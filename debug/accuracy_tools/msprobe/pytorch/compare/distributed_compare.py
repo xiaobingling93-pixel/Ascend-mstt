@@ -44,12 +44,10 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         bench_data_dir = os.path.join(bench_dump_dir, br)
         npu_path = extract_json(npu_data_dir, stack_json=False)
         bench_path = extract_json(bench_data_dir, stack_json=False)
-        # stack_path = extract_json(npu_data_dir, stack_json=True)
 
         dump_result_param = {
             "npu_json_path": npu_path,
             "bench_json_path": bench_path,
-            # "stack_json_path": stack_path,
             "is_print_compare_log": is_print_compare_log
         }
         compare(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)
