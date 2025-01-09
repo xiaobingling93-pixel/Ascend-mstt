@@ -289,7 +289,7 @@ def get_target_output_dir(monitor_path, time_start, time_end):
     time_start = time_str2time_digit(time_start) if time_start is not None else time_start
     time_end = time_str2time_digit(time_end) if time_end is not None else time_end
     if time_start and time_end and time_start > time_end:
-        raise ValueError(f"time_start({time_start} greater than time_end({time_end }))")
+        raise ValueError(f"time_start({time_start}) greater than time_end({time_end})")
     result = {}
     for dirname in os.listdir(monitor_path):
         match = re.match(MonitorConst.OUTPUT_DIR_PATTERN, dirname)
@@ -298,6 +298,6 @@ def get_target_output_dir(monitor_path, time_start, time_end):
         time_tag = match.group(1)
         rank = match.group(2)
         target_time = time_str2time_digit(time_tag)
-        if not ((time_start and target_time < time_start) or (time_end and target_time > time_end)):
+        if (time_start is None or target_time >= time_start) and (time_end is None or target_time <= time_end):
             result[rank] = os.path.join(monitor_path, dirname)
     return result
