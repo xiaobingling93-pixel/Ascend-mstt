@@ -13,6 +13,24 @@
 2. 如果存在namedtuple类型的数据作为nn.Module的输出，工具会将各字段数据dump下来，但是输出数据类型会被转成tuple，原因是什么？
    - 这是由于pytorch框架自身，在注册module的backward hook时，会将namedtuple类型转成tuple类型。
 
+3. 如果某个api在dump支持列表support_wrap_ops.yaml中，但没有dump该api的数据，原因是什么？
+   - 首先确认api调用是否在采集范围内，即需要在 **start** 和 **stop** 接口涵盖的范围内。
+   - 其次，由于工具只在被调用时才对api进行patch，从而使得数据可以被dump下来。因此当api是被直接import进行调用时，由于该api的地址已经确定，
+   工具无法再对其进行patch，故而该api数据无法被dump下来。如下示例，relu将无法被dump：
+   ```python
+   import torch
+   from torch import relu  # 此时relu地址已经确定，无法修改
+
+   from msprobe.pytorch import PrecisionDebugger
+
+   debugger = PrecisionDebugger(dump_path="./dump_data")
+   x = torch.randn(10)
+   debugger.start()  # 此时会对torch下面的api进行patch，但已无法对import进来的api进行patch了
+   x = relu(x)          
+   debugger.stop()
+   ```
+   在上述场景中，若希望采集relu数据，只需要将`relu(x)`修改为`torch.relu(x)`即可。
+
 # 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
