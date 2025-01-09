@@ -523,6 +523,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 确保在 switch 关闭时不应用 hook
         mock_origin_func.assert_called_once()
+        HOOKCell.cell_count = defaultdict(int)
         self.assertTrue((result == input_tensor).all())  # 使用 .all() 来比较 Tensor
 
     @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')

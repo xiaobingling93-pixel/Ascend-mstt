@@ -111,12 +111,7 @@ class PrecisionDebugger:
     @classmethod
     def forward_backward_dump_end(cls):
         instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if instance.task in PrecisionDebugger.task_not_need_service:
-            return
-        if instance.service:
-            instance.service.forward_backward_dump_end()
+        instance.stop()
 
     @classmethod
     def stop(cls):

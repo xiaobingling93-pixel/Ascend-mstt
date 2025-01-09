@@ -118,3 +118,10 @@ class TestPrecisionDebugger(unittest.TestCase):
         with patch.object(CellProcessor, "reset_cell_stats") as mock_reset_cell:
             PrecisionDebugger.step()
         mock_reset_cell.assert_called_once()
+
+    def test_forward_backward_dump_end(self):
+        debugger = PrecisionDebugger()
+        debugger.task = "statistics"
+        debugger.service = MagicMock()
+        debugger.forward_backward_dump_end()
+        debugger.service.stop.assert_called_once()

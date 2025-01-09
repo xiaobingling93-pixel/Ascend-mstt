@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import patch
 
 import mindspore as ms
 from mindspore import Tensor
-
 from msprobe.core.common.const import Const
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
@@ -33,7 +33,8 @@ class TestBasePerturbation(unittest.TestCase):
         self.assertFalse(TestBasePerturbation.base_pert.is_fuzzed)
         self.assertIsNone(TestBasePerturbation.base_pert.perturbation_value)
 
-    def test_get_fuzzed_result(self):
+    @patch("msprobe.mindspore.service.Service.should_execute_hook", return_value=False)
+    def test_get_fuzzed_result(self, _):
         params = HandlerParams()
         params.args = [Tensor([1.0], dtype=ms.float32), Tensor([5.0], dtype=ms.float32)]
         params.kwargs = {}

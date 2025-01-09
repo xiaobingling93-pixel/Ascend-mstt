@@ -90,8 +90,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         if data_clone.numel() == 0:
             return tensor_stat
         elif data_clone.dtype == torch.bool:
-            tensor_stat.max = torch._C._VariableFunctionsClass.any(data_clone).item()
-            tensor_stat.min = torch._C._VariableFunctionsClass.all(data_clone).item()
+            tensor_stat.max = torch.any(data_clone).item()
+            tensor_stat.min = torch.all(data_clone).item()
         elif not data_clone.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
         elif torch.is_complex(data_clone):
@@ -103,28 +103,28 @@ class PytorchDataProcessor(BaseDataProcessor):
         else:
             if not data_clone.is_floating_point() or data_clone.dtype == torch.float64:
                 data_clone = data_clone.float()
-            tensor_stat.max = torch._C._VariableFunctionsClass.max(data_clone).item()
-            tensor_stat.min = torch._C._VariableFunctionsClass.min(data_clone).item()
-            tensor_stat.mean = torch._C._VariableFunctionsClass.mean(data_clone).item()
-            tensor_stat.norm = torch._C._VariableFunctionsClass.norm(data_clone).item()
+            tensor_stat.max = torch.max(data_clone).item()
+            tensor_stat.min = torch.min(data_clone).item()
+            tensor_stat.mean = torch.mean(data_clone).item()
+            tensor_stat.norm = torch.norm(data_clone).item()
         return tensor_stat
 
     @staticmethod
     def handle_tensor_extremum_nan_inf(tensor, operator):
         data_clone = tensor.detach()
-        data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
-        if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
+        data_nan = torch.isnan(data_clone)
+        if int(torch.sum(data_nan)) == data_clone.numel():
             return float('nan')
 
-        finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
-        if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
-            finite_values = getattr(torch._C._TensorBase, "__getitem__")(data_clone, finite_mask)
-            return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
-                torch._C._VariableFunctionsClass.min(finite_values).item()
+        finite_mask = torch.isfinite(data_clone)
+        if int(torch.sum(finite_mask)) > 0:
+            finite_values = data_clone[finite_mask]
+            return torch.max(finite_values).item() if operator == 'max' else \
+                torch.min(finite_values).item()
         else:
-            data_no_nan = getattr(torch._C._TensorBase, "__getitem__")(data_clone, ~data_nan)
-            return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
-                torch._C._VariableFunctionsClass.min(data_no_nan).item()
+            data_no_nan = data_clone[~data_nan]
+            return torch.max(data_no_nan).item() if operator == 'max' else \
+                torch.min(data_no_nan).item()
 
     @staticmethod
     def process_group_hash(arg):

@@ -109,17 +109,12 @@ class TestService(unittest.TestCase):
             mock_register_hook.assert_called_once()
             mock_need_end_service.assert_called_once()
 
-    def test_forward_backward_dump_end(self):
-        self.service.start_call = True
+    def test_should_execute_hook(self):
+        self.assertFalse(self.service.should_execute_hook())
         self.service.switch = True
-        self.service.forward_backward_dump_end()
-        self.assertFalse(self.service.primitive_switch)
-
-    def test_should_excute_hook(self):
-        self.assertFalse(self.service.should_excute_hook())
-        self.service.switch = True
+        self.service.inner_switch = False
         self.service.data_collector.data_processor.is_terminated = False
-        self.assertTrue(self.service.should_excute_hook())
+        self.assertTrue(self.service.should_execute_hook())
 
     def test_need_end_service_with_high_step(self):
         self.service.config.step = [1, 2, 3]
@@ -203,7 +198,7 @@ class TestService(unittest.TestCase):
         self.assertEqual(JitDump.jit_count, defaultdict(int))
         self.assertEqual((self.service.primitive_hook_service.primitive_counters), {})
 
-    @patch.object(Service,'should_excute_hook')
+    @patch.object(Service,'should_execute_hook')
     def test_build_forward_and_backward_hooks(self, mock_should_execute_hook):
         mock_should_execute_hook.return_value = True
         self.service.data_collector = MagicMock()

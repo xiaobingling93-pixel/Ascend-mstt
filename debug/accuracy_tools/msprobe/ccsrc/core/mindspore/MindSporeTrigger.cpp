@@ -16,7 +16,6 @@
 
 #include "include/Macro.hpp"
 #include "base/ErrorInfos.hpp"
-#include "third_party/ACL/AclApi.hpp"
 #include "MindSporeTrigger.hpp"
 #include "MSAclDumper.hpp"
 
@@ -44,7 +43,6 @@ void MindSporeTrigger::TriggerOnStepEnd(ExtArgs& args)
     if (!stepBeginFlag) {
         return;
     }
-    CALL_ACL_API(aclrtSynchronizeDevice);
     MSAclDumper::GetInstance().OnStepEnd(args);
     stepBeginFlag = false;
 
