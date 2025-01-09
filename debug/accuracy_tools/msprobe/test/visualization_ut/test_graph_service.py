@@ -19,6 +19,7 @@ class Args:
     layer_mapping: str = None
     framework: str = None
     overflow_check: bool = False
+    fuzzy_match: bool = False
 
 
 class TestGraphService(unittest.TestCase):
