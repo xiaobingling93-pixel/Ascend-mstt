@@ -59,7 +59,6 @@ class PrecisionDebugger:
                                              model)
             self.check_input_params(config_params)
 
-            self.api_origin = False
             self.initialized = True
             self.model = model
             common_config, task_config = parse_json_config(config_path, task)
@@ -122,15 +121,12 @@ class PrecisionDebugger:
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
-            instance.service.start(instance.model, instance.api_origin)
-            instance.api_origin = False
+            instance.service.start(instance.model)
 
-    # 指定代码段dump前反向结束符，之后的计算过程数据将被忽略，无法被dump
     @classmethod
     def forward_backward_dump_end(cls):
         instance = cls._instance
-        instance.service.forward_backward_dump_end()
-        instance.api_origin = True
+        instance.stop()
 
     @classmethod
     def stop(cls):

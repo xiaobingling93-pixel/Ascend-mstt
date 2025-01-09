@@ -167,7 +167,8 @@ class DataCollector:
         # 校验scope和pid，以及当前name是否有过反向计算
         if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
             # 如果没有反向计算，则需要清除之前占位写入的grad数据
-            self.data_writer.cache_data.get("data").pop(grad_name, None)
+            if self.data_writer.cache_data.get("data"):
+                self.data_writer.cache_data.get("data").pop(grad_name, None)
             return
         data_info = self.data_processor.analyze_params(grad_name, param_name, data)
         self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)

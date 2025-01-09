@@ -19,7 +19,6 @@ import os
 import traceback
 
 import mindspore as ms
-
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import check_path_length, load_yaml
@@ -29,6 +28,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import get_rank_if_initialized
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
@@ -63,7 +63,7 @@ class ApiPyNativeSelfCheck:
         api_register.initialize_hook(self.build_hook)
         api_register.api_set_hook_func()
 
-    def build_hook(self, api_name_with_id):
+    def build_hook(self, api_name):
         def pre_hook(cell, input_data):
             return None
 
@@ -88,7 +88,10 @@ class ApiPyNativeSelfCheck:
         def backward_hook(cell, grad_input, grad_output):
             pass
 
+        HOOKCell.get_cell_count(api_name)
+        api_name_with_id = api_name + str(HOOKCell.get_cell_count(api_name)) + Const.SEP
         forward_hook = functools.partial(forward_hook, api_name_with_id)
+        HOOKCell.add_cell_count(api_name)
 
         def wrap_forward_hook(cell, input_data, output_data):
             return forward_hook(cell, input_data, output_data)
@@ -141,7 +144,7 @@ def get_module(api_name):
     module_obj = importlib.import_module(func_name_list[0])
     for i, module_name in enumerate(func_name_list[1:-1]):
         if not hasattr(module_obj, module_name):
-            importlib.import_module(f"{Const.SEP.join(func_name_list[:i+2])}")
+            importlib.import_module(f"{Const.SEP.join(func_name_list[:i + 2])}")
         module_obj = getattr(module_obj, module_name)
     orig_func = getattr(module_obj, func_name)
 
