@@ -20,7 +20,6 @@ from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.const import Const
 from msprobe.core.compare.acc_compare import ModeConfig
 
-
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
     # NodeOp.module
@@ -106,6 +105,18 @@ def compare_data(data_dict_list1, data_dict_list2):
             tag_value2 = dict2.get(tag_key, None)
             if tag_value1 != tag_value2:
                 return False
+    return True
+
+
+def compare_data_fuzzy(data_dict_list1, data_dict_list2):
+    """
+    模糊匹配，仅校验参数shape是否一致
+    """
+    for x, y in zip(data_dict_list1.values(), data_dict_list2.values()):
+        x_shape = x.get(Const.SHAPE)
+        y_shape = y.get(Const.SHAPE)
+        if x_shape != y_shape:
+            return False
     return True
 
 

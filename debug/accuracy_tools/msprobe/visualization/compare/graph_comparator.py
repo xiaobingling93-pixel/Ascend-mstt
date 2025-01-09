@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
 from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file, get_csv_df
 from msprobe.visualization.graph.graph import Graph, NodeOp
@@ -22,18 +23,23 @@ from msprobe.core.common.const import Const
 
 
 class GraphComparator:
-    def __init__(self, graphs, dump_path_param, output_path, framework=Const.PT_FRAMEWORK, mapping_dict=None):
+    def __init__(self, graphs, dump_path_param, args, mapping_dict=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
-        self._parse_param(dump_path_param, output_path)
-        self.framework = framework
+        self._parse_param(dump_path_param, args.output_path)
+        self.framework = args.framework
         self.mapping_dict = mapping_dict
+        self.fuzzy_match = args.fuzzy_match
+        self.pattern = re.compile(r'\.\d+\.')
 
     def compare(self):
         """
         比较函数，初始化结束后单独调用。比较结果写入graph_n
         """
-        self._compare_nodes(self.graph_n.root)
+        if self.fuzzy_match:
+            self._compare_nodes_fuzzy(self.graph_n.root)
+        else:
+            self._compare_nodes(self.graph_n.root)
         self._postcompare()
     
     def add_compare_result_to_node(self, node, compare_result_list):
@@ -114,13 +120,61 @@ class GraphComparator:
             if node_b:
                 ancestors.append(node_b.id)
                 node_n.add_link(node_b, ancestors)
-        if node_b:
-            # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
-            compare_result_list = compare_node([node_n.id, node_b.id],
-                                               [self.data_n_dict, self.data_b_dict],
-                                               self.stack_json_data, self.ma.compare_mode)
-            if compare_result_list:
-                self.ma.add_csv_data(compare_result_list)
-                self.add_compare_result_to_node(node_n, compare_result_list)
-        for subnode in node_n.subnodes:
-            self._compare_nodes(subnode)
+            if node_b:
+                # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
+                self._get_and_add_result(node_n, node_b)
+            for subnode in node_n.subnodes:
+                self._compare_nodes(subnode)
+
+    def _compare_nodes_fuzzy(self, node_n):
+        if node_n.op != NodeOp.function_api:
+            # 模块经过模糊匹配
+            node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node_n, self.graph_b.node_map.get(node_n.id))
+            if node_b:
+                self._process_matched_nodes(node_n, node_b, ancestors_n, ancestors_b)
+                # 匹配上的两个模块中的所有api, 忽略dump调用次数，按照名称一致+模块中的调用顺序进行匹配
+                recount_result_n = self._recount_api_node(node_n)
+                recount_result_b = self._recount_api_node(node_b)
+                for recount_node_id, node_id_n in recount_result_n.items():
+                    api_node_n = self.graph_n.node_map.get(node_id_n)
+                    if not api_node_n:
+                        continue
+                    api_node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(
+                        api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)))
+                    if api_node_b:
+                        self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
+        for sub_node in node_n.subnodes:
+            self._compare_nodes_fuzzy(sub_node)
+
+    def _get_and_add_result(self, node_n, node_b):
+        compare_result_list = compare_node([node_n.id, node_b.id],
+                                           [self.data_n_dict, self.data_b_dict],
+                                           self.stack_json_data, self.ma.compare_mode)
+        if compare_result_list:
+            self.ma.add_csv_data(compare_result_list)
+            self.add_compare_result_to_node(node_n, compare_result_list)
+
+    def _recount_api_node(self, node):
+        """
+        两个匹配上的模块, 忽略各自模块下所有api的dump调用次数, 并赋予模块中的调用顺序
+        Return:
+            {赋予模块中的调用顺序的node_id: 原始node_id}
+        """
+        recount_result = {}
+        node_count = {}
+        for sub_node in node.subnodes:
+            if sub_node.op == NodeOp.function_api:
+                # 忽略dump调用次数
+                count_removed_id = self.pattern.sub(Const.SEP, sub_node.id)
+                node_count[count_removed_id] = node_count.get(count_removed_id, 0) + 1
+                # 赋予模块中的调用顺序
+                recount_node_id = count_removed_id + str(node_count.get(count_removed_id))
+                recount_result[recount_node_id] = sub_node.id
+        return recount_result
+
+    def _process_matched_nodes(self, node_n, node_b, ancestors_n, ancestors_b):
+        ancestors_n.append(node_n.id)
+        ancestors_b.append(node_b.id)
+        node_n.matched_node_link = ancestors_b
+        node_b.matched_node_link = ancestors_n
+        self._get_and_add_result(node_n, node_b)

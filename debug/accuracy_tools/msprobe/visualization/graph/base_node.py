@@ -15,7 +15,7 @@
 from msprobe.core.overflow_check.level import OverflowLevel
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
-from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data
+from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data, compare_data_fuzzy
 
 
 class BaseNode:
@@ -46,6 +46,13 @@ class BaseNode:
         if not compare_data(self.input_data, other.input_data):
             return False
         if not compare_data(self.output_data, other.output_data):
+            return False
+        return True
+
+    def fuzzy_eq(self, other):
+        if not compare_data_fuzzy(self.input_data, other.input_data):
+            return False
+        if not compare_data_fuzzy(self.output_data, other.output_data):
             return False
         return True
 
