@@ -55,25 +55,37 @@ class TestRunUtUtils(unittest.TestCase):
     def test_exec_api_functional_api(self):
         api_name = "sigmoid"
         args = (torch.tensor([1]))
-        result = exec_api("Functional", api_name, None, args, kwargs={})
+        kwargs={}
+        api_type = "Functional"
+        exec_params = ExecParams(api_type, api_name, "cpu", args, kwargs, False, None)
+        result = exec_api(exec_params)
         self.assertTrue(torch.allclose(result, torch.tensor(0.7311), atol=1e-4))
 
     def test_exec_api_tensor_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Tensor", api_name, None, args, kwargs={})
+        kwargs={}
+        api_type = "Tensor"
+        exec_params = ExecParams(api_type, api_name, "cpu", args, kwargs, False, None)
+        result = exec_api(exec_params)
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_torch_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Torch", api_name, None, args, kwargs={})
+        kwargs={}
+        api_type = "Torch"
+        exec_params = ExecParams(api_type, api_name, "cpu", args, kwargs, False, None)
+        result = exec_api(exec_params)
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_aten_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Aten", api_name, None, args, kwargs={})
+        kwargs={}
+        api_type = "Aten"
+        exec_params = ExecParams(api_type, api_name, "cpu", args, kwargs, False, None)
+        result = exec_api(exec_params)
         self.assertEqual(result, torch.tensor(3))
 
     def test_raise_bench_data_dtype_dtype_unchanged(self):
