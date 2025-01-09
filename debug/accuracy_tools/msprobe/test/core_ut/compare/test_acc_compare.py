@@ -4,12 +4,14 @@ import os
 import shutil
 import threading
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 import torch
 
 from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.compare.acc_compare import Comparator, ModeConfig
+from msprobe.core.common.utils import CompareException
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig, get_bench_data_name
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
 from msprobe.core.compare.utils import get_accuracy
 from msprobe.pytorch.compare.pt_compare import PTComparator
@@ -698,3 +700,60 @@ class TestUtilsMethods(unittest.TestCase):
                                               {'Functional.linear.0.forward': {'input_args': [
                                                   {'data_name': 'Functional.linear.0.forward.input.0.pt'}]}})
         self.assertEqual(result, [1.0, 0.0, 0.0, 1.0, 1.0, ''])
+
+    def test_get_bench_data_name_input(self):
+        bench_op_name = "Functional.linear.0.forward.input.0"
+        bench_data = {"Functional.linear.0.forward": {"input_args": [], "input_kwargs": {}, "output": []}}
+        result = get_bench_data_name(bench_op_name, bench_data)
+
+        self.assertEqual(result, "Functional.linear.0.forward.input.0.pt")
+
+    def test_get_bench_data_name_output(self):
+        bench_op_name = "Functional.linear.0.forward.output.0"
+        bench_data = {"Functional.linear.0.forward": {"input_args": [], "input_kwargs": {}, "output": []}}
+        result = get_bench_data_name(bench_op_name, bench_data)
+
+        self.assertEqual(result, "Functional.linear.0.forward.output.0.pt")
+
+
+class TestComparator(unittest.TestCase):
+    def setUp(self):
+        mode_config = ModeConfig(dump_mode=Const.MD5)
+        self.comparator = Comparator(mode_config=mode_config)
+        self.npu_ops_all = {
+            'op1': {'struct': ['float32', [1, 96, 2], '83dcefb7']},
+        }
+        self.bench_ops_all = {
+            'op1': {'struct': ['float32', [1, 96, 2], '83dcefb7']},
+        }
+
+    def test_normal(self):
+        result = self.comparator.get_result_md5_compare('op1', 'op1',
+                                                        self.npu_ops_all, self.bench_ops_all)
+        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
+                           CompareConst.PASS]
+        self.assertEqual(result, expected_result)
+
+    @patch('msprobe.core.compare.acc_compare_logger')
+    def test_length_exception(self, mock_logger):
+        self.npu_ops_all['op1']['struct'] = ['npu_val1', 'npu_val2']
+        with self.assertRaises(CompareException) as context:
+            self.comparator.get_result_md5_compare('op1', 'op1',
+                                                   self.npu_ops_all, self.bench_ops_all)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+        mock_logger.error.assert_called_once_with("The length of npu_struct and bench_struct must be >= 3, "
+                                                  "but got npu_struct=2 and bench_struct=3. Please check!")
+
+    def test_with_extra_args(self):
+        result = self.comparator.get_result_md5_compare('op1', 'op1',
+                                                        self.npu_ops_all, self.bench_ops_all, True, ['extra_data'])
+        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
+                           'extra_data']
+        self.assertEqual(result, expected_result)
+
+    def test_not_enough_extra_args(self):
+        result = self.comparator.get_result_md5_compare('op1', 'op1',
+                                                        self.npu_ops_all, self.bench_ops_all, False)
+        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
+                           CompareConst.NONE]
+        self.assertEqual(result, expected_result)
