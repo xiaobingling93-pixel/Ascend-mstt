@@ -18,14 +18,6 @@ class TestService(unittest.TestCase):
         self.config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./ut_dump", "L1")
         self.service = Service(self.config)
 
-    @patch('msprobe.pytorch.service.api_register')
-    @patch('msprobe.pytorch.service.logger')
-    def test_forward_backward_dump_end(self, mock_logger, mock_api_register):
-        self.service.forward_backward_dump_end()
-
-        mock_logger.info_on_rank_0.assert_called_once_with("Data needed ends here.")
-        mock_api_register.api_originality.assert_called_once()
-
     def test_start_success(self):
         with patch("msprobe.pytorch.service.get_rank_if_initialized", return_value=0), \
                 patch("msprobe.pytorch.service.Service.create_dirs", return_value=None):

@@ -17,8 +17,6 @@ from collections import defaultdict
 
 from mindspore import nn
 
-from msprobe.core.common.const import Const
-
 
 class HOOKCell(nn.Cell):
     cell_count = defaultdict(int)
@@ -35,8 +33,7 @@ class HOOKCell(nn.Cell):
             if hasattr(self, "prefix_api_name"):
                 self.prefix = self.prefix_api_name
 
-            HOOKCell.cell_count[self.prefix] += 1
-            self.prefix = self.prefix + str(HOOKCell.cell_count[self.prefix] - 1) + Const.SEP
+            self.forward_data_collected= False
             forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
             self.register_forward_pre_hook(forward_pre_hook)
             self.register_forward_hook(forward_hook)
@@ -54,3 +51,11 @@ class HOOKCell(nn.Cell):
                 self.changed_status = False
                 HOOKCell.g_stop_hook = False
         return out
+
+    @staticmethod
+    def add_cell_count(name):
+        HOOKCell.cell_count[name] += 1
+
+    @staticmethod
+    def get_cell_count(name):
+        return HOOKCell.cell_count[name]
