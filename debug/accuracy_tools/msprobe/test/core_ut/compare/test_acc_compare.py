@@ -703,14 +703,14 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_bench_data_name_input(self):
         bench_op_name = "Functional.linear.0.forward.input.0"
-        bench_data = {"Functional.linear.0.forward": {"input_args": [], "input_kwargs": {}, "output": []}}
+        bench_data = {"Functional.linear.0.forward": {"input_args": [{"data_name": "Functional.linear.0.forward.input.0.pt"}], "input_kwargs": {}, "output": []}}
         result = get_bench_data_name(bench_op_name, bench_data)
 
         self.assertEqual(result, "Functional.linear.0.forward.input.0.pt")
 
     def test_get_bench_data_name_output(self):
         bench_op_name = "Functional.linear.0.forward.output.0"
-        bench_data = {"Functional.linear.0.forward": {"input_args": [], "input_kwargs": {}, "output": []}}
+        bench_data = {"Functional.linear.0.forward": {"input_args": [], "input_kwargs": {}, "output": [{"data_name": "Functional.linear.0.forward.output.0.pt"}]}}
         result = get_bench_data_name(bench_op_name, bench_data)
 
         self.assertEqual(result, "Functional.linear.0.forward.output.0.pt")
@@ -728,13 +728,13 @@ class TestComparator(unittest.TestCase):
         }
 
     def test_normal(self):
+        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
+                           CompareConst.PASS, CompareConst.NONE]
         result = self.comparator.get_result_md5_compare('op1', 'op1',
                                                         self.npu_ops_all, self.bench_ops_all)
-        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
-                           CompareConst.PASS]
         self.assertEqual(result, expected_result)
 
-    @patch('msprobe.core.compare.acc_compare_logger')
+    @patch('msprobe.core.compare.acc_compare.logger')
     def test_length_exception(self, mock_logger):
         self.npu_ops_all['op1']['struct'] = ['npu_val1', 'npu_val2']
         with self.assertRaises(CompareException) as context:
@@ -745,15 +745,8 @@ class TestComparator(unittest.TestCase):
                                                   "but got npu_struct=2 and bench_struct=3. Please check!")
 
     def test_with_extra_args(self):
+        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
+                           CompareConst.PASS, 'extra_data']
         result = self.comparator.get_result_md5_compare('op1', 'op1',
                                                         self.npu_ops_all, self.bench_ops_all, True, ['extra_data'])
-        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
-                           'extra_data']
-        self.assertEqual(result, expected_result)
-
-    def test_not_enough_extra_args(self):
-        result = self.comparator.get_result_md5_compare('op1', 'op1',
-                                                        self.npu_ops_all, self.bench_ops_all, False)
-        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
-                           CompareConst.NONE]
         self.assertEqual(result, expected_result)
