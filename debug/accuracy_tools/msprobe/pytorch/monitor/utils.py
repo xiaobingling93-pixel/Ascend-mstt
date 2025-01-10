@@ -286,18 +286,20 @@ def time_str2time_digit(time_str):
 
 def get_target_output_dir(monitor_path, time_start, time_end):
     check_file_or_directory_path(monitor_path, isdir=True)
-    time_start = time_str2time_digit(time_start)
-    time_end = time_str2time_digit(time_end)
-    if time_start > time_end:
-        raise ValueError(f"time_start({time_start} greater than time_end({time_end }))")
+    time_start = time_str2time_digit(time_start) if time_start is not None else time_start
+    time_end = time_str2time_digit(time_end) if time_end is not None else time_end
+    if time_start and time_end and time_start > time_end:
+        raise ValueError(f"time_start({time_start}) greater than time_end({time_end})")
     result = {}
     for dirname in os.listdir(monitor_path):
         match = re.match(MonitorConst.OUTPUT_DIR_PATTERN, dirname)
         if not match:
             continue
         time_tag = match.group(1)
+        rank = match.group(2)
         target_time = time_str2time_digit(time_tag)
-        if time_start <= target_time <= time_end:
-            rank = match.group(2)
+        start_ok = time_start is None or target_time >= time_start
+        end_ok = time_end is None or target_time <= time_end
+        if start_ok and end_ok:
             result[rank] = os.path.join(monitor_path, dirname)
     return result
