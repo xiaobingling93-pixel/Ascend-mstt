@@ -638,9 +638,9 @@ class TrainerMon:
                               or (not self.module_rank_list and dist.get_rank() == 0))
 
         if save_module_struct:
-            module_struct_file = os.path.join(get_output_base_dir(), 'module_struct.json')
+            module_struct_file = os.path.realpath(os.path.join(get_output_base_dir(), 'module_struct.json'))
             save_json(module_struct_file, self.module_struct, indent=2)
-            logger.info(f"> module struct: {module_struct_file}")
+            logger.info(f"> save module struct to {module_struct_file}")
         self.struct_printed = True
 
     def _is_target_param(self, param_name, param, prefix):
