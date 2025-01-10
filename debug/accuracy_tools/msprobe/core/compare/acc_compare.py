@@ -115,7 +115,7 @@ class Comparator:
     def gen_merge_list(self, json_data, op_name, stack_json_data):
         op_data = json_data['data'][op_name]
         check_dump_json_str(op_data, op_name)
-        op_parsed_list = read_op(op_data, op_name)
+        op_parsed_list = read_op(op_data, op_name, dump_json_version)
 
         if self.stack_mode:
             stack_info = stack_json_data.get(op_name)

@@ -93,18 +93,31 @@ def rename_api(npu_name, process):
     return torch_func
 
 
-def read_op(op_data, op_name):
-    io_name_mapping = {
+def read_op(op_data, op_name, dump_json_version='2024'):
+    io_name_mapping_2024 = {
         Const.INPUT_ARGS: '.input',
         Const.INPUT_KWARGS: '.input',
         Const.INPUT: '.input',
         Const.OUTPUT: '.output'
     }
+    io_name_mapping_2025 = {
+        Const.INPUT_ARGS: '.input',
+        Const.INPUT_KWARGS: '.input',
+        Const.PARAMS: '.parameters',
+        Const.PARAMS_GRAD: 'parameters_grad',
+        Const.INPUT: '.input',
+        Const.OUTPUT: '.output'
+    }
 
     op_parsed_list = []
-    for name in io_name_mapping:
-        if name in op_data:
-            op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping[name]))
+    if dump_json_version == '2024':
+        for name in io_name_mapping_2024:
+            if name in op_data:
+                op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping_2024[name]))
+    if dump_json_version == '2025':
+        for name in io_name_mapping_2025:
+            if name in op_data:
+                op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping_2025[name]))
     return op_parsed_list
 
 
@@ -424,7 +437,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         result.append(result_item)
 
 
-def merge_tensor(tensor_list, dump_mode):
+def merge_tensor(tensor_list, dump_mode, dump_json_version):
     op_dict = {}
     op_dict["op_name"] = []
     op_dict[CompareConst.INPUT_STRUCT] = []
@@ -444,12 +457,19 @@ def merge_tensor(tensor_list, dump_mode):
 
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
-        name_to_struct_mapping = {
+        name_to_struct_mapping_2024 = {
             Const.INPUT: CompareConst.INPUT_STRUCT,
             Const.KWARGS: CompareConst.KWARGS_STRUCT,
             Const.OUTPUT: CompareConst.OUTPUT_STRUCT
         }
-        for name_key, struct_key in name_to_struct_mapping.items():
+        name_to_struct_mapping_2025 = {
+            Const.INPUT: CompareConst.INPUT_STRUCT,
+            Const.KWARGS: CompareConst.KWARGS_STRUCT,
+            Const.PARAMS: CompareConst.PARAMS_STRUCT,
+            Const.PARAMS_GRAD: CompareConst.PARAMS_GRAD_STRUCT,
+            Const.OUTPUT: CompareConst.OUTPUT_STRUCT
+        }
+        for name_key, struct_key in name_to_struct_mapping_2024.items():
             if name_key in name_ele_list:
                 if dump_mode == Const.MD5:
                     op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
