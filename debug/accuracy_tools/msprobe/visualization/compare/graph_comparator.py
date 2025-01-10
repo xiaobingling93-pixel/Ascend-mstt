@@ -120,11 +120,11 @@ class GraphComparator:
             if node_b:
                 ancestors.append(node_b.id)
                 node_n.add_link(node_b, ancestors)
-            if node_b:
-                # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
-                self._get_and_add_result(node_n, node_b)
-            for subnode in node_n.subnodes:
-                self._compare_nodes(subnode)
+        if node_b:
+            # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
+            self._get_and_add_result(node_n, node_b)
+        for subnode in node_n.subnodes:
+            self._compare_nodes(subnode)
 
     def _compare_nodes_fuzzy(self, node_n):
         if node_n.op != NodeOp.function_api:
