@@ -211,7 +211,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
           dataSource={getTableData()}
           size='small'
           scroll={{
-            x: 150 * fileList.length + 100,
+            x: (150 * fileList.length) + 100,
             y: fileList.length < 2 ? 'calc(100vh - 240px)' : 'calc(50vh - 185px)',
           }}
           pagination={{

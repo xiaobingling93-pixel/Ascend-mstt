@@ -353,8 +353,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
     } else {
       let bias = memoryCurveData?.metadata.first_ts ?? 0;
       let scale = 1 / (memoryCurveData?.metadata.time_factor ?? 1);
-      startTs = Math.round(allDatas[realStart][0] * scale + bias);
-      endTs = Math.round(allDatas[realEnd][0] * scale + bias);
+      startTs = Math.round((allDatas[realStart][0] * scale) + bias);
+      endTs = Math.round((allDatas[realEnd][0] * scale) + bias);
     }
 
     setSelectedRange({ start, end, startTs, endTs });
