@@ -109,12 +109,34 @@ class TestService(unittest.TestCase):
             mock_register_hook.assert_called_once()
             mock_need_end_service.assert_called_once()
 
-    def test_should_execute_hook(self):
-        self.assertFalse(self.service.should_execute_hook())
+    def test_should_execute_hook_return_false(self):
+        cell = MagicMock()
+        self.service.switch = False
+        self.assertFalse(self.service.should_execute_hook("Module", cell, True))
+        self.assertFalse(self.service.should_execute_hook("api", cell, True))
+
+        self.service.switch = True
+        cell.forward_data_collected = False
+        self.assertFalse(self.service.should_execute_hook("api", cell, False))
+
+        self.service.inner_switch = True
+        self.assertFalse(self.service.should_execute_hook("Module", cell, True))
+
+        self.service.inner_switch = False
+        self.service.data_collector = None
+        self.assertFalse(self.service.should_execute_hook("Module", cell, True))
+
+    def test_should_execute_hook_return_true(self):
+        cell = MagicMock()
         self.service.switch = True
         self.service.inner_switch = False
+        self.service.data_collector = MagicMock()
+        self.service.data_collector.data_processor = MagicMock()
         self.service.data_collector.data_processor.is_terminated = False
-        self.assertTrue(self.service.should_execute_hook())
+        self.assertTrue(self.service.should_execute_hook("Module", cell, True))
+
+        cell.forward_data_collected = True
+        self.assertTrue(self.service.should_execute_hook("api", cell, False))
 
     def test_need_end_service_with_high_step(self):
         self.service.config.step = [1, 2, 3]

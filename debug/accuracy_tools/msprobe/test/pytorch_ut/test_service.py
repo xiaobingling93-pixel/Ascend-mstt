@@ -119,22 +119,31 @@ class TestService(unittest.TestCase):
         self.assertFalse(self.service.switch)
         self.assertTrue(self.service.should_stop_service)
 
-    def test_should_execute_hook(self):
-        self.service.switch = True
-        self.service.data_collector = None
-        self.assertTrue(self.service.should_execute_hook())
-
+    def test_should_execute_hook_return_false(self):
+        module = MagicMock()
         self.service.switch = False
-        self.assertFalse(self.service.should_execute_hook())
-
-        class DataProcessor:
-            def __init__(self):
-                self.is_terminated = True
-
-        class DataCollector:
-            def __init__(self):
-                self.data_processor = DataProcessor()
+        self.assertFalse(self.service.should_execute_hook("Module", module, True))
+        self.assertFalse(self.service.should_execute_hook("api", module, True))
 
         self.service.switch = True
-        self.service.data_collector = DataCollector()
-        self.assertFalse(self.service.should_execute_hook())
+        module.forward_data_collected = False
+        self.assertFalse(self.service.should_execute_hook("api", module, False))
+
+        self.service.inner_switch = True
+        self.assertFalse(self.service.should_execute_hook("Module", module, True))
+
+        self.service.inner_switch = False
+        self.service.data_collector = None
+        self.assertFalse(self.service.should_execute_hook("Module", module, True))
+
+    def test_should_execute_hook_return_true(self):
+        module = MagicMock()
+        self.service.switch = True
+        self.service.inner_switch = False
+        self.service.data_collector = MagicMock()
+        self.service.data_collector.data_processor = MagicMock()
+        self.service.data_collector.data_processor.is_terminated = False
+        self.assertTrue(self.service.should_execute_hook("Module", module, True))
+
+        module.forward_data_collected = True
+        self.assertTrue(self.service.should_execute_hook("api", module, False))

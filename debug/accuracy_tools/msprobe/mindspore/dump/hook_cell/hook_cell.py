@@ -33,7 +33,7 @@ class HOOKCell(nn.Cell):
             if hasattr(self, "prefix_api_name"):
                 self.prefix = self.prefix_api_name
 
-            self.forward_data_collected= False
+            self.forward_data_collected = False
             forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
             self.register_forward_pre_hook(forward_pre_hook)
             self.register_forward_hook(forward_hook)
