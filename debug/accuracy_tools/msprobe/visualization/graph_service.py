@@ -67,8 +67,7 @@ def _compare_graph(input_param, args):
             mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, yaml_path)
         except Exception:
             logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
-    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path, args.framework,
-                                       mapping_dict=mapping_dict)
+    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args, mapping_dict=mapping_dict)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
     # 开启溢出检测
@@ -208,6 +207,8 @@ def _graph_service_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
                         help="<Optional> whether open overflow_check for graph.", required=False)
+    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
 
 
 def _graph_service_command(args):
