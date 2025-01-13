@@ -57,13 +57,14 @@ class Service:
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
-            if not self.should_execute_hook():
+            if not self.should_execute_hook(module_type, module, True):
                 return args, kwargs
 
             self.inner_switch = True
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name[-1]
             else:
+                module.forward_data_collected = True
                 HOOKModule.add_module_count(name)
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
@@ -79,7 +80,7 @@ class Service:
 
         def grad_hook(module, ori_name, param_name):
             def hook_fn(grad):
-                if not self.should_execute_hook(module):
+                if not self.should_execute_hook(module_type, module, False):
                     return grad
                 self.inner_switch = True
                 self.data_collector.params_data_collect(ori_name, param_name, pid, grad)
@@ -105,11 +106,10 @@ class Service:
                     module.has_param_hook = True
 
         def forward_hook(api_or_module_name, module, args, kwargs, output):
-            if not self.should_execute_hook():
+            if not self.should_execute_hook(module_type, module, True):
                 return None
 
             self.inner_switch = True
-            module.forward_data_collected= True
             if self.config.online_run_ut:
                 self.data_collector.update_api_or_module_name(api_or_module_name)
                 if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
@@ -162,7 +162,7 @@ class Service:
             return forward_hook(api_or_module_name, module, args, {}, output)
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
-            if not self.should_execute_hook(module):
+            if not self.should_execute_hook(module_type, module, False):
                 return
 
             self.inner_switch = True
@@ -261,14 +261,18 @@ class Service:
             return True
         return False
 
-    def should_execute_hook(self, module=None):
-        if module is None and not self.switch:
+    def should_execute_hook(self, hook_type, module, is_forward):
+        is_module_hook = hook_type == BaseScope.Module_Type_Module
+        if is_module_hook and not self.switch:
             return False
-        if module is not None and not module.forward_data_collected:
+        elif not is_module_hook and is_forward and not self.switch:
             return False
+        elif not is_module_hook and not is_forward and not module.forward_data_collected:
+            return False
+
         if self.inner_switch:
             return False
-        if self.data_collector and self.data_collector.data_processor.is_terminated:
+        if not self.data_collector or self.data_collector.data_processor.is_terminated:
             return False
         return True
 
