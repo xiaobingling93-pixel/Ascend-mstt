@@ -5,6 +5,7 @@
     "step": [],  
     "level": "L1", 
     "enable_dataloader": false,
+    "enable_async_dump": false,
     "tensor": {
         "scope": [], 
         "list":[], 

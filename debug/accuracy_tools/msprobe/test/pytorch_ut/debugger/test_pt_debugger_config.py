@@ -81,6 +81,7 @@ class TestDebuggerConfig(unittest.TestCase):
     def test_check_and_adjust_config_with_l2_list_empty(self):
         self.common_config.dump_path = "./dump_path"
         self.common_config.task = Const.TENSOR
+        self.common_config.enable_async_dump = False
 
         self.task_config.scope = []
         self.task_config.list = []
