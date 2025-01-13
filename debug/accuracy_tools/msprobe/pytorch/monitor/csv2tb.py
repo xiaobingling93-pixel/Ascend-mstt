@@ -14,8 +14,10 @@
 # limitations under the License.
 import os
 import re
+import datetime
 from multiprocessing import Process
 
+import pytz
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
@@ -24,6 +26,9 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import get_target_output_dir
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.utils import is_int
+
+all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
+csv_file_suffix = r"_\d+-\d+\.csv"
 
 
 def parse_step_line(data, line_id, name, ops):
@@ -85,7 +90,6 @@ def update_dict(dict1, dict2):
     return dict1
 
 
-csv_file_suffix = r"_\d+-\d+\.csv"
 def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
     for dir in tqdm(target_output_dirs):
         dirpath = dir["path"]
@@ -113,6 +117,9 @@ def check_process_num(process_num):
 
 
 def check_data_type_list(data_type_list):
+    if data_type_list is None:
+        logger.info(f"data_type_list is None, use defualt all_data_type_list: {all_data_type_list}")
+        return
     if not isinstance(data_type_list, list):
         raise ValueError(f"data_type_list({data_type_list}) is not a list")
     for data_type in data_type_list:
@@ -120,13 +127,15 @@ def check_data_type_list(data_type_list):
             raise ValueError(f"data type({data_type}) is not supported, supported data type: {all_data_type_list}")
 
 
-all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
-def csv2tensorboard_by_step(monitor_path, time_start, time_end, process_num=1, data_type_list=None):
+def csv2tensorboard_by_step(monitor_path, time_start=None, time_end=None, process_num=1, data_type_list=None, output_dirpath=None):
     check_process_num(process_num)
     check_data_type_list(data_type_list)
     target_output_dirs = get_target_output_dir(monitor_path, time_start, time_end)
     target_output_dirs = [{"rank": rank, "path": path} for rank, path in target_output_dirs.items()]
-    output_dirpath = os.path.join(monitor_path, f"{time_end}-csv2tensorboard_by_step")
+    if output_dirpath is None:
+        local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
+        cur_time = datetime.datetime.now(local_tz).strftime("%b%d_%H-%M-%S")
+        output_dirpath = os.path.join(monitor_path, f"{cur_time}-csv2tensorboard_by_step")
     create_directory(output_dirpath)
 
     task_num = len(target_output_dirs)
@@ -144,3 +153,4 @@ def csv2tensorboard_by_step(monitor_path, time_start, time_end, process_num=1, d
         p.start()
     for p in processes:
         p.join()
+    logger.info(f"output has been saved to: {output_dirpath}")

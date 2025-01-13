@@ -87,7 +87,7 @@ class Service:
 
     def build_hook(self, target_type, name):
         def pre_hook(api_or_cell_name, cell, input_data):
-            if not self.should_execute_hook():
+            if not self.should_execute_hook(target_type, cell, True):
                 clean_input_kwargs(cell)
                 return None
 
@@ -96,6 +96,7 @@ class Service:
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                 else:
+                    cell.forward_data_collected = True
                     HOOKCell.add_cell_count(name)
                 module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
                 self.data_collector.update_api_or_module_name(api_or_cell_name)
@@ -105,7 +106,7 @@ class Service:
 
         def grad_hook(cell, ori_name, param_name):
             def hook_fn(grad):
-                if not self.should_execute_hook(cell):
+                if not self.should_execute_hook(target_type, cell, False):
                     return None
                 self.inner_switch = True
                 self.data_collector.params_data_collect(ori_name, param_name, pid, grad)
@@ -144,12 +145,11 @@ class Service:
                     self.params_grad_info[grad_name] = True
 
         def forward_hook(api_or_cell_name, cell, input_data, output):
-            if not self.should_execute_hook():
+            if not self.should_execute_hook(target_type, cell, True):
                 clean_input_kwargs(cell)
                 return None
             with _no_grad():
                 self.inner_switch = True
-                cell.forward_data_collected= True
                 module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
@@ -178,7 +178,7 @@ class Service:
                 return output
 
         def backward_hook(api_or_cell_name, cell, grad_input, grad_output):
-            if not self.should_execute_hook(cell):
+            if not self.should_execute_hook(target_type, cell, False):
                 return
             self.inner_switch = True
 
@@ -315,11 +315,15 @@ class Service:
             return True
         return False
 
-    def should_execute_hook(self, cell=None):
-        if cell is None and not self.switch:
+    def should_execute_hook(self, hook_type, cell, is_forward):
+        is_cell_hook = hook_type == BaseScope.Module_Type_Module
+        if is_cell_hook and not self.switch:
             return False
-        if cell is not None and not cell.forward_data_collected:
+        elif not is_cell_hook and is_forward and not self.switch:
             return False
+        elif not is_cell_hook and not is_forward and not cell.forward_data_collected:
+            return False
+
         if self.inner_switch:
             return False
         if not self.data_collector or self.data_collector.data_processor.is_terminated:
@@ -362,7 +366,7 @@ class Service:
             for name, cell in self.model.cells_and_names():
                 if cell == self.model:
                     continue
-                cell.forward_data_collected= False
+
                 prefix = 'Cell' + Const.SEP + name + Const.SEP + \
                          cell.__class__.__name__ + Const.SEP
                 _, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)

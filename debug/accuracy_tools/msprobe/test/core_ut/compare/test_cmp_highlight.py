@@ -3,18 +3,22 @@ import os
 import shutil
 import sys
 from collections import namedtuple
-
-import numpy as np
-import openpyxl
-import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
 import unittest
 from unittest.mock import patch
 
+import numpy as np
+import pandas as pd
+import openpyxl
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+
+
 from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
-    add_highlight_row_info, update_highlight_err_msg
+from msprobe.core.common.utils import CompareException
+from msprobe.core.compare.highlight import ApiBatch, CheckMaxRelativeDiff, CheckOrderMagnitude, \
+    CheckOneThousandErrorRatio, CheckCosineSimilarity, add_highlight_row_info, compare_result_df_convert, \
+    df_malicious_value_check, find_error_rows, get_name_and_state, highlight_rows_xlsx, update_highlight_err_msg, \
+    value_check
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -87,6 +91,52 @@ class TestUtilsMethods(unittest.TestCase):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
 
+    def test_CheckOrderMagnitude_normal(self):
+        api_in = [1, 1, 1, 1, 1, 1, 5, 1, 1]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        info = (api_in, api_out, 1)
+        color_columns = ()
+        dump_mode = Const.SUMMARY
+
+        result = CheckOrderMagnitude().apply(info, color_columns, dump_mode)
+
+        self.assertEqual(result, None)
+
+    def test_CheckOneThousandErrorRatio_str(self):
+        api_in = [1, 1, 1, 1, 1, 1, 1, 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1, "unsupported"]
+        info = (api_in, api_out, 1)
+        color_columns = ()
+        dump_mode = Const.ALL
+
+        result = CheckOneThousandErrorRatio().apply(info, color_columns, dump_mode)
+
+        self.assertEqual(result, None)
+
+    @patch("msprobe.core.compare.highlight.add_highlight_row_info")
+    def test_CheckOneThousandErrorRatio_red(self, mock_add_highlight_row_info):
+        api_in = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]
+        info = (api_in, api_out, 1)
+        ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
+        color_columns = ColorColumns(red=[], yellow=[])
+        dump_mode = Const.ALL
+
+        CheckOneThousandErrorRatio().apply(info, color_columns, dump_mode)
+
+        mock_add_highlight_row_info.assert_called_once()
+
+    def test_CheckCosineSimilarity_str(self):
+        api_in = [1, 1, 1, 1, 1, 1, "unsupported", 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, "unsupported", 1, 1, "unsupported"]
+        info = (api_in, api_out, 1)
+        color_columns = ()
+        dump_mode = Const.ALL
+
+        result = CheckCosineSimilarity().apply(info, color_columns, dump_mode)
+
+        self.assertEqual(result, None)
+
     def test_CheckMaxRelativeDiff_red(self):
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
 
@@ -130,7 +180,93 @@ class TestUtilsMethods(unittest.TestCase):
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
 
-    def test_highlight_rows_xlsx_1(self):
+    def test_find_error_rows_normal(self):
+        compare_result = np.array([
+            ["Functional.linear.0.forward.input.0", "Functional.linear.0.forward.input.0",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+            ["Functional.linear.0.forward.input.1", "Functional.linear.0.forward.input.1",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+            ["Functional.linear.0.forward.input.2", "Functional.linear.0.forward.input.2",
+             "torch.float32", "torch.float32", [2], [2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+            ["Functional.linear.0.forward.output.0", "Functional.linear.0.forward.output.0",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+        ], dtype=object)
+        last_len = 0
+        n_num_input = 3
+        highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
+        dump_mode = Const.ALL
+
+        find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
+
+        self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
+
+    def test_find_error_rows_md5(self):
+        compare_result = []
+        last_len = 1
+        n_num_input = 2
+        highlight_dict = {}
+        dump_mode = Const.MD5
+
+        result = find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
+
+        self.assertEqual(result, None)
+
+    def test_ApiBatch_increment_input(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.INPUT)
+
+        self.assertTrue(api_batch.input_state)
+        self.assertEqual(api_batch.input_len, 2)
+        self.assertEqual(api_batch.output_index, 4)
+
+    def test_ApiBatch_increment_output(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.OUTPUT)
+
+        self.assertFalse(api_batch.input_state)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.output_index, 4)
+
+    @patch("msprobe.core.compare.highlight.logger")
+    def test_value_check(self, mock_logger):
+        value = "=functional.conv2d"
+        api_name = "=functional.conv2d"
+        i = 1
+        result_df_columns = CompareConst.COMPARE_RESULT_HEADER
+
+        value_check(value, api_name, i, result_df_columns)
+
+        mock_logger.error.assert_called_once_with(
+            "Malicious value [=functional.conv2d] at api_name [=functional.conv2d], column [Bench Name], "
+            "is not allowed to be written into the compare result xlsx."
+        )
+
+    def test_df_malicious_value_check(self):
+        columns = CompareConst.COMPARE_RESULT_HEADER
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']
+                ]
+        result_df = pd.DataFrame(data, columns=columns)
+
+        df_malicious_value_check(result_df, columns)
+
+    def test_compare_result_df_convert(self):
+        value = float("nan")
+        result = compare_result_df_convert(value)
+        self.assertEqual(result, "nan\t")
+
+    def test_highlight_rows_xlsx_red(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
@@ -245,6 +381,18 @@ class TestUtilsMethods(unittest.TestCase):
         target_result_df = pd.DataFrame(t_data, columns=columns)
         self.assertTrue(result_df.equals(target_result_df))
 
+    def test_update_highlight_err_msg_md5(self):
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], 'abc', 'abc', 'pass']
+                ]
+        columns = CompareConst.MD5_COMPARE_RESULT_HEADER
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {}
+
+        result = update_highlight_err_msg(result_df, highlight_dict)
+
+        self.assertEqual(result, None)
+
     def test_update_highlight_err_msg_fail(self):
         data = [
             ['err_msg1'],
@@ -260,3 +408,35 @@ class TestUtilsMethods(unittest.TestCase):
         }
         result = update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
+
+
+class TestGetNameAndState(unittest.TestCase):
+    def test_valid_forward_input(self):
+        name = 'conv2d.forward.1.input.0'
+        expected_api = 'conv2d.forward.1.'
+        expected_state = 'input'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_valid_backward_output(self):
+        name = 'Functional.pad.0.backward.output.0'
+        expected_api = 'Functional.pad.0.backward.'
+        expected_state = 'output'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_valid_with_kwargs(self):
+        name = 'layer.norm.2.forward.kwargs.attr'
+        expected_api = 'layer.norm.2.forward.'
+        expected_state = 'kwargs'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_no_numeric_index(self):
+        name = 'conv2d.forward.input.0'
+        expected_api = 'conv2d.forward.'
+        expected_state = 'input'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_invalid__state(self):
+        name = 'conv2d.forward.1.invalidstate.0'
+        with self.assertRaises(CompareException) as context:
+            get_name_and_state(name)
+        self.assertIn('Invalid name string', str(context.exception.code))

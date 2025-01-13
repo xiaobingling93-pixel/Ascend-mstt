@@ -31,6 +31,7 @@ except ImportError:
 else:
     is_gpu = False
     current_device = "npu"
+
 import torch
 from tqdm import tqdm
 
@@ -52,7 +53,8 @@ from msprobe.core.common.utils import safe_get_value, CompareException
 from msprobe.pytorch.common.utils import seed_all
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params, \
+    ExecParams
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -239,7 +241,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     in_fwd_data_list = []
     backward_message = ''
     api_type, api_name = extract_basic_api_segments(api_full_name)
-    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
+    args, kwargs, output_dtype = get_api_info(api_info_dict, api_name, real_data_path)
+    need_grad = check_need_grad(api_info_dict)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
     need_backward = api_full_name in backward_content
@@ -262,10 +265,18 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
-    cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
+    cpu_params = generate_cpu_params(args, kwargs, need_backward, api_name)
+    cpu_args, cpu_kwargs = cpu_params.cpu_args, cpu_params.cpu_kwargs
+    autocast_dtype, is_autocast = cpu_params.autocast_dtype, cpu_params.is_autocast
+    if not is_autocast and output_dtype:
+        is_autocast = autocast_dtype != output_dtype
+        autocast_dtype = output_dtype
     bench_grad_out, device_grad_out = None, None
-    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
-    device_out = exec_api(api_type, api_name, current_device, device_args, device_kwargs)
+    cpu_exec_params = ExecParams(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs, False, autocast_dtype)
+    out = exec_api(cpu_exec_params)
+    device_exec_params = ExecParams(api_type, api_name, current_device, device_args, device_kwargs, is_autocast,
+                                     autocast_dtype)
+    device_out = exec_api(device_exec_params)
     current_path = os.path.dirname(os.path.realpath(__file__))
     ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
     api_setting_dict = get_json_contents(ut_setting_path)
@@ -283,7 +294,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             }
             grad = gen_args(backward_args, api_name, func_options)
             grad = safe_get_value(grad, 0, "grad")
-            bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
+            grad_params = generate_cpu_params(grad, {}, False, api_name)
+            bench_grad = grad_params.cpu_args
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
             device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
@@ -310,13 +322,18 @@ def run_torch_api_online(api_full_name, api_data, backward_content):
     return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 
 
+def check_need_grad(api_info_dict):
+    need_grad = True
+    if api_info_dict.get(Const.INPUT_KWARGS) and "out" in api_info_dict.get(Const.INPUT_KWARGS):
+        need_grad = False
+    return need_grad
+
+
 def get_api_info(api_info_dict, api_name, real_data_path):
     convert_type, api_info_dict = api_info_preprocess(api_name, api_info_dict)
-    need_grad = True
-    if api_info_dict.get("input_kwargs") and "out" in api_info_dict.get("input_kwargs"):
-        need_grad = False
-    args, kwargs = gen_api_params(api_info_dict, api_name, need_grad, convert_type, real_data_path)
-    return args, kwargs, need_grad
+    need_grad = check_need_grad(api_info_dict)
+    args, kwargs, output_dtype = gen_api_params(api_info_dict, api_name, need_grad, convert_type, real_data_path)
+    return args, kwargs, output_dtype
 
 
 def need_to_backward(grad_index, out):

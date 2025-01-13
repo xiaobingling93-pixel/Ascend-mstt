@@ -30,7 +30,7 @@ else:
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, is_unsupported_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, is_unsupported_api, ExecParams
 from msprobe.core.common.file_utils import check_link, FileChecker
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.core.common.const import FileCheckConst, Const
@@ -123,8 +123,10 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
-    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
-    npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
+    cpu_exec_params = ExecParams(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs, False, None)
+    device_exec_params = ExecParams(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs, False, None)
+    out = exec_api(cpu_exec_params)
+    npu_out = exec_api(device_exec_params)
     if out is None and npu_out is None:
         logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return

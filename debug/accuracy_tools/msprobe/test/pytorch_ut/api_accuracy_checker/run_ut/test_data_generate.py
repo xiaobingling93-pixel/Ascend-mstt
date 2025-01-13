@@ -44,7 +44,7 @@ class TestDataGenerateMethods(unittest.TestCase):
     
     def test_gen_api_params(self):
         api_info = copy.deepcopy(api_info_dict)
-        args_params, kwargs_params = gen_api_params(api_info, "conv2d", True, None, None)
+        args_params, kwargs_params, output_dtype = gen_api_params(api_info, "conv2d", True, None, None)
         max_diff = abs(args_params[0].max() - max_value)
         min_diff = abs(args_params[0].min() - min_value)
         self.assertEqual(len(args_params), 2)
@@ -54,6 +54,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertLessEqual(min_diff, 0.001)
         self.assertEqual(args_params[0].shape, torch.Size([2048, 2, 1, 256]))
         self.assertEqual(kwargs_params, {'dim': -1})
+        self.assertEqual(output_dtype, torch.float16)
 
     def test_gen_args(self):
         func_options = {}
@@ -371,6 +372,6 @@ class TestDataGenerateMethods(unittest.TestCase):
         convert_type = None
         api_info = {"input_args": None, "input_kwargs": {}}
         with patch('msprobe.pytorch.common.log.logger.warning') as mock_logger:
-            result_args, result_kwargs = gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
+            result_args, result_kwargs, _ = gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
             self.assertEqual(result_args, [])
             mock_logger.assert_called_once_with(f'Warning: No args in {api_info} ')

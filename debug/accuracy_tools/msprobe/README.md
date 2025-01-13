@@ -53,6 +53,10 @@ export MSPROBE_LOG_LEVEL={x}
 
 ## ⚙️ [安装](./docs/01.installation.md)
 
+## 🌟 新版本特性
+
+请参见[特性变更说明](./docs/01.installation.md#特性变更说明)。
+
 ## 🛠️ config.json [介绍](./docs/02.config_introduction.md) 和 [示例](./docs/03.config_examples.md)
 
 ## 🧰 主要功能
@@ -143,30 +147,6 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
 
 [MindSpore 场景的数码关联](./docs/24.code_mapping_Mindspore.md)
-
-## 🌟 新版本特性
-
-若查看历史版本特性，请参见[安装](./docs/01.installation.md)。
-
-【数据采集】
-- 支持 config.json 中的 step 传入范围；
-- 优化了指定 step 的机制，指定 step 结束后工具不再采集数据，但训练会继续运行。工具结束运行后，日志提示信息如下：
-    ```bash
-    ****************************************
-    *      msprobe ends successfully.      *
-    ****************************************
-    ```
-    注：在多卡场景，每张卡进程训练到指定 step 之后都会打印一次上述信息。
-
-【精度预检】
-- 在 PyTorch 场景，支持部分 NPU 融合算子预检。
-
-【精度比对】
-- 解决了使用 MindSpore 需要安装 PyTorch 的问题。
-
-【无标杆比对】
-- 补充在 PyTorch 场景的性能基线报告；
-- 支持 MindSpore 场景的 change_value 扰动模式。
 
 ## 📑 补充材料
 

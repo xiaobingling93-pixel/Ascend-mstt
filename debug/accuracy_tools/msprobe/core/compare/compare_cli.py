@@ -69,6 +69,7 @@ def compare_cli(args):
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         kwargs = {
             **common_kwargs,
+            "stack_mode": args.stack_mode,
             "is_print_compare_log": input_param.get("is_print_compare_log", True),
             "cell_mapping": args.cell_mapping,
             "api_mapping": args.api_mapping,

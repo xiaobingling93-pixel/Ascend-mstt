@@ -44,7 +44,7 @@ class TestDeviceDispatchFunc(unittest.TestCase):
                 patch("msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch.pd"), \
                 patch(
                     "msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch.online_api_precision_compare"):
-            mock_gen_cpu_params.return_value = (MagicMock(), MagicMock())
+            mock_gen_cpu_params.return_value = (MagicMock())
             mock_api_data = MagicMock()
             mock_api_data.name.split.return_value = ("tensor", "conv2d", 1)
             mock_com_config = MagicMock()

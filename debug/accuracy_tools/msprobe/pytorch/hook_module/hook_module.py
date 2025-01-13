@@ -41,7 +41,7 @@ class HOOKModule(nn.Module):
             if hasattr(self, "prefix_op_name_"):
                 self.prefix = self.prefix_op_name_
 
-            self.forward_data_collected= False
+            self.forward_data_collected = False
             forward_pre_hook, forward_hook, backward_hook, _ = build_hook(self.prefix)
             if torch_version_above_or_equal_2:
                 self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)

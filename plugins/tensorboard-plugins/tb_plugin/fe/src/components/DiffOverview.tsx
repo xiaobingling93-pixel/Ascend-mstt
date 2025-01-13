@@ -57,7 +57,7 @@ const getAngleByDataLength = (data: number): number => {
     return 0;
   } else {
     // 数量越大越趋近于旋转90度
-    return 90 * (1 - 10 / data);
+    return 90 * (1 - (10 / data));
   }
 };
 

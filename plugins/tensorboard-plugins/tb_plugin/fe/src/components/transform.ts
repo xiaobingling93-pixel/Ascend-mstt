@@ -43,7 +43,7 @@ export function transformPerformanceIntoTable(performances: api.Performance[]): 
 
 export function transformPerformanceIntoPie(performances: api.Performance[]): {
   columns: api.GraphColumn[];
-  rows: (string | number | boolean | api.ValueAndFormat)[][];
+  rows: Array<Array<string | number | boolean | api.ValueAndFormat>>;
 } {
   const columns: api.GraphColumn[] = [
     { type: 'string', name: 'Name' },

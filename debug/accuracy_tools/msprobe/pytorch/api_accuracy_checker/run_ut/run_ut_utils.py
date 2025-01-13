@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import os
+from collections import namedtuple
 import re
 import torch
 
@@ -23,8 +24,10 @@ try:
     import torch_npu
 except ImportError:
     current_device = "cuda"
+    from torch.cuda.amp import autocast
 else:
     current_device = "npu"
+    from torch_npu.npu.amp import autocast
 
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.file_utils import FileChecker
@@ -45,6 +48,11 @@ PRECISION_MAPPING = {
     torch.bfloat16: torch.float32,
     torch.float32: torch.float64
 }
+
+
+CpuParams = namedtuple("CpuArgs", ["cpu_args", "cpu_kwargs", "autocast_dtype", "is_autocast"])
+ExecParams = namedtuple("ExecParams", ["api_type", "api_name", "device", "args", "kwargs", 
+                                       "is_autocast", "autocast_dtype"])
 
 
 class BackwardMessage:
@@ -92,7 +100,15 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
-def exec_api(api_type, api_name, device, args, kwargs):
+def exec_api(exec_params):
+    api_type = exec_params.api_type
+    api_name = exec_params.api_name
+    device = exec_params.device
+    args = exec_params.args
+    kwargs = exec_params.kwargs
+    is_autocast = exec_params.is_autocast
+    autocast_dtype = exec_params.autocast_dtype
+
     if api_type == "Functional":
         torch_api = FunctionalOPTemplate(api_name, str, False)
     if api_type == "Tensor":
@@ -103,7 +119,11 @@ def exec_api(api_type, api_name, device, args, kwargs):
         torch_api = AtenOPTemplate(api_name, None, False)
     if api_type == "NPU":
         torch_api = NpuOPTemplate(api_name, None, False, device)
-    out = torch_api.forward(*args, **kwargs)
+    if is_autocast:
+        with autocast(dtype=autocast_dtype):
+            out = torch_api.forward(*args, **kwargs)
+    else:
+        out = torch_api.forward(*args, **kwargs)
     return out
 
 
@@ -197,19 +217,28 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
         return set()
 
     raise_dtype = None
+    autocast_dtype = None
+    is_autocast = False
     need_raise_dtypes = recursive_find_dtypes(input_args)
     need_raise_dtypes.update(recursive_find_dtypes(input_kwargs, check_kwargs=True))
     if len(need_raise_dtypes) == 1:
-        raise_dtype = PRECISION_MAPPING.get(need_raise_dtypes.pop(), torch.float32)
+        origin_dtype = need_raise_dtypes.pop()
+        raise_dtype = PRECISION_MAPPING.get(origin_dtype, torch.float32)
+        autocast_dtype = origin_dtype
+        
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
+        need_raise_dtypes.discard(torch.float32)
+        autocast_dtype = need_raise_dtypes.pop()
+        is_autocast = True
 
     raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
     cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for
                   key, value in input_kwargs.items()}
-    return cpu_args, cpu_kwargs
+    cpu_params = CpuParams(cpu_args, cpu_kwargs, autocast_dtype, is_autocast)
+    return cpu_params
 
 
 def record_skip_info(api_full_name, compare, compare_alg_results):
