@@ -389,8 +389,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
     get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
     get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
-    get_accuracy_core(n_num_input+n_num_output, n_num_params, b_num_input+b_num_output, b_num_params,
-                      CompareConst.OUTPUT_STRUCT)
+    get_accuracy_core(n_num_input + n_num_output, n_num_params, b_num_input + b_num_output, b_num_params,
+                      CompareConst.PARAMS_STRUCT)
 
 
 def append_stack_info(result_item, npu_stack_info, index):

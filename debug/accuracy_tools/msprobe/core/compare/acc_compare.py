@@ -212,6 +212,7 @@ class Comparator:
                 check_op_str_pattern_valid(op_name_bench)
                 if op_name_bench.split(Const.SEP)[-1] == Const.PARAMS_GRAD:    # TODO
                     self.bench_parameters_grad_dict[op_name_bench] = npu_json_data['data'][op_name_bench]
+                else:
                     bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
                     if bench_merge_list:
                         bench_ops_queue.append(bench_merge_list)
