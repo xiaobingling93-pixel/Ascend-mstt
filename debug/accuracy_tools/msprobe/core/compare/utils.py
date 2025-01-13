@@ -93,20 +93,19 @@ def rename_api(npu_name, process):
     return torch_func
 
 
-def read_op(op_data, op_name, dump_json_version='2024'):
+def read_op(op_data, op_name, dump_json_version):
     io_name_mapping_2024 = {
         Const.INPUT_ARGS: '.input',
         Const.INPUT_KWARGS: '.input',
         Const.INPUT: '.input',
         Const.OUTPUT: '.output'
-    }
+    }  # TODO 可能要删除
     io_name_mapping_2025 = {
         Const.INPUT_ARGS: '.input',
         Const.INPUT_KWARGS: '.input',
-        Const.PARAMS: '.parameters',
-        Const.PARAMS_GRAD: 'parameters_grad',
         Const.INPUT: '.input',
-        Const.OUTPUT: '.output'
+        Const.OUTPUT: '.output',
+        Const.PARAMS: '.parameters'
     }
 
     op_parsed_list = []
@@ -296,6 +295,16 @@ def result_item_init(n_info, b_info, dump_mode):
     return result_item
 
 
+def count_struct(op_dict):
+    op_name_list = op_dict.get(CompareConst.OP_NAME)
+    num = len(op_name_list)
+    num_input = len([name for name in op_name_list
+                     if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
+    num_output = len([name for name in op_name_list if Const.OUTPUT in name.split(Const.SEP)])
+    num_params = num - num_input - num_output
+    return num, num_input, num_output, num_params
+
+
 def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
@@ -375,31 +384,42 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
                 result.append(result_item)
 
-    n_num = len(n_dict['op_name'])
-    b_num = len(b_dict['op_name'])
-    n_num_input = len([name for name in n_dict['op_name']
-                       if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
-    b_num_input = len([name for name in b_dict['op_name']
-                       if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
-    n_num_output = n_num - n_num_input
-    b_num_output = b_num - b_num_input
-    get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
-    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
+    n_num, n_num_input, n_num_output, n_num_params = count_struct(n_dict)
+    b_num, b_num_input, b_num_output, b_num_params = count_struct(b_dict)
+
+    get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
+    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
+    get_accuracy_core(n_num_input+n_num_output, n_num_params, b_num_input+b_num_output, b_num_params,
+                      CompareConst.OUTPUT_STRUCT)
+
+
+def append_stack_info(result_item, npu_stack_info, index):
+    """添加堆栈信息到 result_item"""
+    if npu_stack_info and index == 0:
+        result_item.extend(npu_stack_info)
+    else:
+        result_item.append(CompareConst.NONE)
 
 
 def get_un_match_accuracy(result, n_dict, dump_mode):
-    index_out = 0
+
     npu_stack_info = n_dict.get("stack_info", None)
     bench_name, bench_type, bench_shape = CompareConst.N_A, CompareConst.N_A, CompareConst.N_A
-    err_msg = CompareConst.NO_BENCH
-    accuracy_check_res = CompareConst.N_A
+
+    index_in = 0
+    index_out = 0
+    index_params = 0
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
         if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
-            n_struct = safe_get_value(n_dict, index, "n_dict", key=CompareConst.INPUT_STRUCT)
+            n_struct = safe_get_value(n_dict, index_in, "n_dict", key=CompareConst.INPUT_STRUCT)
+            index_in += 1
         if Const.OUTPUT in name_ele_list:
             n_struct = safe_get_value(n_dict, index_out, "n_dict", key=CompareConst.OUTPUT_STRUCT)
             index_out += 1
+        if Const.PARAMS in name_ele_list:
+            n_struct = safe_get_value(n_dict, index_params, "n_dict", key=CompareConst.PARAMS_STRUCT)
+            index_params += 1
 
         try:
             result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
@@ -410,28 +430,26 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
                       f"output_struct of n_dict is {n_dict[CompareConst.OUTPUT_STRUCT]}"
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+
         if dump_mode == Const.MD5:
             result_item.extend([CompareConst.N_A] * 3)
-            if npu_stack_info and index == 0:
-                result_item.extend(npu_stack_info)
-            else:
-                result_item.append(CompareConst.NONE)
+            append_stack_info(result_item, npu_stack_info, index)
             result.append(result_item)
             continue
         if dump_mode == Const.SUMMARY:
             result_item.extend([CompareConst.N_A] * 8)
-        else:
+        if dump_mode == Const.ALL:
             result_item.extend([CompareConst.N_A] * 5)
+
         npu_summary_data = safe_get_value(n_dict, index, "n_dict", key=CompareConst.SUMMARY)
-        result_item.extend(npu_summary_data)
         bench_summary_data = [CompareConst.N_A] * 4
+        result_item.extend(npu_summary_data)
         result_item.extend(bench_summary_data)
+        err_msg = CompareConst.NO_BENCH
+        accuracy_check_res = CompareConst.N_A
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
-        if npu_stack_info and index == 0:
-            result_item.extend(npu_stack_info)
-        else:
-            result_item.append(CompareConst.NONE)
+        append_stack_info(result_item, npu_stack_info, index)
         if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
             result_item.extend(["-1"])
         result.append(result_item)
@@ -443,6 +461,7 @@ def merge_tensor(tensor_list, dump_mode, dump_json_version):
     op_dict[CompareConst.INPUT_STRUCT] = []
     op_dict[CompareConst.KWARGS_STRUCT] = []
     op_dict[CompareConst.OUTPUT_STRUCT] = []
+    op_dict[CompareConst.PARAMS_STRUCT] = []
     op_dict[Const.SUMMARY] = []
     op_dict["stack_info"] = []
 
@@ -457,19 +476,8 @@ def merge_tensor(tensor_list, dump_mode, dump_json_version):
 
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
-        name_to_struct_mapping_2024 = {
-            Const.INPUT: CompareConst.INPUT_STRUCT,
-            Const.KWARGS: CompareConst.KWARGS_STRUCT,
-            Const.OUTPUT: CompareConst.OUTPUT_STRUCT
-        }
-        name_to_struct_mapping_2025 = {
-            Const.INPUT: CompareConst.INPUT_STRUCT,
-            Const.KWARGS: CompareConst.KWARGS_STRUCT,
-            Const.PARAMS: CompareConst.PARAMS_STRUCT,
-            Const.PARAMS_GRAD: CompareConst.PARAMS_GRAD_STRUCT,
-            Const.OUTPUT: CompareConst.OUTPUT_STRUCT
-        }
-        for name_key, struct_key in name_to_struct_mapping_2024.items():
+
+        for name_key, struct_key in CompareConst.NAME_TO_STRUCT_MAPPING_2025.items():
             if name_key in name_ele_list:
                 if dump_mode == Const.MD5:
                     op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))

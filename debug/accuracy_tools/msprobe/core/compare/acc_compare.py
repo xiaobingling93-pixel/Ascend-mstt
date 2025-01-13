@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -46,10 +46,15 @@ class ModeConfig:
 
 class Comparator:
     def __init__(self, mode_config: ModeConfig):
+        self.dump_json_version = None
         self.stack_mode = mode_config.stack_mode
         self.auto_analyze = mode_config.auto_analyze
         self.fuzzy_match = mode_config.fuzzy_match
         self.dump_mode = mode_config.dump_mode
+
+        self.npu_parameters_grad_dict = {}
+        self.bench_parameters_grad_dict = {}
+        self.dump_json_version = '2025'
 
     @staticmethod
     def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
@@ -115,7 +120,7 @@ class Comparator:
     def gen_merge_list(self, json_data, op_name, stack_json_data):
         op_data = json_data['data'][op_name]
         check_dump_json_str(op_data, op_name)
-        op_parsed_list = read_op(op_data, op_name, dump_json_version)
+        op_parsed_list = read_op(op_data, op_name, self.dump_json_version)
 
         if self.stack_mode:
             stack_info = stack_json_data.get(op_name)
@@ -127,7 +132,7 @@ class Comparator:
                 'full_info': stack_info
             })
 
-        merge_list = merge_tensor(op_parsed_list, self.dump_mode)
+        merge_list = merge_tensor(op_parsed_list, self.dump_mode, self.dump_json_version)
         return merge_list
 
     def check_op(self, npu_dict, bench_dict):
@@ -143,13 +148,14 @@ class Comparator:
                 return graph_mapping.match(npu_op_name[0], bench_op_name[0])
         struct_match = check_struct_match(npu_dict, bench_dict)
         if not self.fuzzy_match:
-            return npu_op_name == bench_op_name and struct_match
+            name_match = npu_op_name == bench_op_name
+            return name_match and struct_match
         try:
-            is_match = fuzzy_check_op(npu_op_name, bench_op_name)
+            name_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
             logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
-            is_match = False
-        return is_match and struct_match
+            name_match = False
+        return name_match and struct_match
 
     def match_op(self, npu_queue, bench_queue):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
@@ -192,19 +198,23 @@ class Comparator:
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
                 check_op_str_pattern_valid(op_name_npu)
-                read_err_npu = True
-                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
-                if npu_merge_list:
-                    npu_ops_queue.append(npu_merge_list)
+                if op_name_npu.split(Const.SEP)[-1] == Const.PARAMS_GRAD:    # TODO
+                    self.npu_parameters_grad_dict[op_name_npu] = npu_json_data['data'][op_name_npu]
+                else:
+                    npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
+                    if npu_merge_list:
+                        npu_ops_queue.append(npu_merge_list)
             except StopIteration:
                 read_err_npu = False
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
                 check_op_str_pattern_valid(op_name_bench)
-                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
-                if bench_merge_list:
-                    bench_ops_queue.append(bench_merge_list)
+                if op_name_bench.split(Const.SEP)[-1] == Const.PARAMS_GRAD:    # TODO
+                    self.bench_parameters_grad_dict[op_name_bench] = npu_json_data['data'][op_name_bench]
+                    bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
+                    if bench_merge_list:
+                        bench_ops_queue.append(bench_merge_list)
             except StopIteration:
                 read_err_bench = False
 
@@ -222,8 +232,11 @@ class Comparator:
                 break
 
             n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue)
+
+            # 如果没有匹配到，数据放到队列中，跳过，直到后面匹配到，把匹配之前的api放到不匹配中
             if n_match_point == -1 and b_match_point == -1:
                 continue
+
             n_match_data = npu_ops_queue[n_match_point]
             b_match_data = bench_ops_queue[b_match_point]
             un_match_data = npu_ops_queue[0: n_match_point]

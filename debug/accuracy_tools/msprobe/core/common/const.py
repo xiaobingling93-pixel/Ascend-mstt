@@ -265,6 +265,7 @@ class CompareConst:
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
+    PARAMS_STRUCT = "params_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
@@ -347,6 +348,29 @@ class CompareConst:
     ALL_COMPARE_INDEX = [COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO]
     SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
                              MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
+
+    # dtype match
+    MS_TYPE = [
+        [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
+        [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
+    ]
+    TORCH_TYPE = [
+        [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
+        [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
+    ]
+
+    # name to struct mapping
+    NAME_TO_STRUCT_MAPPING_2024 = {
+        Const.INPUT: INPUT_STRUCT,
+        Const.KWARGS: KWARGS_STRUCT,
+        Const.OUTPUT: OUTPUT_STRUCT
+    }  # TODO 可能要删
+    NAME_TO_STRUCT_MAPPING_2025 = {
+        Const.INPUT: INPUT_STRUCT,
+        Const.KWARGS: KWARGS_STRUCT,
+        Const.PARAMS: PARAMS_STRUCT,
+        Const.OUTPUT: OUTPUT_STRUCT
+    }
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
