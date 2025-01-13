@@ -1023,3 +1023,7 @@ communication.comm_func:
   - broadcast
   - gather_into_tensor
   - scatter_tensor
+  - send
+  - recv
+  - isend
+  - irecv
