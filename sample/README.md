@@ -100,7 +100,7 @@ mssanitizer ./*.fatbin  # 默认进行memcheck检查
  ```
  LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++
  修改为：
- LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -L${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/ -lruntime_camodel -lascendcl -lstdc++  # 需要添加libruntime_camodel的依赖路径, SOC_VERSION 使用npu-smi info查询NPU Name
+ LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -L${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/ -lruntime_camodel -lascendcl -lstdc++  # 需要添加libruntime_camodel的依赖路径, SOC_VERSION 通过使用npu-smi info命令进行查询，获取Chip Name信息。实际配置值                                                                                                                                                     为AscendChip Name，例如Chip Name取值为xxxyy，实际配置值为Ascendxxxyy。当Ascendxxxyy为代码样例路径时，需要配置ascendxxxyy。
  ```
  + 调试信息增强：
  ```
