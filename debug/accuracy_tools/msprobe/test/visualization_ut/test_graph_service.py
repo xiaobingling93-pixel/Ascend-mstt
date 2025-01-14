@@ -20,6 +20,7 @@ class Args:
     framework: str = None
     overflow_check: bool = False
     fuzzy_match: bool = False
+    complete_stack: bool = False
 
 
 class TestGraphService(unittest.TestCase):
@@ -67,7 +68,7 @@ class TestGraphService(unittest.TestCase):
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph(self, mock_log_info):
-        result = _build_graph(os.path.join(self.input, 'step0', 'rank0'), overflow_check=True)
+        result = _build_graph(os.path.join(self.input, 'step0', 'rank0'), Args(overflow_check=True))
         self.assertEqual(mock_log_info.call_count, 1)
         self.assertIsNotNone(result)
 
@@ -113,12 +114,12 @@ class TestGraphService(unittest.TestCase):
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph_ranks(self, mock_log_info):
-        _build_graph_ranks(os.path.join(self.input, 'step0'), self.output)
+        _build_graph_ranks(os.path.join(self.input, 'step0'), Args(output_path=self.output))
         self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph_steps(self, mock_log_info):
-        _build_graph_steps(self.input, self.output)
+        _build_graph_steps(self.input, Args(output_path=self.output))
         self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
 
     @patch('msprobe.core.common.log.logger.info')

@@ -20,13 +20,14 @@ from msprobe.visualization.utils import save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import Const
+from msprobe.visualization.builder.msprobe_adapter import op_patterns
 
 
 class GraphBuilder:
     backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
 
     @staticmethod
-    def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
+    def build(construct_path, data_path, stack_path, model_name='DefaultModel', complete_stack=False):
         """
         GraphBuilder的对外提供的构图方法
         Args:
@@ -34,11 +35,14 @@ class GraphBuilder:
             data_path: dump.json路径
             stack_path: stack.json路径
             model_name: 模型名字，依赖外部输入
+            complete_stack: 完整的堆栈信息
         Returns: Graph，代表图的数据结构
         """
         construct_dict = load_json(construct_path)
         dump_dict = load_json(data_path)
         stack_dict = load_json(stack_path)
+        if not complete_stack:
+            GraphBuilder._simplify_stack(stack_dict)
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
         graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict)
         GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
@@ -66,6 +70,21 @@ class GraphBuilder:
             result[GraphConst.JSON_TASK_KEY] = config.task
         result[GraphConst.OVERFLOW_CHECK] = config.overflow_check
         save_json_file(filename, result)
+
+    @staticmethod
+    def _simplify_stack(stack_dict):
+        """
+        精简堆栈内容，模块级堆栈保留索引0，api级堆栈保留索引1
+        """
+        module_pattern = re.compile(op_patterns[0])
+        for dump_name, stack_list in stack_dict.items():
+            if not isinstance(stack_list, list) or len(stack_list) < 2:
+                continue
+            if module_pattern.match(dump_name):
+                stack_list = [stack_list[0]]
+            else:
+                stack_list = [stack_list[1]]
+            stack_dict[dump_name] = stack_list
 
     @staticmethod
     def _handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id):
