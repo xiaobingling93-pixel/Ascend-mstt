@@ -25,6 +25,8 @@ from msprobe.visualization.builder.msprobe_adapter import op_patterns
 
 class GraphBuilder:
     backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
+    # 匹配以大写字母开头，后接任意字母，并以Template(结尾
+    template_pattern = re.compile(r'\b[A-Z][a-zA-Z]*Template\(')
 
     @staticmethod
     def build(construct_path, data_path, stack_path, model_name='DefaultModel', complete_stack=False):
@@ -74,16 +76,34 @@ class GraphBuilder:
     @staticmethod
     def _simplify_stack(stack_dict):
         """
-        精简堆栈内容，模块级堆栈保留索引0，api级堆栈保留索引1
+        精简堆栈内容，模块级保留包含"模块名("的堆栈，api级保留"xxxTemplate("的下一行堆栈
+
+        例如模块 Module.layer3.0.bn2.BatchNorm2d.forward.0，模块名为bn2，匹配"bn2("，
+        保留堆栈"File /home/models/resnet.py, line 97, in forward, \n out = self.bn2(out)"
+
+        例如Api Tensor.__iadd__.4.forward，堆栈为：
+        "File /home/wrap_tensor.py, line 61,  return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /home/torchvision/models/resnet.py, line 102, in forward, \n out += identity",
+        匹配到第一行的"TensorOPTemplate("，保留下一行堆栈
         """
         module_pattern = re.compile(op_patterns[0])
         for dump_name, stack_list in stack_dict.items():
-            if not isinstance(stack_list, list) or len(stack_list) < 2:
+            if not isinstance(stack_list, list):
                 continue
             if module_pattern.match(dump_name):
-                stack_list = [stack_list[0]]
+                parts = dump_name.split(Const.SEP)
+                if len(parts) < abs(Const.LAYER_NAME_INDEX):
+                    continue
+                module_name = parts[Const.LAYER_NAME_INDEX]
+                for stack in stack_list:
+                    if re.search(re.escape(module_name) + r'\(', stack):
+                        stack_list = [stack]
+                        break
             else:
-                stack_list = [stack_list[1]]
+                for index, stack in enumerate(stack_list):
+                    if GraphBuilder.template_pattern.search(stack) and index < len(stack_list) - 1:
+                        stack_list = [stack_list[index + 1]]
+                        break
             stack_dict[dump_name] = stack_list
 
     @staticmethod
