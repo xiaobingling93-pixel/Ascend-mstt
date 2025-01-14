@@ -96,7 +96,7 @@ class GraphBuilder:
                     continue
                 module_name = parts[Const.LAYER_NAME_INDEX]
                 for stack in stack_list:
-                    if re.search(re.escape(module_name) + r'\(', stack):
+                    if re.search(module_name + r'\(', stack):
                         stack_list = [stack]
                         break
             else:
