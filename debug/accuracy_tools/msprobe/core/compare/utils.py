@@ -284,11 +284,11 @@ def result_item_init(n_info, b_info, dump_mode):
 
 
 def count_struct(op_dict):
-    num = len(op_dict.get(CompareConst.OP_NAME))
-    num_input = len(op_dict.get(CompareConst.INPUT_STRUCT))
-    num_output = len(op_dict.get(CompareConst.OUTPUT_STRUCT))
-    num_params = len(op_dict.get(CompareConst.PARAMS_STRUCT))
-    num_params_grad = len(op_dict.get(CompareConst.PARAMS_GRAD_STRUCT))
+    num = len(op_dict.get(CompareConst.OP_NAME, []))
+    num_input = len(op_dict.get(CompareConst.INPUT_STRUCT, []))
+    num_output = len(op_dict.get(CompareConst.OUTPUT_STRUCT, []))
+    num_params = len(op_dict.get(CompareConst.PARAMS_STRUCT, []))
+    num_params_grad = len(op_dict.get(CompareConst.PARAMS_GRAD_STRUCT, []))
     if num != num_input + num_output + num_params + num_params_grad:
         logger.error(f"Length of names and structs of op_dict not match. Please check! op_dict: {op_dict}")
         raise CompareException(CompareException.NAMES_STRUCTS_MATCH_ERROR)
