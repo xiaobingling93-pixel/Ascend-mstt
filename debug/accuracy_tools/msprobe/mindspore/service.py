@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ from collections import defaultdict
 import mindspore as ms
 from mindspore import nn
 from mindspore.common.api import _no_grad
+from mindspore.ops.primitive import Primitive
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
 except ImportError:
@@ -36,11 +37,15 @@ from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutpu
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.common.utils import get_rank_if_initialized, clean_input_kwargs
+from msprobe.mindspore.common.utils import (get_rank_if_initialized, clean_input_kwargs,
+                                            is_mindtorch, register_backward_hook_functions)
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+
+if is_mindtorch():
+    import torch
 
 
 class Service:
@@ -64,11 +69,14 @@ class Service:
 
     @staticmethod
     def check_model_valid(model):
-        if not model or isinstance(model, nn.Cell):
+        if not model:
             return model
-        raise MsprobeException(
-            MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是 mindspore.nn.Cell 类型。"
-        )
+        targer_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
+        if not isinstance(model, targer_module_type[0]):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"model 参数必须是 {targer_module_type[1]} 类型。"
+            )
+        return model
 
     @staticmethod
     def prepare_module_input_output(target_type, cell, input_data, output):
@@ -210,9 +218,14 @@ class Service:
 
     def register_primitive_hooks(self):
         primitive_set = set()
-        for _, cell in self.model.cells_and_names():
-            for pname, primitive in cell._primitives.items():
-                primitive_set.add((pname, primitive))
+        if is_mindtorch():
+            cells_and_names = self.model.named_modules()
+        else:
+            cells_and_names = self.model.cells_and_names()
+        for _, cell in cells_and_names:
+            for attribute, value in vars(cell).items():
+                if isinstance(value, Primitive):
+                    primitive_set.add((attribute, value))
 
         for pname, primitive in primitive_set:
             primitive_class_name = primitive.__class__.__name__
@@ -345,24 +358,28 @@ class Service:
             if not self.model:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                        f"The current level is {self.config.level}, the model cannot be None")
-            for name, cell in self.model.cells_and_names():
+
+            cell_names_and_type = (self.model.named_modules(), Const.MODULE) \
+                if is_mindtorch() else (self.model.cells_and_names(), Const.CELL)
+
+            for name, cell in cell_names_and_type[0]:
                 if cell == self.model:
                     continue
 
-                prefix = 'Cell' + Const.SEP + name + Const.SEP + \
-                         cell.__class__.__name__ + Const.SEP
+                prefix = (cell_names_and_type[1] + Const.SEP + name + Const.SEP +
+                          cell.__class__.__name__ + Const.SEP)
                 _, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
                 cell.register_forward_hook(forward_hook)
-                cell.register_backward_hook(backward_hook)
-
                 cell.register_forward_pre_hook(
                     self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
                 cell.register_forward_hook(
                     self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                cell.register_backward_pre_hook(
-                    self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                cell.register_backward_hook(
-                    self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+
+                register_backward_hook_functions["full"](cell, backward_hook)
+                register_backward_hook_functions["pre"](
+                    cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                register_backward_hook_functions["full"](
+                    cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()

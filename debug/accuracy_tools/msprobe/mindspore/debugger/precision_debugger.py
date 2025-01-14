@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ from mindspore._c_expression import MSContext
 from msprobe.core.common.const import Const, MsgConst
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
+from msprobe.mindspore.common.utils import set_register_backward_hook_functions
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
@@ -34,6 +35,7 @@ try:
     from msprobe.lib import _msprobe_c
 except ImportError:
     _msprobe_c = None
+
 
 class PrecisionDebugger:
     _instance = None
@@ -52,6 +54,9 @@ class PrecisionDebugger:
         if self.initialized:
             return
         self.initialized = True
+
+        set_register_backward_hook_functions()
+
         if not config_path:
             config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
         common_config, task_config = parse_json_config(config_path)

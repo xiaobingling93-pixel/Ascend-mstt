@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import unittest
-from collections import defaultdict
 from unittest.mock import patch, MagicMock
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
@@ -55,7 +54,8 @@ class TestPrecisionDebugger(unittest.TestCase):
         mock_parse_json_config = MagicMock()
         with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
-             patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler):
+             patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler), \
+             patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             mock_get_mode.return_value = MsConst.GRAPH_GE_MODE
             mock_parse_json_config.return_value = [common_config, task_config]
             debugger = PrecisionDebugger()
@@ -67,7 +67,8 @@ class TestPrecisionDebugger(unittest.TestCase):
             self.assertTrue(Handler.called)
 
             mock_get_mode.return_value = MsConst.PYNATIVE_MODE
-            with patch("msprobe.mindspore.debugger.precision_debugger.Service") as mock_Service:
+            with patch("msprobe.mindspore.debugger.precision_debugger.Service") as mock_Service, \
+                 patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
                 debugger = PrecisionDebugger()
                 debugger.start()
                 service = mock_Service.return_value
@@ -81,7 +82,8 @@ class TestPrecisionDebugger(unittest.TestCase):
 
         with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
-             patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler):
+             patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler), \
+             patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             common_config.task = Const.FREE_BENCHMARK
             mock_get_mode.return_value = MsConst.PYNATIVE_MODE
             mock_parse_json_config.return_value = [common_config, task_config]
@@ -120,7 +122,8 @@ class TestPrecisionDebugger(unittest.TestCase):
         mock_reset_cell.assert_called_once()
 
     def test_forward_backward_dump_end(self):
-        debugger = PrecisionDebugger()
+        with patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
+            debugger = PrecisionDebugger()
         debugger.task = "statistics"
         debugger.service = MagicMock()
         debugger.forward_backward_dump_end()

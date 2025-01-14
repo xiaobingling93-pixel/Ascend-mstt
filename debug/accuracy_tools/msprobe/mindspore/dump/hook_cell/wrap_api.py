@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -23,10 +23,16 @@ from mindspore.mint.nn import functional
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.mindspore.common.const import Const as MsConst
+from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+
+if is_mindtorch():
+    import torch
+    import torch_npu
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE)
+torch_yaml_path = os.path.join(cur_path, "../../../pytorch/hook_module", MsConst.SUPPORTED_API_LIST_FILE)
 
 
 class HOOKTensor(object):
@@ -53,6 +59,26 @@ class HOOKDistributedOP(object):
     pass
 
 
+class HOOKTorchOP(object):
+    pass
+
+
+class HOOKTorchTensor(object):
+    pass
+
+
+class HOOKTorchFunctionalOP(object):
+    pass
+
+
+class HOOKTorchDistributedOP(object):
+    pass
+
+
+class HOOKTorchNpuOP(object):
+    pass
+
+
 class ApiTemplate(HOOKCell):
     def __init__(self, api_name, api_dict, prefix, hook):
         self.api_name = api_name
@@ -61,6 +87,11 @@ class ApiTemplate(HOOKCell):
         super().__init__(hook)
 
     def construct(self, *args, **kwargs):
+        if self.api_name.startswith(MsConst.DROPOUT_API_NAME_PREFIX):
+            return args[0] if args else kwargs.get(Const.INPUT)
+        return self.api_func(*args, **kwargs)
+
+    def forward(self, *args, **kwargs):
         if self.api_name.startswith(MsConst.DROPOUT_API_NAME_PREFIX):
             return args[0] if args else kwargs.get(Const.INPUT)
         return self.api_func(*args, **kwargs)
@@ -75,6 +106,15 @@ class WrapApiName:
         self.mint_api_names = mint_api_names
         self.mint_nn_func_api_names = mint_nn_func_api_names
         self.distributed_api_names = distributed_api_names
+
+
+class WrapTorchApiName:
+    def __init__(self, torch_api_names, tensor_api_names, functional_api_names, distributed_api_names, npu_api_names):
+        self.torch_api_names = torch_api_names
+        self.tensor_api_names = tensor_api_names
+        self.functional_api_names = functional_api_names
+        self.distributed_api_names = distributed_api_names
+        self.npu_api_names = npu_api_names
 
 
 def get_wrap_api_list():
@@ -93,6 +133,21 @@ def get_wrap_api_list():
     return wrap_api_name
 
 
+def get_wrap_torch_api_list():
+    api_list = load_yaml(torch_yaml_path)
+    torch_api = api_list.get("torch")
+    tensor_api = api_list.get("tensor")
+    functional_api = api_list.get("functional")
+    distributed_api = api_list.get("distributed")
+    npu_api = api_list.get("torch_npu")
+    wrap_api_name = WrapTorchApiName(set(torch_api) & set(dir(torch)),
+                                     set(tensor_api) & set(dir(torch.Tensor)),
+                                     set(functional_api) & set(dir(torch.nn.functional)),
+                                     set(distributed_api) & set(dir(torch.distributed)),
+                                     set(npu_api) & set(dir(torch_npu)))
+    return wrap_api_name
+
+
 def wrap_api_func(api_name, api_dict, prefix, hook):
     def api_function(*args, **kwargs):
         return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)
@@ -106,6 +161,24 @@ def wrap_api_func_and_bind(api_list, api_dict, prefix, hook, hook_class):
 
 
 def setup_hooks(hook):
+    if is_mindtorch():
+        torch_wrap_api_name = get_wrap_torch_api_list()
+        wrap_api_func_and_bind(torch_wrap_api_name.torch_api_names,
+                               {f: getattr(torch, f) for f in dir(torch)},
+                               MsConst.TORCH_DATA_PREFIX, hook, HOOKTorchOP)
+        wrap_api_func_and_bind(torch_wrap_api_name.tensor_api_names,
+                               {f: getattr(torch.Tensor, f) for f in dir(torch.Tensor)},
+                               MsConst.TENSOR_DATA_PREFIX, hook, HOOKTorchTensor)
+        wrap_api_func_and_bind(torch_wrap_api_name.functional_api_names,
+                               {f: getattr(torch.nn.functional, f) for f in dir(torch.nn.functional)},
+                               MsConst.OPS_DATA_PREFIX, hook, HOOKTorchFunctionalOP)
+        wrap_api_func_and_bind(torch_wrap_api_name.distributed_api_names,
+                               {f: getattr(torch.distributed, f) for f in dir(torch.distributed)},
+                               MsConst.DISTRIBUTED_DATA_PREFIX, hook, HOOKTorchDistributedOP)
+        wrap_api_func_and_bind(torch_wrap_api_name.npu_api_names, {f: getattr(torch_npu, f) for f in dir(torch_npu)},
+                               MsConst.TORCH_NPU_DATA_PREFIX, hook, HOOKTorchNpuOP)
+        return
+
     wrap_api_name = get_wrap_api_list()
     wrap_api_func_and_bind(wrap_api_name.tensor_api_names, {f: getattr(Tensor, f) for f in dir(Tensor)},
                            MsConst.TENSOR_DATA_PREFIX, hook, HOOKTensor)

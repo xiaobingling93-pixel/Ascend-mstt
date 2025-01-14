@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +48,8 @@ class Const:
     MINT_DATA_PREFIX = "Mint."
     MINT_NN_FUNC_DATA_PREFIX = "MintFunctional."
     DISTRIBUTED_DATA_PREFIX = "Distributed."
+    TORCH_DATA_PREFIX = "Torch."
+    TORCH_NPU_DATA_PREFIX = "NPU."
 
     SUPPORTED_API_LIST_FILE = "support_wrap_ops.yaml"
     SUPPORTED_TENSOR_LIST_KEY = "tensor"
