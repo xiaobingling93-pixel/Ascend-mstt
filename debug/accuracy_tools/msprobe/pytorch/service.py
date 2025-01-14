@@ -54,6 +54,7 @@ class Service:
         self.dump_iter_dir = None
         self.should_stop_service = False
         self.attl = None
+        self.params_grad_info = {}
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -89,21 +90,34 @@ class Service:
 
             return hook_fn
 
-        def register_param_hook(module_name, module, params_dict):
+        def register_param_hook(ori_name, module, params_dict):
+            '''
+            注册参数hook
+            '''
             # data_mode为forward时，不注册参数hook
             if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
-                # 判断参数是否已经注册过hook
-                if params_dict and hasattr(module, 'has_param_hook') and not module.has_param_hook:
-                    ori_name = module_name.rsplit(Const.SEP, 2)[0]
-                    grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
-                    # 注册hook时，初始化grad_name的data_info
-                    data_info = {grad_name: {key: [None] for key in params_dict}}
-                    # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
-                    self.data_collector.handle_data(grad_name, data_info,
-                                                    flush=self.data_collector.data_processor.is_terminated)
-                    for param_name, param in params_dict.items():
+                for param_name, param in params_dict.items():
+                    if param.requires_grad:
                         param.register_hook(grad_hook(module, ori_name, param_name))
-                    module.has_param_hook = True
+
+        def init_params_grad_info(module, params_dict):
+            '''
+            初始化参数梯度信息, 在前向hook结束后, 将参数梯度信息写入cache_data中用于占位
+            '''
+            if not params_dict:
+                return
+            if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
+                grad_name = module.params_grad_name if hasattr(module, 'params_grad_name') else None
+                # 判断是否已经在cache_data中进行了占位, 若没有则先写入cache_data中
+                if not self.params_grad_info.get(grad_name):
+                    data_info = {grad_name: {key: [None] for key, value in params_dict.items() if value.requires_grad}}
+                    # 当模块中的参数有requires_grad属性为True时，才会进行梯度计算，此时才需要占位
+                    if data_info.get(grad_name):
+                        # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
+                        self.data_collector.handle_data(grad_name, data_info, 
+                                                        flush=self.data_collector.data_processor.is_terminated)
+                    # 记录当前模块的参数梯度信息已占位
+                    self.params_grad_info[grad_name] = True
 
         def forward_hook(api_or_module_name, module, args, kwargs, output):
             if not self.should_execute_hook(module_type, module, True):
@@ -132,16 +146,20 @@ class Service:
                 self.data_collector.update_api_or_module_name(api_or_module_name)
                 params_dict = {key.split(Const.SEP)[-1]: value for key, value in module.named_parameters(recurse=False)}
                 setattr(module_input_output, Const.PARAMS, params_dict)
-                # 设置has_param_hook属性，避免重复注册hook
-                if not hasattr(module, 'has_param_hook'):
-                    setattr(module, 'has_param_hook', False)
+                # 判断是否需要注册参数hook
+                if not hasattr(module, 'params_grad_name') and params_dict:
+                    ori_name = api_or_module_name.rsplit(Const.SEP, 2)[0]
+                    grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+                    # 首次执行前向hook时，添加params_grad_name属性，并注册参数hook
+                    setattr(module, 'params_grad_name', grad_name)
+                    register_param_hook(ori_name, module, params_dict)
                 self.data_collector.forward_data_collect(
                     api_or_module_name,
                     module,
                     pid,
                     module_input_output
                 )
-                register_param_hook(api_or_module_name, module, params_dict)
+                init_params_grad_info(module, params_dict)
             else:
                 self.data_collector.update_api_or_module_name(api_or_module_name)
                 self.data_collector.forward_output_data_collect(
@@ -348,6 +366,7 @@ class Service:
         ModuleProcesser.reset_module_stats()
         HOOKModule.reset_module_stats()
         self.data_collector.data_writer.reset_cache()
+        self.params_grad_info.clear()
 
         if self.config.level == Const.LEVEL_L2:
             self.data_collector.data_processor.reset_status()
@@ -356,10 +375,3 @@ class Service:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
-        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
-            for single_model in self.model:
-                for _, module in single_model.named_modules():
-                    if module == single_model:
-                        continue
-                    if hasattr(module, 'has_param_hook'):
-                        del module.has_param_hook
