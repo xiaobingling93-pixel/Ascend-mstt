@@ -37,42 +37,41 @@ dtype_mapping = {
 }
 
 
-def check_struct_match(npu_dict, bench_dict):
-    npu_struct_in = npu_dict.get(CompareConst.INPUT_STRUCT)
-    npu_struct_out = npu_dict.get(CompareConst.OUTPUT_STRUCT)
-    npu_struct_param = bench_dict.get(CompareConst.PARAMS_STRUCT)
-    bench_struct_in = bench_dict.get(CompareConst.INPUT_STRUCT)
-    bench_struct_out = bench_dict.get(CompareConst.OUTPUT_STRUCT)
-    bench_struct_param = bench_dict.get(CompareConst.PARAMS_STRUCT)
+def compare_op_dict_struct(npu_dict, bench_dict):
+    return all(npu_dict.get(key) == bench_dict.get(key) for key in CompareConst.STRUCT_COMPARE_KEY)
 
-    is_match = (npu_struct_in == bench_struct_in and npu_struct_out == bench_struct_out
-                and npu_struct_param == bench_struct_param)
+
+def check_struct_match(npu_dict, bench_dict):
+    is_match = compare_op_dict_struct(npu_dict, bench_dict)
     if not is_match:
-        # in some situations, len of struct_param is 0, so do not check param's length
-        if len(npu_struct_in) == 0 or len(bench_struct_in) == 0 or len(npu_struct_in) != len(bench_struct_in):
-            return False
+        struct_match_list = []
         try:
-            struct_in_is_match = check_type_shape_match(npu_struct_in, bench_struct_in)
-            struct_out_is_match = check_type_shape_match(npu_struct_out, bench_struct_out)
-            struct_param_is_match = check_type_shape_match(npu_struct_param, bench_struct_param)
+            for i, key in enumerate(CompareConst.STRUCT_COMPARE_KEY):
+                if i <= 1:
+                    struct_match_list.append(check_type_shape_match(npu_dict.get(key), bench_dict.get(key)))
+                else:
+                    struct_match_list.append(check_type_shape_match(npu_dict.get(key), bench_dict.get(key), param=True))
         except CompareException as error:
             err_msg = f'index out of bounds error occurs in npu or bench api, please check!\n' \
                       f'npu_dict: {npu_dict}' \
                       f'bench_dict: {bench_dict}'
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
-        is_match = struct_in_is_match and struct_out_is_match
+        is_match = all(struct_match_list)
     return is_match
 
 
-def check_type_shape_match(npu_struct, bench_struct, param_exist=False):
+def check_type_shape_match(npu_struct, bench_struct, param=False):
     """
     further check dtypes with a dtype mapping list when dtypes are not entirely consistent.
     """
-    if param_exist:
-        if not npu_struct and bench_struct:
+    if len(npu_struct) != len(bench_struct):
+        return False
+    if param:
+        if not npu_struct and not bench_struct:
             return True
-        if len(npu_struct) != len(bench_struct):
+    else:
+        if not npu_struct or not bench_struct:
             return False
 
     struct_match = False
@@ -108,6 +107,8 @@ def check_graph_mode(a_op_name, b_op_name):
 
 
 def fuzzy_check_op(npu_name_list, bench_name_list):
+    # 先检查api里的item长度是否相等，如果不是parameters_grad, 必然有input或者output，长度不可能为0
+    # 如果是parameters_grad, "parameters_grad"字段的字典不会是空字典，因此len>=1
     if len(npu_name_list) == 0 or len(bench_name_list) == 0 or len(npu_name_list) != len(bench_name_list):
         return False
     is_match = True

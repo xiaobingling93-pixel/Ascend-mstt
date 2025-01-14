@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -28,8 +28,8 @@ from tqdm import tqdm
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import CompareException, get_header_index, safe_get_value
-from msprobe.core.compare.utils import table_value_is_valid
+from msprobe.core.common.utils import get_header_index, safe_get_value
+from msprobe.core.compare.utils import table_value_is_valid, get_name_and_state
 
 
 class HighlightCheck(abc.ABC):
@@ -48,6 +48,7 @@ def add_highlight_row_info(color_list, num, highlight_err_msg):
 
 class CheckOrderMagnitude(HighlightCheck):
     """检查Max diff的数量级差异"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
@@ -64,6 +65,7 @@ class CheckOrderMagnitude(HighlightCheck):
 
 class CheckOneThousandErrorRatio(HighlightCheck):
     """检查千分误差比率"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         one_thousand_index = get_header_index(CompareConst.ONE_THOUSANDTH_ERR_RATIO, dump_mode)
@@ -82,6 +84,7 @@ class CheckOneThousandErrorRatio(HighlightCheck):
 
 class CheckCosineSimilarity(HighlightCheck):
     """检查余弦相似度"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         cosine_index = get_header_index(CompareConst.COSINE, dump_mode)
@@ -94,12 +97,15 @@ class CheckCosineSimilarity(HighlightCheck):
 
 class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
         bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
-        input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
-        output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
+        input_max_relative_diff = np.abs(
+            np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
+        output_max_relative_diff = np.abs(
+            np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
                                                                                    (float, int)):
             return
@@ -113,6 +119,7 @@ class CheckMaxRelativeDiff(HighlightCheck):
 
 class CheckOverflow(HighlightCheck):
     """检查是否存在溢出"""
+
     def apply(self, info, color_columns, dump_mode):
         line, num = info
         npu_max_index = get_header_index(CompareConst.NPU_MAX, dump_mode)
@@ -207,43 +214,20 @@ def find_error_rows(result, api_batch, highlight_dict, dump_mode):
     highlight_dict.get('yellow_lines', []).extend(yellow_lines)
 
 
-def get_name_and_state(name):
-    """
-    Get api/module name and state
-    example:
-    name = 'conv2d.forward.1.input.0'
-    return: ('conv2d.forward.1.', 'input')
-
-    name = 'Functional.pad.0.backward.output.0'
-    return: ('Functional.pad.0.backward.', 'output')
-
-    state type: input, output, kwargs, parameters
-    """
-    split = re.split(r'\.(forward|backward)\.', name)
-    api = f'{split[0]}.{split[1]}.'
-    state_str = split[2]
-    match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
-    if not match:
-        raise CompareException(f'Invalid name string: {name}')
-    if match.group(1):
-        api = f'{api}{match.group(1)}'
-    state = match.group(2)
-    return api, state
-
-
 class ApiBatch:
     def __init__(self, api_name: str, start: int):
         self.api_name = api_name
         self.start = start
         self.input_len = 1  # input的数量
         self.output_end_index = start + 1  # output的结束index
-        self.params_end_index = start + 1  # params的结束index
-        # 内部state的标志("input", "output", "parameters"), 用于控制计算input_len, output_end_index, params_end_index
-        self._state = Const.INPUT
+        self.params_end_index = start + 1  # params, params_grad的结束index
+        # 内部state的标志("input", "output", "parameters", "parameters_grad"),
+        # 用于控制计算input_len, output_end_index, params_end_index
+        self._state = Const.INPUT  # api_batch初始化为input
 
     def set_state(self, state: str):
         """设置当前状态"""
-        if state in {Const.INPUT, Const.OUTPUT, Const.PARAMS}:
+        if state in {Const.INPUT, Const.OUTPUT, Const.PARAMS, Const.PARAMS_GRAD}:
             self._state = state
         else:
             raise ValueError(f"Invalid state: {state}")
@@ -269,7 +253,8 @@ def api_batches_update(api_batches, api_name, state, index):
         api_batches.append(ApiBatch(api_name, index))
     else:
         api_batch = api_batches[-1]
-        if api_batch.api_name == api_name:
+        if api_batch.api_name == api_name or (
+                not re.search(r'forward|backward', api_name) and api_name in api_batch.api_name):
             api_batch.increment(state)
         else:
             api_batches.append(ApiBatch(api_name, index))
@@ -285,7 +270,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
         api_batches_update(api_batches, api_name, state, i)
     with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
         for api_batch in api_batches:
-            find_error_rows(result[api_batch.start: api_batch.output_end_index], api_batch, highlight_dict, dump_mode)
+            find_error_rows(result[api_batch.start: api_batch.params_end_index], api_batch, highlight_dict, dump_mode)
             progress_bar.update(1)
 
 
@@ -329,7 +314,7 @@ def handle_multi_process_malicious_value_check(func, result_df):
     for column in result_df_columns:
         value_check(column)
     for df_chunk in chunks:
-        pool.apply_async(func, args=(df_chunk, result_df_columns, ), error_callback=err_call)
+        pool.apply_async(func, args=(df_chunk, result_df_columns,), error_callback=err_call)
 
     pool.close()
     pool.join()
@@ -346,7 +331,7 @@ def compare_result_df_convert(value):
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     """Write and highlight results in Excel"""
 
-    update_highlight_err_msg(result_df, highlight_dict)     # add highlight err_msg
+    update_highlight_err_msg(result_df, highlight_dict)  # add highlight err_msg
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -360,7 +345,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 
     for row in dataframe_to_rows(result_df_convert, index=False, header=True):
         ws.append(row)
-    
+
     # 对可疑数据标色
     logger.info('Coloring Excel in progress.')
     col_len = len(result_df.columns)
@@ -372,7 +357,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     )
     for i in highlight_dict.get("red_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i + 2, column=j).fill = red_fill    # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
+            ws.cell(row=i + 2, column=j).fill = red_fill  # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
             ws.cell(row=i + 2, column=j).fill = yellow_fill

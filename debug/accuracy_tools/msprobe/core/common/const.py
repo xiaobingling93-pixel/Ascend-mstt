@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -266,6 +266,7 @@ class CompareConst:
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
     PARAMS_STRUCT = "params_struct"
+    PARAMS_GRAD_STRUCT = "params_grad_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
@@ -359,18 +360,30 @@ class CompareConst:
         [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
     ]
 
-    # name to struct mapping
-    NAME_TO_STRUCT_MAPPING_2024 = {
-        Const.INPUT: INPUT_STRUCT,
-        Const.KWARGS: KWARGS_STRUCT,
-        Const.OUTPUT: OUTPUT_STRUCT
-    }  # TODO 可能要删
-    NAME_TO_STRUCT_MAPPING_2025 = {
-        Const.INPUT: INPUT_STRUCT,
-        Const.KWARGS: KWARGS_STRUCT,
-        Const.PARAMS: PARAMS_STRUCT,
-        Const.OUTPUT: OUTPUT_STRUCT
+    # read_op
+    IO_NAME_MAPPING = {
+        Const.INPUT_ARGS: '.input',
+        Const.INPUT_KWARGS: '.input',
+        Const.INPUT: '.input',
+        Const.OUTPUT: '.output',
+        Const.PARAMS: '.parameters'
     }
+
+    # state to struct mapping
+    STATE_TO_STRUCT_MAPPING = {
+        Const.INPUT: INPUT_STRUCT,
+        Const.KWARGS: INPUT_STRUCT,
+        Const.OUTPUT: OUTPUT_STRUCT,
+        Const.PARAMS: PARAMS_STRUCT,
+        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
+    }
+
+    STRUCT_COMPARE_KEY = [
+        INPUT_STRUCT,
+        OUTPUT_STRUCT,
+        PARAMS_STRUCT,
+        PARAMS_GRAD_STRUCT
+    ]
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -453,6 +466,8 @@ class CompareConst:
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
+    PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
+    PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'

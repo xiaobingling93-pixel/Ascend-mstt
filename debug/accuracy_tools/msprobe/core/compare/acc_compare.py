@@ -33,7 +33,7 @@ from msprobe.core.compare.highlight import find_compare_result_error_rows, highl
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    print_compare_ends_info, read_op
+    print_compare_ends_info, read_op, get_name_and_state
 
 
 class ModeConfig:
@@ -46,15 +46,10 @@ class ModeConfig:
 
 class Comparator:
     def __init__(self, mode_config: ModeConfig):
-        self.dump_json_version = None
         self.stack_mode = mode_config.stack_mode
         self.auto_analyze = mode_config.auto_analyze
         self.fuzzy_match = mode_config.fuzzy_match
         self.dump_mode = mode_config.dump_mode
-
-        self.npu_parameters_grad_dict = {}
-        self.bench_parameters_grad_dict = {}
-        self.dump_json_version = '2025'
 
     @staticmethod
     def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
@@ -120,7 +115,7 @@ class Comparator:
     def gen_merge_list(self, json_data, op_name, stack_json_data):
         op_data = json_data['data'][op_name]
         check_dump_json_str(op_data, op_name)
-        op_parsed_list = read_op(op_data, op_name, self.dump_json_version)
+        op_parsed_list = read_op(op_data, op_name)
 
         if self.stack_mode:
             stack_info = stack_json_data.get(op_name)
@@ -132,7 +127,7 @@ class Comparator:
                 'full_info': stack_info
             })
 
-        merge_list = merge_tensor(op_parsed_list, self.dump_mode, self.dump_json_version)
+        merge_list = merge_tensor(op_parsed_list, self.dump_mode)
         return merge_list
 
     def check_op(self, npu_dict, bench_dict):
@@ -198,24 +193,18 @@ class Comparator:
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
                 check_op_str_pattern_valid(op_name_npu)
-                if op_name_npu.split(Const.SEP)[-1] == Const.PARAMS_GRAD:    # TODO
-                    self.npu_parameters_grad_dict[op_name_npu] = npu_json_data['data'][op_name_npu]
-                else:
-                    npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
-                    if npu_merge_list:
-                        npu_ops_queue.append(npu_merge_list)
+                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
+                if npu_merge_list:
+                    npu_ops_queue.append(npu_merge_list)
             except StopIteration:
                 read_err_npu = False
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
                 check_op_str_pattern_valid(op_name_bench)
-                if op_name_bench.split(Const.SEP)[-1] == Const.PARAMS_GRAD:    # TODO
-                    self.bench_parameters_grad_dict[op_name_bench] = npu_json_data['data'][op_name_bench]
-                else:
-                    bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
-                    if bench_merge_list:
-                        bench_ops_queue.append(bench_merge_list)
+                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
+                if bench_merge_list:
+                    bench_ops_queue.append(bench_merge_list)
             except StopIteration:
                 read_err_bench = False
 
@@ -259,32 +248,28 @@ class Comparator:
         for op_name in json_data.get('data', {}):
             merge_list = self.gen_merge_list(json_data, op_name, stack_json_data)
             if merge_list:
-                input_index, output_index = 0, 0
-                for index, input_or_output in enumerate(merge_list[CompareConst.OP_NAME]):
-                    input_or_output_list = input_or_output.split(Const.SEP)
-                    data_name = merge_list.get('data_name')
-                    data_name = data_name[index] if data_name else None
-                    if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
-                        ops_all[input_or_output] = {
-                            CompareConst.STRUCT: safe_get_value(merge_list, input_index, "merge_list",
-                                                                key=CompareConst.INPUT_STRUCT),
-                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                                 key=CompareConst.SUMMARY),
-                            'data_name': data_name,
-                            'stack_info': merge_list.get('stack_info')
-                        }
-                        input_index += 1
+                struct_to_index_mapping = {
+                    CompareConst.INPUT_STRUCT: 0,
+                    CompareConst.OUTPUT_STRUCT: 0,
+                    CompareConst.PARAMS_STRUCT: 0,
+                    CompareConst.PARAMS_GRAD_STRUCT: 0
+                }
+                data_name_list = merge_list.get('data_name')
+                for index, op_full_name in enumerate(merge_list[CompareConst.OP_NAME]):
+                    data_name = data_name_list[index] if data_name_list else None
 
-                    elif Const.OUTPUT in input_or_output_list:
-                        ops_all[input_or_output] = {
-                            CompareConst.STRUCT: safe_get_value(merge_list, output_index, "merge_list",
-                                                                key=CompareConst.OUTPUT_STRUCT),
-                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                                 key=CompareConst.SUMMARY),
-                            'data_name': data_name,
-                            'stack_info': merge_list.get('stack_info')
-                        }
-                        output_index += 1
+                    _, state = get_name_and_state(op_full_name)
+                    for state_key, struct_key in CompareConst.STATE_TO_STRUCT_MAPPING.items():
+                        if state == state_key:
+                            ops_all[op_full_name] = {
+                                CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
+                                                                    "merge_list", key=struct_key),
+                                CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                                     key=CompareConst.SUMMARY),
+                                'data_name': data_name,
+                                'stack_info': merge_list.get('stack_info')
+                            }
+                            struct_to_index_mapping[struct_key] += 1
         return ops_all
 
     def get_accuracy(self, npu_ops_all, bench_ops_all):

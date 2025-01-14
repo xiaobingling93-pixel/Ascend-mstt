@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -72,6 +72,7 @@ class MsprobeBaseException(Exception):
     INVALID_KEY_ERROR = 31
     MISSING_HEADER_ERROR = 32
     MERGE_COMPARE_RESULT_ERROR = 33
+    NAMES_STRUCTS_MATCH_ERROR = 34
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
