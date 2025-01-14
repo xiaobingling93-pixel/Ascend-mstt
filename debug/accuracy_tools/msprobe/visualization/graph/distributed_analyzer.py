@@ -146,7 +146,7 @@ class DistributedAnalyzer:
                 if distributed_type == DistributedType.P2P:
                     config_info = self.config.get(api_name)
                     target_rank = self._get_target_rank(node, rank, config_info[1])
-                    if target_rank is not None:
+                    if target_rank is None:
                         continue
                     # p2p通信节点，api名称+传输目标rank作为group_id
                     group_id = api_name + Const.RANK + str(target_rank)
