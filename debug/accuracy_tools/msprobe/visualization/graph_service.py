@@ -50,8 +50,8 @@ def _compare_graph(input_param, args):
                                FileCheckConst.READ_ABLE).common_check()
     stack_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.STACK_FILE), FileCheckConst.FILE,
                                FileCheckConst.READ_ABLE).common_check()
-    graph_n = GraphBuilder.build(construct_path_n, data_path_n, stack_path_n)
-    graph_b = GraphBuilder.build(construct_path_b, data_path_b, stack_path_b)
+    graph_n = GraphBuilder.build(construct_path_n, data_path_n, stack_path_n, complete_stack=args.complete_stack)
+    graph_b = GraphBuilder.build(construct_path_b, data_path_b, stack_path_b, complete_stack=args.complete_stack)
     logger.info('Model graphs built successfully, start Comparing graphs...')
     # 基于graph、stack和data进行比较
     dump_path_param = {
@@ -90,7 +90,7 @@ def _export_compare_graph_result(args, graphs, graph_comparator, micro_steps,
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def _build_graph(dump_path, overflow_check=False):
+def _build_graph(dump_path, args):
     logger.info('Start building model graph...')
     construct_path = FileChecker(os.path.join(dump_path, GraphConst.CONSTRUCT_FILE), FileCheckConst.FILE,
                                  FileCheckConst.READ_ABLE).common_check()
@@ -98,10 +98,10 @@ def _build_graph(dump_path, overflow_check=False):
                             FileCheckConst.READ_ABLE).common_check()
     stack_path = FileChecker(os.path.join(dump_path, GraphConst.STACK_FILE), FileCheckConst.FILE,
                              FileCheckConst.READ_ABLE).common_check()
-    graph = GraphBuilder.build(construct_path, data_path, stack_path)
+    graph = GraphBuilder.build(construct_path, data_path, stack_path, complete_stack=args.complete_stack)
     micro_steps = graph.paging_by_micro_step()
     # 开启溢出检测
-    if overflow_check:
+    if args.overflow_check:
         graph.overflow_check()
     return BuildGraphResult(graph, micro_steps)
 
@@ -168,14 +168,14 @@ def _compare_graph_steps(input_param, args):
         _compare_graph_ranks(input_param, args, step=folder_step)
 
 
-def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=None):
+def _build_graph_ranks(dump_ranks_path, args, step=None):
     ranks = sorted(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     build_graph_results = []
     for rank in ranks:
         logger.info(f'Start processing data for {rank}...')
         dump_path = os.path.join(dump_ranks_path, rank)
         output_file_name = f'build_{step}_{rank}_{current_time}.vis' if step else f'build_{rank}_{current_time}.vis'
-        result = _build_graph(dump_path, overflow_check)
+        result = _build_graph(dump_path, args)
         result.output_file_name = output_file_name
         try:
             result.rank = int(rank.replace(Const.RANK, ""))
@@ -184,18 +184,19 @@ def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=Non
             raise CompareException(CompareException.INVALID_PATH_ERROR) from e
         build_graph_results.append(result)
 
-    DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results}, overflow_check).distributed_match()
+    DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results}, args.overflow_check).distributed_match()
 
     for result in build_graph_results:
-        _export_build_graph_result(out_path, result.graph, result.micro_steps, overflow_check, result.output_file_name)
+        _export_build_graph_result(args.output_path, result.graph, result.micro_steps, args.overflow_check,
+                                   result.output_file_name)
 
 
-def _build_graph_steps(dump_steps_path, out_path, overflow_check=False):
+def _build_graph_steps(dump_steps_path, args):
     steps = sorted(check_and_return_dir_contents(dump_steps_path, Const.STEP))
     for step in steps:
         logger.info(f'Start processing data for {step}...')
         dump_ranks_path = os.path.join(dump_steps_path, step)
-        _build_graph_ranks(dump_ranks_path, out_path, overflow_check, step)
+        _build_graph_ranks(dump_ranks_path, args, step)
 
 
 def _graph_service_parser(parser):
@@ -204,11 +205,13 @@ def _graph_service_parser(parser):
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
-                        help="<optional> The layer mapping file path.", required=False)
+                        help="<Optional> The layer mapping file path.", required=False)
     parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
                         help="<Optional> whether open overflow_check for graph.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
-                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+                        help="<Optional> Whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-cs", "--complete_stack", dest="complete_stack", action="store_true",
+                        help="<Optional> Whether to use complete stack information.", required=False)
 
 
 def _graph_service_command(args):
@@ -222,11 +225,11 @@ def _graph_service_command(args):
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
         content = check_directory_content(npu_path)
         if content == GraphConst.RANKS:
-            _build_graph_ranks(npu_path, args.output_path, args.overflow_check)
+            _build_graph_ranks(npu_path, args)
         elif content == GraphConst.STEPS:
-            _build_graph_steps(npu_path, args.output_path, args.overflow_check)
+            _build_graph_steps(npu_path, args)
         else:
-            result = _build_graph(npu_path, args.overflow_check)
+            result = _build_graph(npu_path, args)
             _export_build_graph_result(args.output_path, result.graph, result.micro_steps, args.overflow_check)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         content_n = check_directory_content(npu_path)

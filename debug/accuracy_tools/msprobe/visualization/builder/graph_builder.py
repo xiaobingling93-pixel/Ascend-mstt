@@ -20,13 +20,16 @@ from msprobe.visualization.utils import save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import Const
+from msprobe.visualization.builder.msprobe_adapter import op_patterns
 
 
 class GraphBuilder:
     backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
+    # 匹配以大写字母开头，后接任意字母，并以Template(结尾
+    template_pattern = re.compile(r'\b[A-Z][a-zA-Z]*Template\(')
 
     @staticmethod
-    def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
+    def build(construct_path, data_path, stack_path, model_name='DefaultModel', complete_stack=False):
         """
         GraphBuilder的对外提供的构图方法
         Args:
@@ -34,11 +37,14 @@ class GraphBuilder:
             data_path: dump.json路径
             stack_path: stack.json路径
             model_name: 模型名字，依赖外部输入
+            complete_stack: 完整的堆栈信息
         Returns: Graph，代表图的数据结构
         """
         construct_dict = load_json(construct_path)
         dump_dict = load_json(data_path)
         stack_dict = load_json(stack_path)
+        if not complete_stack:
+            GraphBuilder._simplify_stack(stack_dict)
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
         graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict)
         GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
@@ -66,6 +72,39 @@ class GraphBuilder:
             result[GraphConst.JSON_TASK_KEY] = config.task
         result[GraphConst.OVERFLOW_CHECK] = config.overflow_check
         save_json_file(filename, result)
+
+    @staticmethod
+    def _simplify_stack(stack_dict):
+        """
+        精简堆栈内容，模块级保留包含"模块名("的堆栈，api级保留"xxxTemplate("的下一行堆栈
+
+        例如模块 Module.layer3.0.bn2.BatchNorm2d.forward.0，模块名为bn2，匹配"bn2("，
+        保留堆栈"File /home/models/resnet.py, line 97, in forward, \n out = self.bn2(out)"
+
+        例如Api Tensor.__iadd__.4.forward，堆栈为：
+        "File /home/wrap_tensor.py, line 61,  return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /home/torchvision/models/resnet.py, line 102, in forward, \n out += identity",
+        匹配到第一行的"TensorOPTemplate("，保留下一行堆栈
+        """
+        module_pattern = re.compile(op_patterns[0])
+        for dump_name, stack_list in stack_dict.items():
+            if not isinstance(stack_list, list):
+                continue
+            if module_pattern.match(dump_name):
+                parts = dump_name.split(Const.SEP)
+                if len(parts) < abs(Const.LAYER_NAME_INDEX):
+                    continue
+                module_name = parts[Const.LAYER_NAME_INDEX]
+                for stack in stack_list:
+                    if re.search(module_name + r'\(', stack):
+                        stack_list = [stack]
+                        break
+            else:
+                for index, stack in enumerate(stack_list):
+                    if GraphBuilder.template_pattern.search(stack) and index < len(stack_list) - 1:
+                        stack_list = [stack_list[index + 1]]
+                        break
+            stack_dict[dump_name] = stack_list
 
     @staticmethod
     def _handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id):
