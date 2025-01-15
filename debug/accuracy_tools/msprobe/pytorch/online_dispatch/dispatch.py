@@ -44,7 +44,7 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 
 
 class PtdbgDispatch(TorchDispatchMode):
-    def __init__(self, dump_mode=Const.OFF, api_list=[], debug=False, dump_path=None, tag=None, process_num=0):
+    def __init__(self, dump_mode=Const.OFF, api_list=None, debug=False, dump_path=None, tag=None, process_num=0):
         super(PtdbgDispatch, self).__init__()
         logger.info(COMPARE_LOGO)
         if not is_npu:
@@ -56,7 +56,7 @@ class PtdbgDispatch(TorchDispatchMode):
 
         self.device_id = torch_npu._C._npu_getDevice()
         self.dump_mode = dump_mode
-        self.dump_api_list = api_list
+        self.dump_api_list = api_list or []
         self.debug_flag = debug
         self.api_index = 0
         self.single_api_index_dict = {}
