@@ -164,6 +164,12 @@ def get_metrics(ops, tag2tensor, eps, out_dict=None):
     for tag, tensor in tag2tensor.items():
         if tag not in out_dict:
             out_dict[tag] = {}
+        if not torch.is_tensor(tensor):
+            # Non-tensor in/output filled with nan.
+            device = tensor
+            metric_value = torch.tensor(torch.nan).to(device)
+            out_dict[tag].update({metric_name: metric_value for metric_name in ops})
+            continue
         for metric_name in ops:
             fun_metric = config_metric_registry.get(metric_name)
             out_dict[tag][metric_name] = fun_metric.get_metric(tensor, eps)

@@ -75,11 +75,11 @@ class TestModuleHook(unittest.TestCase):
         actv_0 = pd.read_csv(actv_0_csv)
         expect_columns = ['vpp_stage', 'module_name', 'step', 'input.norm', 'input.nans', 'output.norm', 'output.nans']
         self.assertListEqual(list(actv_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([2, 7]))
+        self.assertEqual(actv_0.shape, tuple([3, 7]))
         actv_grad_0 = pd.read_csv(actv_grad_0_csv)
         expect_columns = ['vpp_stage', 'module_name', 'step', 'input_grad.norm', 'input_grad.nans', 'output_grad.norm', 'output_grad.nans']
         self.assertListEqual(list(actv_grad_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([2, 7]))
+        self.assertEqual(actv_0.shape, tuple([3, 7]))
 
     def test_wg_distribution(self):
         self.get_dist_mock(False)
@@ -269,25 +269,63 @@ class TestParamIsDataParallelDuplicate(unittest.TestCase):
 
 class TestModuleHookContext(unittest.TestCase):
     def setUp(self):
-        self.module_hook_context = ModuleHookContext("test_module")
-        self.target_config1 = {'test_module': {'input': {'config': 'input_config'}}}
-        self.target_config2 = {'test_module': {'input_grad': 'input_grad_config'}}
+        self.module_name = "test_module"
+        self.context = ModuleHookContext(self.module_name)
+        self.context.struct = {
+            MonitorConst.ACTV_IN: {
+                "config": "tuple[1]",
+                "0": "size=(2, 784), dtype=torch.float32",
+            },
+            MonitorConst.ACTV_OUT: {
+                "config": "tensor",
+                "tensor": "size=(2, 10), dtype=torch.float32"
+            },
+            MonitorConst.ACTVGRAD_IN: {
+                "config": "tuple[1]",
+                "0": "size=(2, 784), dtype=torch.float32"
+            },
+            MonitorConst.ACTVGRAD_OUT: {
+                "config": "tuple[1]",
+                "0": "size=(2, 10), dtype=torch.float32"
+            }
+        }
+        self.target_config = {
+            self.module_name: {
+                MonitorConst.ACTV_IN: "tuple[1]:0",
+                MonitorConst.ACTV_OUT: "tensor",
+                MonitorConst.ACTVGRAD_IN: "tuple[1]:0"
+            }
+        }
 
-    def test_set_format_by_arg_with_dict_value(self):
-        self.module_hook_context.set_format_by_arg('input', self.target_config1)
-        self.assertEqual(self.module_hook_context.format_by_arg['input'], 'input_config')
+    def test_set_format_by_arg_invalid_key(self):
+        with self.assertRaises(ValueError) as err:
+            self.context.set_format_by_arg('invalid_key', {})
+        self.assertIn(str(err.exception),
+                      "key(invalid_key) error, valid_key: ['input', 'output', 'input_grad', 'output_grad']")
 
-    def test_set_format_by_arg_with_non_dict_value(self):
-        self.module_hook_context.set_format_by_arg('input_grad', self.target_config2)
-        self.assertEqual(self.module_hook_context.format_by_arg['input_grad'], 'input_grad_config')
+    def test_set_format_by_arg_module_name_in_target_config(self):
+        self.context.set_format_by_arg(MonitorConst.ACTV_IN, self.target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_IN], "tuple[1]:0")
+        self.context.set_format_by_arg(MonitorConst.ACTV_OUT, self.target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_OUT], "tensor")
+        self.context.set_format_by_arg(MonitorConst.ACTVGRAD_IN, self.target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTVGRAD_IN], "tuple[1]:0")
+        self.context.set_format_by_arg(MonitorConst.ACTVGRAD_OUT, self.target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTVGRAD_OUT], "tuple[1]")
 
-    def test_set_format_by_arg_with_key_not_in_target_config(self):
-        self.module_hook_context.set_format_by_arg('output', self.target_config1)
-        self.assertNotIn('output', self.module_hook_context.format_by_arg)
+    def test_set_format_by_arg_module_name_not_in_target_config(self):
+        target_config = {}
+        self.context.set_format_by_arg(MonitorConst.ACTV_IN, target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_IN], "tuple[1]")
+        self.context.set_format_by_arg(MonitorConst.ACTV_OUT, target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_OUT], "tensor")
 
-    def test_set_format_by_arg_with_ignore_in(self):
-        self.module_hook_context.set_format_by_arg('input', self.target_config2)
-        self.assertTrue(self.module_hook_context.ignore_in)
+    @patch('msprobe.pytorch.monitor.module_hook.logger')
+    def test_set_format_by_arg_target_module_config_error(self, mock_logger):
+        target_config = {self.module_name: {MonitorConst.ACTV_IN: 123}}
+        self.context.set_format_by_arg(MonitorConst.ACTV_IN, target_config)
+        self.assertNotIn(MonitorConst.ACTV_IN, self.context.format_by_arg)
+        mock_logger.warning_on_rank_0.assert_called_once()
 
 
 class TestContext(unittest.TestCase):
