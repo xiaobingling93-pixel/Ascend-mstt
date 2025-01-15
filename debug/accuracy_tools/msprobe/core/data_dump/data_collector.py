@@ -39,6 +39,7 @@ class DataCollector:
         self.module_count = {}
         self.scope = ScopeFactory(self.config).build_scope()
         self.backward_module_names = {}
+        self.optimizer_status = ""
         atexit.register(self.write_json)
 
     @property
@@ -144,7 +145,10 @@ class DataCollector:
 
     def update_construct(self, name):
         if self.config.level not in DataCollector.level_without_construct:
-            self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+            if self.optimizer_status in [Const.OPTIMIZER, Const.CLIP_GRAD]:
+                self.data_writer.update_construct({name: self.optimizer_status})
+            else:
+                self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, flush=False):

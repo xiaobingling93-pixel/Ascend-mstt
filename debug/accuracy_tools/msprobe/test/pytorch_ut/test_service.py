@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
+import torch
 
 from msprobe.core.common.utils import Const
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig

@@ -219,6 +219,10 @@ class Const:
     SCOPE_SEPARATOR = "/"
     REPLACEMENT_CHARACTER = "_"
 
+    OPTIMIZER = "optimizer"
+    CLIP_GRAD = "clip_grad"
+    END_PREFIX = "end_"
+
 
 class CompareConst:
     """
