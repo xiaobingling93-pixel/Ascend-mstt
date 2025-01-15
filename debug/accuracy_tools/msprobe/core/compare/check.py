@@ -48,9 +48,10 @@ def check_struct_match(npu_dict, bench_dict):
         try:
             for i, key in enumerate(CompareConst.STRUCT_COMPARE_KEY):
                 if i <= 1:
-                    struct_match_list.append(check_type_shape_match(npu_dict.get(key), bench_dict.get(key)))
+                    struct_match_list.append(check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, [])))
                 else:
-                    struct_match_list.append(check_type_shape_match(npu_dict.get(key), bench_dict.get(key), param=True))
+                    struct_match_list.append(
+                        check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, []), param=True))
         except CompareException as error:
             err_msg = f'index out of bounds error occurs in npu or bench api, please check!\n' \
                       f'npu_dict: {npu_dict}' \
