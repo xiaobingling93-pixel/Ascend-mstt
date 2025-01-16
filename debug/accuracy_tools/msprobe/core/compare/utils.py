@@ -480,9 +480,6 @@ def merge_tensor(tensor_list, dump_mode):
 
         if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
-            data_name = safe_get_value(op_dict, -1, "op_dict", key="data_name").rsplit(Const.SEP, 1)[0]
-            if data_name != "-1":
-                op_dict["op_name"][-1] = data_name
 
     if not op_dict[CompareConst.KWARGS_STRUCT]:
         del op_dict[CompareConst.KWARGS_STRUCT]
