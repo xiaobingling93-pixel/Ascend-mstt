@@ -151,8 +151,9 @@ def is_leaf_data(op_data):
 def gen_op_item(op_data, op_name):
     op_item = {}
     op_item.update(op_data)
-    op_item['full_op_name'] = op_name
-    op_item['data_name'] = op_data.get('data_name', '-1')
+    data_name = op_data.get('data_name', '-1')
+    op_item['data_name'] = data_name
+    op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
 
     params = ['Max', 'Min', 'Mean', 'Norm']
     for i in params:
