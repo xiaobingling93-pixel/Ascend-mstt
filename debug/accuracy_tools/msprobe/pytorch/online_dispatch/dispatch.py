@@ -184,8 +184,9 @@ class PtdbgDispatch(TorchDispatchMode):
         with TimeStatistics("CPU RUN", run_param):
             try:
                 cpu_out = func(*cpu_args, **cpu_kwargs)
-            except RuntimeError:
+            except RuntimeError as e:
                 self.api_index -= 1
+                logger.warning(f"RuntimeError: {e}")
                 logger.warning(f"This aten_api {aten_api} does not support running on cpu, so skip it.")
                 return npu_out
 
