@@ -183,7 +183,7 @@ class MegatronFP32OptimizerMon(OptimizerMon):
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
-class MegatronChainedDistributedOptimizer(OptimizerMon):
+class MegatronChainedDistributedOptimizerMon(OptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = self.wrapped_optimizer
         
@@ -205,6 +205,7 @@ class MegatronChainedDistributedOptimizer(OptimizerMon):
             for opt in mix_prec_opt.chained_optimizers:
                 torch_opt.state.update(opt.optimizer.state)
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
+
 
 class MegatronChainedMixPrecisionOptimizerMon(OptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
@@ -318,7 +319,7 @@ class OptimizerMonFactory:
     _optimizer_mon_map = {
         "Megatron_Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
         "Megatron_DistributedOptimizer": MegatronDistributedOptimizerMon,
-        "Megatron_ChainedDistributedOptimizer": MegatronChainedDistributedOptimizer,
+        "Megatron_ChainedDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
         "Megatron_ChainedFloat16OptimizerWithFloat16Params": MegatronChainedMixPrecisionOptimizerMon,
         "Megatron_FP32Optimizer": MegatronFP32OptimizerMon,
         "DeepSpeedZeroOptimizer_Stage0": DeepSpeedZeroOptimizerStage0Mon,

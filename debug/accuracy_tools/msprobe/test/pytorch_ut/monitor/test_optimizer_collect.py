@@ -6,6 +6,7 @@ import torch
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMon, \
     OptimizerMonFactory, DummyOptimizerMon, \
     MixPrecisionOptimizerMon, MegatronDistributedOptimizerMon, MegatronFP32OptimizerMon, \
+    MegatronChainedDistributedOptimizerMon, MegatronChainedMixPrecisionOptimizerMon, \
     DeepSpeedZeroOptimizerStage0Mon, DeepSpeedZeroOptimizerStage1or2Mon, DeepSpeedZeroOptimizerStage3Mon
 
 from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
@@ -103,6 +104,57 @@ class TestMixPrecisionOptimizerMon(unittest.TestCase):
         res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
         self.mock_fetch_mv_in_adam.assert_called_once_with(self.monitor, self.torch_opt, self.params2name)
         self.assertIsInstance(res, MVResult)
+
+class TestChainedMixPrecisionOptimizerMon(unittest.TestCase):
+
+    def test_fetch_mv_with_fp16_to_fp32_param_and_mix_prec_opt(self):
+        # init monitor, torch_opt ...
+        self.monitor = MagicMock()
+        self.torch_opt = MagicMock()
+        self.params2name = MagicMock()
+        self.mix_prec_opt = MagicMock()
+        self.mix_prec_opt.float16_groups = [MagicMock()]
+        self.mix_prec_opt.fp32_from_float16_groups = [MagicMock()]
+        self.optimizer = MegatronChainedMixPrecisionOptimizerMon()
+        self.optimizer.optimizer = [MagicMock(), MagicMock()]
+        self.optimizer.wrapped_optimizer = self.mix_prec_opt
+        self.optimizer.fp16_to_fp32_param = {}
+
+        # Mock _fetch_mv_in_adam method and set a fixed return value
+        mv_result = MVResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={})
+        self.mock_fetch_mv_in_adam = MagicMock(return_value=mv_result)
+        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+
+        res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
+        self.mock_fetch_mv_in_adam.assert_called_once_with(self.monitor, self.torch_opt, self.params2name)
+        self.assertIsInstance(res, MVResult)
+
+
+class TestMegatronChainedDistributedOptimizerMon(unittest.TestCase):
+    def setUp(self):
+        self.monitor = MagicMock()
+        self.torch_opt = MagicMock()
+        self.params2name = MagicMock()
+        self.mock_wrapped_optimizer = MagicMock()
+        mv_result = MVResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={})
+        self.mock_fetch_mv_in_adam = MagicMock(return_value=mv_result)
+        self.optimizer = MegatronChainedDistributedOptimizerMon()
+
+    def test_fetch_mv_with_valid_optimizer(self):
+        self.mock_wrapped_optimizer.model_float16_groups = [MagicMock()]
+        self.mock_wrapped_optimizer.shard_fp32_from_float16_groups = [MagicMock()]
+        self.optimizer.wrapped_optimizer = self.mock_wrapped_optimizer
+        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+
+        res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
+        self.assertIsInstance(res, MVResult)
+
+    def test_fetch_mv_with_invalid_optimizer(self):
+        self.optimizer.wrapped_optimizer = Mock()
+        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+
+        with self.assertRaises(Exception):
+            self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
 
 
 class TestMegatronDistributedOptimizerMon(unittest.TestCase):
@@ -254,6 +306,10 @@ class TestOptimizerMonFactory(unittest.TestCase):
                               MixPrecisionOptimizerMon)
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon("Megatron_DistributedOptimizer"),
                               MegatronDistributedOptimizerMon)
+        self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon("Megatron_ChainedDistributedOptimizer"),
+                              MegatronChainedDistributedOptimizerMon)
+        self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon("Megatron_ChainedFloat16OptimizerWithFloat16Params"),
+                              MegatronChainedMixPrecisionOptimizerMon)
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon("Megatron_FP32Optimizer"),
                               MegatronFP32OptimizerMon)
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon("DeepSpeedZeroOptimizer_Stage0"),
