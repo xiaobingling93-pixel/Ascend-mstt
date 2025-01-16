@@ -4,12 +4,14 @@ import json
 import os
 import shutil
 import unittest
+from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
-    get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, op_item_parse, read_op, rename_api, \
-    resolve_api_special_parameters, result_item_init, stack_column_process, table_value_is_valid, get_name_and_state
+    count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
+    op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
+    table_value_is_valid, get_name_and_state
 
 # test_read_op_1
 op_data = {
@@ -397,6 +399,33 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'Nan', 0, 0, 0, 'Nan', 0, 0, 0])
         self.assertEqual(accuracy_check, '')
         self.assertEqual(err_msg, '')
+
+    def test_count_struct_normal(self):
+        op_dict = {
+            CompareConst.OP_NAME: ['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7', 'op8'],
+            CompareConst.INPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.OUTPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_GRAD_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+        }
+
+        result = count_struct(op_dict)
+
+        self.assertEqual(result, (8, 2, 2, 2, 2))
+
+    @patch('msprobe.core.compare.utils.logger')
+    def test_mismatch_case(self, mock_logger):
+        op_dict = {
+            CompareConst.OP_NAME: ['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7'],
+            CompareConst.INPUT_STRUCT: [("torch.float32", [1])],
+            CompareConst.OUTPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_GRAD_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+        }
+
+        with self.assertRaises(CompareException) as context:
+            count_struct(op_dict)
+        self.assertEqual(context.exception.code, CompareException.NAMES_STRUCTS_MATCH_ERROR)
 
     def test_get_accuracy(self):
         result = []
