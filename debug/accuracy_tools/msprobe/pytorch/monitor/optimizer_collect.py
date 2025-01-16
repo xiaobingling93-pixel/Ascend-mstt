@@ -150,30 +150,36 @@ class MixPrecisionOptimizerMon(OptimizerMon):
     混合精度优化器监控类。在混合精度训练中监控和管理优化器。
     混合精度训练通过适当降低某些计算的精度来加速训练过程并减少内存消耗。
     """
+    def map_fp16_tp_fp32_param(self, mix_prec_opt):
+        for fp16_group, fp32_group in zip(mix_prec_opt.float16_groups, mix_prec_opt.fp32_from_float16_groups):
+                for fp16_param, fp32_param in zip(fp16_group, fp32_group):
+                    self.fp16_to_fp32_param[fp16_param] = fp32_param
 
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = self.wrapped_optimizer
 
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            for fp16_group, fp32_group in zip(mix_prec_opt.float16_groups, mix_prec_opt.fp32_from_float16_groups):
-                for fp16_param, fp32_param in zip(fp16_group, fp32_group):
-                    self.fp16_to_fp32_param[fp16_param] = fp32_param
+            self.map_fp16_tp_fp32_param()
+            
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
 class MegatronDistributedOptimizerMon(OptimizerMon):
-    def fetch_mv(self, monitor, torch_opt, params2name):
-        mix_prec_opt = self.wrapped_optimizer
+    def map_fp16_tp_fp32_param(self, mix_prec_opt):
         if not (hasattr(mix_prec_opt, "model_float16_groups") and
                 hasattr(mix_prec_opt, "shard_fp32_from_float16_groups")):
             raise Exception(
                 "megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, "
                 "if not, please check megatron-lm version")
+        for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups,
+                                                mix_prec_opt.shard_fp32_from_float16_groups):
+            for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
+                self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
+
+    def fetch_mv(self, monitor, torch_opt, params2name):
+        mix_prec_opt = self.wrapped_optimizer
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups,
-                                                    mix_prec_opt.shard_fp32_from_float16_groups):
-                for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
-                    self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
+            self.map_fp16_tp_fp32_param(mix_prec_opt)
 
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
@@ -183,22 +189,13 @@ class MegatronFP32OptimizerMon(OptimizerMon):
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
-class MegatronChainedDistributedOptimizerMon(OptimizerMon):
+class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = self.wrapped_optimizer
         
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
             for opt in mix_prec_opt.chained_optimizers:
-                if not (hasattr(opt, "model_float16_groups") and
-                        hasattr(opt, "shard_fp32_from_float16_groups")):
-                    raise Exception(
-                        "megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, "
-                        "if not, please check megatron-lm version")
-                
-                for fp16_group, shard_fp32_group in zip(opt.model_float16_groups,
-                                                        opt.shard_fp32_from_float16_groups):
-                    for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
-                        self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
+                self.map_fp16_tp_fp32_param(opt)
 
         if not isinstance(torch_opt, torch.optim.Optimizer):
             torch_opt.state = {}
@@ -207,15 +204,13 @@ class MegatronChainedDistributedOptimizerMon(OptimizerMon):
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
-class MegatronChainedMixPrecisionOptimizerMon(OptimizerMon):
+class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = self.wrapped_optimizer
 
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
             for opt in mix_prec_opt.chained_optimizers:
-                for fp16_group, fp32_group in zip(opt.float16_groups, opt.fp32_from_float16_groups):
-                    for fp16_param, fp32_param in zip(fp16_group, fp32_group):
-                        self.fp16_to_fp32_param[fp16_param] = fp32_param
+                self.map_fp16_tp_fp32_param(opt)
 
         if not isinstance(torch_opt, torch.optim.Optimizer):
             torch_opt.state = {}
