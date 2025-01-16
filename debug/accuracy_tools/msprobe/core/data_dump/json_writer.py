@@ -15,10 +15,12 @@
 
 import csv
 import os
+import numpy as np
 
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import change_mode, FileOpen, save_json
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
 from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
 
 
 class DataWriter:
@@ -115,3 +117,29 @@ class DataWriter:
             self.write_stack_info_json(self.stack_file_path)
         if self.cache_construct:
             self.write_construct_info_json(self.construct_file_path)
+
+    def fill_stack_tensor_data(self):
+        self.process_stat_data_recursive(self.cache_data)
+
+    def process_stat_data_recursive(self, data, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"The maximum depth of recursive process stat data, {Const.MAX_DEPTH} is reached.")
+            raise MsprobeException(MsprobeException.RECURSION_LIMIT_ERROR)
+        if isinstance(data, dict):
+            if "tensor_stat" in data.keys():
+                tensor_stat = data["tensor_stat"]
+                if len(tensor_stat) != Const.TENSOR_STAT_LEN or len(tensor_stat[0]) != len(tensor_stat[1]):
+                    logger.warning("Some bad data in async dump")
+                else:
+                    tensor_stat_index, tensor_stat_data = tensor_stat[0], tensor_stat[1]
+                    if hasattr(tensor_stat_data, "device") and tensor_stat_data.device != Const.CPU_LOWERCASE:
+                        tensor_stat_data = tensor_stat_data.cpu()
+                    for index, stat in zip(tensor_stat_index, tensor_stat_data):
+                        data.update({index, stat.item()})
+                del data["tensor_stat"]
+            else:
+                for key in data.keys():
+                    self.process_stat_data_recursive(data[key], depth + 1)
+        elif isinstance(data, (list, tuple)):
+            for i in data:
+                self.process_stat_data_recursive(i, depth + 1)

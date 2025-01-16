@@ -50,7 +50,7 @@ class PrecisionDebugger:
         dump_path=None,
         level=None,
         model=None,
-        step=None,
+        step=None
     ):
         if not hasattr(self, "initialized"):
             config_params = ConfigParameters(config_path,

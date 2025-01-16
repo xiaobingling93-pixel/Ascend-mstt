@@ -39,7 +39,7 @@ class DebuggerConfig:
         self.check_mode = task_config.check_mode
         self.framework = Const.MS_FRAMEWORK
         self.summary_mode = task_config.summary_mode
-        self.enable_async_dump = common_config.enable_async_dump
+        self.async_dump = common_config.async_dump if common_config.async_dump else False
         self.check()
         create_directory(self.dump_path)
 
@@ -70,6 +70,6 @@ class DebuggerConfig:
             self.file_format = "npy"
         if not self.check_mode:
             self.check_mode = "all"
-        if self.enable_async_dump and not self.list:
-            raise Exception("tensor list must be set when enable_async_dump is True.")
+        if not isinstance(self.async_dump, bool):
+            raise Exception("The parameters async_dump should be bool.")
         return True

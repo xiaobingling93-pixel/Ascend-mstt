@@ -253,16 +253,20 @@ class Service:
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, False, self.config.online_run_ut_recompute)
             return
+        if self.config.async_dump:
+            self.data_collector.fill_stack_tensor_data()
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
 
     def step(self):
         if self.should_stop_service:
             return
+        if self.config.async_dump:
+            self.data_collector.fill_stack_tensor_data()
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
-        if self.config.enable_async_dump:
-            self.data_collector.data_processor.dump_async_data()
         self.reset_status()
 
     def need_stop_service(self):

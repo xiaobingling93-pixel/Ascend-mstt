@@ -43,7 +43,8 @@ class TestPrecisionDebugger(unittest.TestCase):
             "dump_path": "/absolute_path",
             "rank": [],
             "step": [],
-            "level": "L1"
+            "level": "L1",
+            "async_dump": False
         }
 
         common_config = CommonConfig(json_config)
