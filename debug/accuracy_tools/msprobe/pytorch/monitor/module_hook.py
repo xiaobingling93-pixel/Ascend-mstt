@@ -41,13 +41,6 @@ from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
 
-device = "cpu"
-try:
-    import torch_npu
-    device = "npu"
-except ImportError:
-    if torch.cuda.is_available():
-        device = "cuda"
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
@@ -333,14 +326,9 @@ class TrainerMon:
         self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
 
     def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        metrics = {}
         key = get_summary_writer_tag_name(module_name, tag, self.rank)
         self._register_param_call_id("_hook_module", key)
-        if torch.is_tensor(tensor):
-            metrics[key] = tensor
-        else:
-            metrics[key] = device
-        return metrics
+        return {key: tensor}
 
     def common_info(self):
         if not self.xy_distribution:

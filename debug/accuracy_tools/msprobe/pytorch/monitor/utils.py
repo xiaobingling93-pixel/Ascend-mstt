@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import inspect
-import os
 from collections import namedtuple
 from datetime import timezone, timedelta
 from functools import wraps
 from datetime import datetime
 import os
 import re
-
 
 import torch
 
@@ -29,6 +27,16 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
+
+device = "cpu"
+try:
+    import torch_npu
+    device = "npu"
+except ImportError:
+    if torch.cuda.is_available():
+        device = "cuda"
+
+NAN_TENSOR_ON_DEVICE = torch.tensor(torch.nan, device=device)
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
