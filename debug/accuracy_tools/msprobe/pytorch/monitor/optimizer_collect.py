@@ -183,6 +183,46 @@ class MegatronFP32OptimizerMon(OptimizerMon):
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
+class MegatronChainedDistributedOptimizer(OptimizerMon):
+    def fetch_mv(self, monitor, torch_opt, params2name):
+        mix_prec_opt = self.wrapped_optimizer
+        
+        if not self.fp16_to_fp32_param and mix_prec_opt is not None:
+            for opt in mix_prec_opt.chained_optimizers:
+                if not (hasattr(opt, "model_float16_groups") and
+                        hasattr(opt, "shard_fp32_from_float16_groups")):
+                    raise Exception(
+                        "megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, "
+                        "if not, please check megatron-lm version")
+                
+                for fp16_group, shard_fp32_group in zip(opt.model_float16_groups,
+                                                        opt.shard_fp32_from_float16_groups):
+                    for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
+                        self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
+
+        if not isinstance(torch_opt, torch.optim.Optimizer):
+            torch_opt.state = {}
+            for opt in mix_prec_opt.chained_optimizers:
+                torch_opt.state.update(opt.optimizer.state)
+        return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
+
+class MegatronChainedMixPrecisionOptimizerMon(OptimizerMon):
+    def fetch_mv(self, monitor, torch_opt, params2name):
+        mix_prec_opt = self.wrapped_optimizer
+
+        if not self.fp16_to_fp32_param and mix_prec_opt is not None:
+            for opt in mix_prec_opt.chained_optimizers:
+                for fp16_group, fp32_group in zip(opt.float16_groups, opt.fp32_from_float16_groups):
+                    for fp16_param, fp32_param in zip(fp16_group, fp32_group):
+                        self.fp16_to_fp32_param[fp16_param] = fp32_param
+
+        if not isinstance(torch_opt, torch.optim.Optimizer):
+            torch_opt.state = {}
+            for opt in mix_prec_opt.chained_optimizers:
+                torch_opt.state.update(opt.optimizer.state)
+        return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
+    
+
 class DeepSpeedZeroOptimizerStage0Mon(OptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
@@ -278,6 +318,8 @@ class OptimizerMonFactory:
     _optimizer_mon_map = {
         "Megatron_Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
         "Megatron_DistributedOptimizer": MegatronDistributedOptimizerMon,
+        "Megatron_ChainedDistributedOptimizer": MegatronChainedDistributedOptimizer,
+        "Megatron_ChainedFloat16OptimizerWithFloat16Params": MegatronChainedMixPrecisionOptimizerMon,
         "Megatron_FP32Optimizer": MegatronFP32OptimizerMon,
         "DeepSpeedZeroOptimizer_Stage0": DeepSpeedZeroOptimizerStage0Mon,
         "DeepSpeedZeroOptimizer_Stage1_or_2": DeepSpeedZeroOptimizerStage1or2Mon,
