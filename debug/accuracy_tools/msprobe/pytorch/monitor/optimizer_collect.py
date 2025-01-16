@@ -159,7 +159,7 @@ class MixPrecisionOptimizerMon(OptimizerMon):
         mix_prec_opt = self.wrapped_optimizer
 
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            self.map_fp16_tp_fp32_param()
+            self.map_fp16_tp_fp32_param(mix_prec_opt)
             
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
