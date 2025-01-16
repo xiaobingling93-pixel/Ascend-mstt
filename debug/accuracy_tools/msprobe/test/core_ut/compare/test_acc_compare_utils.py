@@ -416,7 +416,7 @@ class TestUtilsMethods(unittest.TestCase):
     @patch('msprobe.core.compare.utils.logger')
     def test_mismatch_case(self, mock_logger):
         op_dict = {
-            CompareConst.OP_NAME: ['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7'],
+            CompareConst.OP_NAME: ['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7', 'op8'],
             CompareConst.INPUT_STRUCT: [("torch.float32", [1])],
             CompareConst.OUTPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
             CompareConst.PARAMS_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
