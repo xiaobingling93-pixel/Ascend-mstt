@@ -432,6 +432,42 @@ class TestUtilsMethods(unittest.TestCase):
         get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
 
+    def test_append_stack_info_stack_exist_index_0(self):
+        result_item = ['item1']
+        npu_stack_info = ['stack_info1']
+        index = 0
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', 'stack_info1'])
+
+    def test_append_stack_info_stack_exist_index_not_0(self):
+        result_item = ['item1']
+        npu_stack_info = ['stack_info1']
+        index = 1
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', CompareConst.NONE])
+
+    def test_append_stack_info_stack_empty_index_0(self):
+        result_item = ['item1']
+        npu_stack_info = []
+        index = 0
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', CompareConst.NONE])
+
+    def test_append_stack_info_stack_empty_index_not_0(self):
+        result_item = ['item1']
+        npu_stack_info = []
+        index = 1
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', CompareConst.NONE])
+
     def test_get_un_match_accuracy_md5(self):
         result = []
         get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
