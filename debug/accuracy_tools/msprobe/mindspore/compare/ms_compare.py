@@ -188,13 +188,16 @@ class MSComparator(Comparator):
         return mapping_dict
 
     def process_cell_mapping(self, npu_op_name):
-        if not npu_op_name or not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
+        if not npu_op_name:
+            return CompareConst.N_A
+        param_grad_flag = Const.PARAMS_GRAD in npu_op_name.split(Const.SEP)
+        if not param_grad_flag or not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
             return CompareConst.N_A
         npu_op_name = npu_op_name.replace("Cell", "Module", 1)
         if self.cell_mapping_dict:
             # get cell name & class name from op_name
             # Cell.fc1.Dense.forward.0.input.0
-            cell_name = re.split(r'\.(?:for|back)ward\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
+            cell_name = re.split(r'\.(?:forward|backward|parameters_grad)\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
             if cell_name in self.cell_mapping_dict:
                 npu_op_name = npu_op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
         return npu_op_name
