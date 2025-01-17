@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import mindspore as ms
 
 from mindspore import ops
 from mindspore.mint import nn
+
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
@@ -54,7 +55,7 @@ def convert_to_int(value):
         return int(value)
     except Exception:
         return -1
-    
+
 
 def clean_input_kwargs(cell):
     if hasattr(cell, 'input_kwargs'):
@@ -139,3 +140,42 @@ def remove_dropout():
     ops.operations.Dropout3D = Dropout3D
     nn.Dropout = DropoutExt
     nn.functional.dropout = dropout_ext
+
+
+mindtorch_check_result = None
+
+
+def is_mindtorch():
+    global mindtorch_check_result
+    if mindtorch_check_result is None:
+        mindtorch_check_result = False
+        try:
+            import torch
+            from mindspore._c_expression import Tensor
+        except ImportError:
+            return mindtorch_check_result
+        tensor = torch.tensor(0.0)
+        if isinstance(tensor, Tensor):
+            mindtorch_check_result = True
+    return mindtorch_check_result
+
+
+register_backward_hook_functions = {}
+
+
+def set_register_backward_hook_functions():
+    global register_backward_hook_functions
+    if is_mindtorch():
+        import torch
+        from msprobe.mindspore.mindtorch import (_call_impl,
+                                                 register_full_backward_pre_hook,
+                                                 register_full_backward_hook)
+        if not hasattr(torch, "register_full_backward_hook"):
+            setattr(torch.nn.Module, "_call_impl", _call_impl)
+            setattr(torch.nn.Module, "register_full_backward_pre_hook", register_full_backward_pre_hook)
+            setattr(torch.nn.Module, "register_full_backward_hook", register_full_backward_hook)
+        register_backward_hook_functions["pre"] = torch.nn.Module.register_full_backward_pre_hook
+        register_backward_hook_functions["full"] = torch.nn.Module.register_full_backward_hook
+    else:
+        register_backward_hook_functions["pre"] = ms.nn.Cell.register_backward_pre_hook
+        register_backward_hook_functions["full"] = ms.nn.Cell.register_backward_hook

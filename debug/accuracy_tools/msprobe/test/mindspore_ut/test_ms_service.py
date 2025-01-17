@@ -1,6 +1,7 @@
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -10,19 +11,21 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
+# limitations under the License. language governing permissions and
 # limitations under the License.
 
 import unittest
 from collections import defaultdict
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-from mindspore import nn
+from mindspore import nn, ops
 
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.utils import register_backward_hook_functions
 from msprobe.mindspore.dump.hook_cell.api_registry import ApiRegistry, api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.jit_dump import JitDump
@@ -54,7 +57,7 @@ class TestService(unittest.TestCase):
         self.assertFalse(self.service.should_stop_service)
         self.assertFalse(self.service.start_call)
         self.assertTrue(self.service.first_start)
-    
+
     def test_check_model_valid_with_valid_cell(self):
         model = nn.Cell()
         self.assertEqual(self.service.check_model_valid(model), model)
@@ -172,11 +175,11 @@ class TestService(unittest.TestCase):
 
     @patch.object(Service, 'need_end_service', return_value=False)
     @patch.object(logger, 'info')
-    @patch.object(Service,'register_hook_new')
-    @patch.object(Service,'create_dirs')
+    @patch.object(Service, 'register_hook_new')
+    @patch.object(Service, 'create_dirs')
     @patch('msprobe.mindspore.service.get_rank_if_initialized', return_value=0)
     def test_start_first_time(self, mock_get_rank, mock_create_dirs, mock_register_hook, mock_logger,
-                                              mock_need_end_service):
+                              mock_need_end_service):
         self.service.first_start = True
         self.service.should_stop_service = False
         self.service.start(self.service.model)
@@ -189,13 +192,13 @@ class TestService(unittest.TestCase):
         self.assertTrue(self.service.primitive_switch)
         mock_logger.assert_called_with(f"Dump data will be saved in {self.service.dump_iter_dir}.")
 
-    @patch.object(Service,'register_hook_new')
-    @patch.object(Service, 'need_end_service', return_value=False)
-    @patch.object(JitDump,'set_config')
-    @patch.object(JitDump,'set_data_collector')
+    @patch.object(Service, 'register_hook_new')
+    @patch.object(Service,  'need_end_service', return_value=False)
+    @patch.object(JitDump, 'set_config')
+    @patch.object(JitDump, 'set_data_collector')
     @patch.object(ApiRegistry, 'api_set_hook_func')
-    def test_start_with_jit_dump_enabled(self, mock_api_set_hook_func, mock_set_data_collector, mock_set_config, mock_need_end_service,
-                                         mock_register_hook):
+    def test_start_with_jit_dump_enabled(self, mock_api_set_hook_func, mock_set_data_collector,
+                                         mock_set_config, mock_need_end_service, mock_register_hook):
         self.service.config.level = Const.LEVEL_MIX
         self.service.first_start = True
         self.service.should_stop_service = False
@@ -206,7 +209,7 @@ class TestService(unittest.TestCase):
         mock_need_end_service.assert_called_once()
         mock_register_hook.assert_called_once()
         self.assertTrue(JitDump.jit_dump_switch)
-    
+
     def test_step_updates(self):
         CellProcessor.cell_count = {"test_api": 1}
         HOOKCell.cell_count = {"test_api": 1}
@@ -220,7 +223,7 @@ class TestService(unittest.TestCase):
         self.assertEqual(JitDump.jit_count, defaultdict(int))
         self.assertEqual((self.service.primitive_hook_service.primitive_counters), {})
 
-    @patch.object(Service,'should_execute_hook')
+    @patch.object(Service, 'should_execute_hook')
     def test_build_forward_and_backward_hooks(self, mock_should_execute_hook):
         mock_should_execute_hook.return_value = True
         self.service.data_collector = MagicMock()
@@ -235,13 +238,13 @@ class TestService(unittest.TestCase):
         mock_output = MagicMock()
 
         _, forward_hook, backward_hook = self.service.build_hook(BaseScope.Module_Type_Module, "TestHook")
- 
+
         forward_hook(mock_cell, mock_input, mock_output)
         self.service.data_collector.update_api_or_module_name.assert_called_with('TestCell')
         self.service.data_collector.forward_data_collect.assert_called()
-        
+
         self.service.data_collector.reset_mock()
-        
+
         mock_grad_input = (MagicMock(),)
         mock_grad_output = MagicMock()
 
@@ -250,39 +253,44 @@ class TestService(unittest.TestCase):
         self.service.data_collector.backward_data_collect.assert_called()
 
     def test_register_primitive_hooks(self):
-        primitive_mock = MagicMock()
-        primitive_name = "test_primitive"
+        primitive_attr = ops.Add()
+        primitive_name = "primitive_api"
         cell_mock = MagicMock()
-        cell_mock._primitives = {primitive_name: primitive_mock}
-        primitive_combined_name = primitive_name + Const.SEP + primitive_mock.__class__.__name__
+        cell_mock.primitive_api = primitive_attr
+        primitive_combined_name = primitive_name + Const.SEP + primitive_attr.__class__.__name__
         self.service.model.cells_and_names.return_value = [("cell_name", cell_mock)]
-
         self.service.register_primitive_hooks()
-        self.assertTrue(hasattr(primitive_mock.__class__, '__call__'))
-        self.service.primitive_hook_service.wrap_primitive.assert_called_with(primitive_mock.__call__, primitive_combined_name)
+        self.assertTrue(hasattr(primitive_attr.__class__, '__call__'))
+        self.assertEqual(self.service.primitive_hook_service.wrap_primitive.call_args[0][1],
+                         primitive_combined_name)
 
     @patch.object(Service, 'register_primitive_hooks')
     @patch.object(ApiRegistry, 'initialize_hook')
     @patch.object(ApiRegistry, 'api_set_hook_func')
     @patch("msprobe.mindspore.service.logger.info")
     def test_register_hook_new_with_level_mix(self, mock_logger, mock_api_set_hook_func, mock_initialize_hook,
-                                               mock_register_primitive_hooks):
+                                              mock_register_primitive_hooks):
         self.service.config.level = Const.LEVEL_MIX
         self.service.register_hook_new()
-        mock_logger.assert_called_with(f"The {self.service.config.task} hook function is successfully mounted to the model.")
+        mock_logger.assert_called_with(f"The {self.service.config.task} hook function "
+                                       "is successfully mounted to the model.")
         mock_api_set_hook_func.assert_called()
         mock_initialize_hook.assert_called()
         mock_register_primitive_hooks.assert_called()
 
     @patch.object(CellProcessor, 'node_hook')
     def test_register_hook_new_with_level_l0(self, mock_node_hook):
+        global register_backward_hook_functions
         self.service.config.level = Const.LEVEL_L0
         cell_mock = MagicMock()
         self.service.model.cells_and_names.return_value = [("cell_name", cell_mock)]
+        register_backward_hook_functions["pre"] = cell_mock.register_backward_pre_hook
+        register_backward_hook_functions["full"] = cell_mock.register_backward_hook
         self.service.register_hook_new()
         cell_mock.register_forward_hook.assert_called()
         cell_mock.register_backward_hook.assert_called()
         mock_node_hook.assert_called()
+        register_backward_hook_functions = {}
 
     def test_register_hook_new_without_model_raises_exception(self):
         self.service.config.level = Const.LEVEL_L0

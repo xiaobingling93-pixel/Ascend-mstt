@@ -1,26 +1,47 @@
-import os
-import numpy as np
-import shutil
-import json
-from unittest import TestCase
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import hashlib
+import json
+import os
+import shutil
+from unittest import TestCase
+from unittest.mock import patch
+
+import numpy as np
 import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
+
+from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore import PrecisionDebugger
 from msprobe.mindspore.grad_probe.global_context import grad_context
-from msprobe.core.grad_probe.constant import GradConst
-from msprobe.core.common.file_utils import FileOpen
+
 
 file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)
 config_json_path = os.path.join(directory, "config.json")
 
+
 def main():
     PrecisionDebugger._instance = None
     PrecisionDebugger.initialized = False
     grad_context._setting[GradConst.CURRENT_STEP] = 0
-    debugger = PrecisionDebugger(config_json_path)
+    with patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
+        debugger = PrecisionDebugger(config_json_path)
 
     class SimpleNet(nn.Cell):
         def __init__(self):
@@ -37,7 +58,7 @@ def main():
     debugger.monitor(optimizer)
 
     fix_gradient = tuple([Tensor(np.arange(5*16).reshape((5, 16)), dtype=mindspore.float32),
-                        Tensor(np.arange(5).reshape(5), dtype=mindspore.float32)])
+                         Tensor(np.arange(5).reshape(5), dtype=mindspore.float32)])
 
     steps = 10
 
@@ -97,7 +118,6 @@ class TestMsGradientMonitor(TestCase):
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
         target_md5_value = "d5e71f1aa37d48ef0ca0a75932597a29"
         self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
-
 
     def test_gradient_monitor_L1(self):
         gradient_output_path = os.path.join(directory, "gradient_output")
