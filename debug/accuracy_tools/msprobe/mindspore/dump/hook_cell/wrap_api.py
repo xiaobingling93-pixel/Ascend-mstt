@@ -60,10 +60,23 @@ class ApiTemplate(HOOKCell):
         self.prefix_api_name = prefix + str(api_name.split(Const.SEP)[-1]) + Const.SEP
         super().__init__(hook)
 
+    @staticmethod
+    def async_to_sync(handle):
+        if hasattr(handle, "wait"):
+            handle.wait() 
+
     def construct(self, *args, **kwargs):
         if self.api_name.startswith(MsConst.DROPOUT_API_NAME_PREFIX):
             return args[0] if args else kwargs.get(Const.INPUT)
-        return self.api_func(*args, **kwargs)
+        
+        output = self.api_func(*args, **kwargs)
+
+        if self.prefix_api_name.startswith(MsConst.DISTRIBUTED_DATA_PREFIX):
+            if kwargs.get("async_op") or self.api_name in ["isend", "irecv"]:
+                self.async_to_sync(
+                    output[1] if isinstance(output, tuple) and len(output) > 1 else output)
+                
+        return output
 
 
 class WrapApiName:
