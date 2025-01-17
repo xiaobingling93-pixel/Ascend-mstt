@@ -501,14 +501,19 @@ class Comparator:
 
 
 def get_bench_data_name(bench_op_name, bench_data):
-    bench_name_list = re.split(r'\.(input|output|kwargs)\.', bench_op_name)
-    bench_data_bundle = bench_data.get(bench_name_list[0], {})
+    bench_name_list = re.split(r'\.(input|output|kwargs|parameters|parameters_grad)\.', bench_op_name)
+    if bench_name_list[1] == Const.PARAMS_GRAD:
+        bench_data_bundle = bench_data.get(bench_name_list[0] + Const.SEP + bench_name_list[1], {})
+    else:
+        bench_data_bundle = bench_data.get(bench_name_list[0], {})
     if not bench_data_bundle or len(bench_name_list) < 3:
         return None
     layers = bench_name_list[2].split(Const.SEP)
 
-    def get(key, container):
+    def get(key, container, params_grad=False):
         if isinstance(container, dict):
+            if params_grad and container.get(key):
+                return container.get(key)[0]
             return container.get(key)
         if isinstance(container, list):
             try:
@@ -517,10 +522,10 @@ def get_bench_data_name(bench_op_name, bench_data):
                 return None
         return None
 
-    def get_by_layer(container):
+    def get_by_layer(container, params_grad=False):
         data = container
         for layer in layers:
-            data = get(layer, data)
+            data = get(layer, data, params_grad)
         return get(CompareConst.DATA_NAME.lower(), data)
 
     if Const.INPUT == bench_name_list[1]:
@@ -529,5 +534,9 @@ def get_bench_data_name(bench_op_name, bench_data):
         return get_by_layer(bench_data_bundle.get(Const.INPUT_KWARGS))
     elif Const.OUTPUT == bench_name_list[1]:
         return get_by_layer(bench_data_bundle.get(Const.OUTPUT))
+    elif Const.PARAMS == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle.get(Const.PARAMS))
+    elif Const.PARAMS_GRAD == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle, params_grad=True)
     else:
         return None
