@@ -191,7 +191,7 @@ class MSComparator(Comparator):
         if not npu_op_name:
             return CompareConst.N_A
         param_grad_flag = Const.PARAMS_GRAD in npu_op_name.split(Const.SEP)
-        if not param_grad_flag or not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
+        if not param_grad_flag and not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
             return CompareConst.N_A
         npu_op_name = npu_op_name.replace("Cell", "Module", 1)
         if self.cell_mapping_dict:
