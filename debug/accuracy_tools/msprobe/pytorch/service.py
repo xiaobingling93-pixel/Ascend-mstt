@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -56,6 +56,8 @@ class Service:
         self.should_stop_service = False
         self.attl = None
         self.params_grad_info = {}
+        # 提前注册，确保注册尽可能多的API hook
+        self.register_api_hook()
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -115,7 +117,7 @@ class Service:
                     # 当模块中的参数有requires_grad属性为True时，才会进行梯度计算，此时才需要占位
                     if data_info.get(grad_name):
                         # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
-                        self.data_collector.handle_data(grad_name, data_info, 
+                        self.data_collector.handle_data(grad_name, data_info,
                                                         flush=self.data_collector.data_processor.is_terminated)
                     # 记录当前模块的参数梯度信息已占位
                     self.params_grad_info[grad_name] = True
@@ -228,7 +230,7 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
-            self.register_hook_new()
+            self.register_module_hook()
             self.first_start = False
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
@@ -270,8 +272,6 @@ class Service:
             if self.config.online_run_ut:
                 # send stop signal if online_run_ut
                 self.attl_stop()
-            if self.config.level in [Const.LEVEL_L1, Const.LEVEL_L2, Const.LEVEL_MIX]:
-                api_register.api_originality()
             self.switch = False
             self.should_stop_service = True
             print_tools_ends_info()
@@ -320,12 +320,9 @@ class Service:
         self.data_collector.update_dump_paths(
             dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
 
-    def register_hook_new(self):
-        logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
-        if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
-            self.module_processor.hook_modules(self.model, self.build_hook)
-
+    def register_api_hook(self):
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
+            logger.info_on_rank_0(f"The api {self.config.task} hook function is successfully mounted to the model.")
             api_register.initialize_hook(
                 functools.partial(self.build_hook, BaseScope.Module_Type_API),
                 self.config.online_run_ut
@@ -335,6 +332,10 @@ class Service:
         if self.config.level == Const.LEVEL_MIX:
             register_optimizer_hook(self.data_collector)
 
+    def register_module_hook(self):
+        if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
+            logger.info_on_rank_0(f"The module {self.config.task} hook function is successfully mounted to the model.")
+            self.module_processor.hook_modules(self.model, self.build_hook)
 
     def attl_init(self):
         if self.config.online_run_ut:
