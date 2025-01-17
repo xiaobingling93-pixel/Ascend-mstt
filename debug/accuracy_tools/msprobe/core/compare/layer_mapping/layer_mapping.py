@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from collections import defaultdict
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
@@ -23,16 +24,16 @@ from msprobe.core.common.utils import (add_time_with_yaml,
 from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
 from msprobe.core.compare.utils import read_op
 
-
 class LayerTrie:
     def __init__(self, type_name, framework=None):
         self.type_name = type_name
-        self.data_items = []
+        self.data_items = defaultdict(list)
         self.children = {}
         self.framework = framework
 
     def __repr__(self):
-        return f"Layer(type_name={self.type_name}, data_number={len(self.data_items)})"
+        data_nums = [{k: len(v)} for k, v in self.data_items.items()]
+        return f"Layer(type_name={self.type_name}, data_number={data_nums})"
 
     def get(self, name):
         return self.children.get(name)
@@ -46,10 +47,10 @@ class LayerTrie:
             if name not in node.children:
                 node.children[name] = LayerTrie(name, data_item.framework)
             node = node.children[name]
-        node.data_items.append(data_item)
+        node.data_items[data_item.state].append(data_item)
         node.type_name = data_item.type_name
 
-    def query_data(self, scope, index, default_value=None):
+    def query_data(self, scope, state, index, default_value=None):
         parts = scope.split(Const.SEP)
         node = self
         scope_name_list = parts[1:]
@@ -58,9 +59,9 @@ class LayerTrie:
             if name not in node.children:
                 return default_value
             node = node.children[name]
-        if index >= len(node.data_items):
+        if index >= len(node.data_items[state]):
             return default_value
-        return node.data_items[index]
+        return node.data_items[state][index]
 
     def save_to_yaml(self, output_path):
         result = {f"{self.type_name} @ {self}": self.convert_to_dict(self)}
@@ -70,7 +71,7 @@ class LayerTrie:
 
     def convert_to_dict(self, node):
         result = {}
-        result["data_item"] = [node.data_name for node in node.data_items]
+        result["data_item"] = {st: [dt.data_name for dt in dts] for st, dts in node.data_items.items()}
         for child_key, child_node in node.children.items():
             key = f"{child_key} @ {child_node}"
             result[key] = self.convert_to_dict(child_node)
@@ -102,10 +103,11 @@ def convert_scope(layer_trie, data_item, mapping=None):
             cur_node = child_node
             idx += 1
     index = -1
-    for idx, child in enumerate(cur_node.data_items):
+    state = data_item.state
+    for idx, child in enumerate(cur_node.data_items[state]):
         if data_item.data_name == child.data_name:
             index = idx
-    return new_scope, index
+    return new_scope, state, index
 
 
 def get_data_items_and_tree(dump_json_path, output_path):
@@ -122,8 +124,8 @@ def get_data_items_and_tree(dump_json_path, output_path):
 
 
 def convert_data_item(npu_tree, bench_tree, npu_data_item, mapping):
-    new_scope, index = convert_scope(npu_tree, npu_data_item, mapping)
-    bench_data_item = bench_tree.query_data(new_scope, index)
+    new_scope, state, index = convert_scope(npu_tree, npu_data_item, mapping)
+    bench_data_item = bench_tree.query_data(new_scope, state, index)
     return bench_data_item
 
 
