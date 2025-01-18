@@ -47,7 +47,7 @@ def check_struct_match(npu_dict, bench_dict):
         struct_match_list = []
         try:
             for i, key in enumerate(CompareConst.STRUCT_COMPARE_KEY):
-                # 首先额外判断input_struct是否空，不可能为空 # TODO CHECK
+                # 首先额外检查input_struct是否空，input_struct不可能为空
                 if i == 0 and (not npu_dict.get(key, []) or not bench_dict.get(key, [])):
                     return False
                 struct_match_list.append(check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, [])))
