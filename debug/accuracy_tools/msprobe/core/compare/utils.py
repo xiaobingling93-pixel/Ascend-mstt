@@ -135,7 +135,10 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
     item_list = []
     if isinstance(op_data, list):
         for i, data in enumerate(op_data):
-            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+            if Const.PARAMS_GRAD not in op_name.split(Const.SEP):
+                item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+            else:
+                item_list.extend(op_item_parse(data, op_name, depth + 1))
     elif isinstance(op_data, dict):
         if is_leaf_data(op_data):
             return [gen_op_item(op_data, op_name)]

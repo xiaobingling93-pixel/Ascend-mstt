@@ -29,7 +29,7 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import get_header_index, safe_get_value
-from msprobe.core.compare.utils import table_value_is_valid, get_name_and_state
+from msprobe.core.compare.utils import table_value_is_valid, get_name_and_state, CompareException
 
 
 class HighlightCheck(abc.ABC):
@@ -255,7 +255,11 @@ def api_batches_update(api_batches, api_name, state, index):
         api_batch = api_batches[-1]
         if api_batch.api_name == api_name or (
                 not re.search(r'forward|backward', api_name) and api_name in api_batch.api_name):
-            api_batch.increment(state)
+            try:
+                api_batch.increment(state)
+            except ValueError as e:
+                logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
+                raise CompareException(CompareException.INVALID_STATE_ERROR)
         else:
             api_batches.append(ApiBatch(api_name, index))
 
