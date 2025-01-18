@@ -503,7 +503,7 @@ class Comparator:
 
 def get_bench_data_name(bench_op_name, bench_data):
     bench_name_list = re.split(r'\.(input|output|kwargs|parameters|parameters_grad)\.', bench_op_name)
-    if bench_name_list[1] == Const.PARAMS_GRAD:
+    if len(bench_name_list) > 1 and bench_name_list[1] == Const.PARAMS_GRAD:
         bench_data_bundle = bench_data.get(bench_name_list[0] + Const.SEP + bench_name_list[1], {})
     else:
         bench_data_bundle = bench_data.get(bench_name_list[0], {})
