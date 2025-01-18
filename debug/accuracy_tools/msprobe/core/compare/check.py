@@ -47,11 +47,10 @@ def check_struct_match(npu_dict, bench_dict):
         struct_match_list = []
         try:
             for i, key in enumerate(CompareConst.STRUCT_COMPARE_KEY):
-                if i <= 1:
-                    struct_match_list.append(check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, [])))
-                else:
-                    struct_match_list.append(
-                        check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, []), param=True))
+                # 首先额外判断input_struct是否空，不可能为空 # TODO CHECK
+                if i == 0 and (not npu_dict.get(key, []) or not bench_dict.get(key, [])):
+                    return False
+                struct_match_list.append(check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, [])))
         except CompareException as error:
             err_msg = f'index out of bounds error occurs in npu or bench api, please check!\n' \
                       f'npu_dict: {npu_dict}' \
@@ -62,18 +61,14 @@ def check_struct_match(npu_dict, bench_dict):
     return is_match
 
 
-def check_type_shape_match(npu_struct, bench_struct, param=False):
+def check_type_shape_match(npu_struct, bench_struct):
     """
     further check dtypes with a dtype mapping list when dtypes are not entirely consistent.
     """
     if len(npu_struct) != len(bench_struct):
         return False
-    if param:
-        if not npu_struct and not bench_struct:
-            return True
-    else:
-        if not npu_struct or not bench_struct:
-            return False
+    if not npu_struct and not bench_struct:
+        return True
 
     struct_match = False
     for npu_type_shape, bench_type_shape in zip(npu_struct, bench_struct):

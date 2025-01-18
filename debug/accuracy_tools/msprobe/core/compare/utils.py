@@ -407,10 +407,11 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
     }
     for index, n_name in enumerate(n_dict["op_name"]):
         _, state = get_name_and_state(n_name)
-        for state_key, struct_key in CompareConst.STATE_TO_STRUCT_MAPPING.items():
-            if state == state_key:
-                n_struct = safe_get_value(n_dict, struct_to_index_mapping.get(struct_key), "n_dict", key=struct_key)
-                struct_to_index_mapping[struct_key] += 1
+        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+        if not struct_key:
+            continue
+        n_struct = safe_get_value(n_dict, struct_to_index_mapping.get(struct_key), "n_dict", key=struct_key)
+        struct_to_index_mapping[struct_key] += 1
 
         try:
             result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
@@ -469,13 +470,13 @@ def merge_tensor(tensor_list, dump_mode):
         op_dict["op_name"].append(tensor['full_op_name'])
 
         _, state = get_name_and_state(tensor['full_op_name'])
-        for state_key, struct_key in CompareConst.STATE_TO_STRUCT_MAPPING.items():
-            if state == state_key:
-                if dump_mode == Const.MD5:
-                    op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
-                else:
-                    op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-                break
+        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+        if not struct_key:
+            continue
+        if dump_mode == Const.MD5:
+            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
+        else:
+            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
         op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
 
         if dump_mode == Const.ALL:

@@ -259,17 +259,18 @@ class Comparator:
                     data_name = data_name_list[index] if data_name_list else None
 
                     _, state = get_name_and_state(op_full_name)
-                    for state_key, struct_key in CompareConst.STATE_TO_STRUCT_MAPPING.items():
-                        if state == state_key:
-                            ops_all[op_full_name] = {
-                                CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
-                                                                    "merge_list", key=struct_key),
-                                CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                                     key=CompareConst.SUMMARY),
-                                'data_name': data_name,
-                                'stack_info': merge_list.get('stack_info')
-                            }
-                            struct_to_index_mapping[struct_key] += 1
+                    struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+                    if not struct_key:
+                        continue
+                    ops_all[op_full_name] = {
+                        CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
+                                                            "merge_list", key=struct_key),
+                        CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                             key=CompareConst.SUMMARY),
+                        'data_name': data_name,
+                        'stack_info': merge_list.get('stack_info')
+                    }
+                    struct_to_index_mapping[struct_key] += 1
         return ops_all
 
     def get_accuracy(self, npu_ops_all, bench_ops_all):
