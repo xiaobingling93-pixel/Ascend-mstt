@@ -29,6 +29,7 @@ class Const:
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
+    REGEX_FORWARD_BACKWARD = r'\.(forward|backward)\.'
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","

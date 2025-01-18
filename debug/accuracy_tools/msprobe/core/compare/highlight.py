@@ -254,7 +254,7 @@ def api_batches_update(api_batches, api_name, state, index):
     else:
         api_batch = api_batches[-1]
         if api_batch.api_name == api_name or (
-                not re.search(r'forward|backward', api_name) and api_name in api_batch.api_name):
+                not re.search(Const.REGEX_FORWARD_BACKWARD, api_name) and api_name in api_batch.api_name):
             try:
                 api_batch.increment(state)
             except ValueError as e:

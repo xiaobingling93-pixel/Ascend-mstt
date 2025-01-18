@@ -288,15 +288,19 @@ def result_item_init(n_info, b_info, dump_mode):
 
 
 def count_struct(op_dict):
-    num = len(op_dict.get(CompareConst.OP_NAME, []))
-    num_input = len(op_dict.get(CompareConst.INPUT_STRUCT, []))
-    num_output = len(op_dict.get(CompareConst.OUTPUT_STRUCT, []))
-    num_params = len(op_dict.get(CompareConst.PARAMS_STRUCT, []))
-    num_params_grad = len(op_dict.get(CompareConst.PARAMS_GRAD_STRUCT, []))
-    if num != num_input + num_output + num_params + num_params_grad:
+    parts = [
+        CompareConst.OP_NAME,
+        CompareConst.INPUT_STRUCT,
+        CompareConst.OUTPUT_STRUCT,
+        CompareConst.PARAMS_STRUCT,
+        CompareConst.PARAMS_GRAD_STRUCT
+    ]
+    lengths = [len(op_dict.get(part, [])) for part in parts]
+    num = lengths[0]
+    if num != sum(lengths[1:]):
         logger.error(f"Length of names and structs of op_dict not match. Please check! op_dict: {op_dict}")
         raise CompareException(CompareException.NAMES_STRUCTS_MATCH_ERROR)
-    return num, num_input, num_output, num_params, num_params_grad
+    return tuple(lengths)
 
 
 def get_accuracy(result, n_dict, b_dict, dump_mode):
@@ -524,7 +528,7 @@ def get_name_and_state(name):
     if Const.PARAMS_GRAD in name.split(Const.SEP):
         return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
 
-    split = re.split(r'\.(forward|backward)\.', name)
+    split = re.split(Const.REGEX_FORWARD_BACKWARD, name)
     api = f'{split[0]}.{split[1]}.'
     state_str = split[2]
     match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
