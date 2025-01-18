@@ -99,6 +99,9 @@ class TestService(unittest.TestCase):
             "/tmp/dump/step1/rank0/dump_tensor_data",
             None
         )
+        self.service.data_collector.initialize_json_file.assert_called_once_with(
+            framework=Const.MS_FRAMEWORK
+        )
 
     @patch.object(Service, 'need_end_service', return_value=False)
     def test_start_stop_cycle(self, mock_need_end_service):
