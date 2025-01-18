@@ -259,7 +259,7 @@ def api_batches_update(api_batches, api_name, state, index):
                 api_batch.increment(state)
             except ValueError as e:
                 logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
-                raise CompareException(CompareException.INVALID_STATE_ERROR)
+                raise CompareException(CompareException.INVALID_STATE_ERROR) from e
         else:
             api_batches.append(ApiBatch(api_name, index))
 
