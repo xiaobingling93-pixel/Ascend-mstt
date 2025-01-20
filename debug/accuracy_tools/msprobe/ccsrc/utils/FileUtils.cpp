@@ -65,14 +65,14 @@ static std::string GetFullPath(const std::string &originPath)
     return fullPath;
 }
 
-std::vector<std::string> SplitPath(const std::string &path)
+std::vector<std::string> SplitPath(const std::string &path, char separator)
 {
     std::vector<std::string> tokens;
     size_t len = path.length();
     size_t start = 0;
 
     while (start < len) {
-        size_t end = path.find(pathSeparator, start);
+        size_t end = path.find(separator, start);
         if (end == std::string::npos) {
             end = len;
         }
