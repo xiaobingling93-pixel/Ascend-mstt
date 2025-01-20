@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
-import torch
 
 from msprobe.core.common.utils import Const
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
@@ -74,23 +73,23 @@ class TestService(unittest.TestCase):
         self.service.should_stop_service = True
         self.assertIsNone(self.service.step())
 
-    def test_register_hook_new_with_level0(self):
+    def test_register_module_hook_with_level0(self):
         self.service.model = MagicMock()
         self.service.build_hook = MagicMock()
         self.config.level = "L0"
         with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
                 patch("msprobe.pytorch.service.ModuleProcesser.hook_modules") as mock_hook_modules:
-            self.service.register_hook_new()
+            self.service.register_module_hook()
             self.assertEqual(mock_logger.call_count, 1)
             mock_hook_modules.assert_called_once()
 
-    def test_register_hook_new_with_level1(self):
+    def test_register_api_hook_with_level1(self):
         self.service.build_hook = MagicMock()
         self.config.level = "L1"
         with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
                 patch("msprobe.pytorch.service.api_register.initialize_hook") as mock_init_hook, \
                 patch("msprobe.pytorch.service.api_register.api_modularity") as mock_api_modularity:
-            self.service.register_hook_new()
+            self.service.register_api_hook()
             self.assertEqual(mock_logger.call_count, 1)
             mock_init_hook.assert_called_once()
             mock_api_modularity.assert_called_once()

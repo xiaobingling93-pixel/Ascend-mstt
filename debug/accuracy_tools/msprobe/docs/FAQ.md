@@ -201,9 +201,10 @@ def npu_forward_fused_softmax(self, input_, mask):
 
     答：注释工具目录 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中 `Tensor: ` 下的 `- __getitem__`，工具会跳过采集该 API。如果是需要采集关键位置 API 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
-11. 添加 msprobe 工具后 F.gelu 触发 ValueError 报错：`activation_func must be F.gelu` 等。以及采集 Megatron 数据时报错：`ValueError(Only support fusion of gelu and swiglu)`。
+11. 使用 msprobe 工具数据采集功能后，模型出现报错，报错信息为：`activation_func must be F.gelu` 或 `ValueError(Only support fusion of gelu and swiglu)`。
 
-    答：这一类问题是因为工具本身封装了 torch 算子，所以校验算子名时会报错。注释 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中的 `-gelu` 或者 `-silu`，工具会跳过采集该 API。如果需要采集关键位置 API 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+    答：这一类报错常见于 Megatron/MindSpeed/ModelLink 等加速库或模型仓中，原因是工具本身会封装 torch 的 API（API类型和地址会发生改变），而有些 API 在工具使能前类型和地址就已经确定，此时工具无法对这类 API 再进行封装，而加速库中会对某些 API 进行类型检查，即会把工具无法封装的原始的 API和工具封装之后的 API 进行判断，所以会报错。
+    规避方式有3种：①将PrecisionDebugger的实例化放在文件的开始位置，即导包后的位置，确保所有API都被封装；②注释 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中的 `-gelu` 或者 `-silu`，工具会跳过采集该 API。③ 可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
 12. 添加 msprobe 工具后触发与 AsStrided 算子相关、或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 
