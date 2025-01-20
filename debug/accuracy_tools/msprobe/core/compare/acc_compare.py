@@ -511,10 +511,8 @@ def get_bench_data_name(bench_op_name, bench_data):
         return None
     layers = bench_name_list[2].split(Const.SEP)
 
-    def get(key, container, params_grad=False):
+    def _get(key, container):
         if isinstance(container, dict):
-            if params_grad and container.get(key):
-                return container.get(key)[0]
             return container.get(key)
         if isinstance(container, list):
             try:
@@ -525,9 +523,11 @@ def get_bench_data_name(bench_op_name, bench_data):
 
     def get_by_layer(container, params_grad=False):
         data = container
+        if params_grad:
+            layers.append('0')
         for layer in layers:
-            data = get(layer, data, params_grad)
-        return get(CompareConst.DATA_NAME.lower(), data)
+            data = _get(layer, data)
+        return _get(CompareConst.DATA_NAME.lower(), data)
 
     if Const.INPUT == bench_name_list[1]:
         return get_by_layer(bench_data_bundle.get(Const.INPUT, bench_data_bundle.get(Const.INPUT_ARGS)))
