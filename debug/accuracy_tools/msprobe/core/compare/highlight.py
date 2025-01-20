@@ -159,6 +159,16 @@ def check_indices_numeric(api_items, indices: list):
     return all(isinstance(api_items[i], (float, int)) for i in indices)
 
 
+def apply_comparison_rules(api_info, dump_mode, color_columns):
+    """output与input/params的比较"""
+    if dump_mode == Const.SUMMARY:
+        for rule in HighlightRules.summary_compare_rules.values():
+            rule.apply(api_info, color_columns, dump_mode)
+    else:
+        for rule in HighlightRules.compare_rules.values():
+            rule.apply(api_info, color_columns, dump_mode)
+
+
 def find_error_rows(result, api_batch, highlight_dict, dump_mode):
     """找到单个API中需要高亮的行"""
     if dump_mode == Const.MD5:
@@ -202,24 +212,14 @@ def find_error_rows(result, api_batch, highlight_dict, dump_mode):
             if not check_indices_numeric(api_in, [npu_max_index, bench_max_index, max_diff_index]):
                 continue
             api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=index)
-            if dump_mode == Const.SUMMARY:
-                for rule in HighlightRules.summary_compare_rules.values():
-                    rule.apply(api_info, color_columns, dump_mode)
-            else:
-                for rule in HighlightRules.compare_rules.values():
-                    rule.apply(api_info, color_columns, dump_mode)
+            apply_comparison_rules(api_info, dump_mode, color_columns)
 
         # parameters的比较检查
         for _, api_params in enumerate(result[api_batch_output_slice_index_local: api_batch_params_slice_index_local]):
             if not check_indices_numeric(api_params, [npu_max_index, bench_max_index, max_diff_index]):
                 continue
             api_info = ApiInfo(api_input=api_params, api_output=api_out, num_pointer=index)
-            if dump_mode == Const.SUMMARY:
-                for rule in HighlightRules.summary_compare_rules.values():
-                    rule.apply(api_info, color_columns, dump_mode)
-            else:
-                for rule in HighlightRules.compare_rules.values():
-                    rule.apply(api_info, color_columns, dump_mode)
+            apply_comparison_rules(api_info, dump_mode, color_columns)
 
     red_lines_num_set = {x[0] for x in red_lines}
     yellow_lines_num_set = {x[0] for x in yellow_lines}
