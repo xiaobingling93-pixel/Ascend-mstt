@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -42,10 +42,10 @@ class DumpDataItem:
     construct_scope: str = ""
     scope_direction: Optional[str] = None
     scope_id: Optional[int] = None
+    state: str = ""
 
     # 类变量使用 ClassVar
-    framework2layername: ClassVar[Dict[str, str]] = {
-        Const.MS_FRAMEWORK: Const.CELL, Const.PT_FRAMEWORK: Const.MODULE}
+    layernames: ClassVar[set] = {Const.CELL, Const.MODULE}
     framework2stack_sign: ClassVar[Dict[str, Tuple[str, str]]] = {
         Const.MS_FRAMEWORK: ("Template", "construct"),
         Const.PT_FRAMEWORK: ("Template", r"in (for|back)ward,")
@@ -83,18 +83,21 @@ class DumpDataItem:
             self.api_type = Const.PARAMS_GRAD
             self.api_name = data_name_list[Const.PARAMS_GRAD_NAME_INDEX]
             self.type_name = data_name_list[Const.PARAMS_GRAD_TYPE_NAME_INDEX]
+            self.state = Const.PARAMS_GRAD
             return
 
         self.api_type = data_name_list[Const.API_TYPE_INDEX]
         self.type_name = data_name_list[Const.TYPE_NAME_INDEX]
-        if self.api_type == self.framework2layername.get(self.framework):
+        if self.api_type in self.layernames:
             self.api_name = data_name_list[Const.LAYER_NAME_INDEX]
+            self.state = data_name_list[Const.SCOPE_DIRECTION_INDEX]
         else:
             self.api_name = self.type_name
+            self.state = data_name_list[Const.LAST_INDEX]
 
     def set_layer_scope(self, construct_info: str) -> None:
         self.construct_scope = construct_info
-        if self.api_type == self.framework2layername.get(self.framework):
+        if self.api_type in self.layernames:
             # remove api name
             data_list = self.data_name.split(Const.SEP)
             data_list = data_list[:Const.LAYER_NAME_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
@@ -108,7 +111,7 @@ class DumpDataItem:
         if data_list:
             self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
         else:
-            self.layer_scope = self.framework2layername.get(self.framework)
+            self.layer_scope = Const.TOP_LAYER
         if construct_info:
             construct_list = construct_info.split(Const.SEP)
             if len(construct_list) < abs(Const.LAYER_NAME_INDEX):
@@ -123,7 +126,7 @@ class DumpDataItem:
 
     def set_stack_scope(self, stack_info: str) -> None:
         # Cell/Module has no stack info
-        if self.api_type == self.framework2layername.get(self.framework):
+        if self.api_type in self.layernames:
             return
 
         if self.api_type in Const.DATA_TYPE_SKIP_LIST or not stack_info:
