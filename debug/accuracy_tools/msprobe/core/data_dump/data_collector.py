@@ -161,7 +161,9 @@ class DataCollector:
 
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
-        self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
+
+    def initialize_json_file(self, framework=Const.UNKNOWN_FRAMEWORK):
+        self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level, framework=framework)
 
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)

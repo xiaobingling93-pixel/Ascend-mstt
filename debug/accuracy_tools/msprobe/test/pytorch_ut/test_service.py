@@ -96,7 +96,8 @@ class TestService(unittest.TestCase):
 
     def test_create_dirs(self):
         with patch("msprobe.pytorch.service.create_directory"), \
-                patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths"):
+                patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths"), \
+                patch("msprobe.core.data_dump.data_collector.DataCollector.initialize_json_file"):
             self.service.create_dirs()
         self.assertEqual(self.service.dump_iter_dir, "./ut_dump/step0")
 

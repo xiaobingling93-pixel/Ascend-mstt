@@ -318,7 +318,9 @@ class Service:
         construct_file_path = os.path.join(dump_dir, "construct.json")
         free_benchmark_file_path = os.path.join(self.config.dump_path, "free_benchmark.csv")
         self.data_collector.update_dump_paths(
-            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
+            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path
+        )
+        self.data_collector.initialize_json_file(framework=Const.PT_FRAMEWORK)
 
     def register_api_hook(self):
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:

@@ -342,7 +342,11 @@ class Service:
         stack_file_path = os.path.join(dump_dir, "stack.json")
         construct_file_path = os.path.join(dump_dir, "construct.json")
         self.data_collector.update_dump_paths(
-            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None)
+            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None
+        )
+        self.data_collector.initialize_json_file(
+            framework=Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
+        )
 
     def empty(self, *args, **kwargs):
         pass
