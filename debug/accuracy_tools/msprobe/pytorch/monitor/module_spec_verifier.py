@@ -79,6 +79,8 @@ class TupleValidator(ConfigValidator):
 
 def validate_config_spec(config_spec: str, actual_data, module_name: str, data_type: str):
     focused_col = None
+    if not config_spec or not isinstance(config_spec, str):
+        return focused_col
     for _, validator_cls in config_validator_registry.items():
         config_validator = validator_cls()
         pattern_match = config_validator.check_pattern_match(config_spec)
