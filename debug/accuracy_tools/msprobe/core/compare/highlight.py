@@ -174,10 +174,12 @@ def find_error_rows(result, api_batch, highlight_dict, dump_mode):
     ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
     color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-    api_batch_start = api_batch.start
-    api_batch_input_len = api_batch.input_len
-    api_batch_output_end_index = api_batch.output_end_index
-    api_batch_input_output_len = api_batch_output_end_index - api_batch_start
+    api_batch_start = api_batch.start  # result_df的input起始全局索引
+    api_batch_input_len = api_batch.input_len  # result的input结束局部索引 + 1
+    api_batch_output_end_index = api_batch.output_end_index  # result_df的output结束全局索引 + 1
+    api_batch_params_end_index = api_batch.params_end_index  # result_df的params结束全局索引 + 1
+    api_batch_output_slice_index_local = api_batch_output_end_index - api_batch_start  # result的output结束局部切片索引
+    api_batch_params_slice_index_local = api_batch_params_end_index - api_batch_start  # result的params结束局部切片索引
 
     # 对单行API的输入或输出进行误差判断
     for i, line in enumerate(result):
@@ -187,18 +189,31 @@ def find_error_rows(result, api_batch, highlight_dict, dump_mode):
             rule.apply(line_info, color_columns, dump_mode)
 
     # 对API的输出与输入比较，进行误差判断
-    for n, api_out in enumerate(result[api_batch_input_len: api_batch_input_output_len]):
+    for n, api_out in enumerate(result[api_batch_input_len: api_batch_output_slice_index_local]):
         index = api_batch_start + api_batch_input_len + n
         # 单行检查只有溢出检查（红色），如果已经溢出，不进一步检查
         if index in red_lines:
             continue
         if not check_indices_numeric(api_out, [npu_max_index, bench_max_index, max_diff_index]):
             continue
+
+        # input的比较检查
         for _, api_in in enumerate(result[0: api_batch_input_len]):
             if not check_indices_numeric(api_in, [npu_max_index, bench_max_index, max_diff_index]):
                 continue
-
             api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=index)
+            if dump_mode == Const.SUMMARY:
+                for rule in HighlightRules.summary_compare_rules.values():
+                    rule.apply(api_info, color_columns, dump_mode)
+            else:
+                for rule in HighlightRules.compare_rules.values():
+                    rule.apply(api_info, color_columns, dump_mode)
+
+        # parameters的比较检查
+        for _, api_params in enumerate(result[api_batch_output_slice_index_local: api_batch_params_slice_index_local]):
+            if not check_indices_numeric(api_params, [npu_max_index, bench_max_index, max_diff_index]):
+                continue
+            api_info = ApiInfo(api_input=api_params, api_output=api_out, num_pointer=index)
             if dump_mode == Const.SUMMARY:
                 for rule in HighlightRules.summary_compare_rules.values():
                     rule.apply(api_info, color_columns, dump_mode)
@@ -220,9 +235,10 @@ class ApiBatch:
         self.start = start
         self.input_len = 1  # input的数量
         self.output_end_index = start + 1  # output的结束index
-        self.params_end_index = start + 1  # params, params_grad的结束index
+        self.params_end_index = start + 1  # params的结束index
+        self.params_grad_end_index = start + 1  # params_grad的结束index
         # 内部state的标志("input", "output", "parameters", "parameters_grad"),
-        # 用于控制计算input_len, output_end_index, params_end_index
+        # 用于控制计算input_len, output_end_index, params_end_index, self.params_grad_end_index
         self._state = Const.INPUT  # api_batch初始化为input
 
     def set_state(self, state: str):
@@ -237,9 +253,13 @@ class ApiBatch:
         if self._state == Const.INPUT:
             self.input_len += 1
             self.output_end_index += 1
+            self.params_end_index += 1
         if self._state == Const.OUTPUT:
             self.output_end_index += 1
-        self.params_end_index += 1
+            self.params_end_index += 1
+        if self._state == Const.PARAMS:
+            self.params_end_index += 1
+        self.params_grad_end_index += 1
 
 
 def api_batches_update(api_batches, api_name, state, index):
