@@ -12,12 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import time
 import json
 import os
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import partial
 
 import pytz
@@ -42,10 +41,6 @@ from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
 
-try:
-    import torch_npu
-except ImportError:
-    pass
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
@@ -80,22 +75,38 @@ class ModuleHookContext:
         self.verified = False
         self.focused_in_col = 0
         self.focused_out_col = 0
-        self.ignore_in = False  # no need to care when no key 'input' or 'input_grad' found
 
     def set_format_by_arg(self, key_name: str, target_config: dict):
+        """ 按照监控对象配置format_by_arg
+        1) module_name 在 target 中配置监控对象
+        2) module_name 未在 targets 中配置，且 all_xy 全量监控
+        3) module_name 未在 targets 中配置，且 all_xy 未全量监控
+
+        :param key_name: str, one of [input, output, input_grad, output_grad]
+        :param target_config: target obj in config json.
+        :return:
+        """
+        valid_key = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT, MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
+        if key_name not in valid_key:
+            raise ValueError(f"key({key_name}) error, valid_key: {valid_key}")
         cared = target_config.get(self.module_name, self.struct)
         if key_name in cared:
-            if isinstance(cared[key_name], dict):
-                # current cared is self.struct
-                config = cared[key_name].get('config')
-                self.format_by_arg[key_name] = config
-            else:
+            target_module_config = cared[key_name]
+            if isinstance(target_module_config, dict):
+                # current cared is self.struct, monitor all data for module_name
+                self.format_by_arg[key_name] = target_module_config.get('config')
+            elif isinstance(target_module_config, str):
                 # current cared is target_config[self.module_name]
-                self.format_by_arg[key_name] = cared[key_name]
-        elif key_name in ['input', 'input_grad']:
-            self.ignore_in = True
+                self.format_by_arg[key_name] = target_module_config
+            else:
+                logger.warning_on_rank_0(f"target module config error, result maybe empty."
+                                         f"module_name: {self.module_name}, key_name: {key_name}")
+        else:
+            self.format_by_arg[key_name] = self.struct.get(key_name).get('config')
+
 
 start_step = 0
+
 
 class OptimizerContext:
     def __init__(self) -> None:
@@ -315,12 +326,9 @@ class TrainerMon:
         self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
 
     def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        metrics = {}
         key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        if torch.is_tensor(tensor):
-            self._register_param_call_id("_hook_module", key)
-            metrics[key] = tensor
-        return metrics
+        self._register_param_call_id("_hook_module", key)
+        return {key: tensor}
 
     def common_info(self):
         if not self.xy_distribution:
@@ -439,7 +447,6 @@ class TrainerMon:
 
         self.dp_group = dp_group
         self.tp_group = tp_group
-        
 
         self._register_param_name(model)
         self._patch_grad_sync()
@@ -710,7 +717,9 @@ class TrainerMon:
             return 0
 
         def fwd_hook_fun(module, module_input, module_output, name):
-            if is_recomputation():
+            if not module.training or is_recomputation():
+                # 1 only monitor training stage.
+                # 2 when open recompute, skip recomputed forward stage.
                 return
             if module not in self.module_fwd_hook_context_by_module:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
@@ -723,29 +732,25 @@ class TrainerMon:
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
-            if not module.training:
-                return
             if not context.format_by_arg:
                 context.set_format_by_arg(MonitorConst.ACTV_IN, self.config['targets'])
                 context.set_format_by_arg(MonitorConst.ACTV_OUT, self.config['targets'])
             if not context.format_by_arg:
                 return
             if not context.verified:
-                if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_IN],
-                                                                  module_input, context.module_name,
-                                                                  MonitorConst.ACTV_IN)
+                context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_IN],
+                                                              module_input, context.module_name,
+                                                              MonitorConst.ACTV_IN)
                 context.focused_out_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_OUT],
                                                                module_output, context.module_name,
                                                                MonitorConst.ACTV_OUT)
                 context.verified = True
             # expect output be tensor type
             tbtag_tensor_map = {}
-            if not context.ignore_in:
-                cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
-                tbtag_tensor_map.update(
-                    self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_IN,
-                                                cared_input))
+            cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
+            tbtag_tensor_map.update(
+                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_IN,
+                                            cared_input))
             cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_OUT,
@@ -774,21 +779,19 @@ class TrainerMon:
             if not context.format_by_arg:
                 return
             if not context.verified:
-                if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_IN],
-                                                                  input_grad, context.module_name,
-                                                                  MonitorConst.ACTVGRAD_IN)
+                context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_IN],
+                                                              input_grad, context.module_name,
+                                                              MonitorConst.ACTVGRAD_IN)
                 context.focused_out_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_OUT],
                                                                output_grad, context.module_name,
                                                                MonitorConst.ACTVGRAD_OUT)
                 context.verified = True
 
             tbtag_tensor_map = {}
-            if not context.ignore_in:
-                cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
-                tbtag_tensor_map.update(
-                    self.build_tbtag_tensor_map(
-                        f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_IN, cared_input_grad))
+            cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
+            tbtag_tensor_map.update(
+                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_IN,
+                                            cared_input_grad))
             cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_OUT,
