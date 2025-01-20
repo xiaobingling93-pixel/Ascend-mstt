@@ -56,7 +56,7 @@ class PtdbgDispatch(TorchDispatchMode):
 
         self.device_id = torch_npu._C._npu_getDevice()
         self.dump_mode = dump_mode
-        self.dump_api_list = api_list
+        self.dump_api_list = api_list or []
         self.debug_flag = debug
         self.api_index = 0
         self.single_api_index_dict = {}
@@ -182,7 +182,13 @@ class PtdbgDispatch(TorchDispatchMode):
         npu_out_cpu = safe_get_value(npu_out_cpu, 0, "npu_out_cpu")
 
         with TimeStatistics("CPU RUN", run_param):
-            cpu_out = func(*cpu_args, **cpu_kwargs)
+            try:
+                cpu_out = func(*cpu_args, **cpu_kwargs)
+            except RuntimeError as e:
+                self.api_index -= 1
+                logger.warning(f"RuntimeError: {e}")
+                logger.warning(f"This aten_api {aten_api} does not support running on cpu, so skip it.")
+                return npu_out
 
         if isinstance(cpu_out, torch.Tensor) and cpu_out.dtype in [torch.bfloat16, torch.float16, torch.half]:
             cpu_out = cpu_out.float()
