@@ -6,7 +6,9 @@
 ## 2.模块命名说明
 
 由于有些节点的名称比较长，例如Module.module.module.language_model.embedding.Embedding.forward.0，在图节点上由于字符串过长无法完整显示，forward或backward信息被省略，**因此节点中显示的名称字符串去掉了Module前缀，并将forward或backward信息提取到名称字符串的第二位展示**。
+
 ![module_name.png](./module_name.png)
+
 ![module_name1.png](./module_name1.png)
 
 ### 2.1 命名格式
