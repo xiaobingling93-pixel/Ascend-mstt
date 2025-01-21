@@ -15,14 +15,10 @@
 
 **{Module}.{module_name}.{class_name}.{forward/backward}.{调用次数}**
 
-- **Module.module.Float16Module.forward.0**：
-Module{**Module**}.module{**module_name**}.Float16Module{**class_name**}.forward.0{**调用次数**}
-- **Module.module.module.GPTModel.forward.0**: 
-Module{**Module**}.module.module{**module_name**}.GPTModel{**class_name**}.forward.0{**调用次数**}
-- **Module.module.module.language_model.TransformerLanguageModel.forward.0**: 
-Module{**Module**}.module.module.language_model{**module_name**}.TransformerLanguageModel{**class_name**}.forward.0{**调用次数**}
-- **Module.module.module.language_model.embedding.Embedding.forward.0**: 
-Module{**Module**}.module.module.language_model.embedding{**module_name**}.Embedding{**class_name**}.forward.0{**调用次数**}
+- **Module.module.Float16Module.forward.0** -----> Module{**Module**}.module{**module_name**}.Float16Module{**class_name**}.forward.0{**调用次数**}
+- **Module.module.module.GPTModel.forward.0** -----> Module{**Module**}.module.module{**module_name**}.GPTModel{**class_name**}.forward.0{**调用次数**}
+- **Module.module.module.language_model.TransformerLanguageModel.forward.0** -----> Module{**Module**}.module.module.language_model{**module_name**}.TransformerLanguageModel{**class_name**}.forward.0{**调用次数**}
+- **Module.module.module.language_model.embedding.Embedding.forward.0** -----> Module{**Module**}.module.module.language_model.embedding{**module_name**}.Embedding{**class_name**}.forward.0{**调用次数**}
 
 可以看到，module_name随着模型层级的深入在变长，embedding层module_name拼接了它的上层language_model、上上层module和顶层module。
 
