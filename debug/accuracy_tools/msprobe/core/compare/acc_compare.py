@@ -523,6 +523,7 @@ def get_bench_data_name(bench_op_name, bench_data):
 
     def get_by_layer(container, params_grad=False):
         data = container
+        # dump.json中parameters_grad的结构为key：[{}], 如果存在key，有且只有一个列表元素，而op_name中只命名到了key，因此加'0'
         if params_grad:
             layers.append('0')
         for layer in layers:
