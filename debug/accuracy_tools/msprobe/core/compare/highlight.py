@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -28,8 +28,8 @@ from tqdm import tqdm
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import CompareException, get_header_index, safe_get_value
-from msprobe.core.compare.utils import table_value_is_valid
+from msprobe.core.common.utils import get_header_index, safe_get_value
+from msprobe.core.compare.utils import table_value_is_valid, get_name_and_state, CompareException
 
 
 class HighlightCheck(abc.ABC):
@@ -48,6 +48,7 @@ def add_highlight_row_info(color_list, num, highlight_err_msg):
 
 class CheckOrderMagnitude(HighlightCheck):
     """检查Max diff的数量级差异"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
@@ -64,6 +65,7 @@ class CheckOrderMagnitude(HighlightCheck):
 
 class CheckOneThousandErrorRatio(HighlightCheck):
     """检查千分误差比率"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         one_thousand_index = get_header_index(CompareConst.ONE_THOUSANDTH_ERR_RATIO, dump_mode)
@@ -83,6 +85,7 @@ class CheckOneThousandErrorRatio(HighlightCheck):
 
 class CheckCosineSimilarity(HighlightCheck):
     """检查余弦相似度"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         cosine_index = get_header_index(CompareConst.COSINE, dump_mode)
@@ -96,12 +99,15 @@ class CheckCosineSimilarity(HighlightCheck):
 
 class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
+
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
         bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
-        input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
-        output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
+        input_max_relative_diff = np.abs(
+            np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
+        output_max_relative_diff = np.abs(
+            np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
                                                                                    (float, int)):
             return
@@ -116,6 +122,7 @@ class CheckMaxRelativeDiff(HighlightCheck):
 
 class CheckOverflow(HighlightCheck):
     """检查是否存在溢出"""
+
     def apply(self, info, color_columns, dump_mode):
         line, num = info
         npu_max_index = get_header_index(CompareConst.NPU_MAX, dump_mode)
@@ -150,7 +157,22 @@ class HighlightRules:
     }
 
 
-def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
+def check_indices_numeric(api_items, indices: list):
+    """检查指定索引处的值是否都为数字类型（int 或 float）"""
+    return all(isinstance(api_items[i], (float, int)) for i in indices)
+
+
+def apply_comparison_rules(api_info, dump_mode, color_columns):
+    """output与input/params的比较"""
+    if dump_mode == Const.SUMMARY:
+        for rule in HighlightRules.summary_compare_rules.values():
+            rule.apply(api_info, color_columns, dump_mode)
+    else:
+        for rule in HighlightRules.compare_rules.values():
+            rule.apply(api_info, color_columns, dump_mode)
+
+
+def find_error_rows(result, api_batch, highlight_dict, dump_mode):
     """找到单个API中需要高亮的行"""
     if dump_mode == Const.MD5:
         return
@@ -165,35 +187,42 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
     ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
     color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
+    api_batch_start = api_batch.start  # result_df的input起始全局索引
+    api_batch_input_len = api_batch.input_len  # result的input结束局部索引 + 1
+    api_batch_output_end_index = api_batch.output_end_index  # result_df的output结束全局索引 + 1
+    api_batch_params_end_index = api_batch.params_end_index  # result_df的params结束全局索引 + 1
+    api_batch_output_slice_index_local = api_batch_output_end_index - api_batch_start  # result的output结束局部切片索引
+    api_batch_params_slice_index_local = api_batch_params_end_index - api_batch_start  # result的params结束局部切片索引
+
     # 对单行API的输入或输出进行误差判断
     for i, line in enumerate(result):
-        num = last_len + i
-        line_info = LineInfo(line_data=line, num_pointer=num)
+        index = api_batch_start + i
+        line_info = LineInfo(line_data=line, num_pointer=index)
         for rule in HighlightRules.basic_rules.values():
             rule.apply(line_info, color_columns, dump_mode)
 
     # 对API的输出与输入比较，进行误差判断
-    for n, api_out in enumerate(result[n_num_input:len(result)]):
-        num = last_len + n_num_input + n
-        if num in red_lines:
+    for n, api_out in enumerate(result[api_batch_input_len: api_batch_output_slice_index_local]):
+        index = api_batch_start + api_batch_input_len + n
+        # 单行检查只有溢出检查（红色），如果已经溢出，不进一步检查
+        if index in red_lines:
             continue
-        if not isinstance(api_out[npu_max_index], (float, int)) \
-                or not isinstance(api_out[bench_max_index], (float, int)) \
-                or not isinstance(api_out[max_diff_index], (float, int)):
+        if not check_indices_numeric(api_out, [npu_max_index, bench_max_index, max_diff_index]):
             continue
-        for _, api_in in enumerate(result[0:n_num_input]):
-            if not isinstance(api_in[npu_max_index], (float, int)) \
-                    or not isinstance(api_in[bench_max_index], (float, int)) \
-                    or not isinstance(api_in[max_diff_index], (float, int)):
-                continue
 
-            api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=num)
-            if dump_mode == Const.SUMMARY:
-                for rule in HighlightRules.summary_compare_rules.values():
-                    rule.apply(api_info, color_columns, dump_mode)
-            else:
-                for rule in HighlightRules.compare_rules.values():
-                    rule.apply(api_info, color_columns, dump_mode)
+        # input的比较检查
+        for _, api_in in enumerate(result[0: api_batch_input_len]):
+            if not check_indices_numeric(api_in, [npu_max_index, bench_max_index, max_diff_index]):
+                continue
+            api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=index)
+            apply_comparison_rules(api_info, dump_mode, color_columns)
+
+        # parameters的比较检查
+        for _, api_params in enumerate(result[api_batch_output_slice_index_local: api_batch_params_slice_index_local]):
+            if not check_indices_numeric(api_params, [npu_max_index, bench_max_index, max_diff_index]):
+                continue
+            api_info = ApiInfo(api_input=api_params, api_output=api_out, num_pointer=index)
+            apply_comparison_rules(api_info, dump_mode, color_columns)
 
     red_lines_num_set = {x[0] for x in red_lines}
     yellow_lines_num_set = {x[0] for x in yellow_lines}
@@ -203,40 +232,59 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
     highlight_dict.get('yellow_lines', []).extend(yellow_lines)
 
 
-def get_name_and_state(name):
-    """Get api/module name and state
-    example:
-    name = 'conv2d.forward.1.input.0'
-    return: ('conv2d.forward.1.', 'input')
-
-    name = 'Functional.pad.0.backward.output.0'
-    return: ('Functional.pad.0.backward.', 'output')"""
-    split = re.split(r'\.(forward|backward)\.', name)
-    api = f'{split[0]}.{split[1]}.'
-    state_str = split[2]
-    match = re.match(r'^(\d+\.)?(input|output|kwargs)\..+$', state_str)
-    if not match:
-        raise CompareException(f'Invalid name string: {name}')
-    if match.group(1):
-        api = f'{api}{match.group(1)}'
-    state = match.group(2)
-    return api, state
-
-
 class ApiBatch:
     def __init__(self, api_name: str, start: int):
         self.api_name = api_name
         self.start = start
-        self.input_len = 1
-        self.output_index = start + 1
-        self.input_state = True
+        self.input_len = 1  # input的数量
+        self.output_end_index = start + 1  # output的结束index
+        self.params_end_index = start + 1  # params的结束index
+        self.params_grad_end_index = start + 1  # params_grad的结束index
+        # 内部state的标志("input", "output", "parameters", "parameters_grad"),
+        # 用于控制计算input_len, output_end_index, params_end_index, self.params_grad_end_index
+        self._state = Const.INPUT  # api_batch初始化为input
+
+    def set_state(self, state: str):
+        """设置当前状态"""
+        if state in {Const.INPUT, Const.OUTPUT, Const.PARAMS, Const.PARAMS_GRAD}:
+            self._state = state
+        else:
+            raise ValueError(f"Invalid state: {state}")
 
     def increment(self, state: str):
-        if state == Const.OUTPUT:
-            self.input_state = False
-        if self.input_state:
+        self.set_state(state)
+        if self._state == Const.INPUT:
             self.input_len += 1
-        self.output_index += 1
+            self.output_end_index += 1
+            self.params_end_index += 1
+        if self._state == Const.OUTPUT:
+            self.output_end_index += 1
+            self.params_end_index += 1
+        if self._state == Const.PARAMS:
+            self.params_end_index += 1
+        self.params_grad_end_index += 1
+
+
+def api_batches_update(api_batches, api_name, state, index):
+    """
+    当一个api的所有item更新完后，input, output的索引范围：
+    input: [start: start+input_len]
+    output: [start+input_len: output_end_index]
+    params: [output_end_index: params_end_index]
+    """
+    if not api_batches:
+        api_batches.append(ApiBatch(api_name, index))
+    else:
+        api_batch = api_batches[-1]
+        if api_batch.api_name == api_name or (
+                not re.search(Const.REGEX_FORWARD_BACKWARD, api_name) and api_name in api_batch.api_name):
+            try:
+                api_batch.increment(state)
+            except ValueError as e:
+                logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
+                raise CompareException(CompareException.INVALID_STATE_ERROR) from e
+        else:
+            api_batches.append(ApiBatch(api_name, index))
 
 
 def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
@@ -246,18 +294,10 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     for i, res_i in enumerate(result):
         api_full_name = safe_get_value(res_i, 0, "res_i")
         api_name, state = get_name_and_state(api_full_name)
-        if not api_batches:
-            api_batches.append(ApiBatch(api_name, i))
-            continue
-        api_batch = api_batches[-1]
-        if api_batch.api_name == api_name:
-            api_batch.increment(state)
-        else:
-            api_batches.append(ApiBatch(api_name, i))
+        api_batches_update(api_batches, api_name, state, i)
     with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
         for api_batch in api_batches:
-            find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len,
-                            highlight_dict, dump_mode)
+            find_error_rows(result[api_batch.start: api_batch.params_end_index], api_batch, highlight_dict, dump_mode)
             progress_bar.update(1)
 
 
@@ -301,7 +341,7 @@ def handle_multi_process_malicious_value_check(func, result_df):
     for column in result_df_columns:
         value_check(column)
     for df_chunk in chunks:
-        pool.apply_async(func, args=(df_chunk, result_df_columns, ), error_callback=err_call)
+        pool.apply_async(func, args=(df_chunk, result_df_columns,), error_callback=err_call)
 
     pool.close()
     pool.join()
@@ -318,7 +358,7 @@ def compare_result_df_convert(value):
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     """Write and highlight results in Excel"""
 
-    update_highlight_err_msg(result_df, highlight_dict)     # add highlight err_msg
+    update_highlight_err_msg(result_df, highlight_dict)  # add highlight err_msg
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -344,7 +384,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     )
     for i in highlight_dict.get("red_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i + 2, column=j).fill = red_fill    # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
+            ws.cell(row=i + 2, column=j).fill = red_fill  # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
             ws.cell(row=i + 2, column=j).fill = yellow_fill

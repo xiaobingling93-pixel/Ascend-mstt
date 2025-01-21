@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -16,8 +16,7 @@
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api
 from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
-from msprobe.core.common.const import Const
-
+from msprobe.core.common.const import CompareConst, Const
 
 dtype_mapping = {
     "Int8": "torch.int8",
@@ -38,31 +37,40 @@ dtype_mapping = {
 }
 
 
-def check_struct_match(npu_dict, bench_dict):
-    npu_struct_in = npu_dict.get("input_struct")
-    bench_struct_in = bench_dict.get("input_struct")
-    npu_struct_out = npu_dict.get("output_struct")
-    bench_struct_out = bench_dict.get("output_struct")
+def compare_op_dict_struct(npu_dict, bench_dict):
+    return all(npu_dict.get(key) == bench_dict.get(key) for key in CompareConst.STRUCT_COMPARE_KEY)
 
-    is_match = npu_struct_in == bench_struct_in and npu_struct_out == bench_struct_out
+
+def check_struct_match(npu_dict, bench_dict):
+    is_match = compare_op_dict_struct(npu_dict, bench_dict)
     if not is_match:
-        if len(npu_struct_in) == 0 or len(bench_struct_in) == 0 or len(npu_struct_in) != len(bench_struct_in):
-            return False
+        struct_match_list = []
         try:
-            struct_in_is_match = check_type_shape_match(npu_struct_in, bench_struct_in)
-            struct_out_is_match = check_type_shape_match(npu_struct_out, bench_struct_out)
+            for i, key in enumerate(CompareConst.STRUCT_COMPARE_KEY):
+                # 首先额外检查input_struct是否空，input_struct不可能为空
+                if i == 0 and (not npu_dict.get(key, []) or not bench_dict.get(key, [])):
+                    return False
+                struct_match_list.append(check_type_shape_match(npu_dict.get(key, []), bench_dict.get(key, [])))
         except CompareException as error:
             err_msg = f'index out of bounds error occurs in npu or bench api, please check!\n' \
                       f'npu_dict: {npu_dict}' \
                       f'bench_dict: {bench_dict}'
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
-        is_match = struct_in_is_match and struct_out_is_match
+        is_match = all(struct_match_list)
     return is_match
 
 
 def check_type_shape_match(npu_struct, bench_struct):
-    shape_type_match = False
+    """
+    further check dtypes with a dtype mapping list when dtypes are not entirely consistent.
+    """
+    if len(npu_struct) != len(bench_struct):
+        return False
+    if not npu_struct and not bench_struct:
+        return True
+
+    struct_match = False
     for npu_type_shape, bench_type_shape in zip(npu_struct, bench_struct):
         try:
             npu_type = npu_type_shape[0]
@@ -76,22 +84,14 @@ def check_type_shape_match(npu_struct, bench_struct):
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
-            ms_type = [
-                [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
-                [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
-            ]
-            torch_type = [
-                [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
-                [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
-            ]
-            if ([npu_type, bench_type] in ms_type) or ([npu_type, bench_type] in torch_type):
+            if ([npu_type, bench_type] in CompareConst.MS_TYPE) or ([npu_type, bench_type] in CompareConst.TORCH_TYPE):
                 type_match = True
             else:
                 type_match = False
-        shape_type_match = shape_match and type_match
-        if not shape_type_match:
+        struct_match = shape_match and type_match
+        if not struct_match:
             return False
-    return shape_type_match
+    return struct_match
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -103,6 +103,8 @@ def check_graph_mode(a_op_name, b_op_name):
 
 
 def fuzzy_check_op(npu_name_list, bench_name_list):
+    # 先检查api里的item长度是否相等，如果不是parameters_grad, 必然有input或者output，长度不可能为0
+    # 如果是parameters_grad, "parameters_grad"字段的字典不会是空字典，因此len>=1
     if len(npu_name_list) == 0 or len(bench_name_list) == 0 or len(npu_name_list) != len(bench_name_list):
         return False
     is_match = True
@@ -148,11 +150,11 @@ def check_json_key_value(input_output, op_name, depth=0):
         return
     if isinstance(input_output, list):
         for item in input_output:
-            check_json_key_value(item, op_name, depth+1)
+            check_json_key_value(item, op_name, depth + 1)
     elif isinstance(input_output, dict):
         for key, value in input_output.items():
             if isinstance(value, dict):
-                check_json_key_value(value, op_name, depth+1)
+                check_json_key_value(value, op_name, depth + 1)
             else:
                 valid_key_value(key, value, op_name)
 

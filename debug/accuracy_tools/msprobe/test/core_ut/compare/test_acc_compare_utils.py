@@ -4,12 +4,14 @@ import json
 import os
 import shutil
 import unittest
+from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
-    get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, op_item_parse, read_op, rename_api, \
-    resolve_api_special_parameters, result_item_init, stack_column_process, table_value_is_valid
+    count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
+    op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
+    table_value_is_valid, get_name_and_state
 
 # test_read_op_1
 op_data = {
@@ -98,41 +100,72 @@ o_result_api_special = [
 
 # test_get_accuracy
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
-                        'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
+                        'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output.0',
+                        'Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.bias',
+                        'Functional.conv2d.0.parameters_grad.weight', 'Functional.conv2d.0.parameters_grad.bias'],
             'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                              ('torch.float32', [16])],
             'output_struct': [('torch.float32', [1, 16, 28, 28])],
-            'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
-                        [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
-                        [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
-                        [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
+            'params_struct': [('torch.float32', [1, 16, 28, 28]), ('torch.float32', [1, 16, 28, 28])],
+            'params_grad_struct': [('torch.float32', [1, 16, 28, 28]), ('torch.float32', [1, 16, 28, 28])],
+            'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0],
+                        [0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0],
+                        [0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0],
+                        [2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0],
+                        [1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0],
+                        [1.0, 1.0, 1.0, 1.0]],
+            'stack_info': []}
 bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
-                          'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
+                          'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output.0',
+                          'Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.bias',
+                          'Functional.conv2d.0.parameters_grad.weight', 'Functional.conv2d.0.parameters_grad.bias'],
               'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                                ('torch.float32', [16])],
               'output_struct': [('torch.float32', [1, 16, 28, 28])],
-              'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
-                          [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
-                          [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
-                          [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
+              'params_struct': [('torch.float32', [1, 16, 28, 28]), ('torch.float32', [1, 16, 28, 28])],
+              'params_grad_struct': [('torch.float32', [1, 16, 28, 28]), ('torch.float32', [1, 16, 28, 28])],
+              'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0],
+                          [0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0],
+                          [0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0],
+                          [2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0],
+                          [1.0, 1.0, 1.0, 1.0],
+                          [1.0, 1.0, 1.0, 1.0],
+                          [1.0, 1.0, 1.0, 1.0],
+                          [1.0, 1.0, 1.0, 1.0]],
+              'stack_info': []}
 highlight_dict = {'red_rows': [], 'yellow_rows': []}
 o_result = [
     ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.0', 'torch.float32', 'torch.float32',
-     [1, 1, 28, 28], [1, 1, 28, 28], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 3.029174327850342,
-     -2.926689624786377,
-     -0.06619918346405029, 3.029174327850342, -2.926689624786377, -0.06619918346405029, '', '', 'None'],
+     [1, 1, 28, 28], [1, 1, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0,
+     3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0,'', '', 'None'],
     ['Functional.conv2d.0.forward.input.1', 'Functional.conv2d.0.forward.input.1', 'torch.float32', 'torch.float32',
-     [16, 1, 5, 5], [16, 1, 5, 5], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 0.19919930398464203,
-     -0.19974489510059357,
-     0.006269412115216255, 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, '', '', 'None'],
+     [16, 1, 5, 5], [16, 1, 5, 5], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0,
+     0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, '', '', 'None'],
     ['Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.input.2', 'torch.float32', 'torch.float32',
-     [16], [16], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 0.19734230637550354, -0.18177609145641327,
-     0.007903944700956345,
-     0.19734230637550354, -0.18177609145641327, 0.007903944700956345, '', '', 'None'],
-    ['Functional.conv2d.0.forward.output', 'Functional.conv2d.0.forward.output', 'torch.float32', 'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 2.1166646480560303,
-     -2.190781354904175,
-     -0.003579073818400502, 2.1166646480560303, -2.190781354904175, -0.003579073818400502, '', '', 'None']]
+     [16], [16], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0,
+     0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.forward.output.0', 'Functional.conv2d.0.forward.output.0', 'torch.float32', 'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0,
+     2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.weight', 'torch.float32', 'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'Functional.conv2d.0.forward.parameters.bias', 'torch.float32', 'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.parameters_grad.weight', 'Functional.conv2d.0.parameters_grad.weight', 'torch.float32', 'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.parameters_grad.bias', 'Functional.conv2d.0.parameters_grad.bias', 'torch.float32', 'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+]
 
 # test_get_un_match_accuracy
 o_result_unmatch_1 = [
@@ -141,36 +174,64 @@ o_result_unmatch_1 = [
     ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A',
      'None'],
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'None'],
-    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+    ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'None'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'None'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'None'],
+    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'None'],
+    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'None']
 ]
 o_result_unmatch_2 = [
     ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0, 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 'No bench data matched.', 'None'],
-    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None']
+    ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None']
 ]
 o_result_unmatch_3 = [
     ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'No bench data matched.', 'None', '-1'],
     ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'No bench data matched.', 'None', '-1'],
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'No bench data matched.', 'None', '-1'],
-    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
-     'No bench data matched.', 'None', '-1']
+    ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
+     'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1']
 ]
 
 # test_merge_tensor
@@ -192,6 +253,8 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                   'input_struct': [('torch.float32', [16, 1, 3, 3]), ('torch.float32', [16, 1, 3, 3]),
                                    ("<class 'float'>", '[]')],
                   'output_struct': [('torch.float32', [16, 1, 3, 3])],
+                  'params_struct': [],
+                  'params_grad_struct': [],
                   'summary': [[0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275],
                               [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481,
                                0.02844562754034996],
@@ -211,9 +274,10 @@ tensor_list_md5 = [
 ]
 result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.kwargs.alpha.0',
                                   'Tensor.add_.0.forward.output.0'],
-                      'input_struct': [('torch.float32', [16, 1, 3, 3], 1)],
-                      'kwargs_struct': [("<class 'float'>", '[]', None)],
+                      'input_struct': [('torch.float32', [16, 1, 3, 3], 1), ("<class 'float'>", '[]', None)],
                       'output_struct': [('torch.float32', [16, 1, 3, 3], 2)],
+                      'params_struct': [],
+                      'params_grad_struct': [],
                       'summary': [
                           [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481, 0.02844562754034996],
                           [-0.1, -0.1, -0.1, -0.1],
@@ -336,10 +400,73 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(accuracy_check, '')
         self.assertEqual(err_msg, '')
 
+    def test_count_struct_normal(self):
+        op_dict = {
+            CompareConst.OP_NAME: ['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7', 'op8'],
+            CompareConst.INPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.OUTPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_GRAD_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+        }
+
+        result = count_struct(op_dict)
+
+        self.assertEqual(result, (8, 2, 2, 2, 2))
+
+    @patch('msprobe.core.compare.utils.logger')
+    def test_mismatch_case(self, mock_logger):
+        op_dict = {
+            CompareConst.OP_NAME: ['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7', 'op8'],
+            CompareConst.INPUT_STRUCT: [("torch.float32", [1])],
+            CompareConst.OUTPUT_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+            CompareConst.PARAMS_GRAD_STRUCT: [("torch.float32", [1]), ("torch.float32", [1])],
+        }
+
+        with self.assertRaises(CompareException) as context:
+            count_struct(op_dict)
+        self.assertEqual(context.exception.code, CompareException.NAMES_STRUCTS_MATCH_ERROR)
+
     def test_get_accuracy(self):
         result = []
         get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
+
+    def test_append_stack_info_stack_exist_index_0(self):
+        result_item = ['item1']
+        npu_stack_info = ['stack_info1']
+        index = 0
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', 'stack_info1'])
+
+    def test_append_stack_info_stack_exist_index_not_0(self):
+        result_item = ['item1']
+        npu_stack_info = ['stack_info1']
+        index = 1
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', CompareConst.NONE])
+
+    def test_append_stack_info_stack_empty_index_0(self):
+        result_item = ['item1']
+        npu_stack_info = []
+        index = 0
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', CompareConst.NONE])
+
+    def test_append_stack_info_stack_empty_index_not_0(self):
+        result_item = ['item1']
+        npu_stack_info = []
+        index = 1
+
+        append_stack_info(result_item, npu_stack_info, index)
+
+        self.assertEqual(result_item, ['item1', CompareConst.NONE])
 
     def test_get_un_match_accuracy_md5(self):
         result = []
@@ -472,3 +599,35 @@ class TestUtilsMethods(unittest.TestCase):
     def test_table_value_is_valid_invalid_str(self):
         result = table_value_is_valid("=1.00")
         self.assertFalse(result)
+
+
+class TestGetNameAndState(unittest.TestCase):
+    def test_valid_forward_input(self):
+        name = 'conv2d.forward.1.input.0'
+        expected_api = 'conv2d.forward.1.'
+        expected_state = 'input'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_valid_backward_output(self):
+        name = 'Functional.pad.0.backward.output.0'
+        expected_api = 'Functional.pad.0.backward.'
+        expected_state = 'output'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_valid_with_kwargs(self):
+        name = 'layer.norm.2.forward.kwargs.attr'
+        expected_api = 'layer.norm.2.forward.'
+        expected_state = 'kwargs'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_no_numeric_index(self):
+        name = 'conv2d.forward.input.0'
+        expected_api = 'conv2d.forward.'
+        expected_state = 'input'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+    def test_invalid__state(self):
+        name = 'conv2d.forward.1.invalidstate.0'
+        with self.assertRaises(CompareException) as context:
+            get_name_and_state(name)
+        self.assertIn('Invalid name string', str(context.exception.code))
