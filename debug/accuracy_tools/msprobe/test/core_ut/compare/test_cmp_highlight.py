@@ -161,7 +161,7 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input's is below 0.01"])]
+        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input/parameters's is below 0.01"])]
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
 

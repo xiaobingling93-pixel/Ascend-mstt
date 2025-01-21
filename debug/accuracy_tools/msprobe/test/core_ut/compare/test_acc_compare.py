@@ -325,11 +325,11 @@ class TestUtilsMethods(unittest.TestCase):
                 (3, ["maximum absolute error exceeds 1e+10"])
             ],
             "yellow_lines": [
-                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input's"]),
+                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input/parameters's"]),
                 (3, [
-                    "maximum absolute error of both input and output exceed 1, "
+                    "maximum absolute error of both input/parameters and output exceed 1, "
                     "with the output larger by an order of magnitude",
-                    "The output's cosine decreases by more than 0.1 compared to the input's"])
+                    "The output's cosine decreases by more than 0.1 compared to the input/parameters's"])
             ]
         })
 
