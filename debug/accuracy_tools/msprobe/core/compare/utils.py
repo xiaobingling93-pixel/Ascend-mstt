@@ -131,7 +131,7 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
         return [default_item]
     elif not op_data:
         return []
-    
+
     item_list = []
     if isinstance(op_data, list):
         for i, data in enumerate(op_data):
@@ -162,7 +162,7 @@ def gen_op_item(op_data, op_name):
     for i in params:
         if i not in op_item:
             op_item[i] = None
-    
+
     if not op_item.get('dtype'):
         if op_item.get('type') == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
@@ -177,7 +177,7 @@ def gen_op_item(op_data, op_name):
                 op_item[i] = op_data.get('value')
     if not op_item.get('md5'):
         op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '')).encode()):08x}"
-    
+
     return op_item
 
 
@@ -386,9 +386,9 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
     b_num, b_num_input, b_num_output, b_num_params, b_num_params_grad = count_struct(b_dict)
 
     get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
-    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
     get_accuracy_core(n_num_input + n_num_output, n_num_params, b_num_input + b_num_output, b_num_params,
                       CompareConst.PARAMS_STRUCT)
+    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
     get_accuracy_core(n_num_input + n_num_output + n_num_params, n_num_params_grad,
                       b_num_input + b_num_output + b_num_params, b_num_params_grad,
                       CompareConst.PARAMS_GRAD_STRUCT)
@@ -412,7 +412,8 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         CompareConst.PARAMS_STRUCT: 0,
         CompareConst.PARAMS_GRAD_STRUCT: 0
     }
-    for index, n_name in enumerate(n_dict["op_name"]):
+    op_name_list_reorder = reorder_op_name_list(n_dict[CompareConst.OP_NAME])
+    for index, n_name in enumerate(op_name_list_reorder):
         _, state = get_name_and_state(n_name)
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
         if not struct_key:
@@ -540,11 +541,19 @@ def get_name_and_state(name):
     return api, state
 
 
+def reorder_op_name_list(op_name_list):
+    if not op_name_list:
+        return op_name_list
+    reorder_op_name_list = sorted(op_name_list, key=lambda x: (
+        get_name_and_state(x)[1] != Const.INPUT, get_name_and_state(x)[1] != Const.PARAMS, x))
+    return reorder_op_name_list
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path. Default path: ./output", 
+                        help="<Required> The compare task result out path. Default path: ./output",
                         required=False, default="./output", nargs="?", const="./output")
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)

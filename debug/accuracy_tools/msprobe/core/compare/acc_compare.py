@@ -33,7 +33,7 @@ from msprobe.core.compare.highlight import find_compare_result_error_rows, highl
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    print_compare_ends_info, read_op, get_name_and_state
+    print_compare_ends_info, read_op, get_name_and_state, reorder_op_name_list
 
 
 class ModeConfig:
@@ -255,7 +255,8 @@ class Comparator:
                     CompareConst.PARAMS_GRAD_STRUCT: 0
                 }
                 data_name_list = merge_list.get('data_name')
-                for index, op_full_name in enumerate(merge_list[CompareConst.OP_NAME]):
+                op_name_list_reorder = reorder_op_name_list(merge_list[CompareConst.OP_NAME])
+                for index, op_full_name in enumerate(op_name_list_reorder):
                     data_name = data_name_list[index] if data_name_list else None
 
                     _, state = get_name_and_state(op_full_name)
