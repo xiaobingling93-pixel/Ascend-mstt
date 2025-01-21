@@ -355,7 +355,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
                 new_data.append([name] + [step] + metric_value)
             else:
                 new_data.append(name.split(MonitorConst.VPP_SEP) + [step] + metric_value)
-        new_data = pd.DataFrame(new_data).round(self.ndigits).fillna("nan", inplace=True)
+        new_data = pd.DataFrame(new_data).round(self.ndigits).fillna("nan")
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
 
