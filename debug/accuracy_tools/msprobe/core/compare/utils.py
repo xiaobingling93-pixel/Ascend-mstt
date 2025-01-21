@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -82,6 +82,10 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 
 def rename_api(npu_name, process):
+    """
+    原api： {api_type}.{api_name}.{API调用次数}.{前向反向}.{input/output}.{参数序号}
+    rename后： {api_type}.{api_name}.{input/output}.{参数序号}
+    """
     npu_split = npu_name.split(process)
     try:
         torch_func_index, in_out = npu_split[0], npu_split[1]
@@ -94,17 +98,13 @@ def rename_api(npu_name, process):
 
 
 def read_op(op_data, op_name):
-    io_name_mapping = {
-        Const.INPUT_ARGS: '.input',
-        Const.INPUT_KWARGS: '.input',
-        Const.INPUT: '.input',
-        Const.OUTPUT: '.output'
-    }
-
-    op_parsed_list = []
-    for name in io_name_mapping:
-        if name in op_data:
-            op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping[name]))
+    if Const.PARAMS_GRAD in op_name.split(Const.SEP):
+        op_parsed_list = op_item_parse(op_data, op_name)
+    else:
+        op_parsed_list = []
+        for name in CompareConst.IO_NAME_MAPPING:
+            if name in op_data:
+                op_parsed_list.extend(op_item_parse(op_data[name], op_name + CompareConst.IO_NAME_MAPPING[name]))
     return op_parsed_list
 
 
@@ -135,7 +135,10 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
     item_list = []
     if isinstance(op_data, list):
         for i, data in enumerate(op_data):
-            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+            if Const.PARAMS_GRAD not in op_name.split(Const.SEP):
+                item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+            else:
+                item_list.extend(op_item_parse(data, op_name, depth + 1))
     elif isinstance(op_data, dict):
         if is_leaf_data(op_data):
             return [gen_op_item(op_data, op_name)]
@@ -151,8 +154,9 @@ def is_leaf_data(op_data):
 def gen_op_item(op_data, op_name):
     op_item = {}
     op_item.update(op_data)
-    op_item['full_op_name'] = op_name
-    op_item['data_name'] = op_data.get('data_name', '-1')
+    data_name = op_data.get('data_name') if op_data.get('data_name') else '-1'  # 如果是""也返回-1
+    op_item['data_name'] = data_name
+    op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
 
     params = ['Max', 'Min', 'Mean', 'Norm']
     for i in params:
@@ -283,6 +287,22 @@ def result_item_init(n_info, b_info, dump_mode):
     return result_item
 
 
+def count_struct(op_dict):
+    parts = [
+        CompareConst.OP_NAME,
+        CompareConst.INPUT_STRUCT,
+        CompareConst.OUTPUT_STRUCT,
+        CompareConst.PARAMS_STRUCT,
+        CompareConst.PARAMS_GRAD_STRUCT
+    ]
+    lengths = [len(op_dict.get(part, [])) for part in parts]
+    num = lengths[0]
+    if num != sum(lengths[1:]):
+        logger.error(f"Length of names and structs of op_dict not match. Please check! op_dict: {op_dict}")
+        raise CompareException(CompareException.NAMES_STRUCTS_MATCH_ERROR)
+    return tuple(lengths)
+
+
 def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
@@ -362,31 +382,43 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
                 result.append(result_item)
 
-    n_num = len(n_dict['op_name'])
-    b_num = len(b_dict['op_name'])
-    n_num_input = len([name for name in n_dict['op_name']
-                       if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
-    b_num_input = len([name for name in b_dict['op_name']
-                       if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
-    n_num_output = n_num - n_num_input
-    b_num_output = b_num - b_num_input
-    get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
-    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
+    n_num, n_num_input, n_num_output, n_num_params, n_num_params_grad = count_struct(n_dict)
+    b_num, b_num_input, b_num_output, b_num_params, b_num_params_grad = count_struct(b_dict)
+
+    get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
+    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
+    get_accuracy_core(n_num_input + n_num_output, n_num_params, b_num_input + b_num_output, b_num_params,
+                      CompareConst.PARAMS_STRUCT)
+    get_accuracy_core(n_num_input + n_num_output + n_num_params, n_num_params_grad,
+                      b_num_input + b_num_output + b_num_params, b_num_params_grad,
+                      CompareConst.PARAMS_GRAD_STRUCT)
+
+
+def append_stack_info(result_item, npu_stack_info, index):
+    """添加堆栈信息到 result_item"""
+    if npu_stack_info and index == 0:
+        result_item.extend(npu_stack_info)
+    else:
+        result_item.append(CompareConst.NONE)
 
 
 def get_un_match_accuracy(result, n_dict, dump_mode):
-    index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
     bench_name, bench_type, bench_shape = CompareConst.N_A, CompareConst.N_A, CompareConst.N_A
-    err_msg = CompareConst.NO_BENCH
-    accuracy_check_res = CompareConst.N_A
+
+    struct_to_index_mapping = {
+        CompareConst.INPUT_STRUCT: 0,
+        CompareConst.OUTPUT_STRUCT: 0,
+        CompareConst.PARAMS_STRUCT: 0,
+        CompareConst.PARAMS_GRAD_STRUCT: 0
+    }
     for index, n_name in enumerate(n_dict["op_name"]):
-        name_ele_list = n_name.split(Const.SEP)
-        if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
-            n_struct = safe_get_value(n_dict, index, "n_dict", key=CompareConst.INPUT_STRUCT)
-        if Const.OUTPUT in name_ele_list:
-            n_struct = safe_get_value(n_dict, index_out, "n_dict", key=CompareConst.OUTPUT_STRUCT)
-            index_out += 1
+        _, state = get_name_and_state(n_name)
+        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+        if not struct_key:
+            continue
+        n_struct = safe_get_value(n_dict, struct_to_index_mapping.get(struct_key), "n_dict", key=struct_key)
+        struct_to_index_mapping[struct_key] += 1
 
         try:
             result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
@@ -397,28 +429,26 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
                       f"output_struct of n_dict is {n_dict[CompareConst.OUTPUT_STRUCT]}"
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+
         if dump_mode == Const.MD5:
             result_item.extend([CompareConst.N_A] * 3)
-            if npu_stack_info and index == 0:
-                result_item.extend(npu_stack_info)
-            else:
-                result_item.append(CompareConst.NONE)
+            append_stack_info(result_item, npu_stack_info, index)
             result.append(result_item)
             continue
         if dump_mode == Const.SUMMARY:
             result_item.extend([CompareConst.N_A] * 8)
-        else:
+        if dump_mode == Const.ALL:
             result_item.extend([CompareConst.N_A] * 5)
+
         npu_summary_data = safe_get_value(n_dict, index, "n_dict", key=CompareConst.SUMMARY)
-        result_item.extend(npu_summary_data)
         bench_summary_data = [CompareConst.N_A] * 4
+        result_item.extend(npu_summary_data)
         result_item.extend(bench_summary_data)
+        err_msg = CompareConst.NO_BENCH
+        accuracy_check_res = CompareConst.N_A
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
-        if npu_stack_info and index == 0:
-            result_item.extend(npu_stack_info)
-        else:
-            result_item.append(CompareConst.NONE)
+        append_stack_info(result_item, npu_stack_info, index)
         if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
             result_item.extend(["-1"])
         result.append(result_item)
@@ -430,6 +460,8 @@ def merge_tensor(tensor_list, dump_mode):
     op_dict[CompareConst.INPUT_STRUCT] = []
     op_dict[CompareConst.KWARGS_STRUCT] = []
     op_dict[CompareConst.OUTPUT_STRUCT] = []
+    op_dict[CompareConst.PARAMS_STRUCT] = []
+    op_dict[CompareConst.PARAMS_GRAD_STRUCT] = []
     op_dict[Const.SUMMARY] = []
     op_dict["stack_info"] = []
 
@@ -443,26 +475,19 @@ def merge_tensor(tensor_list, dump_mode):
             break
 
         op_dict["op_name"].append(tensor['full_op_name'])
-        name_ele_list = tensor['full_op_name'].split(Const.SEP)
-        name_to_struct_mapping = {
-            Const.INPUT: CompareConst.INPUT_STRUCT,
-            Const.KWARGS: CompareConst.KWARGS_STRUCT,
-            Const.OUTPUT: CompareConst.OUTPUT_STRUCT
-        }
-        for name_key, struct_key in name_to_struct_mapping.items():
-            if name_key in name_ele_list:
-                if dump_mode == Const.MD5:
-                    op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
-                else:
-                    op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-                break
+
+        _, state = get_name_and_state(tensor['full_op_name'])
+        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+        if not struct_key:
+            continue
+        if dump_mode == Const.MD5:
+            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
+        else:
+            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
         op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
 
         if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
-            data_name = safe_get_value(op_dict, -1, "op_dict", key="data_name").rsplit(Const.SEP, 1)[0]
-            if data_name != "-1":
-                op_dict["op_name"][-1] = data_name
 
     if not op_dict[CompareConst.KWARGS_STRUCT]:
         del op_dict[CompareConst.KWARGS_STRUCT]
@@ -486,6 +511,33 @@ def table_value_is_valid(value: str) -> bool:
         # otherwise, they will be considered as formular injections
         return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
     return True
+
+
+def get_name_and_state(name):
+    """
+    Get api/module name and state
+    example:
+    name = 'conv2d.forward.1.input.0'
+    return: ('conv2d.forward.1.', 'input')
+
+    name = 'Functional.pad.0.backward.output.0'
+    return: ('Functional.pad.0.backward.', 'output')
+
+    state type: input, output, kwargs, parameters, parameters_grad
+    """
+    if Const.PARAMS_GRAD in name.split(Const.SEP):
+        return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
+
+    split = re.split(Const.REGEX_FORWARD_BACKWARD, name)
+    api = f'{split[0]}.{split[1]}.'
+    state_str = split[2]
+    match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
+    if not match:
+        raise CompareException(f'Invalid name string: {name}')
+    if match.group(1):
+        api = f'{api}{match.group(1)}'
+    state = match.group(2)
+    return api, state
 
 
 def _compare_parser(parser):
