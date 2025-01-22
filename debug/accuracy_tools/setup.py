@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -53,21 +53,20 @@ EXCLUDE_PKGS = [
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
     raise SystemError("Specifing platforms or python version is not supported.")
 
-if (platform.system() != "Linux"):
+if platform.system() != "Linux":
     raise SystemError("MsProbe is only supported on Linux platforms.")
 
-
-mod_list_range = {"adump",}
+mod_list_range = {"adump", }
 mod_list = []
-for i in range(len(sys.argv)):
-    if sys.argv[i].startswith("--include-mod"):
-        if sys.argv[i].startswith("--include-mod="):
-            mod_list = sys.argv[i][len("--include-mod="):].split(',')
-            sys.argv.remove(sys.argv[i])
+for i, arg in enumerate(sys.argv):
+    if arg.startswith("--include-mod"):
+        if arg.startswith("--include-mod="):
+            mod_list = arg[len("--include-mod="):].split(',')
+            sys.argv.remove(arg)
         elif i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith("--"):
             mod_list = sys.argv[i + 1].split(',')
             sys.argv.remove(sys.argv[i + 1])
-            sys.argv.remove(sys.argv[i])
+            sys.argv.remove(arg)
         mod_list = list(set(mod_list) & mod_list_range)
         break
 

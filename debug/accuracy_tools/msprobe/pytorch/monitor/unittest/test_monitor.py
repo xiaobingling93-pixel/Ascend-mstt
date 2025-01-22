@@ -1,6 +1,21 @@
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
 import os
 import re
-import argparse
 from glob import glob
 
 import pandas as pd
@@ -21,19 +36,19 @@ def parse_logfile(logfile):
 def parse_monitor_output(output_dir):
     reduced = {}
     unreduced = {}
-    for dir in glob(output_dir + '*'):
-        rank = int(re.findall('(?<=rank)[\d]*', dir)[0])
+    for directory in glob(output_dir + '*'):
+        rank = int(re.findall('(?<=rank)[\d]*', directory)[0])
         unreduced[rank] = []
         reduced[rank] = []
-        for file in os.listdir(dir):
-            df = pd.read_csv(os.path.join(dir, file))
+        for file in os.listdir(directory):
+            df = pd.read_csv(os.path.join(directory, file))
             if '_unreduced_' in file:
                 unreduced[rank].append(df)
                 pass
             elif '_reduced_' in file:
                 reduced[rank].append(df)
             else:
-                logger.info(f'unexpected file {file} in {dir}')
+                logger.info(f'unexpected file {file} in {directory}')
     return reduced, unreduced
 
 
@@ -41,7 +56,7 @@ def valid_reduce(reduced, unreduced, tp_size, dp_size, sequence_parallel):
     steps = len(reduced[0])
     world_size = len(reduced)
     errors = []
-    for index, row in unreduced[0][0].iterrows():
+    for _, row in unreduced[0][0].iterrows():
         param = row['param_name']
         is_tp_duplicate = False
         for step in range(2):
@@ -103,7 +118,7 @@ def valid_total_norm(total_norm, reduced, duplicate_embedding):
                 if step == 0:
                     logger.info(f'rank {rank} is duplicated in dp group')
                 continue
-            for index, row in reduced[rank][step].iterrows():
+            for _, row in reduced[rank][step].iterrows():
                 if duplicate_embedding and 'word_embedding' in row['param_name']:
                     continue
                 calculated_norm += row['norm'] ** 2

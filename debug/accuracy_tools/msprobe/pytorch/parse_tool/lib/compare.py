@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,16 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 import time
-import numpy as np
 from collections import namedtuple
-from msprobe.pytorch.parse_tool.lib.utils import Util
+
+import numpy as np
+
+from msprobe.core.common.file_utils import create_directory, load_npy, save_npy_to_txt, write_csv, os_walk_for_files
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_utils import create_directory, load_npy, save_npy_to_txt, write_csv, os_walk_for_files
+from msprobe.pytorch.parse_tool.lib.utils import Util
 
 
 class Compare:
@@ -126,7 +126,7 @@ class Compare:
         all_close = np.allclose(data_left, data_right, atol=al, rtol=rl)
         np.seterr(divide='raise')
         cos_sim = np.dot(data_left, data_right) / (
-            np.sqrt(np.dot(data_left, data_left)) * np.sqrt(np.dot(data_right, data_right)))
+                np.sqrt(np.dot(data_left, data_left)) * np.sqrt(np.dot(data_right, data_right)))
         err_cnt = 0
         total_cnt = data_left.shape[0]
         diff_table_columns = ['Index', 'Left', 'Right', 'Diff']

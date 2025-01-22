@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,13 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-import cmd
+
 import argparse
-from msprobe.pytorch.parse_tool.lib.parse_tool import ParseTool
-from msprobe.pytorch.parse_tool.lib.utils import Util
+import cmd
+
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception
+from msprobe.pytorch.parse_tool.lib.parse_tool import ParseTool
+from msprobe.pytorch.parse_tool.lib.utils import Util
 
 
 class InteractiveCli(cmd.Cmd):
@@ -81,7 +81,7 @@ class InteractiveCli(cmd.Cmd):
         self.util.check_files_in_path(args.my_dump_path)
         self.util.check_files_in_path(args.golden_dump_path)
         if self.util.dir_contains_only(args.my_dump_path, ".npy") and \
-            self.util.dir_contains_only(args.golden_dump_path, ".npy"):
+                self.util.dir_contains_only(args.golden_dump_path, ".npy"):
             self.parse_tool.do_compare_converted_dir(args)
         else:
             self.parse_tool.do_vector_compare(args)

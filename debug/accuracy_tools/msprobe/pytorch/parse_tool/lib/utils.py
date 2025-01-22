@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,24 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
+import hashlib
 import os
 import re
-import sys
 import subprocess
-import hashlib
+import sys
 import time
-import numpy as np
 from collections import namedtuple
+
+import numpy as np
+from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.file_utils import change_mode, check_other_user_writable, \
+    check_path_executable, check_path_owner_consistent
+from msprobe.core.common.file_utils import check_file_or_directory_path, remove_path, check_file_type, os_walk_for_files
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.file_desc import DumpDecodeFileDesc, FileDesc
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_utils import change_mode, check_other_user_writable,\
-    check_path_executable, check_path_owner_consistent
-from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_utils import check_file_or_directory_path, remove_path, check_file_type, os_walk_for_files
-from msprobe.pytorch.common.log import logger
-
 
 try:
     from rich.traceback import install
@@ -135,7 +134,7 @@ class Util:
             zero_mask = (data == 0)
             data[zero_mask] += np.finfo(float).eps
         return data
-    
+
     @staticmethod
     def dir_contains_only(path, endfix):
         files = os_walk_for_files(path, Const.MAX_TRAVERSAL_DEPTH)
@@ -143,11 +142,11 @@ class Util:
             if not file['file'].endswith(endfix):
                 return False
         return True
-    
+
     @staticmethod
     def localtime_str():
         return time.strftime("%Y%m%d%H%M%S", time.localtime())
-    
+
     @staticmethod
     def change_filemode_safe(path):
         change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -208,7 +207,7 @@ class Util:
 
     def list_numpy_files(self, path, extern_pattern=''):
         return self.list_file_with_pattern(path, Const.NUMPY_PATTERN, extern_pattern,
-                                            self._gen_numpy_file_info)
+                                           self._gen_numpy_file_info)
 
     def create_columns(self, content):
         if not Columns:

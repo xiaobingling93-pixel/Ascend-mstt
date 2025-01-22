@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,20 +14,20 @@
 # limitations under the License.
 import itertools
 import os
-import sys
 import statistics as st
+import sys
 from abc import ABC
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List
-from collections import defaultdict
 
 import pandas as pd
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_utils import change_mode, create_directory, write_df_to_csv
 from msprobe.core.common.const import FileCheckConst, MonitorConst
+from msprobe.core.common.file_utils import change_mode, create_directory, write_df_to_csv
+from msprobe.pytorch.common.log import logger
 
 
 class ScanRule(ABC):
@@ -170,6 +170,7 @@ TRAIN_STAGE = {
     **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
     **{key_: TrainStage.OPTIMIZER_STAGE for key_ in OPTIMIZER_KEY}
 }
+
 
 @dataclass(eq=True)
 class GradAnomalyData:
