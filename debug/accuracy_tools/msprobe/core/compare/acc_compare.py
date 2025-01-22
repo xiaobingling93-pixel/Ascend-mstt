@@ -255,7 +255,8 @@ class Comparator:
                     CompareConst.PARAMS_GRAD_STRUCT: 0
                 }
                 data_name_list = merge_list.get('data_name')
-                op_name_list_reorder = reorder_op_name_list(merge_list[CompareConst.OP_NAME])
+                op_name_list_reorder, summary_list_reorder = reorder_op_name_list(merge_list[CompareConst.OP_NAME],
+                                                                                  merge_list[Const.SUMMARY])
                 for index, op_full_name in enumerate(op_name_list_reorder):
                     data_name = data_name_list[index] if data_name_list else None
 
@@ -266,8 +267,7 @@ class Comparator:
                     ops_all[op_full_name] = {
                         CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
                                                             "merge_list", key=struct_key),
-                        CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                             key=CompareConst.SUMMARY),
+                        CompareConst.SUMMARY: safe_get_value(summary_list_reorder, index, "summary_list_reorder"),
                         'data_name': data_name,
                         'stack_info': merge_list.get('stack_info')
                     }

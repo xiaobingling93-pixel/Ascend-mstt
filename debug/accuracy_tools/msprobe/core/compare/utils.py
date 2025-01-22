@@ -412,7 +412,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         CompareConst.PARAMS_STRUCT: 0,
         CompareConst.PARAMS_GRAD_STRUCT: 0
     }
-    op_name_list_reorder = reorder_op_name_list(n_dict[CompareConst.OP_NAME])
+    op_name_list_reorder, _ = reorder_op_name_list(n_dict[CompareConst.OP_NAME], n_dict[Const.SUMMARY])
     for index, n_name in enumerate(op_name_list_reorder):
         _, state = get_name_and_state(n_name)
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
@@ -541,12 +541,16 @@ def get_name_and_state(name):
     return api, state
 
 
-def reorder_op_name_list(op_name_list):
-    if not op_name_list:
-        return op_name_list
-    reorder_op_name_list = sorted(op_name_list, key=lambda x: (
-        get_name_and_state(x)[1] != Const.INPUT, get_name_and_state(x)[1] != Const.PARAMS, x))
-    return reorder_op_name_list
+def reorder_op_name_list(op_name_list, summary_list):
+    if not op_name_list or not summary_list:
+        return op_name_list, summary_list
+    data = list(zip(op_name_list, summary_list))
+    sorted_data = sorted(data, key=lambda x: (
+        get_name_and_state(x[0])[1] != Const.INPUT, get_name_and_state(x[0])[1] != Const.PARAMS, x[0]))
+    op_name_list_reorder, summary_list_reorder = zip(*sorted_data)
+    op_name_list_reorder = list(op_name_list_reorder)
+    summary_list_reorder = list(summary_list_reorder)
+    return op_name_list_reorder, summary_list_reorder
 
 
 def _compare_parser(parser):

@@ -353,7 +353,8 @@ class MSComparator(Comparator):
             merge_list = self.gen_merge_list(data_json, data_name, stack_json_data)
             if not merge_list:
                 continue
-            op_name_list_reorder = reorder_op_name_list(merge_list[CompareConst.OP_NAME])
+            op_name_list_reorder, summary_list_reorder = reorder_op_name_list(merge_list[CompareConst.OP_NAME],
+                                                                              merge_list[Const.SUMMARY])
             for op_name in op_name_list_reorder:
                 result[CompareConst.OP_NAME].append(op_name)
                 if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
@@ -368,7 +369,7 @@ class MSComparator(Comparator):
                 result[Const.SHAPE].append(struct[1])
                 if self.dump_mode == Const.MD5:
                     result[Const.MD5].append(struct[2])
-                result[Const.SUMMARY].append(merge_list[Const.SUMMARY].pop(0))
+                result[Const.SUMMARY].append(summary_list_reorder.pop(0))
                 result['stack_info'].append(merge_list['stack_info'][0] if self.stack_mode else None)
                 if self.dump_mode == Const.ALL:
                     result['data_name'].append(merge_list['data_name'].pop(0))
