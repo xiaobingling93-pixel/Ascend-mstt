@@ -14,12 +14,15 @@
 # limitations under the License.
 
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import mindspore as ms
 from mindspore._c_expression import MSContext
 
-from msprobe.core.common.const import Const, MsgConst
+from msprobe.core.common.const import Const, FileCheckConst, MsgConst
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import FileChecker
+from msprobe.core.common.utils import get_real_step_or_rank
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import set_register_backward_hook_functions
@@ -38,11 +41,15 @@ except ImportError:
     _msprobe_c = None
 
 
+ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task", "dump_path", "level"])
+
+
 class PrecisionDebugger:
     _instance = None
     task_not_need_service = [Const.GRAD_PROBE]
 
-    def __new__(cls, config_path=None, opt=None):
+    def __new__(cls, config_path=None, task=None, dump_path=None,
+                level=None, step=None, opt=None):
         if not cls._instance:
             cls._instance = super().__new__(cls)
             cls._instance.initialized = False
@@ -51,7 +58,8 @@ class PrecisionDebugger:
             cls.first_start = False
         return cls._instance
 
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, task=None, dump_path=None,
+                 level=None, step=None):
         if self.initialized:
             return
         self.initialized = True
@@ -60,12 +68,18 @@ class PrecisionDebugger:
 
         if not config_path:
             config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
+
+        config_params = ConfigParameters(config_path, task, dump_path, level)
+        self.check_input_params(config_params)
+
         common_config, task_config = parse_json_config(config_path)
-        self.task = common_config.task
+        self.task = task if task else common_config.task
         if self.task == Const.GRAD_PROBE:
             self.gm = GradientMonitor(common_config, task_config)
             return
-        self.config = DebuggerConfig(common_config, task_config)
+        if step:
+            common_config.step = get_real_step_or_rank(step, Const.STEP)
+        self.config = DebuggerConfig(common_config, task_config, task, dump_path, level)
 
         if _msprobe_c:
             _msprobe_c._PrecisionDebugger(framework="MindSpore", config_path=config_path)
@@ -76,6 +90,29 @@ class PrecisionDebugger:
 
         Runtime.step_count = 0
         Runtime.is_running = False
+
+    @staticmethod
+    def check_input_params(args):
+        if args.config_path is not None:
+            if not isinstance(args.config_path, str):
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string")
+            file_checker = FileChecker(
+                file_path=args.config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
+            file_checker.common_check()
+
+        if args.task is not None and args.task not in Const.TASK_LIST:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}")
+
+        if args.dump_path is not None:
+            if not isinstance(args.dump_path, str):
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string")
+
+        if args.level is not None and args.level not in Const.LEVEL_LIST:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
 
     @staticmethod
     def _get_execution_mode():
