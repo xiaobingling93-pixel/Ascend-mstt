@@ -541,7 +541,7 @@ def get_name_and_state(name):
     return api, state
 
 
-def reorder_op_name_list(op_name_list, summary_list):
+def reorder_op_name_list(op_name_list, summary_list, data_name_list):
     if not op_name_list or not summary_list:
         return op_name_list, summary_list
 
@@ -550,22 +550,14 @@ def reorder_op_name_list(op_name_list, summary_list):
     others = [x for x in op_name_list if get_name_and_state(x)[1] not in [Const.PARAMS, Const.OUTPUT]]
 
     # 合并others, parameters, 和outputs，确保parameters排在output前面
-    op_name_list_reorder = others + parameters + outputs
+    op_name_reorder = others + parameters + outputs
+    summary_reorder = [summary_list[op_name_list.index(item)] for item in op_name_reorder]
+    if data_name_list:
+        data_name_reorder = [data_name_list[op_name_list.index(item)] for item in op_name_reorder]
+    else:
+        data_name_reorder = data_name_list
 
-    # # 创建一个映射，用于记录op_name_list_reorder中每个元素的索引
-    # op_name_list_reorder_indices = {item: idx for idx, item in enumerate(op_name_list_reorder)}
-
-    # 使用op_name_list_reorder_indices重新排序summary_list，保证与op_name_list_reorder一致
-    summary_list_reorder = [summary_list[op_name_list.index(item)] for item in op_name_list_reorder]
-
-
-    # data = list(zip(op_name_list, summary_list))
-    # sorted_data = sorted(data, key=lambda x: (
-    #     get_name_and_state(x[0])[1] != Const.INPUT, get_name_and_state(x[0])[1] != Const.PARAMS, x[0]))
-    # op_name_list_reorder, summary_list_reorder = zip(*sorted_data)
-    # op_name_list_reorder = list(op_name_list_reorder)
-    # summary_list_reorder = list(summary_list_reorder)
-    return op_name_list_reorder, summary_list_reorder
+    return op_name_reorder, summary_reorder, data_name_reorder
 
 
 def _compare_parser(parser):
