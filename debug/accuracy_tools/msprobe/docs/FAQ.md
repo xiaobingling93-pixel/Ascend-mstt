@@ -31,6 +31,11 @@
    ```
    在上述场景中，若希望采集relu数据，只需要将`relu(x)`修改为`torch.relu(x)`即可。
 
+4. 在使用L0 dump时，发现有些 module 的数据没有采集下来，原因是什么？
+   - 确认日志打印中是否存在`The {module_name} has registered deprecated register_backward_hook`信息，
+     该信息说明 module 挂载了被 PyTorch 框架废弃的 register_backward_hook，这与工具使用的 register_full_backward_hook 接口会产生冲突，故工具会跳过该 module 的反向数据采集。
+   - 如果您希望所有 module 数据都能采集下来，可以将模型中使用的 register_backward_hook 接口改为 PyTorch 框架推荐的 register_full_backward_pre_hook 或 register_full_backward_hook 接口。
+
 # 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
