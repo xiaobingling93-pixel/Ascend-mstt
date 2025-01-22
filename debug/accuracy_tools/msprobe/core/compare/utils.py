@@ -543,7 +543,7 @@ def get_name_and_state(name):
 
 def reorder_op_name_list(op_name_list, summary_list, data_name_list):
     if not op_name_list or not summary_list:
-        return op_name_list, summary_list
+        return op_name_list, summary_list, data_name_list
 
     parameters = [x for x in op_name_list if get_name_and_state(x)[1] == Const.PARAMS]
     outputs = [x for x in op_name_list if get_name_and_state(x)[1] == Const.OUTPUT]
