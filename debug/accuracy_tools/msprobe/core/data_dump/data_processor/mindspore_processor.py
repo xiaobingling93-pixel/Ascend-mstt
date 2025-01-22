@@ -240,7 +240,6 @@ class KernelDumpDataProcessor(MindsporeDataProcessor):
         logger.warning(f"The kernel dump does not support the {api_name} API.")
 
     def analyze_forward_input(self, name, module, module_input_output):
-        logger.warning(f"name is {name}, enter pre hook, path is {self.config.kernel_config_path}")
         if not self.enable_kernel_dump:
             return
         if not has_adump:
@@ -250,8 +249,6 @@ class KernelDumpDataProcessor(MindsporeDataProcessor):
         self.start_kernel_dump(self.config.kernel_config_path)
 
     def analyze_forward_output(self, name, module, module_input_output):
-        logger.warning(f"name is {name}, enter forward hook")
-
         if not self.enable_kernel_dump:
             return
         self.enable_kernel_dump = False
