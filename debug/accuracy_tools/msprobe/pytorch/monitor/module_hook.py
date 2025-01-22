@@ -637,42 +637,42 @@ class TrainerMon:
             context = self.optimizer_context[optimizer]
             rank = dist.get_rank() if dist.is_initialized() else None
             # 静态在第0步就可以保存, 动态在第0步不可以, 因为动态设计的就是重置后下一步开启, 第0步的self.monitoring还是False
-            if (self.monitoring and
-                    (not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list))):
-                if self.anomaly_data_factory:
-                    self.anomaly_data_factory.set_call_id(self.param_name_call_id)
-                self.write_xy_tb(context.step)
-                self.write_grad_tb(context.step)
-                self.write_mv_tb(context)
-                self.write_param_tb(context)
-                self.write_adhoc_check(context.step)
+            if self.monitoring:
+                if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_factory.set_call_id(self.param_name_call_id)
+                    self.write_xy_tb(context.step)
+                    self.write_grad_tb(context.step)
+                    self.write_mv_tb(context)
+                    self.write_param_tb(context)
+                    self.write_adhoc_check(context.step)
 
-                if self.ur_distribution:
-                    for param_name, _ in context.param_adam_update.items():
-                        self.update_heatmap_visualizer[param_name].visualize(
-                            get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
-                    for param_name, _ in context.param_adam_ratio.items():
-                        self.ratio_heatmap_visualizer[param_name].visualize(
-                            get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
+                    if self.ur_distribution:
+                        for param_name, _ in context.param_adam_update.items():
+                            self.update_heatmap_visualizer[param_name].visualize(
+                                get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
+                        for param_name, _ in context.param_adam_ratio.items():
+                            self.ratio_heatmap_visualizer[param_name].visualize(
+                                get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
 
-                if context.metric_dict:
-                    self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
-                context.metric_dict.clear()
+                    if context.metric_dict:
+                        self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
+                    context.metric_dict.clear()
 
-                if context.step >= self.start_step and (context.step - self.start_step) % self.step_interval == 0:
-                    self.has_collect_times += 1
-                if self.anomaly_data_factory:
-                    self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
-                self.summary_writer.clear_anomalies()
-                self.call_id = 0
-                self.param_name_call_id.clear()
+                    if context.step >= self.start_step and (context.step - self.start_step) % self.step_interval == 0:
+                        self.has_collect_times += 1
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
+                    self.summary_writer.clear_anomalies()
+                    self.call_id = 0
+                    self.param_name_call_id.clear()
 
-                if self.has_collect_times >= self.collect_times:
-                    if self.dynamic_enable:
-                        self._remove_all_hooks_final(optimizer)
-                    else:
-                        self._remove_all_hooks(optimizer)
-                        logger.info("Finish monitor")
+                    if self.has_collect_times >= self.collect_times:
+                        if self.dynamic_enable:
+                            self._remove_all_hooks_final(optimizer)
+                        else:
+                            self._remove_all_hooks(optimizer)
+                            logger.info("Finish monitor")
 
             context.step += 1
 
