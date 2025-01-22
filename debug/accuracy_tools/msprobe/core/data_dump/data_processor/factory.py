@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -67,10 +67,12 @@ class DataProcessorFactory:
             from msprobe.core.data_dump.data_processor.mindspore_processor import (
                 StatisticsDataProcessor as MindsporeStatisticsDataProcessor,
                 TensorDataProcessor as MindsporeTensorDataProcessor,
-                OverflowCheckDataProcessor as MindsporeOverflowCheckDataProcessor
+                OverflowCheckDataProcessor as MindsporeOverflowCheckDataProcessor,
+                KernelDumpDataProcessor as MindsporeKernelDumpDataProcessor
             )
             from msprobe.mindspore.cell_processor import CellProcessor
             cls.register_processor(Const.MS_FRAMEWORK, Const.STATISTICS, MindsporeStatisticsDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.TENSOR, MindsporeTensorDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.OVERFLOW_CHECK, MindsporeOverflowCheckDataProcessor)
+            cls.register_processor(Const.MS_FRAMEWORK, Const.KERNEL_DUMP, MindsporeKernelDumpDataProcessor)
             cls.register_module_processor(Const.MS_FRAMEWORK, CellProcessor)

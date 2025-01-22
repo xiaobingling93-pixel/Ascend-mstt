@@ -33,7 +33,7 @@ from msprobe.core.common.exceptions import DistributedNotInitializedError, Mspro
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.utils import Const, print_tools_ends_info
 from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs
+from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, ModuleBackwardInputs
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
@@ -43,6 +43,7 @@ from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from msprobe.mindspore.dump.kernel_dump.kernel_config import create_kernel_config_json
 
 if is_mindtorch():
     import torch
@@ -64,7 +65,6 @@ class Service:
         self.current_rank = None
         self.dump_iter_dir = None
         self.start_call = False
-        self.check_level_valid()
         self.should_stop_service = False
         self.params_grad_info = {}
         # 提前注册，确保注册尽可能多的API hook
@@ -88,12 +88,6 @@ class Service:
         else:
             module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs, output=output)
         return module_input_output
-
-    def check_level_valid(self):
-        if self.config.level == Const.LEVEL_L2:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
-            )
 
     def build_hook(self, target_type, name):
         def pre_hook(api_or_cell_name, cell, input_data):
@@ -208,6 +202,16 @@ class Service:
                 self.data_collector.backward_data_collect(api_or_cell_name, cell, pid, module_input_output)
             self.inner_switch = False
 
+        def pre_backward_hook(api_or_cell_name, cell, grad_input):
+            if not self.should_execute_hook(target_type, cell, False):
+                return
+            self.inner_switch = True
+            module_input = ModuleBackwardInputs(grad_input=grad_input)
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
+            self.data_collector.backward_input_data_collect(api_or_cell_name, cell, pid, module_input)
+
+            self.inner_switch = False
+
         pid = os.getpid()
         if target_type == BaseScope.Module_Type_Module:
             full_forward_name = name + Const.FORWARD
@@ -218,6 +222,7 @@ class Service:
         pre_forward_hook = functools.partial(pre_hook, full_forward_name)
         forward_hook = functools.partial(forward_hook, full_forward_name)
         backward_hook = functools.partial(backward_hook, full_backward_name)
+        pre_backward_hook = functools.partial(pre_backward_hook, full_backward_name)
 
         def wrap_pre_forward_hook(cell, input_data):
             return pre_forward_hook(cell, input_data)
@@ -228,7 +233,10 @@ class Service:
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
 
-        return wrap_pre_forward_hook, wrap_forward_hook, wrap_backward_hook
+        def wrap_pre_backward_hook(cell, grad_input):
+            return pre_backward_hook(cell, grad_input)
+
+        return wrap_pre_forward_hook, wrap_forward_hook, wrap_backward_hook, wrap_pre_backward_hook
 
     def update_primitive_counters(self, primitive_name):
         if primitive_name not in self.primitive_counters:
@@ -330,6 +338,12 @@ class Service:
         create_directory(self.config.dump_path)
         self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
         cur_rank = self.current_rank if self.current_rank is not None else ''
+        if self.config.level == Const.LEVEL_L2:
+            create_directory(self.dump_iter_dir)
+            kernel_config_path = create_kernel_config_json(self.dump_iter_dir, cur_rank)
+            self.config.kernel_config_path = kernel_config_path
+            return
+
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
         if self.config.task in self.data_collector.tasks_need_tensor_data:
@@ -352,7 +366,7 @@ class Service:
         pass
 
     def register_api_hook(self):
-        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
             logger.info(f"The api {self.config.task} hook function is successfully mounted to the model.")
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
@@ -397,7 +411,7 @@ class Service:
 
                 prefix = (cell_names_and_type[1] + Const.SEP + name + Const.SEP +
                           cell.__class__.__name__ + Const.SEP)
-                _, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                _, forward_hook, backward_hook, _ = self.build_hook(BaseScope.Module_Type_Module, prefix)
                 cell.register_forward_hook(forward_hook)
                 cell.register_forward_pre_hook(
                     self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
@@ -416,6 +430,9 @@ class Service:
         JitDump.jit_count = defaultdict(int)
         self.params_grad_info.clear()
 
+        if self.config.level == Const.LEVEL_L2:
+            self.data_collector.data_processor.reset_status()
+            return
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
