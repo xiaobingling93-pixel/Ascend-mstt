@@ -22,7 +22,8 @@ from msprobe.core.common.utils import (add_time_with_yaml,
                                        detect_framework_by_dump_json,
                                        get_stack_construct_by_dump_json_path)
 from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
-from msprobe.core.compare.utils import read_op
+from msprobe.core.compare.utils import read_op, reorder_op_name_list
+
 
 class LayerTrie:
     def __init__(self, type_name, framework=None):
@@ -225,7 +226,10 @@ def generate_data_mapping(npu_json_path, bench_json_path, api_mapping, output_pa
             continue
         npu_full_op_names = read_full_op_names(npu_data, npu_op_name)
         bench_full_op_names = read_full_op_names(bench_data, bench_op_name)
-        mapping = generate_op_data_mapping(npu_op_name, npu_full_op_names, bench_op_name, bench_full_op_names)
+        npu_full_op_names_reorder = reorder_op_name_list(npu_full_op_names)
+        bench_full_op_names_reorder = reorder_op_name_list(bench_full_op_names)
+        mapping = generate_op_data_mapping(npu_op_name, npu_full_op_names_reorder,
+                                           bench_op_name, bench_full_op_names_reorder)
         data_mapping.update(mapping)
     if output_path:
         file_name = add_time_with_yaml("data_mapping")

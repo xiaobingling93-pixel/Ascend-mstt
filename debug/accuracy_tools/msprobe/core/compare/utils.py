@@ -412,7 +412,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         CompareConst.PARAMS_STRUCT: 0,
         CompareConst.PARAMS_GRAD_STRUCT: 0
     }
-    op_name_list_reorder, _ = reorder_op_name_list(n_dict[CompareConst.OP_NAME], n_dict[Const.SUMMARY])
+    op_name_list_reorder, _ = reorder_op_list(n_dict[CompareConst.OP_NAME], n_dict[Const.SUMMARY], )
     for index, n_name in enumerate(op_name_list_reorder):
         _, state = get_name_and_state(n_name)
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
@@ -541,16 +541,23 @@ def get_name_and_state(name):
     return api, state
 
 
-def reorder_op_name_list(op_name_list, summary_list, data_name_list):
-    if not op_name_list or not summary_list:
-        return op_name_list, summary_list, data_name_list
-
+def reorder_op_name_list(op_name_list):
+    if not op_name_list:
+        return op_name_list
     parameters = [x for x in op_name_list if get_name_and_state(x)[1] == Const.PARAMS]
     outputs = [x for x in op_name_list if get_name_and_state(x)[1] == Const.OUTPUT]
     others = [x for x in op_name_list if get_name_and_state(x)[1] not in [Const.PARAMS, Const.OUTPUT]]
-
     # 合并others, parameters, 和outputs，确保parameters排在output前面
     op_name_reorder = others + parameters + outputs
+    return op_name_reorder
+
+
+def reorder_op_list(op_name_list, summary_list, data_name_list):
+    """对op_name, summary, data_name重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理"""
+    if not op_name_list or not summary_list:
+        return op_name_list, summary_list, data_name_list
+
+    op_name_reorder = reorder_op_name_list(op_name_list)
     summary_reorder = [summary_list[op_name_list.index(item)] for item in op_name_reorder]
     if data_name_list:
         data_name_reorder = [data_name_list[op_name_list.index(item)] for item in op_name_reorder]

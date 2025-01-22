@@ -29,7 +29,7 @@ from msprobe.core.common.utils import CompareException, check_compare_param, che
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
-from msprobe.core.compare.utils import set_stack_json_path, reorder_op_name_list
+from msprobe.core.compare.utils import set_stack_json_path, reorder_op_list
 
 
 class MappingConfig:
@@ -357,9 +357,8 @@ class MSComparator(Comparator):
             op_name_list = merge_list[CompareConst.OP_NAME]
             summary_list = merge_list[Const.SUMMARY]
             data_name_list = merge_list.get('data_name')
-            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_name_list(op_name_list,
-                                                                                       summary_list,
-                                                                                       data_name_list)
+            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_list(op_name_list, summary_list,
+                                                                                  data_name_list)
             for op_name in op_name_reorder:
                 result[CompareConst.OP_NAME].append(op_name)
                 if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
