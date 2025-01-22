@@ -552,9 +552,11 @@ def reorder_op_name_list(op_name_list):
         return op_name_list
     parameters = [x for x in op_name_list if get_name_and_state(x)[1] == Const.PARAMS]
     outputs = [x for x in op_name_list if get_name_and_state(x)[1] == Const.OUTPUT]
-    others = [x for x in op_name_list if get_name_and_state(x)[1] not in [Const.PARAMS, Const.OUTPUT]]
+    parameters_grad = [x for x in op_name_list if get_name_and_state(x)[1] == Const.PARAMS_GRAD]
+    others = [x for x in op_name_list if
+              get_name_and_state(x)[1] not in [Const.PARAMS, Const.OUTPUT, Const.PARAMS_GRAD]]
     # 合并others, parameters, 和outputs，确保parameters排在output前面
-    op_name_reorder = others + parameters + outputs
+    op_name_reorder = others + parameters + outputs + parameters_grad
     return op_name_reorder
 
 

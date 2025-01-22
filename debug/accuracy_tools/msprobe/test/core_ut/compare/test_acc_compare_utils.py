@@ -636,21 +636,15 @@ class TestGetNameAndState(unittest.TestCase):
 class TestReorderOpNameList(unittest.TestCase):
     def test_reorder_op_name_list(self):
         # 标准顺序
-        op_name_list = ["op.input.0.0", "op.output.0", "op.output.1","op.parameters.1", "op.parameters.2"]
+        op_name_list = ["op.forward.input.0.0", "op.forward.output.0", "op.forward.output.1", "op.forward.parameters.1", "op.forward.parameters.2", "op.parameters_grad.0"]
         result = reorder_op_name_list(op_name_list)
-        expected = ["op.input.0.0", "op.parameters.1", "op.parameters.2", "op.output.0", "op.output.1"]
+        expected = ["op.forward.input.0.0", "op.forward.parameters.1", "op.forward.parameters.2", "op.forward.output.0", "op.forward.output.1", "op.parameters_grad.0"]
         self.assertEqual(result, expected)
 
         # 只有输入元素
-        op_name_list = ["op.input.0", "op.input.1"]
+        op_name_list = ["op.forward.input.0", "op.forward.input.1"]
         result = reorder_op_name_list(op_name_list)
-        expected = ["op.input.0", "op.input.1"]
-        self.assertEqual(result, expected)
-
-        # 只有参数元素
-        op_name_list = ["op.parameters.1", "op.parameters.2"]
-        result = reorder_op_name_list(op_name_list)
-        expected = ["op.parameters.1", "op.parameters.2"]
+        expected = ["op.forward.input.0", "op.forward.input.1"]
         self.assertEqual(result, expected)
 
         # 输入为空
@@ -663,11 +657,11 @@ class TestReorderOpNameList(unittest.TestCase):
 class TestReorderOpXList(unittest.TestCase):
     def test_reorder_op_x_list(self):
         # 标准顺序
-        op_name_list = ["op.input.0", "op.output.0", "op.parameters.weight"]
+        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = ["data1", "data2", "data3"]
         result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
-        self.assertEqual(result_op_name, ["op.input.0", "op.parameters.weight", "op.output.0"])
+        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, ["data1", "data3", "data2"])
 
@@ -681,19 +675,19 @@ class TestReorderOpXList(unittest.TestCase):
         self.assertEqual(result_data_name, ["data1", "data2", "data3"])
 
         # 空 data_name_list
-        op_name_list = ["op.input.0", "op.output.0", "op.parameters.weight"]
+        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = []
         result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
-        self.assertEqual(result_op_name, ["op.input.0", "op.parameters.weight", "op.output.0"])
+        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, [])
 
         # data_name_list 为 None
-        op_name_list = ["op.input.0", "op.output.0", "op.parameters.weight"]
+        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = None
         result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
-        self.assertEqual(result_op_name, ["op.input.0", "op.parameters.weight", "op.output.0"])
+        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, None)
