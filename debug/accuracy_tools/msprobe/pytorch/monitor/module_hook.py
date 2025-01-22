@@ -101,6 +101,7 @@ class ModuleHookContext:
             else:
                 logger.warning_on_rank_0(f"target module config error, result maybe empty."
                                          f"module_name: {self.module_name}, key_name: {key_name}")
+                self.format_by_arg[key_name] = None
         else:
             self.format_by_arg[key_name] = self.struct.get(key_name).get('config')
 

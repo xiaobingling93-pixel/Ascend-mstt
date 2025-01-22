@@ -324,7 +324,7 @@ class TestModuleHookContext(unittest.TestCase):
     def test_set_format_by_arg_target_module_config_error(self, mock_logger):
         target_config = {self.module_name: {MonitorConst.ACTV_IN: 123}}
         self.context.set_format_by_arg(MonitorConst.ACTV_IN, target_config)
-        self.assertNotIn(MonitorConst.ACTV_IN, self.context.format_by_arg)
+        self.assertIsNone(self.context.format_by_arg.get(MonitorConst.ACTV_IN))
         mock_logger.warning_on_rank_0.assert_called_once()
 
 
