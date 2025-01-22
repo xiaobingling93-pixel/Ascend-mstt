@@ -11,7 +11,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
     op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
-    table_value_is_valid, get_name_and_state
+    table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list
 
 # test_read_op_1
 op_data = {
@@ -631,3 +631,69 @@ class TestGetNameAndState(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             get_name_and_state(name)
         self.assertIn('Invalid name string', str(context.exception.code))
+
+
+class TestReorderOpNameList(unittest.TestCase):
+    def test_reorder_op_name_list(self):
+        # 标准顺序
+        op_name_list = ["op.input.0.0", "op.output.0", "op.output.1","op.parameters.1", "op.parameters.2"]
+        result = reorder_op_name_list(op_name_list)
+        expected = ["op.input.0.0", "op.parameters.1", "op.parameters.2", "op.output.0", "op.output.1"]
+        self.assertEqual(result, expected)
+
+        # 只有输入元素
+        op_name_list = ["op.input.0", "op.input.1"]
+        result = reorder_op_name_list(op_name_list)
+        expected = ["op.input.0", "op.input.1"]
+        self.assertEqual(result, expected)
+
+        # 只有参数元素
+        op_name_list = ["op.parameters.1", "op.parameters.2"]
+        result = reorder_op_name_list(op_name_list)
+        expected = ["op.parameters.1", "op.parameters.2"]
+        self.assertEqual(result, expected)
+
+        # 输入为空
+        op_name_list = []
+        result = reorder_op_name_list(op_name_list)
+        expected = []
+        self.assertEqual(result, expected)
+
+
+class TestReorderOpXList(unittest.TestCase):
+    def test_reorder_op_x_list(self):
+        # 标准顺序
+        op_name_list = ["op.input.0", "op.output.0", "op.parameters.weight"]
+        summary_list = ["summary1", "summary2", "summary3"]
+        data_name_list = ["data1", "data2", "data3"]
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, ["op.input.0", "op.parameters.weight", "op.output.0"])
+        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
+        self.assertEqual(result_data_name, ["data1", "data3", "data2"])
+
+        # 空 op_name_list 或 summary_list
+        op_name_list = []
+        summary_list = []
+        data_name_list = ["data1", "data2", "data3"]
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, [])
+        self.assertEqual(result_summary, [])
+        self.assertEqual(result_data_name, ["data1", "data2", "data3"])
+
+        # 空 data_name_list
+        op_name_list = ["op.input.0", "op.output.0", "op.parameters.weight"]
+        summary_list = ["summary1", "summary2", "summary3"]
+        data_name_list = []
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, ["op.input.0", "op.parameters.weight", "op.output.0"])
+        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
+        self.assertEqual(result_data_name, [])
+
+        # data_name_list 为 None
+        op_name_list = ["op.input.0", "op.output.0", "op.parameters.weight"]
+        summary_list = ["summary1", "summary2", "summary3"]
+        data_name_list = None
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, ["op.input.0", "op.parameters.weight", "op.output.0"])
+        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
+        self.assertEqual(result_data_name, None)
