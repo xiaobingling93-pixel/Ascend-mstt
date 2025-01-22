@@ -622,6 +622,7 @@ class MonitorConst:
     )
     RULE_NAME = ['AnomalyTurbulence']
 
+    SLICE_SIZE = 20480
     DOT = "."
     VPP_SEP = ":"
     ACTV_IN = "input"
