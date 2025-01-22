@@ -309,6 +309,18 @@ class TrainerMon:
         OptimizerMon.set_wrapped_optimizer(_wrapped_optimizer)
 
     @staticmethod
+    def has_register_backward_hook(module_name, module):
+        if hasattr(module, '_backward_hooks') and \
+                len(module._backward_hooks) > 0 and \
+                module._is_full_backward_hook is False:
+            logger.warning(
+                f"The {module_name} has registered deprecated register_backward_hook,"
+                f"which may cause abnormal data dump. The backward input/output for this module will be skipped."
+            )
+            return True
+        return False
+
+    @staticmethod
     def generate_cc_metrics(cc_name, cc_tensor):
         metrics = defaultdict(dict)
         rank = dist.get_rank() if dist.is_initialized() else None
@@ -824,7 +836,7 @@ class TrainerMon:
                 if not self.backward_only:
                     handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name))
                     self.handles['xy'].append(handle)
-                if not self.forward_only:
+                if not self.forward_only and not self.has_register_backward_hook(name, submodule):
                     handle = submodule.register_full_backward_hook(bwd_hook_fun)
                     self.handles['xy'].append(handle)
                     self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
