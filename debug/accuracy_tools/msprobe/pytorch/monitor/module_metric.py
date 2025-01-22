@@ -32,7 +32,9 @@ def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
         return f"{module_or_param_name}/rank{rank}/{tag}"
 
 
-def squash_param_name(param_name):
+def squash_param_name(param_name, enable=True):
+    if not enable:
+        return param_name
     name = ''
     for pattern in ['layers?\.(.*)', 'embeddings?\.(.*)', 'final.*', 'output.*', 'norm.*']:
         match = re.findall(pattern, param_name)
