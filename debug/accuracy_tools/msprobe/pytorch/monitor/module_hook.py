@@ -203,6 +203,7 @@ class TrainerMon:
             self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
             api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
+        self.squash_name = self.config.get('squash_name', True)
 
         self.common_info()
 
@@ -652,8 +653,8 @@ class TrainerMon:
         self.struct_printed = True
 
     def _is_target_param(self, param_name, param, prefix):
-        squash_name = prefix + squash_param_name(param_name)
         name = prefix + param_name
+        squash_name = prefix + squash_param_name(param_name, self.squash_name)
         for target in self.config['targets'].keys():
             if param_name.startswith(target) or squash_name.startswith(target) or name.startswith(target):
                 setattr(param, "zero_out_wgrad", True)
@@ -667,7 +668,7 @@ class TrainerMon:
             if not param.requires_grad:
                 continue
             if self._is_target_param(param_name, param, prefix):
-                name = prefix + squash_param_name(param_name)
+                name = prefix + squash_param_name(param_name, self.squash_name)
                 if name in self.param2name.values():
                     name = prefix + param_name
                 self.param2name[param] = name
@@ -703,9 +704,9 @@ class TrainerMon:
 
     def _is_target_module(self, module_name, targets, vpp_stage):
         if self.all_xy or self.print_struct:
-            return vpp_stage + squash_param_name(module_name)
+            return vpp_stage + squash_param_name(module_name, self.squash_name)
         for pattern in [
-            vpp_stage + squash_param_name(module_name),
+            vpp_stage + squash_param_name(module_name, self.squash_name),
             vpp_stage + module_name,
         ]:
             if pattern in targets:

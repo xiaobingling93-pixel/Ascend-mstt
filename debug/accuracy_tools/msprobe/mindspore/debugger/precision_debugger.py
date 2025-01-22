@@ -73,13 +73,16 @@ class PrecisionDebugger:
         self.check_input_params(config_params)
 
         common_config, task_config = parse_json_config(config_path)
-        self.task = task if task else common_config.task
+        common_config.task = task if task else common_config.task
+        self.task = common_config.task
         if self.task == Const.GRAD_PROBE:
             self.gm = GradientMonitor(common_config, task_config)
             return
-        if step:
-            common_config.step = get_real_step_or_rank(step, Const.STEP)
-        self.config = DebuggerConfig(common_config, task_config, task, dump_path, level)
+        common_config.step = get_real_step_or_rank(
+            step, Const.STEP) if step is not None else common_config.step
+        common_config.level = level if level else common_config.level
+        common_config.dump_path = dump_path if dump_path else common_config.dump_path
+        self.config = DebuggerConfig(common_config, task_config)
 
         if _msprobe_c:
             _msprobe_c._PrecisionDebugger(framework="MindSpore", config_path=config_path)

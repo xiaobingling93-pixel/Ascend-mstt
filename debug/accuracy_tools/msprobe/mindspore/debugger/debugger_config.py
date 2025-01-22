@@ -22,13 +22,13 @@ from msprobe.mindspore.common.const import FreeBenchmarkConst
 
 
 class DebuggerConfig:
-    def __init__(self, common_config, task_config, task=None, dump_path=None, level=None):
+    def __init__(self, common_config, task_config):
         self.execution_mode = None
-        self.dump_path = dump_path if dump_path else common_config.dump_path
-        self.task = task or common_config.task or Const.STATISTICS
+        self.dump_path = common_config.dump_path
+        self.task = common_config.task
         self.rank = [] if not common_config.rank else common_config.rank
         self.step = [] if not common_config.step else common_config.step
-        common_config.level = level or common_config.level or Const.LEVEL_L1
+        common_config.level = Const.LEVEL_L1 if not common_config.level else common_config.level
         self.level = MsConst.TOOL_LEVEL_DICT.get(common_config.level, MsConst.API)
         self.level_ori = common_config.level
         self.list = [] if not task_config.list else task_config.list
