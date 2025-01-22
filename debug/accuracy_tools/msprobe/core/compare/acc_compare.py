@@ -254,11 +254,12 @@ class Comparator:
                     CompareConst.PARAMS_STRUCT: 0,
                     CompareConst.PARAMS_GRAD_STRUCT: 0
                 }
-                op_name_list = merge_list[CompareConst.OP_NAME]
-                summary_list = merge_list[Const.SUMMARY]
-                data_name_list = merge_list.get('data_name')
 
-                op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list, summary_list,
+                op_name_list = merge_list.get(CompareConst.OP_NAME)
+                summary_list = merge_list.get(Const.SUMMARY)
+                data_name_list = merge_list.get('data_name')
+                op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
+                                                                                        summary_list,
                                                                                         data_name_list)
                 for index, op_full_name in enumerate(op_name_reorder):
                     data_name = data_name_reorder[index] if data_name_reorder else None

@@ -412,8 +412,14 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         CompareConst.PARAMS_STRUCT: 0,
         CompareConst.PARAMS_GRAD_STRUCT: 0
     }
-    op_name_list_reorder, _ = reorder_op_x_list(n_dict[CompareConst.OP_NAME], n_dict[Const.SUMMARY], )
-    for index, n_name in enumerate(op_name_list_reorder):
+
+    op_name_list = n_dict.get(CompareConst.OP_NAME)
+    summary_list = n_dict.get(Const.SUMMARY)
+    data_name_list = n_dict.get('data_name')
+    op_name_reorder, summary_reorder, _ = reorder_op_x_list(op_name_list,
+                                                            summary_list,
+                                                            data_name_list)
+    for index, n_name in enumerate(op_name_reorder):
         _, state = get_name_and_state(n_name)
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
         if not struct_key:
@@ -441,7 +447,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         if dump_mode == Const.ALL:
             result_item.extend([CompareConst.N_A] * 5)
 
-        npu_summary_data = safe_get_value(n_dict, index, "n_dict", key=CompareConst.SUMMARY)
+        npu_summary_data = safe_get_value(summary_reorder, index, "summary_reorder")
         bench_summary_data = [CompareConst.N_A] * 4
         result_item.extend(npu_summary_data)
         result_item.extend(bench_summary_data)

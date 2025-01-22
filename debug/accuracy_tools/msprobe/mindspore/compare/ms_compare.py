@@ -354,10 +354,11 @@ class MSComparator(Comparator):
             if not merge_list:
                 continue
 
-            op_name_list = merge_list[CompareConst.OP_NAME]
-            summary_list = merge_list[Const.SUMMARY]
+            op_name_list = merge_list(CompareConst.OP_NAME)
+            summary_list = merge_list.get(Const.SUMMARY)
             data_name_list = merge_list.get('data_name')
-            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list, summary_list,
+            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
+                                                                                    summary_list,
                                                                                     data_name_list)
             for op_name in op_name_reorder:
                 result[CompareConst.OP_NAME].append(op_name)
