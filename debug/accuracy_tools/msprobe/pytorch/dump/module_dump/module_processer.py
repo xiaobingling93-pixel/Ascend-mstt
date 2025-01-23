@@ -25,12 +25,15 @@ from torch.utils.hooks import BackwardHook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
+
 def checkpoint_without_early_stop(*args, **kwargs):
     with set_checkpoint_early_stop(False):
         return origin_checkpoint(*args, **kwargs)
 
+
 def replace_checkpoint():
     torch.utils.checkpoint.checkpoint = checkpoint_without_early_stop
+
 
 class ModuleProcesser:
     module_count = {}
