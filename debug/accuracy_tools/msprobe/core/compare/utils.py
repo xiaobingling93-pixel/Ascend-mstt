@@ -550,11 +550,11 @@ def get_name_and_state(name):
 def reorder_op_name_list(op_name_list):
     if not op_name_list:
         return op_name_list
+
     parameters = []
     output = []
     parameters_grad = []
     others = []
-
     for x in op_name_list:
         state = get_name_and_state(x)[1]
         if state == Const.PARAMS:
