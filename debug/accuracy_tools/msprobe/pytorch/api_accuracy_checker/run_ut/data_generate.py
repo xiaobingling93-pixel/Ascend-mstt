@@ -394,9 +394,9 @@ def get_output_dtype(api_info):
     output_dtype = None
     output_info = api_info.get(Const.OUTPUT)
     if output_info and isinstance(output_info[0], dict):
-        output_dtype = output_info[0].get(Const.DTYPE)
-        if output_dtype in Const.TORCH_FLOAT_DTYPE:
-            module_name, attribute_name = get_module_and_atttribute_name(output_dtype)
+        output_str_dtype = output_info[0].get(Const.DTYPE)
+        if output_str_dtype in Const.TORCH_FLOAT_DTYPE:
+            module_name, attribute_name = get_module_and_atttribute_name(output_str_dtype)
             output_dtype = get_attribute(module_name, attribute_name)
     return output_dtype
 
