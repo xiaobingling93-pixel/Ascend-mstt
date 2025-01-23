@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,13 +14,14 @@
 # limitations under the License.
 
 import re
+
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import load_json
+from msprobe.visualization.builder.msprobe_adapter import get_input_output
+from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import save_json_file, GraphConst
-from msprobe.visualization.builder.msprobe_adapter import get_input_output
-from msprobe.core.common.file_utils import load_json
-from msprobe.core.common.const import Const
-from msprobe.visualization.builder.msprobe_adapter import op_patterns
 
 
 class GraphBuilder:

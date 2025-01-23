@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,14 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-import json
-import numpy as np
 
-from msprobe.pytorch.parse_tool.lib.config import Const
-from msprobe.pytorch.parse_tool.lib.utils import Util
-from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
+import json
+
+import numpy as np
 from msprobe.core.common.file_utils import FileOpen, load_npy, save_npy_to_txt
+from msprobe.pytorch.parse_tool.lib.config import Const
+from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
+from msprobe.pytorch.parse_tool.lib.utils import Util
 
 
 class Visualization:
@@ -77,7 +76,7 @@ class Visualization:
                             self.util.log.info("  File \"{}\", line {}, in {}".format(item[0], item[1], item[2]))
                             self.util.log.info("    {}".format(item[3]))
                         continue
-                if len(msg) > 5 and len(msg[5]) >=  3:
+                if len(msg) > 5 and len(msg[5]) >= 3:
                     summery_info = "  [{}][dtype: {}][shape: {}][max: {}][min: {}][mean: {}]" \
                         .format(msg[0], msg[3], msg[4], msg[5][0], msg[5][1], msg[5][2])
                     if not title_printed:

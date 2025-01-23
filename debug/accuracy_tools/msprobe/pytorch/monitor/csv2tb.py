@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -12,23 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 import os
 import re
-import datetime
 from multiprocessing import Process
 
 import pytz
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import read_csv, create_directory, remove_path
+from msprobe.core.common.utils import is_int
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import get_target_output_dir
-from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.utils import is_int
 
 all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
-csv_file_suffix = r"_\d+-\d+\.csv"
+CSV_FILE_SUFFIX = r"_\d+-\d+\.csv"
 
 
 def parse_step_line(data, line_id, name, ops):
@@ -65,7 +65,7 @@ def write_step(output_dirpath, parse_step_result, rank, data_type):
     tb_output_path = os.path.join(output_dirpath, f"rank{rank}", data_type)
     if os.path.exists(tb_output_path):
         remove_path(tb_output_path)
-        logger.warning(f"existing path {tb_output_path} will be recovered") 
+        logger.warning(f"existing path {tb_output_path} will be recovered")
     writer = SummaryWriter(tb_output_path)
     for vpp_name, step_data_dict in parse_step_result.items():
         step_data_list = [(step, ops) for step, ops in step_data_dict.items()]
@@ -91,13 +91,13 @@ def update_dict(dict1, dict2):
 
 
 def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
-    for dir in tqdm(target_output_dirs):
-        dirpath = dir["path"]
-        rank = dir["rank"]
+    for directory in tqdm(target_output_dirs):
+        dirpath = directory["path"]
+        rank = directory["rank"]
         for data_type in data_type_list:
             all_step_result = {}
             for filename in os.listdir(dirpath):
-                if not re.match(f"{data_type}{csv_file_suffix}", filename):
+                if not re.match(f"{data_type}{CSV_FILE_SUFFIX}", filename):
                     continue
                 filepath = os.path.join(dirpath, filename)
                 try:
@@ -105,7 +105,7 @@ def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
                 except Exception as e:
                     logger.error(f"csv2tensorboard parse {filepath} failed \n {e}")
                     break
-                
+
                 all_step_result = update_dict(all_step_result, parse_step_result)
             if all_step_result:
                 write_step(output_dirpath, all_step_result, rank, data_type)
@@ -127,7 +127,14 @@ def check_data_type_list(data_type_list):
             raise ValueError(f"data type({data_type}) is not supported, supported data type: {all_data_type_list}")
 
 
-def csv2tensorboard_by_step(monitor_path, time_start=None, time_end=None, process_num=1, data_type_list=None, output_dirpath=None):
+def csv2tensorboard_by_step(
+        monitor_path,
+        time_start=None,
+        time_end=None,
+        process_num=1,
+        data_type_list=None,
+        output_dirpath=None
+):
     check_process_num(process_num)
     check_data_type_list(data_type_list)
     target_output_dirs = get_target_output_dir(monitor_path, time_start, time_end)

@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -12,16 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import itertools
-import math
 import re
-import statistics
 
 import torch
 
-from msprobe.core.common.const import MonitorConst
-from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm, get_mean
-from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.monitor.features import get_max, get_min, get_zeros, get_nans, get_norm, get_mean
 from msprobe.pytorch.monitor.utils import NAN_TENSOR_ON_DEVICE
 
 
@@ -66,7 +61,7 @@ class TensorMetrics:
         self.metrics = {}  # tensor_tag --> []
         self.cur_idx = {}
 
-    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank, eps=1e-8):
+    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank):
         """get stats and insert into metrics dictionary"""
         prefix = get_summary_writer_tag_name(module_name, tensor_name, rank)
         for stat_op in stat_ops:

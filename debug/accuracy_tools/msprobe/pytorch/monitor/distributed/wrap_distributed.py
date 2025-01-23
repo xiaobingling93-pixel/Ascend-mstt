@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import os
 import re
-import inspect
 
 import torch
-import torch.nn as nn
 import torch.distributed as dist
+import torch.nn as nn
 
-from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name
 
 try:
@@ -243,15 +243,20 @@ def create_hooks(context, monitor):
         args = args + tuple(kwargs.values())
         if out:  # async
             if isinstance(out, dist.Work):
-                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_],
-                                                                             module.op_name_,
-                                                                             monitor.ops, args, MonitorConst.PREFIX_POST)
-            elif isinstance(out, list): # batch_isend_irecv
+                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(
+                    context[module.op_name_],
+                    module.op_name_,
+                    monitor.ops, args,
+                    MonitorConst.PREFIX_POST
+                )
+            elif isinstance(out, list):  # batch_isend_irecv
                 for out_element in out:
-                    PENDING_ASYNC_CC_BY_HANDLE[out_element] = create_async_callback_func(context[module.op_name_],
-                                                                                         module.op_name_,
-                                                                                         monitor.ops, args,
-                                                                                         MonitorConst.PREFIX_POST)
+                    PENDING_ASYNC_CC_BY_HANDLE[out_element] = create_async_callback_func(
+                        context[module.op_name_],
+                        module.op_name_,
+                        monitor.ops, args,
+                        MonitorConst.PREFIX_POST
+                    )
             return out
         catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, MonitorConst.PREFIX_POST)
         return out

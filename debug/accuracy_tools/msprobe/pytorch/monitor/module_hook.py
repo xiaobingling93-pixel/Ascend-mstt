@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -22,6 +22,9 @@ from functools import partial
 import pytz
 import torch
 import torch.distributed as dist
+from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
+from torch.utils.hooks import BackwardHook
+
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.pytorch.common.log import logger
@@ -38,9 +41,6 @@ from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, Optim
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
     get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
-from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
-from torch.utils.hooks import BackwardHook
-
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
@@ -475,7 +475,15 @@ class TrainerMon:
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         return self.grad_context.post, self.grad_context.pre
 
-    def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None, start_iteration=0):
+    def monitor_gnorm_with_ad(
+            self,
+            model,
+            grad_acc_steps=1,
+            optimizer=None,
+            tp_group=None,
+            dp_group=None,
+            start_iteration=0
+    ):
         """External interface"""
         global start_step
         start_step = start_iteration
