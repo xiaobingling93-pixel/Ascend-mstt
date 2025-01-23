@@ -33,7 +33,7 @@ from msprobe.core.compare.highlight import find_compare_result_error_rows, highl
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    print_compare_ends_info, read_op, get_name_and_state
+    print_compare_ends_info, read_op, get_name_and_state, reorder_op_x_list
 
 
 class ModeConfig:
@@ -254,9 +254,15 @@ class Comparator:
                     CompareConst.PARAMS_STRUCT: 0,
                     CompareConst.PARAMS_GRAD_STRUCT: 0
                 }
+
+                op_name_list = merge_list.get(CompareConst.OP_NAME)
+                summary_list = merge_list.get(Const.SUMMARY)
                 data_name_list = merge_list.get('data_name')
-                for index, op_full_name in enumerate(merge_list[CompareConst.OP_NAME]):
-                    data_name = data_name_list[index] if data_name_list else None
+                op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
+                                                                                        summary_list,
+                                                                                        data_name_list)
+                for index, op_full_name in enumerate(op_name_reorder):
+                    data_name = data_name_reorder[index] if data_name_reorder else None
 
                     _, state = get_name_and_state(op_full_name)
                     struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
@@ -265,8 +271,7 @@ class Comparator:
                     ops_all[op_full_name] = {
                         CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
                                                             "merge_list", key=struct_key),
-                        CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                             key=CompareConst.SUMMARY),
+                        CompareConst.SUMMARY: safe_get_value(summary_reorder, index, "summary_reorder"),
                         'data_name': data_name,
                         'stack_info': merge_list.get('stack_info')
                     }

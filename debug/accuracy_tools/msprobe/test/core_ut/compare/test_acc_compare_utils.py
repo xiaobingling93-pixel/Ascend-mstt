@@ -11,7 +11,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
     op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
-    table_value_is_valid, get_name_and_state
+    table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list
 
 # test_read_op_1
 op_data = {
@@ -149,16 +149,18 @@ o_result = [
      [16], [16], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0,
      0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.weight', 'torch.float32',
+     'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'Functional.conv2d.0.forward.parameters.bias', 'torch.float32',
+     'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
     ['Functional.conv2d.0.forward.output.0', 'Functional.conv2d.0.forward.output.0', 'torch.float32', 'torch.float32',
      [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0,
      2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, '', '', 'None'],
-    ['Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.weight', 'torch.float32', 'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
-    ['Functional.conv2d.0.forward.parameters.bias', 'Functional.conv2d.0.forward.parameters.bias', 'torch.float32', 'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
     ['Functional.conv2d.0.parameters_grad.weight', 'Functional.conv2d.0.parameters_grad.weight', 'torch.float32', 'torch.float32',
      [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
@@ -174,11 +176,13 @@ o_result_unmatch_1 = [
     ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A',
      'None'],
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'None'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A',
+     'N/A', 'N/A',
+     'None'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
+     'None'],
     ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'None'],
-    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'None'],
-    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'None'],
     ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'None'],
@@ -195,15 +199,17 @@ o_result_unmatch_2 = [
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A',
+     'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
-    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
-    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
@@ -221,13 +227,15 @@ o_result_unmatch_3 = [
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A',
+     'N/A', 'N/A',
+     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
+     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
     ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
      'No bench data matched.', 'None', '-1'],
-    ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
-    ['Functional.conv2d.0.forward.parameters.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
     ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
     ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
@@ -631,3 +639,63 @@ class TestGetNameAndState(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             get_name_and_state(name)
         self.assertIn('Invalid name string', str(context.exception.code))
+
+
+class TestReorderOpNameList(unittest.TestCase):
+    def test_reorder_op_name_list(self):
+        # 标准顺序
+        op_name_list = ["op.forward.input.0.0", "op.forward.output.0", "op.forward.output.1", "op.forward.parameters.1", "op.forward.parameters.2", "op.parameters_grad.0"]
+        result = reorder_op_name_list(op_name_list)
+        expected = ["op.forward.input.0.0", "op.forward.parameters.1", "op.forward.parameters.2", "op.forward.output.0", "op.forward.output.1", "op.parameters_grad.0"]
+        self.assertEqual(result, expected)
+
+        # 只有输入元素
+        op_name_list = ["op.forward.input.0", "op.forward.input.1"]
+        result = reorder_op_name_list(op_name_list)
+        expected = ["op.forward.input.0", "op.forward.input.1"]
+        self.assertEqual(result, expected)
+
+        # 输入为空
+        op_name_list = []
+        result = reorder_op_name_list(op_name_list)
+        expected = []
+        self.assertEqual(result, expected)
+
+
+class TestReorderOpXList(unittest.TestCase):
+    def test_reorder_op_x_list(self):
+        # 标准顺序
+        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
+        summary_list = ["summary1", "summary2", "summary3"]
+        data_name_list = ["data1", "data2", "data3"]
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
+        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
+        self.assertEqual(result_data_name, ["data1", "data3", "data2"])
+
+        # 空 op_name_list 或 summary_list
+        op_name_list = []
+        summary_list = []
+        data_name_list = ["data1", "data2", "data3"]
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, [])
+        self.assertEqual(result_summary, [])
+        self.assertEqual(result_data_name, ["data1", "data2", "data3"])
+
+        # 空 data_name_list
+        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
+        summary_list = ["summary1", "summary2", "summary3"]
+        data_name_list = []
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
+        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
+        self.assertEqual(result_data_name, [])
+
+        # data_name_list 为 None
+        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
+        summary_list = ["summary1", "summary2", "summary3"]
+        data_name_list = None
+        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
+        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
+        self.assertEqual(result_data_name, None)

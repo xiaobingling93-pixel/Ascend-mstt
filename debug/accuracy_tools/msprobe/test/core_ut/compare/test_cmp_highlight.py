@@ -226,8 +226,9 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(api_batch._state, Const.INPUT)
         self.assertEqual(api_batch.input_len, 2)
-        self.assertEqual(api_batch.output_end_index, 4)
         self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
 
     def test_ApiBatch_increment_output(self):
         api_name = "functional.conv2d"
@@ -238,8 +239,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(api_batch._state, Const.OUTPUT)
         self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 3)
         self.assertEqual(api_batch.output_end_index, 4)
-        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
 
     @patch("msprobe.core.compare.highlight.logger")
     def test_value_check(self, mock_logger):

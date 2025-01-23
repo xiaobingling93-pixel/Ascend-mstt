@@ -29,7 +29,7 @@ from msprobe.core.common.utils import CompareException, check_compare_param, che
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
-from msprobe.core.compare.utils import set_stack_json_path
+from msprobe.core.compare.utils import set_stack_json_path, reorder_op_x_list
 
 
 class MappingConfig:
@@ -353,7 +353,14 @@ class MSComparator(Comparator):
             merge_list = self.gen_merge_list(data_json, data_name, stack_json_data)
             if not merge_list:
                 continue
-            for op_name in merge_list[CompareConst.OP_NAME]:
+
+            op_name_list = merge_list.get(CompareConst.OP_NAME)
+            summary_list = merge_list.get(Const.SUMMARY)
+            data_name_list = merge_list.get('data_name')
+            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
+                                                                                    summary_list,
+                                                                                    data_name_list)
+            for op_name in op_name_reorder:
                 result[CompareConst.OP_NAME].append(op_name)
                 if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
                     struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
@@ -367,10 +374,10 @@ class MSComparator(Comparator):
                 result[Const.SHAPE].append(struct[1])
                 if self.dump_mode == Const.MD5:
                     result[Const.MD5].append(struct[2])
-                result[Const.SUMMARY].append(merge_list[Const.SUMMARY].pop(0))
+                result[Const.SUMMARY].append(summary_reorder.pop(0))
                 result['stack_info'].append(merge_list['stack_info'][0] if self.stack_mode else None)
                 if self.dump_mode == Const.ALL:
-                    result['data_name'].append(merge_list['data_name'].pop(0))
+                    result['data_name'].append(data_name_reorder.pop(0))
         return pd.DataFrame(result)
 
 

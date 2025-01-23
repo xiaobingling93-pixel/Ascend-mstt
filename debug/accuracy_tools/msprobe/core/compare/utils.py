@@ -131,7 +131,7 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
         return [default_item]
     elif not op_data:
         return []
-    
+
     item_list = []
     if isinstance(op_data, list):
         for i, data in enumerate(op_data):
@@ -162,7 +162,7 @@ def gen_op_item(op_data, op_name):
     for i in params:
         if i not in op_item:
             op_item[i] = None
-    
+
     if not op_item.get('dtype'):
         if op_item.get('type') == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
@@ -177,7 +177,7 @@ def gen_op_item(op_data, op_name):
                 op_item[i] = op_data.get('value')
     if not op_item.get('md5'):
         op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '')).encode()):08x}"
-    
+
     return op_item
 
 
@@ -386,9 +386,9 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
     b_num, b_num_input, b_num_output, b_num_params, b_num_params_grad = count_struct(b_dict)
 
     get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
-    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
     get_accuracy_core(n_num_input + n_num_output, n_num_params, b_num_input + b_num_output, b_num_params,
                       CompareConst.PARAMS_STRUCT)
+    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
     get_accuracy_core(n_num_input + n_num_output + n_num_params, n_num_params_grad,
                       b_num_input + b_num_output + b_num_params, b_num_params_grad,
                       CompareConst.PARAMS_GRAD_STRUCT)
@@ -412,7 +412,14 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         CompareConst.PARAMS_STRUCT: 0,
         CompareConst.PARAMS_GRAD_STRUCT: 0
     }
-    for index, n_name in enumerate(n_dict["op_name"]):
+
+    op_name_list = n_dict.get(CompareConst.OP_NAME)
+    summary_list = n_dict.get(Const.SUMMARY)
+    data_name_list = n_dict.get('data_name')
+    op_name_reorder, summary_reorder, _ = reorder_op_x_list(op_name_list,
+                                                            summary_list,
+                                                            data_name_list)
+    for index, n_name in enumerate(op_name_reorder):
         _, state = get_name_and_state(n_name)
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
         if not struct_key:
@@ -440,7 +447,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         if dump_mode == Const.ALL:
             result_item.extend([CompareConst.N_A] * 5)
 
-        npu_summary_data = safe_get_value(n_dict, index, "n_dict", key=CompareConst.SUMMARY)
+        npu_summary_data = safe_get_value(summary_reorder, index, "summary_reorder")
         bench_summary_data = [CompareConst.N_A] * 4
         result_item.extend(npu_summary_data)
         result_item.extend(bench_summary_data)
@@ -540,11 +547,51 @@ def get_name_and_state(name):
     return api, state
 
 
+def reorder_op_name_list(op_name_list):
+    if not op_name_list:
+        return op_name_list
+
+    parameters = []
+    output = []
+    parameters_grad = []
+    others = []
+    for x in op_name_list:
+        state = get_name_and_state(x)[1]
+        if state == Const.PARAMS:
+            parameters.append(x)
+        elif state == Const.OUTPUT:
+            output.append(x)
+        elif state == Const.PARAMS_GRAD:
+            parameters_grad.append(x)
+        else:
+            others.append(x)
+    # 合并others, parameters, 和output，确保parameters排在output前面
+    op_name_reorder = others + parameters + output + parameters_grad
+    return op_name_reorder
+
+
+def reorder_op_x_list(op_name_list, summary_list, data_name_list):
+    """对op_name, summary, data_name重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理"""
+    if not op_name_list or not summary_list:
+        return op_name_list, summary_list, data_name_list
+
+    index_map = {name: index for index, name in enumerate(op_name_list)}
+
+    op_name_reorder = reorder_op_name_list(op_name_list)
+    summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
+    if data_name_list:
+        data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
+    else:
+        data_name_reorder = data_name_list
+
+    return op_name_reorder, summary_reorder, data_name_reorder
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path. Default path: ./output", 
+                        help="<Required> The compare task result out path. Default path: ./output",
                         required=False, default="./output", nargs="?", const="./output")
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)
