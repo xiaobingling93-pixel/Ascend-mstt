@@ -14,11 +14,9 @@ from openpyxl.styles import PatternFill
 
 
 from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.highlight import ApiBatch, CheckMaxRelativeDiff, CheckOrderMagnitude, \
     CheckOneThousandErrorRatio, CheckCosineSimilarity, add_highlight_row_info, compare_result_df_convert, \
-    df_malicious_value_check, find_error_rows, get_name_and_state, highlight_rows_xlsx, update_highlight_err_msg, \
-    value_check
+    df_malicious_value_check, find_error_rows, highlight_rows_xlsx, update_highlight_err_msg, value_check
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -163,7 +161,7 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input's is below 0.01"])]
+        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input/parameters's is below 0.01"])]
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
 
@@ -195,23 +193,27 @@ class TestUtilsMethods(unittest.TestCase):
              "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
              1, 1, 1, 1, 1, 1, 1, 1, "", ""],
         ], dtype=object)
-        last_len = 0
-        n_num_input = 3
+        api_batch = ApiBatch("Functional.linear.0.forward", 0)
+        api_batch.input_len = 3
+        api_batch.output_end_index = 4
+        api_batch.params_end_index = 4
         highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
         dump_mode = Const.ALL
 
-        find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
+        find_error_rows(compare_result, api_batch, highlight_dict, dump_mode)
 
         self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
 
     def test_find_error_rows_md5(self):
         compare_result = []
-        last_len = 1
-        n_num_input = 2
+        api_batch = ApiBatch("", 0)
+        api_batch.input_len = 0
+        api_batch.output_end_index = 1
+        api_batch.params_end_index = 1
         highlight_dict = {}
         dump_mode = Const.MD5
 
-        result = find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
+        result = find_error_rows(compare_result, api_batch, highlight_dict, dump_mode)
 
         self.assertEqual(result, None)
 
@@ -222,9 +224,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         api_batch.increment(Const.INPUT)
 
-        self.assertTrue(api_batch.input_state)
+        self.assertEqual(api_batch._state, Const.INPUT)
         self.assertEqual(api_batch.input_len, 2)
-        self.assertEqual(api_batch.output_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_end_index, 4)
 
     def test_ApiBatch_increment_output(self):
         api_name = "functional.conv2d"
@@ -233,9 +236,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         api_batch.increment(Const.OUTPUT)
 
-        self.assertFalse(api_batch.input_state)
+        self.assertEqual(api_batch._state, Const.OUTPUT)
         self.assertEqual(api_batch.input_len, 1)
-        self.assertEqual(api_batch.output_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_end_index, 4)
 
     @patch("msprobe.core.compare.highlight.logger")
     def test_value_check(self, mock_logger):
@@ -408,35 +412,3 @@ class TestUtilsMethods(unittest.TestCase):
         }
         result = update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
-
-
-class TestGetNameAndState(unittest.TestCase):
-    def test_valid_forward_input(self):
-        name = 'conv2d.forward.1.input.0'
-        expected_api = 'conv2d.forward.1.'
-        expected_state = 'input'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_valid_backward_output(self):
-        name = 'Functional.pad.0.backward.output.0'
-        expected_api = 'Functional.pad.0.backward.'
-        expected_state = 'output'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_valid_with_kwargs(self):
-        name = 'layer.norm.2.forward.kwargs.attr'
-        expected_api = 'layer.norm.2.forward.'
-        expected_state = 'kwargs'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_no_numeric_index(self):
-        name = 'conv2d.forward.input.0'
-        expected_api = 'conv2d.forward.'
-        expected_state = 'input'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_invalid__state(self):
-        name = 'conv2d.forward.1.invalidstate.0'
-        with self.assertRaises(CompareException) as context:
-            get_name_and_state(name)
-        self.assertIn('Invalid name string', str(context.exception.code))

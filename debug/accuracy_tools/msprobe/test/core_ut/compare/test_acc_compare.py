@@ -12,7 +12,7 @@ import torch
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig, get_bench_data_name
-from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
+from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows, ApiBatch
 from msprobe.core.compare.utils import get_accuracy
 from msprobe.pytorch.compare.pt_compare import PTComparator
 
@@ -302,9 +302,13 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, aten_result)
 
     def test_find_error_rows(self):
+        api_batch = ApiBatch("Functional_batch_norm_0_forward", 0)
+        api_batch.input_len = 1
+        api_batch.output_end_index = 4
+        api_batch.params_end_index = 4
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
         highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        find_error_rows(summary_result, 0, 1, highlight_dict_test, dump_mode=Const.SUMMARY)
+        find_error_rows(summary_result, api_batch, highlight_dict_test, dump_mode=Const.SUMMARY)
         self.assertEqual(highlight_dict_test,
                          {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
 
@@ -321,11 +325,11 @@ class TestUtilsMethods(unittest.TestCase):
                 (3, ["maximum absolute error exceeds 1e+10"])
             ],
             "yellow_lines": [
-                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input's"]),
+                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input/parameters's"]),
                 (3, [
-                    "maximum absolute error of both input and output exceed 1, "
+                    "maximum absolute error of both input/parameters and output exceed 1, "
                     "with the output larger by an order of magnitude",
-                    "The output's cosine decreases by more than 0.1 compared to the input's"])
+                    "The output's cosine decreases by more than 0.1 compared to the input/parameters's"])
             ]
         })
 
@@ -449,6 +453,8 @@ class TestUtilsMethods(unittest.TestCase):
             'input_struct': [('torch.float32', [2, 2])],
             'op_name': ['Functional.linear.0.forward.input.0'],
             'output_struct': [],
+            'params_struct': [],
+            'params_grad_struct': [],
             'stack_info': [['File']],
             'summary': [[1, 1, 1, 1]]
         }

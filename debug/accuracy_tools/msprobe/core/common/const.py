@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -29,6 +29,7 @@ class Const:
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
+    REGEX_FORWARD_BACKWARD = r'\.(forward|backward)\.'
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","
@@ -116,6 +117,7 @@ class Const:
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
     MS_FRAMEWORK = "mindspore"
+    MT_FRAMEWORK = "mindtorch"
     UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
@@ -269,6 +271,8 @@ class CompareConst:
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
+    PARAMS_STRUCT = "params_struct"
+    PARAMS_GRAD_STRUCT = "params_grad_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
@@ -352,6 +356,41 @@ class CompareConst:
     SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
                              MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
 
+    # dtype match
+    MS_TYPE = [
+        [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
+        [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
+    ]
+    TORCH_TYPE = [
+        [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
+        [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
+    ]
+
+    # read_op
+    IO_NAME_MAPPING = {
+        Const.INPUT_ARGS: '.input',
+        Const.INPUT_KWARGS: '.input',
+        Const.INPUT: '.input',
+        Const.OUTPUT: '.output',
+        Const.PARAMS: '.parameters'
+    }
+
+    # state to struct mapping
+    STATE_TO_STRUCT_MAPPING = {
+        Const.INPUT: INPUT_STRUCT,
+        Const.KWARGS: INPUT_STRUCT,
+        Const.OUTPUT: OUTPUT_STRUCT,
+        Const.PARAMS: PARAMS_STRUCT,
+        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
+    }
+
+    STRUCT_COMPARE_KEY = [
+        INPUT_STRUCT,
+        OUTPUT_STRUCT,
+        PARAMS_STRUCT,
+        PARAMS_GRAD_STRUCT
+    ]
+
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
     THOUSAND_RATIO_THRESHOLD = 0.001
@@ -433,6 +472,8 @@ class CompareConst:
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
+    PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
+    PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'

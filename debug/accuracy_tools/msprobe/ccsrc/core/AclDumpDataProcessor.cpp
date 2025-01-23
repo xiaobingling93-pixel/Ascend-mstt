@@ -20,6 +20,10 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/types.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <chrono>
+#include <sys/file.h>
 
 #include "include/Macro.hpp"
 #include "utils/FileUtils.hpp"
@@ -74,42 +78,186 @@ static const std::map<DebuggerSummaryOption, std::string> summaryOptionHeaderStr
 class AclTensorStats {
 public:
     AclTensorStats() = default;
-    explicit AclTensorStats(const std::map<DebuggerSummaryOption, std::string>& input) : stats(input) {}
+    explicit AclTensorStats(const AclTensorInfo& tensor, const std::map<DebuggerSummaryOption, std::string>& summary);
     ~AclTensorStats() = default;
 
-    std::string& operator[](DebuggerSummaryOption opt) { return stats[opt]; }
     std::string GetCsvHeader() const;
     std::string GetCsvValue() const;
+    std::string GetPath() const {return path;}
+    bool empty() const {return stats.empty();};
+
+    static AclTensorStats CalTensorSummary(const AclTensorInfo& tensor, const std::vector<DebuggerSummaryOption>& opt);
+    static AclTensorStats ParseTensorSummary(const std::string& dumpPath, const std::string& input);
 
 private:
+    std::string path;
+    std::string opType;
+    std::string opName;
+    std::string taskID;
+    std::string streamID;
+    std::string timestamp;
+    std::string inout;
+    std::string slot;
+    std::string dataSize;
+    std::string dataType;
+    std::string format;
+    std::string shape;
     std::map<DebuggerSummaryOption, std::string> stats;
+
+    void ParseInfoFromDumpPath(const std::string& dumpPath);
+    std::string& operator[](DebuggerSummaryOption opt) { return stats[opt]; }
+
+    static constexpr const size_t bufferLen = 1024;
 };
+
+void AclTensorStats::ParseInfoFromDumpPath(const std::string& dumpPath)
+{
+    std::string filename;
+    if (FileUtils::GetFileSuffix(filename) == "csv") {
+        filename = FileUtils::GetFileBaseName(dumpPath);
+    } else {
+        filename = FileUtils::GetFileName(dumpPath);
+    }
+
+    path = FileUtils::GetParentDir(dumpPath);
+    std::vector<std::string> tokens = FileUtils::SplitPath(filename, '.');
+
+    /* dump文件名格式：{optype}.{opname}.{taskid}.{streamid}.{timestamp} */
+    if (tokens.size() < 5) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_FORMAT, "Skip dumping invalid op " + filename);
+        stats.clear();
+        return;
+    }
+
+    opType = std::move(tokens[0]);
+    opName = std::move(tokens[1]);
+    taskID = std::move(tokens[2]);
+    streamID = std::move(tokens[3]);
+    timestamp = std::move(tokens[4]);
+}
+
+AclTensorStats::AclTensorStats(const AclTensorInfo& tensor, const std::map<DebuggerSummaryOption, std::string>& summary)
+    : stats{summary}
+{
+    ParseInfoFromDumpPath(tensor.dumpPath);
+    /* stats为空说明是header行，不需要落盘 */
+    if (stats.empty()) {
+        return;
+    }
+    inout = tensor.inout;
+    slot = std::to_string(tensor.slot);
+    dataSize = std::to_string(tensor.dataSize);
+    dataType = DataUtils::GetDTypeString(tensor.dtype);
+    format = DataUtils::GetFormatString(tensor.hostFmt);
+    shape = DataUtils::GetShapeString(tensor.hostShape);
+}
+
+AclTensorStats AclTensorStats::CalTensorSummary(const AclTensorInfo& tensor, const std::vector<DebuggerSummaryOption>& opt)
+{
+    DEBUG_FUNC_TRACE();
+    std::map<DebuggerSummaryOption, std::string> summary;
+    if (ELE_IN_VECTOR(opt, DebuggerSummaryOption::MD5)) {
+        const uint8_t* data = tensor.transBuf.empty() ?  tensor.aclData : tensor.transBuf.data();
+        summary[DebuggerSummaryOption::MD5] = MathUtils::CalculateMD5(data, tensor.dataSize);
+    }
+
+    return AclTensorStats(tensor, summary);
+}
+
+static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(const std::vector<std::string>& segs)
+{
+    std::map<uint32_t, DebuggerSummaryOption> ret;
+    for (uint32_t pos = 0; pos < segs.size(); ++pos) {
+        const std::string& opt = segs[pos];
+        for (auto it = summaryOptionHeaderStrMap.begin(); it != summaryOptionHeaderStrMap.end(); ++it) {
+            if (opt == it->second) {
+                ret[pos] = it->first;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+AclTensorStats AclTensorStats::ParseTensorSummary(const std::string& dumpPath, const std::string& input)
+{
+    constexpr const uint32_t optPosBase = 7;
+    static std::map<uint32_t, DebuggerSummaryOption> order;
+    static uint32_t headerLen = 0;
+
+    std::vector<std::string> segs = FileUtils::SplitPath(input, ',');
+    /* device计算统计量场景，各个kernel的统计项的顺序是相同的，只要计算一次即可 */
+    if (order.empty()) {
+        if (segs.size() <= optPosBase || segs[0] != kStatsHeaderInout) {
+            LOG_WARNING(DebuggerErrno::ERROR_INVALID_FORMAT, "Summary data miss header, some data may lose.");
+            return AclTensorStats();
+        }
+        headerLen = segs.size();
+        order = ParseTensorSummaryHeaderOrder(segs);
+
+        return AclTensorStats();
+    }
+
+    if (segs.size() < headerLen) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_FORMAT, "Summary data miss some fields, some data may lose.");
+        return AclTensorStats();
+    }
+
+    /* 不重复解析header行 */
+    if (segs[0] == kStatsHeaderInout) {
+        return AclTensorStats();
+    }
+
+    /* device侧计算统计量格式：Input/Output,Index,Data Size,Data Type,Format,Shape,Count,...(统计量) */
+    AclTensorStats stat = AclTensorStats();
+    stat.ParseInfoFromDumpPath(dumpPath);
+    stat.inout = segs[0];
+    stat.slot = segs[1];
+    stat.dataSize = segs[2];
+    stat.dataType = segs[3];
+    stat.format = segs[4];
+    stat.shape = segs[5];
+    for (auto it = order.begin(); it != order.end(); ++it) {
+        stat[it->second] = segs[it->first];
+    }
+    return stat;
+}
 
 std::string AclTensorStats::GetCsvHeader() const
 {
-    std::string ret("");
+    if (stats.empty()) {
+        return std::string();
+    }
+    std::string ret;
+    ret.reserve(bufferLen);
+    ret.append("Op Type,Op Name,Task ID,Stream ID,Timestamp,Input/Output,Slot,Data Size,Data Type,Format,Shape");
     for (auto it = stats.begin(); it != stats.end(); it++) {
-        ret.append(summaryOptionHeaderStrMap.at(it->first));
         ret.append(",");
+        ret.append(summaryOptionHeaderStrMap.at(it->first));
     }
+    ret.append("\n");
 
-    if (!ret.empty()) {
-        ret.pop_back();
-    }
     return ret;
 }
 
 std::string AclTensorStats::GetCsvValue() const
 {
-    std::string ret("");
-    for (auto it = stats.begin(); it != stats.end(); it++) {
-        ret.append(it->second);
-        ret.append(",");
+    if (stats.empty()) {
+        return std::string();
     }
 
-    if (!ret.empty()) {
-        ret.pop_back();
+    std::string ret;
+    ret.reserve(bufferLen);
+    ret.append(opType).append(",").append(opName).append(",").append(taskID).append(",").append(streamID).append(",") \
+       .append(timestamp).append(",").append(inout).append(",").append(slot).append(",") .append(dataSize) \
+       .append(",").append(dataType).append(",").append(format).append(",").append(shape);
+    /* map会根据键值自动排序，此处可以保障头和值的顺序，直接追加写即可 */
+    for (auto it = stats.begin(); it != stats.end(); it++) {
+        ret.append(",");
+        ret.append(it->second);
     }
+    ret.append("\n");
+
     return ret;
 }
 
@@ -483,7 +631,6 @@ static DebuggerErrno DumpOneAclTensorFmtBin(AclTensorInfo& tensor)
     return ret;
 }
 
-
 static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
 {
     DEBUG_FUNC_TRACE();
@@ -526,72 +673,63 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
     return ret;
 }
 
-static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorInfo& tensor, const AclTensorStats& stat)
+static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorStats& stat)
 {
     DEBUG_FUNC_TRACE();
-    static constexpr auto csvHeaderComm = "Input/Output,Index,Data Size,Data Type,Format,Shape";
-    std::string dumpPath = tensor.dumpPath;
-    std::string csvHeader;
-    std::ofstream ofs;
-    DebuggerErrno ret;
-
-    if (FileUtils::GetFileSuffix(dumpPath) != CSV_SUFFIX) {
-        dumpPath.append(".").append(CSV_SUFFIX);
+    if (stat.empty()) {
+        return DebuggerErrno::OK;
     }
 
-    if (StandardizedDumpPath(dumpPath) != DebuggerErrno::OK) {
-        LOG_ERROR(DebuggerErrno::ERROR, "Failed to standardize path " + dumpPath + ".");
-        return DebuggerErrno::ERROR;
+    std::string dumpfile = stat.GetPath() + "/statistic.csv";
+    /* 此处防止多进程间竞争，使用文件锁，故使用C风格接口 */
+    uint32_t retry = 100;
+    uint32_t interval = 10;
+    if (FileUtils::IsPathExist(dumpfile) && !FileUtils::IsRegularFile(dumpfile)) {
+        LOG_ERROR(DebuggerErrno::ERROR_FILE_ALREADY_EXISTS, "File " + dumpfile + " exists and has invalid format.");
+        return DebuggerErrno::ERROR_FILE_ALREADY_EXISTS;
     }
 
-    if (FileUtils::IsPathExist(dumpPath)) {
-        if (!FileUtils::IsRegularFile(dumpPath)) {
-            LOG_ERROR(DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE, dumpPath + " exists and is not a regular file.");
-            return DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE;
+    int fd = open(dumpfile.c_str(), O_WRONLY | O_CREAT | O_APPEND, NORMAL_FILE_MODE_DEFAULT);
+    if (fd < 0) {
+        LOG_ERROR(DebuggerErrno::ERROR_FAILED_TO_OPEN_FILE, "Failed to open file " + dumpfile);
+        return DebuggerErrno::ERROR_FAILED_TO_OPEN_FILE;
+    }
+
+    uint32_t i;
+    for (i = 0; i < retry; ++i) {
+        if (flock(fd, LOCK_EX | LOCK_NB) == 0) {
+            break;
         }
-        ret = FileUtils::OpenFile(dumpPath, ofs, std::ofstream::app);
-    } else {
-        csvHeader = csvHeaderComm;
-        csvHeader.append(",");
-        csvHeader.append(stat.GetCsvHeader());
-        ret = FileUtils::OpenFile(dumpPath, ofs);
+        std::this_thread::sleep_for(std::chrono::milliseconds(interval));
     }
 
-    if (ret != DebuggerErrno::OK) {
-        LOG_ERROR(ret, tensor + ": Failed to open file " + dumpPath + ".");
-        return ret;
+    if (i >= retry) {
+        LOG_ERROR(DebuggerErrno::ERROR_SYSCALL_FAILED, "Failed to occupy file " + dumpfile);
+        return DebuggerErrno::ERROR_SYSCALL_FAILED;
     }
 
-    /* map会根据键值自动排序，此处可以保障头和值的顺序，直接追加写即可 */
-    if (!csvHeader.empty()) {
-        ofs << csvHeader << '\n';
+    /* 防止等待文件锁的期间又有别的进程写入内容，重新查找文件尾 */
+    off_t offset = lseek(fd, 0, SEEK_END);
+    if (offset == 0) {
+        std::string header = stat.GetCsvHeader();
+        if (write(fd, header.c_str(), header.length()) < static_cast<ssize_t>(header.length())) {
+            LOG_ERROR(DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE, "Failed to write file " + dumpfile);
+            flock(fd, LOCK_UN);
+            close(fd);
+            return DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE;
+        }
     }
 
-    ofs << tensor.inout << ',';
-    ofs << tensor.slot << ',';
-    ofs << tensor.dataSize << ',';
-    ofs << DataUtils::GetDTypeString(tensor.dtype) << ',';
-    ofs << DataUtils::GetFormatString(tensor.hostFmt) << ',';
-    ofs << DataUtils::GetShapeString(tensor.hostShape) << ',';
-    ofs << stat.GetCsvValue() << '\n';
-
-    if (ofs.fail()) {
-        LOG_ERROR(DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE, tensor + ": Failed to write file " + dumpPath + ".");
+    std::string value = stat.GetCsvValue();
+    DebuggerErrno ret = DebuggerErrno::OK;
+    if (write(fd, value.c_str(), value.length()) < static_cast<ssize_t>(value.length())) {
+        LOG_ERROR(DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE, "Failed to write file " + dumpfile);
         ret = DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE;
     }
-    ofs.close();
-    return ret;
-}
 
-static AclTensorStats CalTensorSummary(AclTensorInfo& tensor, std::vector<DebuggerSummaryOption>& opt)
-{
-    DEBUG_FUNC_TRACE();
-    AclTensorStats stat;
-    if (ELE_IN_VECTOR(opt, DebuggerSummaryOption::MD5)) {
-        const uint8_t* data = tensor.transBuf.empty() ?  tensor.aclData : tensor.transBuf.data();
-        stat[DebuggerSummaryOption::MD5] = MathUtils::CalculateMD5(data, tensor.dataSize);
-    }
-    return stat;
+    flock(fd, LOCK_UN);
+    close(fd);
+    return ret;
 }
 
 static DebuggerErrno DumpOneAclTensor(AclTensorInfo& tensor, std::vector<DebuggerSummaryOption>& opt)
@@ -608,8 +746,8 @@ static DebuggerErrno DumpOneAclTensor(AclTensorInfo& tensor, std::vector<Debugge
     }
 
     if (!opt.empty()) {
-        AclTensorStats stat = CalTensorSummary(tensor, opt);
-        return WriteOneTensorStatToDisk(tensor, stat);
+        AclTensorStats stat = AclTensorStats::CalTensorSummary(tensor, opt);
+        return WriteOneTensorStatToDisk(stat);
     }
 
     return DumpOneAclTensorFmtNpy(tensor);
@@ -693,37 +831,28 @@ static DebuggerErrno DumpTensorDataToDisk(const std::string& dumpPath, AclDumpMs
 static DebuggerErrno DumpStatsDataToDisk(const std::string& dumpPath, const uint8_t* data, size_t dataLen)
 {
     DEBUG_FUNC_TRACE();
-    std::ofstream ofs;
+    constexpr const size_t maxDataSize = 10 * 1024 * 1024;
+
+    if (dataLen > maxDataSize) {
+        LOG_ERROR(DebuggerErrno::ERROR_FILE_TOO_LARGE, "File " + dumpPath + " is too large to be dumped.");
+        return DebuggerErrno::ERROR_FILE_TOO_LARGE;
+    }
+
+    std::string content(reinterpret_cast<const char*>(data), dataLen);
+    std::vector<std::string> lines = FileUtils::SplitPath(content, '\n');
     DebuggerErrno ret;
-
-    std::string path = dumpPath;
-    if (StandardizedDumpPath(path) != DebuggerErrno::OK) {
-        LOG_ERROR(DebuggerErrno::ERROR, "Failed to standardize path " + path + ".");
-        return DebuggerErrno::ERROR;
-    }
-
-    if (FileUtils::IsPathExist(path)) {
-        if (!FileUtils::IsRegularFile(path)) {
-            LOG_ERROR(DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE, path + " exists and is not a regular file.");
-            return DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE;
+    for (const auto& line : lines) {
+        if (line.empty() || line[0] == '\0') {
+            continue;
         }
-        ret = FileUtils::OpenFile(path, ofs, std::ofstream::app);
-    } else {
-        ret = FileUtils::OpenFile(path, ofs);
-    }
-    if (ret != DebuggerErrno::OK) {
-        LOG_ERROR(ret, "Failed to open file " + path + ".");
-        return ret;
+        AclTensorStats stat = AclTensorStats::ParseTensorSummary(dumpPath, line);
+        ret = WriteOneTensorStatToDisk(stat);
+        if (ret != DebuggerErrno::OK) {
+            return ret;
+        }
     }
 
-    /* 统计量模式adump返回的数据就是csv格式的字符流，直接落盘即可 */
-    ofs.write(reinterpret_cast<const char*>(data), dataLen);
-    if (ofs.fail()) {
-        LOG_ERROR(DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE, "Failed to write file " + path + ".");
-        ret = DebuggerErrno::ERROR_FAILED_TO_WRITE_FILE;
-    }
-    ofs.close();
-    return ret;
+    return DebuggerErrno::OK;
 }
 
 DebuggerErrno AclDumpDataProcessor::DumpToDisk()

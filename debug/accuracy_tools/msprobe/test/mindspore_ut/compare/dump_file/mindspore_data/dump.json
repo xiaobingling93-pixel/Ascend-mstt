@@ -265,7 +265,7 @@
                 }
             ]
         },
-        "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.backward.0": {
+        "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0": {
             "input": [
                 {
                     "type": "mindspore.Tensor",

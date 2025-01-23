@@ -67,6 +67,8 @@ class Service:
         self.check_level_valid()
         self.should_stop_service = False
         self.params_grad_info = {}
+        # 提前注册，确保注册尽可能多的API hook
+        self.register_api_hook()
 
     @staticmethod
     def check_model_valid(model):
@@ -147,7 +149,7 @@ class Service:
                     # 当模块中的参数有requires_grad属性为True时，才会进行梯度计算，此时才需要占位
                     if data_info.get(grad_name):
                         # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
-                        self.data_collector.handle_data(grad_name, data_info, 
+                        self.data_collector.handle_data(grad_name, data_info,
                                                         flush=self.data_collector.data_processor.is_terminated)
                     # 记录当前模块的参数梯度信息已占位
                     self.params_grad_info[grad_name] = True
@@ -234,25 +236,6 @@ class Service:
         else:
             self.primitive_counters[primitive_name] += 1
 
-    def register_primitive_hooks(self):
-        primitive_set = set()
-        if is_mindtorch():
-            cells_and_names = self.model.named_modules()
-        else:
-            cells_and_names = self.model.cells_and_names()
-        for _, cell in cells_and_names:
-            for attribute, value in vars(cell).items():
-                if isinstance(value, Primitive):
-                    primitive_set.add((attribute, value))
-
-        for pname, primitive in primitive_set:
-            primitive_class_name = primitive.__class__.__name__
-            primitive_combined_name = pname + Const.SEP + primitive_class_name
-            new_primitive = type('NewPrimitive', (primitive.__class__,),
-                                 {'__call__': self.primitive_hook_service.wrap_primitive(primitive.__call__,
-                                                                                         primitive_combined_name)})
-            primitive.__class__ = new_primitive
-
     def step(self):
         self.data_collector.write_json()
         self.current_iter += 1
@@ -264,7 +247,6 @@ class Service:
         if self.should_stop_service:
             return
         if self.need_end_service():
-            api_register.api_set_ori_func()
             self.should_stop_service = True
             self.switch = False
             self.primitive_switch = False
@@ -284,7 +266,8 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
-            self.register_hook_new()
+            self.register_primitive_hook()
+            self.register_cell_hook()
             if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
                 JitDump.set_data_collector(self.data_collector)
@@ -359,20 +342,48 @@ class Service:
         stack_file_path = os.path.join(dump_dir, "stack.json")
         construct_file_path = os.path.join(dump_dir, "construct.json")
         self.data_collector.update_dump_paths(
-            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None)
+            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None
+        )
+        self.data_collector.initialize_json_file(
+            framework=Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
+        )
 
     def empty(self, *args, **kwargs):
         pass
 
-    def register_hook_new(self):
-        logger.info("The {} hook function is successfully mounted to the model.".format(self.config.task))
+    def register_api_hook(self):
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
+            logger.info(f"The api {self.config.task} hook function is successfully mounted to the model.")
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
-            if self.model and self.config.task in Const.DUMP_DATA_COLLECTION_LIST:
-                self.register_primitive_hooks()
 
+    def register_primitive_hook(self):
+        if self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L1]:
+            return
+        if not self.model or self.config.task not in Const.DUMP_DATA_COLLECTION_LIST:
+            return
+
+        primitive_set = set()
+        if is_mindtorch():
+            cells_and_names = self.model.named_modules()
+        else:
+            cells_and_names = self.model.cells_and_names()
+        for _, cell in cells_and_names:
+            for attribute, value in vars(cell).items():
+                if isinstance(value, Primitive):
+                    primitive_set.add((attribute, value))
+
+        for pname, primitive in primitive_set:
+            primitive_class_name = primitive.__class__.__name__
+            primitive_combined_name = pname + Const.SEP + primitive_class_name
+            new_primitive = type('NewPrimitive', (primitive.__class__,),
+                                 {'__call__': self.primitive_hook_service.wrap_primitive(primitive.__call__,
+                                                                                         primitive_combined_name)})
+            primitive.__class__ = new_primitive
+
+    def register_cell_hook(self):
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
+            logger.info(f"The cell {self.config.task} hook function is successfully mounted to the model.")
             if not self.model:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                        f"The current level is {self.config.level}, the model cannot be None")

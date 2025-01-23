@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -188,13 +188,16 @@ class MSComparator(Comparator):
         return mapping_dict
 
     def process_cell_mapping(self, npu_op_name):
-        if not npu_op_name or not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
+        if not npu_op_name:
+            return CompareConst.N_A
+        param_grad_flag = Const.PARAMS_GRAD in npu_op_name.split(Const.SEP)
+        if not param_grad_flag and not re.search(Const.REGEX_FORWARD_BACKWARD, npu_op_name):
             return CompareConst.N_A
         npu_op_name = npu_op_name.replace("Cell", "Module", 1)
         if self.cell_mapping_dict:
             # get cell name & class name from op_name
             # Cell.fc1.Dense.forward.0.input.0
-            cell_name = re.split(r'\.(?:for|back)ward\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
+            cell_name = re.split(r'\.(?:forward|backward|parameters_grad)\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
             if cell_name in self.cell_mapping_dict:
                 npu_op_name = npu_op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
         return npu_op_name
@@ -255,8 +258,8 @@ class MSComparator(Comparator):
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         npu_df[CompareConst.COMPARE_SHAPE] = npu_df[Const.SHAPE]
-        bench_df[CompareConst.COMPARE_SHAPE] = bench_df[Const.SHAPE]
         bench_df[CompareConst.COMPARE_KEY] = bench_df[CompareConst.OP_NAME]
+        bench_df[CompareConst.COMPARE_SHAPE] = bench_df[Const.SHAPE]
         match_result = pd.merge(npu_df, bench_df, on=[CompareConst.COMPARE_KEY, CompareConst.COMPARE_SHAPE],
                                 how='outer')
         match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
@@ -301,11 +304,17 @@ class MSComparator(Comparator):
             return flag
 
         for mapping_dict in self.api_mapping_dict:
-            if (len(mapping_dict.get('ms_args')) != len(mapping_dict.get('pt_args')) or
-                    len(mapping_dict.get('ms_output')) != len(mapping_dict.get('pt_output'))):
+            keys_to_compare = [
+                ('ms_args', 'pt_args'),
+                ('ms_output', 'pt_output'),
+                ('ms_parameters', 'pt_parameters'),
+                ('ms_parameters_grad', 'pt_parameters_grad'),
+            ]
+            if not all(len(mapping_dict.get(k1, [])) == len(mapping_dict.get(k2, [])) for k1, k2 in keys_to_compare):
                 logger.warning('The user-defined mapping table is incorrect,\
                                 make sure that the number of parameters is equal')
                 continue
+
             ms_api, pt_api = mapping_dict.get('ms_api'), mapping_dict.get('pt_api')
             if ms_api not in ms_api_indices_dict or pt_api not in pt_api_indices_dict:
                 continue
@@ -317,6 +326,10 @@ class MSComparator(Comparator):
                     is_abandoned = gen_input_compare_key(CompareConst.KWARGS_PATTERN, 'args')
                 elif CompareConst.OUTPUT_PATTERN in op_name:
                     is_abandoned = gen_input_compare_key(CompareConst.OUTPUT_PATTERN, 'output')
+                elif CompareConst.PARAMS_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.PARAMS_PATTERN, 'parameters')
+                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.PARAMS_GRAD_PATTERN, 'parameters_grad')
                 else:
                     logger.error(f'Excepted op_name: {op_name}')
                     raise CompareException(CompareException.INVALID_DATA_ERROR)
@@ -344,8 +357,12 @@ class MSComparator(Comparator):
                 result[CompareConst.OP_NAME].append(op_name)
                 if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
                     struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
-                else:
+                elif CompareConst.OUTPUT_PATTERN in op_name:
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
+                elif CompareConst.PARAMS_PATTERN in op_name:
+                    struct = merge_list[CompareConst.PARAMS_STRUCT].pop(0)
+                else:
+                    struct = merge_list[CompareConst.PARAMS_GRAD_STRUCT].pop(0)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])
                 if self.dump_mode == Const.MD5:

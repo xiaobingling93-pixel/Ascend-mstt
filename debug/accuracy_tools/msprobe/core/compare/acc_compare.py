@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -33,7 +33,7 @@ from msprobe.core.compare.highlight import find_compare_result_error_rows, highl
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    print_compare_ends_info, read_op
+    print_compare_ends_info, read_op, get_name_and_state
 
 
 class ModeConfig:
@@ -143,13 +143,14 @@ class Comparator:
                 return graph_mapping.match(npu_op_name[0], bench_op_name[0])
         struct_match = check_struct_match(npu_dict, bench_dict)
         if not self.fuzzy_match:
-            return npu_op_name == bench_op_name and struct_match
+            name_match = npu_op_name == bench_op_name
+            return name_match and struct_match
         try:
-            is_match = fuzzy_check_op(npu_op_name, bench_op_name)
+            name_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
             logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
-            is_match = False
-        return is_match and struct_match
+            name_match = False
+        return name_match and struct_match
 
     def match_op(self, npu_queue, bench_queue):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
@@ -192,7 +193,6 @@ class Comparator:
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
                 check_op_str_pattern_valid(op_name_npu)
-                read_err_npu = True
                 npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
                 if npu_merge_list:
                     npu_ops_queue.append(npu_merge_list)
@@ -222,8 +222,11 @@ class Comparator:
                 break
 
             n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue)
+
+            # 如果没有匹配到，数据放到队列中，跳过，直到后面匹配到，把匹配之前的api放到不匹配中
             if n_match_point == -1 and b_match_point == -1:
                 continue
+
             n_match_data = npu_ops_queue[n_match_point]
             b_match_data = bench_ops_queue[b_match_point]
             un_match_data = npu_ops_queue[0: n_match_point]
@@ -245,32 +248,29 @@ class Comparator:
         for op_name in json_data.get('data', {}):
             merge_list = self.gen_merge_list(json_data, op_name, stack_json_data)
             if merge_list:
-                input_index, output_index = 0, 0
-                for index, input_or_output in enumerate(merge_list[CompareConst.OP_NAME]):
-                    input_or_output_list = input_or_output.split(Const.SEP)
-                    data_name = merge_list.get('data_name')
-                    data_name = data_name[index] if data_name else None
-                    if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
-                        ops_all[input_or_output] = {
-                            CompareConst.STRUCT: safe_get_value(merge_list, input_index, "merge_list",
-                                                                key=CompareConst.INPUT_STRUCT),
-                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                                 key=CompareConst.SUMMARY),
-                            'data_name': data_name,
-                            'stack_info': merge_list.get('stack_info')
-                        }
-                        input_index += 1
+                struct_to_index_mapping = {
+                    CompareConst.INPUT_STRUCT: 0,
+                    CompareConst.OUTPUT_STRUCT: 0,
+                    CompareConst.PARAMS_STRUCT: 0,
+                    CompareConst.PARAMS_GRAD_STRUCT: 0
+                }
+                data_name_list = merge_list.get('data_name')
+                for index, op_full_name in enumerate(merge_list[CompareConst.OP_NAME]):
+                    data_name = data_name_list[index] if data_name_list else None
 
-                    elif Const.OUTPUT in input_or_output_list:
-                        ops_all[input_or_output] = {
-                            CompareConst.STRUCT: safe_get_value(merge_list, output_index, "merge_list",
-                                                                key=CompareConst.OUTPUT_STRUCT),
-                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
-                                                                 key=CompareConst.SUMMARY),
-                            'data_name': data_name,
-                            'stack_info': merge_list.get('stack_info')
-                        }
-                        output_index += 1
+                    _, state = get_name_and_state(op_full_name)
+                    struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+                    if not struct_key:
+                        continue
+                    ops_all[op_full_name] = {
+                        CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
+                                                            "merge_list", key=struct_key),
+                        CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                             key=CompareConst.SUMMARY),
+                        'data_name': data_name,
+                        'stack_info': merge_list.get('stack_info')
+                    }
+                    struct_to_index_mapping[struct_key] += 1
         return ops_all
 
     def get_accuracy(self, npu_ops_all, bench_ops_all):
@@ -394,7 +394,7 @@ class Comparator:
 
         result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg)
 
-        if npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
+        if self.fuzzy_match and npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
@@ -502,13 +502,16 @@ class Comparator:
 
 
 def get_bench_data_name(bench_op_name, bench_data):
-    bench_name_list = re.split(r'\.(input|output|kwargs)\.', bench_op_name)
-    bench_data_bundle = bench_data.get(bench_name_list[0], {})
+    bench_name_list = re.split(r'\.(input|output|kwargs|parameters|parameters_grad)\.', bench_op_name)
+    if len(bench_name_list) > 1 and bench_name_list[1] == Const.PARAMS_GRAD:
+        bench_data_bundle = bench_data.get(bench_name_list[0] + Const.SEP + bench_name_list[1], {})
+    else:
+        bench_data_bundle = bench_data.get(bench_name_list[0], {})
     if not bench_data_bundle or len(bench_name_list) < 3:
         return None
     layers = bench_name_list[2].split(Const.SEP)
 
-    def get(key, container):
+    def _get(key, container):
         if isinstance(container, dict):
             return container.get(key)
         if isinstance(container, list):
@@ -518,11 +521,14 @@ def get_bench_data_name(bench_op_name, bench_data):
                 return None
         return None
 
-    def get_by_layer(container):
+    def get_by_layer(container, params_grad=False):
         data = container
+        # dump.json中parameters_grad的结构为key：[{}], 如果存在key，有且只有一个列表元素，而op_name中只命名到了key，因此加'0'
+        if params_grad:
+            layers.append('0')
         for layer in layers:
-            data = get(layer, data)
-        return get(CompareConst.DATA_NAME.lower(), data)
+            data = _get(layer, data)
+        return _get(CompareConst.DATA_NAME.lower(), data)
 
     if Const.INPUT == bench_name_list[1]:
         return get_by_layer(bench_data_bundle.get(Const.INPUT, bench_data_bundle.get(Const.INPUT_ARGS)))
@@ -530,5 +536,9 @@ def get_bench_data_name(bench_op_name, bench_data):
         return get_by_layer(bench_data_bundle.get(Const.INPUT_KWARGS))
     elif Const.OUTPUT == bench_name_list[1]:
         return get_by_layer(bench_data_bundle.get(Const.OUTPUT))
+    elif Const.PARAMS == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle.get(Const.PARAMS))
+    elif Const.PARAMS_GRAD == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle, params_grad=True)
     else:
         return None
