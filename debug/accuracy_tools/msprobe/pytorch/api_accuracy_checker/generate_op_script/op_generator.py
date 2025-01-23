@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import argparse
 import json
 import os
@@ -23,7 +24,8 @@ import numpy as np
 import torch
 
 
-from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_standard_api, absolute_standard_api, ulp_standard_api, thousandth_standard_api
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_standard_api, absolute_standard_api, \
+ulp_standard_api, thousandth_standard_api
 from msprobe.core.common.file_utils import FileOpen, load_json, save_json
 from msprobe.core.common.utils import check_file_or_directory_path, check_op_str_pattern_valid, is_int
 from msprobe.core.common.const import Const, MonitorConst, MsgConst
@@ -77,6 +79,7 @@ class APIInfo:
 
     def is_supported_type(self):
         return self.api_type in OPERATOR_TYPE
+
 
 class CommonConfig:
     def __init__(self, json_config):
@@ -147,6 +150,7 @@ class CommonConfig:
         if not is_int(self.iter_times):
             raise ValueError(f'iter_times is invalid, it should be an int')
 
+
 class APIExtractor:
     def __init__(self, api_name, dump_json_path, output_file):
         self.api_name = api_name
@@ -185,6 +189,7 @@ class APIExtractor:
                 self.update_data_name(item, dump_data_dir)
         elif DATA_NAME in data:
             data[DATA_NAME] = os.path.join(dump_data_dir, data[DATA_NAME])
+
 
 class OperatorScriptGenerator:
     def __init__(self, common_config, args_info_forward, kwargs_info_forward, args_info_backward):
@@ -238,7 +243,8 @@ class OperatorScriptGenerator:
             ordinal_number: how many times the same api has been called
             direction_status: forward
             random_seed: if mode is random_data, random seed is random_seed
-            iter_times: if mode is random_data, generate iter_times group of data; if mode is real_data, iter_times does not matter
+            iter_times: if mode is random_data, generate iter_times group of data; if mode is real_data,
+            iter_times does not matter
             args_element_assignment: code for args assignment
             args_list_generator_device: code for generate args list on device
             args_list_generator_bench: code for generate args list on bench
@@ -267,17 +273,25 @@ class OperatorScriptGenerator:
             internal_settings["iter_times"] = 1
         else:
             internal_settings["iter_times"] = self.common_config.iter_times
-        internal_settings["args_element_assignment"] = self.generate_args_element_assignment_code(self.args_info_forward)
-        internal_settings["args_list_generator_device"] = self.generate_args_list(self.args_info_forward, flag_device=True)
-        internal_settings["args_list_generator_bench"] = self.generate_args_list(self.args_info_forward, flag_device=False)
-        internal_settings["kwargs_value_assignment"] = self.generate_kwargs_value_assignment_code(self.kwargs_info_forward)
-        internal_settings["kwargs_dict_generator_device"] = self.generate_kwargs_dict(self.kwargs_info_forward, flag_device=True)
-        internal_settings["kwargs_dict_generator_bench"] = self.generate_kwargs_dict(self.kwargs_info_forward, flag_device=False)
+        internal_settings["args_element_assignment"] = \
+                            self.generate_args_element_assignment_code(self.args_info_forward)
+        internal_settings["args_list_generator_device"] = \
+                            self.generate_args_list(self.args_info_forward, flag_device=True)
+        internal_settings["args_list_generator_bench"] = \
+                            self.generate_args_list(self.args_info_forward, flag_device=False)
+        internal_settings["kwargs_value_assignment"] = \
+                            self.generate_kwargs_value_assignment_code(self.kwargs_info_forward)
+        internal_settings["kwargs_dict_generator_device"] = \
+                            self.generate_kwargs_dict(self.kwargs_info_forward, flag_device=True)
+        internal_settings["kwargs_dict_generator_bench"] = \
+                            self.generate_kwargs_dict(self.kwargs_info_forward, flag_device=False)
         if self.common_config.propagation == Const.BACKWARD:
             internal_settings["args_element_assignment_backward"] = self.generate_args_element_assignment_code(
                 self.args_info_backward)
-            internal_settings["args_list_generator_device_backward"] = self.generate_args_list(self.args_info_backward, flag_device=True)
-            internal_settings["args_list_generator_bench_backward"] = self.generate_args_list(self.args_info_backward, flag_device=False)
+            internal_settings["args_list_generator_device_backward"] = \
+                            self.generate_args_list(self.args_info_backward, flag_device=True)
+            internal_settings["args_list_generator_bench_backward"] = \
+                            self.generate_args_list(self.args_info_backward, flag_device=False)
         else:
             internal_settings["args_element_assignment_backward"] = ''
             internal_settings["args_list_generator_device_backward"] = ''
@@ -290,12 +304,15 @@ class OperatorScriptGenerator:
         args_element_assignment = ""
         for index, arg in enumerate(args_info):
             if isinstance(arg, (list, tuple)):
-                new_args_element_assignment = self.recursive_args_element_assignment(arg, name_number + "_" + str(index))
+                new_args_element_assignment = \
+                    self.recursive_args_element_assignment(arg, name_number + "_" + str(index))
                 args_element_assignment += new_args_element_assignment
             else:
                 arg["parameter_name"] = "arg" + name_number + "_" + str(index)
-                args_element_assignment += "    " + "arg_info" + name_number + "_" + str(index) + " = " + "{}".format(str(arg)) + MsgConst.SPECIAL_CHAR[0]
-                args_element_assignment += "    " + "arg" + name_number + "_" + str(index) + " = " + "generate_data(arg_info" + name_number + "_" + str(index) + ")" + MsgConst.SPECIAL_CHAR[0]
+                args_element_assignment += "    " + "arg_info" + name_number + "_" + str(index) + " = " + \
+                    "{}".format(str(arg)) + MsgConst.SPECIAL_CHAR[0]
+                args_element_assignment += "    " + "arg" + name_number + "_" + str(index) + " = " + \
+                    "generate_data(arg_info" + name_number + "_" + str(index) + ")" + MsgConst.SPECIAL_CHAR[0]
         return args_element_assignment
 
 
@@ -320,7 +337,8 @@ class OperatorScriptGenerator:
                         args_list_generator += ".to(device)"
                     if flag_bench:
                         args_list_generator += '.to(torch.device("cpu"))'
-                        args_list_generator += ".to(RAISE_PRECISION.get(str(" + arg.get("parameter_name") + ".dtype), " + arg.get("parameter_name") + ".dtype))"
+                        args_list_generator += ".to(RAISE_PRECISION.get(str(" + arg.get("parameter_name") + \
+                            ".dtype), " + arg.get("parameter_name") + ".dtype))"
             args_list_generator += Const.COMMA
         return args_list_generator
 
@@ -338,12 +356,15 @@ class OperatorScriptGenerator:
             if info.get("type") == "torch.device" or info.get("type") == "torch.dtype":
                 kwargs_value_assignment += "    " + "kwarg_" + key_name + name_number + " = " + info.get("value")
             else:
-                kwargs_value_assignment += "    " + "kwarg_info_" + key_name + name_number + " = " + "{}".format(str(info)) + MsgConst.SPECIAL_CHAR[0]
-                kwargs_value_assignment += "    " + "kwarg_" + key_name + name_number + " = " + "generate_data(kwarg_info_" + key_name + name_number + ")" + MsgConst.SPECIAL_CHAR[0]
+                kwargs_value_assignment += "    " + "kwarg_info_" + key_name + name_number + " = " + \
+                    "{}".format(str(info)) + MsgConst.SPECIAL_CHAR[0]
+                kwargs_value_assignment += "    " + "kwarg_" + key_name + name_number + " = " + \
+                    "generate_data(kwarg_info_" + key_name + name_number + ")" + MsgConst.SPECIAL_CHAR[0]
             info["parameter_name"] = "kwarg_" + key_name + name_number
         else:
             for index, arg in enumerate(info):
-                new_kwargs_value_assignment = self.recursive_kwargs_value_assignment(arg, key_name, name_number + "_" + str(index))
+                new_kwargs_value_assignment = self.recursive_kwargs_value_assignment(arg, key_name, name_number + \
+                    "_" + str(index))
                 kwargs_value_assignment += new_kwargs_value_assignment
         return kwargs_value_assignment
 
@@ -363,7 +384,8 @@ class OperatorScriptGenerator:
                     kwargs_dict_generator += ".to(device)"
                 if flag_bench:
                     kwargs_dict_generator += '.to(torch.device("cpu"))'
-                    kwargs_dict_generator += ".to(RAISE_PRECISION.get(str(" + info.get("parameter_name") + ".dtype), " + info.get("parameter_name") + ".dtype))"
+                    kwargs_dict_generator += ".to(RAISE_PRECISION.get(str(" + info.get("parameter_name") + \
+                        ".dtype), " + info.get("parameter_name") + ".dtype))"
         else:
             (left_bracket, right_bracket) = ("[", "]") if isinstance(info, list) else ("(", ")")
             kwargs_dict_generator += left_bracket
@@ -393,6 +415,7 @@ def _op_generator_parser(parser):
                         help="<Required> Path of extract api_name.json.",
                         required=True)
 
+
 def parse_json_config(json_file_path):
     if not json_file_path:
         config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -400,6 +423,7 @@ def parse_json_config(json_file_path):
     json_config = load_json(json_file_path)
     common_config = CommonConfig(json_config)
     return common_config
+
 
 def _run_operator_generate_commond(cmd_args):
     common_config = parse_json_config(cmd_args.config_input)
@@ -434,7 +458,8 @@ def _run_operator_generate_commond(cmd_args):
         internal_settings = op_generate.get_settings(api_full_name_forward)
 
     template_path = os.path.join(os.path.dirname(__file__), "operator_replication.template")
-    operator_script_path = os.path.join(cmd_args.api_output_path, "{0}.py".format(internal_settings.get("api_full_name")))
+    operator_script_path = os.path.join(cmd_args.api_output_path, 
+                                        "{0}.py".format(internal_settings.get("api_full_name")))
 
     try:
         with FileOpen(template_path, 'r') as ftemp, FileOpen(operator_script_path, 'w') as fout:
