@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 
 #include "PrecisionDebuggerIfPython.hpp"
 #include "CPythonAgent.hpp"
+#include "ACLDump.hpp"
 
 namespace MindStudioDebugger {
 
@@ -72,5 +73,13 @@ PyMODINIT_FUNC PyInit__msprobe_c(void)
     }
     Py_INCREF(cpyAgent);
 
+    PyMethodDef* dumpmethods = MindStudioDebugger::GetDumpMethods();
+    for (PyMethodDef* method = dumpmethods; method->ml_name != nullptr; ++method) {
+        if (PyModule_AddObject(m, method->ml_name, PyCFunction_New(method, nullptr)) < 0) {
+            PyErr_SetString(PyExc_ImportError, "Failed to bind dump method.");
+            Py_DECREF(m);
+            return nullptr;
+        }
+    }
     return m;
 }

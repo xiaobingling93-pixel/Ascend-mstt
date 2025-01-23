@@ -40,10 +40,11 @@ def __init__(self, build_hook) -> None:
             self.prefix = self.prefix_api_name
 
         self.forward_data_collected = False
-        forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
+        forward_pre_hook, forward_hook, backward_hook, backward_pre_hook = build_hook(self.prefix)
         self.register_forward_pre_hook(forward_pre_hook)
         self.register_forward_hook(forward_hook)
         register_backward_hook_functions["full"](self, backward_hook)
+        register_backward_hook_functions["pre"](self, backward_pre_hook)
 
 
 # 重载call，加全局标志。

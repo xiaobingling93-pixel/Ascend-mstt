@@ -1,4 +1,4 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright 2024-2025 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 import zlib
 
 import mindspore as ms
-from mindspore import mint, ops
+from mindspore import mint, ops, hal
 from mindspore._c_expression.typing import Number
 import numpy as np
 
@@ -28,6 +28,11 @@ from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
+has_adump = True
+try:
+    from msprobe.lib import _msprobe_c
+except ImportError:
+    has_adump = False
 
 class MindsporeDataProcessor(BaseDataProcessor):
     mindspore_special_type = tuple([ms.Tensor, Number])
@@ -211,3 +216,60 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self._analyze_maybe_overflow_tensor(single_arg)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
+
+class KernelDumpDataProcessor(MindsporeDataProcessor):
+    def __init__(self, config, data_writer):
+        super().__init__(config, data_writer)
+        self.enable_kernel_dump = True
+
+    @staticmethod
+    def start_kernel_dump(config_path):
+        hal.synchronize()
+        _msprobe_c.init_dump()
+        _msprobe_c.set_dump(config_path)
+        hal.synchronize()
+
+    @staticmethod
+    def stop_kernel_dump():
+        hal.synchronize()
+        _msprobe_c.finalize_dump()
+        hal.synchronize()
+
+    @staticmethod
+    def _print_unsupported_log(api_name):
+        logger.warning(f"The kernel dump does not support the {api_name} API.")
+
+    def analyze_forward_input(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        if not has_adump:
+            logger.warning("The current msprobe package does not compile adump, and kernel dump cannot be used.")
+            self.enable_kernel_dump = False
+            return
+        self.start_kernel_dump(self.config.kernel_config_path)
+
+    def analyze_forward_output(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        self.enable_kernel_dump = False
+        self.stop_kernel_dump()
+        logger.info(f"The kernel data of {name} is dumped successfully.")
+
+    def analyze_backward_input(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        if not has_adump:
+            logger.warning("The current msprobe package does not compile adump, and kernel dump cannot be used.")
+            self.enable_kernel_dump = False
+            return
+        self.start_kernel_dump(self.config.kernel_config_path)
+
+    def analyze_backward(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        self.enable_kernel_dump = False
+        self.stop_kernel_dump()
+        logger.info(f"The kernel data of {name} is dumped successfully.")
+
+    def reset_status(self):
+        self.enable_kernel_dump = True

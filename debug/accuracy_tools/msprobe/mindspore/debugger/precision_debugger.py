@@ -95,6 +95,16 @@ class PrecisionDebugger:
         else:
             return MsConst.PYNATIVE_MODE
 
+    @staticmethod
+    def _is_graph_dump(config):
+        if config.level != MsConst.KERNEL:
+            return False
+        if not config.list or len(config.list) > 1:
+            return True
+        if '-' in config.list[0] or '/' in config.list[0]:
+            return True
+        return False
+
     @classmethod
     def start(cls, model=None):
         instance = cls._instance
@@ -172,4 +182,4 @@ class PrecisionDebugger:
         if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
             return False
         else:
-            return instance.config.task != Const.FREE_BENCHMARK and instance.config.level != MsConst.KERNEL
+            return instance.config.task != Const.FREE_BENCHMARK and not instance._is_graph_dump(instance.config)

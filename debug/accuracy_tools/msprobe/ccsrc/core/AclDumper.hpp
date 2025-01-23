@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,4 +65,7 @@ private:
     std::map<std::string, std::shared_ptr<AclDumpDataProcessor>> dataProcessors;
 };
 
+void KernelInitDump();
+void KernelSetDump(const std::string &filePath);
+void KernelFinalizeDump();
 }

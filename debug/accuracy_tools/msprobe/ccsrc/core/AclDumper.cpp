@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -469,5 +469,40 @@ void AclDumper::FinalizeDump(ExtArgs& args)
     aclDumpHasSet = false;
 }
 
+void KernelInitDump() {
+  if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
+    return;
+  }
 
+  DebuggerErrno ret = InitAcl();
+  if (ret != DebuggerErrno::OK) {
+    LOG_ERROR(ret, "Failed to call InitAcl.");
+    return;
+  }
+  auto aclRet = CALL_ACL_API(aclmdlInitDump);
+  if (aclRet != ACL_SUCCESS) {
+    LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
+              "Failed to init acldump(" + std::to_string(aclRet) + ").");
+    return;
+  }
+}
+
+void KernelSetDump(const std::string &filePath) {
+  std::string dumpPath = FileUtils::GetAbsPath(filePath);
+  auto aclRet = CALL_ACL_API(aclmdlSetDump, dumpPath.c_str());
+  if (aclRet != ACL_SUCCESS) {
+    LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
+              "Failed to enable acldump(" + std::to_string(aclRet) + ").");
+    return;
+  }
+}
+
+void KernelFinalizeDump() {
+  CALL_ACL_API(aclrtSynchronizeDevice);
+  auto aclRet = CALL_ACL_API(aclmdlFinalizeDump);
+  if (aclRet != ACL_SUCCESS) {
+    LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
+              "Failed to finalize acldump(" + std::to_string(aclRet) + ").");
+  }
+}
 }

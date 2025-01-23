@@ -90,7 +90,7 @@ class TestApiPyNativeSelfCheck(TestCase):
         mock_set_hook.assert_called_once()
 
     def test_build_hook(self):
-        _, forward_hook, backward_hook = self.checker.build_hook("Functional.add.")
+        _, forward_hook, backward_hook, _ = self.checker.build_hook("Functional.add.")
 
         cell = Cell()
 
