@@ -57,10 +57,13 @@ class DistributedOPTemplate(nn.Module):
         super(DistributedOPTemplate, self).__init__()
         self.op_name_ = str(op_name)
         self.__name__ = self.op_name_
+        self.cc_hooks = []
         for pre_hook in pre_hooks:
-            self.register_forward_pre_hook(pre_hook, with_kwargs=True)
+            handle = self.register_forward_pre_hook(pre_hook, with_kwargs=True)
+            self.cc_hooks.append(handle)
         for hook in post_hooks:
-            self.register_forward_hook(hook, with_kwargs=True)
+            handle = self.register_forward_hook(hook, with_kwargs=True)
+            self.cc_hooks.append(handle)
 
     def forward(self, *args, **kwargs):
         return distributed_func.get(self.op_name_)(*args, **kwargs)
@@ -120,8 +123,11 @@ class ApiRegistry:
 
     def initialize_hook(self, pre_hooks, post_hooks):
         self.store_ori_attr(dist, get_distributed_ops(), self.distributed_attr_origin)
+        cc_hooks = []
         for op_name in get_distributed_ops():
             self.distributed_attr_hooked[op_name] = DistributedOPTemplate(op_name, pre_hooks, post_hooks)
+            cc_hooks.extend(self.distributed_attr_hooked[op_name].cc_hooks)
+        return cc_hooks
 
 
 def get_process_group(process_group):
