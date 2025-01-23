@@ -550,13 +550,23 @@ def get_name_and_state(name):
 def reorder_op_name_list(op_name_list):
     if not op_name_list:
         return op_name_list
-    parameters = [x for x in op_name_list if get_name_and_state(x)[1] == Const.PARAMS]
-    outputs = [x for x in op_name_list if get_name_and_state(x)[1] == Const.OUTPUT]
-    parameters_grad = [x for x in op_name_list if get_name_and_state(x)[1] == Const.PARAMS_GRAD]
-    others = [x for x in op_name_list if
-              get_name_and_state(x)[1] not in [Const.PARAMS, Const.OUTPUT, Const.PARAMS_GRAD]]
-    # 合并others, parameters, 和outputs，确保parameters排在output前面
-    op_name_reorder = others + parameters + outputs + parameters_grad
+    parameters = []
+    output = []
+    parameters_grad = []
+    others = []
+
+    for x in op_name_list:
+        state = get_name_and_state(x)[1]
+        if state == Const.PARAMS:
+            parameters.append(x)
+        elif state == Const.OUTPUT:
+            output.append(x)
+        elif state == Const.PARAMS_GRAD:
+            parameters_grad.append(x)
+        else:
+            others.append(x)
+    # 合并others, parameters, 和output，确保parameters排在output前面
+    op_name_reorder = others + parameters + output + parameters_grad
     return op_name_reorder
 
 
@@ -565,10 +575,12 @@ def reorder_op_x_list(op_name_list, summary_list, data_name_list):
     if not op_name_list or not summary_list:
         return op_name_list, summary_list, data_name_list
 
+    index_map = {name: index for index, name in enumerate(op_name_list)}
+
     op_name_reorder = reorder_op_name_list(op_name_list)
-    summary_reorder = [summary_list[op_name_list.index(item)] for item in op_name_reorder]
+    summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
     if data_name_list:
-        data_name_reorder = [data_name_list[op_name_list.index(item)] for item in op_name_reorder]
+        data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
     else:
         data_name_reorder = data_name_list
 
