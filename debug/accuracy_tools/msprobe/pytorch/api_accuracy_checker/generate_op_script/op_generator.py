@@ -19,10 +19,10 @@ import argparse
 import json
 import os
 import re
+
 import math
 import numpy as np
 import torch
-
 
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_standard_api, absolute_standard_api, \
 ulp_standard_api, thousandth_standard_api
