@@ -1,0 +1,3 @@
+[submodule "dynolog_npu/third_party/dynolog"]
+	path = dynolog_npu/third_party/dynolog
+	url = https://github.com/facebookincubator/dynolog.git
