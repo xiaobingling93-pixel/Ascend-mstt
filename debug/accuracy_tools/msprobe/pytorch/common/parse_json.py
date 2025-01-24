@@ -24,7 +24,8 @@ def parse_json_info_forward_backward(json_path):
     real_data_path = dump_json.get("dump_data_dir")
     dump_data = dump_json.get("data")
     if dump_data is None:
-        raise ParseJsonException(ParseJsonException.InvalidDumpJson, "something wrong with dump, no data found in dump.json")
+        raise ParseJsonException(ParseJsonException.InvalidDumpJson, 
+                                 "something wrong with dump, no data found in dump.json")
     if not dump_data:
         logger.warning("data field is empty, no overflow data found.")
 

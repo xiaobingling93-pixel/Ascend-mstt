@@ -20,6 +20,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import absolute_
     ulp_standard_api, thousandth_standard_api, accumulative_error_standard_api, BINARY_COMPARE_UNSUPPORT_LIST
 from msprobe.core.common.const import CompareConst
 
+
 class StandardRegistry:
     """
     Registry class for managing comparison standards and functions.

@@ -30,6 +30,7 @@
                                        numels=0, prefix=None, sparse_mode=0, gen_mask_parallel=True, sync=False
 """
 
+from collections import namedtuple
 import torch
 import numpy as np
 from einops import rearrange
@@ -52,6 +53,14 @@ from msprobe.core.common.const import Const, CompareConst
 
 GTYPE = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
 SOFTMAX_BUILD_MODE = "QKV"  # "MAX_SUM"
+
+
+fa_forward_params = namedtuple("fa_forward_params",
+                                ["q", "k", "v", "drop_mask", "atten_mask", "pse", "scale", "keep_prob"])
+fa_backward_params = namedtuple("fa_backward_params",
+                                 ["dx", "q", "k", "v", "softmax_res", "drop_mask", "pse", "scale", "keep_prob"])
+rebuild_softmax_params = namedtuple("rebuild_softmax_params", 
+                                    ["q", "k", "atten_mask", "pse", "scale", "softmax_max", "softmax_sum"])
 
 
 def softmax_forward(x):
@@ -99,7 +108,15 @@ def calculate_qk(q, k, atten_mask, pse, scale):
     return qk
 
 
-def fusion_attention_forward(q, k, v, drop_mask, atten_mask, pse, scale, keep_prob):
+def fusion_attention_forward(forward_params):
+    q = forward_params.q
+    k = forward_params.k
+    v = forward_params.v
+    drop_mask = forward_params.drop_mask
+    atten_mask = forward_params.atten_mask
+    pse = forward_params.pse
+    scale = forward_params.scale
+    keep_prob = forward_params.keep_prob
     qk = calculate_qk(q, k, atten_mask, pse, scale)
     softmax_res, softmax_max, softmax_sum = softmax_forward(qk)
     if drop_mask is None or len(drop_mask.shape) == 0:
@@ -110,7 +127,16 @@ def fusion_attention_forward(q, k, v, drop_mask, atten_mask, pse, scale, keep_pr
     return y, softmax_max, softmax_sum
 
 
-def fusion_attention_backward(dx, q, k, v, softmax_res, drop_mask, pse, scale, keep_prob):
+def fusion_attention_backward(backward_params):
+    dx = backward_params.dx
+    q = backward_params.q
+    k = backward_params.k
+    v = backward_params.v
+    softmax_res = backward_params.softmax_res
+    drop_mask = backward_params.drop_mask
+    pse = backward_params.pse
+    scale = backward_params.scale
+    keep_prob = backward_params.keep_prob
     dp = torch.matmul(dx, v.permute(0, 1, 3, 2))
     if drop_mask is None or len(drop_mask.shape) == 0:
         drop_res = softmax_res.permute(0, 1, 3, 2)
@@ -368,11 +394,18 @@ def rebuid_softmax_by_qkv(q, k, atten_mask, pse, scale):
     return softmax_res
 
 
-def rebuild_softmax_by_max_sum(q, k, atten_mask, pse, scale, softmax_max, softmax_sum):
+def rebuild_softmax_by_max_sum(softmax_params):
     """
     attention = softmax(QK^T/sqrt(d))V
     softmax(x_i) = e^(x_i - x_max_i) / x_sum_i)
     """
+    q = softmax_params.q
+    k = softmax_params.k
+    atten_mask = softmax_params.atten_mask
+    pse = softmax_params.pse
+    scale = softmax_params.scale
+    softmax_max = softmax_params.softmax_max
+    softmax_sum = softmax_params.softmax_sum
     logger.info("Using softmax_max and softmax_sum to rebuild original softmax")
     qk = calculate_qk(q, k, atten_mask, pse, scale)
     if softmax_max.shape[-1] == 0:
@@ -502,10 +535,8 @@ def npu_fusion_attention(*args, **kwargs):
     key = convert_to_bnsd(key, n2, input_layout)
     value = convert_to_bnsd(value, n2, input_layout)
     k_new, v_new = generate_kv(key, value, n1, n2)
-    out_golden, softmax_max, softmax_sum = fusion_attention_forward(q=query, k=k_new, v=v_new,
-                                                                    drop_mask=None, atten_mask=atten_mask,
-                                                                    pse=pse, scale=scale,
-                                                                    keep_prob=keep_prob)
+    forward_params = fa_forward_params(query, k_new, v_new, None, atten_mask, pse, scale, keep_prob)
+    out_golden, softmax_max, softmax_sum = fusion_attention_forward(forward_params)
     if out_golden.dim() == 5:
         out_golden = out_golden.reshape(out_golden.size(0), out_golden.size(1) * out_golden.size(2), out_golden.size(3),
                                         out_golden.size(4))
@@ -546,9 +577,10 @@ def npu_fusion_attention_grad(*args, **kwargs):
     if SOFTMAX_BUILD_MODE == "QKV":
         softmax_res = rebuid_softmax_by_qkv(query, k_new, atten_mask, pse, scale_value)
     else:
-        softmax_res = rebuild_softmax_by_max_sum(query, k_new, atten_mask, pse, scale_value, softmax_max, softmax_sum)
-
-    dq, dk, dv = fusion_attention_backward(dx, query, k_new, v_new, softmax_res, None, pse, scale_value, keep_prob)
+        softmax_params = rebuild_softmax_params(query, k_new, atten_mask, pse, scale_value, softmax_max, softmax_sum)
+        softmax_res = rebuild_softmax_by_max_sum(softmax_params)
+    backward_params = fa_backward_params(dx, query, k_new, v_new, softmax_res, None, pse, scale_value, keep_prob)
+    dq, dk, dv = fusion_attention_backward(backward_params)
 
     # N不等长适配by cdy
     if not (n1 == n2):
