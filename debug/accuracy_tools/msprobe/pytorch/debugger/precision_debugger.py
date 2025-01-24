@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -22,6 +22,7 @@ from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
+from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.pytorch.service import Service
@@ -72,6 +73,7 @@ class PrecisionDebugger:
                 common_config, task_config, task, dump_path, level
             )
             self.service = Service(self.config)
+            self.module_dumper = ModuleDumper(self.service)
             self.enable_dataloader = self.config.enable_dataloader
             if self.enable_dataloader:
                 logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
@@ -155,6 +157,36 @@ class PrecisionDebugger:
         if cls._instance.task != Const.GRAD_PROBE:
             return
         cls._instance.gm.monitor(model)
+
+
+def module_dump(module, dump_name):
+    if not isinstance(module, torch.nn.Module):
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR,
+            f"the module argument in module_dump must be a torch.nn.Module subclass"
+        )
+    if not isinstance(dump_name, str):
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR,
+            f"the dump_name argument in module_dump must be a str type"
+        )
+    instance = PrecisionDebugger._instance
+    if not instance:
+        raise MsprobeException(
+            MsprobeException.INTERFACE_USAGE_ERROR,
+            f"PrecisionDebugger must be instantiated before using module_dump interface"
+        )
+    instance.module_dumper.start_module_dump(module, dump_name)
+
+
+def module_dump_end():
+    instance = PrecisionDebugger._instance
+    if not instance:
+        raise MsprobeException(
+            MsprobeException.INTERFACE_USAGE_ERROR,
+            f"PrecisionDebugger must be instantiated before using module_dump_end interface"
+        )
+    instance.module_dumper.stop_module_dump()
 
 
 def iter_tracer(func):

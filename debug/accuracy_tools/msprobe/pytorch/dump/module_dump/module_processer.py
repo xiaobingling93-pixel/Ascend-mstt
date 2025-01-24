@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -16,21 +16,24 @@
 from functools import wraps
 
 import torch
-from torch.utils.checkpoint import set_checkpoint_early_stop
-from torch.utils.checkpoint import checkpoint as origin_checkpoint
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
+from torch.utils.checkpoint import checkpoint as origin_checkpoint
+from torch.utils.checkpoint import set_checkpoint_early_stop
 from torch.utils.hooks import BackwardHook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+
 
 def checkpoint_without_early_stop(*args, **kwargs):
     with set_checkpoint_early_stop(False):
         return origin_checkpoint(*args, **kwargs)
 
+
 def replace_checkpoint():
     torch.utils.checkpoint.checkpoint = checkpoint_without_early_stop
+
 
 class ModuleProcesser:
     module_count = {}
@@ -96,13 +99,10 @@ class ModuleProcesser:
         return ModuleProcesser.module_count[module_name]
 
     @staticmethod
-    def remove_deprecated_backward_hook_if_exist(module):
-        if hasattr(module, '_backward_hooks') and \
-                len(module._backward_hooks) > 0 and \
-                module._is_full_backward_hook is False:
-            module._backward_hooks.clear()
-            module._is_full_backward_hook = None
-            logger.warning("Found deprecated backward hooks. Removing them and switching to full backward hooks.")
+    def has_register_backward_hook(module):
+        return hasattr(module, '_backward_hooks') and \
+            len(module._backward_hooks) > 0 and \
+            module._is_full_backward_hook is False
 
     @classmethod
     def reset_module_stats(cls):
@@ -130,20 +130,25 @@ class ModuleProcesser:
                 BaseScope.Module_Type_Module,
                 prefix_name
             )
+
+            if self.has_register_backward_hook(module):
+                logger.warning(
+                    f"The {prefix_name[:-1]} has registered deprecated register_backward_hook,"
+                    f"which may cause abnormal data dump. The backward data dump for this module will be skipped."
+                )
             if torch_version_above_or_equal_2:
                 module.register_forward_hook(forward_hook, with_kwargs=True)
             else:
-                self.remove_deprecated_backward_hook_if_exist(module)
-                module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
+                if not self.has_register_backward_hook(module):
+                    module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
                 module.register_forward_hook(forward_hook_torch_version_below_2)
-            self.remove_deprecated_backward_hook_if_exist(module)
-            module.register_full_backward_hook(backward_hook)
+            if not self.has_register_backward_hook(module):
+                module.register_full_backward_hook(backward_hook)
 
             module.register_forward_pre_hook(self.node_hook(prefix_name + Const.FORWARD, Const.START))
             module.register_forward_hook(self.node_hook(prefix_name + Const.FORWARD, Const.STOP))
-            if torch_version_above_or_equal_2:
+            if torch_version_above_or_equal_2 and not self.has_register_backward_hook(module):
                 module.register_full_backward_pre_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.START))
-                self.remove_deprecated_backward_hook_if_exist(module)
                 module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
 
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
