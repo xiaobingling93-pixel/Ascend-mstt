@@ -58,8 +58,8 @@ def get_result_path(input_dir):
     """
     get rank ordered compare result file path list
     """
-    compare_result_path_list = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if
-                                f.endswith(FileCheckConst.XLSX_SUFFIX)]
+    compare_result_path_list = [os.path.join(input_dir, f)
+                                for f in os.listdir(input_dir) if f.endswith(FileCheckConst.XLSX_SUFFIX)]
     filt_compare_result_path_list = []
     for file_path in compare_result_path_list:
         file_name = os.path.basename(file_path)
@@ -316,13 +316,15 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
             for _,  api_index_dict in compare_index_dict.items():
                 result_df = generate_result_df(api_index_dict, header)
                 result_df_list.append(result_df)
-            # all_result_df_list示例：[[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
+            # all_result_df_list示例：
+            # [[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
             all_result_df_list.append(result_df_list)
 
     merge_df_list = df_merge(all_result_df_list)
     final_result_df_list = []
     for i, df in enumerate(merge_df_list):
-        final_result_df_list.append((df, compare_index_list[i]))    # merge_df_list中df与compare_index_list中compare_index一一对应
+        # merge_df_list中df与compare_index_list中compare_index一一对应
+        final_result_df_list.append((df, compare_index_list[i]))
     save_excel(output_path, final_result_df_list)
     logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")
 

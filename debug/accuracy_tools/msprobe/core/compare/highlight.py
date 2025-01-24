@@ -98,8 +98,10 @@ class CheckMaxRelativeDiff(HighlightCheck):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
         bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
-        input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
-        output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
+        input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index],
+                                                   max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
+        output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index],
+                                                    max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
                                                                                    (float, int)):
             return
@@ -201,13 +203,15 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 
 def get_name_and_state(name):
-    """Get api/module name and state
-    example:
-    name = 'conv2d.forward.1.input.0'
-    return: ('conv2d.forward.1.', 'input')
+    """
+        Get api/module name and state
+        example:
+        name = 'conv2d.forward.1.input.0'
+        return: ('conv2d.forward.1.', 'input')
 
-    name = 'Functional.pad.0.backward.output.0'
-    return: ('Functional.pad.0.backward.', 'output')"""
+        name = 'Functional.pad.0.backward.output.0'
+        return: ('Functional.pad.0.backward.', 'output')
+    """
     split = re.split(r'\.(forward|backward)\.', name)
     api = f'{split[0]}.{split[1]}.'
     state_str = split[2]

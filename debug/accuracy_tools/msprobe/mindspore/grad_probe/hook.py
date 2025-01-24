@@ -26,7 +26,7 @@ from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.grad_probe.global_context import grad_context
 from msprobe.mindspore.grad_probe.grad_analyzer import csv_generator
-from msprobe.mindspore.grad_probe.grad_analyzer import grad_dump, get_rank_id
+from msprobe.mindspore.grad_probe.grad_analyzer import grad_dump, get_rank_id, GradDumpConfig
 from msprobe.mindspore.grad_probe.grad_stat_csv import GradStatCsv, CsvInput
 from msprobe.mindspore.grad_probe.utils import save_grad_direction, get_adapted_level
 
@@ -66,8 +66,10 @@ def hook_graph_mode_optimizer(opt, hook_input):
         for index, grad_value in enumerate(gradients):
             if hook_input.param_list and hook_input.g_names[index] not in hook_input.param_list:
                 continue
-            grad_dump(hook_input.dump_dir, hook_input.g_names[index], self.dump_step,
-                      grad_value, hook_input.level, hook_input.bounds)
+            conf = GradDumpConfig(dump_dir=hook_input.dump_dir, g_name=hook_input.g_names[index],
+                                  dump_step=self.dump_step, grad=grad_value, level=hook_input.level,
+                                  bounds=hook_input.bounds)
+            grad_dump(conf)
         ms.ops.TensorDump()(hook_input.step_finish_flag, self.dump_step)
         self.assignadd(self.dump_step, self.global_step_increase_tensor)
         out = hook_input.func(gradients)

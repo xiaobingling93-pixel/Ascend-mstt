@@ -108,8 +108,8 @@ class MsprobeStep(ms.train.Callback):
 
 
 class Dropout(ops.Dropout):
-    def __init__(self, keep_prob=0.5, Seed0=0, Seed1=1):
-        super().__init__(1., Seed0, Seed1)
+    def __init__(self, keep_prob=0.5, seed0=0, seed1=1):
+        super().__init__(1., seed0, seed1)
 
 
 class Dropout2D(ops.Dropout2D):

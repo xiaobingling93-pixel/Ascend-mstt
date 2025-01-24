@@ -177,7 +177,6 @@ def _call_impl(self, *args, **kwargs):
             result = apply_backward_hook_on_tensors(bw_pre_hook, result)
 
         return result
-
     except Exception:
         # run always called hooks if they have not already been run
         # For now only forward hooks have the always_call option but perhaps

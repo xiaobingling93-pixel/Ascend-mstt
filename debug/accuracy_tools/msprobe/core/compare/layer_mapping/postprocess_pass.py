@@ -29,9 +29,9 @@ def backward_pass(data_items, name2item):
         data_name_list = data_item.data_name.split(Const.SEP)
         if not data_name_list:
             continue
-        if Const.BACKWARD in data_name_list[Const.SCOPE_DIRECTION_INDEX :]:
-            data_name_list[Const.SCOPE_DIRECTION_INDEX :] = [
-                s.replace(Const.BACKWARD, Const.FORWARD) for s in data_name_list[Const.SCOPE_DIRECTION_INDEX :]
+        if Const.BACKWARD in data_name_list[Const.SCOPE_DIRECTION_INDEX:]:
+            data_name_list[Const.SCOPE_DIRECTION_INDEX:] = [
+                s.replace(Const.BACKWARD, Const.FORWARD) for s in data_name_list[Const.SCOPE_DIRECTION_INDEX:]
             ]
             forward_name = Const.SEP.join(data_name_list)
             forward_item = name2item.get(forward_name, None)

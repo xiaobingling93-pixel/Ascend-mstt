@@ -24,6 +24,7 @@ from msprobe.core.common.utils import (add_time_with_yaml,
 from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
 from msprobe.core.compare.utils import read_op
 
+
 class LayerTrie:
     def __init__(self, type_name, framework=None):
         self.type_name = type_name

@@ -16,9 +16,9 @@
 import argparse
 import os
 
-
 from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory
 from msprobe.core.common.utils import Const, MsprobeBaseException
+
 
 class UniqueDeviceAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -39,6 +39,7 @@ def add_api_accuracy_checker_argument(parser):
                         help="<optional> The ut task result out path.")
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
+
 
 def multi_add_api_accuracy_checker_argument(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,

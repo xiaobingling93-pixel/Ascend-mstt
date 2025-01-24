@@ -154,14 +154,16 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
         """
         if not api_info.check_forward_info():
             logger.debug(
-                f"[Device {self.current_device_id}] API: {api_name_str} lacks forward information, skipping forward check.")
+                f"[Device {self.current_device_id}] API: {api_name_str} lacks forward information, skipping "
+                f"forward check.")
             return Const.EXCEPTION_NONE
 
         try:
             forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
         except Exception as e:
             logger.warning(
-                f"[Device {self.current_device_id}] Exception occurred while getting forward API inputs for {api_name_str}. Skipping forward check. Detailed exception information: {e}.")
+                f"[Device {self.current_device_id}] Exception occurred while getting forward API inputs for "
+                f"{api_name_str}. Skipping forward check. Detailed exception information: {e}.")
             return Const.EXCEPTION_NONE
 
         forward_output_list = None
@@ -170,7 +172,8 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
                                                               Const.FORWARD)
         except Exception as e:
             logger.warning(
-                f"[Device {self.current_device_id}] Exception occurred while running and comparing {api_name_str} forward API. Detailed exception information: {e}.")
+                f"[Device {self.current_device_id}] Exception occurred while running and comparing {api_name_str} "
+                f"forward API. Detailed exception information: {e}.")
         return forward_output_list
 
     def process_backward(self, api_name_str, api_info):
@@ -186,14 +189,16 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
         """
         if not api_info.check_backward_info():
             logger.debug(
-                f"[Device {self.current_device_id}] API: {api_name_str} lacks backward information, skipping backward check.")
+                f"[Device {self.current_device_id}] API: {api_name_str} lacks backward information, skipping "
+                f"backward check.")
             return Const.EXCEPTION_NONE
 
         try:
             backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
         except Exception as e:
             logger.warning(
-                f"[Device {self.current_device_id}] Exception occurred while getting backward API inputs for {api_name_str}. Skipping backward check. Detailed exception information: {e}.")
+                f"[Device {self.current_device_id}] Exception occurred while getting backward API inputs for "
+                f"{api_name_str}. Skipping backward check. Detailed exception information: {e}.")
             return Const.EXCEPTION_NONE
 
         backward_output_list = None
@@ -202,5 +207,6 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
                                                                Const.BACKWARD)
         except Exception as e:
             logger.warning(
-                f"[Device {self.current_device_id}] Exception occurred while running and comparing {api_name_str} backward API. Detailed exception information: {e}.")
+                f"[Device {self.current_device_id}] Exception occurred while running and comparing {api_name_str} "
+                f"backward API. Detailed exception information: {e}.")
         return backward_output_list
