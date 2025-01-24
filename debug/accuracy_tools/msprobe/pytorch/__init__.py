@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -20,8 +18,7 @@ import torch
 from .compare.distributed_compare import compare_distributed
 from .compare.pt_compare import compare
 from .common.utils import seed_all
-from .debugger.precision_debugger import PrecisionDebugger
-from .functional.module_dump import module_dump, module_dump_end
+from .debugger.precision_debugger import PrecisionDebugger, module_dump, module_dump_end
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:

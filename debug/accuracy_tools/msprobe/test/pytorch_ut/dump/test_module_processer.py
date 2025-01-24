@@ -118,9 +118,13 @@ class TestModuleProcesser(unittest.TestCase):
         self.assertEqual(module.mindstudio_reserved_name, [expected_name])
         self.assertIn(expected_name, ModuleProcesser.module_node)
 
-    def test_remove_deprecated_backward_hook_if_exist(self):
+    def test_has_register_backward_hook(self):
         module = MagicMock()
         module._backward_hooks = {0: lambda: None}
         module._is_full_backward_hook = False
-        self.processor.remove_deprecated_backward_hook_if_exist(module)
-        self.assertIsNone(module._is_full_backward_hook)
+        result = self.processor.has_register_backward_hook(module)
+        self.assertTrue(result)
+
+        module._is_full_backward_hook = True
+        result = self.processor.has_register_backward_hook(module)
+        self.assertFalse(result)

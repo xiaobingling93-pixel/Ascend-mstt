@@ -99,7 +99,10 @@ class ApiPyNativeSelfCheck:
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
 
-        return pre_hook, wrap_forward_hook, wrap_backward_hook
+        def pre_backward_hook(cell, grad_input):
+            return None
+
+        return pre_hook, wrap_forward_hook, wrap_backward_hook, pre_backward_hook
 
     def store_original_func(self):
         for api_name in self.api_list:

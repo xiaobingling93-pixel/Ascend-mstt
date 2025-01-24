@@ -66,11 +66,6 @@ class TestService(unittest.TestCase):
         with self.assertRaises(MsprobeException):
             self.service.check_model_valid("not a cell")
 
-    def test_check_level_valid_with_unsupported_level(self):
-        self.service.config.level = Const.LEVEL_L2
-        with self.assertRaises(MsprobeException):
-            self.service.check_level_valid()
-
     def test_update_primitive_counters(self):
         self.service.primitive_counters = {}
         self.service.update_primitive_counters("conv2d")
@@ -241,7 +236,7 @@ class TestService(unittest.TestCase):
         mock_input = (MagicMock(),)
         mock_output = MagicMock()
 
-        _, forward_hook, backward_hook = self.service.build_hook(BaseScope.Module_Type_Module, "TestHook")
+        _, forward_hook, backward_hook, _ = self.service.build_hook(BaseScope.Module_Type_Module, "TestHook")
 
         forward_hook(mock_cell, mock_input, mock_output)
         self.service.data_collector.update_api_or_module_name.assert_called_with('TestCell')

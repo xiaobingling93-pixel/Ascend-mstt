@@ -299,6 +299,7 @@ class TestTensorDataProcessor(unittest.TestCase):
     @patch('torch.save')
     def test_analyze_tensor(self, mock_save):
         self.config.framework = "pytorch"
+        self.config.enable_async_dump = False
         tensor = torch.tensor([1.0, 2.0, 3.0])
         suffix = 'suffix'
         result = self.processor._analyze_tensor(tensor, suffix)

@@ -112,6 +112,7 @@ class TestTensorDataProcessor(unittest.TestCase):
     @patch('msprobe.core.data_dump.data_processor.mindspore_processor.save_tensor_as_npy')
     def test_analyze_tensor(self, mock_save):
         self.config.framework = "mindspore"
+        self.config.enable_async_dump = False
         tensor = ms.Tensor([1.0, 2.0, 3.0])
         suffix = 'suffix'
         result = self.processor._analyze_tensor(tensor, suffix)

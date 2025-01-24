@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,17 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import argparse
 import os
 from collections import namedtuple
 
-from msprobe.pytorch.parse_tool.lib.config import Const
-from msprobe.pytorch.parse_tool.lib.utils import Util
-from msprobe.pytorch.parse_tool.lib.compare import Compare
-from msprobe.pytorch.parse_tool.lib.visualization import Visualization
-from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
 from msprobe.core.common.file_utils import create_directory
+from msprobe.pytorch.parse_tool.lib.compare import Compare
+from msprobe.pytorch.parse_tool.lib.config import Const
+from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
+from msprobe.pytorch.parse_tool.lib.utils import Util
+from msprobe.pytorch.parse_tool.lib.visualization import Visualization
+
 
 class ParseTool:
     def __init__(self):
@@ -117,7 +117,8 @@ class ParseTool:
         self.util.check_path_valid(args.golden_dump_path)
         self.util.check_file_path_format(args.my_dump_path, Const.NPY_SUFFIX)
         self.util.check_file_path_format(args.golden_dump_path, Const.NPY_SUFFIX)
-        compare_data_args = namedtuple('compare_data_args', ['my_dump_path', 'golden_dump_path', 'save', 'rtol', 'atol', 'count'])
+        compare_data_args = namedtuple('compare_data_args',
+                                       ['my_dump_path', 'golden_dump_path', 'save', 'rtol', 'atol', 'count'])
         compare_data_args.__new__.__defaults__ = (False, 0.001, 0.001, 20)
         res = compare_data_args(args.my_dump_path, args.golden_dump_path, args.save, args.rtol, args.atol, args.count)
         self.compare.compare_data(res)

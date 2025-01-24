@@ -135,7 +135,7 @@ class UlpPrecisionCompare(BasePrecisionCompare):
                 CompareConst.ULP_ERR_STATUS: CompareConst.ERROR
             }
             compare_result = CompareConst.ERROR
-            metrics[CompareConst.COMPARE_MESSAGE] =  metrics.get(CompareConst.COMPARE_MESSAGE, "") + \
+            metrics[CompareConst.COMPARE_MESSAGE] = metrics.get(CompareConst.COMPARE_MESSAGE, "") + \
                 "ERROR: ULP误差不满足标准\n"
             metrics.update({CompareConst.COMPARE_RESULT: compare_result})
             return metrics
@@ -150,7 +150,7 @@ class UlpPrecisionCompare(BasePrecisionCompare):
         else:
             status, final_message = \
                 self._get_fp16_ulp_err_status(ulp_err_proportion, ulp_err_proportion_ratio)
-        metrics[CompareConst.COMPARE_MESSAGE] =  metrics.get(CompareConst.COMPARE_MESSAGE, "") + final_message
+        metrics[CompareConst.COMPARE_MESSAGE] = metrics.get(CompareConst.COMPARE_MESSAGE, "") + final_message
 
         status_dict = {
             CompareConst.ULP_ERR_STATUS: status

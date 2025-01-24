@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
 from collections import defaultdict
 
 import torch
@@ -87,7 +86,7 @@ class OptimizerMon(object):
         partition_id = dist.get_rank()
 
         def get_flatten_grad(self, optimizer, group_idx):
-            if  fp32_partitioned_groups_flat[group_idx].grad is None:
+            if fp32_partitioned_groups_flat[group_idx].grad is None:
                 if partition_id == dist.get_world_size() - 1 and not self.is_stage3:
                     fp32_partitioned_groups_flat_grad = optimizer.flatten_dense_tensors_aligned(
                         optimizer.averaged_gradients[group_idx],
@@ -150,17 +149,18 @@ class MixPrecisionOptimizerMon(OptimizerMon):
     混合精度优化器监控类。在混合精度训练中监控和管理优化器。
     混合精度训练通过适当降低某些计算的精度来加速训练过程并减少内存消耗。
     """
+
     def map_fp16_tp_fp32_param(self, mix_prec_opt):
         for fp16_group, fp32_group in zip(mix_prec_opt.float16_groups, mix_prec_opt.fp32_from_float16_groups):
-                for fp16_param, fp32_param in zip(fp16_group, fp32_group):
-                    self.fp16_to_fp32_param[fp16_param] = fp32_param
+            for fp16_param, fp32_param in zip(fp16_group, fp32_group):
+                self.fp16_to_fp32_param[fp16_param] = fp32_param
 
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = self.wrapped_optimizer
 
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
             self.map_fp16_tp_fp32_param(mix_prec_opt)
-            
+
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
@@ -192,7 +192,7 @@ class MegatronFP32OptimizerMon(OptimizerMon):
 class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = self.wrapped_optimizer
-        
+
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
             for opt in mix_prec_opt.chained_optimizers:
                 self.map_fp16_tp_fp32_param(opt)
@@ -217,7 +217,7 @@ class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
             for opt in mix_prec_opt.chained_optimizers:
                 torch_opt.state.update(opt.optimizer.state)
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
-    
+
 
 class DeepSpeedZeroOptimizerStage0Mon(OptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):

@@ -34,6 +34,7 @@ class DebuggerConfig:
         self.summary_mode = task_config.summary_mode if task_config.summary_mode else Const.STATISTICS
         self.overflow_nums = task_config.overflow_nums if task_config.overflow_nums else 1
         self.framework = Const.PT_FRAMEWORK
+        self.enable_async_dump = common_config.enable_async_dump
 
         if self.level == Const.LEVEL_L2:
             self.is_backward_kernel_dump = False
@@ -74,6 +75,9 @@ class DebuggerConfig:
         if not self.dump_path:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The dump_path not found.")
+        if self.enable_async_dump and not self.list:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"tensor list must be set when enable_async_dump is True.")
 
     def check(self):
         self.check_kwargs()
