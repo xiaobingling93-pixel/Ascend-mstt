@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,8 +26,10 @@ from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.data_dump.data_processor.mindspore_processor import (
     MindsporeDataProcessor,
     TensorDataProcessor,
-    OverflowCheckDataProcessor
+    OverflowCheckDataProcessor,
+    KernelDumpDataProcessor,
 )
+from msprobe.mindspore.common.log import logger
 
 
 class TestMindsporeDataProcessor(unittest.TestCase):
@@ -240,3 +242,68 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
                    return_value=True):
             self.data_processor._analyze_tensor("tensor", "suffix")
             mock_warning.assert_called_with("The file path file_path length exceeds limit.")
+
+class TestKernelDumpDataProcessor(unittest.TestCase):
+    def setUp(self):
+        self.config = MagicMock()
+        self.data_writer = MagicMock()
+        self.processor = KernelDumpDataProcessor(self.config, self.data_writer)
+
+    @patch.object(logger, 'warning')
+    def test_print_unsupported_log(self, mock_logger_warning):
+        self.processor._print_unsupported_log("test_api_name")
+        mock_logger_warning.assert_called_with("The kernel dump does not support the test_api_name API.")
+
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.KernelDumpDataProcessor.start_kernel_dump')
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.has_adump', new=True)
+    def test_analyze_pre_forward_with_adump(self, mock_start_kernel_dump):
+        self.processor.analyze_forward_input("test_api_name", None, None)
+        mock_start_kernel_dump.assert_called_once()
+        self.assertTrue(self.processor.enable_kernel_dump)
+
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.has_adump', new=False)
+    @patch.object(logger, 'warning')
+    def test_analyze_pre_forward_without_adump(self, mock_logger_warning):
+        self.processor.enable_kernel_dump = True
+        self.processor.analyze_forward_input("test_api_name", None, None)
+        mock_logger_warning.assert_called_with("The current msprobe package does not compile adump, and kernel dump cannot be used.")
+        self.assertFalse(self.processor.enable_kernel_dump)
+
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.KernelDumpDataProcessor.stop_kernel_dump')
+    @patch.object(logger, 'info')
+    def test_analyze_forward_successfully(self, mock_logger_info, mock_stop_kernel_dump):
+        self.processor.enable_kernel_dump = True
+        self.processor.analyze_forward_output('test_api_name', None, None)
+        self.assertFalse(self.processor.enable_kernel_dump)
+        mock_stop_kernel_dump.assert_called_once()
+        mock_logger_info.assert_called_with("The kernel data of test_api_name is dumped successfully.")
+
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.has_adump', new=True)
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.KernelDumpDataProcessor.start_kernel_dump')
+    def test_analyze_pre_backward_with_adump(self, mock_start_kernel_dump):
+        self.processor.enable_kernel_dump = True
+        self.processor.analyze_backward_input("test_api_name", None, None)
+        self.assertTrue(self.processor.enable_kernel_dump)
+        mock_start_kernel_dump.assert_called_once()
+
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.has_adump', new=False)
+    @patch.object(logger, 'warning')
+    def test_analyze_pre_backward_without_adump(self, mock_logger_warning):
+        self.processor.enable_kernel_dump = True
+        self.processor.analyze_backward_input("test_api_name", None, None)
+        self.assertFalse(self.processor.enable_kernel_dump)
+        mock_logger_warning.assert_called_with("The current msprobe package does not compile adump, and kernel dump cannot be used.")
+
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.KernelDumpDataProcessor.stop_kernel_dump')
+    @patch.object(logger, 'info')
+    def test_analyze_backward_successfully(self, mock_logger_info, mock_stop_kernel_dump):
+        self.processor.enable_kernel_dump = True
+        self.processor.analyze_backward('test_api_name', None, None)
+        self.assertFalse(self.processor.enable_kernel_dump)
+        mock_stop_kernel_dump.assert_called_once()
+        mock_logger_info.assert_called_with("The kernel data of test_api_name is dumped successfully.")
+
+    def test_reset_status(self):
+        self.processor.enable_kernel_dump = False
+        self.processor.reset_status()
+        self.assertTrue(self.processor.enable_kernel_dump)

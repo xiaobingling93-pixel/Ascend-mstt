@@ -128,3 +128,41 @@ class TestPrecisionDebugger(unittest.TestCase):
         debugger.service = MagicMock()
         debugger.forward_backward_dump_end()
         debugger.service.stop.assert_called_once()
+
+    def test_is_graph_dump_level_not_kernel(self):
+        config = MagicMock()
+        config.level = "NOT_KERNEL"
+        config.list = ["some_value"]
+        result = PrecisionDebugger._is_graph_dump(config)
+        self.assertFalse(result)
+
+    def test_is_graph_dump_empty_list(self):
+        config = MagicMock()
+        config.level = MsConst.KERNEL
+        config.list = []
+        result = PrecisionDebugger._is_graph_dump(config)
+        self.assertTrue(result)
+
+    def test_is_graph_dump_multiple_items_in_list(self):
+        config = MagicMock()
+        config.level = MsConst.KERNEL
+        config.list = ["item1", "item2"]
+        result = PrecisionDebugger._is_graph_dump(config)
+        self.assertTrue(result)
+
+    def test_is_graph_dump_single_item_with_slash_or_dash(self):
+        config = MagicMock()
+        config.level = MsConst.KERNEL
+        config.list = ["item/with/slash"]
+        result = PrecisionDebugger._is_graph_dump(config)
+        self.assertTrue(result)
+        config.list = ["item-with-dash"]
+        result = PrecisionDebugger._is_graph_dump(config)
+        self.assertTrue(result)
+
+    def test_is_graph_dump_single_item_without_dash_or_slash(self):
+        config = MagicMock()
+        config.level = MsConst.KERNEL
+        config.list = ["Functional.relu.1.forward"]
+        result = PrecisionDebugger._is_graph_dump(config)
+        self.assertFalse(result)
