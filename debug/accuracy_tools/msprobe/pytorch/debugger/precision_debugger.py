@@ -67,7 +67,7 @@ class PrecisionDebugger:
             if self.task == Const.GRAD_PROBE:
                 self.gm = GradientMonitor(common_config, task_config)
                 return
-            if step:
+            if step is not None:
                 common_config.step = get_real_step_or_rank(step, Const.STEP)
             self.config = DebuggerConfig(
                 common_config, task_config, task, dump_path, level
