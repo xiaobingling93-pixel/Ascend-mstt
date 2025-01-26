@@ -55,12 +55,12 @@ GTYPE = torch.float64  # arm host必须选择float64，x86环境选择float32即
 SOFTMAX_BUILD_MODE = "QKV"  # "MAX_SUM"
 
 
-fa_forward_params = namedtuple("fa_forward_params",
-                                ["q", "k", "v", "drop_mask", "atten_mask", "pse", "scale", "keep_prob"])
-fa_backward_params = namedtuple("fa_backward_params",
-                                 ["dx", "q", "k", "v", "softmax_res", "drop_mask", "pse", "scale", "keep_prob"])
-rebuild_softmax_params = namedtuple("rebuild_softmax_params", 
-                                    ["q", "k", "atten_mask", "pse", "scale", "softmax_max", "softmax_sum"])
+FaForwardParams = namedtuple("FaForwardParams",
+                            ["q", "k", "v", "drop_mask", "atten_mask", "pse", "scale", "keep_prob"])
+FaBackwardParams = namedtuple("FaBackwardParams",
+                            ["dx", "q", "k", "v", "softmax_res", "drop_mask", "pse", "scale", "keep_prob"])
+RebuildSoftmaxParams = namedtuple("RebuildSoftmaxParams",
+                                ["q", "k", "atten_mask", "pse", "scale", "softmax_max", "softmax_sum"])
 
 
 def softmax_forward(x):
@@ -535,7 +535,7 @@ def npu_fusion_attention(*args, **kwargs):
     key = convert_to_bnsd(key, n2, input_layout)
     value = convert_to_bnsd(value, n2, input_layout)
     k_new, v_new = generate_kv(key, value, n1, n2)
-    forward_params = fa_forward_params(query, k_new, v_new, None, atten_mask, pse, scale, keep_prob)
+    forward_params = FaForwardParams(query, k_new, v_new, None, atten_mask, pse, scale, keep_prob)
     out_golden, softmax_max, softmax_sum = fusion_attention_forward(forward_params)
     if out_golden.dim() == 5:
         out_golden = out_golden.reshape(out_golden.size(0), out_golden.size(1) * out_golden.size(2), out_golden.size(3),
@@ -577,9 +577,9 @@ def npu_fusion_attention_grad(*args, **kwargs):
     if SOFTMAX_BUILD_MODE == "QKV":
         softmax_res = rebuid_softmax_by_qkv(query, k_new, atten_mask, pse, scale_value)
     else:
-        softmax_params = rebuild_softmax_params(query, k_new, atten_mask, pse, scale_value, softmax_max, softmax_sum)
+        softmax_params = RebuildSoftmaxParams(query, k_new, atten_mask, pse, scale_value, softmax_max, softmax_sum)
         softmax_res = rebuild_softmax_by_max_sum(softmax_params)
-    backward_params = fa_backward_params(dx, query, k_new, v_new, softmax_res, None, pse, scale_value, keep_prob)
+    backward_params = FaBackwardParams(dx, query, k_new, v_new, softmax_res, None, pse, scale_value, keep_prob)
     dq, dk, dv = fusion_attention_backward(backward_params)
 
     # N不等长适配by cdy
