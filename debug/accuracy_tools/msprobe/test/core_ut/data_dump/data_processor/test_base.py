@@ -142,7 +142,7 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.assertEqual(BaseDataProcessor.recursive_apply_transform((1, 2), transform), (2, 4))
         self.assertEqual(BaseDataProcessor.recursive_apply_transform({'a': 1}, transform), {'a': 2})
 
-    @patch.object(logger, 'warning')
+    @patch.object(logger, 'debug')
     def test_recursive_apply_transform_with_warning(self, mock_logger):
         transform = lambda x, _: x * 2
         BaseDataProcessor.recursive_apply_transform({1, 2, 3}, transform)

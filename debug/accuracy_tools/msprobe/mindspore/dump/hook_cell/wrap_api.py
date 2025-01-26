@@ -87,9 +87,16 @@ class ApiTemplate(HOOKCell):
         super().__init__(hook)
 
     @staticmethod
-    def async_to_sync(handle):
-        if hasattr(handle, "wait"):
-            handle.wait() 
+    def async_to_sync(output):
+        # Fake handle, used to return after the CommHandle executes the wait method
+        fake_handle = type("FakeHandle", (), {"wait": lambda self: None})()
+        if isinstance(output, tuple) and len(output) == 2 and hasattr(output[1], "wait"):
+            output[1].wait()
+            output = (output[0], fake_handle)
+        elif hasattr(output, "wait"):
+            output.wait()
+            output = fake_handle
+        return output
 
     def construct(self, *args, **kwargs):
         if self.api_name.startswith(MsConst.DROPOUT_API_NAME_PREFIX):
@@ -99,9 +106,7 @@ class ApiTemplate(HOOKCell):
 
         if self.prefix_api_name.startswith(MsConst.DISTRIBUTED_DATA_PREFIX):
             if kwargs.get("async_op") or self.api_name in ["isend", "irecv"]:
-                self.async_to_sync(
-                    output[1] if isinstance(output, tuple) and len(output) > 1 else output)
-                
+                output = self.async_to_sync(output)
         return output
 
     def forward(self, *args, **kwargs):
