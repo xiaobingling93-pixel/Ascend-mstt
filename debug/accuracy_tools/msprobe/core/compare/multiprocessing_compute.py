@@ -23,7 +23,7 @@ from msprobe.core.common.const import CompareConst
 
 
 def _handle_multi_process(func, input_parma, result_df, lock):
-    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+    process_num = max(int((multiprocessing.cpu_count() + 1) // 4), 1)
     op_name_mapping_dict = read_dump_data(result_df)
 
     df_chunk_size = len(result_df) // process_num
