@@ -157,7 +157,8 @@ class Service:
                 module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
-                    params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(recurse=False).items()}
+                    params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(
+                        recurse=False).items()}
                     setattr(module_input_output, Const.PARAMS, params_dict)
                     # 判断是否需要注册参数hook
                     if not hasattr(cell, 'params_grad_name') and params_dict:
@@ -248,6 +249,8 @@ class Service:
         self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
+        if self.config.enable_async_dump:
+            self.data_collector.data_processor.dump_async_data()
         self.reset_status()
 
     def start(self, model=None):

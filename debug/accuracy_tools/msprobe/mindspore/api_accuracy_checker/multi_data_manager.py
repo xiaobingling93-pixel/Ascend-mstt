@@ -17,7 +17,9 @@
 import multiprocessing
 import os
 
-from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager, ResultCsvEntry, write_csv_header, get_result_csv_header, get_detail_csv_header, check_csv_header
+from msprobe.mindspore.api_accuracy_checker.data_manager import (DataManager, ResultCsvEntry, write_csv_header,
+                                                                 get_result_csv_header, get_detail_csv_header,
+                                                                 check_csv_header)
 from msprobe.mindspore.common.log import logger
 
 

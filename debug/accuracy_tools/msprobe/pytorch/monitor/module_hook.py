@@ -576,6 +576,21 @@ class TrainerMon:
         # in DDP by default use params_have_main_grad
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
+
+            if (self.print_struct and not all(value == {} for value in self.module_struct.values())
+                    and not self.struct_printed):
+                self._save_module_struct()
+                if not self.cc_log_only:
+                    raise Exception("exit after first monitor step when print model struct")
+            if self.cc_log_only and context.step > 0:
+                self._smallest_rank_print("> Used communication ops and corresponding stack")
+                self._smallest_rank_print(
+                    json.dumps({k: [i.split(';') for i in v] for k, v in self.cc_logged_stack.items()}))
+                raise Exception("exit after first step when print cc stack")
+
+            # skip generate metrics
+            if context.step < self.start_step or (context.step - self.start_step) % self.step_interval != 0:
+                return
             if self.opt_ty in MonitorConst.DEEPSPEED_OPT_TY:
                 if not self.name2indices:
                     self.name2indices = self.mix_precision_optimizer_mon.get_param_index(self.param2name,
@@ -589,17 +604,6 @@ class TrainerMon:
             context.param_exp_avg_sq = mv_result.exp_avg_sq
             context.param_adam_update = mv_result.update
             context.param_adam_ratio = mv_result.ratio
-
-            if (self.print_struct and not all(value == {} for value in self.module_struct.values())
-                    and not self.struct_printed):
-                self._save_module_struct()
-                if not self.cc_log_only:
-                    raise Exception("exit after first monitor step when print model struct")
-            if self.cc_log_only and context.step > 0:
-                self._smallest_rank_print("> Used communication ops and corresponding stack")
-                self._smallest_rank_print(
-                    json.dumps({k: [i.split(';') for i in v] for k, v in self.cc_logged_stack.items()}))
-                raise Exception("exit after first step when print cc stack")
 
             self.generate_wgrad_metrics()
             self.generate_mv_metrics(context)
@@ -652,13 +656,51 @@ class TrainerMon:
         self.optimizer_hooked = True
         return
 
+    def dynamic_monitor(self, optimizer):
+        """
+        If dynamic monitor enabled and config.json updated,
+        remove hooks and register new hooks according to new configuration.
+        """
+        context = self.optimizer_context[optimizer]
+        if not self.dynamic_enable:
+            return
+        try:
+            # 如果文件时间戳没变, 可以不读取节省时间
+            config_timestamp = os.path.getmtime(self.config_file_path)
+            if config_timestamp == self.config_timestamp:
+                return
+            # 更新config文件最新修改时间戳
+            self.config_timestamp = config_timestamp
+            config = load_json(self.config_file_path)
+        except Exception as e:
+            logger.error(f"get config.json wrong because {e}, not updated, please check!!!")
+            return
+
+        if config.get("switch", False):
+            try:
+                validate_config(config)
+                self.config = config
+                self.set_config()
+                logger.warning(f"config is updated at step{context.step - 1}, "
+                               f"will start new hook at step{context.step}.")
+            except Exception as e:
+                logger.error(f"set config wrong because {e}, not updated, please check!!!")
+                return
+
+            self._remove_all_hooks(optimizer)
+            self.register_hooks(optimizer)
+
     def hook_step_final(self, optimizer):
         def step_final_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
             rank = dist.get_rank() if dist.is_initialized() else None
             # 静态在第0步就可以保存, 动态在第0步不可以, 因为动态设计的就是重置后下一步开启, 第0步的self.monitoring还是False
             if self.monitoring:
-                if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
+                module_rank_valid = not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list)
+                step_condition = (context.step >= self.start_step and (context.step - self.start_step) % self.step_interval == 0)
+                if module_rank_valid and step_condition:
+                    self.has_collect_times += 1
+
                     if self.anomaly_data_factory:
                         self.anomaly_data_factory.set_call_id(self.param_name_call_id)
                     self.write_xy_tb(context.step)
@@ -679,8 +721,6 @@ class TrainerMon:
                         self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
                     context.metric_dict.clear()
 
-                    if context.step >= self.start_step and (context.step - self.start_step) % self.step_interval == 0:
-                        self.has_collect_times += 1
                     if self.anomaly_data_factory:
                         self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
                     self.summary_writer.clear_anomalies()
@@ -688,44 +728,10 @@ class TrainerMon:
                     self.param_name_call_id.clear()
 
                     if self.has_collect_times >= self.collect_times:
-                        if self.dynamic_enable:
-                            self._remove_all_hooks_final(optimizer)
-                        else:
-                            self._remove_all_hooks(optimizer)
-                            logger.info("Finish monitor")
+                        self._remove_all_hooks_final(optimizer)
 
             context.step += 1
-
-            if not self.dynamic_enable:
-                return
-            else:
-                try:
-                    # 如果文件时间戳没变, 可以不读取节省时间
-                    config_timestamp = os.path.getmtime(self.config_file_path)
-                    if config_timestamp == self.config_timestamp:
-                        return
-                    # 更新config文件最新修改时间戳
-                    self.config_timestamp = config_timestamp
-                    config = load_json(self.config_file_path)
-                except Exception as e:
-                    logger.error(f"get config.json wrong because {e}, not updated, please check!!!")
-                    return
-
-                if config.get("switch", False):
-                    try:
-                        validate_config(config)
-                        self.config = config
-                        self.set_config()
-                        logger.warning(f"config is updated at step{context.step - 1}, "
-                                       f"will start new hook at step{context.step}.")
-                    except Exception as e:
-                        logger.error(f"set config wrong because {e}, not updated, please check!!!")
-                        return
-
-                    self._remove_all_hooks(optimizer)
-                    self.register_hooks(optimizer)
-
-                return
+            self.dynamic_monitor(optimizer)
 
         def patch_step(func, optimizer):
             def wrapper(*args, **kwargs):
@@ -786,22 +792,22 @@ class TrainerMon:
 
         # 关闭采集状态
         self.monitoring = False
-        return
 
     def _remove_all_hooks_final(self, optimizer):
-        # 结束后自动重置switch为False等待用户手动开启
-        try:
-            config = load_json(self.config_file_path)
-            config['switch'] = False
-            save_json(self.config_file_path, config, indent=2)
-            config_timestamp = os.path.getmtime(self.config_file_path)
-            self.config_timestamp = config_timestamp
-            logger.warning(
-                "Finish monitor, set config'switch=False, will restart by set switch=True and update content")
-        except Exception as e:
-            logger.warning(f"Finish monitor, set config'switch=False fail because {e}, please check!!!")
+        if self.dynamic_enable:
+            # 结束后自动重置switch为False等待用户手动开启
+            try:
+                config = load_json(self.config_file_path)
+                config['switch'] = False
+                save_json(self.config_file_path, config, indent=2)
+                config_timestamp = os.path.getmtime(self.config_file_path)
+                self.config_timestamp = config_timestamp
+                logger.info(
+                    "Finish monitor, set config'switch=False, will restart by set switch=True and update content")
+            except Exception as e:
+                logger.warning(f"Finish monitor, set config'switch=False fail because {e}, please check!!!")
+        logger.info("Finish monitor")
         self._remove_all_hooks(optimizer)
-        return
 
     def _smallest_rank_print(self, msg):
         if dist.is_initialized():

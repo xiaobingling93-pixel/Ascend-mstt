@@ -196,6 +196,7 @@ class Const:
 
     # data type const
     TORCH_INT_DTYPE = ["torch.int8", "torch.int32", "torch.int64"]
+    TORCH_FLOAT_DTYPE = ["torch.bfloat16", "torch.float16", "torch.float32", "torch.float64"]
     FLOAT16 = "Float16"
     FLOAT32 = "Float32"
     BFLOAT16 = "BFloat16"
@@ -622,6 +623,7 @@ class MonitorConst:
     )
     RULE_NAME = ['AnomalyTurbulence']
 
+    SLICE_SIZE = 20480
     DOT = "."
     VPP_SEP = ":"
     ACTV_IN = "input"

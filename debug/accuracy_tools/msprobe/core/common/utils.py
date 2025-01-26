@@ -29,6 +29,7 @@ from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 
+
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
 
@@ -406,8 +407,8 @@ def get_real_step_or_rank(step_or_rank_input, obj):
             if not Const.STEP_RANK_MINIMUM_VALUE <= element <= Const.STEP_RANK_MAXIMUM_VALUE:
                 raise MsprobeException(
                     MsprobeException.INVALID_PARAM_ERROR,
-                    f"Each element of {obj} must be between {Const.STEP_RANK_MINIMUM_VALUE} and {Const.STEP_RANK_MAXIMUM_VALUE}, "
-                    f"currently it is {element}."
+                    f"Each element of {obj} must be between {Const.STEP_RANK_MINIMUM_VALUE} and "
+                    f"{Const.STEP_RANK_MAXIMUM_VALUE}, currently it is {element}."
                 )
             real_step_or_rank.append(element)
             continue

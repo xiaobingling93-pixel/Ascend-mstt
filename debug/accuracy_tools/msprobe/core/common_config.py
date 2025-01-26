@@ -27,6 +27,7 @@ class CommonConfig:
         self.step = get_real_step_or_rank(json_config.get('step'), Const.STEP)
         self.level = json_config.get('level')
         self.enable_dataloader = json_config.get('enable_dataloader', False)
+        self.enable_async_dump = json_config.get('enable_async_dump', False)
         self._check_config()
 
     def _check_config(self):
@@ -42,6 +43,11 @@ class CommonConfig:
         if not isinstance(self.enable_dataloader, bool):
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if not isinstance(self.enable_async_dump, bool):
+            logger.error_log_with_exp("enable_async_dump is invalid, it should be a boolean",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        elif self.enable_async_dump:
+            logger.warning("enable_async_dump is True, it may cause OOM when dumping large tensor.")
 
 
 class BaseConfig:

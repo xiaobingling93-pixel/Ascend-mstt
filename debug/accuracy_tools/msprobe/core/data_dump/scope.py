@@ -45,7 +45,7 @@ class ScopeFactory:
 
         if self.level == Const.LEVEL_MIX:
             return mix_range_scope
-        
+
         if not self.scope:
             return api_range_scope
         if api_range_scope.is_valid and module_range_scope.is_valid:
@@ -73,21 +73,21 @@ class BaseScope(ABC):
     def rectify_args(scope, api_list):
         if not isinstance(api_list, list):
             raise ScopeException(ScopeException.InvalidApiStr,
-                f"api_list参数须配置为列表，实际类型为{type(api_list)}.")
+                                 f"api_list参数须配置为列表，实际类型为{type(api_list)}.")
         for api in api_list:
             if not isinstance(api, str):
                 raise ScopeException(ScopeException.InvalidApiStr,
-                    f"api_list中的元素须配置为字符串，实际类型为{type(api)}.")
+                                     f"api_list中的元素须配置为字符串，实际类型为{type(api)}.")
         if isinstance(scope, str):
             scope = [scope]
             return scope, api_list
         if not isinstance(scope, list):
             raise ScopeException(ScopeException.InvalidScope,
-                f"scope参数须配置为字符串或列表，实际类型为{type(scope)}.")
+                                 f"scope参数须配置为字符串或列表，实际类型为{type(scope)}.")
         for s in scope:
             if not isinstance(s, str):
                 raise ScopeException(ScopeException.InvalidScope,
-                f"scope列表元素要求类型为字符串，实际类型为{type(s)}.")
+                                     f"scope列表元素要求类型为字符串，实际类型为{type(s)}.")
         return scope, api_list
 
     @abstractmethod
@@ -108,7 +108,7 @@ class ListScope(BaseScope):
     def rectify_args(scope, api_list):
         if scope and api_list:
             raise ScopeException(ScopeException.ArgConflict,
-                f"scope和api_list不可以同时配置，实际配置为scope={scope}, api_list={api_list}.")
+                                 f"scope和api_list不可以同时配置，实际配置为scope={scope}, api_list={api_list}.")
         return super(ListScope, ListScope).rectify_args(scope, api_list)
 
     def check(self, name):
@@ -134,23 +134,23 @@ class RangeScope(BaseScope, ABC):
         if self.level == Const.LEVEL_L1:
             if not re.match(api_pattern, name):
                 raise ScopeException(ScopeException.InvalidScope,
-                                    f"scope参数格式错误，要求格式为api完整命名，实际为{name}.")
-        
+                                     f"scope参数格式错误，要求格式为api完整命名，实际为{name}.")
+
         if self.level == Const.LEVEL_L0:
             if not re.match(module_pattern, name):
                 raise ScopeException(ScopeException.InvalidScope,
-                                    f"scope参数格式错误，要求格式为模块完整命名，实际为{name}.")
+                                     f"scope参数格式错误，要求格式为模块完整命名，实际为{name}.")
 
         if self.level == Const.LEVEL_MIX:
             if not re.match(api_pattern, name) and not re.match(module_pattern, name):
                 raise ScopeException(ScopeException.InvalidScope,
-                                    f"scope参数格式错误，要求格式为api或模块完整命名，实际为{name}.")
+                                     f"scope参数格式错误，要求格式为api或模块完整命名，实际为{name}.")
 
     def rectify_args(self, scope, api_list):
         scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
         if scope and len(scope) != 2:
             raise ScopeException(ScopeException.InvalidScope,
-                f"scope参数指定区间断点，须传入长度为2的列表，实际长度为{len(scope)}.")
+                                 f"scope参数指定区间断点，须传入长度为2的列表，实际长度为{len(scope)}.")
         for name in scope:
             self.check_name_pattern(name)
         return scope, api_list
@@ -230,7 +230,7 @@ class ModuleRangeScope(RangeScope):
 class MixRangeScope(RangeScope):
     def check_scope_is_valid(self):
         return True if self.scope else False
-        
+
     def begin_module(self, module_name):
         if self.scope and module_name == self.scope[0]:
             self.in_scope = True
@@ -249,12 +249,12 @@ class MixRangeScope(RangeScope):
     def check_api_list(self, api_name):
         if not self.api_list:
             return True
-        
+
         for name in self.api_list:
             if name in api_name:
                 return True
         return False
-    
+
     def check(self, name):
         """
         dump时调用的接口，根据scope和api_list判断是否需要dump
@@ -272,4 +272,3 @@ class MixRangeScope(RangeScope):
         if self.scope and name == self.scope[1]:
             self.in_scope = False
         return result
-    

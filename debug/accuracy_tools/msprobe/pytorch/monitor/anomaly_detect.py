@@ -289,10 +289,19 @@ class BaseWriterWithAD:
         tags = list(itertools.product(metric_value.keys(), ops))
         for op2tensor in metric_value.values():
             tensors.extend(op2tensor.values())
+        if not tensors:
+            return
+        
+        n_slices = len(tensors) // MonitorConst.SLICE_SIZE
         with torch.no_grad():
-            metric_list = torch.stack(tensors).cpu() if tensors else []
-        for tag, metric in zip(tags, metric_list):
-            self.add_scalar(tag, metric, step)
+            for i in range(n_slices + 1):
+                begin = i * MonitorConst.SLICE_SIZE
+                end = (i+1) * MonitorConst.SLICE_SIZE
+                if begin == len(tensors):
+                    continue
+                metric_list = torch.stack(tensors[begin:end]).cpu()
+                for tag, metric in zip(tags[begin:end], metric_list):
+                    self.add_scalar(tag, metric, step)
 
     def _ad(self, scalar_value, history):
         return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)

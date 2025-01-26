@@ -26,6 +26,7 @@ def api_checker_main(args):
     api_accuracy_checker.parse(args.api_info_file)
     api_accuracy_checker.run_and_compare()
 
+
 def mul_api_checker_main(args):
     check_args(args)
     api_accuracy_checker = MultiApiAccuracyChecker(args)

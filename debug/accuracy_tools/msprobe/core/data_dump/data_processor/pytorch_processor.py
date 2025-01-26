@@ -54,6 +54,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             "device": self.analyze_device_in_kwargs,
             "dtype": self.analyze_dtype_in_kwargs
         }
+        self._async_dump_cache = {}
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -216,12 +217,20 @@ class StatisticsDataProcessor(PytorchDataProcessor):
 
 
 class TensorDataProcessor(PytorchDataProcessor):
+    def dump_async_data(self):
+        for file_path, tensor in self._async_dump_cache.items():
+            save_pt(tensor.contiguous(), file_path)
+        self._async_dump_cache.clear()
+
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        saved_tensor = tensor.clone().contiguous().detach()
-        save_pt(saved_tensor, file_path)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
+        if self.config.enable_async_dump:
+            self._async_dump_cache[file_path] = tensor.clone().detach()
+        else:
+            saved_tensor = tensor.clone().contiguous().detach()
+            save_pt(saved_tensor, file_path)
         return single_arg
 
 

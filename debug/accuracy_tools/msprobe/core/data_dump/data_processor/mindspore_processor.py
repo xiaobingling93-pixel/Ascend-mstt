@@ -42,6 +42,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
         self.mindspore_object_key = {
             "dtype": self.analyze_dtype_in_kwargs
         }
+        self._async_dump_cache = {}
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -129,11 +130,19 @@ class StatisticsDataProcessor(MindsporeDataProcessor):
 
 
 class TensorDataProcessor(MindsporeDataProcessor):
+    def dump_async_data(self):
+        for file_path, tensor in self._async_dump_cache.items():
+            save_tensor_as_npy(tensor, file_path)
+        self._async_dump_cache.clear()
+
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        save_tensor_as_npy(tensor, file_path)
+        if self.config.enable_async_dump:
+            self._async_dump_cache[file_path] = tensor.copy()
+        else:
+            save_tensor_as_npy(tensor, file_path)
         return single_arg
 
 
