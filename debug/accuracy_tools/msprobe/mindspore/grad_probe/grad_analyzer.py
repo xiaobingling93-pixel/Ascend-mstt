@@ -16,6 +16,7 @@
 import multiprocessing
 import os
 import time
+from dataclasses import dataclass
 from multiprocessing import Process
 from typing import List
 
@@ -23,12 +24,23 @@ import mindspore as ms
 import numpy as np
 from mindspore.common.parameter import Parameter
 from mindspore.communication import get_rank
+
 from msprobe.core.common.file_utils import (create_directory, check_file_or_directory_path,
                                             write_csv, remove_path, move_file, load_npy)
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.core.grad_probe.utils import ListCache
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.grad_probe.global_context import grad_context, GlobalContext
+
+
+@dataclass
+class GradDumpConfig:
+    dump_dir: str
+    g_name: str
+    dump_step: Parameter
+    grad: ms.Tensor
+    level: str
+    bounds: List
 
 
 def get_rank_id():
@@ -40,35 +52,35 @@ def get_rank_id():
 
 
 @ms.jit
-def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor, level: str, bounds: List):
+def grad_dump(config: GradDumpConfig):
     """
     Dump gradient statistic data.
         level0: [step, max, min, norm, shape_dim, shape]
         level1: [step, max, min, norm, shape_dim, shape] + grad_bool_data
         level2: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
     """
-    dump_path = os.path.join(dump_dir, g_name)
+    dump_path = os.path.join(config.dump_dir, config.g_name)
     dump_dir_path = dump_path + "_dir"
     save_op = ms.ops.TensorDump()
 
-    grad_flat = grad.reshape(-1)
+    grad_flat = config.grad.reshape(-1)
     max_val = grad_flat.max(axis=0).float()
     min_val = grad_flat.min(axis=0).float()
     norm_val = grad_flat.norm(ord=2).float()
-    shape = grad.shape
-    extrem_list = [dump_step[0].float(), max_val, min_val, norm_val]
+    shape = config.grad.shape
+    extrem_list = [config.dump_step[0].float(), max_val, min_val, norm_val]
     extrem_stat = ms.ops.stack(extrem_list)
     shape_list = [len(shape)] + list(shape)
     shape_stat = ms.Tensor(shape_list).float()
     level0_stat = ms.ops.concat((extrem_stat, shape_stat), axis=0)
     level_stat = level0_stat
 
-    if level == GradConst.LEVEL2:
-        zero_grad = (grad == 0).sum()
-        dist_dim = ms.Tensor([len(bounds) + 2]).float()
-        bucket_result = ms.ops.bucketize(grad.float(), bounds)
+    if config.level == GradConst.LEVEL2:
+        zero_grad = (config.grad == 0).sum()
+        dist_dim = ms.Tensor([len(config.bounds) + 2]).float()
+        bucket_result = ms.ops.bucketize(config.grad.float(), config.bounds)
         bucket_result = bucket_result.astype(ms.int8)
-        dist_stat = [(bucket_result == i).sum() for i in range(len(bounds) + 1)]
+        dist_stat = [(bucket_result == i).sum() for i in range(len(config.bounds) + 1)]
         dist_stat.append(zero_grad)
         dist_stat.append(ms.Tensor(1, dtype=ms.int64))  # make sure dist_stat is not empty
         dist_stat = ms.ops.stack(dist_stat, axis=0).float()
@@ -76,8 +88,8 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
         level_stat = level2_stat
 
     save_op(dump_path, level_stat)
-    if level == GradConst.LEVEL1 or level == GradConst.LEVEL2:
-        grad_direction = grad > 0
+    if config.level == GradConst.LEVEL1 or config.level == GradConst.LEVEL2:
+        grad_direction = config.grad > 0
         save_op(dump_dir_path, grad_direction)
 
 

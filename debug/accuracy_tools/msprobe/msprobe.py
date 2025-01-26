@@ -55,7 +55,6 @@ def main():
     _merge_result_parser(merge_result_parser)
 
     is_torch_available = is_module_available("torch")
-    is_mindspore_available = is_module_available("mindspore")
 
     if len(sys.argv) < 4:
         parser.print_help()

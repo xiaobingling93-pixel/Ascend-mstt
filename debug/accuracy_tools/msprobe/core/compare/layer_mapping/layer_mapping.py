@@ -25,6 +25,7 @@ from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_i
 from msprobe.core.compare.utils import read_op, reorder_op_name_list
 
 
+
 class LayerTrie:
     def __init__(self, type_name, framework=None):
         self.type_name = type_name

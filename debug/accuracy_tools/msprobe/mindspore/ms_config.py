@@ -48,7 +48,7 @@ class StatisticsConfig(BaseConfig):
         single_opt = ["statistics", "md5"]
         muti_opt = ["md5", "max", "min", "mean", "l2norm"]
         if isinstance(self.summary_mode, str) and self.summary_mode not in single_opt:
-           raise Exception("summary_mode is invalid")
+            raise Exception("summary_mode is invalid")
         if isinstance(self.summary_mode, list) and not all(opt in muti_opt for opt in self.summary_mode):
             raise Exception("summary_mode is invalid")
 

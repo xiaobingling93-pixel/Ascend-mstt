@@ -6,7 +6,7 @@ import mindspore as ms
 from unittest import TestCase, mock
 from unittest.mock import patch
 from mindspore import Tensor, Parameter
-from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator, grad_dump
+from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator, grad_dump, GradDumpConfig
 from msprobe.mindspore.grad_probe.global_context import grad_context
 from msprobe.core.grad_probe.constant import GradConst
 
@@ -102,7 +102,9 @@ class TestGradAnalyzer(TestCase):
 
         # Run the grad_dump function
         try:
-            grad_dump(dump_dir, g_name, dump_step, grad, level, bounds)
+            conf = GradDumpConfig(dump_dir=dump_dir, g_name=g_name, dump_step=dump_step, grad=grad, level=level,
+                                  bounds=bounds)
+            grad_dump(conf)
         except RuntimeError as e:
             # If TensorDump fails due to environment, skip the file existence check
             self.skipTest(f"TensorDump operation failed: {e}")
