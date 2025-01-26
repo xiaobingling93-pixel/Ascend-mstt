@@ -130,19 +130,21 @@ def _compare_graph_ranks(input_param, args, step=None):
         output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
         result = _compare_graph(input_param, args)
         result.output_file_name = output_file_name
-        try:
-            result.rank = int(nr.replace(Const.RANK, ""))
-        except Exception as e:
-            logger.error('The folder name format is incorrect, expected rank+number.')
-            raise CompareException(CompareException.INVALID_PATH_ERROR) from e
+        if nr != Const.RANK:
+            try:
+                result.rank = int(nr.replace(Const.RANK, ""))
+            except Exception as e:
+                logger.error('The folder name format is incorrect, expected rank+number.')
+                raise CompareException(CompareException.INVALID_PATH_ERROR) from e
         # 暂存所有rank的graph，用于匹配rank间的分布式节点
         compare_graph_results.append(result)
 
     # 匹配rank间的分布式节点
-    DistributedAnalyzer({obj.rank: obj.graph_n for obj in compare_graph_results},
-                        args.overflow_check).distributed_match()
-    DistributedAnalyzer({obj.rank: obj.graph_b for obj in compare_graph_results},
-                        args.overflow_check).distributed_match()
+    if len(compare_graph_results) > 1:
+        DistributedAnalyzer({obj.rank: obj.graph_n for obj in compare_graph_results},
+                            args.overflow_check).distributed_match()
+        DistributedAnalyzer({obj.rank: obj.graph_b for obj in compare_graph_results},
+                            args.overflow_check).distributed_match()
 
     for result in compare_graph_results:
         _export_compare_graph_result(args, [result.graph_n, result.graph_b], result.graph_comparator,
@@ -177,14 +179,17 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
         output_file_name = f'build_{step}_{rank}_{current_time}.vis' if step else f'build_{rank}_{current_time}.vis'
         result = _build_graph(dump_path, args)
         result.output_file_name = output_file_name
-        try:
-            result.rank = int(rank.replace(Const.RANK, ""))
-        except Exception as e:
-            logger.error('The folder name format is incorrect, expected rank+number.')
-            raise CompareException(CompareException.INVALID_PATH_ERROR) from e
+        if rank != Const.RANK:
+            try:
+                result.rank = int(rank.replace(Const.RANK, ""))
+            except Exception as e:
+                logger.error('The folder name format is incorrect, expected rank+number.')
+                raise CompareException(CompareException.INVALID_PATH_ERROR) from e
         build_graph_results.append(result)
 
-    DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results}, args.overflow_check).distributed_match()
+    if len(build_graph_results) > 1:
+        DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results},
+                            args.overflow_check).distributed_match()
 
     for result in build_graph_results:
         _export_build_graph_result(args.output_path, result.graph, result.micro_steps, args.overflow_check,

@@ -97,6 +97,10 @@ def check_directory_content(input_path):
     if all(os.path.isfile(os.path.join(input_path, item)) for item in contents):
         return GraphConst.FILES
 
+    # 单卡只有一个rank文件夹
+    if contents == [Const.RANK]:
+        return GraphConst.RANKS
+
     rank_pattern = re.compile(r'^rank\d+$')
     step_pattern = re.compile(r'^step\d+$')
 
