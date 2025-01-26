@@ -71,15 +71,25 @@ class Service:
         self.register_api_hook()
 
     @staticmethod
-    def check_model_valid(model):
-        if not model:
-            return model
-        targer_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
-        if not isinstance(model, targer_module_type[0]):
+    def check_model_valid(models):
+        target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
+        if models is None or isinstance(models, target_module_type[0]):
+            return models
+        error_model = None
+        if isinstance(models, (list, tuple)):
+            for model in models:
+                if not isinstance(model, target_module_type[0]):
+                    error_model = model
+                    break
+        else:
+            error_model = models
+
+        if error_model is not None:
+            error_info = (f"The 'model' parameter must be a {target_module_type[1]} or list[{target_module_type[1]}] "
+                          f"type, currently there is a {type(error_model)} type.")
             raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"model 参数必须是 {targer_module_type[1]} 类型。"
-            )
-        return model
+                MsprobeException.INVALID_PARAM_ERROR, error_info)
+        return models
 
     @staticmethod
     def prepare_module_input_output(target_type, cell, input_data, output):
@@ -374,6 +384,19 @@ class Service:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
 
+    def get_cells_and_names(self):
+        cells_and_names_with_index = {}
+
+        def get_cell_or_module(model):
+            return model.named_modules() if is_mindtorch() else model.cells_and_names()
+        
+        if isinstance(self.model, (list, tuple)):
+            for index, model in enumerate(self.model):
+                cells_and_names_with_index[str(index)] = get_cell_or_module(model)
+        else:
+            cells_and_names_with_index["-1"] = get_cell_or_module(self.model)
+        return cells_and_names_with_index        
+
     def register_primitive_hook(self):
         if self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L1]:
             return
@@ -381,14 +404,12 @@ class Service:
             return
 
         primitive_set = set()
-        if is_mindtorch():
-            cells_and_names = self.model.named_modules()
-        else:
-            cells_and_names = self.model.cells_and_names()
-        for _, cell in cells_and_names:
-            for attribute, value in vars(cell).items():
-                if isinstance(value, Primitive):
-                    primitive_set.add((attribute, value))
+        cells_and_names_with_index = self.get_cells_and_names()
+        for cells_and_names in cells_and_names_with_index.values():
+            for _, cell in cells_and_names:
+                for attribute, value in vars(cell).items():
+                    if isinstance(value, Primitive):
+                        primitive_set.add((attribute, value))
 
         for pname, primitive in primitive_set:
             primitive_class_name = primitive.__class__.__name__
@@ -404,28 +425,29 @@ class Service:
             if not self.model:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                        f"The current level is {self.config.level}, the model cannot be None")
+            model_type = Const.MODULE if is_mindtorch() else Const.CELL 
+            cells_and_names_with_index = self.get_cells_and_names()
 
-            cell_names_and_type = (self.model.named_modules(), Const.MODULE) \
-                if is_mindtorch() else (self.model.cells_and_names(), Const.CELL)
+            for index, cells_and_names in cells_and_names_with_index.items():
+                for name, cell in cells_and_names:
+                    model = self.model if index == "-1" else self.model[int(index)]
+                    if cell == model:
+                        continue
+                    cell_index = (index + Const.SEP) if index != "-1" else ""
+                    prefix = (model_type + Const.SEP + cell_index + name + 
+                              Const.SEP + cell.__class__.__name__ + Const.SEP)
+                    _, forward_hook, backward_hook, _ = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                    cell.register_forward_hook(forward_hook)
+                    cell.register_forward_pre_hook(
+                        self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                    cell.register_forward_hook(
+                        self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
 
-            for name, cell in cell_names_and_type[0]:
-                if cell == self.model:
-                    continue
-
-                prefix = (cell_names_and_type[1] + Const.SEP + name + Const.SEP +
-                          cell.__class__.__name__ + Const.SEP)
-                _, forward_hook, backward_hook, _ = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                cell.register_forward_hook(forward_hook)
-                cell.register_forward_pre_hook(
-                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
-                cell.register_forward_hook(
-                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-
-                register_backward_hook_functions["full"](cell, backward_hook)
-                register_backward_hook_functions["pre"](
-                    cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                register_backward_hook_functions["full"](
-                    cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    register_backward_hook_functions["full"](cell, backward_hook)
+                    register_backward_hook_functions["pre"](
+                        cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                    register_backward_hook_functions["full"](
+                        cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()

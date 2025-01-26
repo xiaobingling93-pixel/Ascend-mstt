@@ -93,21 +93,25 @@ class DebuggerConfig:
             logger.error_on_rank_0(
                 f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' parameter.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
-        if instance.model and not isinstance(instance.model, list):
-            instance.model = [instance.model]
-        if start_model:
-            if not isinstance(start_model, list):
-                instance.model = [start_model]
-            else:
-                instance.model = start_model
-        for single_model in instance.model:
-            if not isinstance(single_model, torch.nn.Module):
-                logger.error_on_rank_0(
-                    f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] type, "
-                    f"currently there is a {type(single_model)} type."
-                )
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module or list[torch.nn.Module]")
+        
+        instance.model = start_model if start_model else instance.model
+        if isinstance(instance.model, torch.nn.Module):
+            return 
+
+        error_model = None
+        if isinstance(instance.model, (list, tuple)):
+            for model in instance.model:
+                if not isinstance(model, torch.nn.Module):
+                    error_model = model
+                    break
+        else:
+            error_model = instance.model
+
+        if error_model is not None:
+            error_info = (f"The 'model' parameter must be a torch.nn.Moudle or list[torch.nn.Moudle] "
+                          f"type, currently there is a {type(error_model)} type.")
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, error_info)
 
     def _check_and_adjust_config_with_l2(self):
         if self.scope:

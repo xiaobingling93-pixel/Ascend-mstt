@@ -78,10 +78,10 @@ class TestService(unittest.TestCase):
         self.service.build_hook = MagicMock()
         self.config.level = "L0"
         with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
-                patch("msprobe.pytorch.service.ModuleProcesser.hook_modules") as mock_hook_modules:
+                patch("msprobe.pytorch.service.ModuleProcesser.register_module_hook") as mock_register_module_hook:
             self.service.register_module_hook()
             self.assertEqual(mock_logger.call_count, 1)
-            mock_hook_modules.assert_called_once()
+            mock_register_module_hook.assert_called_once()
 
     def test_register_api_hook_with_level1(self):
         self.service.build_hook = MagicMock()

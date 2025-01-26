@@ -60,11 +60,16 @@ class TestService(unittest.TestCase):
 
     def test_check_model_valid_with_valid_cell(self):
         model = nn.Cell()
+        model_list = [model]
         self.assertEqual(self.service.check_model_valid(model), model)
+        self.assertEqual(self.service.check_model_valid(model_list), model_list)
 
     def test_check_model_valid_with_invalid_type(self):
+        model = nn.Cell()
         with self.assertRaises(MsprobeException):
             self.service.check_model_valid("not a cell")
+        with self.assertRaises(MsprobeException):
+            self.service.check_model_valid(["not a cell", model])
 
     def test_update_primitive_counters(self):
         self.service.primitive_counters = {}
