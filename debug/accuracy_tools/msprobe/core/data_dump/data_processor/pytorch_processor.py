@@ -83,32 +83,63 @@ class PytorchDataProcessor(BaseDataProcessor):
         return {"type": "torch.dtype", "value": str(element)}
 
     @staticmethod
-    def get_stat_info(data):
+    def get_stat_info_async(data):
+        tensor_stat = TensorStatInfo()
+        if torch.is_complex(data):
+            logger.warning("Async dump do not support complex data!")
+            return tensor_stat
+        elif data.dtype == torch.bool:
+            tensor_stat.stack_tensor_stat = (["Max", "Min"], torch.stack(
+                [torch.any(data), torch.all(data)]))
+        elif not data.shape:
+            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([data, data, data, data]))
+        else:
+            if not data.is_floating_point() or data.dtype == torch.float64:
+                data = data.float()
+            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([
+                torch.max(data),
+                torch.min(data),
+                torch.mean(data),
+                torch.norm(data)
+            ]))
+        return tensor_stat
+
+    @staticmethod
+    def get_stat_info_sync(data):
+        tensor_stat = TensorStatInfo()
+        if torch.is_complex(data):
+            data_np = data.cpu().numpy()
+            data_abs = np.abs(data_np)
+            tensor_stat.max = np.max(data_abs).item()
+            tensor_stat.min = np.min(data_abs).item()
+            tensor_stat.mean = np.mean(data_abs).item()
+        elif data.dtype == torch.bool:
+            tensor_stat.max = torch.any(data).item()
+            tensor_stat.min = torch.all(data).item()
+        elif not data.shape:
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
+        else:
+            if not data.is_floating_point() or data.dtype == torch.float64:
+                data = data.float()
+            tensor_stat.max = torch.max(data).item()
+            tensor_stat.min = torch.min(data).item()
+            tensor_stat.mean = torch.mean(data).item()
+            tensor_stat.norm = torch.norm(data).item()
+        return tensor_stat
+
+    @staticmethod
+    def get_stat_info(data, async_dump=False):
         tensor_stat = TensorStatInfo()
         if data.is_meta:
             return tensor_stat
         data_clone = data.detach()
         if data_clone.numel() == 0:
             return tensor_stat
-        elif data_clone.dtype == torch.bool:
-            tensor_stat.max = torch.any(data_clone).item()
-            tensor_stat.min = torch.all(data_clone).item()
-        elif not data_clone.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
-        elif torch.is_complex(data_clone):
-            data_np = data_clone.cpu().numpy()
-            data_abs = np.abs(data_np)
-            tensor_stat.max = np.max(data_abs).item()
-            tensor_stat.min = np.min(data_abs).item()
-            tensor_stat.mean = np.mean(data_abs).item()
         else:
-            if not data_clone.is_floating_point() or data_clone.dtype == torch.float64:
-                data_clone = data_clone.float()
-            tensor_stat.max = torch.max(data_clone).item()
-            tensor_stat.min = torch.min(data_clone).item()
-            tensor_stat.mean = torch.mean(data_clone).item()
-            tensor_stat.norm = torch.norm(data_clone).item()
-        return tensor_stat
+            if data_clone.device.type == Const.CPU_LOWERCASE or not async_dump:
+                return PytorchDataProcessor.get_stat_info_sync(data_clone)
+            else:
+                return PytorchDataProcessor.get_stat_info_async(data_clone)
 
     @staticmethod
     def handle_tensor_extremum_nan_inf(tensor, operator):
@@ -188,25 +219,29 @@ class PytorchDataProcessor(BaseDataProcessor):
         return super().analyze_forward_output(name, module, module_input_output)
 
     def _analyze_tensor(self, tensor, suffix):
-        tensor_stat = self.get_stat_info(tensor)
+        tensor_stat = self.get_stat_info(tensor, self.config.async_dump)
         tensor_json = {}
         tensor_json.update({'type': 'torch.Tensor'})
         tensor_json.update({'dtype': str(tensor.dtype)})
         tensor_json.update({"shape": tensor.shape})
-        tensor_json.update({"Max": tensor_stat.max})
-        tensor_json.update({"Min": tensor_stat.min})
-        tensor_json.update({"Mean": tensor_stat.mean})
-        tensor_json.update({"Norm": tensor_stat.norm})
-        tensor_json.update({"requires_grad": tensor.requires_grad})
+        if tensor_stat.stack_tensor_stat is None:
+            tensor_json.update({"Max": tensor_stat.max})
+            tensor_json.update({"Min": tensor_stat.min})
+            tensor_json.update({"Mean": tensor_stat.mean})
+            tensor_json.update({"Norm": tensor_stat.norm})
+            tensor_json.update({"requires_grad": tensor.requires_grad})
+            if tensor_stat.max is not None:
+                if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
+                    tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
+            if tensor_stat.min is not None:
+                if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
+                    tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
 
-        if tensor_stat.max is not None:
-            if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
-                tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
-        if tensor_stat.min is not None:
-            if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
-                tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
+        else:
+            tensor_json.update({"requires_grad": tensor.requires_grad})
+            tensor_json.update({"tensor_stat": tensor_stat.stack_tensor_stat})
 
-        if self.config.summary_mode == Const.MD5:
+        if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
@@ -226,7 +261,7 @@ class TensorDataProcessor(PytorchDataProcessor):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        if self.config.enable_async_dump:
+        if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.clone().detach()
         else:
             saved_tensor = tensor.clone().contiguous().detach()

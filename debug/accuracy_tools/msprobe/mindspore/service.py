@@ -246,11 +246,12 @@ class Service:
             self.primitive_counters[primitive_name] += 1
 
     def step(self):
+        if self.config.async_dump:
+            self.data_collector.fill_stack_tensor_data()
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
-        if self.config.enable_async_dump:
-            self.data_collector.data_processor.dump_async_data()
         self.reset_status()
 
     def start(self, model=None):
@@ -312,6 +313,9 @@ class Service:
         self.switch = False
         self.primitive_switch = False
         self.start_call = False
+        if self.config.async_dump:
+            self.data_collector.fill_stack_tensor_data()
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         JitDump.jit_dump_switch = False
 

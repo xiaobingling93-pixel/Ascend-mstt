@@ -55,15 +55,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def analyze_dtype_in_kwargs(element):
         return {"type": "mindspore.dtype", "value": str(element)}
 
-    @classmethod
-    def get_special_types(cls):
-        return super().get_special_types() + cls.mindspore_special_type
-
-    def get_stat_info(self, data):
+    @staticmethod
+    def get_stat_info_sync(data):
         tensor_stat = TensorStatInfo()
-        if data.numel() == 0:
-            return tensor_stat
-        elif data.dtype == ms.bool_:
+        if data.dtype == ms.bool_:
             data_np = data.asnumpy()
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
@@ -93,6 +88,47 @@ class MindsporeDataProcessor(BaseDataProcessor):
             api_register.norm_inner_op_set_hook_func()
         return tensor_stat
 
+    @staticmethod
+    def get_stat_info_async(data):
+        tensor_stat = TensorStatInfo()
+        stack_method = api_register.functional_ori_attr.get("stack", ms.ops.stack)
+        if data.dtype == ms.complex64 or data.dtype == ms.complex128:
+            logger.warning("Async dump do not support complex data!")
+            return tensor_stat
+        elif data.dtype == ms.bool_:
+            tensor_stat.stack_tensor_stat = (["Max", "Min"], stack_method([data.any(), data.all()]))
+        elif not data.shape:
+            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], stack_method([data, data, data, data]))
+        else:
+            if not ops.is_floating_point(data) or data.dtype == ms.float64:
+                data = data.to(ms.float32)
+            api_register.norm_inner_op_set_ori_func()
+            get_max_value = api_register.mint_ops_ori_attr.get("max", mint.max)
+            get_min_value = api_register.mint_ops_ori_attr.get("min", mint.min)
+            get_mean_value = api_register.mint_ops_ori_attr.get("mean", mint.mean)
+            if hasattr(mint, "norm"):
+                get_norm_value = api_register.mint_ops_ori_attr.get("norm", mint.norm)
+            else:
+                get_norm_value = api_register.functional_ori_attr.get("norm", ops.norm)
+            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], stack_method(
+                [get_max_value(data), get_min_value(data), get_mean_value(data), get_norm_value(data)]))
+            api_register.norm_inner_op_set_hook_func()
+        return tensor_stat
+
+    @classmethod
+    def get_special_types(cls):
+        return super().get_special_types() + cls.mindspore_special_type
+
+    def get_stat_info(self, data):
+        tensor_stat = TensorStatInfo()
+        if data.numel() == 0:
+            return tensor_stat
+        else:
+            if self.config.async_dump:
+                return MindsporeDataProcessor.get_stat_info_async(data)
+            else:
+                return MindsporeDataProcessor.get_stat_info_sync(data)
+
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.mindspore_object_key:
             return self.mindspore_object_key[suffix_stack[-1]](element)
@@ -113,13 +149,17 @@ class MindsporeDataProcessor(BaseDataProcessor):
         tensor_json = {
             'type': 'mindspore.Tensor',
             'dtype': str(tensor.dtype),
-            'shape': tensor.shape,
-            'Max': self.transfer_type(tensor_stat.max),
-            'Min': self.transfer_type(tensor_stat.min),
-            'Mean': self.transfer_type(tensor_stat.mean),
-            'Norm': self.transfer_type(tensor_stat.norm),
+            'shape': tensor.shape
         }
-        if self.config.summary_mode == Const.MD5:
+
+        if tensor_stat.stack_tensor_stat is None:
+            tensor_json.update({'Max': self.transfer_type(tensor_stat.max)})
+            tensor_json.update({'Min': self.transfer_type(tensor_stat.min)})
+            tensor_json.update({'Mean': self.transfer_type(tensor_stat.mean)})
+            tensor_json.update({'Norm': self.transfer_type(tensor_stat.norm)})
+        else:
+            tensor_json.update({'tensor_stat': tensor_stat.stack_tensor_stat})
+        if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
@@ -139,7 +179,7 @@ class TensorDataProcessor(MindsporeDataProcessor):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        if self.config.enable_async_dump:
+        if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.copy()
         else:
             save_tensor_as_npy(tensor, file_path)

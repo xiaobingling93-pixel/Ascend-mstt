@@ -70,6 +70,14 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.mean, 2.0)
         self.assertEqual(result.norm, torch.norm(tensor).item())
 
+    def test_get_stat_info_float_async(self):
+        tensor = torch.tensor([1.0, 2.0, 3.0])
+        result = self.processor.get_stat_info_async(tensor).stack_tensor_stat[1]
+        self.assertEqual(result[0].item(), 3.0)
+        self.assertEqual(result[1].item(), 1.0)
+        self.assertEqual(result[2].item(), 2.0)
+        self.assertEqual(result[3].item(), torch.norm(tensor).item())
+
     def test_get_stat_info_int(self):
         tensor = torch.tensor([1, 2, 3], dtype=torch.int32)
         result = self.processor.get_stat_info(tensor)
@@ -77,6 +85,14 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.min, 1)
         self.assertEqual(result.mean, 2)
         self.assertEqual(result.norm, torch.norm(tensor.float()).item())
+
+    def test_get_stat_info_int_async(self):
+        tensor = torch.tensor([1, 2, 3])
+        result = self.processor.get_stat_info_async(tensor).stack_tensor_stat[1]
+        self.assertEqual(result[0].item(), 3.0)
+        self.assertEqual(result[1].item(), 1.0)
+        self.assertEqual(result[2].item(), 2.0)
+        self.assertEqual(result[3].item(), torch.norm(tensor.float()).item())
 
     def test_get_stat_info_empty(self):
         tensor = torch.tensor([])
@@ -93,6 +109,12 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.min, False)
         self.assertIsNone(result.mean)
         self.assertIsNone(result.norm)
+
+    def test_get_stat_info_bool_async(self):
+        tensor = torch.tensor([True, False, True])
+        result = self.processor.get_stat_info_async(tensor).stack_tensor_stat[1]
+        self.assertEqual(result[0].item(), True)
+        self.assertEqual(result[1].item(), False)
 
     def test_get_stat_info_with_scalar_tensor(self):
         scalar_tensor = torch.tensor(42.0)
@@ -257,6 +279,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         get_md5_for_tensor.return_value = 'mocked_md5'
         tensor = torch.tensor([1.0, 2.0, 3.0])
         self.config.summary_mode = 'md5'
+        self.config.async_dump = False
         result = self.processor._analyze_tensor(tensor, 'suffix')
         expected = {
             'type': 'torch.Tensor',
@@ -299,7 +322,7 @@ class TestTensorDataProcessor(unittest.TestCase):
     @patch('torch.save')
     def test_analyze_tensor(self, mock_save):
         self.config.framework = "pytorch"
-        self.config.enable_async_dump = False
+        self.config.async_dump = False
         tensor = torch.tensor([1.0, 2.0, 3.0])
         suffix = 'suffix'
         result = self.processor._analyze_tensor(tensor, suffix)

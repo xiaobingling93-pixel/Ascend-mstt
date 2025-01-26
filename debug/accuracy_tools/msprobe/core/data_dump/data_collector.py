@@ -154,6 +154,8 @@ class DataCollector:
     def handle_data(self, name, data_info, flush=False):
         if data_info:
             self.update_data(name, data_info)
+        if self.config.async_dump:
+            return
         if not flush:
             self.data_writer.flush_data_periodically()
         else:
@@ -178,3 +180,6 @@ class DataCollector:
             return
         data_info = self.data_processor.analyze_params(grad_name, param_name, data)
         self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
+
+    def fill_stack_tensor_data(self):
+        self.data_writer.fill_stack_tensor_data()

@@ -226,6 +226,8 @@ class Const:
     CLIP_GRAD = "clip_grad"
     END_PREFIX = "end_"
 
+    TENSOR_STAT_LEN = 2
+
 
 class CompareConst:
     """

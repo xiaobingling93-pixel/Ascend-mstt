@@ -58,6 +58,7 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_get_stat_info_float(self):
+        self.config.async_dump = False
         tensor = ms.Tensor([1.0, 2.0, 3.0])
         result = self.processor.get_stat_info(tensor)
         self.assertEqual(result.max, 3.0)
@@ -65,7 +66,17 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         self.assertEqual(result.mean, 2.0)
         self.assertEqual(result.norm, ms.ops.norm(tensor).item())
 
+    def test_get_stat_info_float_async(self):
+        self.config.async_dump = True
+        tensor = ms.tensor([1.0, 2.0, 3.0])
+        result = self.processor.get_stat_info(tensor).stack_tensor_stat[1]
+        self.assertEqual(result[0].item(), 3.0)
+        self.assertEqual(result[1].item(), 1.0)
+        self.assertEqual(result[2].item(), 2.0)
+        self.assertEqual(result[3].item(), ms.ops.norm(tensor).item())
+
     def test_get_stat_info_int(self):
+        self.config.async_dump = False
         tensor = ms.Tensor([1, 2, 3], dtype=ms.int32)
         result = self.processor.get_stat_info(tensor)
         self.assertEqual(result.max, 3)
@@ -73,7 +84,15 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         self.assertEqual(result.mean, 2)
         self.assertEqual(result.norm, ms.ops.norm(tensor).item())
 
+    def test_get_stat_info_int_async(self):
+        self.config.async_dump = True
+        tensor = ms.tensor([1, 2, 3])
+        result = self.processor.get_stat_info(tensor).stack_tensor_stat[1]
+        self.assertEqual(result[0].item(), 3.0)
+        self.assertEqual(result[1].item(), 1.0)
+
     def test_get_stat_info_bool(self):
+        self.config.async_dump = False
         tensor = ms.Tensor([True, False, True])
         result = self.processor.get_stat_info(tensor)
         self.assertEqual(result.max, True)
@@ -81,11 +100,19 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         self.assertIsNone(result.mean)
         self.assertIsNone(result.norm)
 
+    def test_get_stat_info_bool_async(self):
+        self.config.async_dump = True
+        tensor = ms.Tensor([True, False, True])
+        result = self.processor.get_stat_info(tensor).stack_tensor_stat[1]
+        self.assertEqual(result[0].item(), True)
+        self.assertEqual(result[1].item(), False)
+
     @patch.object(MindsporeDataProcessor, 'get_md5_for_tensor')
     def test__analyze_tensor(self, get_md5_for_tensor):
         get_md5_for_tensor.return_value = "test_md5"
         tensor = ms.Tensor(np.array([1, 2, 3], dtype=np.int32))
         self.config.summary_mode = 'md5'
+        self.config.async_dump = False
         suffix = "test_tensor"
         expected_result = {
             'type': 'mindspore.Tensor',
@@ -114,7 +141,7 @@ class TestTensorDataProcessor(unittest.TestCase):
     @patch('msprobe.core.data_dump.data_processor.mindspore_processor.save_tensor_as_npy')
     def test_analyze_tensor(self, mock_save):
         self.config.framework = "mindspore"
-        self.config.enable_async_dump = False
+        self.config.async_dump = False
         tensor = ms.Tensor([1.0, 2.0, 3.0])
         suffix = 'suffix'
         result = self.processor._analyze_tensor(tensor, suffix)
