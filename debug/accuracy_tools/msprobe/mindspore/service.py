@@ -33,7 +33,8 @@ from msprobe.core.common.exceptions import DistributedNotInitializedError, Mspro
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.utils import Const, print_tools_ends_info
 from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, ModuleBackwardInputs
+from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs,
+                                                        ModuleBackwardInputs)
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
