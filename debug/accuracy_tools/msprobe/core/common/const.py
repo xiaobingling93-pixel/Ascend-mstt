@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -29,7 +29,6 @@ class Const:
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
-    REGEX_FORWARD_BACKWARD = r'\.(forward|backward)\.'
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","
@@ -133,7 +132,6 @@ class Const:
     DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive",
                    "Aten", "VF", "NPU", "Jit"]
     MODULE_PREFIX = ["Module", "Cell"]
-    FORWARD_NAME_SUFFIX = ".forward"
 
     # struct json param
     ORIGIN_DATA = "origin_data"
@@ -196,7 +194,6 @@ class Const:
 
     # data type const
     TORCH_INT_DTYPE = ["torch.int8", "torch.int32", "torch.int64"]
-    TORCH_FLOAT_DTYPE = ["torch.bfloat16", "torch.float16", "torch.float32", "torch.float64"]
     FLOAT16 = "Float16"
     FLOAT32 = "Float32"
     BFLOAT16 = "BFloat16"
@@ -221,12 +218,6 @@ class Const:
     # 分隔符常量
     SCOPE_SEPARATOR = "/"
     REPLACEMENT_CHARACTER = "_"
-
-    OPTIMIZER = "optimizer"
-    CLIP_GRAD = "clip_grad"
-    END_PREFIX = "end_"
-
-    TENSOR_STAT_LEN = 2
 
 
 class CompareConst:
@@ -274,8 +265,6 @@ class CompareConst:
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
-    PARAMS_STRUCT = "params_struct"
-    PARAMS_GRAD_STRUCT = "params_grad_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
@@ -294,14 +283,12 @@ class CompareConst:
     BINARY_CONSISTENCY_ALGORITHM_NAME = "二进制一致法"
     ABSOLUTE_THRESHOLD_ALGORITHM_NAME = "绝对阈值法"
     THOUSANDTH_STANDARD_ALGORITHM_NAME = "双千指标法"
-    ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME = "累积误差比对法"
 
     ABSOLUTE_THRESHOLD = 'absolute_threshold'
     BINARY_CONSISTENCY = 'binary_consistency'
     ULP_COMPARE = 'ulp_compare'
     THOUSANDTH_STANDARD = 'thousandth_threshold'
     BENCHMARK = 'benchmark'
-    ACCUMULATIVE_ERROR_COMPARE = 'accumulative_error_compare'
 
     SMALL_VALUE_ERR_RATIO = "small_value_err_ratio"
     RMSE_RATIO = "rmse_ratio"
@@ -358,41 +345,6 @@ class CompareConst:
     ALL_COMPARE_INDEX = [COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO]
     SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
                              MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
-
-    # dtype match
-    MS_TYPE = [
-        [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
-        [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
-    ]
-    TORCH_TYPE = [
-        [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
-        [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
-    ]
-
-    # read_op
-    IO_NAME_MAPPING = {
-        Const.INPUT_ARGS: '.input',
-        Const.INPUT_KWARGS: '.input',
-        Const.INPUT: '.input',
-        Const.OUTPUT: '.output',
-        Const.PARAMS: '.parameters'
-    }
-
-    # state to struct mapping
-    STATE_TO_STRUCT_MAPPING = {
-        Const.INPUT: INPUT_STRUCT,
-        Const.KWARGS: INPUT_STRUCT,
-        Const.OUTPUT: OUTPUT_STRUCT,
-        Const.PARAMS: PARAMS_STRUCT,
-        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
-    }
-
-    STRUCT_COMPARE_KEY = [
-        INPUT_STRUCT,
-        OUTPUT_STRUCT,
-        PARAMS_STRUCT,
-        PARAMS_GRAD_STRUCT
-    ]
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -475,8 +427,6 @@ class CompareConst:
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
-    PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
-    PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
@@ -544,8 +494,24 @@ class MsCompareConst:
 
     API_NAME_STR_LENGTH = 4
 
+    # Mindtorch api_info field
+    MINDTORCH_TENSOR = "Tensor"
+    MINDTORCH = "Torch"
+    MINDTORCH_FUNC = "Functional"
+    MINDTORCH_NPU = "NPU"
+    MINDTORCH_DIST = "Distributed"
+
+    VALID_API_TYPES = [
+        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
+    ]
+    # framework
+    FRAMEWORK_TORCH = "torch"
+    FRAMEWORK_MINDSPORE = "mindspore"
+    FRAMEWORK_MINDTORCH = "mindtorch"
+
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
+    FRAMEWORK = "framework"
     TENSOR_TASK = "tensor"
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
@@ -619,13 +585,9 @@ class MonitorConst:
     EMAIL = "email"
     OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
     DEEPSPEED_OPT_TY = (
-        "DeepSpeedZeroOptimizer_Stage0",
-        "DeepSpeedZeroOptimizer_Stage1_or_2",
-        "DeepSpeedZeroOptimizer_Stage3"
-    )
+    "DeepSpeedZeroOptimizer_Stage0", "DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
 
-    SLICE_SIZE = 20480
     DOT = "."
     VPP_SEP = ":"
     ACTV_IN = "input"

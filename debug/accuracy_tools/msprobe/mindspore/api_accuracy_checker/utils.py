@@ -82,16 +82,23 @@ class GlobalContext:
     def __init__(self):
         self.is_constructed = True
         self.dump_data_dir = ""
+        self.framework = "mindspore"
 
-    def init(self, is_constructed, dump_data_dir):
+    def init(self, is_constructed, dump_data_dir, framework):
         self.is_constructed = is_constructed
         self.dump_data_dir = dump_data_dir
+        self.framework = framework
+        # print(f"self.framework: {self.framework}")
 
     def get_dump_data_dir(self):
         return self.dump_data_dir
 
     def get_is_constructed(self):
         return self.is_constructed
+
+    def get_framework(self):
+        # print(f"self.framework: {self.framework}")
+        return self.framework
 
 
 global_context = GlobalContext()

@@ -15,9 +15,18 @@
 
 import mindspore
 import numpy as np
-import torch
+# import torch
 from mindspore._c_expression import typing
 from mindspore.common import dtype as mstype
+
+import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as torch_module
+
+mindtorch = torch_module.mindtorch
+print(f"\ntype_maping_torch.__file__ 重新验证: {mindtorch.__file__}")
+torch = torch_module.torch
+
+# import torch
+# torch = torch_module.torch
 
 INT8 = "Int8"
 UINT8 = "UInt8"
@@ -81,6 +90,21 @@ dtype_str_to_torch_dtype = {
     BFLOAT16: torch.bfloat16,
 }
 torch_dtype_to_dtype_str = {value: key for key, value in dtype_str_to_torch_dtype.items()}
+
+
+dtype_str_to_mindtorch_dtype = {
+    INT8: mindtorch.int8,
+    UINT8: mindtorch.uint8,
+    INT16: mindtorch.int16,
+    INT32: mindtorch.int32,
+    INT64: mindtorch.int64,
+    FLOAT16: mindtorch.float16,
+    FLOAT32: mindtorch.float32,
+    FLOAT64: mindtorch.float64,
+    BOOL: mindtorch.bool,
+    BFLOAT16: mindtorch.bfloat16,
+}
+mindtorch_dtype_to_dtype_str = {value: key for key, value in dtype_str_to_mindtorch_dtype.items()}
 
 MINDSPORE_TENSOR_TYPE_STR = "mindspore.Tensor"
 BOOL_TYPE_STR = "bool"

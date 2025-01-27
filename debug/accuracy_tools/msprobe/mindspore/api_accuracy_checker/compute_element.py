@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import os
 
 import mindspore
@@ -25,6 +26,7 @@ from msprobe.core.common.file_utils import load_npy
 from msprobe.mindspore.api_accuracy_checker.type_mapping import (api_info_type_str_to_type,
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
+                                                                 dtype_str_to_mindtorch_dtype,
                                                                  dtype_str_to_torch_dtype, type_to_api_info_type_str,
                                                                  DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE, TUPLE_TYPE_STR,
                                                                  MINDSPORE_TENSOR_TYPE_STR, MINDSPORE_DTYPE_TYPE_STR,
@@ -32,6 +34,12 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import (api_info_type_s
                                                                  float_dtype_str_list, int_dtype_str_list)
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 from msprobe.mindspore.common.log import logger
+
+import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as torch_module
+
+mindtorch = torch_module.mindtorch
+# import torch
+torch = torch_module.torch
 
 
 class MstensorMetaData:
@@ -70,21 +78,88 @@ class ComputeElement:
         Return:
             torch_tensor: torch.Tensor
         '''
+        print(f"transfer_to_torch_tensor called with ms_tensor of type {type(ms_tensor)}")
+
         ms_dtype = ms_tensor.dtype
+        print(f"ms_tensor.dtype: {ms_dtype}")
+
         dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
+        print(f"Converted ms_dtype to dtype_str: {dtype_str}")
+
         if dtype_str not in dtype_str_to_torch_dtype:
             err_msg = f"ComputeElement.transfer_to_torch_tensor failed: no matching torch dtype for {dtype_str}"
+            print(f"ERROR: {err_msg}")  # 这里打印错误信息
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
+            print(f"Found matching torch dtype: {torch_dtype}")
 
         if dtype_str in int_dtype_str_list:
             middle_dtype = mindspore.int64
+            print(f"Using int64 as middle_dtype for integer types.")
         else:
             middle_dtype = mindspore.float64
+            print(f"Using float64 as middle_dtype for non-integer types.")
+
+        # 执行类型转换，生成 numpy ndarray
         np_ndarray = ms_tensor.astype(middle_dtype).numpy()
+        print(f"ms_dtype: {ms_dtype}, dtype_str: {dtype_str}")
+        print(f"Converted ms_tensor to numpy ndarray with dtype {np_ndarray.dtype} and shape {np_ndarray.shape}")
+        print(f"torch package loaded from: {torch.__file__}")
+        # 从 numpy ndarray 转换到 torch tensor
         torch_tensor = torch.from_numpy(np_ndarray).to(torch_dtype)
+
+        print(f"Converted numpy ndarray to torch tensor with dtype {torch_tensor.dtype} and shape {torch_tensor.shape}")
+
         return torch_tensor
+
+    @staticmethod
+    def transfer_to_mindtorch_tensor(ms_tensor):
+        '''
+        Args:
+            ms_tensor: mindspore.Tensor
+        Return:
+            mindtorch_tensor: mindtorch.Tensor
+        '''
+        print(f"transfer_to_mindtorch_tensor called with ms_tensor of type {type(ms_tensor)}")
+
+        ms_dtype = ms_tensor.dtype
+        print(f"ms_tensor.dtype: {ms_dtype}")
+
+        dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
+        print(f"Converted ms_dtype to dtype_str: {dtype_str}")
+
+        if dtype_str not in dtype_str_to_mindtorch_dtype:
+            err_msg = f"ComputeElement.transfer_to_mindtorch_tensor failed: no matching mindtorch dtype for {dtype_str}"
+            print(f"ERROR: {err_msg}")  # 这里打印错误信息
+            logger.error_log_with_exp(err_msg,
+                                      ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+        else:
+            mindtorch_dtype = dtype_str_to_mindtorch_dtype.get(dtype_str)
+            print(f"Found matching mindtorch dtype: {mindtorch_dtype}")
+
+        if dtype_str in int_dtype_str_list:
+            middle_dtype = mindspore.int64
+            print(f"Using int64 as middle_dtype for integer types.")
+        else:
+            middle_dtype = mindspore.float64
+            print(f"Using float64 as middle_dtype for non-integer types.")
+
+        # 执行类型转换，生成 numpy ndarray
+        np_ndarray = ms_tensor.astype(middle_dtype).numpy()
+        print(f"Converted ms_tensor to numpy ndarray with dtype {np_ndarray.dtype} and shape {np_ndarray.shape}")
+
+        # 从 numpy ndarray 转换到 mindtorch tensor
+        print(f"mindtorch_dtype:{mindtorch_dtype}")
+        #        mindtorch_tensor = mindtorch.from_numpy(np_ndarray).to(mindtorch_dtype)
+        mindtorch_tensor = mindtorch.from_numpy(np_ndarray).to(ms_dtype)
+
+        # torch_tensor =
+        print(f"transfer torch package loaded from: {mindtorch.__file__}")
+        print(
+            f"Converted numpy ndarray to torch tensor with dtype {mindtorch_tensor.dtype} and shape {mindtorch_tensor.shape}")
+
+        return mindtorch_tensor
 
     @staticmethod
     def transfer_to_mindspore_tensor(torch_tensor):
@@ -139,10 +214,18 @@ class ComputeElement:
         elif isinstance(self.parameter, self.supported_parameter_type):
             parameter_tmp = self.parameter
         elif isinstance(self.parameter, DtypeMetaData):
+            print(f"Parameter is of type DtypeMetaData, dtype_str: {self.parameter.dtype_str}")
             if tensor_platform == Const.MS_FRAMEWORK:
                 parameter_tmp = dtype_str_to_ms_dtype.get(self.parameter.dtype_str)
-            else:
+                print(f"MS Framework dtype mapping: {parameter_tmp}")
+            elif tensor_platform == Const.PT_FRAMEWORK:
                 parameter_tmp = dtype_str_to_torch_dtype.get(self.parameter.dtype_str)
+                print(f"PT Framework dtype mapping: {parameter_tmp}")
+            elif tensor_platform == Const.MT_FRAMEWORK:
+                parameter_tmp = dtype_str_to_mindtorch_dtype.get(self.parameter.dtype_str)
+
+                # parameter_tmp = self.parameter
+                print(f"MT Framework dtype mapping: {parameter_tmp}")
         elif isinstance(self.parameter, MstensorMetaData):
             mstensor_meta_data = self.parameter
             ms_dtype = dtype_str_to_ms_dtype.get(mstensor_meta_data.dtype_str)
@@ -161,6 +244,8 @@ class ComputeElement:
         # if necessary, do transfer
         if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.PT_FRAMEWORK:
             parameter = self.transfer_to_torch_tensor(parameter_tmp)
+        elif not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.MT_FRAMEWORK:
+            parameter = self.transfer_to_mindtorch_tensor(parameter_tmp)
         elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform == Const.MS_FRAMEWORK:
             parameter = self.transfer_to_mindspore_tensor(parameter_tmp)
         else:
