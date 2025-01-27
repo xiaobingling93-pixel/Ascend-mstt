@@ -313,11 +313,9 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
         for compare_index_dict, rank_num in zip(compare_index_dict_list, rank_num_list):
             header = [CompareConst.NPU_NAME, "rank" + str(rank_num)]
             result_df_list = []
-            for _,  api_index_dict in compare_index_dict.items():
+            for _, api_index_dict in compare_index_dict.items():
                 result_df = generate_result_df(api_index_dict, header)
                 result_df_list.append(result_df)
-            # all_result_df_list示例：
-            # [[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
             all_result_df_list.append(result_df_list)
 
     merge_df_list = df_merge(all_result_df_list)
