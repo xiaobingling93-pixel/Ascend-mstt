@@ -544,8 +544,24 @@ class MsCompareConst:
 
     API_NAME_STR_LENGTH = 4
 
+    # Mindtorch api_info field
+    MINDTORCH_TENSOR = "Tensor"
+    MINDTORCH = "Torch"
+    MINDTORCH_FUNC = "Functional"
+    MINDTORCH_NPU = "NPU"
+    MINDTORCH_DIST = "Distributed"
+
+    VALID_API_TYPES = [
+        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
+    ]
+    # framework
+    FRAMEWORK_TORCH = "torch"
+    FRAMEWORK_MINDSPORE = "mindspore"
+    FRAMEWORK_MINDTORCH = "mindtorch"
+
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
+    FRAMEWORK = "framework"
     TENSOR_TASK = "tensor"
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
