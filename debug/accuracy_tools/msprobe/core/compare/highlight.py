@@ -289,7 +289,8 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
         api_batches_update(api_batches, api_name, state, i)
     with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
         for api_batch in api_batches:
-            find_error_rows(result[api_batch.start: api_batch.params_grad_end_index], api_batch, highlight_dict, dump_mode)
+            find_error_rows(result[api_batch.start: api_batch.params_grad_end_index], api_batch, highlight_dict, 
+                            dump_mode)
             progress_bar.update(1)
 
 

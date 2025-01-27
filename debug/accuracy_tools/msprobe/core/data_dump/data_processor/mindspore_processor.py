@@ -34,6 +34,7 @@ try:
 except ImportError:
     has_adump = False
 
+
 class MindsporeDataProcessor(BaseDataProcessor):
     mindspore_special_type = tuple([ms.Tensor, Number])
 
@@ -265,6 +266,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self._analyze_maybe_overflow_tensor(single_arg)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
+
 
 class KernelDumpDataProcessor(MindsporeDataProcessor):
     def __init__(self, config, data_writer):
