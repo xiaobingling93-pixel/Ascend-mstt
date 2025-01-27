@@ -207,9 +207,11 @@ def validate_cc_distribution(cc_distribution):
         else:
             raise TypeError(f'{key} of cc_distribution is not supported.')
 
+
 def validate_squash_name(squash_name):
     if not isinstance(squash_name, bool):
         raise TypeError('squash_name should be a bool')
+
 
 def validate_alert(alert):
     if not isinstance(alert, dict):
