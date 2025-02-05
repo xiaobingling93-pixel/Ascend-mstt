@@ -30,17 +30,17 @@
 
 [MindStudio Probe（msprobe，MindStudio 精度调试工具）](./debug/accuracy_tools/msprobe)。
 
-## [性能工具](./profiler)
+## [性能工具](./profiler/msprof_analyze)
 
-1. [compare_tools（性能比对工具）](./profiler/compare_tools)
+1. [compare_tools（性能比对工具）](./profiler/msprof_analyze/compare_tools)
 
    提供 NPU 与 GPU 性能拆解功能以及算子、通信、内存性能的比对功能。
 
-2. [cluster_analyse（集群分析工具）](./profiler/cluster_analyse)
+2. [cluster_analyse（集群分析工具）](./profiler/msprof_analyze/cluster_analyse)
 
    提供多机多卡的集群分析能力（基于通信域的通信分析和迭代耗时分析）, 当前需要配合 MindStudio Insight 的集群分析功能使用。
 
-3. [advisor](./profiler/advisor)
+3. [advisor](./profiler/msprof_analyze/advisor)
 
    将 Ascend PyTorch Profiler 或者 msprof 采集的 PyTorch 场景性能数据进行分析，并输出性能调优建议。
 
