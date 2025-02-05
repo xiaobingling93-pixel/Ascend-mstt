@@ -85,7 +85,7 @@ def update_dict(dict1, dict2):
                 try:
                     update_dict(dict1[key], value)
                 except Exception as e:
-                    raise Exception(f"Error updating nested dict failed at key '{key}': {e}")
+                    raise Exception(f"Error updating nested dict failed at key '{key}': {e}") from e
             else:
                 raise Exception(f"duplicate key: {key}")
         else:
