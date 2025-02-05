@@ -82,7 +82,10 @@ def update_dict(dict1, dict2):
     for key, value in dict2.items():
         if key in dict1:
             if isinstance(dict1[key], dict) and isinstance(value, dict):
-                update_dict(dict1[key], value)
+                try:
+                    update_dict(dict1[key], value)
+                except Exception as e:
+                    raise Exception(f"Error updating nested dict failed at key '{key}': {e}")
             else:
                 raise Exception(f"duplicate key: {key}")
         else:
