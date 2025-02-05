@@ -429,8 +429,8 @@ class Service:
             cells_and_names_with_index = self.get_cells_and_names()
 
             for index, cells_and_names in cells_and_names_with_index.items():
+                model = self.model if index == "-1" else self.model[int(index)]
                 for name, cell in cells_and_names:
-                    model = self.model if index == "-1" else self.model[int(index)]
                     if cell == model:
                         continue
                     cell_index = (index + Const.SEP) if index != "-1" else ""

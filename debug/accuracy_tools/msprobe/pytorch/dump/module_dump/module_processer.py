@@ -125,8 +125,8 @@ class ModuleProcesser:
         logger.info_on_rank_0("The init dump is enabled, and the module dump function will not be available.")
         modules_and_names_with_index = self.get_modules_and_names(models)
         for index, modules_and_names in modules_and_names_with_index.items():
+            model = models if index == "-1" else models[int(index)]
             for name, module in modules_and_names:
-                model = models if index == "-1" else models[int(index)]
                 if module == model:
                     continue
                 module_index = (index + Const.SEP) if index != "-1" else ""

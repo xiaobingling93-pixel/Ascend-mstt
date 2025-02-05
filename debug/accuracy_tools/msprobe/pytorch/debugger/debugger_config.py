@@ -94,7 +94,7 @@ class DebuggerConfig:
                 f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' parameter.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
         
-        instance.model = start_model if start_model else instance.model
+        instance.model = start_model if start_model is not None else instance.model
         if isinstance(instance.model, torch.nn.Module):
             return 
 
