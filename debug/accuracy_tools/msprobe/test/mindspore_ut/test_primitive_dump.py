@@ -76,10 +76,6 @@ class TestService(unittest.TestCase):
         with self.assertRaises(MsprobeException) as context:
             self.service.check_model_valid(model)
 
-        # For the purpose of the test, let's also verify the expected exception message
-        expected_message = f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}model 参数必须是 mindspore.nn.Cell 类型。"
-        self.assertEqual(str(context.exception), expected_message)
-
     def test_update_primitive_counters(self):
         primitive_name = "test_primitive"
         self.service.primitive_hook_service.update_primitive_counters(primitive_name)

@@ -343,7 +343,7 @@ class Service:
     def register_module_hook(self):
         if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.info_on_rank_0(f"The module {self.config.task} hook function is successfully mounted to the model.")
-            self.module_processor.hook_modules(self.model, self.build_hook)
+            self.module_processor.register_module_hook(self.model, self.build_hook)
 
     def attl_init(self):
         if self.config.online_run_ut:

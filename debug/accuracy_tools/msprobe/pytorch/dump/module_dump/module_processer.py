@@ -103,6 +103,16 @@ class ModuleProcesser:
         return hasattr(module, '_backward_hooks') and \
             len(module._backward_hooks) > 0 and \
             module._is_full_backward_hook is False
+    
+    @staticmethod
+    def get_modules_and_names(models):
+        modules_and_names_with_index = {}
+        if isinstance(models, (list, tuple)):
+            for index, model in enumerate(models):
+                modules_and_names_with_index[str(index)] = model.named_modules()
+        else:
+            modules_and_names_with_index["-1"] = models.named_modules()
+        return modules_and_names_with_index
 
     @classmethod
     def reset_module_stats(cls):
@@ -111,45 +121,41 @@ class ModuleProcesser:
         cls.api_parent_node = ""
         cls.module_node = {}
 
-    def hook_modules(self, models, build_hook):
+    def register_module_hook(self, models, build_hook):
         logger.info_on_rank_0("The init dump is enabled, and the module dump function will not be available.")
-        for model in models:
-            self.register_module_hook(model, build_hook)
-
-    def register_module_hook(self, model, build_hook):
-        for name, module in model.named_modules():
-            if module == model:
-                continue
-
-            prefix_name = (
-                    BaseScope.Module_Type_Module + Const.SEP +
-                    name + Const.SEP +
-                    module.__class__.__name__ + Const.SEP
-            )
-            pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 = build_hook(
-                BaseScope.Module_Type_Module,
-                prefix_name
-            )
-
-            if self.has_register_backward_hook(module):
-                logger.warning(
-                    f"The {prefix_name[:-1]} has registered deprecated register_backward_hook,"
-                    f"which may cause abnormal data dump. The backward data dump for this module will be skipped."
+        modules_and_names_with_index = self.get_modules_and_names(models)
+        for index, modules_and_names in modules_and_names_with_index.items():
+            model = models if index == "-1" else models[int(index)]
+            for name, module in modules_and_names:
+                if module == model:
+                    continue
+                module_index = (index + Const.SEP) if index != "-1" else ""
+                prefix_name = (BaseScope.Module_Type_Module + Const.SEP + module_index + 
+                                name + Const.SEP + module.__class__.__name__ + Const.SEP)
+                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 = build_hook(
+                    BaseScope.Module_Type_Module,
+                    prefix_name
                 )
-            if torch_version_above_or_equal_2:
-                module.register_forward_hook(forward_hook, with_kwargs=True)
-            else:
-                if not self.has_register_backward_hook(module):
-                    module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
-                module.register_forward_hook(forward_hook_torch_version_below_2)
-            if not self.has_register_backward_hook(module):
-                module.register_full_backward_hook(backward_hook)
 
-            module.register_forward_pre_hook(self.node_hook(prefix_name + Const.FORWARD, Const.START))
-            module.register_forward_hook(self.node_hook(prefix_name + Const.FORWARD, Const.STOP))
-            if torch_version_above_or_equal_2 and not self.has_register_backward_hook(module):
-                module.register_full_backward_pre_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.START))
-                module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
+                if self.has_register_backward_hook(module):
+                    logger.warning(
+                        f"The {prefix_name[:-1]} has registered deprecated register_backward_hook,"
+                        f"which may cause abnormal data dump. The backward data dump for this module will be skipped."
+                    )
+                if torch_version_above_or_equal_2:
+                    module.register_forward_hook(forward_hook, with_kwargs=True)
+                else:
+                    if not self.has_register_backward_hook(module):
+                        module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
+                    module.register_forward_hook(forward_hook_torch_version_below_2)
+                if not self.has_register_backward_hook(module):
+                    module.register_full_backward_hook(backward_hook)
+
+                module.register_forward_pre_hook(self.node_hook(prefix_name + Const.FORWARD, Const.START))
+                module.register_forward_hook(self.node_hook(prefix_name + Const.FORWARD, Const.STOP))
+                if torch_version_above_or_equal_2 and not self.has_register_backward_hook(module):
+                    module.register_full_backward_pre_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.START))
+                    module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
 
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
 
