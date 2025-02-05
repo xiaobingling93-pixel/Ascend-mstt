@@ -51,6 +51,8 @@ export MSPROBE_LOG_LEVEL={x}
 
 **1. Pytorch 框架下，工具暂不支持 Fully Sharded Data Parallel(FSDP)。**
 
+**2. 工具读写的所有路径，如config_path、dump_path等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。**
+
 ## ⚙️ [安装](./docs/01.installation.md)
 
 ## 🌟 新版本特性
