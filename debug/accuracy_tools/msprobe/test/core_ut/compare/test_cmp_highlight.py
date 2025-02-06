@@ -252,7 +252,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(api_batch._state, Const.KWARGS)
         self.assertEqual(api_batch.input_len, 2)
-        self.assertEqual(api_batch.params_end_index, 3)
+        self.assertEqual(api_batch.params_end_index, 4)
         self.assertEqual(api_batch.output_end_index, 4)
         self.assertEqual(api_batch.params_grad_end_index, 4)
 
@@ -264,8 +264,8 @@ class TestUtilsMethods(unittest.TestCase):
         api_batch.increment(Const.PARAMS)
 
         self.assertEqual(api_batch._state, Const.PARAMS)
-        self.assertEqual(api_batch.input_len, 1)  # 不变
-        self.assertEqual(api_batch.params_end_index, 3)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 4)
         self.assertEqual(api_batch.output_end_index, 4)
         self.assertEqual(api_batch.params_grad_end_index, 4)
 
@@ -279,7 +279,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(api_batch._state, Const.INPUT)
         self.assertEqual(api_batch.input_len, 3)
-        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.params_end_index, 5)
         self.assertEqual(api_batch.output_end_index, 5)
         self.assertEqual(api_batch.params_grad_end_index, 5)
 
