@@ -402,3 +402,22 @@ def load_api_data(api_data_bytes):
     except Exception as e:
         raise RuntimeError(f"load api_data from bytes failed") from e
     return buffer
+
+
+def check_save_param(variable, name, save_backward):
+    # try catch this api to skip invalid call
+    if not isinstance(variable, (list, dict, torch.Tensor, int, float, str)):
+        logger.warning("PrecisionDebugger.save variable type not valid, "
+                       "should be one of list, dict, torch.Tensor, int, float or string. "
+                       "Skip current save process.")
+        raise ValueError
+    if not isinstance(name, str):
+        logger.warning("PrecisionDebugger.save name not valid, "
+                       "should be string. "
+                       "skip current save process.")
+        raise ValueError
+    if not isinstance(save_backward, bool):
+        logger.warning("PrecisionDebugger.save_backward name not valid, "
+                       "should be bool. "
+                       "Skip current save process.")
+        raise ValueError
