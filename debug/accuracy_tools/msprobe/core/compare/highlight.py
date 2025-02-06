@@ -238,14 +238,14 @@ class ApiBatch:
 
     def set_state(self, state: str):
         """设置当前状态"""
-        if state in {Const.INPUT, Const.OUTPUT, Const.PARAMS, Const.PARAMS_GRAD}:
+        if state in {Const.INPUT, Const.OUTPUT, Const.KWARGS, Const.PARAMS, Const.PARAMS_GRAD}:
             self._state = state
         else:
             raise ValueError(f"Invalid state: {state}")
 
     def increment(self, state: str):
         self.set_state(state)
-        if self._state == Const.INPUT:
+        if self._state == Const.INPUT or self._state == Const.KWARGS:
             self.input_len += 1
             self.params_end_index += 1
             self.output_end_index += 1
