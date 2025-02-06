@@ -224,7 +224,7 @@ class BaseDataProcessor:
         elif isinstance(args, dict):
             return cls.apply_transform_dict(args, transform, depth)
         elif args is not None:
-            logger.warning(f"Data type {type(args)} is not supported.")
+            logger.debug(f"Data type {type(args)} is not supported.")
             return None
         else:
             return None
