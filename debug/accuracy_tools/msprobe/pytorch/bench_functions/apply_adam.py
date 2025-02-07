@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import torch
+
+
+VarParams = namedtuple('VarParams', ['var', 'lr_t', 'm_t', 'beta1_broad', 'grad', 'epsilon', 'v_t'])
 
 
 def _output_m_compute(m, beta1_broad, grad):
@@ -121,12 +125,20 @@ def _inner_eps_add_sqrt_vt_compute(epsilon, v_t):
     return v_add_sqrt_v
 
 
-def _output_var_t_compute_use_nesterov(var, lr_t, m_t, beta1_broad, grad, epsilon, v_t):
+def _output_var_t_compute_use_nesterov(varparams):
     """
     _output_var_t_compute_use_nesterov
     `formula; var_t = var - lr_t * (m_t * beta1 + (1 - beta1) * grad) / (epsilon + sqrt(v_t))`
     `formula; var_t = var - lr_t * (m_t * beta1 + (1 - beta1) * grad) / (epsilon + sqrt(v_t))`
     """
+    var = varparams.var
+    lr_t = varparams.lr_t
+    m_t = varparams.m_t
+    beta1_broad = varparams.beta1_broad
+    grad = varparams.grad
+    epsilon = varparams.epsilon
+    v_t = varparams.v_t
+
     input_dtype = var.dtype
 
     s_one = torch.ones((1), dtype=input_dtype)
@@ -194,7 +206,8 @@ def npu_apply_adam(beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, us
     v_t = _output_v_compute(v, beta2, grad)
     lr_t = _inner_lr_compute(lr, beta2_power, beta1_power, grad)
     if use_nesterov:
-        var_t = _output_var_t_compute_use_nesterov(var, lr_t, m_t, beta1_broad, grad, epsilon, v_t)
+        var_params = VarParams(var, lr_t, m_t, beta1_broad, grad, epsilon, v_t)
+        var_t = _output_var_t_compute_use_nesterov(var_params)
     else:
         var_t = _output_var_t_compute(var, lr_t, m_t, epsilon, v_t)
     return var_t, m_t, v_t
