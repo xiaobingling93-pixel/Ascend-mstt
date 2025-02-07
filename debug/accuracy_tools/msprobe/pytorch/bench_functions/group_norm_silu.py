@@ -17,7 +17,7 @@ import torch
 
 
 def npu_group_norm_silu(x, gama, beta, group, eps):
-    res = torch.ops.aten.native_group_norm(x, gama, beta, x.shape[0], x.shape[1], x.shape[2]*x.shape[3], group, eps)
+    res = torch.ops.aten.native_group_norm(x, gama, beta, x.shape[0], x.shape[1], x.shape[2] * x.shape[3], group, eps)
     res = list(res)
     res[0] = torch.nn.functional.silu(res[0])
     return res

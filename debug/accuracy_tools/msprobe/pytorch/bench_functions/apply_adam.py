@@ -22,11 +22,10 @@ def _output_m_compute(m, beta1_broad, grad):
     """
     input_dtype = m.dtype
 
-    #sneg_one = tvm.const(-1, dtype=input_dtype)
     sneg_one = torch.ones((1), dtype=input_dtype) * -1
     sneg_one = sneg_one.to(beta1_broad.device)
+
     # `formula; beta1 -1`
-    #vsub_beta1_1 = tbe.vadds(beta1_broad, sneg_one)
     vsub_beta1_1 = torch.add(beta1_broad, sneg_one)
 
     # `formula; m - grad`
@@ -46,13 +45,10 @@ def _output_v_compute(v, beta2, grad):
     do compute v_t = v + (1 - beta2)*(grad*grad -v)
     """
     input_dtype = v.dtype
-    #shape_m_grad = shape_util.shape_to_list(v.shape)
-    shape_m_grad = v.shape
-    #sneg_one = tvm.const(-1, dtype=input_dtype)
+
     sneg_one = torch.ones((1), dtype=input_dtype) * -1
 
     # `formula; broadcast beta2 to vector`
-    #beta2_broad = tbe.broadcast(beta2, shape_m_grad)
     beta2_tensor = torch.tensor(beta2, dtype=input_dtype)
     beta2_broad = beta2_tensor.expand_as(v)
 
@@ -78,7 +74,7 @@ def _output_v_compute(v, beta2, grad):
 def _inner_lr_compute(lr, beta2_power, beta1_power, compute_shape_tensor):
     """
     _inner_lr_compute
-    #lr_t = learning_rate * (sqrt(1-beta2_power)) / (1 - beta1_power)
+    `formula; lr_t = learning_rate * (sqrt(1-beta2_power)) / (1 - beta1_power)`
     """
 
     input_dtype = compute_shape_tensor.dtype
@@ -114,7 +110,6 @@ def _inner_eps_add_sqrt_vt_compute(epsilon, v_t):
     sqrt_vt = torch.sqrt(v_t)
 
     # `formula; broadcast epsilon  to vector`
-    compute_shape = v_t.shape
     input_dtype = v_t.dtype
     epsilon_tensor = torch.tensor(epsilon, dtype=input_dtype)
     epsilon_broad = epsilon_tensor.expand_as(v_t)
@@ -129,12 +124,10 @@ def _inner_eps_add_sqrt_vt_compute(epsilon, v_t):
 def _output_var_t_compute_use_nesterov(var, lr_t, m_t, beta1_broad, grad, epsilon, v_t):
     """
     _output_var_t_compute_use_nesterov
-    # var_t = var - lr_t * (m_t * beta1 + (1 - beta1) * grad) / (epsilon + sqrt(v_t))
-    # var_t = var - lr_t * (m_t * beta1 + (1 - beta1) * grad) / (epsilon + sqrt(v_t))
+    `formula; var_t = var - lr_t * (m_t * beta1 + (1 - beta1) * grad) / (epsilon + sqrt(v_t))`
+    `formula; var_t = var - lr_t * (m_t * beta1 + (1 - beta1) * grad) / (epsilon + sqrt(v_t))`
     """
     input_dtype = var.dtype
-
-    compute_shape = var.shape
 
     s_one = torch.ones((1), dtype=input_dtype)
 
