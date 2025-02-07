@@ -118,6 +118,7 @@ def _inner_eps_add_sqrt_vt_compute(epsilon, v_t):
     input_dtype = v_t.dtype
     epsilon_tensor = torch.tensor(epsilon, dtype=input_dtype)
     epsilon_broad = epsilon_tensor.expand_as(v_t)
+    epsilon_broad = epsilon_broad.to(sqrt_vt.device)
 
     # `formula; epsilon + sqrt(v_t)`
     v_add_sqrt_v = torch.add(sqrt_vt, epsilon_broad)
