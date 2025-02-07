@@ -24,7 +24,7 @@ def _output_m_compute(m, beta1_broad, grad):
 
     #sneg_one = tvm.const(-1, dtype=input_dtype)
     sneg_one = torch.ones((1), dtype=input_dtype) * -1
-
+    sneg_one = sneg_one.to(beta1_broad.device)
     # `formula; beta1 -1`
     #vsub_beta1_1 = tbe.vadds(beta1_broad, sneg_one)
     vsub_beta1_1 = torch.add(beta1_broad, sneg_one)
