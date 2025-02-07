@@ -449,8 +449,8 @@ class TrainerMon:
             return
         opt_context.exp_avg_metric = {}
         opt_context.exp_avg_sq_metric = {}
-        m_tag_tensor_map = self.generate_param_map('exp_avg', opt_context.param_exp_avg)
-        v_tag_tensor_map = self.generate_param_map('efxp_avg_sq', opt_context.param_exp_avg_sq)
+        m_tag_tensor_map = self.generate_param_map(MonitorConst.EXP_AVG, opt_context.param_exp_avg)
+        v_tag_tensor_map = self.generate_param_map(MonitorConst.EXP_AVG_SQ, opt_context.param_exp_avg_sq)
         get_metrics(self.ops, m_tag_tensor_map, self.eps, opt_context.exp_avg_metric)
         get_metrics(self.ops, v_tag_tensor_map, self.eps, opt_context.exp_avg_sq_metric)
 
