@@ -42,7 +42,7 @@ def is_mindtorch():
 # 删除与 torch 相关的路径
 def remove_torch_related_paths():
     removed_paths = []
-    if not is_mindtorch:
+    if not is_mindtorch():
         return
     try:
         # clear_torch_from_sys_modules()
@@ -159,19 +159,5 @@ print(f"已恢复 sys.path: {sys.path}")
 
 
 
-
-# 更新后的 main 函数
-def main():
-    # 删除 torch 路径
-    i = 0
-    if is_mindtorch:
-        initial_sys_path = sys.path.copy()
-        removed_paths = delete_torch_paths()
-
-        clear_torch_from_sys_modules()
-        # 恢复 torch 路径
-        # restore_torch_paths(removed_paths)
-        sys.path = initial_sys_path
-        # import torch
 
 
