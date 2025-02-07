@@ -192,7 +192,7 @@ def _output_var_t_compute(var, lr_t, m_t, epsilon, v_t):
 def npu_apply_adam(beta1_power, beta2_power, lr, beta1, beta2, epsilon, grad, use_locking, use_nesterov, out):
     var, m, v = out
     input_dtype = m.dtype
-    beta1_tensor = torch.tensor(beta1, dtype=input_dtype)
+    beta1_tensor = torch.tensor(beta1, dtype=input_dtype).to(m.device)
     beta1_broad = beta1_tensor.expand_as(m)
     m_t = _output_m_compute(m, beta1_broad, grad)
     v_t = _output_v_compute(v, beta2, grad)
