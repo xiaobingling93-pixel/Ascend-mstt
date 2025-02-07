@@ -35,7 +35,6 @@ try:
 except ImportError:
     if torch.cuda.is_available():
         device = "cuda"
-device = "cpu"
 
 NAN_TENSOR_ON_DEVICE = torch.tensor(torch.nan, device=device)
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024

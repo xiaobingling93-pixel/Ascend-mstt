@@ -31,14 +31,16 @@ all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unredu
 CSV_FILE_SUFFIX = r"_\d+-\d+\.csv"
 
 
-def parse_step_line(data, line_id, name, ops):
-    vp_id = data["vpp_stage"][line_id]
-    module_name = data[name][line_id]
-    step = data["step"][line_id]
+def parse_step_line(line, name, ops):
+    vp_id = line["vpp_stage"]
+    module_name = line[name]
+    step = line["step"]
     vpp_name = f"vp{vp_id}:{module_name}"
+    if 'micro_step' in line:
+        vpp_name = f'{vpp_name}{MonitorConst.NAME_SEP}micro{line["micro_step"]}'
     ops_result = {}
     for op in ops:
-        ops_result[op] = data[op][line_id]
+        ops_result[op] = line[op]
     return vpp_name, step, ops_result
 
 
@@ -47,8 +49,8 @@ def parse_step_fn(filepath):
     ops = [k for k in data.keys() if k in MonitorConst.OP_LIST]
     parse_step_result = {}
 
-    for line_id in range(len(data)):
-        vpp_name, step, ops_result = parse_step_line(data, line_id, MonitorConst.HEADER_NAME, ops)
+    for _, line in data.iterrows():
+        vpp_name, step, ops_result = parse_step_line(line, MonitorConst.HEADER_NAME, ops)
         if vpp_name not in parse_step_result:
             parse_step_result[vpp_name] = {}
         if step in parse_step_result[vpp_name]:
