@@ -65,7 +65,7 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.data_writer.dump_tensor_data_dir = "./dump_data"
         self.processor.current_api_or_module_name = "test_api"
         self.processor.api_data_category = "input"
-    
+
     @patch('inspect.stack')
     def test_analyze_api_call_stack(self, mock_stack):
         mock_stack.return_value = [
@@ -81,8 +81,8 @@ class TestBaseDataProcessor(unittest.TestCase):
         result = BaseDataProcessor.analyze_api_call_stack('test_stack')
         expected_output = {
             'test_stack': [
-                'File file5.py, line 50, in function5, \n code line 5', 
-                'File file6.py, line 60, in function6, \n code line 6', 
+                'File file5.py, line 50, in function5, \n code line 5',
+                'File file6.py, line 60, in function6, \n code line 6',
                 'File file7.py, line 70, in function7, \n code line 7',
             ]
         }
@@ -128,18 +128,18 @@ class TestBaseDataProcessor(unittest.TestCase):
             last_hidden_state: int = None
             hidden_states: Optional[Tuple[int, ...]] = None
             attentions: Optional[Tuple[int, ...]] = None
-        
+
         myData = MyDataClass(
             last_hidden_state=1,
             hidden_states=(2, 3),
             attentions=(4, 5)
         )
-        expected_dataclass_res = {'last_hidden_state': 2, 'hidden_states': (4, 6), 'attentions': (8,10)}
+        expected_dataclass_res = {'last_hidden_state': 2, 'hidden_states': [4, 6], 'attentions': [8,10]}
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(2, transform), 4)
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(myData, transform), expected_dataclass_res)
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(myNamedTuple, transform), {'a': 2})
         self.assertEqual(BaseDataProcessor.recursive_apply_transform([1, 2], transform), [2, 4])
-        self.assertEqual(BaseDataProcessor.recursive_apply_transform((1, 2), transform), (2, 4))
+        self.assertEqual(BaseDataProcessor.recursive_apply_transform((1, 2), transform), [2, 4])
         self.assertEqual(BaseDataProcessor.recursive_apply_transform({'a': 1}, transform), {'a': 2})
 
     @patch.object(logger, 'warning')

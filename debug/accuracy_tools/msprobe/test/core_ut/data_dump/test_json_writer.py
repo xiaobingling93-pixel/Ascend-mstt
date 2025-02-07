@@ -3,6 +3,7 @@ import os
 import unittest
 from unittest.mock import patch
 
+from msprobe.core.common.utils import DumpPathAggregation
 from msprobe.core.common.file_utils import FileOpen, remove_path, load_json
 from msprobe.core.data_dump.json_writer import DataWriter
 
@@ -75,12 +76,21 @@ class TestDataWriter(unittest.TestCase):
         self.assertIsNone(self.data_writer.dump_file_path)
         test_path = os.path.join(self.cur_path, "test1.json")
 
-        self.data_writer.update_dump_paths(test_path, test_path, test_path, test_path, test_path)
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_file_path = test_path
+        dump_path_aggregation.stack_file_path = test_path
+        dump_path_aggregation.construct_file_path = test_path
+        dump_path_aggregation.dump_tensor_data_dir = test_path
+        dump_path_aggregation.free_benchmark_file_path = test_path
+        dump_path_aggregation.debug_file_path = test_path
+
+        self.data_writer.update_dump_paths(dump_path_aggregation)
         self.assertTrue(self.data_writer.dump_file_path == test_path)
         self.assertTrue(self.data_writer.stack_file_path == test_path)
         self.assertTrue(self.data_writer.construct_file_path == test_path)
         self.assertTrue(self.data_writer.dump_tensor_data_dir == test_path)
         self.assertTrue(self.data_writer.free_benchmark_file_path == test_path)
+        self.assertTrue(self.data_writer.debug_file_path == test_path)
 
     @patch.object(DataWriter, "write_json")
     def test_flush_data_periodically(self, mock_write_json):
