@@ -14,7 +14,6 @@
 # limitations under the License.
 import itertools
 import os
-import re
 import statistics as st
 import sys
 from abc import ABC
