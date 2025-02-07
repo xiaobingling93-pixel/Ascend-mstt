@@ -66,7 +66,7 @@ def data_collect():
 def setup_all():
     data_collect()
     yield
-    shutil.rmtree(monitor_output)
+    # shutil.rmtree(monitor_output)
 
 @pytest.mark.usefixtures("setup_all")
 class TestGradMonitor(unittest.TestCase):
@@ -78,20 +78,35 @@ class TestGradMonitor(unittest.TestCase):
         timestamp_dirpath = os.path.join(monitor_output, os.listdir(monitor_output)[0])
         data = parse_step_fn(os.path.join(timestamp_dirpath,"actv_0-2.csv"))
         result = {
-            'vp0:_0': {
-                0: {'input.nans': 0.0,'input.norm': 5.550016,'output.nans': 0.0,'output.norm': 41.842655},
-                1: {'input.nans': 0.0,'input.norm': 5.975112,'output.nans': 0.0,'output.norm': 44.40981},
-                2: {'input.nans': 0.0,'input.norm': 5.789881,'output.nans': 0.0,'output.norm': 43.578354}
+            'vp0:.input': {
+                0: {'nans': 0.0,'norm': 5.550016},
+                1: {'nans': 0.0,'norm': 5.975112},
+                2: {'nans': 0.0,'norm': 5.789881}
                 },
-            'vp0:linear_0': {
-                0: {'input.nans': 0.0,'input.norm': 5.550016,'output.nans': 0.0,'output.norm': 41.842655},
-                1: {'input.nans': 0.0,'input.norm': 5.975112,'output.nans': 0.0,'output.norm': 44.40981},
-                2: {'input.nans': 0.0,'input.norm': 5.789881,'output.nans': 0.0,'output.norm': 43.578354}
+            'vp0:.output': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
                 },
-            'vp0:relu_0': {
-                0: {'input.nans': 0.0,'input.norm': 41.842655,'output.nans': 0.0,'output.norm': 41.842655},
-                1: {'input.nans': 0.0,'input.norm': 44.40981,'output.nans': 0.0,'output.norm': 44.40981},
-                2: {'input.nans': 0.0,'input.norm': 43.578354,'output.nans': 0.0,'output.norm': 43.578354}
+            'vp0:linear.input': {
+                0: {'nans': 0.0,'norm': 5.550016},
+                1: {'nans': 0.0,'norm': 5.975112},
+                2: {'nans': 0.0,'norm': 5.789881}
+                },
+            'vp0:linear.output': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
+                },
+            'vp0:relu.input': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
+                },
+            'vp0:relu.output': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
                 }
             }
         self.assertEqual(data, result)
@@ -100,22 +115,38 @@ class TestGradMonitor(unittest.TestCase):
     def test_actv_grad(self):
         timestamp_dirpath = os.path.join(monitor_output, os.listdir(monitor_output)[0])
         data = parse_step_fn(os.path.join(timestamp_dirpath,"actv_grad_0-2.csv"))
+        print(data)
         nan = np.nan
         result = {
-            'vp0:_0': {
-                0: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282843, 'output_grad.nans': 0.0}, 
-                1: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282617, 'output_grad.nans': 0.0}, 
-                2: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282655, 'output_grad.nans': 0.0}
+            'vp0:.input': {
+                0: {'norm': nan, 'nans': nan}, 
+                1: {'norm': nan, 'nans': nan}, 
+                2: {'norm': nan, 'nans': nan}
                 }, 
-            'vp0:relu_0': {
-                0: {'input_grad.norm': 0.282843, 'input_grad.nans': 0.0, 'output_grad.norm': 0.282843, 'output_grad.nans': 0.0}, 
-                1: {'input_grad.norm': 0.282617, 'input_grad.nans': 0.0, 'output_grad.norm': 0.282617, 'output_grad.nans': 0.0}, 
-                2: {'input_grad.norm': 0.282655, 'input_grad.nans': 0.0, 'output_grad.norm': 0.282655, 'output_grad.nans': 0.0}
+            'vp0:.output': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
                 }, 
-            'vp0:linear_0': {
-                0: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282843, 'output_grad.nans': 0.0}, 
-                1: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282617, 'output_grad.nans': 0.0}, 
-                2: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282655, 'output_grad.nans': 0.0}
+            'vp0:relu.input': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
+                }, 
+            'vp0:relu.output': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
+                }, 
+            'vp0:linear.input': {
+                0: {'norm': nan, 'nans': nan}, 
+                1: {'norm': nan, 'nans': nan}, 
+                2: {'norm': nan, 'nans': nan}
+                },
+            'vp0:linear.output': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
                 }
             }
         

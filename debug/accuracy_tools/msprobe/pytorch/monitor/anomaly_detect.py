@@ -14,6 +14,7 @@
 # limitations under the License.
 import itertools
 import os
+import re
 import statistics as st
 import sys
 from abc import ABC
@@ -136,8 +137,8 @@ class AnomalyDataFactory(ABC):
         tag_name = tag[0]
         param_name = tag_name.split('/')[0]
         call_id = self.name2callid.get(tag_name, -1)
-        if MonitorConst.VPP_SEP in param_name:
-            vpp_stage = int(param_name.split(MonitorConst.VPP_SEP)[0])
+        if MonitorConst.NAME_SEP in param_name:
+            vpp_stage = int(param_name.split(MonitorConst.NAME_SEP)[0])
         else:
             vpp_stage = 0
 
@@ -161,10 +162,10 @@ class TrainStage:
     OPTIMIZER_STAGE = 2
 
 
-FORWARD_KEY = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
-BACKWARD_KEY = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT,
-                MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
-OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EFXP_AVG_SQ]
+FORWARD_KEY = [MonitorConst.ACTV]
+BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD, 
+                MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
+OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
 TRAIN_STAGE = {
     **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
     **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
@@ -221,7 +222,7 @@ class GradAnomalyData:
     @staticmethod
     def get_train_stage(tag_name):
         """
-        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/efxp_avg_sq"
+        :param tag_name: "0:fc2.input:0/rank0/actv", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq"
         :return: int, if forward return 0; if backward return 1; if optimizer return 2
         """
         key_ = tag_name.split("/")[-1]
@@ -361,10 +362,10 @@ class CSVWriterWithAD(BaseWriterWithAD):
 
         new_data = []
         for name, metric_value in self.context_dict.items():
-            if MonitorConst.VPP_SEP not in name:
-                new_data.append([name] + [step] + metric_value)
-            else:
-                new_data.append(name.split(MonitorConst.VPP_SEP) + [step] + metric_value)
+            new_line = name.split(MonitorConst.NAME_SEP) + metric_value
+            new_line.insert(2, step)
+            new_data.append(new_line)
+
         new_data = pd.DataFrame(new_data).round(self.ndigits).fillna("nan")
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
@@ -381,26 +382,11 @@ class CSVWriterWithAD(BaseWriterWithAD):
     def write_metrics(self, ops, metric_value, step, prefix=''):
         super().write_metrics(ops, metric_value, step, prefix='')
 
-        # generate csv headers
-        # set hashmap to reduce the number of headers generated.
-        # 前向的norm用input.ops_和output.ops_，反向的用input_grad.ops_和output_grad.ops_
-        if prefix in {"actv", "actv_grad"}:
-            if prefix == "actv":
-                input_and_output = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
-            else:
-                input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
-            ops_ = [MonitorConst.DOT.join(i) for i in itertools.product(input_and_output, ops)]
-            csv_header = ["module_name", "step", *ops_]
+        if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD]:
+            self.header = MonitorConst.CSV_HEADER_XY + ops
         else:
-            csv_header = ["param_name", "step", *ops]
-
-        keys = list(metric_value.keys())
-        if keys and MonitorConst.VPP_SEP in keys[0]:
-            csv_header.insert(0, "vpp_stage")
-
-        self.header = csv_header
+            self.header = MonitorConst.CSV_HEADER + ops
         self.write_csv(prefix, step)
-        self.header = []
 
     def close(self):
         pass

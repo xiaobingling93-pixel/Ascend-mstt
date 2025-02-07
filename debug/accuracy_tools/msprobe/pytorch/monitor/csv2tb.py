@@ -44,15 +44,11 @@ def parse_step_line(data, line_id, name, ops):
 
 def parse_step_fn(filepath):
     data = read_csv(filepath)
-
-    header = list(data.keys())
-    name = header[MonitorConst.HEADER_NAME_INDEX]
-    ops = header[MonitorConst.OPS_START_INDEX:]
-
+    ops = [k for k in data.keys() if k in MonitorConst.OP_LIST]
     parse_step_result = {}
 
     for line_id in range(len(data)):
-        vpp_name, step, ops_result = parse_step_line(data, line_id, name, ops)
+        vpp_name, step, ops_result = parse_step_line(data, line_id, MonitorConst.HEADER_NAME, ops)
         if vpp_name not in parse_step_result:
             parse_step_result[vpp_name] = {}
         if step in parse_step_result[vpp_name]:
