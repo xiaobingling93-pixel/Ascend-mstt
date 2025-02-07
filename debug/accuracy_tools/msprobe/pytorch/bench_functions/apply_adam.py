@@ -176,6 +176,7 @@ def _output_var_t_compute(var, lr_t, m_t, epsilon, v_t):
     `var_t = var - lr_t * m_t / (epsilon + sqrt(v_t))`
     """
     # `formula; lr_t * m_t`
+    lr_t = lr_t.to(m_t.device)
     v_mul_left = torch.mul(lr_t, m_t)
 
     # `formula; (epsilon + sqrt(v_t))`
