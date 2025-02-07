@@ -58,6 +58,7 @@ def _output_v_compute(v, beta2, grad):
 
     # `formula; beta2 - 1`
     vsub_beta2_1 = torch.add(beta2_broad, sneg_one)
+    vsub_beta2_1 = vsub_beta2_1.to(v.device)
 
     # `formula; grad * grad`
     vmul_grad_grad = torch.mul(grad, grad)
