@@ -93,13 +93,6 @@ class TestService(unittest.TestCase):
         mock_create_directory.assert_has_calls(
             [unittest.mock.call(path) for path in expected_calls], any_order=True)
 
-        self.service.data_collector.update_dump_paths.assert_called_once_with(
-            "/tmp/dump/step1/rank0/dump.json",
-            "/tmp/dump/step1/rank0/stack.json",
-            "/tmp/dump/step1/rank0/construct.json",
-            "/tmp/dump/step1/rank0/dump_tensor_data",
-            None
-        )
         args, _ = self.service.data_collector.update_dump_paths.call_args
         self.assertEqual(args[0].dump_file_path, "/tmp/dump/step1/rank0/dump.json")
         self.assertEqual(args[0].stack_file_path, "/tmp/dump/step1/rank0/stack.json")

@@ -163,9 +163,15 @@ class BaseDataProcessor:
             is_last = i == len(indexes) - 1
             if valid_for_dict or valid_for_list:
                 if is_last:
-                    current_level[index] = value
+                    try:
+                        current_level[index] = value
+                    except:
+                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong")
                 else:
-                    current_level = current_level[index]
+                    try:
+                        current_level = current_level[index]
+                    except:
+                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong")
             else:
                 raise ValueError("set_value_into_nested_structure failed: "
                                  "invalid data_structure type or invalid index")
@@ -438,7 +444,11 @@ class BaseDataProcessor:
             grad_data_info = self.analyze_element(grad)
             self.save_name = None
             full_index = [grad_name_with_count] + indexes
-            self.set_value_into_nested_structure(nested_data_structure, full_index, grad_data_info)
+            try:
+                self.set_value_into_nested_structure(nested_data_structure, full_index, grad_data_info)
+            except (ValueError, IndexError) as e:
+                logger.warning(f"error occured while recording statistics of {grad_name_with_count} variable, "
+                               f"skip current recording, detailed infomation: {e}")
             return grad
         wrap_register_hook_single_element = partial(self.register_hook_single_element, hook_fn=hook_fn)
         self.recursive_apply_transform(variable, wrap_register_hook_single_element)

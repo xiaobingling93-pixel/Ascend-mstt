@@ -15,8 +15,7 @@
 
 import functools
 import os
-from collections import namedtuple
-from collections import defaultdict
+from collections import namedtuple, defaultdict
 
 import torch
 from msprobe.core.common.const import Const
