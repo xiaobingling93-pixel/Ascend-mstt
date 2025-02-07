@@ -165,13 +165,13 @@ class BaseDataProcessor:
                 if is_last:
                     try:
                         current_level[index] = value
-                    except:
-                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong")
+                    except Exception as e:
+                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong") from e
                 else:
                     try:
                         current_level = current_level[index]
-                    except:
-                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong")
+                    except Exception as e:
+                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong") from e
             else:
                 raise ValueError("set_value_into_nested_structure failed: "
                                  "invalid data_structure type or invalid index")
