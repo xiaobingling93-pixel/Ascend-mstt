@@ -215,7 +215,7 @@ class TrainerMon:
             self.group_mates = dist.get_process_group_ranks(self.process_group)
         else:
             self.rank = 0
-            self.tensorboard_dir = os.path.join(self.output_base_dir, f"{cur_time}-{self.unique_id}")
+            self.tensorboard_dir = os.path.join(self.output_base_dir, f"{cur_time}-rank{self.rank}-{self.unique_id}")
             self.pp_stage = 0
             self.group_mates = [0]
 
