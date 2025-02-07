@@ -172,6 +172,7 @@ class PrecisionDebugger:
             return
         instance.service.save(variable, name, save_backward)
 
+
 def module_dump(module, dump_name):
     if not isinstance(module, torch.nn.Module):
         raise MsprobeException(

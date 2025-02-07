@@ -160,7 +160,7 @@ class BaseDataProcessor:
         for i, index in enumerate(indexes):
             valid_for_list = isinstance(current_level, list) and isinstance(index, int) and len(current_level) > index
             valid_for_dict = isinstance(current_level, dict) and index in current_level
-            is_last = i == len(indexes)-1
+            is_last = i == len(indexes) - 1
             if valid_for_dict or valid_for_list:
                 if is_last:
                     current_level[index] = value
@@ -279,6 +279,7 @@ class BaseDataProcessor:
         if cls.is_hookable_element(element):
             indexes = copy.deepcopy(suffix_stack)
             wrap_hook_fn = partial(hook_fn, indexes=indexes)
+
             def real_hook_fn(grad):
                 return wrap_hook_fn(grad)
             element.register_hook(real_hook_fn)

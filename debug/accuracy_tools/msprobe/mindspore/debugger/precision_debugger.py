@@ -215,16 +215,6 @@ class PrecisionDebugger:
         instance.gm.monitor(opt)
 
     @classmethod
-    def _need_service(cls):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
-            return False
-        else:
-            return instance.config.task != Const.FREE_BENCHMARK and not instance._is_graph_dump(instance.config)
-
-    @classmethod
     def save(cls, variable, name, save_backward=True):
         instance = cls._instance
         if not instance:
@@ -241,3 +231,13 @@ class PrecisionDebugger:
             if not instance.service:
                 instance.service = Service(instance.config)
             instance.service.save(variable, name, save_backward)
+
+    @classmethod
+    def _need_service(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
+            return False
+        else:
+            return instance.config.task != Const.FREE_BENCHMARK and not instance._is_graph_dump(instance.config)
