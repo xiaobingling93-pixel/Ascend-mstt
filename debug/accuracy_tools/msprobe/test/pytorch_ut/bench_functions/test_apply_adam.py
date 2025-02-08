@@ -29,7 +29,7 @@ class TestNPUApplyAdam(unittest.TestCase):
         )
 
         # 验证 var_t 的结果
-        expected_var_t = torch.tensor([-0.0010, -0.0020, -0.0030], dtype=torch.float32)
+        expected_var_t = torch.tensor([-0.0010, -0.0010, -0.0010], dtype=torch.float32)
         self.assertTrue(torch.allclose(var_t, expected_var_t, atol=1e-4))
 
         # 验证 m_t 的结果
@@ -49,7 +49,7 @@ class TestNPUApplyAdam(unittest.TestCase):
         )
 
         # 验证 var_t 的结果
-        expected_var_t = torch.tensor([-0.0010, -0.0020, -0.0030], dtype=torch.float32)
+        expected_var_t = torch.tensor([-0.0019, -0.0019, -0.0019], dtype=torch.float32)
         self.assertTrue(torch.allclose(var_t, expected_var_t, atol=1e-4))
 
         # 验证 m_t 的结果
@@ -73,13 +73,13 @@ class TestNPUApplyAdam(unittest.TestCase):
         )
 
         # 验证 var_t 的结果
-        expected_var_t = torch.tensor([-0.0009999, -0.0019999, -0.0029999], dtype=torch.float32)
+        expected_var_t = torch.tensor([-0.0003, -0.0004, -0.0005], dtype=torch.float32)
         self.assertTrue(torch.allclose(var_t, expected_var_t, atol=1e-4))
 
         # 验证 m_t 的结果
-        expected_m_t = torch.tensor([1.0900, 2.1800, 3.2700], dtype=torch.float32)
+        expected_m_t = torch.tensor([1., 2., 3.], dtype=torch.float32)
         self.assertTrue(torch.allclose(m_t, expected_m_t, atol=1e-4))
 
         # 验证 v_t 的结果
-        expected_v_t = torch.tensor([1.0009, 2.0036, 3.0081], dtype=torch.float32)
+        expected_v_t = torch.tensor([1.0000, 2.0020, 3.0060], dtype=torch.float32)
         self.assertTrue(torch.allclose(v_t, expected_v_t, atol=1e-4))

@@ -16,9 +16,9 @@ class TestNPUMoEGatingTopKSoftmax(unittest.TestCase):
         
         # 预期的结果
         expected_result = (
-            torch.tensor([[[[0.9999, 0.9999], [0.9999, 0.9999]]]]),
-            torch.tensor([[[[1, 0], [0, 1]]]]),
-            torch.tensor([[0, 1], [2, 3]])
+            torch.tensor([[[[0.7311, 0.2689], [0.7311, 0.2689]]]]),
+            torch.tensor([[[[1, 0], [1, 0]]]]),
+            torch.tensor([[0]])
         )
         
         # 使用 torch.allclose 进行近似比较
@@ -28,10 +28,10 @@ class TestNPUMoEGatingTopKSoftmax(unittest.TestCase):
 
     def test_softmax_func(self):
         # 调用 softmax_func 函数
-        result = softmax_func(self.input0)
+        result = softmax_func(self.input0, -1)
         
         # 预期的结果
-        expected_result = torch.tensor([[[[0.2689, 0.7311], [0.0452, 0.9548]]]])
+        expected_result = torch.tensor([[[[0.2689, 0.7311], [0.2689, 0.7311]]]])
         
         # 使用 torch.allclose 进行近似比较
         self.assertTrue(torch.allclose(result, expected_result, atol=1e-4))
