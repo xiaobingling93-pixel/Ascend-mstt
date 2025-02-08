@@ -82,7 +82,7 @@ class GlobalContext:
     def __init__(self):
         self.is_constructed = True
         self.dump_data_dir = ""
-        self.framework = "mindspore"
+        self.framework = Const.MS_FRAMEWORK
 
     def init(self, is_constructed, dump_data_dir, framework):
         self.is_constructed = is_constructed

@@ -1,7 +1,22 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 from pathlib import Path
 
+from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 import sys
 import torch as mindtorch
 from torch import Tensor as mindtorch_tensor
@@ -36,6 +51,7 @@ def is_mindtorch():
     tensor = torch.tensor(0.0)
     if isinstance(tensor, Tensor):
         mindtorch_check_result = True
+
     return mindtorch_check_result
 
 
@@ -45,9 +61,6 @@ def remove_torch_related_paths():
     if not is_mindtorch():
         return
     try:
-        # clear_torch_from_sys_modules()
-        # import torch
-        # test_torch = importlib.reload(torch)
         torch = importlib.import_module("torch")
         torch_file = torch.__file__
         print(f"torch.__file__: {torch_file}")
@@ -56,36 +69,24 @@ def remove_torch_related_paths():
         return removed_paths
 
     torch_dir = os.path.dirname(torch_file)
-    print(f"torch 所在目录: {torch_dir}")
 
     torch_dir_path = Path(torch_dir).resolve()
     parent_dir = torch_dir_path.parent
-    print(f"torch 的父目录: {parent_dir}")
 
-    paths_to_remove = [
-        str(parent_dir),
-    ]
+    paths_to_remove = str(parent_dir)
 
-    for path in paths_to_remove:
-        try:
-            path_resolved = str(Path(path).resolve())
-        except Exception:
-            print(f"无法解析路径 '{path}'，跳过。")
-            continue
+    try:
+        path_resolved = str(Path(paths_to_remove).resolve())
+    except Exception:
+        print(f"无法解析路径 '{paths_to_remove}'，跳过。")
 
-        if path_resolved in sys.path:
-            index = sys.path.index(path_resolved)
-            removed_paths.append((path_resolved, index))
-            sys.path.pop(index)
-            print(f"已从 sys.path 中删除 '{path_resolved}' (索引: {index})")
-        else:
-            print(f"路径 '{path_resolved}' 不在 sys.path 中，无需删除。")
+    if path_resolved in sys.path:
+        index = sys.path.index(path_resolved)
+        removed_paths.append((path_resolved, index))
+        sys.path.pop(index)
 
     return removed_paths
 
-
-
-# import gc
 
 # 清除 sys.modules 中与 torch 相关的模块
 def clear_torch_from_sys_modules():
@@ -98,6 +99,16 @@ def clear_torch_from_sys_modules():
     # print(f"已从 sys.modules 中删除模块 '{module}'")
 
 
+is_valid_pt_mt_env = True
+is_mt_env = True
+
+def invalid_pt_mt_env():
+    global is_valid_pt_mt_env
+    is_valid_pt_mt_env = False
+
+def invalid_mt_env():
+    global is_mt_env
+    is_mt_env = False
 # 新增函数：删除 torch 路径的主流程
 def delete_torch_paths():
     print("初始 sys.path:")
@@ -105,8 +116,14 @@ def delete_torch_paths():
         print(f"{i}: {path}")
 
     removed_paths_total = []
+    if not is_mindtorch():
+        invalid_pt_mt_env()
+        invalid_mt_env()
 
-    while True:
+    clear_torch_from_sys_modules()
+
+    count_delete_env_path = 0
+    for count_delete_env_path in range(MsCompareConst.MAX_RECURSION_DEPTH):
         print("\n开始删除与 torch 相关的路径...\n")
         if is_mindtorch():
             print("\nmindtorch 仍然可导入，继续删除相关路径...")
@@ -128,6 +145,14 @@ def delete_torch_paths():
             print(f"{i}: {path}")
         clear_torch_from_sys_modules()
 
+    if count_delete_env_path >= MsCompareConst.MAX_RECURSION_DEPTH - 1:
+        raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment, and ensure "
+                        f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
+
+    if is_mindtorch():
+        invalid_pt_mt_env()
+    clear_torch_from_sys_modules()
+
     return removed_paths_total
 
 
@@ -143,7 +168,8 @@ delete_torch_paths()
 import importlib
 import gc
 gc.collect()
-torch = importlib.import_module("torch")
+# torch = importlib.import_module("torch")
+import torch
 import torch_npu
 import torch.distributed as distributed
 from torch import Tensor

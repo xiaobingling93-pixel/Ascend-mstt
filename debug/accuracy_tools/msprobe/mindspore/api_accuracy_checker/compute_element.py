@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import os
 
 import mindspore
@@ -35,11 +34,13 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import (api_info_type_s
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 from msprobe.mindspore.common.log import logger
 
-import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as torch_module
+import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as env_module
 
-mindtorch = torch_module.mindtorch
-# import torch
-torch = torch_module.torch
+if env_module.is_mt_env:
+    mindtorch = env_module.mindtorch
+    torch = env_module.torch
+else:
+    import torch
 
 
 class MstensorMetaData:

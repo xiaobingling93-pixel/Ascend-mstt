@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import mindspore
-import torch
 from mindspore import ops
 from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
@@ -24,18 +22,21 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
 from msprobe.mindspore.common.log import logger
 
-import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as torch_module
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch as mindtorch
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_tensor as mindtorch_tensor
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_func as mindtorch_func
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_npu as mindtorch_npu
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_dist as mindtorch_dist
 
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch as torch
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import Tensor as Tensor
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch_npu as torch_npu
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import functional as functional
-from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import distributed as distributed
+from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
+
+if torch_mindtorch_importer.is_mt_env:
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_tensor
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_func
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_npu
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_dist
+
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch_npu
+else:
+    import torch
+
 
 
 # test
@@ -125,19 +126,20 @@ class ApiRunner:
         Description:
             run mindspore.mint/torch api
         '''
+
         api_type_str, api_sub_name = self.get_info_from_name(api_name_str, api_platform)
         api_instance = self.get_api_instance(api_type_str, api_sub_name, api_platform)
 
         return self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
 
     @staticmethod
-    def get_info_from_name(api_name_str, api_platform="mindspore"):
+    def get_info_from_name(api_name_str, api_platform = Const.MS_FRAMEWORK):
         '''
         Args:
             api_name_str: str, the trimmed key of data dict in api_info.json. e.g. "MintFunctional.relu.0"
 
         Return:
-            api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Torch", "Torch_npu"]
+            api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Torch", "Functional"]
             api_sub_name: str, e.g. "relu"
         '''
         api_name_list = api_name_str.split(Const.SEP)
@@ -145,11 +147,11 @@ class ApiRunner:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] and api_platform == "mindspore":
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] and api_platform == Const.MS_FRAMEWORK:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
-        if api_type_str not in MsCompareConst.VALID_API_TYPES and api_platform == "mindtorch":
+        if api_type_str not in MsCompareConst.MT_VALID_API_TYPES and api_platform == Const.MT_FRAMEWORK:
             err_msg = f"ApiRunner.get_info_from_name failed: not torch, torch_npu or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         return api_type_str, api_sub_name

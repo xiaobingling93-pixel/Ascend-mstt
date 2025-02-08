@@ -543,6 +543,7 @@ class MsCompareConst:
     TENSOR_API = "Tensor"
 
     API_NAME_STR_LENGTH = 4
+    MAX_RECURSION_DEPTH = 20
 
     # Mindtorch api_info field
     MINDTORCH_TENSOR = "Tensor"
@@ -551,13 +552,11 @@ class MsCompareConst:
     MINDTORCH_NPU = "NPU"
     MINDTORCH_DIST = "Distributed"
 
-    VALID_API_TYPES = [
+
+
+    MT_VALID_API_TYPES = [
         MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
     ]
-    # framework
-    FRAMEWORK_TORCH = "torch"
-    FRAMEWORK_MINDSPORE = "mindspore"
-    FRAMEWORK_MINDTORCH = "mindtorch"
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"

@@ -26,6 +26,7 @@ from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
@@ -62,7 +63,7 @@ class ApiAccuracyChecker:
 
     @staticmethod
     def run_and_compare_helper(api_info, api_name_str, api_input_aggregation, forward_or_backward):
-        '''
+        """
         Args:
             api_info: ApiInfo
             api_name_str: str
@@ -76,7 +77,7 @@ class ApiAccuracyChecker:
             get mindspore api output, run torch api and get output.
             compare output.
             record compare result.
-        '''
+        """
         # get output
         if global_context.get_is_constructed():
             # constructed situation, need use constructed input to run mindspore api getting tested_output
@@ -112,8 +113,8 @@ class ApiAccuracyChecker:
                 err_msg = ""
             else:
                 status = CompareConst.ERROR
-                err_msg = compare_result_dict.get(CompareConst.COSINE).err_msg + \
-                          compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg
+                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
+                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
             basic_info_status = \
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
@@ -121,13 +122,13 @@ class ApiAccuracyChecker:
 
     @staticmethod
     def prepare_api_input_aggregation(api_info, forward_or_backward=Const.FORWARD):
-        '''
+        """
         Args:
             api_info: ApiInfo
             forward_or_backward: str
         Returns:
             ApiInputAggregation
-        '''
+        """
         forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
         kwargs = api_info.get_kwargs()
         if forward_or_backward == Const.FORWARD:
@@ -153,14 +154,14 @@ class ApiAccuracyChecker:
         real_api_str = Const.SEP.join(api_name_str_list[1:-2])
         api_list = load_yaml(yaml_path)
         supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
-        # print(f"global_context.get_framework:{global_context.get_framework()}")
-        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) and global_context.get_framework() == "mindspore":
-            print(f"api_name_str:{api_name_str}")
+        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
-        if api_type_str in MsCompareConst.VALID_API_TYPES and global_context.get_framework() == "mindtorch":
-            # print(f"api_name_str:{api_name_str}")
+        if api_type_str in MsCompareConst.VALID_API_TYPES \
+                and global_context.get_framework() == Const.MT_FRAMEWORK:
             return True
-        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list and global_context.get_framework() == "mindspore":
+        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
         return False
 
@@ -173,17 +174,18 @@ class ApiAccuracyChecker:
                                             "task field in api_info.json", accepted_type=str,
                                             accepted_value=(MsCompareConst.STATISTICS_TASK,
                                                             MsCompareConst.TENSOR_TASK))
-        framework = "mindspore"
         try:
             framework = check_and_get_from_json_dict(api_info_dict, MsCompareConst.FRAMEWORK,
-                                                "framework field in api_info.json",
-                                                     accepted_type=str,
-                                                accepted_value=(MsCompareConst.FRAMEWORK_TORCH,
-                                                                MsCompareConst.FRAMEWORK_MINDSPORE,
-                                                                MsCompareConst.FRAMEWORK_MINDTORCH))
+                                            "framework field in api_info.json",accepted_type=str,
+                                            accepted_value=(Const.MS_FRAMEWORK,
+                                                            Const.MT_FRAMEWORK))
             # print(f"framework:{framework}")
         except KeyError:
-            framework = "mindspore"
+            framework = Const.MS_FRAMEWORK
+
+        if framework == Const.MS_FRAMEWORK and not torch_mindtorch_importer.is_valid_pt_mt_env:
+            raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment")
+
         is_constructed = task == MsCompareConst.STATISTICS_TASK
         if not is_constructed:
             dump_data_dir = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DUMP_DATA_DIR_FIELD,
@@ -228,7 +230,8 @@ class ApiAccuracyChecker:
             return process_result_packet
 
         try:
-            forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
+            forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation,
+                                                              Const.FORWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when running and comparing {api_name_str} forward api. "
                            f"Detailed exception information: {e}.")
@@ -244,9 +247,9 @@ class ApiAccuracyChecker:
         """处理反向检查"""
         if not api_info.check_backward_info():
             logger.debug(f"api: {api_name_str} is lack of backward information, skipping backward check.")
-            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.API_NOT_FOUND,
-                                                         result=None,
-                                                         err_msg=f"backward info of {api_name_str} is not found")
+            process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.API_NOT_FOUND,
+                                                        result=None,
+                                                        err_msg=f"backward info of {api_name_str} is not found")
             return process_result_packet
 
         try:
@@ -254,21 +257,22 @@ class ApiAccuracyChecker:
         except Exception as e:
             logger.warning(f"Exception occurs when getting inputs for {api_name_str} backward api. "
                            f"Skipping backward check. Detailed exception information: {e}.")
-            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
-                                                         result=None, err_msg=f"{e}")
+            process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                        result=None, err_msg=f"{e}")
             return process_result_packet
 
         try:
-            backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
+            backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation,
+                                                               Const.BACKWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when running and comparing {api_name_str} backward api. "
                            f"Detailed exception information: {e}.")
-            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
-                                                         result=None, err_msg=f"{e}")
+            process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                        result=None, err_msg=f"{e}")
             return process_result_packet
 
-        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
-                                                     result=backward_output_list, err_msg="")
+        process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
+                                                    result=backward_output_list, err_msg="")
         return process_result_packet
 
     def run_and_compare(self):
@@ -291,4 +295,3 @@ class ApiAccuracyChecker:
                 self.data_manager.record_exception_skip(api_name_str, Const.BACKWARD, process_result_packet.err_msg)
 
             self.data_manager.save_results(api_name_str)
-
