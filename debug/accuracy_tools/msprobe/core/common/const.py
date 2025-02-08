@@ -640,6 +640,7 @@ class MonitorConst:
     OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
 
     EXP_AVG = "exp_avg"
+    EXP_AVG_SQ = "exp_avg_sq"
     EFXP_AVG_SQ = "efxp_avg_sq"
 
     ANOMALY_JSON = "anomaly.json"
