@@ -106,7 +106,7 @@ def remove_torch_related_paths():
 
     return removed_paths
 
-    return removed_paths
+    # return removed_paths
 
 
 # 清除 sys.modules 中与 torch 相关的模块
