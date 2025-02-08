@@ -457,7 +457,6 @@ class TestGradMonitor(unittest.TestCase):
                                             (7, 0.28274500370025635),
                                             (8, 0.2833530008792877),
                                             (9, 0.2825529873371124)]}
-        print(tb_data, tb_result)
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
 
     
