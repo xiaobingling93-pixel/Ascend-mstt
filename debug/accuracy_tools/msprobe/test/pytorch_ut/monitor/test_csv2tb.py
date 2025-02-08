@@ -141,26 +141,42 @@ class TestGradMonitor(unittest.TestCase):
     def test_actv(self):
         data = parse_step_fn(os.path.join(timestamp_dirpath,"actv_0-2.csv"))
         result = {
-            'vp0:_0': {
-                0: {'input.nans': 0.0,'input.norm': 5.550016,'output.nans': 0.0,'output.norm': 41.842655},
-                1: {'input.nans': 0.0,'input.norm': 5.975112,'output.nans': 0.0,'output.norm': 44.40981},
-                2: {'input.nans': 0.0,'input.norm': 5.789881,'output.nans': 0.0,'output.norm': 43.578354}
+            'vp0:.input:micro0': {
+                0: {'nans': 0.0,'norm': 5.550016},
+                1: {'nans': 0.0,'norm': 5.975112},
+                2: {'nans': 0.0,'norm': 5.789881}
                 },
-            'vp0:linear_0': {
-                0: {'input.nans': 0.0,'input.norm': 5.550016,'output.nans': 0.0,'output.norm': 41.842655},
-                1: {'input.nans': 0.0,'input.norm': 5.975112,'output.nans': 0.0,'output.norm': 44.40981},
-                2: {'input.nans': 0.0,'input.norm': 5.789881,'output.nans': 0.0,'output.norm': 43.578354}
+            'vp0:.output:micro0': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
                 },
-            'vp0:relu_0': {
-                0: {'input.nans': 0.0,'input.norm': 41.842655,'output.nans': 0.0,'output.norm': 41.842655},
-                1: {'input.nans': 0.0,'input.norm': 44.40981,'output.nans': 0.0,'output.norm': 44.40981},
-                2: {'input.nans': 0.0,'input.norm': 43.578354,'output.nans': 0.0,'output.norm': 43.578354}
+            'vp0:linear.input:micro0': {
+                0: {'nans': 0.0,'norm': 5.550016},
+                1: {'nans': 0.0,'norm': 5.975112},
+                2: {'nans': 0.0,'norm': 5.789881}
+                },
+            'vp0:linear.output:micro0': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
+                },
+            'vp0:relu.input:micro0': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
+                },
+            'vp0:relu.output:micro0': {
+                0: {'nans': 0.0,'norm': 41.842655},
+                1: {'nans': 0.0,'norm': 44.40981},
+                2: {'nans': 0.0,'norm': 43.578354}
                 }
             }
         self.assertEqual(dict_equal(data, result), True)
         tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "actv"))
+        print(tb_data)
         tb_result = {
-            'vp0:_0/input.nans': [(0, 0.0),
+            'vp0:.input:micro0/nans': [(0, 0.0),
                                   (1, 0.0),
                                   (2, 0.0),
                                   (3, 0.0),
@@ -170,7 +186,7 @@ class TestGradMonitor(unittest.TestCase):
                                   (7, 0.0),
                                   (8, 0.0),
                                   (9, 0.0)],
-            'vp0:_0/input.norm': [(0, 5.550015926361084),
+            'vp0:.input:micro0/norm': [(0, 5.550015926361084),
                                   (1, 5.975111961364746),
                                   (2, 5.789881229400635),
                                   (3, 6.052319049835205),
@@ -180,7 +196,7 @@ class TestGradMonitor(unittest.TestCase):
                                   (7, 5.477899074554443),
                                   (8, 5.884613990783691),
                                   (9, 5.456457138061523)],
-            'vp0:_0/output.nans': [(0, 0.0),
+            'vp0:.output:micro0/nans': [(0, 0.0),
                                    (1, 0.0),
                                    (2, 0.0),
                                    (3, 0.0),
@@ -190,7 +206,7 @@ class TestGradMonitor(unittest.TestCase):
                                    (7, 0.0),
                                    (8, 0.0),
                                    (9, 0.0)],
-            'vp0:_0/output.norm': [(0, 41.842655181884766),
+            'vp0:.output:micro0/norm': [(0, 41.842655181884766),
                                    (1, 44.40980911254883),
                                    (2, 43.57835388183594),
                                    (3, 45.83631134033203),
@@ -200,7 +216,7 @@ class TestGradMonitor(unittest.TestCase):
                                    (7, 40.200843811035156),
                                    (8, 44.453147888183594),
                                    (9, 40.841522216796875)],
-            'vp0:linear_0/input.nans': [(0, 0.0),
+            'vp0:linear.input:micro0/nans': [(0, 0.0),
                                         (1, 0.0),
                                         (2, 0.0),
                                         (3, 0.0),
@@ -210,7 +226,7 @@ class TestGradMonitor(unittest.TestCase):
                                         (7, 0.0),
                                         (8, 0.0),
                                         (9, 0.0)],
-            'vp0:linear_0/input.norm': [(0, 5.550015926361084),
+            'vp0:linear.input:micro0/norm': [(0, 5.550015926361084),
                                         (1, 5.975111961364746),
                                         (2, 5.789881229400635),
                                         (3, 6.052319049835205),
@@ -220,7 +236,7 @@ class TestGradMonitor(unittest.TestCase):
                                         (7, 5.477899074554443),
                                         (8, 5.884613990783691),
                                         (9, 5.456457138061523)],
-            'vp0:linear_0/output.nans': [(0, 0.0),
+            'vp0:linear.output:micro0/nans': [(0, 0.0),
                                          (1, 0.0),
                                          (2, 0.0),
                                          (3, 0.0),
@@ -230,7 +246,7 @@ class TestGradMonitor(unittest.TestCase):
                                          (7, 0.0),
                                          (8, 0.0),
                                          (9, 0.0)],
-            'vp0:linear_0/output.norm': [(0, 41.842655181884766),
+            'vp0:linear.output:micro0/norm': [(0, 41.842655181884766),
                                          (1, 44.40980911254883),
                                          (2, 43.57835388183594),
                                          (3, 45.83631134033203),
@@ -240,7 +256,7 @@ class TestGradMonitor(unittest.TestCase):
                                          (7, 40.200843811035156),
                                          (8, 44.453147888183594),
                                          (9, 40.841522216796875)],
-            'vp0:relu_0/input.nans': [(0, 0.0),
+            'vp0:relu.input:micro0/nans': [(0, 0.0),
                                       (1, 0.0),
                                       (2, 0.0),
                                       (3, 0.0),
@@ -250,7 +266,7 @@ class TestGradMonitor(unittest.TestCase):
                                       (7, 0.0),
                                       (8, 0.0),
                                       (9, 0.0)],
-            'vp0:relu_0/input.norm': [(0, 41.842655181884766),
+            'vp0:relu.input:micro0/norm': [(0, 41.842655181884766),
                                       (1, 44.40980911254883),
                                       (2, 43.57835388183594),
                                       (3, 45.83631134033203),
@@ -260,7 +276,7 @@ class TestGradMonitor(unittest.TestCase):
                                       (7, 40.200843811035156),
                                       (8, 44.453147888183594),
                                       (9, 40.841522216796875)],
-            'vp0:relu_0/output.nans': [(0, 0.0),
+            'vp0:relu.output:micro0/nans': [(0, 0.0),
                                        (1, 0.0),
                                        (2, 0.0),
                                        (3, 0.0),
@@ -270,7 +286,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, 0.0),
                                        (8, 0.0),
                                        (9, 0.0)],
-            'vp0:relu_0/output.norm': [(0, 41.842655181884766),
+            'vp0:relu.output:micro0/norm': [(0, 41.842655181884766),
                                        (1, 44.40980911254883),
                                        (2, 43.57835388183594),
                                        (3, 45.83631134033203),
@@ -287,27 +303,42 @@ class TestGradMonitor(unittest.TestCase):
         data = parse_step_fn(os.path.join(timestamp_dirpath,"actv_grad_0-2.csv"))
         nan = np.nan
         result = {
-            'vp0:_0': {
-                0: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282843, 'output_grad.nans': 0.0}, 
-                1: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282617, 'output_grad.nans': 0.0}, 
-                2: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282655, 'output_grad.nans': 0.0}
+            'vp0:.input:micro0': {
+                0: {'norm': nan, 'nans': nan}, 
+                1: {'norm': nan, 'nans': nan}, 
+                2: {'norm': nan, 'nans': nan}
                 }, 
-            'vp0:relu_0': {
-                0: {'input_grad.norm': 0.282843, 'input_grad.nans': 0.0, 'output_grad.norm': 0.282843, 'output_grad.nans': 0.0}, 
-                1: {'input_grad.norm': 0.282617, 'input_grad.nans': 0.0, 'output_grad.norm': 0.282617, 'output_grad.nans': 0.0}, 
-                2: {'input_grad.norm': 0.282655, 'input_grad.nans': 0.0, 'output_grad.norm': 0.282655, 'output_grad.nans': 0.0}
+            'vp0:.output:micro0': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
                 }, 
-            'vp0:linear_0': {
-                0: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282843, 'output_grad.nans': 0.0}, 
-                1: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282617, 'output_grad.nans': 0.0}, 
-                2: {'input_grad.norm': nan, 'input_grad.nans': nan, 'output_grad.norm': 0.282655, 'output_grad.nans': 0.0}
+            'vp0:relu.input:micro0': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
+                }, 
+            'vp0:relu.output:micro0': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
+                }, 
+            'vp0:linear.input:micro0': {
+                0: {'norm': nan, 'nans': nan}, 
+                1: {'norm': nan, 'nans': nan}, 
+                2: {'norm': nan, 'nans': nan}
+                },
+            'vp0:linear.output:micro0': {
+                0: {'norm': 0.282843, 'nans': 0.0}, 
+                1: {'norm': 0.282617, 'nans': 0.0}, 
+                2: {'norm': 0.282655, 'nans': 0.0}
                 }
             }
         self.assertEqual(dict_equal(data, result), True)
         
         tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "actv_grad"))
         tb_result = {
-            'vp0:_0/input_grad.nans': [(0, nan),
+            'vp0:.input:micro0/nans': [(0, nan),
                                        (1, nan),
                                        (2, nan),
                                        (3, nan),
@@ -317,7 +348,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, nan),
                                        (8, nan),
                                        (9, nan)],
-            'vp0:_0/input_grad.norm': [(0, nan),
+            'vp0:.input:micro0/norm': [(0, nan),
                                        (1, nan),
                                        (2, nan),
                                        (3, nan),
@@ -327,7 +358,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, nan),
                                        (8, nan),
                                        (9, nan)],
-            'vp0:_0/output_grad.nans': [(0, 0.0),
+            'vp0:.output:micro0/nans': [(0, 0.0),
                                         (1, 0.0),
                                         (2, 0.0),
                                         (3, 0.0),
@@ -337,7 +368,7 @@ class TestGradMonitor(unittest.TestCase):
                                         (7, 0.0),
                                         (8, 0.0),
                                         (9, 0.0)],
-            'vp0:_0/output_grad.norm': [(0, 0.2828429937362671),
+            'vp0:.output:micro0/norm': [(0, 0.2828429937362671),
                                         (1, 0.2826170027256012),
                                         (2, 0.2826550006866455),
                                         (3, 0.2828519940376282),
@@ -347,7 +378,7 @@ class TestGradMonitor(unittest.TestCase):
                                         (7, 0.28274500370025635),
                                         (8, 0.2833530008792877),
                                         (9, 0.2825529873371124)],
-            'vp0:linear_0/input_grad.nans': [(0, nan),
+            'vp0:linear.input:micro0/nans': [(0, nan),
                                              (1, nan),
                                              (2, nan),
                                              (3, nan),
@@ -357,7 +388,7 @@ class TestGradMonitor(unittest.TestCase):
                                              (7, nan),
                                              (8, nan),
                                              (9, nan)],
-            'vp0:linear_0/input_grad.norm': [(0, nan),
+            'vp0:linear.input:micro0/norm': [(0, nan),
                                              (1, nan),
                                              (2, nan),
                                              (3, nan),
@@ -367,7 +398,7 @@ class TestGradMonitor(unittest.TestCase):
                                              (7, nan),
                                              (8, nan),
                                              (9, nan)],
-            'vp0:linear_0/output_grad.nans': [(0, 0.0),
+            'vp0:linear.output:micro0/nans': [(0, 0.0),
                                               (1, 0.0),
                                               (2, 0.0),
                                               (3, 0.0),
@@ -377,7 +408,7 @@ class TestGradMonitor(unittest.TestCase):
                                               (7, 0.0),
                                               (8, 0.0),
                                               (9, 0.0)],
-            'vp0:linear_0/output_grad.norm': [(0, 0.2828429937362671),
+            'vp0:linear.output:micro0/norm': [(0, 0.2828429937362671),
                                               (1, 0.2826170027256012),
                                               (2, 0.2826550006866455),
                                               (3, 0.2828519940376282),
@@ -387,7 +418,7 @@ class TestGradMonitor(unittest.TestCase):
                                               (7, 0.28274500370025635),
                                               (8, 0.2833530008792877),
                                               (9, 0.2825529873371124)],
-            'vp0:relu_0/input_grad.nans': [(0, 0.0),
+            'vp0:relu.input:micro0/nans': [(0, 0.0),
                                            (1, 0.0),
                                            (2, 0.0),
                                            (3, 0.0),
@@ -397,7 +428,7 @@ class TestGradMonitor(unittest.TestCase):
                                            (7, 0.0),
                                            (8, 0.0),
                                            (9, 0.0)],
-            'vp0:relu_0/input_grad.norm': [(0, 0.2828429937362671),
+            'vp0:relu.input:micro0/norm': [(0, 0.2828429937362671),
                                            (1, 0.2826170027256012),
                                            (2, 0.2826550006866455),
                                            (3, 0.2828519940376282),
@@ -407,7 +438,7 @@ class TestGradMonitor(unittest.TestCase):
                                            (7, 0.28274500370025635),
                                            (8, 0.2833530008792877),
                                            (9, 0.2825529873371124)],
-            'vp0:relu_0/output_grad.nans': [(0, 0.0),
+            'vp0:relu.output:micro0/nans': [(0, 0.0),
                                             (1, 0.0),
                                             (2, 0.0),
                                             (3, 0.0),
@@ -417,7 +448,7 @@ class TestGradMonitor(unittest.TestCase):
                                             (7, 0.0),
                                             (8, 0.0),
                                             (9, 0.0)],
-            'vp0:relu_0/output_grad.norm': [(0, 0.2828429937362671),
+            'vp0:relu.output:micro0/norm': [(0, 0.2828429937362671),
                                             (1, 0.2826170027256012),
                                             (2, 0.2826550006866455),
                                             (3, 0.2828519940376282),

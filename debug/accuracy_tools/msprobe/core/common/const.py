@@ -626,27 +626,29 @@ class MonitorConst:
     RULE_NAME = ['AnomalyTurbulence']
 
     SLICE_SIZE = 20480
+    # used for name
     DOT = "."
-    VPP_SEP = ":"
-    ACTV_IN = "input"
-    ACTV_OUT = "output"
-    ACTVGRAD_IN = "input_grad"
-    ACTVGRAD_OUT = "output_grad"
+    NAME_SEP = ":"
+    INPUT_GRAD = "input_grad"
+    OUTPUT_GRAD = "output_grad"
+    # used for tasks
+    ACTV = "actv"
+    ACTVGRAD = "actv_grad"
     POST_GRAD = "post_grad"
     PRE_GRAD = "pre_grad"
     ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
-    OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
-
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
-    EFXP_AVG_SQ = "efxp_avg_sq"
+    PARAM = "param"
 
+    CSV_HEADER = ["vpp_stage", "name", "step"]
+    CSV_HEADER_XY = ["vpp_stage", "name", "step", "micro_step"]
+    OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
     ANOMALY_JSON = "anomaly.json"
     ANALYSE_JSON = "anomaly_analyse.json"
     TENSORBOARD = "tensorboard"
     CSV = "csv"
     API = "api"
-    OPS_START_INDEX = 3
-    HEADER_NAME_INDEX = 1
+    HEADER_NAME = 'name'

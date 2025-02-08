@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 import pandas as pd
 import torch
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.const import MonitorConst, Const
 from torch import distributed as dist
 
 from msprobe.pytorch.monitor.module_hook import CommunicationContext, GradContext, ModuleHookContext, \
@@ -73,13 +73,13 @@ class TestModuleHook(unittest.TestCase):
         self.assertTrue(os.path.exists(actv_grad_0_csv))
         # validate columns and lines
         actv_0 = pd.read_csv(actv_0_csv)
-        expect_columns = ['vpp_stage', 'module_name', 'step', 'input.norm', 'input.nans', 'output.norm', 'output.nans']
+        expect_columns = ['vpp_stage', 'name', 'step', 'micro_step', 'norm', 'nans']
         self.assertListEqual(list(actv_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([3, 7]))
+        self.assertEqual(actv_0.shape, tuple([6, 6]))
         actv_grad_0 = pd.read_csv(actv_grad_0_csv)
-        expect_columns = ['vpp_stage', 'module_name', 'step', 'input_grad.norm', 'input_grad.nans', 'output_grad.norm', 'output_grad.nans']
+        expect_columns = ['vpp_stage', 'name', 'step', 'micro_step', 'norm', 'nans']
         self.assertListEqual(list(actv_grad_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([3, 7]))
+        self.assertEqual(actv_0.shape, tuple([6, 6]))
 
     def test_wg_distribution(self):
         self.get_dist_mock(False)
@@ -96,7 +96,7 @@ class TestModuleHook(unittest.TestCase):
         self.assertTrue(os.path.exists(grad_reduced_0_csv))
         self.assertTrue(os.path.exists(grad_unreduced_0_csv))
         # validate columns and lines
-        expect_columns = ["vpp_stage", "param_name", "step", "norm"]
+        expect_columns = ["vpp_stage", "name", "step", "norm"]
         grad_reduced_0 = pd.read_csv(grad_reduced_0_csv)
         self.assertListEqual(list(grad_reduced_0.columns), expect_columns)
         self.assertEqual(grad_reduced_0.shape, tuple([2, 4]))
@@ -119,7 +119,7 @@ class TestModuleHook(unittest.TestCase):
         self.assertTrue(os.path.exists(exp_avg_1_csv))
         self.assertTrue(os.path.exists(exp_avg_sq_1_csv))
         # validate columns and lines
-        expect_columns = ["vpp_stage", "param_name", "step", "norm"]
+        expect_columns = ["vpp_stage", "name", "step", "norm"]
         exp_avg_1 = pd.read_csv(exp_avg_1_csv)
         self.assertListEqual(list(exp_avg_1.columns), expect_columns)
         self.assertEqual(exp_avg_1.shape, tuple([2, 4]))
@@ -272,28 +272,28 @@ class TestModuleHookContext(unittest.TestCase):
         self.module_name = "test_module"
         self.context = ModuleHookContext(self.module_name)
         self.context.struct = {
-            MonitorConst.ACTV_IN: {
+            Const.INPUT: {
                 "config": "tuple[1]",
                 "0": "size=(2, 784), dtype=torch.float32",
             },
-            MonitorConst.ACTV_OUT: {
+            Const.OUTPUT: {
                 "config": "tensor",
                 "tensor": "size=(2, 10), dtype=torch.float32"
             },
-            MonitorConst.ACTVGRAD_IN: {
+            MonitorConst.INPUT_GRAD: {
                 "config": "tuple[1]",
                 "0": "size=(2, 784), dtype=torch.float32"
             },
-            MonitorConst.ACTVGRAD_OUT: {
+            MonitorConst.OUTPUT_GRAD: {
                 "config": "tuple[1]",
                 "0": "size=(2, 10), dtype=torch.float32"
             }
         }
         self.target_config = {
             self.module_name: {
-                MonitorConst.ACTV_IN: "tuple[1]:0",
-                MonitorConst.ACTV_OUT: "tensor",
-                MonitorConst.ACTVGRAD_IN: "tuple[1]:0"
+                Const.INPUT: "tuple[1]:0",
+                Const.OUTPUT: "tensor",
+                MonitorConst.INPUT_GRAD: "tuple[1]:0"
             }
         }
 
@@ -304,27 +304,27 @@ class TestModuleHookContext(unittest.TestCase):
                       "key(invalid_key) error, valid_key: ['input', 'output', 'input_grad', 'output_grad']")
 
     def test_set_format_by_arg_module_name_in_target_config(self):
-        self.context.set_format_by_arg(MonitorConst.ACTV_IN, self.target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_IN], "tuple[1]:0")
-        self.context.set_format_by_arg(MonitorConst.ACTV_OUT, self.target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_OUT], "tensor")
-        self.context.set_format_by_arg(MonitorConst.ACTVGRAD_IN, self.target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTVGRAD_IN], "tuple[1]:0")
-        self.context.set_format_by_arg(MonitorConst.ACTVGRAD_OUT, self.target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTVGRAD_OUT], "tuple[1]")
+        self.context.set_format_by_arg(Const.INPUT, self.target_config)
+        self.assertEqual(self.context.format_by_arg[Const.INPUT], "tuple[1]:0")
+        self.context.set_format_by_arg(Const.OUTPUT, self.target_config)
+        self.assertEqual(self.context.format_by_arg[Const.OUTPUT], "tensor")
+        self.context.set_format_by_arg(MonitorConst.INPUT_GRAD, self.target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.INPUT_GRAD], "tuple[1]:0")
+        self.context.set_format_by_arg(MonitorConst.OUTPUT_GRAD, self.target_config)
+        self.assertEqual(self.context.format_by_arg[MonitorConst.OUTPUT_GRAD], "tuple[1]")
 
     def test_set_format_by_arg_module_name_not_in_target_config(self):
         target_config = {}
-        self.context.set_format_by_arg(MonitorConst.ACTV_IN, target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_IN], "tuple[1]")
-        self.context.set_format_by_arg(MonitorConst.ACTV_OUT, target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.ACTV_OUT], "tensor")
+        self.context.set_format_by_arg(Const.INPUT, target_config)
+        self.assertEqual(self.context.format_by_arg[Const.INPUT], "tuple[1]")
+        self.context.set_format_by_arg(Const.OUTPUT, target_config)
+        self.assertEqual(self.context.format_by_arg[Const.OUTPUT], "tensor")
 
     @patch('msprobe.pytorch.monitor.module_hook.logger')
     def test_set_format_by_arg_target_module_config_error(self, mock_logger):
-        target_config = {self.module_name: {MonitorConst.ACTV_IN: 123}}
-        self.context.set_format_by_arg(MonitorConst.ACTV_IN, target_config)
-        self.assertIsNone(self.context.format_by_arg.get(MonitorConst.ACTV_IN))
+        target_config = {self.module_name: {Const.INPUT: 123}}
+        self.context.set_format_by_arg(Const.INPUT, target_config)
+        self.assertIsNone(self.context.format_by_arg.get(Const.INPUT))
         mock_logger.warning_on_rank_0.assert_called_once()
 
 
