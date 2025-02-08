@@ -73,17 +73,38 @@ def remove_torch_related_paths():
     torch_dir_path = Path(torch_dir).resolve()
     parent_dir = torch_dir_path.parent
 
-    paths_to_remove = str(parent_dir)
+    # paths_to_remove = str(parent_dir)
+    #
+    # try:
+    #     path_resolved = str(Path(paths_to_remove).resolve())
+    # except Exception:
+    #     print(f"无法解析路径 '{paths_to_remove}'，跳过。")
+    #
+    # if path_resolved in sys.path:
+    #     index = sys.path.index(path_resolved)
+    #     removed_paths.append((path_resolved, index))
+    #     sys.path.pop(index)
 
-    try:
-        path_resolved = str(Path(paths_to_remove).resolve())
-    except Exception:
-        print(f"无法解析路径 '{paths_to_remove}'，跳过。")
+    paths_to_remove = [
+        str(parent_dir),
+    ]
 
-    if path_resolved in sys.path:
-        index = sys.path.index(path_resolved)
-        removed_paths.append((path_resolved, index))
-        sys.path.pop(index)
+    for path in paths_to_remove:
+        try:
+            path_resolved = str(Path(path).resolve())
+        except Exception:
+            print(f"无法解析路径 '{path}'，跳过。")
+            continue
+
+        if path_resolved in sys.path:
+            index = sys.path.index(path_resolved)
+            removed_paths.append((path_resolved, index))
+            sys.path.pop(index)
+            print(f"已从 sys.path 中删除 '{path_resolved}' (索引: {index})")
+        else:
+            print(f"路径 '{path_resolved}' 不在 sys.path 中，无需删除。")
+
+    return removed_paths
 
     return removed_paths
 
