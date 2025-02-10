@@ -38,32 +38,14 @@ else:
     import torch
 
 
-
-# test
-import inspect
-import importlib
-print(f"\ntorch.__file__ 重新验证走进没api_runner: {torch.__file__}")
-# print(f"\napi_runnermindtorch.__file__ 重新验证: {mindtorch.__file__}")
-print(f"\napi_runnermindtorch.__file__ 重新验证: {mindtorch.__file__}")
-print(f"\napi_runnertorch_npu.__file__ 重新验证: {torch_npu.__file__}")
-print(f"\napi_runnermindtorch_npu.__file__ 重新验证: {mindtorch_npu.__file__}")
-
-module_name = mindtorch_tensor.__module__
-file_path = inspect.getfile(importlib.import_module(module_name))
-print(f"api_runner Module {module_name} file path: {file_path}")
-global_mindtorch = True
-
-
-
-
 class ApiInputAggregation:
     def __init__(self, inputs, kwargs, gradient_inputs) -> None:
-        '''
+        """
         Args:
             inputs: List[ComputeElement]
             kwargs: dict{str: ComputeElement}
             gradient_inputs: Union[List[ComputeElement], None]
-        '''
+        """
         self.inputs = inputs
         self.kwargs = kwargs
         self.gradient_inputs = gradient_inputs

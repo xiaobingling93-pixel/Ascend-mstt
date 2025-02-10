@@ -179,7 +179,6 @@ class ApiAccuracyChecker:
                                             "framework field in api_info.json",accepted_type=str,
                                             accepted_value=(Const.MS_FRAMEWORK,
                                                             Const.MT_FRAMEWORK))
-            # print(f"framework:{framework}")
         except KeyError:
             framework = Const.MS_FRAMEWORK
 

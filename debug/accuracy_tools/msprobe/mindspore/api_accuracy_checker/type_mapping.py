@@ -15,18 +15,17 @@
 
 import mindspore
 import numpy as np
-# import torch
 from mindspore._c_expression import typing
 from mindspore.common import dtype as mstype
 
-import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as torch_module
+from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 
-mindtorch = torch_module.mindtorch
-print(f"\ntype_maping_torch.__file__ 重新验证: {mindtorch.__file__}")
-torch = torch_module.torch
+if torch_mindtorch_importer.is_mt_env:
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
 
-# import torch
-# torch = torch_module.torch
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
+else:
+    import torch
 
 INT8 = "Int8"
 UINT8 = "UInt8"

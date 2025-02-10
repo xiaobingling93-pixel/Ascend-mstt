@@ -88,7 +88,6 @@ class GlobalContext:
         self.is_constructed = is_constructed
         self.dump_data_dir = dump_data_dir
         self.framework = framework
-        # print(f"self.framework: {self.framework}")
 
     def get_dump_data_dir(self):
         return self.dump_data_dir
@@ -97,7 +96,6 @@ class GlobalContext:
         return self.is_constructed
 
     def get_framework(self):
-        # print(f"self.framework: {self.framework}")
         return self.framework
 
 
