@@ -472,18 +472,18 @@ class TrainerMon:
         self.model = model # list
         self._register_param_name(model)
         self.micro_batch_number = grad_acc_steps
-        module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.VPP_SEP not in key]
+        module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.NAME_SEP not in key]
 
         for key in module_in_all_stage:
             struct = self.targets.pop(key)
-            self.targets.update({f'{vpp_stage}{MonitorConst.VPP_SEP}{key}': struct for vpp_stage in range(len(model))})
+            self.targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(model))})
 
         hooked_count = 0
         for vpp_stage, model_chunk in enumerate(model):
             if not isinstance(model_chunk, nn.Cell):
                 logger.info("Target Model is not Cell")
                 continue
-            vpp_stage = f'{vpp_stage}{MonitorConst.VPP_SEP}'
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             targets = [x for x, _ in model_chunk.cells_and_names()] if self.print_struct else self.targets.keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
         logger.info(f"> {hooked_count} modules are monitored.")
@@ -535,7 +535,7 @@ class TrainerMon:
             logger.info('vpp enabled')
 
         for vpp_stage, model_chunk in enumerate(model):
-            prefix = f'{vpp_stage}{MonitorConst.VPP_SEP}'
+            prefix = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             self._register_chunk(model_chunk, prefix)
 
         self.param_registered = True
