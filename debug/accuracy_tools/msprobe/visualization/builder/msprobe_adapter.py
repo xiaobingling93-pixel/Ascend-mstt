@@ -57,8 +57,8 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
         from msprobe.pytorch.compare.pt_compare import PTComparator
         return PTComparator(mode_config).do_multi_process(dump_path_param, csv_path)
     else:
-        from msprobe.mindspore.compare.ms_compare import MSComparator
-        ms_comparator = MSComparator(mode_config)
+        from msprobe.mindspore.compare.ms_compare import MSComparator, MappingConfig
+        ms_comparator = MSComparator(mode_config, MappingConfig())
         ms_comparator.cross_frame = is_cross_frame
         return ms_comparator.do_multi_process(dump_path_param, csv_path)
 
