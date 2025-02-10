@@ -157,7 +157,7 @@ class ApiAccuracyChecker:
         if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
                 and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
-        if api_type_str in MsCompareConst.VALID_API_TYPES \
+        if api_type_str in MsCompareConst.MT_VALID_API_TYPES \
                 and global_context.get_framework() == Const.MT_FRAMEWORK:
             return True
         if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \

@@ -170,9 +170,8 @@ def delete_torch_paths():
         raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment, and ensure "
                         f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
 
-    if is_mindtorch():
-        invalid_pt_mt_env()
-    clear_torch_from_sys_modules()
+
+    # clear_torch_from_sys_modules()
 
     return removed_paths_total
 
@@ -191,6 +190,9 @@ import gc
 gc.collect()
 # torch = importlib.import_module("torch")
 import torch
+
+if is_mindtorch():
+    invalid_pt_mt_env()
 import torch_npu
 import torch.distributed as distributed
 from torch import Tensor
