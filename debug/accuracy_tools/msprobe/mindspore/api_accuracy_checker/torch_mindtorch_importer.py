@@ -120,22 +120,6 @@ def delete_torch_paths():
                             f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
 
 
-initial_sys_path = sys.path.copy()
-
-delete_torch_paths()
-
-gc.collect()
-
-if is_mindtorch():
-    invalid_pt_mt_env()
-    import torch
-else:
-    import torch
-    import torch_npu
-
-sys.path = initial_sys_path
-
-
 def reset_torch_env():
     """
     Resets the PyTorch environment by clearing mindtorch-related paths,
