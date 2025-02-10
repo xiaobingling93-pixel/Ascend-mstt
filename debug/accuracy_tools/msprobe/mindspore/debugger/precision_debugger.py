@@ -25,7 +25,7 @@ from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
-from msprobe.mindspore.common.utils import set_register_backward_hook_functions
+from msprobe.mindspore.common.utils import set_register_backward_hook_functions, check_save_param
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -213,6 +213,24 @@ class PrecisionDebugger:
         if instance.task != Const.GRAD_PROBE:
             return
         instance.gm.monitor(opt)
+
+    @classmethod
+    def save(cls, variable, name, save_backward=True):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if instance.task not in [Const.TENSOR, Const.STATISTICS] or instance.config.level_ori != Const.LEVEL_DEBUG:
+            return
+        try:
+            check_save_param(variable, name, save_backward)
+        except ValueError:
+            return
+
+        instance.config.execution_mode = cls._get_execution_mode()
+        if cls._need_service():
+            if not instance.service:
+                instance.service = Service(instance.config)
+            instance.service.save(variable, name, save_backward)
 
     @classmethod
     def _need_service(cls):

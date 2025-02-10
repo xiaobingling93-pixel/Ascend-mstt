@@ -110,7 +110,8 @@ class Const:
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
     LEVEL_MIX = "mix"
-    LEVEL_LIST = [LEVEL_L0, LEVEL_L1, LEVEL_L2, LEVEL_MIX]
+    LEVEL_DEBUG = "debug"
+    LEVEL_LIST = [LEVEL_L0, LEVEL_L1, LEVEL_L2, LEVEL_MIX, LEVEL_DEBUG]
     ATTR_NAME_PREFIX = "wrap_"
     ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
@@ -631,6 +632,10 @@ class MonitorConst:
     NAME_SEP = ":"
     INPUT_GRAD = "input_grad"
     OUTPUT_GRAD = "output_grad"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
     # used for tasks
     ACTV = "actv"
     ACTVGRAD = "actv_grad"
@@ -641,6 +646,7 @@ class MonitorConst:
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
+    EFXP_AVG_SQ = "efxp_avg_sq"
     PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
