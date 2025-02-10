@@ -176,9 +176,9 @@ class ApiAccuracyChecker:
                                                             MsCompareConst.TENSOR_TASK))
         try:
             framework = check_and_get_from_json_dict(api_info_dict, MsCompareConst.FRAMEWORK,
-                                            "framework field in api_info.json",accepted_type=str,
-                                            accepted_value=(Const.MS_FRAMEWORK,
-                                                            Const.MT_FRAMEWORK))
+                                                "framework field in api_info.json", accepted_type=str,
+                                                accepted_value=(Const.MS_FRAMEWORK,
+                                                                Const.MT_FRAMEWORK))
         except KeyError:
             framework = Const.MS_FRAMEWORK
 

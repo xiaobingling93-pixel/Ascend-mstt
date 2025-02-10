@@ -15,6 +15,8 @@
 
 import os
 from pathlib import Path
+import mindspore
+from mindspore import _c_expression
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 import sys
@@ -33,11 +35,11 @@ def is_mindtorch():
     mindtorch_check_result = False
     try:
         import torch
-        from mindspore._c_expression import Tensor
+        from _c_expression import Tensor as MindsporeTensor
     except ImportError:
         return mindtorch_check_result
     tensor = torch.tensor(0.0)
-    if isinstance(tensor, Tensor):
+    if isinstance(tensor, MindsporeTensor):
         mindtorch_check_result = True
 
     return mindtorch_check_result
@@ -48,7 +50,7 @@ def remove_torch_related_paths():
     if not is_mindtorch():
         return
     try:
-        torch = importlib.import_module("torch")
+        import torch
         torch_file = torch.__file__
     except ImportError:
         return removed_paths

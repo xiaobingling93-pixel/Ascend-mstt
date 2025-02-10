@@ -115,21 +115,23 @@ class ApiRunner:
         return self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
 
     @staticmethod
-    def get_info_from_name(api_name_str, api_platform = Const.MS_FRAMEWORK):
-        '''
+    def get_info_from_name(api_name_str, api_platform=Const.MS_FRAMEWORK):
+        """
         Args:
             api_name_str: str, the trimmed key of data dict in api_info.json. e.g. "MintFunctional.relu.0"
-
+            api_platform: str, the platform for the API, which can be either "mindspore" or "mindtorch".
+                      It specifies which framework is being used. Default is "mindspore".
         Return:
             api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Torch", "Functional"]
             api_sub_name: str, e.g. "relu"
-        '''
+        """
         api_name_list = api_name_str.split(Const.SEP)
         if len(api_name_list) != 3:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] and api_platform == Const.MS_FRAMEWORK:
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] \
+                and api_platform == Const.MS_FRAMEWORK:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
@@ -140,7 +142,7 @@ class ApiRunner:
 
     @staticmethod
     def get_api_instance(api_type_str, api_sub_name, api_platform):
-        '''
+        """
         Args:
             api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
             api_sub_name: str, e.g. "relu"
@@ -153,11 +155,10 @@ class ApiRunner:
             get mindspore.mint/torch api fucntion
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
-        '''
+        """
 
         api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
         api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
-        print(f"api_type_str{api_type_str}api_platform{api_platform} api_parent_module_str:{api_parent_module_str},Const.SEP:{Const.SEP},api_sub_name{api_sub_name}")
         full_api_name = api_parent_module_str + Const.SEP + api_sub_name
 
         if not hasattr(api_parent_module, api_sub_name):
