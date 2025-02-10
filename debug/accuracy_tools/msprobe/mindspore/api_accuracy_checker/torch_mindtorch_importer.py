@@ -132,10 +132,6 @@ if is_mindtorch():
     import torch
 else:
     import torch
-    import torch_npu
-    import torch.distributed as distributed
-    from torch import Tensor
-    import torch.nn.functional as functional
 
 sys.path = initial_sys_path
 
