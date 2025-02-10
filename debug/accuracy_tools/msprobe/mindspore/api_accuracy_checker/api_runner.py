@@ -33,6 +33,7 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_dist
 
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch_npu
 else:
     import torch
 

@@ -132,6 +132,7 @@ if is_mindtorch():
     import torch
 else:
     import torch
+    import torch_npu
 
 sys.path = initial_sys_path
 
