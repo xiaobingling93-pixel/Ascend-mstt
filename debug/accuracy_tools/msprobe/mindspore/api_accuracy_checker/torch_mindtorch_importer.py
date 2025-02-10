@@ -134,9 +134,3 @@ else:
     import torch_npu
 
 sys.path = initial_sys_path
-
-
-
-
-
-

@@ -80,11 +80,8 @@ class ComputeElement:
         Return:
             torch_tensor: torch.Tensor
         """
-
         ms_dtype = ms_tensor.dtype
-
         dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
-
         if dtype_str not in dtype_str_to_torch_dtype:
             err_msg = f"ComputeElement.transfer_to_torch_tensor failed: no matching torch dtype for {dtype_str}"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
@@ -96,9 +93,7 @@ class ComputeElement:
         else:
             middle_dtype = mindspore.float64
 
-        # 执行类型转换，生成 numpy ndarray
         np_ndarray = ms_tensor.astype(middle_dtype).numpy()
-        # 从 numpy ndarray 转换到 torch tensor
         torch_tensor = torch.from_numpy(np_ndarray).to(torch_dtype)
 
         return torch_tensor
@@ -128,7 +123,6 @@ class ComputeElement:
         else:
             middle_dtype = mindspore.float64
 
-        # 执行类型转换，生成 numpy ndarray
         np_ndarray = ms_tensor.astype(middle_dtype).numpy()
 
         mindtorch_tensor = mindtorch.from_numpy(np_ndarray).to(ms_dtype)
