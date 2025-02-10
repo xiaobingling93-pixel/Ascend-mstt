@@ -31,6 +31,7 @@ from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
 
+
 class BasicInfoAndStatus:
     def __init__(self, api_name, bench_dtype, tested_dtype, shape, status, err_msg) -> None:
         self.api_name = api_name
@@ -55,6 +56,7 @@ class ProcessResultPacket:
         self.process_status = process_status
         self.result = result
         self.err_msg = err_msg
+
 
 class ApiAccuracyChecker:
     def __init__(self, args):

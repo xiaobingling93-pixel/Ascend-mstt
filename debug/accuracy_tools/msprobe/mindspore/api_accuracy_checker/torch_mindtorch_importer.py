@@ -16,8 +16,9 @@
 import os
 from pathlib import Path
 import mindspore
+import gc
 from mindspore import _c_expression
-
+from msprobe.mindspore.common.log import logger
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 import sys
 import torch as mindtorch
@@ -34,11 +35,11 @@ is_mt_env = True
 def is_mindtorch():
     mindtorch_check_result = False
     try:
-        import torch
+        import torch as test_torch
         from _c_expression import Tensor as MindsporeTensor
     except ImportError:
         return mindtorch_check_result
-    tensor = torch.tensor(0.0)
+    tensor = test_torch.tensor(0.0)
     if isinstance(tensor, MindsporeTensor):
         mindtorch_check_result = True
 
@@ -48,10 +49,10 @@ def is_mindtorch():
 def remove_torch_related_paths():
     removed_paths = []
     if not is_mindtorch():
-        return
+        return removed_paths
     try:
-        import torch
-        torch_file = torch.__file__
+        import torch as remove_torch
+        torch_file = remove_torch.__file__
     except ImportError:
         return removed_paths
 
@@ -65,7 +66,8 @@ def remove_torch_related_paths():
     for path in paths_to_remove:
         try:
             path_resolved = str(Path(path).resolve())
-        except Exception:
+        except Exception as error:
+            logger.debug(f"Failed to resolve path {path}: {error}")
             continue
 
         if path_resolved in sys.path:
@@ -77,9 +79,13 @@ def remove_torch_related_paths():
 
 
 def clear_torch_from_sys_modules():
-    modules_to_remove = [module for module in sys.modules if
-                         module == "torch" or module.startswith("torch.") or module.startswith(
-                             "torch_npu.") or module == "torch_npu"]
+    modules_to_remove = [
+        module for module in sys.modules
+        if module == "torch" or
+        module.startswith("torch.") or
+        module.startswith("torch_npu.") or
+        module == "torch_npu"
+    ]
     for module in modules_to_remove:
         del sys.modules[module]
 
@@ -103,7 +109,6 @@ def delete_torch_paths():
 
     clear_torch_from_sys_modules()
 
-    count_delete_env_path = 0
     for count_delete_env_path in range(MsCompareConst.MAX_RECURSION_DEPTH):
         if not is_mindtorch():
             break
@@ -114,28 +119,26 @@ def delete_torch_paths():
 
         clear_torch_from_sys_modules()
 
-    if count_delete_env_path >= MsCompareConst.MAX_RECURSION_DEPTH - 1:
-        raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment, and ensure "
-                        f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
+        if count_delete_env_path >= MsCompareConst.MAX_RECURSION_DEPTH - 1:
+            raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment, and ensure "
+                            f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
 
-    return removed_paths_total
 
 initial_sys_path = sys.path.copy()
 
 delete_torch_paths()
 
-import importlib
-import gc
 gc.collect()
-import torch
 
 if is_mindtorch():
     invalid_pt_mt_env()
-
-import torch_npu
-import torch.distributed as distributed
-from torch import Tensor
-import torch.nn.functional as functional
+    import torch
+else:
+    import torch
+    import torch_npu
+    import torch.distributed as distributed
+    from torch import Tensor
+    import torch.nn.functional as functional
 
 sys.path = initial_sys_path
 
