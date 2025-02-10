@@ -14,13 +14,12 @@
 # limitations under the License.
 
 import os
+import gc
+import sys
 from pathlib import Path
 import mindspore
-import gc
-from mindspore import _c_expression
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-import sys
 import torch as mindtorch
 from torch import Tensor as mindtorch_tensor
 import torch.nn.functional as mindtorch_func
@@ -36,7 +35,7 @@ def is_mindtorch():
     mindtorch_check_result = False
     try:
         import torch as test_torch
-        from _c_expression import Tensor as MindsporeTensor
+        from mindspore._c_expression import Tensor as MindsporeTensor
     except ImportError:
         return mindtorch_check_result
     tensor = test_torch.tensor(0.0)
@@ -82,9 +81,7 @@ def clear_torch_from_sys_modules():
     modules_to_remove = [
         module for module in sys.modules
         if module == "torch" or
-        module.startswith("torch.") or
-        module.startswith("torch_npu.") or
-        module == "torch_npu"
+        module.startswith("torch.")
     ]
     for module in modules_to_remove:
         del sys.modules[module]

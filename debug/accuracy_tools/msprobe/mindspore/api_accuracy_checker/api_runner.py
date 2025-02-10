@@ -25,7 +25,7 @@ from msprobe.mindspore.common.log import logger
 
 from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 
-if torch_mindtorch_importer.is_mt_env:
+if torch_mindtorch_importer.is_valid_pt_mt_env:
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_tensor
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_func

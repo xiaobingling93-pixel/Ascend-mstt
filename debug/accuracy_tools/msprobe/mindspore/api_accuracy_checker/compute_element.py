@@ -36,7 +36,7 @@ from msprobe.mindspore.common.log import logger
 
 import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as env_module
 
-if env_module.is_mt_env:
+if env_module.is_valid_pt_mt_env:
     mindtorch = env_module.mindtorch
     torch = env_module.torch
 else:
