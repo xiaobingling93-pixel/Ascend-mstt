@@ -120,11 +120,13 @@ def compare_data_fuzzy(data_dict_list1, data_dict_list2):
     return True
 
 
-def format_node_data(data_dict):
+def format_node_data(data_dict, node_id=None):
     """
     批量进行节点数据的输出
     """
     del_list = ['requires_grad', 'full_op_name']
+    if node_id and GraphConst.BATCH_P2P in node_id:
+        del_list.extend(['op', 'peer', 'tag', 'group_id'])
     for _, value in data_dict.items():
         if not isinstance(value, dict):
             continue

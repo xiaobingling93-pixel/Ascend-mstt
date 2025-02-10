@@ -92,8 +92,8 @@ class BaseNode:
         result = {
             'id': self.id,
             'node_type': self.op.value,
-            'output_data': format_node_data(self.output_data),
-            'input_data': format_node_data(self.input_data),
+            'output_data': format_node_data(self.output_data, self.id),
+            'input_data': format_node_data(self.input_data, self.id),
             'upnode': self.upnode.id if self.upnode else 'None',
             'subnodes': [node.id for node in self.subnodes],
             'matched_node_link': self.matched_node_link,
