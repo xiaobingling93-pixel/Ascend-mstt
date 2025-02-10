@@ -134,3 +134,36 @@ else:
     import torch_npu
 
 sys.path = initial_sys_path
+
+
+def reset_torch_env():
+    """
+    Resets the PyTorch environment by clearing mindtorch-related paths,
+    ensuring the correct torch environment is imported, and restoring
+    system paths to their initial state.
+
+    This function performs the following steps:
+    1. Saves the current system path.
+    2. Removes mindtorch-related paths from the environment.
+    3. Forces garbage collection to clean up unused memory.
+    4. Imports the correct version of torch based on the current environment.
+    5. Restores the system path to its initial state.
+    """
+    initial_sys_path = sys.path.copy()
+
+    delete_torch_paths()
+
+    gc.collect()
+
+    if is_mindtorch():
+        # If mindtorch is detected, ensure it's invalidated and then import mindtorch
+        invalid_pt_mt_env()
+        import torch
+    else:
+        import torch
+        import torch_npu
+
+    sys.path = initial_sys_path
+
+
+reset_torch_env()
