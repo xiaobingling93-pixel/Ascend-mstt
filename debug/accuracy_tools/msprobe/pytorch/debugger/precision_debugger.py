@@ -21,6 +21,7 @@ from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import check_save_param
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
@@ -157,6 +158,19 @@ class PrecisionDebugger:
         if cls._instance.task != Const.GRAD_PROBE:
             return
         cls._instance.gm.monitor(model)
+
+    @classmethod
+    def save(cls, variable, name, save_backward=True):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if instance.task not in [Const.TENSOR, Const.STATISTICS] or instance.config.level != Const.LEVEL_DEBUG:
+            return
+        try:
+            check_save_param(variable, name, save_backward)
+        except ValueError:
+            return
+        instance.service.save(variable, name, save_backward)
 
 
 def module_dump(module, dump_name):

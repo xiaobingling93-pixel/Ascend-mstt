@@ -110,7 +110,8 @@ class Const:
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
     LEVEL_MIX = "mix"
-    LEVEL_LIST = [LEVEL_L0, LEVEL_L1, LEVEL_L2, LEVEL_MIX]
+    LEVEL_DEBUG = "debug"
+    LEVEL_LIST = [LEVEL_L0, LEVEL_L1, LEVEL_L2, LEVEL_MIX, LEVEL_DEBUG]
     ATTR_NAME_PREFIX = "wrap_"
     ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"

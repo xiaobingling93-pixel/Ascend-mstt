@@ -179,3 +179,22 @@ def set_register_backward_hook_functions():
     else:
         register_backward_hook_functions["pre"] = ms.nn.Cell.register_backward_pre_hook
         register_backward_hook_functions["full"] = ms.nn.Cell.register_backward_hook
+
+
+def check_save_param(variable, name, save_backward):
+    # try catch this api to skip invalid call
+    if not isinstance(variable, (list, dict, ms.Tensor, int, float, str)):
+        logger.warning("PrecisionDebugger.save variable type not valid, "
+                       "should be one of list, dict, ms.Tensor, int, float or string. "
+                       "Skip current save process.")
+        raise ValueError
+    if not isinstance(name, str):
+        logger.warning("PrecisionDebugger.save name not valid, "
+                       "should be string. "
+                       "skip current save process.")
+        raise ValueError
+    if not isinstance(save_backward, bool):
+        logger.warning("PrecisionDebugger.save_backward name not valid, "
+                       "should be bool. "
+                       "Skip current save process.")
+        raise ValueError

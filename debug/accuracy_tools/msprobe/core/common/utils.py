@@ -496,3 +496,12 @@ def check_str_param(param):
     if not re.match(Const.REGEX_PREFIX_PATTERN, param):
         logger.error('The parameter {} contains special characters.'.format(param))
         raise MsprobeBaseException(MsprobeBaseException.INVALID_CHAR_ERROR)
+
+
+class DumpPathAggregation:
+    dump_file_path = None
+    stack_file_path = None
+    construct_file_path = None
+    dump_tensor_data_dir = None
+    free_benchmark_file_path = None
+    debug_file_path = None

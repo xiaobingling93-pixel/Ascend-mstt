@@ -183,3 +183,16 @@ class DataCollector:
 
     def fill_stack_tensor_data(self):
         self.data_writer.fill_stack_tensor_data()
+
+    def debug_data_collect_forward(self, variable, name_with_count):
+
+        data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)
+        self.data_writer.update_debug({name_with_count: data_info})
+
+    def debug_data_collect_backward(self, variable, grad_name_with_count):
+        # prepare all None nested data structure
+        all_none_data_info = self.data_processor.analyze_element_to_all_none(variable)
+        self.data_writer.update_debug({grad_name_with_count: all_none_data_info})
+
+        # register tensor backward hook
+        self.data_processor.analyze_debug_backward(variable, grad_name_with_count, self.data_writer.cache_debug['data'])

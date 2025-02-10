@@ -15,13 +15,13 @@
 
 import functools
 import os
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 import torch
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import print_tools_ends_info
+from msprobe.core.common.utils import print_tools_ends_info, DumpPathAggregation
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope
@@ -58,6 +58,7 @@ class Service:
         self.params_grad_info = {}
         # 提前注册，确保注册尽可能多的API hook
         self.register_api_hook()
+        self.init_for_debug_level()
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -217,6 +218,8 @@ class Service:
         return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
     def start(self, model):
+        if self.config.level == Const.LEVEL_DEBUG:
+            return
         if self.need_stop_service():
             return
 
@@ -241,6 +244,8 @@ class Service:
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
+        if self.config.level == Const.LEVEL_DEBUG:
+            return
         if self.should_stop_service:
             return
         if self.config.step and self.current_iter not in self.config.step:
@@ -259,6 +264,8 @@ class Service:
         self.data_collector.write_json()
 
     def step(self):
+        if self.config.level == Const.LEVEL_DEBUG:
+            return
         if self.should_stop_service:
             return
         if self.config.async_dump:
@@ -319,13 +326,13 @@ class Service:
         else:
             dump_data_dir = None
 
-        dump_file_path = os.path.join(dump_dir, "dump.json")
-        stack_file_path = os.path.join(dump_dir, "stack.json")
-        construct_file_path = os.path.join(dump_dir, "construct.json")
-        free_benchmark_file_path = os.path.join(self.config.dump_path, "free_benchmark.csv")
-        self.data_collector.update_dump_paths(
-            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path
-        )
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")
+        self.data_collector.update_dump_paths(dump_path_aggregation)
         self.data_collector.initialize_json_file(framework=Const.PT_FRAMEWORK)
 
     def register_api_hook(self):
@@ -389,3 +396,46 @@ class Service:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
+
+    def init_for_debug_level(self):
+        if not (self.config.level == Const.LEVEL_DEBUG and self.config.task in [Const.TENSOR, Const.STATISTICS]):
+            return
+        try:
+            self.current_rank = get_rank_if_initialized()
+        except DistributedNotInitializedError:
+            self.current_rank = None
+
+        # dir: dump_path -- rank{} -- debug.json
+        self.dump_iter_dir = self.config.dump_path
+        cur_rank = self.current_rank if self.current_rank is not None else ''
+        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
+        create_directory(dump_dir)
+        if self.config.task in self.data_collector.tasks_need_tensor_data:
+            dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
+            create_directory(dump_data_dir)
+        else:
+            dump_data_dir = None
+
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
+        self.data_collector.update_dump_paths(dump_path_aggregation)
+        self.data_collector.initialize_json_file(framework=Const.PT_FRAMEWORK)
+
+        self.debug_variable_counter = defaultdict(int)
+
+    def save(self, variable, name, save_backward):
+        if self.config.level != Const.LEVEL_DEBUG:
+            return
+        count = self.debug_variable_counter[name]
+        self.debug_variable_counter[name] += 1
+
+        name_with_count = f"{name}.{count}"
+        grad_name_with_count = f"{name}_grad.{count}"
+
+        # forward save
+        self.data_collector.debug_data_collect_forward(variable, name_with_count)
+
+        # backward save
+        if save_backward:
+            self.data_collector.debug_data_collect_backward(variable, grad_name_with_count)
