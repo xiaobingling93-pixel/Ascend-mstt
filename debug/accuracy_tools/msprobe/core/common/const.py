@@ -632,6 +632,10 @@ class MonitorConst:
     NAME_SEP = ":"
     INPUT_GRAD = "input_grad"
     OUTPUT_GRAD = "output_grad"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
     # used for tasks
     ACTV = "actv"
     ACTVGRAD = "actv_grad"
@@ -642,6 +646,7 @@ class MonitorConst:
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
+    EFXP_AVG_SQ = "efxp_avg_sq"
     PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
