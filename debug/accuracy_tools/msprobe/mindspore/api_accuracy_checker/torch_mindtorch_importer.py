@@ -85,9 +85,7 @@ def remove_torch_related_paths():
     #     removed_paths.append((path_resolved, index))
     #     sys.path.pop(index)
 
-    paths_to_remove = [
-        str(parent_dir),
-    ]
+    paths_to_remove = [str(parent_dir)]
 
     for path in paths_to_remove:
         try:
@@ -106,18 +104,13 @@ def remove_torch_related_paths():
 
     return removed_paths
 
-    # return removed_paths
 
-
-# 清除 sys.modules 中与 torch 相关的模块
 def clear_torch_from_sys_modules():
     modules_to_remove = [module for module in sys.modules if
                          module == "torch" or module.startswith("torch.") or module.startswith(
                              "torch_npu.") or module == "torch_npu"]
     for module in modules_to_remove:
         del sys.modules[module]
-    # gc.collect()
-    # print(f"已从 sys.modules 中删除模块 '{module}'")
 
 
 is_valid_pt_mt_env = True
