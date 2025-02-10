@@ -23,10 +23,7 @@ def softmax_func(x, axis=None):
     x_sub = x - x_max
     y = torch.exp(x_sub)
     x_sum = y.sum(dim=axis, keepdims=True)
-    if (x_sum == 0).any():
-        ans = 0
-    else:
-        ans = y / x_sum
+    ans = 0 if (x_sum == 0).any() else y / x_sum
     return ans
 
 

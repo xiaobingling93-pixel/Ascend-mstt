@@ -17,7 +17,11 @@ import torch
 
 
 def npu_group_norm_silu(x, gama, beta, group, eps):
+    if len(x.shape) != 4:
+        raise ValueError("x 的形状必须是 (N, C, H, W)")
     res = torch.ops.aten.native_group_norm(x, gama, beta, x.shape[0], x.shape[1], x.shape[2] * x.shape[3], group, eps)
     res = list(res)
+    if not res:
+        raise ValueError("native_group_norm 调用失败")
     res[0] = torch.nn.functional.silu(res[0])
     return res

@@ -23,6 +23,7 @@ VarParams = namedtuple('VarParams', ['var', 'lr_t', 'm_t', 'beta1_broad', 'grad'
 def _output_m_compute(m, beta1_broad, grad):
     """
     _output_m_compute
+    do compute m_t = m + (beta1 - 1) * (m - grad)
     """
     input_dtype = m.dtype
 
@@ -45,7 +46,8 @@ def _output_m_compute(m, beta1_broad, grad):
 
 
 def _output_v_compute(v, beta2, grad):
-    """_output_v_compute
+    """
+    _output_v_compute
     do compute v_t = v + (1 - beta2)*(grad*grad -v)
     """
     input_dtype = v.dtype
