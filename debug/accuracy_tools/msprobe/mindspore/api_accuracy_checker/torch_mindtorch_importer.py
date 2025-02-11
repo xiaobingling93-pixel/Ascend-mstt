@@ -91,16 +91,10 @@ def set_pt_mt_env_invalid():
     is_valid_pt_mt_env = False
 
 
-def set_mt_env_invalid():
-    global is_mt_env
-    is_mt_env = False
-
-
 def delete_torch_paths():
 
     if not is_mindtorch():
         set_pt_mt_env_invalid()
-        set_mt_env_invalid()
 
     clear_torch_from_sys_modules()
 
@@ -119,7 +113,6 @@ def delete_torch_paths():
 
 if not is_mindtorch():
     set_pt_mt_env_invalid()
-    set_mt_env_invalid()
 
 else:
     initial_sys_path = sys.path.copy()
