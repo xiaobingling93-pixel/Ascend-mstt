@@ -77,10 +77,15 @@ def remove_torch_related_paths():
 
 
 def clear_torch_from_sys_modules():
-    modules_to_remove = []
-    for module in sys.modules:
-        if module == "torch" or module.startswith("torch."):
-            modules_to_remove.append(module)
+    # modules_to_remove = []
+    # for module in sys.modules:
+    #     if module == "torch" or module.startswith("torch."):
+    #         modules_to_remove.append(module)
+    modules_to_remove = [
+        module for module in sys.modules
+        if module == "torch" or
+        module.startswith("torch.")
+    ]
     for module in modules_to_remove:
         del sys.modules[module]
 
