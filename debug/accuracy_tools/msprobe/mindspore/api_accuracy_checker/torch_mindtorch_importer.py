@@ -77,15 +77,11 @@ def remove_torch_related_paths():
 
 
 def clear_torch_from_sys_modules():
-    # modules_to_remove = []
-    # for module in sys.modules:
-    #     if module == "torch" or module.startswith("torch."):
-    #         modules_to_remove.append(module)
-    modules_to_remove = [
-        module for module in sys.modules
-        if module == "torch" or
-        module.startswith("torch.")
-    ]
+    modules_to_remove = []
+    for module in sys.modules:
+        if module == "torch" or module.startswith("torch."):
+            modules_to_remove.append(module)
+
     for module in modules_to_remove:
         del sys.modules[module]
 
@@ -102,7 +98,6 @@ def invalid_mt_env():
 
 def delete_torch_paths():
 
-    removed_paths_total = []
     if not is_mindtorch():
         invalid_pt_mt_env()
         invalid_mt_env()
@@ -113,9 +108,7 @@ def delete_torch_paths():
         if not is_mindtorch():
             break
 
-        removed = remove_torch_related_paths()
-        if removed:
-            removed_paths_total.extend(removed)
+        remove_torch_related_paths()
 
         clear_torch_from_sys_modules()
 
@@ -144,10 +137,10 @@ def reset_torch_env():
 
     gc.collect()
 
+    import torch
+
     if is_mindtorch():
         invalid_pt_mt_env()
-
-    import torch
 
     sys.path = initial_sys_path
 
