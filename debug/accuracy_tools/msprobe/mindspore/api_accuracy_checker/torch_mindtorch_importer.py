@@ -108,7 +108,7 @@ def delete_torch_paths():
         if not is_mindtorch():
             break
 
-        remove_torch_related_paths()
+        removed = remove_torch_related_paths()
 
         clear_torch_from_sys_modules()
 
