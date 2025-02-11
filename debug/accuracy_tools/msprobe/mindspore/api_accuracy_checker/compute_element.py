@@ -74,12 +74,12 @@ class ComputeElement:
 
     @staticmethod
     def transfer_to_torch_tensor(ms_tensor):
-        """
+        '''
         Args:
             ms_tensor: mindspore.Tensor
         Return:
             torch_tensor: torch.Tensor
-        """
+        '''
         ms_dtype = ms_tensor.dtype
         dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
         if dtype_str not in dtype_str_to_torch_dtype:
@@ -92,10 +92,8 @@ class ComputeElement:
             middle_dtype = mindspore.int64
         else:
             middle_dtype = mindspore.float64
-
         np_ndarray = ms_tensor.astype(middle_dtype).numpy()
         torch_tensor = torch.from_numpy(np_ndarray).to(torch_dtype)
-
         return torch_tensor
 
     @staticmethod
@@ -131,13 +129,13 @@ class ComputeElement:
 
     @staticmethod
     def transfer_to_mindspore_tensor(torch_tensor):
-        """
+        '''
         Args:
             torch_tensor: torch.Tensor
 
         Return:
             ms_tensor: mindspore.Tensor
-        """
+        '''
         torch_dtype = torch_tensor.dtype
         dtype_str = torch_dtype_to_dtype_str.get(torch_dtype)
         if dtype_str not in dtype_str_to_ms_dtype:
