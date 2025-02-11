@@ -117,22 +117,12 @@ def delete_torch_paths():
                             f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
 
 
-def reset_torch_env():
-    """
-    Resets the PyTorch environment by clearing mindtorch-related paths,
-    ensuring the correct torch environment is imported, and restoring
-    system paths to their initial state.
+if not is_mindtorch():
+    invalid_pt_mt_env()
+    invalid_mt_env()
 
-    This function performs the following steps:
-    1. Saves the current system path.
-    2. Removes mindtorch-related paths from the environment.
-    3. Forces garbage collection to clean up unused memory.
-    4. Imports the correct version of torch based on the current environment.
-    5. Restores the system path to its initial state.
-    """
-    global torch
+else:
     initial_sys_path = sys.path.copy()
-
     delete_torch_paths()
 
     gc.collect()
@@ -143,14 +133,5 @@ def reset_torch_env():
         invalid_pt_mt_env()
 
     sys.path = initial_sys_path
-
-if not is_mindtorch():
-    invalid_pt_mt_env()
-    invalid_mt_env()
-
-    import torch
-else:
-    reset_torch_env()
-
 
 
