@@ -55,7 +55,7 @@ class DataCollector:
         return (not scope or scope.check(name)) and pid == os.getpid()
     
     def reset_status(self):
-        self.data_writer.reset_cache{}
+        self.data_writer.reset_cache()
         self.backward_module_names.clear()
 
     def if_return_forward_new_output(self):
