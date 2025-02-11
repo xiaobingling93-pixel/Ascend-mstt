@@ -646,7 +646,6 @@ class MonitorConst:
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
-    EFXP_AVG_SQ = "efxp_avg_sq"
     PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
