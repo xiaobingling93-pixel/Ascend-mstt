@@ -72,4 +72,6 @@ class DebuggerConfig:
             self.check_mode = "all"
         if not isinstance(self.async_dump, bool):
             raise Exception("The parameters async_dump should be bool.")
+        if self.async_dump and self.task == Const.TENSOR and not self.list:
+            raise Exception("The parameters async_dump is true in tensor task, the parameters list cannot be empty.")
         return True

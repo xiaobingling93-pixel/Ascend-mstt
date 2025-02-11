@@ -17,6 +17,8 @@ import inspect
 import os
 from dataclasses import dataclass, is_dataclass
 from typing import Tuple, Dict, Optional, Any
+from functools import partial
+import copy
 
 import numpy as np
 
@@ -144,6 +146,37 @@ class BaseDataProcessor:
             return data
 
     @staticmethod
+    def set_value_into_nested_structure(data_structure, indexes, value):
+        '''
+        Args:
+            data_structure: nested data structure
+            indexes: List
+            value: value to be set
+        '''
+        if not indexes:
+            raise ValueError("set_value_into_nested_structure failed: "
+                             "indexes need to be non empty when set value to nested data structure")
+        current_level = data_structure
+        for i, index in enumerate(indexes):
+            valid_for_list = isinstance(current_level, list) and isinstance(index, int) and len(current_level) > index
+            valid_for_dict = isinstance(current_level, dict) and index in current_level
+            is_last = i == len(indexes) - 1
+            if valid_for_dict or valid_for_list:
+                if is_last:
+                    try:
+                        current_level[index] = value
+                    except Exception as e:
+                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong") from e
+                else:
+                    try:
+                        current_level = current_level[index]
+                    except Exception as e:
+                        raise IndexError("set_value_into_nested_structure failed: passed indexes wrong") from e
+            else:
+                raise ValueError("set_value_into_nested_structure failed: "
+                                 "invalid data_structure type or invalid index")
+
+    @staticmethod
     def _convert_numpy_to_builtin(arg):
         type_mapping = {
             np.integer: int,
@@ -220,20 +253,20 @@ class BaseDataProcessor:
             return cls.apply_transform_dict(args_dict, transform, depth)
         elif isinstance(args, (list, tuple)):
             result_list = cls.apply_transform_list(args, transform, depth)
-            return type(args)(result_list)
+            return result_list
         elif isinstance(args, dict):
             return cls.apply_transform_dict(args, transform, depth)
         elif args is not None:
-            logger.warning(f"Data type {type(args)} is not supported.")
+            logger.debug(f"Data type {type(args)} is not supported.")
             return None
         else:
             return None
-    
+
     @classmethod
     def apply_transform_dict(cls, args, transform, depth):
         result_dict = {}
         for k, arg in args.items():
-            cls._recursive_key_stack.append(str(k))
+            cls._recursive_key_stack.append(k)
             result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
             cls._recursive_key_stack.pop()
         return result_dict
@@ -242,10 +275,20 @@ class BaseDataProcessor:
     def apply_transform_list(cls, args, transform, depth):
         result_list = []
         for i, arg in enumerate(args):
-            cls._recursive_key_stack.append(str(i))
+            cls._recursive_key_stack.append(i)
             result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
             cls._recursive_key_stack.pop()
         return result_list
+
+    @classmethod
+    def register_hook_single_element(cls, element, suffix_stack, hook_fn):
+        if cls.is_hookable_element(element):
+            indexes = copy.deepcopy(suffix_stack)
+            wrap_hook_fn = partial(hook_fn, indexes=indexes)
+
+            def real_hook_fn(grad):
+                return wrap_hook_fn(grad)
+            element.register_hook(real_hook_fn)
 
     def if_return_forward_new_output(self):
         return self._return_forward_new_output
@@ -383,3 +426,29 @@ class BaseDataProcessor:
                               suffix + file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
+
+    def analyze_element_to_all_none(self, element):
+        return self.recursive_apply_transform(element, lambda element, stack: None)
+
+    def analyze_debug_forward(self, variable, name_with_count):
+        self.current_api_or_module_name = name_with_count
+        self.api_data_category = Const.TENSOR
+        # these two attributes are used to construct tensor file name {name_with_count}.tensor.{indexes}.npy/pt
+        data_info = self.analyze_element(variable)
+        return data_info
+
+    def analyze_debug_backward(self, variable, grad_name_with_count, nested_data_structure):
+        def hook_fn(grad, indexes):
+            suffix = Const.SEP.join([str(index) for index in indexes])
+            self.save_name = grad_name_with_count + Const.SEP + Const.TENSOR + Const.SEP + suffix
+            grad_data_info = self.analyze_element(grad)
+            self.save_name = None
+            full_index = [grad_name_with_count] + indexes
+            try:
+                self.set_value_into_nested_structure(nested_data_structure, full_index, grad_data_info)
+            except (ValueError, IndexError) as e:
+                logger.warning(f"error occured while recording statistics of {grad_name_with_count} variable, "
+                               f"skip current recording, detailed infomation: {e}")
+            return grad
+        wrap_register_hook_single_element = partial(self.register_hook_single_element, hook_fn=hook_fn)
+        self.recursive_apply_transform(variable, wrap_register_hook_single_element)

@@ -16,8 +16,7 @@
 import os
 import pandas as pd
 
-from common_func.utils import describe_duration
-
+from msprof_analyze.cluster_analyse.common_func.utils import describe_duration
 from msprof_analyze.cluster_analyse.recipes.base_recipe_analysis import BaseRecipeAnalysis
 from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.prof_common.logger import get_logger
@@ -26,17 +25,14 @@ from msprof_analyze.prof_exports.hccl_sum_export import HcclSumExport
 logger = get_logger()
 
 
-def DoubleHash(data):
-    UINT32_BITS = 32
-    UINT32_MASK = 0xffffffff
+def double_hash(data):
     prime = [29, 131]
     hash_num = [0, 0]
-
     for d in data:
-        hash_num[0] = (((hash_num[0] * prime[0]) & UINT32_MASK) + ord(d)) & UINT32_MASK
-        hash_num[1] = (((hash_num[1] * prime[1]) & UINT32_MASK) + ord(d)) & UINT32_MASK
+        hash_num[0] = (((hash_num[0] * prime[0]) & Constant.UINT32_MASK) + ord(d)) & Constant.UINT32_MASK
+        hash_num[1] = (((hash_num[1] * prime[1]) & Constant.UINT32_MASK) + ord(d)) & Constant.UINT32_MASK
 
-    return str((hash_num[0] << UINT32_BITS) | hash_num[1])
+    return str((hash_num[0] << Constant.UINT32_BITS) | hash_num[1])
 
 
 class HcclSum(BaseRecipeAnalysis):
@@ -61,19 +57,6 @@ class HcclSum(BaseRecipeAnalysis):
     @property
     def base_dir(self):
         return os.path.basename(os.path.dirname(__file__))
-
-    @staticmethod
-    def _mapper_func(data_map, analysis_class):
-        profiler_db_path = data_map.get(Constant.PROFILER_DB_PATH)
-        rank_id = data_map.get(Constant.RANK_ID)
-        df = HcclSumExport(profiler_db_path, analysis_class).read_export_db()
-
-        if df is None or df.empty:
-            logger.warning(f"There is no stats data in {profiler_db_path}.")
-            return None
-
-        df["Rank"] = rank_id
-        return df
 
     @classmethod
     def add_parser_argument(cls, parser):
@@ -105,7 +88,7 @@ class HcclSum(BaseRecipeAnalysis):
             lambda x: ';'.join(map(str, x['Rank'].drop_duplicates().sort_index()))).sort_index()
         self.group_name_map = pd.DataFrame(
             data={
-                "GroupId": [key[-3:] for key in map(DoubleHash, group_name_rank_map.keys())],
+                "GroupId": [key[-3:] for key in map(double_hash, group_name_rank_map.keys())],
                 "Ranks": group_name_rank_map.values
             },
             index=sorted(grouped_group_name_stats.groups.keys())
@@ -141,3 +124,13 @@ class HcclSum(BaseRecipeAnalysis):
         self.dump_data(self.per_rank_stats, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, self.TABLE_PER_RANK_STATS)
         self.dump_data(self.top_op_stats, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, self.TABLE_TOP_OP_STATS)
         self.dump_data(self.group_name_map, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, self.TABLE_GROUP_NAME_MAP)
+
+    def _mapper_func(self, data_map, analysis_class):
+        profiler_db_path = data_map.get(Constant.PROFILER_DB_PATH)
+        rank_id = data_map.get(Constant.RANK_ID)
+        df = HcclSumExport(profiler_db_path, analysis_class).read_export_db()
+        if df is None or df.empty:
+            logger.warning(f"There is no stats data in {profiler_db_path}.")
+            return None
+        df["Rank"] = rank_id
+        return df

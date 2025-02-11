@@ -15,7 +15,7 @@
 from collections import defaultdict
 import os
 
-from cluster_data_preprocess.data_preprocessor import DataPreprocessor
+from msprof_analyze.cluster_analyse.cluster_data_preprocess.data_preprocessor import DataPreprocessor
 from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.prof_common.file_manager import FileManager
 from msprof_analyze.prof_common.logger import get_logger
@@ -40,8 +40,12 @@ class PytorchDataPreprocessor(DataPreprocessor):
                 if file_name.startswith(self.PROFILER_INFO_HEAD) and file_name.endswith(self.PROFILER_INFO_EXTENSION):
                     file_path = os.path.join(dir_name, file_name)
                     config = FileManager.read_json_file(file_path)
-                    self.data_type.add(config.get(Constant.CONFIG, {}).get(Constant.EXPER_CONFIG, {}).
-                                       get(Constant.EXPER_EXPORT_TYPE, Constant.TEXT))
+                    export_type = (config.get(Constant.CONFIG, {}).get(Constant.EXPER_CONFIG, {}).
+                                   get(Constant.EXPER_EXPORT_TYPE, Constant.TEXT))
+                    if isinstance(export_type, list):
+                        self.data_type.add(Constant.DB if Constant.DB in export_type else Constant.TEXT)
+                    else:
+                        self.data_type.add(export_type)
             rank_id_map[rank_id].append(dir_name)
 
         try:

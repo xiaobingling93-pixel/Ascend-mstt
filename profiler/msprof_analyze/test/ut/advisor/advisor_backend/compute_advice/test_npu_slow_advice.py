@@ -1,3 +1,17 @@
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import json
 import os
 import shutil
@@ -5,8 +19,8 @@ import stat
 import csv
 import unittest
 
-from advisor_backend.interface import Interface
-from advisor_backend.compute_advice.npu_slow_advice import NpuSlowAdvice
+from msprof_analyze.advisor.advisor_backend.interface import Interface
+from msprof_analyze.advisor.advisor_backend.compute_advice.npu_slow_advice import NpuSlowAdvice
 
 
 class TestNpuSlowAdvice(unittest.TestCase):
@@ -201,7 +215,6 @@ class TestNpuSlowAdvice(unittest.TestCase):
         call_stack = NpuSlowAdvice(self.ASCEND_PT_DIR).get_call_stack(data, index_id=0, ts_col="Start Time(us)")
         self.assertEqual(9, len(data))
         self.assertEqual(2, len(slow_op_data))
-        print(call_stack)
         call_stack_res = "/root/torch/module.py\n" \
                          "/root/test/slice.py(116)"
         self.assertEqual(call_stack_res, call_stack)
@@ -217,7 +230,6 @@ class TestNpuSlowAdvice(unittest.TestCase):
         call_stack = NpuSlowAdvice(self.ASCEND_PT_DIR).get_call_stack(data, index_id=0, ts_col="Start Time(us)")
         self.assertEqual(9, len(data))
         self.assertEqual(2, len(slow_op_data))
-        print(call_stack)
         call_stack_res = "/root/test/slice.py(116)\n\r\n" \
                          "/root/torch/module.py"
         self.assertEqual(call_stack_res, call_stack)

@@ -1,12 +1,26 @@
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import unittest
 from unittest import mock
 from collections import deque
 from collections import defaultdict
 
-from advisor_backend.cluster_advice.cluster_pipeline_advice import ClusterPipelineAdvice
-from advisor_backend.cluster_advice.cluster_pipeline_advice import FineTraceViewData
-from advisor_backend.cluster_advice.cluster_pipeline_advice import PipelineTimeSlice
-from advisor_backend.cluster_advice.cluster_pipeline_advice import PipelineTraceViewer
+from msprof_analyze.advisor.advisor_backend.cluster_advice.cluster_pipeline_advice import ClusterPipelineAdvice
+from msprof_analyze.advisor.advisor_backend.cluster_advice.cluster_pipeline_advice import FineTraceViewData
+from msprof_analyze.advisor.advisor_backend.cluster_advice.cluster_pipeline_advice import PipelineTimeSlice
+from msprof_analyze.advisor.advisor_backend.cluster_advice.cluster_pipeline_advice import PipelineTraceViewer
 
 
 class TestClusterPipelineAdvice(unittest.TestCase):
@@ -105,7 +119,8 @@ class TestClusterPipelineAdvice(unittest.TestCase):
         bp_op2 = {"ph": "X", "name": "autogard::add", "ts": str(2000000000 - 100), "dur": 2000, "tid": 3, "pid": 1,
                   "args": {}}
         res_bp_ops = [(bp_op1, bp_op2)]
-        with mock.patch('advisor_backend.cluster_advice.cluster_pipeline_advice.ClusterPipelineAdvice.double_queue_pop',
+        with mock.patch('msprof_analyze.advisor.advisor_backend.cluster_advice.cluster_pipeline_advice.'
+                        'ClusterPipelineAdvice.double_queue_pop',
                         return_value=(None, res_bp_ops)):
             advice = ClusterPipelineAdvice('./tmp_dir', {})
             res_check = advice.get_fp_bp_bound_ops(fine_data)

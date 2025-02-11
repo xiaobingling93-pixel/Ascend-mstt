@@ -12,14 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import configparser
 import os
 from email.utils import parseaddr
 from typing import Dict, List
 from urllib.parse import urlparse
 
-from .logger import get_logger
-from .path_manager import PathManager
+from msprof_analyze.prof_common.logger import get_logger
+from msprof_analyze.prof_common.path_manager import PathManager
 
 logger = get_logger()
 
@@ -90,17 +91,3 @@ def convert_to_int(num):
     except (ValueError, NameError):
         logger.error(f"Can not convert %s to int", num)
     return 0
-
-
-class PrintUtils:
-    @staticmethod
-    def print_warning(msg):
-        print("[WARNING] " + msg)
-
-    @staticmethod
-    def print_info(msg):
-        print("[INFO] " + msg)
-
-    @staticmethod
-    def print_error(msg):
-        print("[ERROR] " + msg)

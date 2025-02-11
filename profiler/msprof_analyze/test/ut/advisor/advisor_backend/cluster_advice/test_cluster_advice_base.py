@@ -1,10 +1,24 @@
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import shutil
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
 
-from advisor_backend.cluster_advice.cluster_advice_base import ClusterAdviceBase
+from msprof_analyze.advisor.advisor_backend.cluster_advice.cluster_advice_base import ClusterAdviceBase
 
 
 class MockChildClusterAdvice(ClusterAdviceBase):
@@ -56,7 +70,8 @@ class TestClusterAdviceBase(unittest.TestCase):
 
     def test_cluster_analyze_normal(self):
         mock_inst = MockChildClusterAdvice(self.tmp_dir)
-        with mock.patch("advisor_backend.cluster_advice.cluster_advice_base.Interface") as mock_if:
+        with mock.patch("msprof_analyze.advisor.advisor_backend.cluster_advice."
+                        "cluster_advice_base.Interface") as mock_if:
             mock_if_inst = mock_if.return_value
             mock_if_inst.run = MagicMock(name="run")
             mock_inst.cluster_analyze()
@@ -65,7 +80,8 @@ class TestClusterAdviceBase(unittest.TestCase):
     def test_cluster_analyze_abnormal(self):
         mock_inst = MockChildClusterAdvice(self.tmp_dir)
         with self.assertRaises(ValueError):
-            with mock.patch("advisor_backend.cluster_advice.cluster_advice_base.Interface") as mock_if:
+            with mock.patch("msprof_analyze.advisor.advisor_backend.cluster_advice."
+                            "cluster_advice_base.Interface") as mock_if:
                 mock_if_inst = mock_if.return_value
                 mock_if_inst.run = mock.Mock(name="run", side_effect=Exception('Error!'))
                 mock_inst.cluster_analyze()

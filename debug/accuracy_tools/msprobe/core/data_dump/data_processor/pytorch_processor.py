@@ -169,6 +169,11 @@ class PytorchDataProcessor(BaseDataProcessor):
         return getattr(module, "op_is_distributed", False)
 
     @staticmethod
+    def is_hookable_element(element):
+        return (hasattr(element, "register_hook") and callable(element.register_hook)) and \
+            (hasattr(element, "requires_grad") and element.requires_grad)
+
+    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -208,7 +213,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         if converted_numpy is not element:
             return self._analyze_numpy(converted_numpy, numpy_type)
         if isinstance(element, torch.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
+            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
@@ -319,7 +324,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.handle_overflow()
         return api_info_struct if self.has_overflow else None
-    
+
     def analyze_params(self, name, param_name, grad):
         self.has_overflow = False
         self._is_support_inf_nan()

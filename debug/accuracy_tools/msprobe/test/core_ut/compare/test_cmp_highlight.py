@@ -243,6 +243,59 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(api_batch.output_end_index, 4)
         self.assertEqual(api_batch.params_grad_end_index, 4)
 
+    def test_ApiBatch_increment_kwargs(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.KWARGS)
+
+        self.assertEqual(api_batch._state, Const.KWARGS)
+        self.assertEqual(api_batch.input_len, 2)
+        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
+    def test_ApiBatch_increment_params(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.PARAMS)
+
+        self.assertEqual(api_batch._state, Const.PARAMS)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
+    def test_ApiBatch_increment_multiple_input(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.INPUT)
+        api_batch.increment(Const.INPUT)
+
+        self.assertEqual(api_batch._state, Const.INPUT)
+        self.assertEqual(api_batch.input_len, 3)
+        self.assertEqual(api_batch.params_end_index, 5)
+        self.assertEqual(api_batch.output_end_index, 5)
+        self.assertEqual(api_batch.params_grad_end_index, 5)
+
+    def test_ApiBatch_increment_multiple_output(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.OUTPUT)
+        api_batch.increment(Const.OUTPUT)
+
+        self.assertEqual(api_batch._state, Const.OUTPUT)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 3)
+        self.assertEqual(api_batch.output_end_index, 5)
+        self.assertEqual(api_batch.params_grad_end_index, 5)
 
     @patch("msprobe.core.compare.highlight.logger")
     def test_value_check(self, mock_logger):

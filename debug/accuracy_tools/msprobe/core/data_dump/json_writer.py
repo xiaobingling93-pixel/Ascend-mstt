@@ -15,6 +15,7 @@
 
 import csv
 import os
+import copy
 import numpy as np
 
 from msprobe.core.common.const import Const, FileCheckConst
@@ -31,10 +32,12 @@ class DataWriter:
         self.construct_file_path = None
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
+        self.debug_file_path = None
         self.flush_size = 1000
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
+        self.cache_debug = {}
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -57,6 +60,13 @@ class DataWriter:
         self.cache_construct = {}
 
     def initialize_json_file(self, **kwargs):
+        if self.debug_file_path and not self.cache_debug:
+            # debug level case only create debug.json
+            debug_dict = copy.deepcopy(kwargs)
+            debug_dict.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
+            self.cache_debug = debug_dict
+            save_json(self.debug_file_path, self.cache_debug, indent=1)
+            return
         if not self.cache_data:
             kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
             self.cache_data = kwargs
@@ -66,13 +76,13 @@ class DataWriter:
         if not self.cache_construct:
             save_json(self.construct_file_path, self.cache_construct, indent=1)
 
-    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir,
-                          free_benchmark_file_path):
-        self.dump_file_path = dump_file_path
-        self.stack_file_path = stack_file_path
-        self.construct_file_path = construct_file_path
-        self.dump_tensor_data_dir = dump_data_dir
-        self.free_benchmark_file_path = free_benchmark_file_path
+    def update_dump_paths(self, dump_path_aggregation):
+        self.dump_file_path = dump_path_aggregation.dump_file_path
+        self.stack_file_path = dump_path_aggregation.stack_file_path
+        self.construct_file_path = dump_path_aggregation.construct_file_path
+        self.dump_tensor_data_dir = dump_path_aggregation.dump_tensor_data_dir
+        self.free_benchmark_file_path = dump_path_aggregation.free_benchmark_file_path
+        self.debug_file_path = dump_path_aggregation.debug_file_path
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
@@ -100,6 +110,9 @@ class DataWriter:
     def update_construct(self, new_data):
         self.cache_construct.update(new_data)
 
+    def update_debug(self, new_data):
+        self.cache_debug['data'].update(new_data)
+
     def write_data_json(self, file_path):
         logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
         save_json(file_path, self.cache_data, indent=1)
@@ -110,6 +123,9 @@ class DataWriter:
     def write_construct_info_json(self, file_path):
         save_json(file_path, self.cache_construct, indent=1)
 
+    def write_debug_info_json(self, file_path):
+        save_json(file_path, self.cache_debug, indent=1)
+
     def write_json(self):
         if self.cache_data:
             self.write_data_json(self.dump_file_path)
@@ -117,6 +133,8 @@ class DataWriter:
             self.write_stack_info_json(self.stack_file_path)
         if self.cache_construct:
             self.write_construct_info_json(self.construct_file_path)
+        if self.cache_debug:
+            self.write_debug_info_json(self.debug_file_path)
 
     def fill_stack_tensor_data(self):
         self.process_stat_data_recursive(self.cache_data)
@@ -135,7 +153,7 @@ class DataWriter:
                     if hasattr(tensor_stat_data, "device") and tensor_stat_data.device != Const.CPU_LOWERCASE:
                         tensor_stat_data = tensor_stat_data.cpu()
                     for index, stat in zip(tensor_stat_index, tensor_stat_data):
-                        data.update({index, stat.item()})
+                        data.update({index: stat.item()})
                 del data["tensor_stat"]
             else:
                 for key in data.keys():

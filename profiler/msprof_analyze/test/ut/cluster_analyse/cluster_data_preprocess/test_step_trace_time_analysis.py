@@ -1,4 +1,4 @@
-# Copyright (c) 2023, Huawei Technologies Co., Ltd.
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,13 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import os
 import unittest
-from unittest import mock
 
-from analysis.step_trace_time_analysis import StepTraceTimeAnalysis
-from prof_bean.step_trace_time_bean import StepTraceTimeBean
+from msprof_analyze.cluster_analyse.analysis.step_trace_time_analysis import StepTraceTimeAnalysis
+from msprof_analyze.cluster_analyse.prof_bean.step_trace_time_bean import StepTraceTimeBean
 from msprof_analyze.prof_common.constant import Constant
 
 

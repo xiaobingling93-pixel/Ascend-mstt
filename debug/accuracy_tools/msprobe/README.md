@@ -15,7 +15,7 @@ debugger = PrecisionDebugger(config_path='./config.json')
 ...
 debugger.start() # 一般在训练循环开头启动工具
 ... # 循环体
-debugger.stop() # 一般在训练循环末尾结束工具
+debugger.stop() # 一般在训练循环末尾结束工具。必须调用，否则可能导致精度数据落盘不全
 debugger.step() # 在训练循环的最后需要重置工具，非循环场景不需要
 ```
 
@@ -50,6 +50,8 @@ export MSPROBE_LOG_LEVEL={x}
 ## 🚨 工具限制与注意事项
 
 **1. Pytorch 框架下，工具暂不支持 Fully Sharded Data Parallel(FSDP)。**
+
+**2. 工具读写的所有路径，如config_path、dump_path等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。**
 
 ## ⚙️ [安装](./docs/01.installation.md)
 
@@ -125,7 +127,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 该功能收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
 
-[PyTorch 场景的训练状态监控](./docs/19.monitor.md)
+[兼容 PyTorch 和 MindSpore 框架的训练状态监控](./docs/19.monitor.md)
 
 ### 10 分级可视化构图比对
 

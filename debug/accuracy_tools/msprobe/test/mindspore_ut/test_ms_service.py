@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 from mindspore import nn, ops
 
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.utils import Const
+from msprobe.core.common.utils import Const, DumpPathAggregation
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
@@ -60,11 +60,16 @@ class TestService(unittest.TestCase):
 
     def test_check_model_valid_with_valid_cell(self):
         model = nn.Cell()
+        model_list = [model]
         self.assertEqual(self.service.check_model_valid(model), model)
+        self.assertEqual(self.service.check_model_valid(model_list), model_list)
 
     def test_check_model_valid_with_invalid_type(self):
+        model = nn.Cell()
         with self.assertRaises(MsprobeException):
             self.service.check_model_valid("not a cell")
+        with self.assertRaises(MsprobeException):
+            self.service.check_model_valid(["not a cell", model])
 
     def test_update_primitive_counters(self):
         self.service.primitive_counters = {}
@@ -78,6 +83,7 @@ class TestService(unittest.TestCase):
         self.service.current_iter = 1
         self.service.current_rank = 0
         self.service.data_collector.tasks_need_tensor_data = [Const.TENSOR]
+        self.service.data_collector.update_dump_paths = MagicMock()
         self.service.create_dirs()
         expected_calls = [
             ("/tmp/dump"),
@@ -87,13 +93,11 @@ class TestService(unittest.TestCase):
         mock_create_directory.assert_has_calls(
             [unittest.mock.call(path) for path in expected_calls], any_order=True)
 
-        self.service.data_collector.update_dump_paths.assert_called_once_with(
-            "/tmp/dump/step1/rank0/dump.json",
-            "/tmp/dump/step1/rank0/stack.json",
-            "/tmp/dump/step1/rank0/construct.json",
-            "/tmp/dump/step1/rank0/dump_tensor_data",
-            None
-        )
+        args, _ = self.service.data_collector.update_dump_paths.call_args
+        self.assertEqual(args[0].dump_file_path, "/tmp/dump/step1/rank0/dump.json")
+        self.assertEqual(args[0].stack_file_path, "/tmp/dump/step1/rank0/stack.json")
+        self.assertEqual(args[0].construct_file_path, "/tmp/dump/step1/rank0/construct.json")
+        self.assertEqual(args[0].dump_tensor_data_dir, "/tmp/dump/step1/rank0/dump_tensor_data")
         self.service.data_collector.initialize_json_file.assert_called_once_with(
             framework=Const.MS_FRAMEWORK
         )

@@ -25,9 +25,10 @@ import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
 
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_recomputation
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -38,7 +39,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
     TensorMetrics, squash_param_name
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
-from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
+from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
@@ -85,7 +86,7 @@ class ModuleHookContext:
         :param target_config: target obj in config json.
         :return:
         """
-        valid_key = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT, MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
+        valid_key = [Const.INPUT, Const.OUTPUT, MonitorConst.INPUT_GRAD, MonitorConst.OUTPUT_GRAD]
         if key_name not in valid_key:
             raise ValueError(f"key({key_name}) error, valid_key: {valid_key}")
         cared = target_config.get(self.module_name, self.struct)
@@ -215,7 +216,7 @@ class TrainerMon:
             self.group_mates = dist.get_process_group_ranks(self.process_group)
         else:
             self.rank = 0
-            self.tensorboard_dir = os.path.join(self.output_base_dir, f"{cur_time}-{self.unique_id}")
+            self.tensorboard_dir = os.path.join(self.output_base_dir, f"{cur_time}-rank{self.rank}-{self.unique_id}")
             self.pp_stage = 0
             self.group_mates = [0]
 
@@ -361,7 +362,8 @@ class TrainerMon:
             )
             # 初始化anomaly detected文件目录
             if self.anomaly_data_factory:
-                self.anomaly_data_writer = AnomalyDataWriter(os.path.join(self.output_base_dir, "anomaly_detected"), self.rank)
+                self.anomaly_data_writer = AnomalyDataWriter(os.path.join(self.output_base_dir, "anomaly_detected"),
+                                                             self.rank)
                 self.anomaly_data_writer.init_detected_json()
 
     def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
@@ -403,14 +405,14 @@ class TrainerMon:
             return
 
         targets = self.config['targets']
-        module_in_all_stage = [key for key in targets.keys() if MonitorConst.VPP_SEP not in key]
+        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
         for key in module_in_all_stage:
             struct = targets.pop(key)
-            targets.update({f'{vpp_stage}{MonitorConst.VPP_SEP}{key}': struct for vpp_stage in range(len(self.model))})
+            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
 
         hooked_count = 0
         for vpp_stage, model_chunk in enumerate(self.model):
-            vpp_stage = f'{vpp_stage}{MonitorConst.VPP_SEP}'
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
                 'targets'].keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
@@ -448,8 +450,8 @@ class TrainerMon:
             return
         opt_context.exp_avg_metric = {}
         opt_context.exp_avg_sq_metric = {}
-        m_tag_tensor_map = self.generate_param_map('exp_avg', opt_context.param_exp_avg)
-        v_tag_tensor_map = self.generate_param_map('efxp_avg_sq', opt_context.param_exp_avg_sq)
+        m_tag_tensor_map = self.generate_param_map(MonitorConst.EXP_AVG, opt_context.param_exp_avg)
+        v_tag_tensor_map = self.generate_param_map(MonitorConst.EXP_AVG_SQ, opt_context.param_exp_avg_sq)
         get_metrics(self.ops, m_tag_tensor_map, self.eps, opt_context.exp_avg_metric)
         get_metrics(self.ops, v_tag_tensor_map, self.eps, opt_context.exp_avg_sq_metric)
 
@@ -546,21 +548,23 @@ class TrainerMon:
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if len(fwd_context.actv) == 0:
                 continue
-            self.summary_writer.write_metrics(self.ops, fwd_context.actv, step, 'actv')
+            self.summary_writer.write_metrics(self.ops, fwd_context.actv, step, MonitorConst.ACTV)
             fwd_context.actv.clear()
         if self.grad_context.actv:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, 'actv_grad')
+            self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, MonitorConst.ACTVGRAD)
 
     def write_param_tb(self, opt_context):
         if not self.param_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, 'param')
+        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, MonitorConst.PARAM)
 
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, opt_context.step, 'exp_avg')
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step, 'exp_avg_sq')
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, 
+                                          opt_context.step, MonitorConst.EXP_AVG)
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, 
+                                          opt_context.step, MonitorConst.EXP_AVG_SQ)
 
     def write_grad_tb(self, step):
         if not self.wg_distribution:
@@ -696,8 +700,10 @@ class TrainerMon:
             rank = dist.get_rank() if dist.is_initialized() else None
             # 静态在第0步就可以保存, 动态在第0步不可以, 因为动态设计的就是重置后下一步开启, 第0步的self.monitoring还是False
             if self.monitoring:
-                module_rank_valid = not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list)
-                step_condition = (context.step >= self.start_step and (context.step - self.start_step) % self.step_interval == 0)
+                module_rank_valid = not self.module_rank_list or (
+                            dist.is_initialized() and dist.get_rank() in self.module_rank_list)
+                step_condition = (context.step >= self.start_step and (
+                            context.step - self.start_step) % self.step_interval == 0)
                 if module_rank_valid and step_condition:
                     self.has_collect_times += 1
 
@@ -712,10 +718,12 @@ class TrainerMon:
                     if self.ur_distribution:
                         for param_name, _ in context.param_adam_update.items():
                             self.update_heatmap_visualizer[param_name].visualize(
-                                get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
+                                get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step,
+                                self.summary_writer)
                         for param_name, _ in context.param_adam_ratio.items():
                             self.ratio_heatmap_visualizer[param_name].visualize(
-                                get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
+                                get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step,
+                                self.summary_writer)
 
                     if context.metric_dict:
                         self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
@@ -866,7 +874,7 @@ class TrainerMon:
 
     def _register_param_name(self):
         for vpp_stage, model_chunk in enumerate(self.model):
-            prefix = f'{vpp_stage}{MonitorConst.VPP_SEP}'
+            prefix = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             self._register_chunk(model_chunk, prefix)
 
     def _is_target_module(self, module_name, targets, vpp_stage):
@@ -895,35 +903,37 @@ class TrainerMon:
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
                 context.struct = {
-                    MonitorConst.ACTV_IN: get_param_struct(module_input),
-                    MonitorConst.ACTV_OUT: get_param_struct(module_output)
+                    Const.INPUT: get_param_struct(module_input),
+                    Const.OUTPUT: get_param_struct(module_output)
                 }
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not context.format_by_arg:
-                context.set_format_by_arg(MonitorConst.ACTV_IN, self.config['targets'])
-                context.set_format_by_arg(MonitorConst.ACTV_OUT, self.config['targets'])
+                context.set_format_by_arg(Const.INPUT, self.config['targets'])
+                context.set_format_by_arg(Const.OUTPUT, self.config['targets'])
             if not context.format_by_arg:
                 return
             if not context.verified:
-                context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_IN],
+                context.focused_in_col = validate_config_spec(context.format_by_arg[Const.INPUT],
                                                               module_input, context.module_name,
-                                                              MonitorConst.ACTV_IN)
-                context.focused_out_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_OUT],
+                                                              Const.INPUT)
+                context.focused_out_col = validate_config_spec(context.format_by_arg[Const.OUTPUT],
                                                                module_output, context.module_name,
-                                                               MonitorConst.ACTV_OUT)
+                                                               Const.OUTPUT)
                 context.verified = True
             # expect output be tensor type
             tbtag_tensor_map = {}
             cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_IN,
-                                            cared_input))
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.INPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, cared_input))
             cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_OUT,
-                                            cared_output))
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.OUTPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, cared_output))
 
             get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             context.micro_step += 1
@@ -935,35 +945,37 @@ class TrainerMon:
             context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
             if not context.struct:
                 context.struct = {
-                    MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
-                    MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)
+                    MonitorConst.INPUT_GRAD: get_param_struct(input_grad),
+                    MonitorConst.OUTPUT_GRAD: get_param_struct(output_grad)
                 }
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not context.format_by_arg:
-                context.set_format_by_arg(MonitorConst.ACTVGRAD_IN, self.config['targets'])
-                context.set_format_by_arg(MonitorConst.ACTVGRAD_OUT, self.config['targets'])
+                context.set_format_by_arg(MonitorConst.INPUT_GRAD, self.config['targets'])
+                context.set_format_by_arg(MonitorConst.OUTPUT_GRAD, self.config['targets'])
             if not context.format_by_arg:
                 return
             if not context.verified:
-                context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_IN],
-                                                              input_grad, context.module_name,
-                                                              MonitorConst.ACTVGRAD_IN)
-                context.focused_out_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_OUT],
-                                                               output_grad, context.module_name,
-                                                               MonitorConst.ACTVGRAD_OUT)
+                context.focused_in_col = validate_config_spec(
+                    context.format_by_arg[MonitorConst.INPUT_GRAD], 
+                    input_grad, context.module_name, MonitorConst.INPUT_GRAD)
+                context.focused_out_col = validate_config_spec(
+                    context.format_by_arg[MonitorConst.OUTPUT_GRAD],
+                    output_grad, context.module_name, MonitorConst.OUTPUT_GRAD)
                 context.verified = True
 
             tbtag_tensor_map = {}
             cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_IN,
-                                            cared_input_grad))
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.INPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, cared_input_grad))
             cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_OUT,
-                                            cared_output_grad))
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.OUTPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, cared_output_grad))
 
             if context.micro_step == 0 and context.actvgrad:
                 logger.warning(f"actvgrad context of {context.module_name} is not empty when first micro_step, "

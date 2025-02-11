@@ -31,7 +31,7 @@ else:
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import Const, print_tools_ends_info
+from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs,
                                                         ModuleBackwardInputs)
@@ -70,17 +70,28 @@ class Service:
         self.params_grad_info = {}
         # 提前注册，确保注册尽可能多的API hook
         self.register_api_hook()
+        self.init_for_debug_level()
 
     @staticmethod
-    def check_model_valid(model):
-        if not model:
-            return model
-        targer_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
-        if not isinstance(model, targer_module_type[0]):
+    def check_model_valid(models):
+        target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
+        if models is None or isinstance(models, target_module_type[0]):
+            return models
+        error_model = None
+        if isinstance(models, (list, tuple)):
+            for model in models:
+                if not isinstance(model, target_module_type[0]):
+                    error_model = model
+                    break
+        else:
+            error_model = models
+
+        if error_model is not None:
+            error_info = (f"The 'model' parameter must be a {target_module_type[1]} or list[{target_module_type[1]}] "
+                          f"type, currently there is a {type(error_model)} type.")
             raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"model 参数必须是 {targer_module_type[1]} 类型。"
-            )
-        return model
+                MsprobeException.INVALID_PARAM_ERROR, error_info)
+        return models
 
     @staticmethod
     def prepare_module_input_output(target_type, cell, input_data, output):
@@ -247,15 +258,20 @@ class Service:
             self.primitive_counters[primitive_name] += 1
 
     def step(self):
+        if self.config.level == Const.LEVEL_DEBUG:
+            return
         if self.config.async_dump:
             self.data_collector.fill_stack_tensor_data()
-            self.data_collector.data_processor.dump_async_data()
+            if self.config.task == Const.TENSOR:
+                self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         self.reset_status()
 
     def start(self, model=None):
+        if self.config.level == Const.LEVEL_DEBUG:
+            return
         self.start_call = True
         if self.should_stop_service:
             return
@@ -300,6 +316,8 @@ class Service:
         JitDump.jit_dump_switch = True
 
     def stop(self):
+        if self.config.level == Const.LEVEL_DEBUG:
+            return
         if self.should_stop_service:
             return
         logger.info(f"{Const.TOOL_NAME}: debugger.stop() is set successfully. "
@@ -316,7 +334,8 @@ class Service:
         self.start_call = False
         if self.config.async_dump:
             self.data_collector.fill_stack_tensor_data()
-            self.data_collector.data_processor.dump_async_data()
+            if self.config.task == Const.TENSOR:
+                self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         JitDump.jit_dump_switch = False
 
@@ -360,12 +379,13 @@ class Service:
         else:
             dump_data_dir = None
 
-        dump_file_path = os.path.join(dump_dir, "dump.json")
-        stack_file_path = os.path.join(dump_dir, "stack.json")
-        construct_file_path = os.path.join(dump_dir, "construct.json")
-        self.data_collector.update_dump_paths(
-            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None
-        )
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        self.data_collector.update_dump_paths(dump_path_aggregation)
+
         self.data_collector.initialize_json_file(
             framework=Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
         )
@@ -379,6 +399,19 @@ class Service:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
 
+    def get_cells_and_names(self):
+        cells_and_names_with_index = {}
+
+        def get_cell_or_module(model):
+            return model.named_modules() if is_mindtorch() else model.cells_and_names()
+
+        if isinstance(self.model, (list, tuple)):
+            for index, model in enumerate(self.model):
+                cells_and_names_with_index[str(index)] = get_cell_or_module(model)
+        else:
+            cells_and_names_with_index["-1"] = get_cell_or_module(self.model)
+        return cells_and_names_with_index
+
     def register_primitive_hook(self):
         if self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L1]:
             return
@@ -386,14 +419,12 @@ class Service:
             return
 
         primitive_set = set()
-        if is_mindtorch():
-            cells_and_names = self.model.named_modules()
-        else:
-            cells_and_names = self.model.cells_and_names()
-        for _, cell in cells_and_names:
-            for attribute, value in vars(cell).items():
-                if isinstance(value, Primitive):
-                    primitive_set.add((attribute, value))
+        cells_and_names_with_index = self.get_cells_and_names()
+        for cells_and_names in cells_and_names_with_index.values():
+            for _, cell in cells_and_names:
+                for attribute, value in vars(cell).items():
+                    if isinstance(value, Primitive):
+                        primitive_set.add((attribute, value))
 
         for pname, primitive in primitive_set:
             primitive_class_name = primitive.__class__.__name__
@@ -409,28 +440,29 @@ class Service:
             if not self.model:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                        f"The current level is {self.config.level}, the model cannot be None")
+            model_type = Const.MODULE if is_mindtorch() else Const.CELL
+            cells_and_names_with_index = self.get_cells_and_names()
 
-            cell_names_and_type = (self.model.named_modules(), Const.MODULE) \
-                if is_mindtorch() else (self.model.cells_and_names(), Const.CELL)
+            for index, cells_and_names in cells_and_names_with_index.items():
+                model = self.model if index == "-1" else self.model[int(index)]
+                for name, cell in cells_and_names:
+                    if cell == model:
+                        continue
+                    cell_index = (index + Const.SEP) if index != "-1" else ""
+                    prefix = (model_type + Const.SEP + cell_index + name +
+                              Const.SEP + cell.__class__.__name__ + Const.SEP)
+                    _, forward_hook, backward_hook, _ = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                    cell.register_forward_hook(forward_hook)
+                    cell.register_forward_pre_hook(
+                        self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                    cell.register_forward_hook(
+                        self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
 
-            for name, cell in cell_names_and_type[0]:
-                if cell == self.model:
-                    continue
-
-                prefix = (cell_names_and_type[1] + Const.SEP + name + Const.SEP +
-                          cell.__class__.__name__ + Const.SEP)
-                _, forward_hook, backward_hook, _ = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                cell.register_forward_hook(forward_hook)
-                cell.register_forward_pre_hook(
-                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
-                cell.register_forward_hook(
-                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-
-                register_backward_hook_functions["full"](cell, backward_hook)
-                register_backward_hook_functions["pre"](
-                    cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                register_backward_hook_functions["full"](
-                    cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    register_backward_hook_functions["full"](cell, backward_hook)
+                    register_backward_hook_functions["pre"](
+                        cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                    register_backward_hook_functions["full"](
+                        cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()
@@ -445,3 +477,54 @@ class Service:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
+
+    def init_for_debug_level(self):
+        if not (self.config.level == Const.LEVEL_DEBUG and self.config.task in [Const.TENSOR, Const.STATISTICS]):
+            return
+        try:
+            self.current_rank = get_rank_if_initialized()
+        except DistributedNotInitializedError:
+            self.current_rank = None
+        # dir: dump_path -- rank{} -- debug.json
+        self.dump_iter_dir = self.config.dump_path
+        cur_rank = self.current_rank if self.current_rank is not None else ''
+        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
+        create_directory(dump_dir)
+        if self.config.task in self.data_collector.tasks_need_tensor_data:
+            dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
+            create_directory(dump_data_dir)
+        else:
+            dump_data_dir = None
+
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
+        self.data_collector.update_dump_paths(dump_path_aggregation)
+        self.data_collector.initialize_json_file(
+            framework=Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
+        )
+        self.debug_variable_counter = defaultdict(int)
+
+    def save(self, variable, name, save_backward):
+        '''
+        Args:
+            variable: Union[List[variable], dict{str: variable}, mindspore.tensor, str, float, int]
+            name: str
+            save_backward: boolean
+        Return:
+            void
+        '''
+        if self.config.level != Const.LEVEL_DEBUG:
+            return
+        count = self.debug_variable_counter[name]
+        self.debug_variable_counter[name] += 1
+
+        name_with_count = f"{name}.{count}"
+        grad_name_with_count = f"{name}_grad.{count}"
+
+        # forward save
+        self.data_collector.debug_data_collect_forward(variable, name_with_count)
+
+        # backward save
+        if save_backward:
+            self.data_collector.debug_data_collect_backward(variable, grad_name_with_count)

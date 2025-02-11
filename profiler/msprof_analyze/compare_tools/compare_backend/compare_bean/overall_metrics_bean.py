@@ -14,10 +14,9 @@
 # limitations under the License.
 from math import isclose
 
-from compare_backend.compare_bean.profiling_info import ProfilingInfo
-from compare_backend.utils.common_func import calculate_diff_ratio
-from compare_backend.utils.excel_config import ExcelConfig, CellFormatType
-
+from msprof_analyze.compare_tools.compare_backend.compare_bean.profiling_info import ProfilingInfo
+from msprof_analyze.compare_tools.compare_backend.utils.common_func import calculate_diff_ratio
+from msprof_analyze.compare_tools.compare_backend.utils.excel_config import ExcelConfig, CellFormatType
 from msprof_analyze.prof_common.constant import Constant
 
 
@@ -30,7 +29,7 @@ class OverallMetricsBean:
         self._base_data = OverallMetricsInfo(base_info).overall_metrics
         self._comparison_data = OverallMetricsInfo(comparison_info).overall_metrics
         if not any((base_info.is_not_minimal_profiling(), comparison_info.is_not_minimal_profiling())):
-            self.TABLE_NAME += ' (Minimal Prof)'
+            OverallMetricsBean.TABLE_NAME += ' (Minimal Prof)'
 
     @property
     def rows(self):

@@ -34,6 +34,7 @@ try:
 except ImportError:
     has_adump = False
 
+
 class MindsporeDataProcessor(BaseDataProcessor):
     mindspore_special_type = tuple([ms.Tensor, Number])
 
@@ -115,6 +116,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
             api_register.norm_inner_op_set_hook_func()
         return tensor_stat
 
+    @staticmethod
+    def is_hookable_element(element):
+        return hasattr(element, "register_hook") and callable(element.register_hook)
+
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.mindspore_special_type
@@ -139,7 +144,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if isinstance(element, Number):
             return self.analyze_dtype_in_kwargs(element)
         if isinstance(element, ms.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
+            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
@@ -230,7 +235,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.maybe_save_overflow_data()
         return api_info_struct if self.has_overflow else None
-    
+
     def analyze_params(self, name, param_name, grad):
         self.has_overflow = False
         api_info_struct = super().analyze_params(name, param_name, grad)
@@ -265,6 +270,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self._analyze_maybe_overflow_tensor(single_arg)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
+
 
 class KernelDumpDataProcessor(MindsporeDataProcessor):
     def __init__(self, config, data_writer):

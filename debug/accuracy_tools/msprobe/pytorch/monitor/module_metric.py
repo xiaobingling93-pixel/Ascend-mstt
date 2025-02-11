@@ -147,13 +147,13 @@ def get_metrics(ops, tag2tensor, eps, out_dict=None):
     """
     :param ops: ["op1", "op2"]
     :param tag2tensor: {
-    '0:fc_0/input': torch.randn([3, 4]),
-    '0:fc_0/output': torch.randn([3, 3])
+    '0:fc.input:0/actv': torch.randn([3, 4]),
+    '0:fc.output:0/actv': torch.randn([3, 3])
     }
     :param eps: float 1e-8
     :param out_dict:{
-    '0:fc_0/input': {"op1": op1(torch.randn([3, 4])), "op2": op2(torch.randn([3, 4]))}
-    '0:fc_0/output': {"op1": op1(torch.randn([3, 3])), "op2": op2(torch.randn([3, 3]))}
+    '0:fc.input:0/actv': {"op1": op1(torch.randn([3, 4])), "op2": op2(torch.randn([3, 4]))}
+    '0:fc.output:0/actv': {"op1": op1(torch.randn([3, 3])), "op2": op2(torch.randn([3, 3]))}
     }
     :return: out_dict
     """

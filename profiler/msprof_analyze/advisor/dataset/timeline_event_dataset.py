@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import logging
 import traceback
 from collections import OrderedDict
@@ -23,7 +22,8 @@ from tqdm import tqdm
 
 from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.advisor.common.timeline.event import TimelineEvent
-from msprof_analyze.advisor.utils.utils import get_file_path_from_directory, check_path_valid, singleton, convert_to_float
+from msprof_analyze.advisor.utils.utils import get_file_path_from_directory, check_path_valid, singleton, \
+    convert_to_float
 from msprof_analyze.advisor.dataset.timeline_op_collector.timeline_op_collector import (
     OpCompileCollector,
     SynchronizeStreamCollector,
