@@ -78,6 +78,10 @@ class DebuggerConfig:
         if not isinstance(self.async_dump, bool):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump should be bool.")
+        if self.async_dump and self.task == Const.TENSOR and not self.list:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"The parameters async_dump is true in tensor task, the parameters list cannot be "
+                                   f"empty.")
 
     def check(self):
         self.check_kwargs()

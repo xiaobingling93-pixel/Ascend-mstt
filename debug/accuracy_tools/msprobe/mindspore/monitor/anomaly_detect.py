@@ -165,7 +165,7 @@ class TrainStage:
 FORWARD_KEY = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
 BACKWARD_KEY = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT,
                 MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
-OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EFXP_AVG_SQ]
+OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
 TRAIN_STAGE = {
     **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
     **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
@@ -222,7 +222,7 @@ class GradAnomalyData:
     @staticmethod
     def get_train_stage(tag_name):
         """
-        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/efxp_avg_sq"
+        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq"
         :return: int, if forward return 0; if backward return 1; if optimizer return 2
         """
         key_ = tag_name.split("/")[-1]

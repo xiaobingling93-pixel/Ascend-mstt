@@ -54,6 +54,11 @@ class DataCollector:
     def check_scope_and_pid(scope, name, pid):
         return (not scope or scope.check(name)) and pid == os.getpid()
 
+    @staticmethod
+    def set_is_recomputable(data_info, is_recompute):
+        if data_info and len(data_info) == 1: # 正常情况下data_info的长度应改为1
+            data_info[list(data_info.keys())[0]]["is_recompute"] = is_recompute
+
     def if_return_forward_new_output(self):
         return self.data_processor.if_return_forward_new_output()
 
@@ -77,7 +82,7 @@ class DataCollector:
         logger.debug(msg)
         self.data_writer.update_data(data_info)
 
-    def forward_input_data_collect(self, name, module, pid, module_input_output):
+    def forward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=False):
         if self.config.task == Const.FREE_BENCHMARK:
             backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
             if self.check_scope_and_pid(self.scope, backward_name, pid):
@@ -88,31 +93,34 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_forward_input(name, module, module_input_output)
+        self.set_is_recomputable(data_info, is_recompute)
         if self.config.level == Const.LEVEL_L2:
             return
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-    def forward_output_data_collect(self, name, module, pid, module_input_output):
+    def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=False):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
         data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
+        self.set_is_recomputable(data_info, is_recompute)
         if self.config.level == Const.LEVEL_L2:
             return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-    def forward_data_collect(self, name, module, pid, module_input_output):
+    def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=False):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
         data_info = self.data_processor.analyze_forward(name, module, module_input_output)
+        self.set_is_recomputable(data_info, is_recompute)
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-    def backward_data_collect(self, name, module, pid, module_input_output):
+    def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=False):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
@@ -127,20 +135,22 @@ class DataCollector:
             self.backward_module_names[module_name] = True
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-    def backward_input_data_collect(self, name, module, pid, module_input_output):
+    def backward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=False):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
         data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
+        self.set_is_recomputable(data_info, is_recompute)
         self.handle_data(name, data_info)
 
-    def backward_output_data_collect(self, name, module, pid, module_input_output):
+    def backward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=False):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
         data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
+        self.set_is_recomputable(data_info, is_recompute)
         self.handle_data(name, data_info)
 
     def update_construct(self, name):

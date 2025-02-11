@@ -27,7 +27,7 @@ from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutput
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import get_rank_if_initialized
+from msprobe.pytorch.common.utils import get_rank_if_initialized, is_recomputation
 from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_registry import api_register
@@ -64,6 +64,7 @@ class Service:
         def pre_hook(api_or_module_name, module, args, kwargs):
             if not self.should_execute_hook(module_type, module, True):
                 return args, kwargs
+            is_recompute = is_recomputation()
 
             self.inner_switch = True
             if module_type == BaseScope.Module_Type_Module:
@@ -78,7 +79,13 @@ class Service:
                 return None, None
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
-                self.data_collector.forward_input_data_collect(api_or_module_name, module, pid, module_input_output)
+                self.data_collector.forward_input_data_collect(
+                    api_or_module_name, 
+                    module, 
+                    pid, 
+                    module_input_output, 
+                    is_recompute
+                )
 
             self.inner_switch = False
             return args, kwargs
@@ -126,6 +133,7 @@ class Service:
         def forward_hook(api_or_module_name, module, args, kwargs, output):
             if not self.should_execute_hook(module_type, module, True):
                 return None
+            is_recompute = is_recomputation()
 
             self.inner_switch = True
             if self.config.online_run_ut:
@@ -161,7 +169,8 @@ class Service:
                     api_or_module_name,
                     module,
                     pid,
-                    module_input_output
+                    module_input_output,
+                    is_recompute
                 )
                 init_params_grad_info(module, params_dict)
             else:
@@ -170,7 +179,8 @@ class Service:
                     api_or_module_name,
                     module,
                     pid,
-                    module_input_output
+                    module_input_output,
+                    is_recompute
                 )
 
             if self.data_collector.if_return_forward_new_output():
@@ -186,6 +196,7 @@ class Service:
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if not self.should_execute_hook(module_type, module, False):
                 return
+            is_recompute = is_recomputation()
 
             self.inner_switch = True
             if module_type == BaseScope.Module_Type_Module:
@@ -199,7 +210,13 @@ class Service:
             if self.data_collector:
                 # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
-                self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
+                self.data_collector.backward_data_collect(
+                    api_or_module_name, 
+                    module, 
+                    pid, 
+                    module_input_output, 
+                    is_recompute
+                )
             self.inner_switch = False
 
         pid = os.getpid()
@@ -260,7 +277,8 @@ class Service:
             return
         if self.config.async_dump:
             self.data_collector.fill_stack_tensor_data()
-            self.data_collector.data_processor.dump_async_data()
+            if self.config.task == Const.TENSOR:
+                self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
 
     def step(self):
@@ -270,7 +288,8 @@ class Service:
             return
         if self.config.async_dump:
             self.data_collector.fill_stack_tensor_data()
-            self.data_collector.data_processor.dump_async_data()
+            if self.config.task == Const.TENSOR:
+                self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)

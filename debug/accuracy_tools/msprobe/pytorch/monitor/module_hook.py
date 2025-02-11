@@ -28,6 +28,7 @@ from torch.utils.hooks import BackwardHook
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_recomputation
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -38,7 +39,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
     TensorMetrics, squash_param_name
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
-from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
+from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
