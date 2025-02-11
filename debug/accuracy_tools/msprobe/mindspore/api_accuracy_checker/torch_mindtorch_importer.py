@@ -23,7 +23,6 @@ from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 import torch as mindtorch
 from torch import Tensor as mindtorch_tensor
 import torch.nn.functional as mindtorch_func
-import torch_npu as mindtorch_npu
 import torch.distributed as mindtorch_dist
 
 
@@ -145,7 +144,6 @@ def reset_torch_env():
         import torch
     else:
         import torch
-        import torch_npu
 
     sys.path = initial_sys_path
 

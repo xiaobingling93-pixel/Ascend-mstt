@@ -29,11 +29,9 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_tensor
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_func
-    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_npu
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_dist
 
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
-    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch_npu
 else:
     import torch
 
@@ -64,8 +62,6 @@ api_parent_module_mapping = {
     (MsCompareConst.MINDTORCH, Const.PT_FRAMEWORK): torch,
     (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): mindtorch_func,
     (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): torch.nn.functional,
-    (MsCompareConst.MINDTORCH_NPU, Const.MT_FRAMEWORK): mindtorch_npu,
-    (MsCompareConst.MINDTORCH_NPU, Const.PT_FRAMEWORK): torch_npu,
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): mindtorch_dist,
     (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed
 
@@ -85,8 +81,6 @@ api_parent_module_str_mapping = {
     (MsCompareConst.MINDTORCH, Const.PT_FRAMEWORK): "torch",
     (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): "mindtorch_func",
     (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): "torch.nn.functional",
-    (MsCompareConst.MINDTORCH_NPU, Const.MT_FRAMEWORK): "mindtorch_npu",
-    (MsCompareConst.MINDTORCH_NPU, Const.PT_FRAMEWORK): "torch_npu",
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): "mindtorch_dist",
     (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed"
 }
@@ -136,7 +130,7 @@ class ApiRunner:
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
         if api_type_str not in MsCompareConst.MT_VALID_API_TYPES and api_platform == Const.MT_FRAMEWORK:
-            err_msg = f"ApiRunner.get_info_from_name failed: not torch, torch_npu or Tensor api"
+            err_msg = f"ApiRunner.get_info_from_name failed: not torch, functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         return api_type_str, api_sub_name
 
