@@ -24,6 +24,7 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
 else:
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
     import torch
 
 INT8 = "Int8"
