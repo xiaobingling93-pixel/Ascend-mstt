@@ -86,12 +86,12 @@ def clear_torch_from_sys_modules():
         del sys.modules[module]
 
 
-def invalid_pt_mt_env():
+def set_pt_mt_env_invalid():
     global is_valid_pt_mt_env
     is_valid_pt_mt_env = False
 
 
-def invalid_mt_env():
+def set_mt_env_invalid():
     global is_mt_env
     is_mt_env = False
 
@@ -99,8 +99,8 @@ def invalid_mt_env():
 def delete_torch_paths():
 
     if not is_mindtorch():
-        invalid_pt_mt_env()
-        invalid_mt_env()
+        set_pt_mt_env_invalid()
+        set_mt_env_invalid()
 
     clear_torch_from_sys_modules()
 
@@ -118,8 +118,8 @@ def delete_torch_paths():
 
 
 if not is_mindtorch():
-    invalid_pt_mt_env()
-    invalid_mt_env()
+    set_pt_mt_env_invalid()
+    set_mt_env_invalid()
 
 else:
     initial_sys_path = sys.path.copy()
@@ -130,7 +130,7 @@ else:
     import torch
 
     if is_mindtorch():
-        invalid_pt_mt_env()
+        set_pt_mt_env_invalid()
 
     sys.path = initial_sys_path
 
