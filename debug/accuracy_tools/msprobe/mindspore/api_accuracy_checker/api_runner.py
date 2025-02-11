@@ -35,10 +35,6 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
 else:
     import torch
 
-    mindtorch = None
-    mindtorch_tensor = None
-    mindtorch_func = None
-    mindtorch_dist = None
 
 
 class ApiInputAggregation:
