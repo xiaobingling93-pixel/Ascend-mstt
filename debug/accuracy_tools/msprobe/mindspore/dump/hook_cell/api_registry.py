@@ -106,6 +106,7 @@ class ApiRegistry:
             self.set_api_attr(torch.Tensor, self.torch_tensor_hook_attr)
             self.set_api_attr(torch.nn.functional, self.torch_functional_hook_attr)
             self.set_api_attr(torch.distributed, self.torch_distributed_hook_attr)
+            self.set_api_attr(torch.distributed.distributed_c10d, self.torch_distributed_hook_attr)
             self.set_api_attr(torch_npu, self.torch_npu_hook_attr)
         else:
             self.set_api_attr(Tensor, self.tensor_hook_attr)
@@ -121,6 +122,7 @@ class ApiRegistry:
             self.set_api_attr(torch.Tensor, self.torch_tensor_ori_attr)
             self.set_api_attr(torch.nn.functional, self.torch_functional_ori_attr)
             self.set_api_attr(torch.distributed, self.torch_distributed_ori_attr)
+            self.set_api_attr(torch.distributed.distributed_c10d, self.torch_distributed_ori_attr)
             self.set_api_attr(torch_npu, self.torch_npu_ori_attr)
         else:
             self.set_api_attr(Tensor, self.tensor_ori_attr)
