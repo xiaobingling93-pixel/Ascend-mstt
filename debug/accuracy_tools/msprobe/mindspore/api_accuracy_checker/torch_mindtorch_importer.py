@@ -151,8 +151,13 @@ def reset_torch_env():
 
     sys.path = initial_sys_path
 
+if not is_mindtorch():
+    invalid_pt_mt_env()
+    invalid_mt_env()
 
-reset_torch_env()
+    import torch
+else:
+    reset_torch_env()
 
 
 
