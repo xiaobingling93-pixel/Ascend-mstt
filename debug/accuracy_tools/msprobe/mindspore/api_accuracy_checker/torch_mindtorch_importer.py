@@ -47,12 +47,12 @@ def is_mindtorch():
 def remove_torch_related_paths():
     removed_paths = []
     if not is_mindtorch():
-        return removed_paths
+        return
     try:
         import torch as remove_torch
         torch_file = remove_torch.__file__
     except ImportError:
-        return removed_paths
+        return
 
     torch_dir = os.path.dirname(torch_file)
 
@@ -73,7 +73,7 @@ def remove_torch_related_paths():
             removed_paths.append((path_resolved, index))
             sys.path.pop(index)
 
-    return removed_paths
+    return
 
 
 def clear_torch_from_sys_modules():
@@ -108,7 +108,7 @@ def delete_torch_paths():
         if not is_mindtorch():
             break
 
-        removed = remove_torch_related_paths()
+        remove_torch_related_paths()
 
         clear_torch_from_sys_modules()
 
