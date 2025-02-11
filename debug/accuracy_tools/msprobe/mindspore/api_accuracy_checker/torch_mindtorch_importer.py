@@ -132,6 +132,7 @@ def reset_torch_env():
     4. Imports the correct version of torch based on the current environment.
     5. Restores the system path to its initial state.
     """
+    global torch
     initial_sys_path = sys.path.copy()
 
     delete_torch_paths()
@@ -139,13 +140,14 @@ def reset_torch_env():
     gc.collect()
 
     if is_mindtorch():
-        # If mindtorch is detected, ensure it's invalidated and then import mindtorch
         invalid_pt_mt_env()
-        import torch
-    else:
-        import torch
+
+    import torch
 
     sys.path = initial_sys_path
 
 
 reset_torch_env()
+
+
+
