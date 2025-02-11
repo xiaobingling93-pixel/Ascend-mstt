@@ -33,12 +33,13 @@ from mindspore.communication import get_rank
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import create_directory, load_json
-from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config
+from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, \
+    get_single_metrics, get_metrics
 from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
-from msprobe.mindspore.monitor.features import FUNC_MAP
-
+from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
+    get_process_group
 
 FORMAT_MAPPING = {
     MonitorConst.CSV: CSVWriterWithAD,
@@ -81,31 +82,6 @@ def squash_param_name(param_name):
         if match:
             return match[0]
     return param_name
-
-
-def get_single_metrics(op_list, tag, tensor, output=None):
-    if output is None:
-        output = {}
-    if tag not in output:
-        output[tag] = {}
-    for op in op_list:
-        func = FUNC_MAP.get(op)
-        statistic = func(tensor)
-        if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
-            statistic = float(statistic)
-            statistic = Tensor(statistic)
-        output[tag][op] = statistic.astype(mstype.float32)
-
-
-def get_metrics(op_list, tag2tensor, eps, output=None):
-    if output is None:
-        output = {}
-    for tag, tensor in tag2tensor.items():
-        if tag not in output:
-            output[tag] = {}
-        get_single_metrics(op_list, tag, tensor, output)
-    return output
-
 
 # ===================================== Context area ====================================
 # Used For Weight Grad Collect
@@ -171,6 +147,26 @@ class OptimizerContext:
         self.param_metric = {}
 
 
+class CommunicationContext:
+    def __init__(self) -> None:
+        self.data = {}
+
+    @staticmethod
+    def _agg(data):
+        aggregated_data = {}
+        for tag, op2tensorlist in data.items():
+            aggregated_data[tag] = {}
+            for op, tensorlist in op2tensorlist.items():
+                aggregated_data[tag][op] = op_aggregate(op, tensorlist)
+        return aggregated_data
+
+    def reset(self):
+        self.data = {}
+
+    def aggregate(self):
+        self.data = self._agg(self.data)
+
+
 # ===================================== Context area ====================================
 
 # ===================================== Main Processor ====================================
@@ -179,6 +175,7 @@ class TrainerMon:
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.optimizer_context = defaultdict(OptimizerContext)
+        self.cc_context = defaultdict(CommunicationContext)
         self.grad_context = GradContext()
         self.params_have_main_grad = params_have_main_grad
         self.opt_ty = opt_ty
@@ -370,6 +367,16 @@ class TrainerMon:
                 for param in param_list:
                     get_single_metrics(self.ops, param.name, param, context.param_metric)
             self.generate_wgrad_metrics()
+            metric_dict = {}
+            for cc in self.cc_context.values():
+                cc.aggregate()
+                metric_dict.update(cc.data)
+                cc.reset()
+
+            if not metric_dict:
+                return
+            context.metric_dict = metric_dict
+            return
 
         def optimizer_post_hook_function(opt, args, gradients, outputs):
             context = self.optimizer_context[opt]

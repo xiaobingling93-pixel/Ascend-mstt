@@ -13,9 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from mindspore import dtype as mstype, Tensor
+
+from msprobe.mindspore.monitor.features import FUNC_MAP
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.log import logger
+
+
+def get_single_metrics(op_list, tag, tensor, output=None):
+    if output is None:
+        output = {}
+    if tag not in output:
+        output[tag] = {}
+    for op in op_list:
+        func = FUNC_MAP.get(op)
+        statistic = func(tensor)
+        if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
+            statistic = float(statistic)
+            statistic = Tensor(statistic)
+        output[tag][op] = statistic.astype(mstype.float32)
+
+
+def get_metrics(op_list, tag2tensor, eps, output=None):
+    if output is None:
+        output = {}
+    for tag, tensor in tag2tensor.items():
+        if tag not in output:
+            output[tag] = {}
+        get_single_metrics(op_list, tag, tensor, output)
+    return output
 
 
 def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
