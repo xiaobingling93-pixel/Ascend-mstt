@@ -45,28 +45,7 @@ class ModuleProcesser:
         self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
-        BackwardHook.setup_output_hook = ModuleProcesser.filter_tensor_and_tuple(BackwardHook.setup_output_hook)
         replace_checkpoint()
-
-    @staticmethod
-    def filter_tensor_and_tuple(func):
-        @wraps(func)
-        def wrap_by_filter_tensor_and_tuple(*args, **kwargs):
-            # setup_output_hook传入非tensor数据，工具后续dump会报错，处理方式是解析非tensor数据的属性，对tensor属性挂hook
-            # setup_output_hook定义为setup_output_hook(self, args)，因此处理第二个位置参数，即*args[1]
-            if not isinstance(args[1], (torch.Tensor, tuple)):
-                for item_str in dir(args[1]):
-                    item = getattr(args[1], item_str)
-                    # 处理tensor或者只包含tensor的元组
-                    if isinstance(item, torch.Tensor) or \
-                            (isinstance(item, tuple) and all(isinstance(x, torch.Tensor) for x in item)):
-                        args_new = (args[0], item)
-                        result = func(*args_new, **kwargs)
-                        setattr(args[1], item_str, result)
-                return args[1]
-            return func(*args, **kwargs)
-
-        return wrap_by_filter_tensor_and_tuple
 
     @staticmethod
     def clone_return_value(func):
@@ -81,11 +60,11 @@ class ModuleProcesser:
     def clone_if_tensor(result):
         if isinstance(result, torch.Tensor):
             return result.clone()
-        elif isinstance(result, tuple):
+        elif type(result) is tuple:
             return tuple(ModuleProcesser.clone_if_tensor(x) for x in result)
-        elif isinstance(result, list):
+        elif type(result) is list:
             return list(ModuleProcesser.clone_if_tensor(x) for x in result)
-        elif isinstance(result, dict):
+        elif type(result) is dict:
             return {k: ModuleProcesser.clone_if_tensor(v) for k, v in result.items()}
         else:
             return result
