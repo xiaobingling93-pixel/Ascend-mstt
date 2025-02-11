@@ -394,7 +394,7 @@ class Service:
     def reset_status(self):
         ModuleProcesser.reset_module_stats()
         HOOKModule.reset_module_stats()
-        self.data_collector.data_writer.reset_cache()
+        self.data_collector.reset_status()
         self.params_grad_info.clear()
 
         if self.config.level == Const.LEVEL_L2:

@@ -53,6 +53,10 @@ class DataCollector:
     @staticmethod
     def check_scope_and_pid(scope, name, pid):
         return (not scope or scope.check(name)) and pid == os.getpid()
+    
+    def reset_status(self):
+        self.data_writer.reset_cache{}
+        self.backward_module_names.clear()
 
     def if_return_forward_new_output(self):
         return self.data_processor.if_return_forward_new_output()

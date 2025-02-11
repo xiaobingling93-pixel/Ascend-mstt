@@ -472,7 +472,7 @@ class Service:
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()
-        self.data_collector.data_writer.reset_cache()
+        self.data_collector.reset_status()
         JitDump.jit_count = defaultdict(int)
         self.params_grad_info.clear()
         if self.config.level == Const.LEVEL_L2:
