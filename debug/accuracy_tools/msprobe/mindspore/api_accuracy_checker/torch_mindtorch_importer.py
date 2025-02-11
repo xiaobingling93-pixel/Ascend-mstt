@@ -27,7 +27,6 @@ import torch.distributed as mindtorch_dist
 
 
 is_valid_pt_mt_env = True
-is_mt_env = True
 
 
 def is_mindtorch():
