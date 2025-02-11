@@ -181,8 +181,9 @@ class ApiAccuracyChecker:
                                                 "framework field in api_info.json", accepted_type=str,
                                                 accepted_value=(Const.MS_FRAMEWORK,
                                                                 Const.MT_FRAMEWORK))
-        except KeyError:
+        except Exception as e:
             framework = Const.MS_FRAMEWORK
+            logger.info(f"An json error occurred: {e}")
 
         if framework == Const.MS_FRAMEWORK and not torch_mindtorch_importer.is_valid_pt_mt_env:
             raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment")
