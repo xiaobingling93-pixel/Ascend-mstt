@@ -266,7 +266,8 @@ class Service:
             return
         if self.config.async_dump:
             self.data_collector.fill_stack_tensor_data()
-            self.data_collector.data_processor.dump_async_data()
+            if self.config.task == Const.TENSOR:
+                self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
 
     def step(self):
@@ -276,7 +277,8 @@ class Service:
             return
         if self.config.async_dump:
             self.data_collector.fill_stack_tensor_data()
-            self.data_collector.data_processor.dump_async_data()
+            if self.config.task == Const.TENSOR:
+                self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)

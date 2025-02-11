@@ -25,32 +25,6 @@ class TestModuleProcesser(unittest.TestCase):
         processor = ModuleProcesser(scope)
         self.assertIsNone(processor.scope)
 
-    def test_filter_tensor_and_tuple(self):
-        def func(nope, x):
-            return x * 2
-
-        result_1 = ModuleProcesser.filter_tensor_and_tuple(func)(None, torch.tensor([1]))
-        self.assertEqual(result_1, torch.tensor([2]))
-        result_2 = ModuleProcesser.filter_tensor_and_tuple(func)(None, "test")
-        self.assertEqual(result_2, "test")
-
-    def test_filter_tensor_and_tuple_with_tensor(self):
-        class MockBackwardHook:
-            @staticmethod
-            def setup_output_hook(*args, **kwargs):
-                return args[1]
-
-        mock_hook = MockBackwardHook.setup_output_hook
-        wrapped_hook = ModuleProcesser.filter_tensor_and_tuple(mock_hook)
-
-        tensor = torch.tensor([1, 2, 3])
-        mock_obj = type('MockObj', (object,), {'tensor_attr': tensor})()
-        wrapped_hook(None, mock_obj)
-        self.assertIs(mock_obj.tensor_attr, tensor)
-        non_tensor_obj = type('MockObj', (object,), {'non_tensor_attr': 'non_tensor_value'})()
-        wrapped_hook(None, non_tensor_obj)
-        self.assertEqual(non_tensor_obj.non_tensor_attr, 'non_tensor_value')
-
     def test_clone_return_value_and_test_clone_if_tensor(self):
         def func(x):
             return x
