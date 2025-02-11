@@ -185,7 +185,7 @@ class ApiAccuracyChecker:
             framework = Const.MS_FRAMEWORK
             logger.info(f"An json error occurred: {e}")
 
-        if framework == Const.MS_FRAMEWORK and not torch_mindtorch_importer.is_valid_pt_mt_env:
+        if framework == Const.MT_FRAMEWORK and not torch_mindtorch_importer.is_valid_pt_mt_env:
             raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment")
 
         is_constructed = task == MsCompareConst.STATISTICS_TASK
