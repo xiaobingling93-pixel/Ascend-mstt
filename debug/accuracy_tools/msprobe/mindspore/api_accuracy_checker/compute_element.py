@@ -25,6 +25,7 @@ from msprobe.core.common.file_utils import load_npy
 from msprobe.mindspore.api_accuracy_checker.type_mapping import (api_info_type_str_to_type,
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
+                                                                 dtype_str_to_mindtorch_dtype,
                                                                  dtype_str_to_torch_dtype, type_to_api_info_type_str,
                                                                  DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE, TUPLE_TYPE_STR,
                                                                  MINDSPORE_TENSOR_TYPE_STR, MINDSPORE_DTYPE_TYPE_STR,
@@ -32,6 +33,15 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import (api_info_type_s
                                                                  float_dtype_str_list, int_dtype_str_list)
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 from msprobe.mindspore.common.log import logger
+
+import msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer as env_module
+
+
+if env_module.is_valid_pt_mt_env:
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
+else:
+    import torch
 
 
 class MstensorMetaData:
@@ -85,6 +95,37 @@ class ComputeElement:
         np_ndarray = ms_tensor.astype(middle_dtype).numpy()
         torch_tensor = torch.from_numpy(np_ndarray).to(torch_dtype)
         return torch_tensor
+
+    @staticmethod
+    def transfer_to_mindtorch_tensor(ms_tensor):
+        """
+        Args:
+            ms_tensor: mindspore.Tensor
+        Return:
+            mindtorch_tensor: mindtorch.Tensor
+        """
+
+        ms_dtype = ms_tensor.dtype
+
+        dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
+
+        if dtype_str not in dtype_str_to_mindtorch_dtype:
+            err_msg = f"ComputeElement.transfer_to_mindtorch_tensor failed: no matching mindtorch dtype for {dtype_str}"
+            logger.error_log_with_exp(err_msg,
+                                      ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+        else:
+            mindtorch_dtype = dtype_str_to_mindtorch_dtype.get(dtype_str)
+
+        if dtype_str in int_dtype_str_list:
+            middle_dtype = mindspore.int64
+        else:
+            middle_dtype = mindspore.float64
+
+        np_ndarray = ms_tensor.astype(middle_dtype).numpy()
+
+        mindtorch_tensor = mindtorch.from_numpy(np_ndarray).to(ms_dtype)
+
+        return mindtorch_tensor
 
     @staticmethod
     def transfer_to_mindspore_tensor(torch_tensor):
@@ -141,8 +182,11 @@ class ComputeElement:
         elif isinstance(self.parameter, DtypeMetaData):
             if tensor_platform == Const.MS_FRAMEWORK:
                 parameter_tmp = dtype_str_to_ms_dtype.get(self.parameter.dtype_str)
-            else:
+            elif tensor_platform == Const.PT_FRAMEWORK:
                 parameter_tmp = dtype_str_to_torch_dtype.get(self.parameter.dtype_str)
+            elif tensor_platform == Const.MT_FRAMEWORK:
+                parameter_tmp = dtype_str_to_mindtorch_dtype.get(self.parameter.dtype_str)
+
         elif isinstance(self.parameter, MstensorMetaData):
             mstensor_meta_data = self.parameter
             ms_dtype = dtype_str_to_ms_dtype.get(mstensor_meta_data.dtype_str)
@@ -161,6 +205,8 @@ class ComputeElement:
         # if necessary, do transfer
         if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.PT_FRAMEWORK:
             parameter = self.transfer_to_torch_tensor(parameter_tmp)
+        elif not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.MT_FRAMEWORK:
+            parameter = self.transfer_to_mindtorch_tensor(parameter_tmp)
         elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform == Const.MS_FRAMEWORK:
             parameter = self.transfer_to_mindspore_tensor(parameter_tmp)
         else:

@@ -28,7 +28,7 @@ class TestComputeElement(unittest.TestCase):
         cls.init(TestComputeElement)
 
     def init(self):
-        global_context.init(False, os.path.join(directory, "files"))
+        global_context.init(False, os.path.join(directory, "files"), "mindspore")
         self.ndarray = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.float32)
         self.ms_tensor = mindspore.Tensor(self.ndarray)
         self.torch_tensor = torch.Tensor(self.ndarray)

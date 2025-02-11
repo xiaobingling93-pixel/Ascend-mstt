@@ -82,16 +82,21 @@ class GlobalContext:
     def __init__(self):
         self.is_constructed = True
         self.dump_data_dir = ""
+        self.framework = Const.MS_FRAMEWORK
 
-    def init(self, is_constructed, dump_data_dir):
+    def init(self, is_constructed, dump_data_dir, framework):
         self.is_constructed = is_constructed
         self.dump_data_dir = dump_data_dir
+        self.framework = framework
 
     def get_dump_data_dir(self):
         return self.dump_data_dir
 
     def get_is_constructed(self):
         return self.is_constructed
+
+    def get_framework(self):
+        return self.framework
 
 
 global_context = GlobalContext()

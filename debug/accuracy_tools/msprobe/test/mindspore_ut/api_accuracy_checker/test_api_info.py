@@ -19,7 +19,7 @@ class TestApiInfo(unittest.TestCase):
         """
         class level setup_class
         """
-        global_context.init(False, os.path.join(directory, "files"))
+        global_context.init(False, os.path.join(directory, "files"), "mindspore")
 
     def test_get_kwargs_with_null(self):
         # first load forward backward api_info

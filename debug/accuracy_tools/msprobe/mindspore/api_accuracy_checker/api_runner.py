@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import mindspore
-import torch
 from mindspore import ops
 from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
@@ -24,14 +23,28 @@ from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
 from msprobe.mindspore.common.log import logger
 
 
+from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
+
+from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch
+from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_tensor
+from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_func
+from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import mindtorch_dist
+
+if torch_mindtorch_importer.is_valid_pt_mt_env:
+    from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
+else:
+    import torch
+
+
+
 class ApiInputAggregation:
     def __init__(self, inputs, kwargs, gradient_inputs) -> None:
-        '''
+        """
         Args:
             inputs: List[ComputeElement]
             kwargs: dict{str: ComputeElement}
             gradient_inputs: Union[List[ComputeElement], None]
-        '''
+        """
         self.inputs = inputs
         self.kwargs = kwargs
         self.gradient_inputs = gradient_inputs
@@ -43,8 +56,18 @@ api_parent_module_mapping = {
     (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
     (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional,
     (MsCompareConst.TENSOR_API, Const.MS_FRAMEWORK): mindspore.Tensor,
-    (MsCompareConst.TENSOR_API, Const.PT_FRAMEWORK): torch.Tensor
+    (MsCompareConst.TENSOR_API, Const.PT_FRAMEWORK): torch.Tensor,
+    (MsCompareConst.MINDTORCH_TENSOR, Const.MT_FRAMEWORK): mindtorch_tensor,
+    (MsCompareConst.MINDTORCH_TENSOR, Const.PT_FRAMEWORK): torch.Tensor,
+    (MsCompareConst.MINDTORCH, Const.MT_FRAMEWORK): mindtorch,
+    (MsCompareConst.MINDTORCH, Const.PT_FRAMEWORK): torch,
+    (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): mindtorch_func,
+    (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): torch.nn.functional,
+    (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): mindtorch_dist,
+    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed
+
 }
+
 
 api_parent_module_str_mapping = {
     (MsCompareConst.MINT, Const.MS_FRAMEWORK): "mindspore.mint",
@@ -52,7 +75,15 @@ api_parent_module_str_mapping = {
     (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): "mindspore.mint.nn.functional",
     (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): "torch.nn.functional",
     (MsCompareConst.TENSOR_API, Const.MS_FRAMEWORK): "mindspore.Tensor",
-    (MsCompareConst.TENSOR_API, Const.PT_FRAMEWORK): "torch.Tensor"
+    (MsCompareConst.TENSOR_API, Const.PT_FRAMEWORK): "torch.Tensor",
+    (MsCompareConst.MINDTORCH_TENSOR, Const.MT_FRAMEWORK): "mindtorch_tensor",
+    (MsCompareConst.MINDTORCH_TENSOR, Const.PT_FRAMEWORK): "torch.Tensor",
+    (MsCompareConst.MINDTORCH, Const.MT_FRAMEWORK): "mindtorch",
+    (MsCompareConst.MINDTORCH, Const.PT_FRAMEWORK): "torch",
+    (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): "mindtorch_func",
+    (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): "torch.nn.functional",
+    (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): "mindtorch_dist",
+    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed"
 }
 
 
@@ -64,7 +95,7 @@ class ApiRunner:
             api_input_aggregation: ApiInputAggregation
             api_name_str: str, e.g. "MintFunctional.relu.0"
             forward_or_backward: str, Union["forward", "backward"]
-            api_platform: str, Union["mindspore", "torch"]
+            api_platform: str, Union["mindspore", "torch", "mindtorch"]
 
         Return:
             outputs: list[ComputeElement]
@@ -72,35 +103,41 @@ class ApiRunner:
         Description:
             run mindspore.mint/torch api
         '''
-        api_type_str, api_sub_name = self.get_info_from_name(api_name_str)
+
+        api_type_str, api_sub_name = self.get_info_from_name(api_name_str, api_platform)
         api_instance = self.get_api_instance(api_type_str, api_sub_name, api_platform)
 
         return self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
 
     @staticmethod
-    def get_info_from_name(api_name_str):
-        '''
+    def get_info_from_name(api_name_str, api_platform=Const.MS_FRAMEWORK):
+        """
         Args:
             api_name_str: str, the trimmed key of data dict in api_info.json. e.g. "MintFunctional.relu.0"
-
+            api_platform: str, the platform for the API, which can be either "mindspore" or "mindtorch".
+                      It specifies which framework is being used. Default is "mindspore".
         Return:
-            api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
+            api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Torch", "Functional"]
             api_sub_name: str, e.g. "relu"
-        '''
+        """
         api_name_list = api_name_str.split(Const.SEP)
         if len(api_name_list) != 3:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API]:
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] \
+                and api_platform == Const.MS_FRAMEWORK:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
+        if api_type_str not in MsCompareConst.MT_VALID_API_TYPES and api_platform == Const.MT_FRAMEWORK:
+            err_msg = f"ApiRunner.get_info_from_name failed: not torch, functional or Tensor api"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         return api_type_str, api_sub_name
 
     @staticmethod
     def get_api_instance(api_type_str, api_sub_name, api_platform):
-        '''
+        """
         Args:
             api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
             api_sub_name: str, e.g. "relu"
@@ -113,11 +150,12 @@ class ApiRunner:
             get mindspore.mint/torch api fucntion
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
-        '''
+        """
 
         api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
         api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
         full_api_name = api_parent_module_str + Const.SEP + api_sub_name
+
         if not hasattr(api_parent_module, api_sub_name):
             err_msg = f"ApiRunner.get_api_instance failed: {full_api_name} is not found"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.ApiWrong))
@@ -147,7 +185,7 @@ class ApiRunner:
                 logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
             gradient_inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
                                     for compute_element in gradient_inputs)
-            if api_platform == Const.MS_FRAMEWORK:
+            if api_platform == Const.MS_FRAMEWORK or api_platform == Const.MT_FRAMEWORK:
                 if len(gradient_inputs) == 1:
                     gradient_inputs = gradient_inputs[0]
 
