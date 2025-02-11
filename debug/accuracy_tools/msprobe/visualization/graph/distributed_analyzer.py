@@ -114,6 +114,7 @@ class DistributedAnalyzer:
             if group_id is not None:
                 return group_id
         logger.warning(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
+        return None
 
     def distributed_match(self):
         for rank, graph in self.graphs.items():
@@ -187,7 +188,7 @@ class DistributedAnalyzer:
         if rank not in self.group_node_mapping:
             self.group_node_mapping[rank] = {}
         params = []
-        for param, data_dict in node.input_data.items():
+        for data_dict in node.input_data.values():
             op = data_dict.get(GraphConst.OP)
             target_rank = data_dict.get(GraphConst.PEER)
             group_id = op + Const.REPLACEMENT_CHARACTER + Const.RANK + str(target_rank) + \
