@@ -10,8 +10,7 @@ class TestNodeOp(unittest.TestCase):
 
     def test_get_node_op_invalid(self):
         node_name = "InvalidNodeName"
-        with self.assertRaises(Exception):
-            NodeOp.get_node_op(node_name)
+        self.assertEqual(NodeOp.get_node_op(node_name), NodeOp.module)
 
     def test_get_node_op_all(self):
         test_cases = [
