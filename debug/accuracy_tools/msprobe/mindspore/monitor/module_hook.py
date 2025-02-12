@@ -33,7 +33,8 @@ from mindspore.communication import get_rank
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import create_directory, load_json
-from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config
+from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
+    is_skip_step
 from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -184,6 +185,10 @@ class TrainerMon:
         self.opt_ty = opt_ty
         self.config = load_json(config_file_path)
         validate_config(self.config)
+
+        self.start_step = self.config.get("start_step", 0)
+        self.collect_times = self.config.get("collect_times", 100000000)  # 默认大值, 目的是一直采集
+        self.step_interval = self.config.get("step_interval", 1)
 
         # monitor target in module, such as layer, weight, grad
         self.targets = self.config.get("targets", None)
@@ -345,6 +350,8 @@ class TrainerMon:
         """
         def optimizer_pre_hook_function(opt, grad_names, gradients):
             context = self.optimizer_context[opt]
+            if is_skip_step(context.step, self.start_step, self.step_interval):
+                return
             gradient_list = gradients[0] if isinstance(gradients, tuple) else gradients
             is_select = self.is_select
             for idx, grad in enumerate(gradient_list):
@@ -373,6 +380,10 @@ class TrainerMon:
 
         def optimizer_post_hook_function(opt, args, gradients, outputs):
             context = self.optimizer_context[opt]
+            if is_skip_step(context.step, self.start_step, self.step_interval):
+                context.metric_dict.clear()
+                context.step += 1
+                return
             self.write_xy_tb(context.step)
             self.write_grad_tb(context.step)
             self.write_mv_tb(context)
@@ -605,6 +616,9 @@ class TrainerMon:
                 return
             if not module.training:
                 return
+            if is_skip_step(context.step, self.start_step, self.step_interval):
+                step_accumulates_one(context, self.micro_batch_number)
+                return
             if not context.format_by_arg:
                 context.set_format_by_arg(MonitorConst.ACTV_IN, self.targets)
                 context.set_format_by_arg(MonitorConst.ACTV_OUT, self.targets)
@@ -634,6 +648,8 @@ class TrainerMon:
                 get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             except Exception as e:
                 logger.warning(f"An error occurred while generating forward activation metrics: {e}")
+
+            step_accumulates_one(context, self.micro_batch_number)
             return
 
         def bwd_hook_fun(module, input_grad, output_grad):
@@ -646,6 +662,11 @@ class TrainerMon:
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
+
+            if is_skip_step(context.step, self.start_step, self.step_interval):
+                step_accumulates_one(context, self.micro_batch_number)
+                return
+
             if not context.format_by_arg:
                 context.set_format_by_arg(MonitorConst.ACTVGRAD_IN, self.targets)
                 context.set_format_by_arg(MonitorConst.ACTVGRAD_OUT, self.targets)
@@ -680,10 +701,8 @@ class TrainerMon:
                 get_metrics(self.ops, tbtag_tensor_map, self.eps, self.grad_context.actv)
             except Exception as e:
                 logger.warning(f"An error occurred while generating backward activation metrics: {e}")
-            context.micro_step += 1
-            if context.micro_step == self.micro_batch_number:
-                context.micro_step = 0
-                context.step += 1
+
+            step_accumulates_one(context, self.micro_batch_number)
             return
 
         def fwd_hook_fun_wrapper(fwd_hook_fun, name):
