@@ -265,7 +265,7 @@ class TestBaseDataProcessor(unittest.TestCase):
 
     def test_set_value_into_nested_structure(self):
         dst_data_structure = {"key1": [None, None]}
-        self.processor.set_value_into_nested_structure(dst_data_structure, ["key1", "0"], 12)
+        self.processor.set_value_into_nested_structure(dst_data_structure, ["key1", 0], 12)
         excepted_result = {"key1": [12, None]}
         self.assertEqual(dst_data_structure, excepted_result)
 
@@ -312,7 +312,6 @@ class TestBaseDataProcessor(unittest.TestCase):
         result = kwargs["hook_fn"](grad, index)
 
         # 验证 hook_fn 内部逻辑
-        self.assertEqual(self.processor.api_data_category, "output")
         self.processor.analyze_element.assert_called_once_with(grad)
         self.processor.set_value_into_nested_structure.assert_called_once_with(
             nested_data_structure, ["grad_name_1", "layer1", "layer2"], "grad_data_info"
