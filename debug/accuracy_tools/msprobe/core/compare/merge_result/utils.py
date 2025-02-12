@@ -28,6 +28,11 @@ def process_compare_index_dict_na(compare_index_dict, compare_index_list, rank_n
         Bench: tp-0-1-2-3
     """
 
+    if CompareConst.NPU_MAX not in compare_index_dict or CompareConst.BENCH_MAX not in compare_index_dict:
+        compare_index_dict.pop(CompareConst.NPU_MAX, None)
+        compare_index_dict.pop(CompareConst.BENCH_MAX, None)
+        return compare_index_dict
+
     # 遍历比对指标列表，排除最后两个指标NPU max， Bench max
     for compare_index in compare_index_list[:-2]:
         op_name_index_dict = compare_index_dict[compare_index]
@@ -38,6 +43,8 @@ def process_compare_index_dict_na(compare_index_dict, compare_index_list, rank_n
             # 如果当前比对指标值是N/A，并且NPU和Bench的最大值是字符串类型，进行替换
             if index_value[rank_num] == CompareConst.N_A and isinstance(npu_max, str) and isinstance(bench_max, str):
                 compare_index_dict[compare_index][op_name][rank_num] = f'NPU: {npu_max} \nBench: {bench_max}'
-    del compare_index_dict[CompareConst.NPU_MAX]
-    del compare_index_dict[CompareConst.BENCH_MAX]
+
+    # 删除NPU_MAX和BENCH_MAX
+    compare_index_dict.pop(CompareConst.NPU_MAX, None)
+    compare_index_dict.pop(CompareConst.BENCH_MAX, None)
     return compare_index_dict
