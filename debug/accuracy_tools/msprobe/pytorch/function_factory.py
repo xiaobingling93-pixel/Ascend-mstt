@@ -27,6 +27,11 @@ from msprobe.pytorch.bench_functions.rotary_mul import npu_rotary_mul, npu_rotar
 from msprobe.pytorch.bench_functions.scaled_mask_softmax import npu_scaled_masked_softmax, \
     npu_scaled_masked_softmax_backward
 from msprobe.pytorch.bench_functions.swiglu import npu_swiglu, npu_swiglu_backward
+from msprobe.pytorch.bench_functions.apply_adam import npu_apply_adam
+from msprobe.pytorch.bench_functions.group_norm_silu import npu_group_norm_silu
+from msprobe.pytorch.bench_functions.mish import npu_mish
+from msprobe.pytorch.bench_functions.moe_gating_top_k_softmax import npu_moe_gating_top_k_softmax
+from msprobe.pytorch.bench_functions.sort_v2 import npu_sort_v2
 from msprobe.pytorch.common.utils import logger
 
 
@@ -79,7 +84,8 @@ class Register(dict):
 npu_custom_functions = Register()
 npu_custom_functions([
     npu_apply_adam_w, npu_confusion_transpose, npu_fast_gelu, npu_layer_norm_eval, npu_linear, npu_fusion_attention,
-    npu_rms_norm, npu_rotary_mul, npu_scaled_masked_softmax, npu_swiglu, gpu_fusion_attention
+    npu_rms_norm, npu_rotary_mul, npu_scaled_masked_softmax, npu_swiglu, gpu_fusion_attention, npu_apply_adam,
+    npu_group_norm_silu, npu_mish, npu_moe_gating_top_k_softmax, npu_sort_v2
 ])
 
 # register for npu custom backward bench functions
