@@ -117,10 +117,8 @@ def check_index_dump_mode_consistent(dump_mode, rank_num):
     # 如果传入的compare_index_list为空，则比对指标为dump_mode对应的全部比对指标
     if not share_list:
         share_compare_index_list.extend(valid_compare_index)
-        share_compare_index_list.extend([CompareConst.NPU_MAX, CompareConst.BENCH_MAX])
         return list(share_compare_index_list)
     if set(share_list).issubset(valid_compare_index):
-        share_list.extend([CompareConst.NPU_MAX, CompareConst.BENCH_MAX])
         return share_list
     else:
         invalid_compare_index = set(valid_compare_index) - set(share_list)
@@ -208,10 +206,13 @@ def result_process(compare_result_path_list, api_list):
             compare_index_list = check_index_dump_mode_consistent(dump_mode, rank_num)
             if len(compare_index_list) == 0:
                 return [], [], []
+            compare_index_list.extend([CompareConst.NPU_MAX, CompareConst.BENCH_MAX])
             compare_index_dict = search_api_index_result(api_list, compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
             compare_index_dict_list.append(compare_index_dict)
             rank_num_list.append(rank_num)
+            compare_index_list.pop()
+            compare_index_list.pop()
         else:
             logger.warning(f"Rank{rank_num} compare result is empty and will not shown in merged result.")
 
