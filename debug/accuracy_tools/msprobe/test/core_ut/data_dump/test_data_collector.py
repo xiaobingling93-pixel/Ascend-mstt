@@ -101,3 +101,21 @@ class TestDataCollector(unittest.TestCase):
 
             self.data_collector.backward_data_collect("name", "module", "pid", "module_input_output")
             mock_handle_data.assert_called_with("name", {}, flush=False)
+
+    @patch.object(DataWriter, "update_debug")
+    @patch.object(BaseDataProcessor, "analyze_debug_forward", return_value="data_info")
+    @patch.object(DataCollector, "update_api_or_module_name")
+    def test_debug_data_collect_forward(self, mock_update_api_or_module_name, _, mock_update_debug):
+        self.data_collector.debug_data_collect_forward("variable", "name_with_count")
+        mock_update_api_or_module_name.assert_called_with("name_with_count")
+        mock_update_debug.assert_called_with({"name_with_count": "data_info"})
+
+    @patch.object(DataWriter, "update_debug")
+    @patch.object(BaseDataProcessor, "analyze_debug_backward")
+    @patch.object(BaseDataProcessor, "analyze_element_to_all_none", return_value = "all_none_data_info")
+    def test_debug_data_collect_backward(self, _, mock_analyze_debug_backward, mock_update_debug):
+        self.data_collector.data_writer.cache_debug = {"data": None}
+        self.data_collector.debug_data_collect_backward("variable", "name_with_count")
+        mock_update_debug.assert_called_with({"name_with_count": "all_none_data_info"})
+        mock_analyze_debug_backward.assert_called_with("variable", "name_with_count", self.data_collector.data_writer.cache_debug['data'])
+        self.data_collector.data_writer.cache_debug = None
