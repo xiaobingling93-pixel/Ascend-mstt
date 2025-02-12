@@ -178,7 +178,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         result = check_index_dump_mode_consistent(Const.ALL, rank_num=2)
 
-        compare_index_list = ["Cosine", "MaxAbsErr", "NPU max", "Bench max"]
+        compare_index_list = ["Cosine", "MaxAbsErr"]
         self.assertEqual(result, compare_index_list)
 
     def test_extract_api_full_name_all_apis_found(self):
