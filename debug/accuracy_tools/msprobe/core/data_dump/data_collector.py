@@ -161,6 +161,9 @@ class DataCollector:
                 self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
+    def init_optimizer_construct(self, name):
+        self.data_writer.update_construct({name: None})
+
     def handle_data(self, name, data_info, flush=False):
         if data_info:
             self.update_data(name, data_info)

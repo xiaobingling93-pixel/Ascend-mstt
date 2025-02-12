@@ -24,6 +24,7 @@ if torch_version_above_or_equal_2:
 
 def register_optimizer_hook(data_collector):
     def optimizer_pre_step_hook(optimizer, args, kwargs):
+        data_collector.init_optimizer_construct(Const.OPTIMIZER)
         data_collector.optimizer_status = Const.OPTIMIZER
 
     def optimizer_post_step_hook(optimizer, args, kwargs):
@@ -32,6 +33,7 @@ def register_optimizer_hook(data_collector):
     def patch_clip_grad(func):
         def wrapper(*args, **kwargs):
             data_collector.optimizer_status = Const.CLIP_GRAD
+            data_collector.init_optimizer_construct(Const.CLIP_GRAD)
             func(*args, **kwargs)
             data_collector.optimizer_status = Const.END_PREFIX + Const.CLIP_GRAD
 
