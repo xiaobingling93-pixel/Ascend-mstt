@@ -16,6 +16,7 @@
 from enum import Enum
 import re
 from msprobe.visualization.builder.msprobe_adapter import op_patterns
+from msprobe.core.common.log import logger
 
 
 class NodeOp(Enum):
@@ -32,8 +33,9 @@ class NodeOp(Enum):
         for op in NodeOp:
             index = op.value
             if index < 0 or index >= len(op_patterns):
-                raise Exception("NodeOp and op_patterns in MsprobeAdapter do not match")
+                continue
             pattern = op_patterns[index]
             if re.match(pattern, node_name):
                 return op
-        raise Exception(f"Cannot parse node_name {node_name} into NodeOp")
+        logger.warning(f"Cannot parsing node_name {node_name} into NodeOp, default parsing as module.")
+        return NodeOp.module
