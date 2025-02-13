@@ -263,7 +263,7 @@ class BaseWriterWithAD:
     def clear_anomalies(self):
         self.anomalies.clear()
 
-    def add_scalar(self, tag, scalar_value, global_step=None):
+    def add_scalar(self, tag, scalar_value, global_step=None, need_explain=False):
         """If an anomaly is detected, the anomaly information is recorded and added to self.anomalies.
         Args:
             tag (tuple): tuple of tag_name and tag like ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min').
@@ -283,7 +283,7 @@ class BaseWriterWithAD:
             if self.anomaly_factory:
                 self.anomalies.append(self.anomaly_factory.create(tag, exception_message, global_step))
 
-    def write_metrics(self, op_list, metric_value, step, prefix=''):
+    def write_metrics(self, op_list, metric_value, step, prefix='', need_explain=False):
         if not metric_value:
             return
         tensors = []
@@ -293,7 +293,7 @@ class BaseWriterWithAD:
         with _no_grad():
             metric_list = ops.stack(tensors).tolist() if tensors else []
         for tag, metric in zip(tags, metric_list):
-            self.add_scalar(tag, metric, step)
+            self.add_scalar(tag, metric, step, need_explain)
 
     def _ad(self, scalar_value, history):
         return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)
@@ -361,17 +361,23 @@ class CSVWriterWithAD(BaseWriterWithAD):
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
 
-    def add_scalar(self, tag, scalar_value, global_step):
+    def add_scalar(self, tag, scalar_value, global_step, need_explain=False):
         """
         ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
         """
-        super().add_scalar(tag, scalar_value, global_step)
-
-        name = tag[0].split('/')[0]
+        super().add_scalar(tag, scalar_value, global_step, need_explain=False)
+        split_name = tag[0].split('/')
+        name = split_name[0]
+        if need_explain:
+            if 'pre' in split_name[-1]:
+                name += '.input'
+            if 'post' in split_name[-1]:
+                name += '.output'
         self.context_dict[name].append(scalar_value)
 
     def write_metrics(self, op_list, metric_value, step, prefix=''):
-        super().write_metrics(op_list, metric_value, step, prefix='')
+        need_explain = prefix == 'other'
+        super().write_metrics(op_list, metric_value, step, prefix='', need_explain=need_explain)
 
         # generate csv headers
         # set hashmap to reduce the number of headers generated.

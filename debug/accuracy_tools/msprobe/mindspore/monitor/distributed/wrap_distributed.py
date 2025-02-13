@@ -22,8 +22,9 @@ import numpy as np
 from mindspore import nn, Tensor, ops, _no_grad
 from mindspore import communication
 from mindspore.communication import comm_func, get_rank
+from mindspore._c_expression import CommHandle as CommHandle_
 
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.mindspore.monitor.utils import get_metrics, get_summary_writer_tag_name
 
@@ -40,7 +41,7 @@ distributed_func = {}
 for f in dir(comm_func):
     distributed_func[f] = getattr(comm_func, f)
 
-ORIGIN_WAIT = getattr(comm_func.CommHandle, 'wait')
+ORIGIN_WAIT = CommHandle_.wait
 PENDING_ASYNC_CC_BY_HANDLE = {}
 
 
@@ -78,8 +79,8 @@ class ApiRegistry:
     @staticmethod
     def store_ori_attr(ori_api_group, api_list, api_ori_attr):
         for api in api_list:
-            if '.' in api:
-                sub_module_name, sub_op = api.rsplit('.', 1)
+            if Const.SEP in api:
+                sub_module_name, sub_op = api.rsplit(Const.SEP, 1)
                 sub_module = getattr(ori_api_group, sub_module_name)
                 api_ori_attr[api] = getattr(sub_module, sub_op)
             else:
@@ -88,8 +89,8 @@ class ApiRegistry:
     @staticmethod
     def set_api_attr(api_group, attr_dict):
         for cc_api_name, cc_api_entry_func in attr_dict.items():
-            if '.' in cc_api_name:
-                sub_module_name, sub_op = cc_api_name.rsplit('.', 1)
+            if Const.SEP in cc_api_name:
+                sub_module_name, sub_op = cc_api_name.rsplit(Const.SEP, 1)
                 sub_module = getattr(api_group, sub_module_name, None)
                 if sub_module is not None:
                     setattr(sub_module, sub_op, cc_api_entry_func)
@@ -110,17 +111,15 @@ class ApiRegistry:
 
             return wrapped_wait
 
-        comm_func.CommHandle.wait = wrapped_wait(comm_func.CommHandle)
+        CommHandle_.wait = wrapped_wait(CommHandle_)
 
     def redirect_api(self):
         self.set_api_attr(comm_func, self.distributed_attr_hooked)
-        # self.set_api_attr(dist.distributed_c10d, self.distributed_attr_hooked)
         self.redirect_wait()
 
     def restore_api(self):
         self.set_api_attr(comm_func, self.distributed_attr_origin)
-        # self.set_api_attr(dist.distributed_c10d, self.distributed_attr_origin)
-        setattr(comm_func.CommHandle, 'wait', ORIGIN_WAIT)
+        setattr(CommHandle_, 'wait', ORIGIN_WAIT)
 
     def initialize_hook(self, pre_hooks, post_hooks):
         self.store_ori_attr(comm_func, get_distributed_ops(), self.distributed_attr_origin)
@@ -241,7 +240,7 @@ def create_hooks(context, monitor):
         if not is_target_line(monitor.cc_codeline):
             return out
         if out:  # async
-            if isinstance(out, comm_func.CommHandle):
+            if isinstance(out, CommHandle_):
                 PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(
                     context[module.op_name_],
                     module.op_name_,
@@ -250,12 +249,22 @@ def create_hooks(context, monitor):
                 )
             elif isinstance(out, list):  # batch_isend_irecv
                 for out_element in out:
-                    PENDING_ASYNC_CC_BY_HANDLE[out_element] = create_async_callback_func(
-                        context[module.op_name_],
-                        module.op_name_,
-                        monitor.ops, inputs,
-                        MonitorConst.PREFIX_POST
+                    if isinstance(out_element, comm_func.P2POp):
+                        PENDING_ASYNC_CC_BY_HANDLE[out_element] = create_async_callback_func(
+                            context[module.op_name_],
+                            module.op_name_,
+                            monitor.ops, inputs,
+                            MonitorConst.PREFIX_POST
+                        )
+            elif isinstance(out, tuple):
+                if len(out) == 2 and isinstance(out[1], CommHandle_):
+                    PENDING_ASYNC_CC_BY_HANDLE[out[1]] = create_async_callback_func(
+                            context[module.op_name_],
+                            module.op_name_,
+                            monitor.ops, inputs,
+                            MonitorConst.PREFIX_POST
                     )
+
             return out
         catch_data(context[module.op_name_], module.op_name_, monitor.ops, inputs, MonitorConst.PREFIX_POST)
         return out

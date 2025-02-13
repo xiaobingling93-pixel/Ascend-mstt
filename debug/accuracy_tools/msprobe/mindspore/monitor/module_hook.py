@@ -179,6 +179,7 @@ class TrainerMon:
         self.grad_context = GradContext()
         self.params_have_main_grad = params_have_main_grad
         self.opt_ty = opt_ty
+        self.handles = defaultdict(list)
         self.config = load_json(config_file_path)
         validate_config(self.config)
 
@@ -222,7 +223,7 @@ class TrainerMon:
             self.cc_log_only = self.cc_distribution.get('cc_log_only', False)
             self.cc_logged_stack = defaultdict(set)
             self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
-            api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
+            self.handles['cc'] = api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
         self.common_info()
 
