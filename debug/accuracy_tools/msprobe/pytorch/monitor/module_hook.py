@@ -43,9 +43,6 @@ from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, val
     get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
-torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
-if not torch_version_above_or_equal_2:
-    logger.error("monitor require torch>=2.0, not satisfied. monitor don't work")
 
 FORMAT_MAPPING = {
     MonitorConst.TENSORBOARD: SummaryWriterWithAD,
@@ -177,9 +174,6 @@ class TrainerMon:
     tensor_metrics = TensorMetrics()
 
     def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
-        # 若环境不满足条件, 则直接跳过
-        if not torch_version_above_or_equal_2:
-            return
         # TYPE1: 只在这里初始化的变量, 不会随着训练中途config配置改变而重置
         self.config_file_path = config_file_path
         self.process_group = get_process_group(process_group)
@@ -302,7 +296,7 @@ class TrainerMon:
         self.has_collect_times = 0  # 重设采集计数器
         self.print_struct = self.config.get("print_struct", False)
         self.module_rank_list = self.config.get("module_ranks", [])
-        self.format = self.config.get('format', 'tensorboard')
+        self.format = self.config.get('format', MonitorConst.CSV)
         self.eps = self.config.get('eps', 1e-8)
         self.ops = self.config.get('ops', [])
         self.ndigits = self.config.get('ndigits', 6)
@@ -476,9 +470,6 @@ class TrainerMon:
             start_iteration=0
     ):
         """External interface"""
-        # 若环境不满足条件, 则直接跳过
-        if not torch_version_above_or_equal_2:
-            return
         global start_step
         start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
@@ -588,7 +579,7 @@ class TrainerMon:
             # skip generate metrics
             if context.step < self.start_step or (context.step - self.start_step) % self.step_interval != 0:
                 return
-            if MonitorConst.DEEPSPEED_OPT_FILTER in self.optimizer_class:  # use deepspeed with zero1/2/3
+            if MonitorConst.DEEPSPEED_ZERO_OPT_FILTER in self.optimizer_class:  # use deepspeed with zero1/2/3
                 if not self.name2indices:
                     self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index)
                 mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
@@ -641,13 +632,8 @@ class TrainerMon:
         if self.optimizer_hooked:
             return
 
-        if optimizer:
-            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-            self.handles['optimizer'] = []
-        else:
-            if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
-                step_pre_hook = register_optimizer_step_pre_hook(optimizer_pre_step_hook)
-                self.handles['optimizer'] = [step_pre_hook]
+        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+
         self.optimizer_hooked = True
         return
 
@@ -739,11 +725,9 @@ class TrainerMon:
                 return out
             return wrapper
 
-        if optimizer:
-            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-            self.origin_step_func = optimizer.__class__.step
-        else:
-            register_optimizer_step_post_hook(step_final_hook)
+        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+        self.origin_step_func = optimizer.__class__.step
+
         return
 
     def _remove_all_hooks(self, optimizer):
@@ -763,12 +747,9 @@ class TrainerMon:
         self.handles['wgrads'].clear()
         self.weight_hooked = False
 
-        if len(self.handles['optimizer']) == 0 and self.optimizer_hooked:
+        if self.optimizer_hooked:
             optimizer.__class__.step = self.origin_step_func
-        else:
-            for handle in self.handles['optimizer']:
-                handle.remove()
-            self.handles['optimizer'].clear()
+
         for _, context in self.optimizer_context.items():
             context.reset()
         self.optimizer_hooked = False

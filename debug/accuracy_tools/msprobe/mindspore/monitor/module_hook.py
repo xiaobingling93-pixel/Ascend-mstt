@@ -104,7 +104,6 @@ def get_metrics(op_list, tag2tensor, eps, output=None):
     return output
 
 
-# ===================================== Context area ====================================
 # Used For Module Forward & Backward Collect
 class ModuleHookContext:
     def __init__(self, module_name) -> None:
@@ -134,7 +133,7 @@ class ModuleHookContext:
             self.ignore_in = True
 
 
-satrt_step = 0
+start_step = 0
 
 
 # Used For Optimizer Weight Grad & M/V Collect
@@ -169,9 +168,8 @@ class GradContext:
         self.acc_metric.clear()
         self.acc.clear()
         self.actv.clear()
-# ===================================== Context area ====================================
 
-# ===================================== Main Processor ====================================
+
 class TrainerMon:
     def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
@@ -795,5 +793,3 @@ class TrainerMon:
             handle = param.register_hook(param_hook_wrapper(param_hook, context_dict=context.acc, param=param, key=key))
             self.handles['wgrads'].append(handle)
         self.weight_hooked = True
-
-# ===================================== Main Processor ====================================
