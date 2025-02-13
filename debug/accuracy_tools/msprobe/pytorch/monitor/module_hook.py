@@ -580,7 +580,7 @@ class TrainerMon:
                 return
             if MonitorConst.DEEPSPEED_ZERO_OPT_FILTER in self.optimizer_class:  # use deepspeed with zero1/2/3
                 if not self.name2indices:
-                    self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index)
+                    self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index, optimizer)
                 mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
                 self.param2name = mv_result.grad
             else:
