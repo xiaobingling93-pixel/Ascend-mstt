@@ -173,6 +173,8 @@ def gen_op_item(op_data, op_name):
         elif op_item.get('type') == 'ellipsis':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = '[]'
+            for i in params:
+                op_item[i] = op_data.get('value')
         else:
             op_item['dtype'] = str(type(op_data.get('value')))
             op_item['shape'] = '[]'
