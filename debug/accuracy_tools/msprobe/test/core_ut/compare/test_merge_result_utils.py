@@ -17,7 +17,7 @@
 import unittest
 
 from msprobe.core.common.const import CompareConst
-from msprobe.core.compare.merge_result.utils import process_compare_index_dict_na
+from msprobe.core.compare.merge_result.utils import process_compare_index_dict_na, check_npu_bench_max_dtype
 
 
 class TestProcessCompareIndexDictNa(unittest.TestCase):
@@ -121,3 +121,25 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
 
         self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], 'N/A')
         self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], 'N/A')
+
+    def test_same_type_and_valid(self):
+        # 测试相同类型且在有效类型范围内
+        self.assertTrue(check_npu_bench_max_dtype("test", "string"))
+        self.assertTrue(check_npu_bench_max_dtype(True, False))
+        self.assertTrue(check_npu_bench_max_dtype(None, None))
+
+    def test_different_types(self):
+        # 测试不同类型
+        self.assertFalse(check_npu_bench_max_dtype("test", True))
+        self.assertFalse(check_npu_bench_max_dtype("test", 123))
+        self.assertFalse(check_npu_bench_max_dtype(None, "test"))
+
+    def test_invalid_types(self):
+        # 测试类型不属于有效类型
+        self.assertFalse(check_npu_bench_max_dtype(123, 456))
+        self.assertFalse(check_npu_bench_max_dtype(3.14, 2.71))
+
+    def test_edge_cases(self):
+        # 测试在有效类型范围内, 但类型不同
+        self.assertFalse(check_npu_bench_max_dtype(None, "test"))
+        self.assertFalse(check_npu_bench_max_dtype("test", None))
