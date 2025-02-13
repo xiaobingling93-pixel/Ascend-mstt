@@ -59,6 +59,10 @@ class DataCollector:
         if data_info and len(data_info) == 1 and is_recompute is not None: # 正常情况下data_info的长度应改为1
             data_info[list(data_info.keys())[0]]["is_recompute"] = is_recompute
 
+    def reset_status(self):
+        self.data_writer.reset_cache()
+        self.backward_module_names.clear()
+
     def if_return_forward_new_output(self):
         return self.data_processor.if_return_forward_new_output()
 
