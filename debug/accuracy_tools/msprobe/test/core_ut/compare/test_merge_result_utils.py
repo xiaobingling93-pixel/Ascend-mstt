@@ -53,14 +53,14 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
         result = process_compare_index_dict_na(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
         # 检查是否替换了 N/A 值
-        self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'NPU: tp-0-1-2-3 \nBench: tp-0-1-2-3')
-        self.assertEqual(result['Max diff']['op_name_2'][self.rank_num], 'NPU: tp-0-1-2-3 \nBench: tp-0-1-2-3')
+        self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
+        self.assertEqual(result['Max diff']['op_name_2'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
 
-        self.assertEqual(result['L2norm diff']['op_name_1'][self.rank_num], 'NPU: tp-0-1-2-3 \nBench: tp-0-1-2-3')
-        self.assertEqual(result['L2norm diff']['op_name_2'][self.rank_num], 'NPU: tp-0-1-2-3 \nBench: tp-0-1-2-3')
+        self.assertEqual(result['L2norm diff']['op_name_1'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
+        self.assertEqual(result['L2norm diff']['op_name_2'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
 
-        self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], 'NPU: tp-0-1-2-3 \nBench: tp-0-1-2-3')
-        self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], 'NPU: tp-0-1-2-3 \nBench: tp-0-1-2-3')
+        self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
+        self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
 
     def test_no_na_values(self):
         # 修改测试数据，确保没有 N/A 值
