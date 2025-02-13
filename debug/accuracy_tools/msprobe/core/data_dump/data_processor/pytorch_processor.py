@@ -228,9 +228,10 @@ class PytorchDataProcessor(BaseDataProcessor):
         return super().analyze_forward_output(name, module, module_input_output)
 
     def _analyze_p2pop(self, arg):
-        p2pop_info = {}
+        p2pop_info = {"class_type": "torch.distributed.P2POp"}
         try:
-            p2pop_info = self._analyze_tensor(arg.tensor, [])
+            tensor_info = self._analyze_tensor(arg.tensor, [])
+            p2pop_info.update({"tensor": tensor_info})
             p2pop_info.update({"op": arg.op.__name__})
             p2pop_info.update({"peer": arg.peer})
             p2pop_info.update({"tag": arg.tag})

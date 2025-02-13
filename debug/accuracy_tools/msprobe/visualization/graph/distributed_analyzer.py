@@ -188,11 +188,14 @@ class DistributedAnalyzer:
         if rank not in self.group_node_mapping:
             self.group_node_mapping[rank] = {}
         params = []
-        for data_dict in node.input_data.values():
-            op = data_dict.get(GraphConst.OP)
-            target_rank = data_dict.get(GraphConst.PEER)
+        for info_dict in node.batch_p2p_info:
+            op = info_dict.get(GraphConst.OP)
+            target_rank = info_dict.get(GraphConst.PEER)
+            if op is None or target_rank is None:
+                logger.warning('Cannot get param op or peer.')
+                continue
             group_id = op + Const.REPLACEMENT_CHARACTER + Const.RANK + str(target_rank) + \
-                       Const.REPLACEMENT_CHARACTER + data_dict.get('group_id', '')
+                       Const.REPLACEMENT_CHARACTER + info_dict.get(GraphConst.GROUP_ID, '')
             batch_p2p_count[group_id] = batch_p2p_count.get(group_id, 0) + 1
             # 例如: isend_rank0_5a4d31ad765260ba50eb190f1f9fd163_1
             unique_group_id = group_id + Const.REPLACEMENT_CHARACTER + str(batch_p2p_count.get(group_id))

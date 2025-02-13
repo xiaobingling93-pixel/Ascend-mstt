@@ -34,6 +34,7 @@ class BaseNode:
         self.micro_step_id = None
         self.overflow_level = None
         self.matched_distributed = {}
+        self.batch_p2p_info = []
 
     def __str__(self):
         info = f'id:\t{self.id}'
