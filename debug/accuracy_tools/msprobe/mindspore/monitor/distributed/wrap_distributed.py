@@ -199,7 +199,7 @@ def is_target_line(codeline):
 
 
 @_no_grad()
-def catch_data(cc_context, cc_name, ops, args, prefix):
+def catch_data(cc_context, cc_name, ops_list, args, prefix):
     tensor_args = {}
     for arg in args:
         if isinstance(arg, Tensor):
@@ -213,13 +213,13 @@ def catch_data(cc_context, cc_name, ops, args, prefix):
             key = get_summary_writer_tag_name(cc_name, f'{prefix}_{len(tensor_args)}', RANK)
             tensor_args[key] = stacked_arg
 
-    new_data = get_metrics(ops, tensor_args, 1e-8)
+    new_data = get_metrics(ops_list, tensor_args, 1e-8)
     cc_context.data = update_data(cc_context.data, new_data)
 
 
-def create_async_callback_func(context, cc_name, ops, args, prefix):
+def create_async_callback_func(context, cc_name, ops_list, args, prefix):
     def store_data():
-        catch_data(context, cc_name, ops, args, prefix)
+        catch_data(context, cc_name, ops_list, args, prefix)
 
     return store_data
 

@@ -83,6 +83,7 @@ def squash_param_name(param_name):
             return match[0]
     return param_name
 
+
 # ===================================== Context area ====================================
 # Used For Weight Grad Collect
 class GradContext:
