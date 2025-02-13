@@ -22,7 +22,6 @@ from functools import partial
 import pytz
 import torch
 import torch.distributed as dist
-from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import MonitorConst, Const

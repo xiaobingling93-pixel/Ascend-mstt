@@ -308,13 +308,13 @@ class TestOptimizerMonFactory(unittest.TestCase):
         chained_optimizer = MagicMock()
         chained_optimizer_class = MagicMock()
         chained_optimizer_class.__name__ = "ChainedOptimizer"
-        chained_optimizer.__class__ = fp32_optimizer_class
+        chained_optimizer.__class__ = chained_optimizer_class
         chained_optimizer.chained_optimizers = [mix_optimizer, mix_optimizer]
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon(chained_optimizer)[0],
-                              MegatronChainedDistributedOptimizerMon)
+                              MegatronChainedMixPrecisionOptimizerMon)
         chained_optimizer.chained_optimizers = [dis_optimizer, dis_optimizer]
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon(chained_optimizer)[0],
-                              MegatronChainedMixPrecisionOptimizerMon)
+                              MegatronChainedDistributedOptimizerMon)
         deepspeed_optimizer = MagicMock()
         deepspeed_optimizer_class = MagicMock()
         deepspeed_optimizer_class.__name__ = "BF16_Optimizer"
@@ -328,11 +328,11 @@ class TestOptimizerMonFactory(unittest.TestCase):
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon(deepspeed_optimizer)[0],
                               DeepSpeedZeroOptimizerStage3Mon)
         # 测试未知的优化器类型，应该返回DummyOptimizerMon
-        unknow_optimizer = MagicMock()
-        unknow_optimizer_class = MagicMock()
-        unknow_optimizer_class.__name__ = "unknown"
-        unknow_optimizer.__class__ = unknow_optimizer_class
-        self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon(unknow_optimizer)[0], DummyOptimizerMon)
+        unknown_optimizer = MagicMock()
+        unknown_optimizer_class = MagicMock()
+        unknown_optimizer_class.__name__ = "unknown"
+        unknown_optimizer.__class__ = unknown_optimizer_class
+        self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon(unknown_optimizer)[0], DummyOptimizerMon)
 
 
 if __name__ == '__main__':
