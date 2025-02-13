@@ -41,7 +41,8 @@ def process_compare_index_dict_na(compare_index_dict, compare_index_list, rank_n
             npu_max = compare_index_dict[CompareConst.NPU_MAX][op_name][rank_num]
             bench_max = compare_index_dict[CompareConst.BENCH_MAX][op_name][rank_num]
             # 如果当前比对指标值是N/A，并且NPU和Bench的最大值是字符串类型，进行替换
-            if index_value[rank_num] == CompareConst.N_A and check_npu_bench_max_dtype(npu_max, bench_max):
+            if ((index_value[rank_num] == CompareConst.N_A or index_value[rank_num] == CompareConst.UNSUPPORTED)
+                    and check_npu_bench_max_dtype(npu_max, bench_max)):
                 compare_index_dict[compare_index][op_name][rank_num] = f'NPU: {str(npu_max)} \nBench: {str(bench_max)}'
 
     # 删除NPU_MAX和BENCH_MAX
