@@ -23,7 +23,7 @@ from msprobe.core.compare.acc_compare import ModeConfig
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
     # NodeOp.module
-    r'^(Module.|Cell.)',
+    r'^(Module.|Cell.|optimizer|clip_grad)',
     # NodeOp.function_api
     r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.)'
 ]

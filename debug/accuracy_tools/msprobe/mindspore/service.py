@@ -68,6 +68,7 @@ class Service:
         self.start_call = False
         self.should_stop_service = False
         self.params_grad_info = {}
+        self.hook_handle_dict = {}
         # 提前注册，确保注册尽可能多的API hook
         self.register_api_hook()
         self.init_for_debug_level()
@@ -139,7 +140,12 @@ class Service:
             if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
                 for param_name, param in params_dict.items():
                     if param.requires_grad:
-                        param.register_hook(grad_hook(cell, ori_name, param_name))
+                        name = ori_name + Const.SEP + param_name
+                        old_handle = self.hook_handle_dict.get(name)
+                        if old_handle and hasattr(old_handle, "remove"):
+                            old_handle.remove()
+                        handle = param.register_hook(grad_hook(cell, ori_name, param_name))
+                        self.hook_handle_dict[name] = handle
 
         def init_params_grad_info(cell, params_dict):
             '''
@@ -173,7 +179,7 @@ class Service:
                         recurse=False).items()}
                     setattr(module_input_output, Const.PARAMS, params_dict)
                     # 判断是否需要注册参数hook
-                    if not hasattr(cell, 'params_grad_name') and params_dict:
+                    if params_dict:
                         ori_name = api_or_cell_name.rsplit(Const.SEP, 2)[0]
                         grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
                         # 首次执行前向hook时，添加params_grad_name属性，并注册参数hook
@@ -466,10 +472,9 @@ class Service:
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()
-        self.data_collector.data_writer.reset_cache()
+        self.data_collector.reset_status()
         JitDump.jit_count = defaultdict(int)
         self.params_grad_info.clear()
-
         if self.config.level == Const.LEVEL_L2:
             self.data_collector.data_processor.reset_status()
             return
