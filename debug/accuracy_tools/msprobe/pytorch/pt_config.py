@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -303,28 +303,25 @@ class GradToolConfig(BaseConfig):
         check_bounds(self.bounds)
 
 
+class StructureConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+
+
+TaskDict = {
+    Const.TENSOR: TensorConfig,
+    Const.STATISTICS: StatisticsConfig,
+    Const.OVERFLOW_CHECK: OverflowCheckConfig,
+    Const.FREE_BENCHMARK: FreeBenchmarkCheckConfig,
+    Const.RUN_UT: RunUTConfig,
+    Const.GRAD_PROBE: GradToolConfig,
+    Const.STRUCTURE: StructureConfig
+}
+
+
 def parse_task_config(task, json_config):
-    default_dic = {}
-    if task == Const.TENSOR:
-        config_dic = json_config.get(Const.TENSOR, default_dic)
-        return TensorConfig(config_dic)
-    elif task == Const.STATISTICS:
-        config_dic = json_config.get(Const.STATISTICS, default_dic)
-        return StatisticsConfig(config_dic)
-    elif task == Const.OVERFLOW_CHECK:
-        config_dic = json_config.get(Const.OVERFLOW_CHECK, default_dic)
-        return OverflowCheckConfig(config_dic)
-    elif task == Const.FREE_BENCHMARK:
-        config_dic = json_config.get(Const.FREE_BENCHMARK, default_dic)
-        return FreeBenchmarkCheckConfig(config_dic)
-    elif task == Const.RUN_UT:
-        config_dic = json_config.get(Const.RUN_UT, default_dic)
-        return RunUTConfig(config_dic)
-    elif task == Const.GRAD_PROBE:
-        config_dic = json_config.get(Const.GRAD_PROBE, default_dic)
-        return GradToolConfig(config_dic)
-    else:
-        return StatisticsConfig(default_dic)
+    task_map = json_config.get(task, dict())
+    return TaskDict.get(task)(task_map)
 
 
 def parse_json_config(json_file_path, task):

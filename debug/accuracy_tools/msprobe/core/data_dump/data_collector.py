@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -96,7 +96,9 @@ class DataCollector:
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
-        data_info = self.data_processor.analyze_forward_input(name, module, module_input_output)
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_forward_input(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
         if self.config.level == Const.LEVEL_L2:
             return
@@ -107,7 +109,9 @@ class DataCollector:
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
-        data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
         if self.config.level == Const.LEVEL_L2:
             return
@@ -119,7 +123,9 @@ class DataCollector:
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
-        data_info = self.data_processor.analyze_forward(name, module, module_input_output)
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
@@ -129,7 +135,9 @@ class DataCollector:
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
-        data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_backward(name, module, module_input_output)
         if self.config.level == Const.LEVEL_L2:
             return
         # 获取执行反向的模块名称
@@ -144,7 +152,9 @@ class DataCollector:
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
-        data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
         self.handle_data(name, data_info)
 
@@ -153,7 +163,9 @@ class DataCollector:
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
-        data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
         self.handle_data(name, data_info)
 

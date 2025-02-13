@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from msprobe.core.common.const import Const
+from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 
 
 class DataProcessorFactory:
@@ -62,6 +63,7 @@ class DataProcessorFactory:
             cls.register_processor(Const.PT_FRAMEWORK, Const.OVERFLOW_CHECK, PytorchOverflowCheckDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.FREE_BENCHMARK, PytorchFreeBenchmarkDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.KERNEL_DUMP, PytorchKernelDumpDataProcessor)
+            cls.register_processor(Const.PT_FRAMEWORK, Const.STRUCTURE, BaseDataProcessor)
             cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcesser)
         elif framework == Const.MS_FRAMEWORK:
             from msprobe.core.data_dump.data_processor.mindspore_processor import (
@@ -75,4 +77,5 @@ class DataProcessorFactory:
             cls.register_processor(Const.MS_FRAMEWORK, Const.TENSOR, MindsporeTensorDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.OVERFLOW_CHECK, MindsporeOverflowCheckDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.KERNEL_DUMP, MindsporeKernelDumpDataProcessor)
+            cls.register_processor(Const.MS_FRAMEWORK, Const.STRUCTURE, BaseDataProcessor)
             cls.register_module_processor(Const.MS_FRAMEWORK, CellProcessor)
