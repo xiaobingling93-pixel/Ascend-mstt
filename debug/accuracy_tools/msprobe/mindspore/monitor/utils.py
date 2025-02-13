@@ -25,6 +25,29 @@ def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
         return f"{module_or_param_name}/rank{rank}/{tag}"
 
 
+def step_accumulates_one(context, micro_batch_number):
+    """
+    :param context: ModuleHookContext
+    :param micro_batch_number: mbs of training model.
+    :return:
+    """
+    context.micro_step += 1
+    if context.micro_step == micro_batch_number:
+        context.micro_step = 0
+        context.step += 1
+
+
+def is_skip_step(step, start_step, step_interval):
+    """
+    If current step less than start_step or not reach step_interval, skip current step.
+    :param step: current training step, int
+    :param start_step: int
+    :param step_interval: int
+    :return: whether skip or not, bool
+    """
+    return step < start_step or (step - start_step) % step_interval != 0
+
+
 def validate_ops(ops):
     if not isinstance(ops, list):
         raise TypeError("ops should be a list")

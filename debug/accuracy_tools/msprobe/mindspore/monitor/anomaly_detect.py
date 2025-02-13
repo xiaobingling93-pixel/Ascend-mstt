@@ -137,8 +137,8 @@ class AnomalyDataFactory(ABC):
         tag_name = tag[0]
         param_name = tag_name.split('/')[0]
         call_id = self.name2callid.get(tag_name, -1)
-        if MonitorConst.VPP_SEP in param_name:
-            vpp_stage = int(param_name.split(MonitorConst.VPP_SEP)[0])
+        if MonitorConst.NAME_SEP in param_name:
+            vpp_stage = int(param_name.split(MonitorConst.NAME_SEP)[0])
         else:
             vpp_stage = 0
 
@@ -353,10 +353,10 @@ class CSVWriterWithAD(BaseWriterWithAD):
 
         new_data = []
         for name, metric_value in self.context_dict.items():
-            if MonitorConst.VPP_SEP not in name:
+            if MonitorConst.NAME_SEP not in name:
                 new_data.append([name] + [step] + metric_value)
             else:
-                new_data.append(name.split(MonitorConst.VPP_SEP) + [step] + metric_value)
+                new_data.append(name.split(MonitorConst.NAME_SEP) + [step] + metric_value)
         new_data = pd.DataFrame(new_data).round(self.ndigits)
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
@@ -387,7 +387,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
             csv_header = ["param_name", "step", *op_list]
 
         keys = list(metric_value.keys())
-        if keys and MonitorConst.VPP_SEP in keys[0]:
+        if keys and MonitorConst.NAME_SEP in keys[0]:
             csv_header.insert(0, "vpp_stage")
 
         self.header = csv_header

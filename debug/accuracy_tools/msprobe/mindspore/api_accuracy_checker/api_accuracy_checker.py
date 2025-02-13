@@ -26,6 +26,7 @@ from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
@@ -82,9 +83,11 @@ class ApiAccuracyChecker:
         # get output
         if global_context.get_is_constructed():
             # constructed situation, need use constructed input to run mindspore api getting tested_output
-            tested_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.MS_FRAMEWORK)
+            tested_outputs = api_runner(api_input_aggregation, api_name_str,
+                                        forward_or_backward, global_context.get_framework())
         else:
             tested_outputs = api_info.get_compute_element_list(forward_or_backward, Const.OUTPUT)
+
         bench_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.PT_FRAMEWORK)
         tested_outputs = trim_output_compute_element_list(tested_outputs, forward_or_backward)
         bench_outputs = trim_output_compute_element_list(bench_outputs, forward_or_backward)
@@ -153,13 +156,19 @@ class ApiAccuracyChecker:
         real_api_str = Const.SEP.join(api_name_str_list[1:-2])
         api_list = load_yaml(yaml_path)
         supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
-        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL):
+        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
-        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list:
+        if api_type_str in MsCompareConst.MT_VALID_API_TYPES \
+                and global_context.get_framework() == Const.MT_FRAMEWORK:
+            return True
+        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
         return False
 
     def parse(self, api_info_path):
+
         api_info_dict = load_json(api_info_path)
 
         # init global context
@@ -167,14 +176,25 @@ class ApiAccuracyChecker:
                                             "task field in api_info.json", accepted_type=str,
                                             accepted_value=(MsCompareConst.STATISTICS_TASK,
                                                             MsCompareConst.TENSOR_TASK))
+        try:
+            framework = check_and_get_from_json_dict(api_info_dict, MsCompareConst.FRAMEWORK,
+                                                "framework field in api_info.json", accepted_type=str,
+                                                accepted_value=(Const.MS_FRAMEWORK,
+                                                                Const.MT_FRAMEWORK))
+        except Exception as e:
+            framework = Const.MS_FRAMEWORK
+            logger.warning(f"JSON parsing error in framework field: {e}")
+
+        if framework == Const.MT_FRAMEWORK and not torch_mindtorch_importer.is_valid_pt_mt_env:
+            raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment")
+
         is_constructed = task == MsCompareConst.STATISTICS_TASK
         if not is_constructed:
             dump_data_dir = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DUMP_DATA_DIR_FIELD,
-                                                         "dump_data_dir field in api_info.json",
-                                                         accepted_type=str)
+                                                         "dump_data_dir field in api_info.json", accepted_type=str)
         else:
             dump_data_dir = ""
-        global_context.init(is_constructed, dump_data_dir)
+        global_context.init(is_constructed, dump_data_dir, framework)
 
         api_info_data = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DATA_FIELD,
                                                      "data field in api_info.json", accepted_type=dict)
