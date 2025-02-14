@@ -140,11 +140,13 @@ class MindsporeDataProcessor(BaseDataProcessor):
 
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
-            return self._analyze_numpy(converted_numpy, numpy_type)
+            return {"type": numpy_type, "value": converted_numpy}
         if isinstance(element, Number):
             return self.analyze_dtype_in_kwargs(element)
         if isinstance(element, ms.Tensor):
             return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
+        if isinstance(element, np.ndarray):
+            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
@@ -189,6 +191,13 @@ class TensorDataProcessor(MindsporeDataProcessor):
         else:
             save_tensor_as_npy(tensor, file_path)
         return single_arg
+    
+    def _analyze_numpy(self, ndarray, suffix):
+        dump_data_name, file_path = self.get_save_file_path(suffix)
+        np.save(file_path, ndarray)
+        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json.update({"data_name": dump_data_name})
+        return ndarray_json
 
 
 class OverflowCheckDataProcessor(MindsporeDataProcessor):

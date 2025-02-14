@@ -254,7 +254,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         numpy_element = np.int64(1)
         converted_numpy, numpy_type = self.processor._convert_numpy_to_builtin(numpy_element)
         result = self.processor.analyze_single_element(numpy_element, [])
-        expected_result = self.processor._analyze_numpy(converted_numpy, numpy_type)
+        expected_result = {"type": numpy_type, "value": converted_numpy} 
         self.assertEqual(result, expected_result)
 
     def test_analyze_single_element_tensor(self):
