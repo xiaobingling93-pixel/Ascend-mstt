@@ -51,7 +51,7 @@ def get_zeros(x: Tensor, eps: float):
 
 @_no_grad()
 def get_nans(t):
-    return ops.isnan(t).sum()
+    return ops.isnan(t.astype(mstype.float32)).sum()
 
 
 FUNC_MAP = {"min"  : get_min,
