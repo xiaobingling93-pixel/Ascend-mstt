@@ -174,6 +174,7 @@ class TrainerMon:
         self.cc_context = defaultdict(CommunicationContext)
         self.grad_context = GradContext()
         self.params_have_main_grad = params_have_main_grad
+        self.handles = defaultdict(list)
         self.config = load_json(config_file_path)
         validate_config(self.config)
 
