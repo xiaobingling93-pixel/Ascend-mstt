@@ -42,6 +42,10 @@ from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, val
     get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+if not torch_version_above_or_equal_2:
+    raise ValueError("monitor require torch>=2.0")
+
 
 FORMAT_MAPPING = {
     MonitorConst.TENSORBOARD: SummaryWriterWithAD,
