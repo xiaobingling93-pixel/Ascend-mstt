@@ -22,11 +22,16 @@ import numpy as np
 from mindspore import nn, Tensor, ops, _no_grad
 from mindspore import communication
 from mindspore.communication import comm_func, get_rank
-from mindspore._c_expression import CommHandle as CommHandle_
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.mindspore.monitor.utils import get_metrics, get_summary_writer_tag_name
+
+enable_communication = True
+try:
+    from mindspore._c_expression import CommHandle as CommHandle_
+except ImportError:
+    enable_communication = False
 
 
 RANK = None
@@ -41,7 +46,7 @@ distributed_func = {}
 for f in dir(comm_func):
     distributed_func[f] = getattr(comm_func, f)
 
-ORIGIN_WAIT = CommHandle_.wait
+ORIGIN_WAIT = CommHandle_.wait if enable_communication else None
 PENDING_ASYNC_CC_BY_HANDLE = {}
 
 
@@ -101,6 +106,8 @@ class ApiRegistry:
     def redirect_wait():
         global ORIGIN_WAIT
         global PENDING_ASYNC_CC_BY_HANDLE
+        if not ORIGIN_WAIT:
+            return
 
         def wrapped_wait(work):
             def wrapped_wait(*args, **kwargs):
@@ -118,6 +125,8 @@ class ApiRegistry:
         self.redirect_wait()
 
     def restore_api(self):
+        if not ORIGIN_WAIT:
+            return
         self.set_api_attr(comm_func, self.distributed_attr_origin)
         setattr(CommHandle_, 'wait', ORIGIN_WAIT)
 
@@ -239,7 +248,7 @@ def create_hooks(context, monitor):
     def cc_hook(module, inputs, out=None):
         if not is_target_line(monitor.cc_codeline):
             return out
-        if out:  # async
+        if out and enable_communication:  # async
             if isinstance(out, CommHandle_):
                 PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(
                     context[module.op_name_],

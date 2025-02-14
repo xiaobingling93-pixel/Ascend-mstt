@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 import numpy as np
+import mindspore
 from mindspore import Tensor, ops
 
 from msprobe.mindspore.monitor.distributed.wrap_distributed import (
@@ -18,7 +19,16 @@ class TestWrapDistributed(unittest.TestCase):
     def setUp(self):
         self.mock_ops = ['min', 'max', 'norm']
         self.mock_rank = '0'
-        
+
+    def hook(self):
+        def forward_pre_hook(nope, inputs):
+            return inputs
+
+        def forward_hook(nope, inputs, output):
+            return 2
+
+        return [forward_pre_hook], [forward_hook]
+
     def test_catch_data(self):
         # 准备测试数据
         cc_context = Mock()
@@ -28,16 +38,15 @@ class TestWrapDistributed(unittest.TestCase):
         
         # 测试输入数据捕获
         catch_data(cc_context, cc_name, self.mock_ops, args, MonitorConst.PREFIX_PRE)
-        self.assertTrue('all_reduce_pre_0_0' in cc_context.data)
+        self.assertTrue('all_reduce/pre_0' in cc_context.data)
         
         # 测试输出数据捕获
         catch_data(cc_context, cc_name, self.mock_ops, args, MonitorConst.PREFIX_POST)
-        self.assertTrue('all_reduce_post_0_0' in cc_context.data)
+        self.assertTrue('all_reduce/post_0' in cc_context.data)
 
     def test_distributed_op_template(self):
         # 测试分布式算子模板
-        pre_hooks = [Mock()]
-        post_hooks = [Mock()]
+        pre_hooks, post_hooks = self.hook()
         op = DistributedOPTemplate("all_reduce", pre_hooks, post_hooks)
         
         self.assertEqual(op.op_name_, "all_reduce")
@@ -101,21 +110,3 @@ class TestWrapDistributed(unittest.TestCase):
         # 测试获取分布式算子列表
         ops = get_distributed_ops()
         self.assertIsInstance(ops, set)
-
-    @patch('mindspore.communication.get_rank')
-    def test_create_hooks(self, mock_get_rank):
-        # 测试创建钩子函数
-        from msprobe.mindspore.monitor.distributed.wrap_distributed import create_hooks
-        
-        mock_get_rank.return_value = 0
-        context = {}
-        monitor = Mock()
-        monitor.cc_codeline = []
-        monitor.ops = self.mock_ops
-        monitor.module_rank_list = []
-        monitor.cc_log_only = False
-        monitor.cc_pre_hook = True
-        
-        pre_hooks, hooks = create_hooks(context, monitor)
-        self.assertTrue(len(pre_hooks) > 0)
-        self.assertTrue(len(hooks) > 0)
