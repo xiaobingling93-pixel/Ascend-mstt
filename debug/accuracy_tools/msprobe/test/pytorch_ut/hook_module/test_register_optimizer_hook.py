@@ -9,6 +9,9 @@ class DataCollector:
     def __init__(self):
         self.optimizer_status = ""
 
+    def init_optimizer_construct(self, name):
+        pass
+
 
 class TestRegisterOptimizerHook(unittest.TestCase):
     def test_register_optimizer_hook(self):
