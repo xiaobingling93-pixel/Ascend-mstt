@@ -530,6 +530,8 @@ class TrainerMon:
         return actv, actv_grad
 
     def reload_xy(self, xy_distribution=False):
+        logger.warning("reload_xy() is deprecated and will be removed in a future version. "
+                       "Use DYNAMIC_MONITOR instead.")
         self.xy_distribution = xy_distribution
 
         for handle in self.handles['xy']:
