@@ -36,7 +36,7 @@ def get_mean(x: Tensor):
 @_no_grad()
 def get_norm(x: Tensor):
     norm_func = mint.norm if hasattr(mint, "norm") else ops.norm
-    return norm_func(x.astype(mstype.float32), p=2)
+    return norm_func(x.astype(mstype.float32))
 
 
 @_no_grad()
