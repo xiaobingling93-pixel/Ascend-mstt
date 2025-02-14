@@ -14,14 +14,10 @@
 # limitations under the License.
 
 import os
-import time
 import re
-import csv
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
-
-import pandas as pd
+from datetime import datetime
 
 import pytz
 import mindspore as ms
@@ -32,7 +28,7 @@ from mindspore.communication import get_rank
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import create_directory, load_json
+from msprobe.core.common.file_utils import load_json
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
     is_skip_step
 from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
@@ -108,24 +104,6 @@ def get_metrics(op_list, tag2tensor, eps, output=None):
     return output
 
 
-# ===================================== Context area ====================================
-# Used For Weight Grad Collect
-class GradContext:
-    def __init__(self) -> None:
-        self.pre = {}
-        self.post = {}
-        self.acc_metric = {}
-        self.acc = {}
-        self.actv = {}
-
-    def reset(self):
-        self.pre.clear()
-        self.post.clear()
-        self.acc_metric.clear()
-        self.acc.clear()
-        self.actv.clear()
-
-
 # Used For Module Forward & Backward Collect
 class ModuleHookContext:
     def __init__(self, module_name) -> None:
@@ -155,9 +133,12 @@ class ModuleHookContext:
             self.ignore_in = True
 
 
+start_step = 0
+
+
 # Used For Optimizer Weight Grad & M/V Collect
 class OptimizerContext:
-    def __init__(self, start_step=0) -> None:
+    def __init__(self) -> None:
         self.step = start_step
         self.param_effective_rank = defaultdict(float)
         self.param_mg_direction = defaultdict(float)
@@ -172,17 +153,30 @@ class OptimizerContext:
         self.param_metric = {}
 
 
-# ===================================== Context area ====================================
+# Used For Weight Grad Collect
+class GradContext:
+    def __init__(self) -> None:
+        self.pre = {}
+        self.post = {}
+        self.acc_metric = {}
+        self.acc = {}
+        self.actv = {}
 
-# ===================================== Main Processor ====================================
+    def reset(self):
+        self.pre.clear()
+        self.post.clear()
+        self.acc_metric.clear()
+        self.acc.clear()
+        self.actv.clear()
+
+
 class TrainerMon:
-    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
+    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.optimizer_context = defaultdict(OptimizerContext)
         self.grad_context = GradContext()
         self.params_have_main_grad = params_have_main_grad
-        self.opt_ty = opt_ty
         self.config = load_json(config_file_path)
         validate_config(self.config)
 
@@ -236,7 +230,7 @@ class TrainerMon:
         local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
 
         cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
-        unique_id = str(uuid.uuid4())[:8]   
+        unique_id = str(uuid.uuid4())[:8]
         output_base_dir = get_output_base_dir()
 
         time_tags = self.config.get("append_output", [])
@@ -258,7 +252,7 @@ class TrainerMon:
                 tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
             pp_stage = 0
             group_mates = [0]
-            
+
         self.rank = rank
 
         # 初始化AnomalyData工厂
@@ -309,11 +303,19 @@ class TrainerMon:
         self.module_struct = defaultdict(dict)
 
     # Start
-    def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None):
+    def set_monitor(
+            self,
+            model,
+            grad_acc_steps=1,
+            optimizer=None,
+            tp_group=None,
+            dp_group=None,
+            start_iteration=0):
+        global start_step
+        start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
         self.hook_optimizer(optimizer)
         self.micro_batch_number = grad_acc_steps
-
         self.dp_group = dp_group
         self.tp_group = tp_group
 
@@ -359,7 +361,7 @@ class TrainerMon:
                 if is_select and grad_name not in self.targets:
                     continue
                 get_single_metrics(self.ops, grad_name, grad, context.param_weight_grad)
-            
+
             if self.mv_distribution:
                 # fetch mean
                 for param in m_list:
@@ -463,11 +465,6 @@ class TrainerMon:
             logger.info('> grad and momentum direction will not be compared.')
         if not self.cc_distribution.get('enable', False):
             logger.info("> cc operator is not monitored.")
-        if not self.opt_ty:
-            if self.ur_distribution:
-                raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
-            if self.mv_distribution:
-                raise Exception("mv_distribution cannot be enabled with unknown optimizer.")
 
     def is_target_rank(self):
         rank_id = str(get_rank())
@@ -480,7 +477,7 @@ class TrainerMon:
             return
         if not isinstance(model, list):
             model = [model]
-        self.model = model # list
+        self.model = model  # list
         self._register_param_name(model)
         self.micro_batch_number = grad_acc_steps
         module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.NAME_SEP not in key]
@@ -796,5 +793,3 @@ class TrainerMon:
             handle = param.register_hook(param_hook_wrapper(param_hook, context_dict=context.acc, param=param, key=key))
             self.handles['wgrads'].append(handle)
         self.weight_hooked = True
-
-# ===================================== Main Processor ====================================

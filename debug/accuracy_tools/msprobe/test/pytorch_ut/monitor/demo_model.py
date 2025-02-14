@@ -36,15 +36,13 @@ def monitor_demo(config: str = "./config/monitor_config.json"):
 
     hooker = TrainerMon(
         config,
-        params_have_main_grad=False,
-        opt_ty='Megatron_FP32Optimizer'
+        params_have_main_grad=False
     )
-    hooker.monitor_gnorm_with_ad(
+    hooker.set_monitor(
         model=net,
         grad_acc_steps=1,
         optimizer=optimizer
     )
-    hooker.set_wrapped_optimizer(optimizer)
 
     train_ds = ToyDataset()
     train_loader = torch.utils.data.DataLoader(train_ds, shuffle=True, batch_size=10)
