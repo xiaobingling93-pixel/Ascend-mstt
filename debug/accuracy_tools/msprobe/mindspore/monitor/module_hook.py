@@ -146,6 +146,26 @@ class GradContext:
         self.actv.clear()
 
 
+class CommunicationContext:
+    def __init__(self) -> None:
+        self.data = {}
+
+    @staticmethod
+    def _agg(data):
+        aggregated_data = {}
+        for tag, op2tensorlist in data.items():
+            aggregated_data[tag] = {}
+            for op, tensorlist in op2tensorlist.items():
+                aggregated_data[tag][op] = op_aggregate(op, tensorlist)
+        return aggregated_data
+
+    def reset(self):
+        self.data = {}
+
+    def aggregate(self):
+        self.data = self._agg(self.data)
+
+
 class TrainerMon:
     def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
