@@ -19,6 +19,7 @@ import unittest
 from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.merge_result.utils import replace_compare_index_dict
 
+
 class TestReplaceCompareIndexDict(unittest.TestCase):
 
     def setUp(self):
