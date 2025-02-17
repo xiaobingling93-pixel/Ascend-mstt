@@ -57,6 +57,10 @@ class DistributedOPTemplate(HOOKModule):
         if kwargs.get("async_op") or self.op_name_ in ["isend", "irecv"]:
             if handle and hasattr(handle, 'wait'):
                 handle.wait()
+        if self.op_name_ == "batch_isend_irecv":
+            if isinstance(handle, list):
+                for req in handle:
+                    req.wait()
         return handle
 
 

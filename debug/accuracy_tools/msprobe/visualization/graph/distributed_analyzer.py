@@ -107,6 +107,15 @@ class DistributedAnalyzer:
             return None, None
         return group_ranks, group_id
 
+    @staticmethod
+    def _get_batch_group_info(node, rank):
+        for data in node.input_data.values():
+            group_id = data.get('group_id')
+            if group_id is not None:
+                return group_id
+        logger.warning(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
+        return None
+
     def distributed_match(self):
         for rank, graph in self.graphs.items():
             nodes = graph.node_map
@@ -115,7 +124,9 @@ class DistributedAnalyzer:
                 if not node_id.startswith(Const.DISTRIBUTED) or node.matched_distributed:
                     continue
                 api_name, distributed_type = self._get_distributed_name_and_type(node_id)
-                if distributed_type == DistributedType.P2P:
+                if api_name == GraphConst.BATCH_P2P:
+                    self._batch_p2p_match(node, rank)
+                elif distributed_type == DistributedType.P2P:
                     self._p2p_match(node, rank, api_name)
                 else:
                     self._collective_match(node, rank, api_name)
@@ -138,12 +149,16 @@ class DistributedAnalyzer:
         for rank, graph in self.graphs.items():
             group_count = {}
             group_info = {}
+            batch_p2p_count = {}
             nodes = graph.node_map
             for node_id, node in nodes.items():
                 if not node_id.startswith(Const.DISTRIBUTED):
                     continue
                 api_name, distributed_type = self._get_distributed_name_and_type(node_id)
-                if distributed_type == DistributedType.P2P:
+                if api_name == GraphConst.BATCH_P2P:
+                    self._make_batch_p2p_mapping(node, rank, batch_p2p_count)
+                    continue
+                elif distributed_type == DistributedType.P2P:
                     config_info = self.config.get(api_name)
                     target_rank = self._get_target_rank(node, rank, config_info[1])
                     if target_rank is None:
@@ -162,7 +177,32 @@ class DistributedAnalyzer:
                 unique_group_id = group_id + Const.REPLACEMENT_CHARACTER + str(group_count.get(group_id))
                 group_info[unique_group_id] = node_id
                 group_info[node_id] = unique_group_id
-            self.group_node_mapping[rank] = group_info
+            if rank not in self.group_node_mapping:
+                self.group_node_mapping[rank] = {}
+            self.group_node_mapping[rank].update(group_info)
+
+    def _make_batch_p2p_mapping(self, node, rank, batch_p2p_count):
+        """
+        给batch_isend_irecv接口的每个p2p内容赋予唯一标识
+        """
+        if rank not in self.group_node_mapping:
+            self.group_node_mapping[rank] = {}
+        params = []
+        for info_dict in node.batch_p2p_info:
+            op = info_dict.get(GraphConst.OP)
+            target_rank = info_dict.get(GraphConst.PEER)
+            if op is None or target_rank is None:
+                logger.warning('Cannot get param op or peer.')
+                continue
+            group_id = op + Const.REPLACEMENT_CHARACTER + Const.RANK + str(target_rank) + \
+                       Const.REPLACEMENT_CHARACTER + info_dict.get(GraphConst.GROUP_ID, '')
+            batch_p2p_count[group_id] = batch_p2p_count.get(group_id, 0) + 1
+            # 例如: isend_rank0_5a4d31ad765260ba50eb190f1f9fd163_1
+            unique_group_id = group_id + Const.REPLACEMENT_CHARACTER + str(batch_p2p_count.get(group_id))
+            params.append(unique_group_id)
+            self.group_node_mapping.get(rank)[unique_group_id] = node.id
+        if params:
+            self.group_node_mapping.get(rank)[node.id] = params
 
     def _get_distributed_name_and_type(self, node_id):
         if Const.SEP not in node_id:
@@ -315,4 +355,41 @@ class DistributedAnalyzer:
                 self._add_node_matched_distributed(target_node, node, api_name, rank, True)
         if nodes_info:
             matched_distributed['nodes_info'] = nodes_info
+            node.matched_distributed = matched_distributed
+
+    def _batch_p2p_match(self, node, rank):
+        """
+        批量点对点匹配
+
+        针对torch.distributed.batch_isend_irecv接口，其入参是一个包含点对点通信信息的集合，需要遍历集合对每个点对点通信信息进行匹配
+        :param node: 当前集体通信节点
+        :param rank: 当前节点所属rank
+        :return:
+        """
+        unique_group_ids = self.group_node_mapping.get(rank, {}).get(node.id)
+        if not unique_group_ids:
+            return
+        matched_distributed = [] if len(unique_group_ids) > 1 else {}
+        for unique_group_id in unique_group_ids:
+            try:
+                id_info = unique_group_id.split(Const.REPLACEMENT_CHARACTER)
+                api_name = id_info[0]
+                target_api_name = self.config.get(api_name)[0]
+                target_rank = int(id_info[1].replace(Const.RANK, ''))
+            except Exception as e:
+                logger.warning(f'Failed to parsing batch p2p parameter with error info: {e}.')
+                continue
+            target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
+            if not target_node:
+                continue
+            communications_type = self.config.get(api_name)[2]
+            index = target_node.data.get(GraphConst.OVERFLOW_LEVEL, CompareConst.NAN) if self.overflow_check \
+                else target_node.data.get(GraphConst.JSON_INDEX_KEY, CompareConst.NAN)
+            matched_info = {
+                'communications_type': communications_type,
+                'nodes_info': {target_rank: [str(index), target_node.id]}
+            }
+            matched_distributed.append(matched_info) if isinstance(matched_distributed, list) \
+                else matched_distributed.update(matched_info)
+        if matched_distributed:
             node.matched_distributed = matched_distributed
