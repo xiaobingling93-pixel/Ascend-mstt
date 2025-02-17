@@ -12,6 +12,7 @@
 pub mod dcgm;
 pub mod gputrace;
 pub mod nputrace;
+pub mod npumonitor;
 pub mod status;
 pub mod version;
 // ... add new command modules here
