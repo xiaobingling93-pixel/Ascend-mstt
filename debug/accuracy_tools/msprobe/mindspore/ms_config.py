@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,12 +106,18 @@ class GradProbeConfig(BaseConfig):
         check_numeral_list_ascend(self.bounds)
 
 
+class StructureConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+
+
 TaskDict = {
     Const.TENSOR: TensorConfig,
     Const.STATISTICS: StatisticsConfig,
     Const.OVERFLOW_CHECK: OverflowCheckConfig,
     Const.FREE_BENCHMARK: FreeBenchmarkConfig,
-    Const.GRAD_PROBE: GradProbeConfig
+    Const.GRAD_PROBE: GradProbeConfig,
+    Const.STRUCTURE: StructureConfig
 }
 
 

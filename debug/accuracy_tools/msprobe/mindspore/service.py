@@ -22,6 +22,7 @@ import mindspore as ms
 from mindspore import nn
 from mindspore.common.api import _no_grad
 from mindspore.ops.primitive import Primitive
+
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
 except ImportError:
@@ -175,9 +176,13 @@ class Service:
                 module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
-                    params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(
-                        recurse=False).items()}
-                    setattr(module_input_output, Const.PARAMS, params_dict)
+                    params_dict = {}
+                    if self.config.task != Const.STRUCTURE:
+                        params_dict = {
+                            key.split(Const.SEP)[-1]: value
+                            for key, value in cell.parameters_dict(recurse=False).items()
+                        }
+                        setattr(module_input_output, Const.PARAMS, params_dict)
                     # 判断是否需要注册参数hook
                     if params_dict:
                         ori_name = api_or_cell_name.rsplit(Const.SEP, 2)[0]

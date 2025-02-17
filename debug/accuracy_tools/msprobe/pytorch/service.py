@@ -81,10 +81,10 @@ class Service:
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.forward_input_data_collect(
-                    api_or_module_name, 
-                    module, 
-                    pid, 
-                    module_input_output, 
+                    api_or_module_name,
+                    module,
+                    pid,
+                    module_input_output,
                     is_recompute
                 )
 
@@ -162,8 +162,13 @@ class Service:
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name[-1]
                 self.data_collector.update_api_or_module_name(api_or_module_name)
-                params_dict = {key.split(Const.SEP)[-1]: value for key, value in module.named_parameters(recurse=False)}
-                setattr(module_input_output, Const.PARAMS, params_dict)
+                params_dict = {}
+                if self.config.task != Const.STRUCTURE:
+                    params_dict = {
+                        key.split(Const.SEP)[-1]: value
+                        for key, value in module.named_parameters(recurse=False)
+                    }
+                    setattr(module_input_output, Const.PARAMS, params_dict)
                 # 判断是否需要注册参数hook
                 if params_dict:
                     ori_name = api_or_module_name.rsplit(Const.SEP, 2)[0]
@@ -217,10 +222,10 @@ class Service:
                 # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
                 self.data_collector.backward_data_collect(
-                    api_or_module_name, 
-                    module, 
-                    pid, 
-                    module_input_output, 
+                    api_or_module_name,
+                    module,
+                    pid,
+                    module_input_output,
                     is_recompute
                 )
             self.inner_switch = False
