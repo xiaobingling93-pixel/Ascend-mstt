@@ -262,6 +262,8 @@ class Service:
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_module_hook()
+            if self.config.level == Const.LEVEL_MIX:
+                register_optimizer_hook(self.data_collector)
             self.first_start = False
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
@@ -373,9 +375,6 @@ class Service:
                 self.config.online_run_ut
             )
             api_register.api_modularity()
-
-        if self.config.level == Const.LEVEL_MIX:
-            register_optimizer_hook(self.data_collector)
 
     def register_module_hook(self):
         if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
