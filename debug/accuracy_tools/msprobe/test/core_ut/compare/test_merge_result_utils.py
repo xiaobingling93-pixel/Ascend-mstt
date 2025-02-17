@@ -95,15 +95,15 @@ class TestReplaceCompareIndexDict(unittest.TestCase):
 
         result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
-        # 验证结果没有变化
-        self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'N/A')
-        self.assertEqual(result['Max diff']['op_name_2'][self.rank_num], 'N/A')
+        expected_value = 'NPU:123  Bench:123'
+        self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['Max diff']['op_name_2'][self.rank_num], expected_value)
 
-        self.assertEqual(result['L2norm diff']['op_name_1'][self.rank_num], 'N/A')
-        self.assertEqual(result['L2norm diff']['op_name_2'][self.rank_num], 'N/A')
+        self.assertEqual(result['L2norm diff']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['L2norm diff']['op_name_2'][self.rank_num], expected_value)
 
-        self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], 'N/A')
-        self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], 'N/A')
+        self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], expected_value)
 
     def test_missing_npu_bench_max(self):
         # 移除 NPU_MAX 和 BENCH_MAX 键
