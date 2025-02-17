@@ -184,6 +184,31 @@ def validate_step_count_per_record(step_count_per_record):
         raise ValueError("step_count_per_record must smaller than 1e6")
 
 
+def validate_start_step(start_step):
+    if not is_int(start_step):
+        raise TypeError('start_step must be int.')
+    if start_step < 0:
+        raise ValueError("start_step must greater than 0")
+    if start_step > 1e8:
+        raise ValueError("start_step must smaller than 1e8")
+
+
+def validate_step_interval(step_interval):
+    if not is_int(step_interval):
+        raise TypeError('step_interval must be int.')
+    if step_interval < 1:
+        raise ValueError("step_interval must greater than 1")
+    if step_interval > 1e8:
+        raise ValueError("step_interval must smaller than 1e8")
+
+
+def validate_collect_times(collect_times):
+    if not is_int(collect_times):
+        raise TypeError('collect_times must be int.')
+    if collect_times < 1:
+        raise ValueError("collect_times must greater than 1")
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -223,6 +248,15 @@ def validate_config(config):
 
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
+
+    start_step = config.get('start_step', 0)
+    validate_start_step(start_step)
+
+    step_interval = config.get('step_interval', 1)
+    validate_step_interval(step_interval)
+
+    collect_times = config.get('collect_times', 1e8)
+    validate_collect_times(collect_times)
 
     if not targets:
         if xy_distribution:
