@@ -29,7 +29,10 @@ generate_patches() {
         echo "original_file: ${original_file}"
         # 检查原始文件是否存在
         if [ ! -f "${original_file}" ]; then
-            echo "ERROR: Original file not found: ${original_file}"
+            echo "WARN: Original file not found: ${original_file}"
+
+            cp "${modified_file}" "${original_file}"
+            echo "Copied ${modified_file} to ${original_file}"
             continue
         fi
         
