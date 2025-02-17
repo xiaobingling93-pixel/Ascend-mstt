@@ -990,7 +990,10 @@ class TrainerMon:
         def patch_sync(sync_grad_func):
             def wrapper(bucket):
                 grad_dict = {}
-                bucket_params_id_list = [id(params) for params in bucket.params_list]
+                # Megatron between core_r0.6.0 and core_r0.8.0, this bucket is Bucket.
+                # When megatron is core_r0.9.0, this bucket is _ParamAndGradBucketGroup.
+                # In megatron version core_r0.9.0, func start_grad_sync from Bucket moved to _ParamAndGradBucketGroup.
+                bucket_params_id_list = [id(params) for params in bucket.params]
                 for param, name in self.param2name.items():
                     if id(param) not in bucket_params_id_list:
                         continue
@@ -1009,18 +1012,26 @@ class TrainerMon:
 
             return wrapper
 
-        try:
-            from megatron.core.distributed.param_and_grad_buffer import Bucket
-            self.enable_megatron = True
-        except ImportError:
-            self.enable_megatron = False
-
         if not self.wg_distribution:
             return
 
-        if self.enable_megatron:
-            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)  # differ in different megatron version
-        else:
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import Bucket
+            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)
+            self.enable_megatron = True
+            logger.info("megatron version is >= core_r0.6.0 <= core_r0.8.0")
+        except ImportError:
+            self.enable_megatron = False
+
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
+            _ParamAndGradBucketGroup.start_grad_sync = patch_sync(_ParamAndGradBucketGroup.start_grad_sync)
+            self.enable_megatron = True
+            logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
+        except ImportError:
+            self.enable_megatron = False
+
+        if not self.enable_megatron:
             self._hook_weights()
 
     def _hook_weights(self):
@@ -1037,6 +1048,7 @@ class TrainerMon:
                 else:
                     context_dict[key] = param.grad.clone()
 
+        logger.info("hooking weights.")
         for param, name in self.param2name.items():
             key = get_summary_writer_tag_name(name, 'acc_grad', self.rank)
             setattr(param, 'micro_step', 0)
