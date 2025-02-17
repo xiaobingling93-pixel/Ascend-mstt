@@ -64,7 +64,7 @@ def step_accumulates_one(context, micro_batch_number):
         context.step += 1
 
 
-def is_skip_step(step, start_step, step_interval):
+def is_skip_step(step, start_step, step_interval, has_collect_times=0, collect_times=1e8):
     """
     If current step less than start_step or not reach step_interval, skip current step.
     :param step: current training step, int
@@ -72,7 +72,7 @@ def is_skip_step(step, start_step, step_interval):
     :param step_interval: int
     :return: whether skip or not, bool
     """
-    return step < start_step or (step - start_step) % step_interval != 0
+    return step < start_step or (step - start_step) % step_interval != 0 or has_collect_times >= collect_times
 
 
 def validate_ops(ops):

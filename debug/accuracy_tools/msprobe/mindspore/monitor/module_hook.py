@@ -128,6 +128,17 @@ class OptimizerContext:
         self.metric_dict = {}
         self.param_metric = {}
 
+    def reset(self) -> None:
+        self.param_mg_direction.clear()
+        self.param_adam_update.clear()
+        self.param_weight_grad.clear()
+        self.param_exp_avg.clear()
+        self.exp_avg_metric.clear()
+        self.param_exp_avg_sq.clear()
+        self.exp_avg_sq_metric.clear()
+        self.metric_dict.clear()
+        self.param_metric.clear()
+
 
 # Used For Weight Grad Collect
 class GradContext:
@@ -181,6 +192,7 @@ class TrainerMon:
         self.start_step = self.config.get("start_step", 0)
         self.collect_times = self.config.get("collect_times", 100000000)  # 默认大值, 目的是一直采集
         self.step_interval = self.config.get("step_interval", 1)
+        self.has_collect_times = 0
 
         # monitor target in module, such as layer, weight, grad
         self.targets = self.config.get("targets", None)
@@ -350,7 +362,8 @@ class TrainerMon:
         """
         def optimizer_pre_hook_function(opt, grad_names, gradients):
             context = self.optimizer_context[opt]
-            if is_skip_step(context.step, self.start_step, self.step_interval):
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times, \
+                            self.collect_times):
                 return
             gradient_list = gradients[0] if isinstance(gradients, tuple) else gradients
             is_select = self.is_select
@@ -390,8 +403,9 @@ class TrainerMon:
 
         def optimizer_post_hook_function(opt, args, gradients, outputs):
             context = self.optimizer_context[opt]
-            if is_skip_step(context.step, self.start_step, self.step_interval):
-                context.metric_dict.clear()
+            step_skip = is_skip_step(context.step, self.start_step, self.step_interval, \
+                                     self.has_collect_times, self.collect_times)
+            if step_skip:
                 context.step += 1
                 return
             self.write_xy_tb(context.step)
@@ -402,6 +416,7 @@ class TrainerMon:
             if context.metric_dict:
                 self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
             context.metric_dict.clear()
+            self.has_collect_times += 1
             context.step += 1
             if self.anomaly_data_factory:
                 self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
@@ -521,7 +536,7 @@ class TrainerMon:
             try:
                 get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
             except Exception as e:
-                logger.warning(f"An error occurred while generating wgrad pre metrics: {e}")
+                logger.warning(f"An error occurred while generating wgrad pre metrics")
                 return {}, {}
 
         grad_dict = {}
@@ -538,7 +553,7 @@ class TrainerMon:
         try:
             get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         except Exception as e:
-            logger.warning(f"An error occurred while generating wgrad post metrics: {e}")
+            logger.warning(f"An error occurred while generating wgrad post metrics")
             return {}, {}
         return self.grad_context.post, self.grad_context.pre
 
@@ -621,7 +636,8 @@ class TrainerMon:
                 return
             if not module.training:
                 return
-            if is_skip_step(context.step, self.start_step, self.step_interval):
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times, \
+                            self.collect_times):
                 step_accumulates_one(context, self.micro_batch_number)
                 return
             if not context.format_by_arg:
@@ -652,7 +668,7 @@ class TrainerMon:
             try:
                 get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             except Exception as e:
-                logger.warning(f"An error occurred while generating forward activation metrics: {e}")
+                logger.warning(f"An error occurred while generating forward activation metrics")
 
             step_accumulates_one(context, self.micro_batch_number)
             return
@@ -668,7 +684,8 @@ class TrainerMon:
                 self.module_struct[context.module_name].update(context.struct)
                 return
 
-            if is_skip_step(context.step, self.start_step, self.step_interval):
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times, \
+                            self.collect_times):
                 step_accumulates_one(context, self.micro_batch_number)
                 return
 
@@ -763,7 +780,7 @@ class TrainerMon:
                 try:
                     get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 except Exception as e:
-                    logger.warning(f"An error occurred while generating weight grad metrics: {e}")
+                    logger.warning(f"An error occurred while generating weight grad metrics")
                 out = sync_grad_func(bucket)
                 return out
 
