@@ -17,10 +17,10 @@
 import unittest
 
 from msprobe.core.common.const import CompareConst
-from msprobe.core.compare.merge_result.utils import process_compare_index_dict_na, check_npu_bench_max_dtype
+from msprobe.core.compare.merge_result.utils import replace_compare_index_dict, check_npu_bench_max_dtype
 
 
-class TestProcessCompareIndexDictNa(unittest.TestCase):
+class TestReplaceCompareIndexDict(unittest.TestCase):
 
     def setUp(self):
         # 初始化测试数据
@@ -50,7 +50,7 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
         self.rank_num = 0
 
     def test_process_compare_index_dict_na(self):
-        result = process_compare_index_dict_na(self.compare_index_dict, self.compare_index_list, self.rank_num)
+        result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
         # 检查是否替换了 N/A 值
         self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3')
@@ -70,7 +70,7 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
                 'op_name_2': {0: 'tp-0-1-2-3'}
             }
 
-        result = process_compare_index_dict_na(self.compare_index_dict, self.compare_index_list, self.rank_num)
+        result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
         # 验证返回值没有变化
         self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'tp-0-1-2-3')
@@ -93,7 +93,7 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
             'op_name_2': {0: 123}
         }
 
-        result = process_compare_index_dict_na(self.compare_index_dict, self.compare_index_list, self.rank_num)
+        result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
         # 验证结果没有变化
         self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'N/A')
@@ -110,7 +110,7 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
         del self.compare_index_dict[CompareConst.NPU_MAX]
         del self.compare_index_dict[CompareConst.BENCH_MAX]
 
-        result = process_compare_index_dict_na(self.compare_index_dict, self.compare_index_list, self.rank_num)
+        result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
         # 验证原始数据未改变
         self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], 'N/A')
@@ -122,24 +122,71 @@ class TestProcessCompareIndexDictNa(unittest.TestCase):
         self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], 'N/A')
         self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], 'N/A')
 
-    def test_same_type_and_valid(self):
-        # 测试相同类型且在有效类型范围内
-        self.assertTrue(check_npu_bench_max_dtype("test", "string"))
-        self.assertTrue(check_npu_bench_max_dtype(True, False))
-        self.assertTrue(check_npu_bench_max_dtype(None, None))
+    def test_unsupported_values(self):
+        # 'unsupported'
+        self.compare_index_dict['Max diff'] = {
+            'op_name_1': {0: 'unsupported'},
+            'op_name_2': {0: 'unsupported'}
+        }
+        self.compare_index_dict['L2norm diff'] = {
+            'op_name_1': {0: 'unsupported'},
+            'op_name_2': {0: 'unsupported'}
+        }
+        self.compare_index_dict['MeanRelativeErr'] = {
+            'op_name_1': {0: 'unsupported'},
+            'op_name_2': {0: 'unsupported'}
+        }
 
-    def test_different_types(self):
-        # 测试不同类型
-        self.assertFalse(check_npu_bench_max_dtype("test", True))
-        self.assertFalse(check_npu_bench_max_dtype("test", 123))
-        self.assertFalse(check_npu_bench_max_dtype(None, "test"))
+        result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
 
-    def test_invalid_types(self):
-        # 测试类型不属于有效类型
-        self.assertFalse(check_npu_bench_max_dtype(123, 456))
-        self.assertFalse(check_npu_bench_max_dtype(3.14, 2.71))
+        # 检查是否替换了'unsupported'
+        expected_value = 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3'
 
-    def test_edge_cases(self):
-        # 测试在有效类型范围内, 但类型不同
-        self.assertFalse(check_npu_bench_max_dtype(None, "test"))
-        self.assertFalse(check_npu_bench_max_dtype("test", None))
+        self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['Max diff']['op_name_2'][self.rank_num], expected_value)
+
+        self.assertEqual(result['L2norm diff']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['L2norm diff']['op_name_2'][self.rank_num], expected_value)
+
+        self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], expected_value)
+
+    def test_nan_values(self):
+        # 'Nan'
+        self.compare_index_dict['Max diff'] = {
+            'op_name_1': {0: 'Nan'},
+            'op_name_2': {0: 'Nan'}
+        }
+        self.compare_index_dict['L2norm diff'] = {
+            'op_name_1': {0: 'Nan'},
+            'op_name_2': {0: 'Nan'}
+        }
+        self.compare_index_dict['MeanRelativeErr'] = {
+            'op_name_1': {0: 'Nan'},
+            'op_name_2': {0: 'Nan'}
+        }
+
+        result = replace_compare_index_dict(self.compare_index_dict, self.compare_index_list, self.rank_num)
+
+        # 检查是否替换了'Nan'
+        expected_value = 'NPU:tp-0-1-2-3  Bench:tp-0-1-2-3'
+
+        self.assertEqual(result['Max diff']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['Max diff']['op_name_2'][self.rank_num], expected_value)
+
+        self.assertEqual(result['L2norm diff']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['L2norm diff']['op_name_2'][self.rank_num], expected_value)
+
+        self.assertEqual(result['MeanRelativeErr']['op_name_1'][self.rank_num], expected_value)
+        self.assertEqual(result['MeanRelativeErr']['op_name_2'][self.rank_num], expected_value)
+
+    def test_empty_dict(self):
+        # 测试空字典的处理
+        empty_dict = {}
+        result = replace_compare_index_dict(empty_dict, [], self.rank_num)
+        self.assertEqual(result, {})
+
+    def test_empty_compare_index_list(self):
+        # 测试空 compare_index_list 的情况
+        result = replace_compare_index_dict(self.compare_index_dict, [], self.rank_num)
+        self.assertEqual(result, self.compare_index_dict)

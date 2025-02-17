@@ -16,9 +16,9 @@
 from msprobe.core.common.const import CompareConst
 
 
-def process_compare_index_dict_na(compare_index_dict, compare_index_list, rank_num):
+def replace_compare_index_dict(compare_index_dict, compare_index_list, rank_num):
     """
-    由于统计量是str导致比对指标值为N/A，将比对指标的N/A值替换成NPU max 和 Bench max(几个统计量相同)
+    比对指标值为N/A、unsupported、Nan，将比对指标值替换成NPU max 和 Bench max(几个统计量相同)
 
     示例：
     Distributed.all_reduce.0.forward.output.group的比对指标值是N/A
@@ -40,20 +40,12 @@ def process_compare_index_dict_na(compare_index_dict, compare_index_list, rank_n
         for op_name, index_value in op_name_index_dict.items():
             npu_max = compare_index_dict[CompareConst.NPU_MAX][op_name][rank_num]
             bench_max = compare_index_dict[CompareConst.BENCH_MAX][op_name][rank_num]
-            # 如果当前比对指标值是N/A，并且NPU和Bench的最大值是字符串类型，进行替换
-            if ((index_value[rank_num] == CompareConst.N_A or index_value[rank_num] == CompareConst.UNSUPPORTED)
-                    and check_npu_bench_max_dtype(npu_max, bench_max)):
+            # 如果当前比对指标值是N/A、unsupported、Nan，并且NPU和Bench的最大值是类型相同，进行替换
+            if index_value[rank_num] in [CompareConst.N_A, CompareConst.UNSUPPORTED, CompareConst.NAN] and type(
+                    npu_max) == type(bench_max):
                 compare_index_dict[compare_index][op_name][rank_num] = f'NPU:{str(npu_max)}  Bench:{str(bench_max)}'
 
     # 删除NPU_MAX和BENCH_MAX
     compare_index_dict.pop(CompareConst.NPU_MAX, None)
     compare_index_dict.pop(CompareConst.BENCH_MAX, None)
     return compare_index_dict
-
-
-def check_npu_bench_max_dtype(npu_max, bench_max):
-    # 判断npu_max和bench_max是否属于str、bool或NoneType，并且它们的类型是否相同
-    valid_types = (str, bool, type(None))  # 包含str, bool, NoneType类型
-    if isinstance(npu_max, valid_types) and isinstance(bench_max, valid_types) and isinstance(npu_max, type(bench_max)):
-        return True
-    return False
