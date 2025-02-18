@@ -25,7 +25,7 @@ from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx
 from msprobe.core.compare.utils import table_value_is_valid
-from msprobe.core.compare.merge_result.utils import replace_compare_index_dict
+from msprobe.core.compare.merge_result.utils import replace_compare_index_dict, check_config
 
 
 def check_compare_result_name(file_name):
@@ -368,16 +368,8 @@ def merge_result(input_dir, output_dir, config_path):
     compare_result_path_list = get_result_path(input_dir)   # 获得的input_dir中所有比对结果件的全路径，数量少于2，便提示退出
 
     config = load_yaml(config_path)
-    if not config:
-        logger.error('config.yaml is empty, please check.')
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    config = check_config(config)
     api_list = config.get('api')
-    if not api_list:
-        logger.error('The APIs required to merge data were not found')
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
-    # 处理yaml中有compare_index但没有具体比对指标时，读取后值为None无法被list的情况
-    if 'compare_index' in config and config['compare_index'] is None:
-        del config['compare_index']
 
     # 初始化共享全局变量share_compare_index_list
     initialize_compare_index(config)
