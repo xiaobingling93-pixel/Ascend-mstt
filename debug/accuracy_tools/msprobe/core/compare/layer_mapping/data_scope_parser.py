@@ -112,7 +112,7 @@ class DumpDataItem:
             self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
         else:
             self.layer_scope = Const.TOP_LAYER
-        if construct_info:
+        if construct_info and Const.SEP in construct_info:
             construct_list = construct_info.split(Const.SEP)
             if len(construct_list) < abs(Const.LAYER_NAME_INDEX):
                 logger.error(
