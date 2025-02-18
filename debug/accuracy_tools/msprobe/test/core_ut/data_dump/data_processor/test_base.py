@@ -113,12 +113,22 @@ class TestBaseDataProcessor(unittest.TestCase):
         expected = {'type': 'int', 'value': 1}
         self.assertEqual(result, expected)
 
-    def test_analyze_numpy(self):
-        result = BaseDataProcessor._analyze_numpy(5, 'int32')
-        self.assertEqual(result, {'type': 'int32', 'value': 5})
-
     def test_get_special_types(self):
         self.assertIn(int, BaseDataProcessor.get_special_types())
+
+    def test_analyze_numpy(self):
+        ndarray = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
+        result = BaseDataProcessor._analyze_numpy(ndarray, 'numpy.ndarray')
+        expected_result = {
+            'type': 'numpy.ndarray',
+            'dtype': 'int32',
+            'shape': (2, 3),
+            'Max': 6,
+            'Min': 1,
+            'Mean': 3.5,
+            'Norm':9.539392014169456
+        }
+        self.assertEqual(result, expected_result)
 
     def test_recursive_apply_transform(self):
         transform = lambda x, _: x * 2

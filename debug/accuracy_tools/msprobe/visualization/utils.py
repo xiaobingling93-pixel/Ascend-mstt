@@ -215,3 +215,8 @@ class GraphConst:
 
     SRC = 'src'
     DST = 'dst'
+
+    BATCH_P2P = 'batch_isend_irecv'
+    OP = 'op'
+    PEER = 'peer'
+    GROUP_ID = 'group_id'

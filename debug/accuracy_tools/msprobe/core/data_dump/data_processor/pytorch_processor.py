@@ -21,6 +21,7 @@ from typing import List
 import numpy as np
 import torch
 from torch import distributed as dist
+from torch.distributed.distributed_c10d import _get_default_group
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import path_len_exceeds_limit
@@ -40,7 +41,8 @@ except ImportError:
 
 
 class PytorchDataProcessor(BaseDataProcessor):
-    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, torch.memory_format, dist.ProcessGroup)
+    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, torch.memory_format, dist.ProcessGroup,
+                            dist.P2POp)
     memory_format = {
         torch.contiguous_format: "contiguous_format",
         torch.channels_last: "channels_last",
@@ -209,11 +211,15 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_memory_format(element)
         if isinstance(element, dist.ProcessGroup):
             return self._analyze_process_group(element)
+        if isinstance(element, dist.P2POp):
+            return self._analyze_p2pop(element)
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
-            return self._analyze_numpy(converted_numpy, numpy_type)
+            return {"type": numpy_type, "value": converted_numpy}
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
+        if isinstance(element, np.ndarray):
+            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
@@ -222,6 +228,21 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.is_distributed_op(module):
             module_input_output.update_output_with_args_and_kwargs()
         return super().analyze_forward_output(name, module, module_input_output)
+
+    def _analyze_p2pop(self, arg):
+        p2pop_info = {"class_type": "torch.distributed.P2POp"}
+        try:
+            tensor_info = self._analyze_tensor(arg.tensor, [])
+            p2pop_info.update({"tensor": tensor_info})
+            p2pop_info.update({"op": arg.op.__name__})
+            p2pop_info.update({"peer": arg.peer})
+            p2pop_info.update({"tag": arg.tag})
+            group_id = PytorchDataProcessor.process_group_hash(
+                arg.group) if arg.group else PytorchDataProcessor.process_group_hash(_get_default_group())
+            p2pop_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to parse the P2POp content with error info: {e}.")
+        return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor, self.config.async_dump)
@@ -272,6 +293,13 @@ class TensorDataProcessor(PytorchDataProcessor):
             saved_tensor = tensor.clone().contiguous().detach()
             save_pt(saved_tensor, file_path)
         return single_arg
+    
+    def _analyze_numpy(self, ndarray, suffix):
+        dump_data_name, file_path = self.get_save_file_path(suffix)
+        torch.save(ndarray, file_path)
+        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json.update({"data_name": dump_data_name})
+        return ndarray_json
 
 
 class OverflowCheckDataProcessor(PytorchDataProcessor):

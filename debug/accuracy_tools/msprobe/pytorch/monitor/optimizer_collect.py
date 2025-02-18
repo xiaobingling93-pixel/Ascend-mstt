@@ -23,15 +23,9 @@ from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
 
 
 class OptimizerMon(object):
-    wrapped_optimizer = None
-
     def __init__(self) -> None:
         self.fp16_to_fp32_param = {}
         self.is_stage3 = False
-
-    @classmethod
-    def set_wrapped_optimizer(cls, wrapped_optimizer):
-        cls.wrapped_optimizer = wrapped_optimizer
 
     def fetch_mv(self, monitor, torch_opt, params2name):
         pass
@@ -82,7 +76,6 @@ class OptimizerMon(object):
         ratio_dict = defaultdict()
         param2name = defaultdict()
         fp32_partitioned_groups_flat_grad = defaultdict()
-        mix_prec_opt = OptimizerMon.wrapped_optimizer
         partition_id = dist.get_rank()
 
         def get_flatten_grad(self, optimizer, group_idx):
@@ -101,7 +94,7 @@ class OptimizerMon(object):
                 return fp32_partitioned_groups_flat[group_idx].grad
 
         for group_idx in range(len(fp32_partitioned_groups_flat)):
-            fp32_partitioned_groups_flat_grad[group_idx] = get_flatten_grad(self, mix_prec_opt, group_idx)
+            fp32_partitioned_groups_flat_grad[group_idx] = get_flatten_grad(self, torch_opt, group_idx)
 
         for name in params2name.values():
             start_idx, end_idx, group_idx, group_with_rank = name2indices[name]
@@ -110,9 +103,9 @@ class OptimizerMon(object):
             fp32_param = fp32_partitioned_groups_flat[group_idx][start_idx: end_idx]
             fp32_param.grad = fp32_partitioned_groups_flat_grad[group_idx][start_idx: end_idx]
             param2name[fp32_param] = name
-            if not mix_prec_opt.state:
+            if not torch_opt.state:
                 continue
-            state_param = list(mix_prec_opt.state.values())[group_idx]
+            state_param = list(torch_opt.state.values())[group_idx]
             exp_avg = state_param.get("exp_avg", None)
             exp_avg_sq = state_param.get("exp_avg_sq", None)
             if exp_avg is None or exp_avg_sq is None:
@@ -150,36 +143,33 @@ class MixPrecisionOptimizerMon(OptimizerMon):
     混合精度训练通过适当降低某些计算的精度来加速训练过程并减少内存消耗。
     """
 
-    def map_fp16_tp_fp32_param(self, mix_prec_opt):
-        for fp16_group, fp32_group in zip(mix_prec_opt.float16_groups, mix_prec_opt.fp32_from_float16_groups):
+    def map_fp16_tp_fp32_param(self, torch_opt):
+        for fp16_group, fp32_group in zip(torch_opt.float16_groups, torch_opt.fp32_from_float16_groups):
             for fp16_param, fp32_param in zip(fp16_group, fp32_group):
                 self.fp16_to_fp32_param[fp16_param] = fp32_param
 
     def fetch_mv(self, monitor, torch_opt, params2name):
-        mix_prec_opt = self.wrapped_optimizer
-
-        if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            self.map_fp16_tp_fp32_param(mix_prec_opt)
+        if not self.fp16_to_fp32_param and torch_opt is not None:
+            self.map_fp16_tp_fp32_param(torch_opt)
 
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
 class MegatronDistributedOptimizerMon(OptimizerMon):
-    def map_fp16_tp_fp32_param(self, mix_prec_opt):
-        if not (hasattr(mix_prec_opt, "model_float16_groups") and
-                hasattr(mix_prec_opt, "shard_fp32_from_float16_groups")):
+    def map_fp16_tp_fp32_param(self, torch_opt):
+        if not (hasattr(torch_opt, "model_float16_groups") and
+                hasattr(torch_opt, "shard_fp32_from_float16_groups")):
             raise Exception(
                 "megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, "
                 "if not, please check megatron-lm version")
-        for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups,
-                                                mix_prec_opt.shard_fp32_from_float16_groups):
+        for fp16_group, shard_fp32_group in zip(torch_opt.model_float16_groups,
+                                                torch_opt.shard_fp32_from_float16_groups):
             for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
                 self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
 
     def fetch_mv(self, monitor, torch_opt, params2name):
-        mix_prec_opt = self.wrapped_optimizer
-        if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            self.map_fp16_tp_fp32_param(mix_prec_opt)
+        if not self.fp16_to_fp32_param and torch_opt is not None:
+            self.map_fp16_tp_fp32_param(torch_opt)
 
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
@@ -191,30 +181,26 @@ class MegatronFP32OptimizerMon(OptimizerMon):
 
 class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
-        mix_prec_opt = self.wrapped_optimizer
-
-        if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            for opt in mix_prec_opt.chained_optimizers:
+        if not self.fp16_to_fp32_param and torch_opt is not None:
+            for opt in torch_opt.chained_optimizers:
                 self.map_fp16_tp_fp32_param(opt)
 
         if not isinstance(torch_opt, torch.optim.Optimizer):
             torch_opt.state = {}
-            for opt in mix_prec_opt.chained_optimizers:
+            for opt in torch_opt.chained_optimizers:
                 torch_opt.state.update(opt.optimizer.state)
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
 class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
-        mix_prec_opt = self.wrapped_optimizer
-
-        if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            for opt in mix_prec_opt.chained_optimizers:
+        if not self.fp16_to_fp32_param and torch_opt is not None:
+            for opt in torch_opt.chained_optimizers:
                 self.map_fp16_tp_fp32_param(opt)
 
         if not isinstance(torch_opt, torch.optim.Optimizer):
             torch_opt.state = {}
-            for opt in mix_prec_opt.chained_optimizers:
+            for opt in torch_opt.chained_optimizers:
                 torch_opt.state.update(opt.optimizer.state)
         return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
@@ -225,9 +211,8 @@ class DeepSpeedZeroOptimizerStage0Mon(OptimizerMon):
 
 
 class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
-    def get_param_index(self, params2name, name2index):
-        mix_prec_opt = OptimizerMon.wrapped_optimizer
-        fp16_groups = mix_prec_opt.fp16_partitioned_groups
+    def get_param_index(self, params2name, name2index, torch_opt):
+        fp16_groups = torch_opt.fp16_partitioned_groups
         name2indices = defaultdict()
         index_length = defaultdict()
         index = 0
@@ -246,13 +231,11 @@ class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
 
     def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
         self.is_stage3 = True
-        mix_prec_opt = OptimizerMon.wrapped_optimizer
-        fp32_partitioned_groups_flat = mix_prec_opt.fp32_partitioned_groups_flat
+        fp32_partitioned_groups_flat = torch_opt.fp32_partitioned_groups_flat
         return self._fetch_mv_grad_in_adam(monitor, torch_opt, params2name, name2indices, fp32_partitioned_groups_flat)
 
 
 class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
-
     @staticmethod
     def get_group_index(fp32_length, world_size, index):
         for i in range(len(fp32_length) - 1):
@@ -265,12 +248,11 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
                 return sub_interval_start, min(sub_index, world_size - 1)
         return fp32_length[-1], 0
 
-    def get_param_index(self, params2name, name2index):
-        mix_prec_opt = OptimizerMon.wrapped_optimizer
-        padding = mix_prec_opt.groups_padding
+    def get_param_index(self, params2name, name2index, torch_opt):
+        padding = torch_opt.groups_padding
         world_size = dist.get_world_size()
         fp32_length = [0]
-        for fp32_group_index, single_partition_of_fp32_group in enumerate(mix_prec_opt.single_partition_of_fp32_groups):
+        for fp32_group_index, single_partition_of_fp32_group in enumerate(torch_opt.single_partition_of_fp32_groups):
             fp32_length.append(len(single_partition_of_fp32_group) * world_size + fp32_length[fp32_group_index])
 
         bf16_groups = []
@@ -278,7 +260,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
         index_length = defaultdict()
         index = 0
         idx = 0
-        for group_idx, bf16_group in enumerate(mix_prec_opt.bit16_groups):
+        for group_idx, bf16_group in enumerate(torch_opt.bit16_groups):
             bf16_groups.extend(bf16_group)
             for param in bf16_group:
                 param_length = len(param.flatten())
@@ -286,7 +268,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
                 index_length[idx] = (index, index + param_length, group_idx, group_index, group_with_rank)
                 index += param_length
                 idx += 1
-        group_length = len(bf16_groups) / len(mix_prec_opt.bit16_groups)
+        group_length = len(bf16_groups) / len(torch_opt.bit16_groups)
         for _, name in params2name.items():
             name_index = name2index[name]
             start_idx, end_idx, group_idx, group_index, group_with_rank = index_length[name_index]
@@ -300,8 +282,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
         return name2indices
 
     def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
-        mix_prec_opt = OptimizerMon.wrapped_optimizer
-        fp32_partitioned_groups_flat = mix_prec_opt.single_partition_of_fp32_groups
+        fp32_partitioned_groups_flat = torch_opt.single_partition_of_fp32_groups
         return self._fetch_mv_grad_in_adam(monitor, torch_opt, params2name, name2indices, fp32_partitioned_groups_flat)
 
 
@@ -312,22 +293,23 @@ class DummyOptimizerMon(OptimizerMon):
 
 class OptimizerMonFactory:
     _optimizer_mon_map = {
-        "Megatron_Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
-        "Megatron_DistributedOptimizer": MegatronDistributedOptimizerMon,
-        "Megatron_ChainedDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
-        "Megatron_ChainedFloat16OptimizerWithFloat16Params": MegatronChainedMixPrecisionOptimizerMon,
-        "Megatron_FP32Optimizer": MegatronFP32OptimizerMon,
-        "DeepSpeedZeroOptimizer_Stage0": DeepSpeedZeroOptimizerStage0Mon,
-        "DeepSpeedZeroOptimizer_Stage1_or_2": DeepSpeedZeroOptimizerStage1or2Mon,
+        "FP32Optimizer": MegatronFP32OptimizerMon,
+        "Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
+        "DistributedOptimizer": MegatronDistributedOptimizerMon,
+        "ChainedDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
+        "ChainedFloat16OptimizerWithFloat16Params": MegatronChainedMixPrecisionOptimizerMon,
+        "BF16_Optimizer": DeepSpeedZeroOptimizerStage0Mon,
+        "DeepSpeedZeroOptimizer": DeepSpeedZeroOptimizerStage1or2Mon,
         "DeepSpeedZeroOptimizer_Stage3": DeepSpeedZeroOptimizerStage3Mon,
-        "unknown": DummyOptimizerMon
+        "Adam": DummyOptimizerMon
     }
 
     @staticmethod
-    def create_optimizer_mon(opt_ty: str):
-        if not opt_ty:
-            return DummyOptimizerMon()
-        optimizer_mon_class = OptimizerMonFactory._optimizer_mon_map.get(opt_ty)
-        if not optimizer_mon_class:
-            raise Exception("opt_ty should be one of: " + ", ".join(OptimizerMonFactory._optimizer_mon_map.keys()))
-        return optimizer_mon_class()
+    def create_optimizer_mon(optimizer):
+        # auto replace opt_ty
+        optimizer_class = optimizer.__class__.__name__
+        if optimizer_class == "ChainedOptimizer":
+            optimizer_class = "Chained" + optimizer.chained_optimizers[0].__class__.__name__
+
+        optimizer_mon_class = OptimizerMonFactory._optimizer_mon_map.get(optimizer_class, DummyOptimizerMon)
+        return optimizer_mon_class(), optimizer_class

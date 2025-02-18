@@ -137,8 +137,8 @@ class AnomalyDataFactory(ABC):
         tag_name = tag[0]
         param_name = tag_name.split('/')[0]
         call_id = self.name2callid.get(tag_name, -1)
-        if MonitorConst.VPP_SEP in param_name:
-            vpp_stage = int(param_name.split(MonitorConst.VPP_SEP)[0])
+        if MonitorConst.NAME_SEP in param_name:
+            vpp_stage = int(param_name.split(MonitorConst.NAME_SEP)[0])
         else:
             vpp_stage = 0
 
@@ -165,7 +165,7 @@ class TrainStage:
 FORWARD_KEY = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
 BACKWARD_KEY = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT,
                 MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
-OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EFXP_AVG_SQ]
+OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
 TRAIN_STAGE = {
     **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
     **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
@@ -222,7 +222,7 @@ class GradAnomalyData:
     @staticmethod
     def get_train_stage(tag_name):
         """
-        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/efxp_avg_sq"
+        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq"
         :return: int, if forward return 0; if backward return 1; if optimizer return 2
         """
         key_ = tag_name.split("/")[-1]
@@ -263,7 +263,7 @@ class BaseWriterWithAD:
     def clear_anomalies(self):
         self.anomalies.clear()
 
-    def add_scalar(self, tag, scalar_value, global_step=None):
+    def add_scalar(self, tag, scalar_value, global_step=None, need_explain=False):
         """If an anomaly is detected, the anomaly information is recorded and added to self.anomalies.
         Args:
             tag (tuple): tuple of tag_name and tag like ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min').
@@ -283,7 +283,7 @@ class BaseWriterWithAD:
             if self.anomaly_factory:
                 self.anomalies.append(self.anomaly_factory.create(tag, exception_message, global_step))
 
-    def write_metrics(self, op_list, metric_value, step, prefix=''):
+    def write_metrics(self, op_list, metric_value, step, prefix='', need_explain=False):
         if not metric_value:
             return
         tensors = []
@@ -293,7 +293,7 @@ class BaseWriterWithAD:
         with _no_grad():
             metric_list = ops.stack(tensors).tolist() if tensors else []
         for tag, metric in zip(tags, metric_list):
-            self.add_scalar(tag, metric, step)
+            self.add_scalar(tag, metric, step, need_explain)
 
     def _ad(self, scalar_value, history):
         return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)
@@ -353,25 +353,31 @@ class CSVWriterWithAD(BaseWriterWithAD):
 
         new_data = []
         for name, metric_value in self.context_dict.items():
-            if MonitorConst.VPP_SEP not in name:
+            if MonitorConst.NAME_SEP not in name:
                 new_data.append([name] + [step] + metric_value)
             else:
-                new_data.append(name.split(MonitorConst.VPP_SEP) + [step] + metric_value)
+                new_data.append(name.split(MonitorConst.NAME_SEP) + [step] + metric_value)
         new_data = pd.DataFrame(new_data).round(self.ndigits)
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
 
-    def add_scalar(self, tag, scalar_value, global_step):
+    def add_scalar(self, tag, scalar_value, global_step, need_explain=False):
         """
         ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
         """
-        super().add_scalar(tag, scalar_value, global_step)
-
-        name = tag[0].split('/')[0]
+        super().add_scalar(tag, scalar_value, global_step, need_explain=False)
+        split_name = tag[0].split('/')
+        name = split_name[0]
+        if need_explain:
+            if 'pre' in split_name[-1]:
+                name += '.input'
+            if 'post' in split_name[-1]:
+                name += '.output'
         self.context_dict[name].append(scalar_value)
 
     def write_metrics(self, op_list, metric_value, step, prefix=''):
-        super().write_metrics(op_list, metric_value, step, prefix='')
+        need_explain = prefix == 'other'
+        super().write_metrics(op_list, metric_value, step, prefix='', need_explain=need_explain)
 
         # generate csv headers
         # set hashmap to reduce the number of headers generated.
@@ -387,7 +393,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
             csv_header = ["param_name", "step", *op_list]
 
         keys = list(metric_value.keys())
-        if keys and MonitorConst.VPP_SEP in keys[0]:
+        if keys and MonitorConst.NAME_SEP in keys[0]:
             csv_header.insert(0, "vpp_stage")
 
         self.header = csv_header

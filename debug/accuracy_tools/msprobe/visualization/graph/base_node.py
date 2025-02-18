@@ -34,6 +34,7 @@ class BaseNode:
         self.micro_step_id = None
         self.overflow_level = None
         self.matched_distributed = {}
+        self.batch_p2p_info = []
 
     def __str__(self):
         info = f'id:\t{self.id}'
@@ -92,8 +93,8 @@ class BaseNode:
         result = {
             'id': self.id,
             'node_type': self.op.value,
-            'output_data': format_node_data(self.output_data),
-            'input_data': format_node_data(self.input_data),
+            'output_data': format_node_data(self.output_data, self.id),
+            'input_data': format_node_data(self.input_data, self.id),
             'upnode': self.upnode.id if self.upnode else 'None',
             'subnodes': [node.id for node in self.subnodes],
             'matched_node_link': self.matched_node_link,

@@ -18,7 +18,10 @@ from collections import defaultdict
 
 from mindspore import Tensor
 from mindspore._c_expression import PyNativeExecutor_
-from mindspore.common.api import _MindsporeFunctionExecutor
+try:
+    from mindspore.common.api import _MindsporeFunctionExecutor
+except ImportError:
+    from mindspore.common.api import _JitExecutor as _MindsporeFunctionExecutor
 
 from msprobe.core.common.log import logger
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs

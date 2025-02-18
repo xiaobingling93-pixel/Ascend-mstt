@@ -39,8 +39,7 @@ class TestModuleHook(unittest.TestCase):
         xy_config = os.path.join(base_dir, "config/xy_config.json")
         hooker = TrainerMon(
             xy_config,
-            params_have_main_grad=False,
-            opt_ty='Megatron_FP32Optimizer'
+            params_have_main_grad=False
         )
         self.get_dist_mock(True)
 
@@ -146,8 +145,7 @@ class TestModuleHook(unittest.TestCase):
         self.get_dist_mock(True)
         hooker = TrainerMon(
             cc_config,
-            params_have_main_grad=False,
-            opt_ty='Megatron_FP32Optimizer'
+            params_have_main_grad=False
         )
         self.assertIsNotNone(hooker)
 
@@ -160,7 +158,7 @@ class TestModuleHook(unittest.TestCase):
         rank_list = [1, 2]
         ops_list = ['max', 'min']
         cc_config = os.path.join(base_dir, "config/cc_config.json")
-        hooker = TrainerMon(cc_config, params_have_main_grad=False, opt_ty='Megatron_FP32Optimizer')
+        hooker = TrainerMon(cc_config, params_have_main_grad=False)
         hooker.adhoc_check(target_tensor, module_name, tensor_name, rank_list, ops_list)
 
     def test_generate_cc_metrics(self):
@@ -183,32 +181,11 @@ class TestModuleHook(unittest.TestCase):
         result = TrainerMon.generate_cc_metrics(cc_name, cc_tensor)
         self.assertDictEqual(result, expected_metrics)
 
-    def test_common_info_with_Exception(self):
-        xy_config = os.path.join(base_dir, "config/xy_config.json")
-        hooker = TrainerMon(
-            xy_config,
-            params_have_main_grad=False,
-            opt_ty=None
-        )
-        hooker.forward_only = True
-
-        hooker.ur_distribution = True
-        with self.assertRaises(Exception) as context:
-            hooker.common_info()
-        self.assertIn(str(context.exception), "ur_distribution cannot be enabled with unknown optimizer.")
-
-        hooker.ur_distribution = False
-        hooker.mv_distribution = True
-        with self.assertRaises(Exception) as context:
-            hooker.common_info()
-        self.assertIn(str(context.exception), "mv_distribution cannot be enabled with unknown optimizer.")
-
     def test_generate_xy_metrics(self):
         xy_config = os.path.join(base_dir, "config/xy_config.json")
         trainer_mon = TrainerMon(
             xy_config,
-            params_have_main_grad=False,
-            opt_ty='Megatron_FP32Optimizer'
+            params_have_main_grad=False
         )
 
         fwd_context = ModuleHookContext("module1")
@@ -224,8 +201,7 @@ class TestModuleHook(unittest.TestCase):
         xy_config = os.path.join(base_dir, "config/xy_config.json")
         trainer_mon = TrainerMon(
             xy_config,
-            params_have_main_grad=False,
-            opt_ty='Megatron_FP32Optimizer'
+            params_have_main_grad=False
         )
         trainer_mon.rank = 0
         trainer_mon.module_rank_list = [1, 2]
@@ -296,12 +272,6 @@ class TestModuleHookContext(unittest.TestCase):
                 MonitorConst.INPUT_GRAD: "tuple[1]:0"
             }
         }
-
-    def test_set_format_by_arg_invalid_key(self):
-        with self.assertRaises(ValueError) as err:
-            self.context.set_format_by_arg('invalid_key', {})
-        self.assertIn(str(err.exception),
-                      "key(invalid_key) error, valid_key: ['input', 'output', 'input_grad', 'output_grad']")
 
     def test_set_format_by_arg_module_name_in_target_config(self):
         self.context.set_format_by_arg(Const.INPUT, self.target_config)

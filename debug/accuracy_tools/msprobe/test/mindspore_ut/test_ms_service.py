@@ -222,7 +222,7 @@ class TestService(unittest.TestCase):
         self.service.step()
         self.assertEqual(self.service.current_iter, 1)
         self.service.data_collector.update_iter.assert_called_once_with(1)
-        self.service.data_collector.data_writer.reset_cache.assert_called_once()
+        self.service.data_collector.reset_status.assert_called_once()
         self.assertEqual(JitDump.jit_count, defaultdict(int))
         self.assertEqual((self.service.primitive_hook_service.primitive_counters), {})
 

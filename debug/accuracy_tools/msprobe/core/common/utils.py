@@ -239,6 +239,8 @@ def md5_find(data):
                 for data_detail in data[key_op][api_info]:
                     if data_detail and 'md5' in data_detail:
                         return True
+            if isinstance(data[key_op][api_info], bool):
+                continue
             elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
                 return True
     return False

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import torch
 from .compare.distributed_compare import compare_distributed
 from .compare.pt_compare import compare

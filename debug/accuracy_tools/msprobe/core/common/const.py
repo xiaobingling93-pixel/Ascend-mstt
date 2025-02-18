@@ -103,8 +103,9 @@ class Const:
     FREE_BENCHMARK = "free_benchmark"
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
-    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
-    DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR]
+    STRUCTURE = "structure"
+    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE]
+    DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR, STRUCTURE]
     DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
@@ -544,9 +545,24 @@ class MsCompareConst:
     TENSOR_API = "Tensor"
 
     API_NAME_STR_LENGTH = 4
+    MAX_RECURSION_DEPTH = 20
+
+    # Mindtorch api_info field
+    MINDTORCH_TENSOR = "Tensor"
+    MINDTORCH = "Torch"
+    MINDTORCH_FUNC = "Functional"
+    MINDTORCH_NPU = "NPU"
+    MINDTORCH_DIST = "Distributed"
+
+
+
+    MT_VALID_API_TYPES = [
+        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
+    ]
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
+    FRAMEWORK = "framework"
     TENSOR_TASK = "tensor"
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
@@ -624,6 +640,7 @@ class MonitorConst:
         "DeepSpeedZeroOptimizer_Stage1_or_2",
         "DeepSpeedZeroOptimizer_Stage3"
     )
+    DEEPSPEED_ZERO_OPT_FILTER = "DeepSpeedZeroOptimizer"
     RULE_NAME = ['AnomalyTurbulence']
 
     SLICE_SIZE = 20480
@@ -646,7 +663,6 @@ class MonitorConst:
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
-    EFXP_AVG_SQ = "efxp_avg_sq"
     PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]

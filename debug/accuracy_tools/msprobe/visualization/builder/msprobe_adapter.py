@@ -23,7 +23,7 @@ from msprobe.core.compare.acc_compare import ModeConfig
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
     # NodeOp.module
-    r'^(Module.|Cell.)',
+    r'^(Module.|Cell.|optimizer|clip_grad)',
     # NodeOp.function_api
     r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.)'
 ]
@@ -57,8 +57,8 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
         from msprobe.pytorch.compare.pt_compare import PTComparator
         return PTComparator(mode_config).do_multi_process(dump_path_param, csv_path)
     else:
-        from msprobe.mindspore.compare.ms_compare import MSComparator
-        ms_comparator = MSComparator(mode_config)
+        from msprobe.mindspore.compare.ms_compare import MSComparator, MappingConfig
+        ms_comparator = MSComparator(mode_config, MappingConfig())
         ms_comparator.cross_frame = is_cross_frame
         return ms_comparator.do_multi_process(dump_path_param, csv_path)
 
@@ -120,11 +120,13 @@ def compare_data_fuzzy(data_dict_list1, data_dict_list2):
     return True
 
 
-def format_node_data(data_dict):
+def format_node_data(data_dict, node_id=None):
     """
-    批量进行节点数据的输出
+    删除节点数据中不需要展示的字段
     """
     del_list = ['requires_grad', 'full_op_name']
+    if node_id and GraphConst.BATCH_P2P in node_id:
+        del_list.extend(['op', 'peer', 'tag', 'group_id'])
     for _, value in data_dict.items():
         if not isinstance(value, dict):
             continue

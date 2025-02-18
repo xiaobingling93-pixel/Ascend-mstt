@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -19,6 +19,7 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
+from msprobe.core.common.log import logger
 
 
 class DebuggerConfig:
@@ -50,7 +51,7 @@ class DebuggerConfig:
                                  if not task_config.handler_type else task_config.handler_type)
             self.stage = FreeBenchmarkConst.DEFAULT_STAGE if not task_config.fuzz_stage else task_config.fuzz_stage
             if self.handler_type == FreeBenchmarkConst.FIX and \
-               self.pert_type != FreeBenchmarkConst.DEFAULT_PERT_TYPE:
+                    self.pert_type != FreeBenchmarkConst.DEFAULT_PERT_TYPE:
                 raise ValueError("pert_mode must be improve_precision or empty when handler_type is fix, "
                                  f"but got {self.pert_type}.")
             if self.stage == Const.BACKWARD and self.handler_type == FreeBenchmarkConst.FIX:
@@ -72,4 +73,12 @@ class DebuggerConfig:
             self.check_mode = "all"
         if not isinstance(self.async_dump, bool):
             raise Exception("The parameters async_dump should be bool.")
+        if self.async_dump and self.task == Const.TENSOR and not self.list:
+            raise Exception("The parameters async_dump is true in tensor task, the parameters list cannot be empty.")
+        if self.task == Const.STRUCTURE and self.level_ori not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
+            logger.warning_on_rank_0(
+                f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
+                f"If not, the default level is {Const.LEVEL_MIX}."
+            )
+            self.level_ori = Const.LEVEL_MIX
         return True

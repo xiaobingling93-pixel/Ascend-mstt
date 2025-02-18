@@ -399,7 +399,7 @@ class OperatorScriptGenerator:
     def generate_kwargs_dict(self, kwargs_info, flag_device):
         kwargs_dict_generator = ""
         for key, value in kwargs_info.items():
-            kwargs_dict_generator += '"' + key + '"' + MonitorConst.VPP_SEP
+            kwargs_dict_generator += '"' + key + '"' + MonitorConst.NAME_SEP
             if flag_device:
                 kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_device=True) + Const.COMMA
             else:

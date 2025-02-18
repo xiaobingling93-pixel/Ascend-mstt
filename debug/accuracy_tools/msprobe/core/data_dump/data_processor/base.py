@@ -89,7 +89,7 @@ class TensorStatInfo:
 class BaseDataProcessor:
     _recursive_key_stack = []
     special_type = (
-        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
+        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_, np.ndarray,
         bool, int, float, str, slice,
         type(Ellipsis)
     )
@@ -216,8 +216,22 @@ class BaseDataProcessor:
         return single_arg
 
     @staticmethod
-    def _analyze_numpy(value, numpy_type):
-        return {"type": numpy_type, "value": value}
+    def _analyze_numpy(ndarray, numpy_type):
+        ndarray_json = {}
+        ndarray_json.update({'type': 'numpy.ndarray'})
+        ndarray_json.update({'dtype': str(ndarray.dtype)})
+        ndarray_json.update({'shape': ndarray.shape})
+        if ndarray.size > 0:
+            ndarray_json.update({"Max": np.max(ndarray).item()})
+            ndarray_json.update({"Min": np.min(ndarray).item()})
+            ndarray_json.update({"Mean": np.mean(ndarray).item()})
+            ndarray_json.update({"Norm": np.linalg.norm(ndarray).item()})
+        else:
+            ndarray_json.update({"Max": None})
+            ndarray_json.update({"Min": None})
+            ndarray_json.update({"Mean": None})
+            ndarray_json.update({"Norm": None})
+        return ndarray_json
 
     @staticmethod
     def _get_allowed_data_mode(data_mode):

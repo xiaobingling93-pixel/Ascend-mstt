@@ -148,6 +148,8 @@ class GraphBuilder:
             input_data, output_data = get_input_output(node_data, node.id)
             # 更新数据
             node.set_input_output(input_data, output_data)
+            if GraphConst.BATCH_P2P in name:
+                GraphBuilder._extract_batch_p2p_info(node, node_data)
             # 反向节点使用对应前向节点的堆栈信息
             # 模块命名举例：Module.module.module.GPTModel.backward.0; API命名举例：Tensor.permute.1.backward
             if (not node_stack_info and
@@ -163,6 +165,24 @@ class GraphBuilder:
         # 添加节点
         node.add_upnode(upnode)
         return node
+
+    @staticmethod
+    def _is_valid_batch_p2p_output(param_list):
+        if not isinstance(param_list, list) or not param_list:
+            return False
+        if not isinstance(param_list[0], list) or not param_list[0]:
+            return False
+        return True
+
+    @staticmethod
+    def _extract_batch_p2p_info(node, node_data):
+        param_list = node_data.get(Const.OUTPUT, [])
+        # 数据格式："output": [[{param1}, {param2}, ...]]
+        if GraphBuilder._is_valid_batch_p2p_output(param_list):
+            for param in param_list[0]:
+                info = {GraphConst.OP: param.get(GraphConst.OP), GraphConst.PEER: param.get(GraphConst.PEER),
+                        GraphConst.GROUP_ID: param.get(GraphConst.GROUP_ID)}
+                node.batch_p2p_info.append(info)
 
     @staticmethod
     def _collect_apis_between_modules(graph):

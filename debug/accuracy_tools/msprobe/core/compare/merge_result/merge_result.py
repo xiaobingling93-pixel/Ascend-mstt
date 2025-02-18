@@ -25,6 +25,7 @@ from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx
 from msprobe.core.compare.utils import table_value_is_valid
+from msprobe.core.compare.merge_result.utils import replace_compare_index_dict
 
 
 def check_compare_result_name(file_name):
@@ -170,6 +171,8 @@ def search_api_index_result(api_list, compare_index_list, result_df, rank_num, c
             table_value_check(index_value)
             api_index_dict.setdefault(api_full_name, {})[rank_num] = index_value  # update api_index_dict
         compare_index_dict[compare_index] = api_index_dict
+
+    compare_index_dict = replace_compare_index_dict(compare_index_dict, compare_index_list, rank_num)
     return compare_index_dict
 
 
@@ -203,10 +206,13 @@ def result_process(compare_result_path_list, api_list):
             compare_index_list = check_index_dump_mode_consistent(dump_mode, rank_num)
             if len(compare_index_list) == 0:
                 return [], [], []
-            compare_index_dict = search_api_index_result(api_list, share_compare_index_list,
+            compare_index_list.extend([CompareConst.NPU_MAX, CompareConst.BENCH_MAX])
+            compare_index_dict = search_api_index_result(api_list, compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
             compare_index_dict_list.append(compare_index_dict)
             rank_num_list.append(rank_num)
+            compare_index_list.pop()
+            compare_index_list.pop()
         else:
             logger.warning(f"Rank{rank_num} compare result is empty and will not shown in merged result.")
 

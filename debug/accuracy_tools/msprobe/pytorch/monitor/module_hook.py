@@ -22,12 +22,12 @@ from functools import partial
 import pytz
 import torch
 import torch.distributed as dist
-from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_recomputation
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -37,14 +37,15 @@ from msprobe.pytorch.monitor.features import get_sign_matches
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name, \
     TensorMetrics, squash_param_name
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
-from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
-from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
+from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
+from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
     raise ValueError("monitor require torch>=2.0")
+
 
 FORMAT_MAPPING = {
     MonitorConst.TENSORBOARD: SummaryWriterWithAD,
@@ -85,9 +86,6 @@ class ModuleHookContext:
         :param target_config: target obj in config json.
         :return:
         """
-        valid_key = [Const.INPUT, Const.OUTPUT, MonitorConst.INPUT_GRAD, MonitorConst.OUTPUT_GRAD]
-        if key_name not in valid_key:
-            raise ValueError(f"key({key_name}) error, valid_key: {valid_key}")
         cared = target_config.get(self.module_name, self.struct)
         if key_name in cared:
             target_module_config = cared[key_name]
@@ -178,16 +176,11 @@ class GradContext:
 class TrainerMon:
     tensor_metrics = TensorMetrics()
 
-    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
-        """
-        opt_ty: "Megatron_Float16OptimizerWithFloat16Params" or "Megatron_DistributedOptimizer"
-        """
+    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
         # TYPE1: 只在这里初始化的变量, 不会随着训练中途config配置改变而重置
         self.config_file_path = config_file_path
         self.process_group = get_process_group(process_group)
         self.params_have_main_grad = params_have_main_grad
-        self.opt_ty = opt_ty
-        self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.origin_step_func = None
@@ -219,13 +212,15 @@ class TrainerMon:
             self.pp_stage = 0
             self.group_mates = [0]
 
-        # TYPE2: 只会在monitor_gnorm_with_ad()主调中赋值的变量
+        # TYPE2: 只会在set_monitor()主调中赋值的变量
         self.model = None
         self.vpp = False
         self.dp_group = None
         self.tp_group = None
         self.enable_megatron = False
         self.micro_batch_number = 1
+        self.optimizer_class = None
+        self.optimizer_mon = None
 
         # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
@@ -274,10 +269,6 @@ class TrainerMon:
         self._ops = validate_ops(value)
 
     @staticmethod
-    def set_wrapped_optimizer(_wrapped_optimizer):
-        OptimizerMon.set_wrapped_optimizer(_wrapped_optimizer)
-
-    @staticmethod
     def has_register_backward_hook(module_name, module):
         if hasattr(module, '_backward_hooks') and \
                 len(module._backward_hooks) > 0 and \
@@ -308,7 +299,7 @@ class TrainerMon:
         self.has_collect_times = 0  # 重设采集计数器
         self.print_struct = self.config.get("print_struct", False)
         self.module_rank_list = self.config.get("module_ranks", [])
-        self.format = self.config.get('format', 'tensorboard')
+        self.format = self.config.get('format', MonitorConst.CSV)
         self.eps = self.config.get('eps', 1e-8)
         self.ops = self.config.get('ops', [])
         self.ndigits = self.config.get('ndigits', 6)
@@ -344,7 +335,8 @@ class TrainerMon:
 
         # 初始化writer, 创建输出目录
         if self.format not in FORMAT_MAPPING:
-            raise ValueError(f"Unsupported format: {self.format}")
+            logger.error(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
+            self.format = MonitorConst.CSV
         writer = FORMAT_MAPPING[self.format]
         self.step_count_per_record = self.config.get('step_count_per_record', 1)
 
@@ -393,11 +385,6 @@ class TrainerMon:
             logger.info_on_rank_0('> grad and momentum direction will not be compared.')
         if not self.cc_distribution.get('enable', False):
             logger.info_on_rank_0("> cc operator is not monitored.")
-        if not self.opt_ty:
-            if self.ur_distribution:
-                raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
-            if self.mv_distribution:
-                raise Exception("mv_distribution cannot be enabled with unknown optimizer.")
 
     def hook_modules(self):
         if self.module_rank_list and (self.rank not in self.module_rank_list):
@@ -476,7 +463,7 @@ class TrainerMon:
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         return self.grad_context.post, self.grad_context.pre
 
-    def monitor_gnorm_with_ad(
+    def set_monitor(
             self,
             model,
             grad_acc_steps=1,
@@ -492,6 +479,7 @@ class TrainerMon:
         self.micro_batch_number = grad_acc_steps
         self.dp_group = dp_group
         self.tp_group = tp_group
+        self.optimizer_mon, self.optimizer_class = OptimizerMonFactory.create_optimizer_mon(optimizer)
         self.hook_step_final(optimizer)
         if not isinstance(model, list):
             model = [model]
@@ -529,6 +517,8 @@ class TrainerMon:
         return actv, actv_grad
 
     def reload_xy(self, xy_distribution=False):
+        logger.warning("reload_xy() is deprecated and will be removed in a future version. "
+                       "Use DYNAMIC_MONITOR instead.")
         self.xy_distribution = xy_distribution
 
         for handle in self.handles['xy']:
@@ -594,15 +584,13 @@ class TrainerMon:
             # skip generate metrics
             if context.step < self.start_step or (context.step - self.start_step) % self.step_interval != 0:
                 return
-            if self.opt_ty in MonitorConst.DEEPSPEED_OPT_TY:
+            if MonitorConst.DEEPSPEED_ZERO_OPT_FILTER in self.optimizer_class:  # use deepspeed with zero1/2/3
                 if not self.name2indices:
-                    self.name2indices = self.mix_precision_optimizer_mon.get_param_index(self.param2name,
-                                                                                         self.name2index)
-                mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name,
-                                                                      self.name2indices)
+                    self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index, optimizer)
+                mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
                 self.param2name = mv_result.grad
             else:
-                mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name)
+                mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name)
             context.param_exp_avg = mv_result.exp_avg
             context.param_exp_avg_sq = mv_result.exp_avg_sq
             context.param_adam_update = mv_result.update
@@ -649,13 +637,8 @@ class TrainerMon:
         if self.optimizer_hooked:
             return
 
-        if optimizer:
-            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-            self.handles['optimizer'] = []
-        else:
-            if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
-                step_pre_hook = register_optimizer_step_pre_hook(optimizer_pre_step_hook)
-                self.handles['optimizer'] = [step_pre_hook]
+        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+
         self.optimizer_hooked = True
         return
 
@@ -747,11 +730,9 @@ class TrainerMon:
                 return out
             return wrapper
 
-        if optimizer:
-            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-            self.origin_step_func = optimizer.__class__.step
-        else:
-            register_optimizer_step_post_hook(step_final_hook)
+        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+        self.origin_step_func = optimizer.__class__.step
+
         return
 
     def _remove_all_hooks(self, optimizer):
@@ -771,12 +752,9 @@ class TrainerMon:
         self.handles['wgrads'].clear()
         self.weight_hooked = False
 
-        if len(self.handles['optimizer']) == 0 and self.optimizer_hooked:
+        if self.optimizer_hooked:
             optimizer.__class__.step = self.origin_step_func
-        else:
-            for handle in self.handles['optimizer']:
-                handle.remove()
-            self.handles['optimizer'].clear()
+
         for _, context in self.optimizer_context.items():
             context.reset()
         self.optimizer_hooked = False
@@ -1012,7 +990,10 @@ class TrainerMon:
         def patch_sync(sync_grad_func):
             def wrapper(bucket):
                 grad_dict = {}
-                bucket_params_id_list = [id(params) for params in bucket.params_list]
+                # Megatron between core_r0.6.0 and core_r0.8.0, this bucket is Bucket.
+                # When megatron is core_r0.9.0, this bucket is _ParamAndGradBucketGroup.
+                # In megatron version core_r0.9.0, func start_grad_sync from Bucket moved to _ParamAndGradBucketGroup.
+                bucket_params_id_list = [id(params) for params in bucket.params]
                 for param, name in self.param2name.items():
                     if id(param) not in bucket_params_id_list:
                         continue
@@ -1031,18 +1012,26 @@ class TrainerMon:
 
             return wrapper
 
-        try:
-            from megatron.core.distributed.param_and_grad_buffer import Bucket
-            self.enable_megatron = True
-        except ImportError:
-            self.enable_megatron = False
-
         if not self.wg_distribution:
             return
 
-        if self.enable_megatron:
-            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)  # differ in different megatron version
-        else:
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import Bucket
+            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)
+            self.enable_megatron = True
+            logger.info("megatron version is >= core_r0.6.0 <= core_r0.8.0")
+        except ImportError:
+            self.enable_megatron = False
+
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
+            _ParamAndGradBucketGroup.start_grad_sync = patch_sync(_ParamAndGradBucketGroup.start_grad_sync)
+            self.enable_megatron = True
+            logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
+        except ImportError:
+            self.enable_megatron = False
+
+        if not self.enable_megatron:
             self._hook_weights()
 
     def _hook_weights(self):
@@ -1059,6 +1048,7 @@ class TrainerMon:
                 else:
                     context_dict[key] = param.grad.clone()
 
+        logger.info("hooking weights.")
         for param, name in self.param2name.items():
             key = get_summary_writer_tag_name(name, 'acc_grad', self.rank)
             setattr(param, 'micro_step', 0)

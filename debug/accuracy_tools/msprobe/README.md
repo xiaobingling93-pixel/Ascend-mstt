@@ -15,7 +15,7 @@ debugger = PrecisionDebugger(config_path='./config.json')
 ...
 debugger.start() # 一般在训练循环开头启动工具
 ... # 循环体
-debugger.stop() # 一般在训练循环末尾结束工具
+debugger.stop() # 一般在训练循环末尾结束工具。必须调用，否则可能导致精度数据落盘不全
 debugger.step() # 在训练循环的最后需要重置工具，非循环场景不需要
 ```
 

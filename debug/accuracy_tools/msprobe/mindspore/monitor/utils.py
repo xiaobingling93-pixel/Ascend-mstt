@@ -13,9 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from mindspore import dtype as mstype, Tensor
+
+from msprobe.mindspore.monitor.features import FUNC_MAP
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.log import logger
+
+
+def get_single_metrics(op_list, tag, tensor, output=None):
+    if output is None:
+        output = {}
+    if tag not in output:
+        output[tag] = {}
+    for op in op_list:
+        func = FUNC_MAP.get(op)
+        statistic = func(tensor)
+        if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
+            statistic = float(statistic)
+            statistic = Tensor(statistic)
+        output[tag][op] = statistic.astype(mstype.float32)
+
+
+def get_metrics(op_list, tag2tensor, eps, output=None):
+    if output is None:
+        output = {}
+    for tag, tensor in tag2tensor.items():
+        if tag not in output:
+            output[tag] = {}
+        get_single_metrics(op_list, tag, tensor, output)
+    return output
 
 
 def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
@@ -23,6 +50,29 @@ def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
         return f"{module_or_param_name}/{tag}"
     else:
         return f"{module_or_param_name}/rank{rank}/{tag}"
+
+
+def step_accumulates_one(context, micro_batch_number):
+    """
+    :param context: ModuleHookContext
+    :param micro_batch_number: mbs of training model.
+    :return:
+    """
+    context.micro_step += 1
+    if context.micro_step == micro_batch_number:
+        context.micro_step = 0
+        context.step += 1
+
+
+def is_skip_step(step, start_step, step_interval, has_collect_times=0, collect_times=1e8):
+    """
+    If current step less than start_step or not reach step_interval, skip current step.
+    :param step: current training step, int
+    :param start_step: int
+    :param step_interval: int
+    :return: whether skip or not, bool
+    """
+    return step < start_step or (step - start_step) % step_interval != 0 or has_collect_times >= collect_times
 
 
 def validate_ops(ops):
@@ -134,6 +184,31 @@ def validate_step_count_per_record(step_count_per_record):
         raise ValueError("step_count_per_record must smaller than 1e6")
 
 
+def validate_start_step(start_step):
+    if not is_int(start_step):
+        raise TypeError('start_step must be int.')
+    if start_step < 0:
+        raise ValueError("start_step must greater than 0")
+    if start_step > 1e8:
+        raise ValueError("start_step must smaller than 1e8")
+
+
+def validate_step_interval(step_interval):
+    if not is_int(step_interval):
+        raise TypeError('step_interval must be int.')
+    if step_interval < 1:
+        raise ValueError("step_interval must greater than 1")
+    if step_interval > 1e8:
+        raise ValueError("step_interval must smaller than 1e8")
+
+
+def validate_collect_times(collect_times):
+    if not is_int(collect_times):
+        raise TypeError('collect_times must be int.')
+    if collect_times < 1:
+        raise ValueError("collect_times must greater than 1")
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -173,6 +248,15 @@ def validate_config(config):
 
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
+
+    start_step = config.get('start_step', 0)
+    validate_start_step(start_step)
+
+    step_interval = config.get('step_interval', 1)
+    validate_step_interval(step_interval)
+
+    collect_times = config.get('collect_times', 1e8)
+    validate_collect_times(collect_times)
 
     if not targets:
         if xy_distribution:

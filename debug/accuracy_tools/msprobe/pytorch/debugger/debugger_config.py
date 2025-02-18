@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -26,7 +26,7 @@ class DebuggerConfig:
         self.task = task or common_config.task or Const.STATISTICS
         self.rank = common_config.rank if common_config.rank else []
         self.step = common_config.step if common_config.step else []
-        self.level = level or common_config.level or "L1"
+        self.level = level or common_config.level or Const.LEVEL_L1
         self.enable_dataloader = common_config.enable_dataloader
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
@@ -35,10 +35,6 @@ class DebuggerConfig:
         self.overflow_nums = task_config.overflow_nums if task_config.overflow_nums else 1
         self.framework = Const.PT_FRAMEWORK
         self.async_dump = common_config.async_dump if common_config.async_dump else False
-
-        if self.level == Const.LEVEL_L2:
-            self.is_backward_kernel_dump = False
-            self._check_and_adjust_config_with_l2()
 
         if self.task == Const.FREE_BENCHMARK:
             self.fuzz_device = task_config.fuzz_device
@@ -65,6 +61,10 @@ class DebuggerConfig:
 
         self.check()
 
+        if self.level == Const.LEVEL_L2:
+            self.is_backward_kernel_dump = False
+            self._check_and_adjust_config_with_l2()
+
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
@@ -78,6 +78,16 @@ class DebuggerConfig:
         if not isinstance(self.async_dump, bool):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump should be bool.")
+        if self.async_dump and self.task == Const.TENSOR and not self.list:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"The parameters async_dump is true in tensor task, the parameters list cannot be "
+                                   f"empty.")
+        if self.task == Const.STRUCTURE and self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
+            logger.warning_on_rank_0(
+                f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
+                f"If not, the default level is {Const.LEVEL_MIX}."
+            )
+            self.level = Const.LEVEL_MIX
 
     def check(self):
         self.check_kwargs()
@@ -93,10 +103,10 @@ class DebuggerConfig:
             logger.error_on_rank_0(
                 f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' parameter.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
-        
+
         instance.model = start_model if start_model is not None else instance.model
         if isinstance(instance.model, torch.nn.Module):
-            return 
+            return
 
         error_model = None
         if isinstance(instance.model, (list, tuple)):
@@ -108,7 +118,7 @@ class DebuggerConfig:
             error_model = instance.model
 
         if error_model is not None:
-            error_info = (f"The 'model' parameter must be a torch.nn.Moudle or list[torch.nn.Moudle] "
+            error_info = (f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] "
                           f"type, currently there is a {type(error_model)} type.")
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, error_info)

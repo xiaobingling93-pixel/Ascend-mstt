@@ -14,14 +14,10 @@
 # limitations under the License.
 
 import os
-import time
 import re
-import csv
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
-
-import pandas as pd
+from datetime import datetime
 
 import pytz
 import mindspore as ms
@@ -32,13 +28,14 @@ from mindspore.communication import get_rank
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import create_directory, load_json
-from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config
+from msprobe.core.common.file_utils import load_json
+from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
+    is_skip_step, get_metrics, get_single_metrics
 from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
-from msprobe.mindspore.monitor.features import FUNC_MAP
-
+from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
+    get_process_group
 
 FORMAT_MAPPING = {
     MonitorConst.CSV: CSVWriterWithAD,
@@ -83,48 +80,6 @@ def squash_param_name(param_name):
     return param_name
 
 
-def get_single_metrics(op_list, tag, tensor, output=None):
-    if output is None:
-        output = {}
-    if tag not in output:
-        output[tag] = {}
-    for op in op_list:
-        func = FUNC_MAP.get(op)
-        statistic = func(tensor)
-        if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
-            statistic = float(statistic)
-            statistic = Tensor(statistic)
-        output[tag][op] = statistic.astype(mstype.float32)
-
-
-def get_metrics(op_list, tag2tensor, eps, output=None):
-    if output is None:
-        output = {}
-    for tag, tensor in tag2tensor.items():
-        if tag not in output:
-            output[tag] = {}
-        get_single_metrics(op_list, tag, tensor, output)
-    return output
-
-
-# ===================================== Context area ====================================
-# Used For Weight Grad Collect
-class GradContext:
-    def __init__(self) -> None:
-        self.pre = {}
-        self.post = {}
-        self.acc_metric = {}
-        self.acc = {}
-        self.actv = {}
-
-    def reset(self):
-        self.pre.clear()
-        self.post.clear()
-        self.acc_metric.clear()
-        self.acc.clear()
-        self.actv.clear()
-
-
 # Used For Module Forward & Backward Collect
 class ModuleHookContext:
     def __init__(self, module_name) -> None:
@@ -154,9 +109,12 @@ class ModuleHookContext:
             self.ignore_in = True
 
 
+start_step = 0
+
+
 # Used For Optimizer Weight Grad & M/V Collect
 class OptimizerContext:
-    def __init__(self, start_step=0) -> None:
+    def __init__(self) -> None:
         self.step = start_step
         self.param_effective_rank = defaultdict(float)
         self.param_mg_direction = defaultdict(float)
@@ -170,20 +128,71 @@ class OptimizerContext:
         self.metric_dict = {}
         self.param_metric = {}
 
+    def reset(self) -> None:
+        self.param_mg_direction.clear()
+        self.param_adam_update.clear()
+        self.param_weight_grad.clear()
+        self.param_exp_avg.clear()
+        self.exp_avg_metric.clear()
+        self.param_exp_avg_sq.clear()
+        self.exp_avg_sq_metric.clear()
+        self.metric_dict.clear()
+        self.param_metric.clear()
 
-# ===================================== Context area ====================================
 
-# ===================================== Main Processor ====================================
+# Used For Weight Grad Collect
+class GradContext:
+    def __init__(self) -> None:
+        self.pre = {}
+        self.post = {}
+        self.acc_metric = {}
+        self.acc = {}
+        self.actv = {}
+
+    def reset(self):
+        self.pre.clear()
+        self.post.clear()
+        self.acc_metric.clear()
+        self.acc.clear()
+        self.actv.clear()
+
+
+class CommunicationContext:
+    def __init__(self) -> None:
+        self.data = {}
+
+    @staticmethod
+    def _agg(data):
+        aggregated_data = {}
+        for tag, op2tensorlist in data.items():
+            aggregated_data[tag] = {}
+            for op, tensorlist in op2tensorlist.items():
+                aggregated_data[tag][op] = op_aggregate(op, tensorlist)
+        return aggregated_data
+
+    def reset(self):
+        self.data = {}
+
+    def aggregate(self):
+        self.data = self._agg(self.data)
+
+
 class TrainerMon:
-    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
+    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.optimizer_context = defaultdict(OptimizerContext)
+        self.cc_context = defaultdict(CommunicationContext)
         self.grad_context = GradContext()
         self.params_have_main_grad = params_have_main_grad
-        self.opt_ty = opt_ty
+        self.handles = defaultdict(list)
         self.config = load_json(config_file_path)
         validate_config(self.config)
+
+        self.start_step = self.config.get("start_step", 0)
+        self.collect_times = self.config.get("collect_times", 100000000)  # 默认大值, 目的是一直采集
+        self.step_interval = self.config.get("step_interval", 1)
+        self.has_collect_times = 0
 
         # monitor target in module, such as layer, weight, grad
         self.targets = self.config.get("targets", None)
@@ -221,7 +230,7 @@ class TrainerMon:
             self.cc_log_only = self.cc_distribution.get('cc_log_only', False)
             self.cc_logged_stack = defaultdict(set)
             self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
-            api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
+            self.handles['cc'] = api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
         self.common_info()
 
@@ -231,7 +240,7 @@ class TrainerMon:
         local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
 
         cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
-        unique_id = str(uuid.uuid4())[:8]   
+        unique_id = str(uuid.uuid4())[:8]
         output_base_dir = get_output_base_dir()
 
         time_tags = self.config.get("append_output", [])
@@ -253,7 +262,7 @@ class TrainerMon:
                 tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
             pp_stage = 0
             group_mates = [0]
-            
+
         self.rank = rank
 
         # 初始化AnomalyData工厂
@@ -304,11 +313,19 @@ class TrainerMon:
         self.module_struct = defaultdict(dict)
 
     # Start
-    def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None):
+    def set_monitor(
+            self,
+            model,
+            grad_acc_steps=1,
+            optimizer=None,
+            tp_group=None,
+            dp_group=None,
+            start_iteration=0):
+        global start_step
+        start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
         self.hook_optimizer(optimizer)
         self.micro_batch_number = grad_acc_steps
-
         self.dp_group = dp_group
         self.tp_group = tp_group
 
@@ -345,6 +362,9 @@ class TrainerMon:
         """
         def optimizer_pre_hook_function(opt, grad_names, gradients):
             context = self.optimizer_context[opt]
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times, \
+                            self.collect_times):
+                return
             gradient_list = gradients[0] if isinstance(gradients, tuple) else gradients
             is_select = self.is_select
             for idx, grad in enumerate(gradient_list):
@@ -352,7 +372,7 @@ class TrainerMon:
                 if is_select and grad_name not in self.targets:
                     continue
                 get_single_metrics(self.ops, grad_name, grad, context.param_weight_grad)
-            
+
             if self.mv_distribution:
                 # fetch mean
                 for param in m_list:
@@ -370,9 +390,24 @@ class TrainerMon:
                 for param in param_list:
                     get_single_metrics(self.ops, param.name, param, context.param_metric)
             self.generate_wgrad_metrics()
+            metric_dict = {}
+            for cc in self.cc_context.values():
+                cc.aggregate()
+                metric_dict.update(cc.data)
+                cc.reset()
+
+            if not metric_dict:
+                return
+            context.metric_dict = metric_dict
+            return
 
         def optimizer_post_hook_function(opt, args, gradients, outputs):
             context = self.optimizer_context[opt]
+            step_skip = is_skip_step(context.step, self.start_step, self.step_interval, \
+                                     self.has_collect_times, self.collect_times)
+            if step_skip:
+                context.step += 1
+                return
             self.write_xy_tb(context.step)
             self.write_grad_tb(context.step)
             self.write_mv_tb(context)
@@ -381,6 +416,7 @@ class TrainerMon:
             if context.metric_dict:
                 self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
             context.metric_dict.clear()
+            self.has_collect_times += 1
             context.step += 1
             if self.anomaly_data_factory:
                 self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
@@ -452,11 +488,6 @@ class TrainerMon:
             logger.info('> grad and momentum direction will not be compared.')
         if not self.cc_distribution.get('enable', False):
             logger.info("> cc operator is not monitored.")
-        if not self.opt_ty:
-            if self.ur_distribution:
-                raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
-            if self.mv_distribution:
-                raise Exception("mv_distribution cannot be enabled with unknown optimizer.")
 
     def is_target_rank(self):
         rank_id = str(get_rank())
@@ -469,21 +500,21 @@ class TrainerMon:
             return
         if not isinstance(model, list):
             model = [model]
-        self.model = model # list
+        self.model = model  # list
         self._register_param_name(model)
         self.micro_batch_number = grad_acc_steps
-        module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.VPP_SEP not in key]
+        module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.NAME_SEP not in key]
 
         for key in module_in_all_stage:
             struct = self.targets.pop(key)
-            self.targets.update({f'{vpp_stage}{MonitorConst.VPP_SEP}{key}': struct for vpp_stage in range(len(model))})
+            self.targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(model))})
 
         hooked_count = 0
         for vpp_stage, model_chunk in enumerate(model):
             if not isinstance(model_chunk, nn.Cell):
                 logger.info("Target Model is not Cell")
                 continue
-            vpp_stage = f'{vpp_stage}{MonitorConst.VPP_SEP}'
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             targets = [x for x, _ in model_chunk.cells_and_names()] if self.print_struct else self.targets.keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
         logger.info(f"> {hooked_count} modules are monitored.")
@@ -505,7 +536,7 @@ class TrainerMon:
             try:
                 get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
             except Exception as e:
-                logger.warning(f"An error occurred while generating wgrad pre metrics: {e}")
+                logger.warning(f"An error occurred while generating wgrad pre metrics")
                 return {}, {}
 
         grad_dict = {}
@@ -522,7 +553,7 @@ class TrainerMon:
         try:
             get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         except Exception as e:
-            logger.warning(f"An error occurred while generating wgrad post metrics: {e}")
+            logger.warning(f"An error occurred while generating wgrad post metrics")
             return {}, {}
         return self.grad_context.post, self.grad_context.pre
 
@@ -535,7 +566,7 @@ class TrainerMon:
             logger.info('vpp enabled')
 
         for vpp_stage, model_chunk in enumerate(model):
-            prefix = f'{vpp_stage}{MonitorConst.VPP_SEP}'
+            prefix = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             self._register_chunk(model_chunk, prefix)
 
         self.param_registered = True
@@ -605,6 +636,10 @@ class TrainerMon:
                 return
             if not module.training:
                 return
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times, \
+                            self.collect_times):
+                step_accumulates_one(context, self.micro_batch_number)
+                return
             if not context.format_by_arg:
                 context.set_format_by_arg(MonitorConst.ACTV_IN, self.targets)
                 context.set_format_by_arg(MonitorConst.ACTV_OUT, self.targets)
@@ -633,7 +668,9 @@ class TrainerMon:
             try:
                 get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             except Exception as e:
-                logger.warning(f"An error occurred while generating forward activation metrics: {e}")
+                logger.warning(f"An error occurred while generating forward activation metrics")
+
+            step_accumulates_one(context, self.micro_batch_number)
             return
 
         def bwd_hook_fun(module, input_grad, output_grad):
@@ -646,6 +683,12 @@ class TrainerMon:
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
+
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times, \
+                            self.collect_times):
+                step_accumulates_one(context, self.micro_batch_number)
+                return
+
             if not context.format_by_arg:
                 context.set_format_by_arg(MonitorConst.ACTVGRAD_IN, self.targets)
                 context.set_format_by_arg(MonitorConst.ACTVGRAD_OUT, self.targets)
@@ -680,10 +723,8 @@ class TrainerMon:
                 get_metrics(self.ops, tbtag_tensor_map, self.eps, self.grad_context.actv)
             except Exception as e:
                 logger.warning(f"An error occurred while generating backward activation metrics: {e}")
-            context.micro_step += 1
-            if context.micro_step == self.micro_batch_number:
-                context.micro_step = 0
-                context.step += 1
+
+            step_accumulates_one(context, self.micro_batch_number)
             return
 
         def fwd_hook_fun_wrapper(fwd_hook_fun, name):
@@ -739,7 +780,7 @@ class TrainerMon:
                 try:
                     get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 except Exception as e:
-                    logger.warning(f"An error occurred while generating weight grad metrics: {e}")
+                    logger.warning(f"An error occurred while generating weight grad metrics")
                 out = sync_grad_func(bucket)
                 return out
 
@@ -777,5 +818,3 @@ class TrainerMon:
             handle = param.register_hook(param_hook_wrapper(param_hook, context_dict=context.acc, param=param, key=key))
             self.handles['wgrads'].append(handle)
         self.weight_hooked = True
-
-# ===================================== Main Processor ====================================

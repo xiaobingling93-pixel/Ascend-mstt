@@ -54,8 +54,8 @@ def data_collect():
     nn.init.constant_(test_module.linear.bias, 1.0)
     optimizer = torch.optim.Adam(test_module.parameters())
 
-    monitor = TrainerMon(config_json_path, params_have_main_grad=False, opt_ty="unknown")
-    monitor.monitor_gnorm_with_ad(test_module, grad_acc_steps=1, optimizer=optimizer)
+    monitor = TrainerMon(config_json_path, params_have_main_grad=False)
+    monitor.set_monitor(test_module, grad_acc_steps=1, optimizer=optimizer)
 
     for input_data, label in zip(inputs, labels):
         output = test_module(input_data)
