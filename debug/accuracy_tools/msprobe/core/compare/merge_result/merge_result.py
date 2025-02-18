@@ -375,6 +375,7 @@ def merge_result(input_dir, output_dir, config_path):
     if not api_list:
         logger.error('The APIs required to merge data were not found')
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    # 处理yaml中有compare_index但没有具体比对指标时，读取后值为None无法被list的情况
     if 'compare_index' in config and config['compare_index'] is None:
         del config['compare_index']
 
