@@ -752,22 +752,24 @@ class TrainerMon:
             bwd_context.reset()
         self.grad_context.reset()  # 权重梯度和激活值梯度都在这
 
-        if self.weight_hooked:  # no megatron
-            for handle in self.handles['wgrads']:
-                handle.remove()
-            self.handles['wgrads'].clear()
-            self.weight_hooked = False
-        else:  # megatron
+        if hasattr(self, 'origin_start_grad_sync'):  # megatron
             try:
                 from megatron.core.distributed.param_and_grad_buffer import Bucket
                 Bucket.start_grad_sync = self.origin_start_grad_sync
+                logger.info("remove Bucket start_grad_sync")
             except ImportError:
                 pass
             try:
                 from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
                 _ParamAndGradBucketGroup.start_grad_sync = self.origin_start_grad_sync
+                logger.info("remove _ParamAndGradBucketGroup start_grad_sync")
             except ImportError:
                 pass
+        else:  # not megatron
+            for handle in self.handles['wgrads']:
+                handle.remove()
+            self.handles['wgrads'].clear()
+            self.weight_hooked = False
 
         if self.optimizer_hooked:
             optimizer.__class__.step = self.origin_step_func
