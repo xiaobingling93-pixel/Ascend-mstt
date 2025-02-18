@@ -72,7 +72,8 @@ def check_config(config):
 
     compare_index_list = config.get('compare_index', [])
     if compare_index_list is None:
-        config['compare_index'] = []
+        compare_index_list = []
+        config['compare_index'] = compare_index_list
     if not isinstance(compare_index_list, list):
         logger.error("The config format of 'compare_index' is incorrect, please check.")
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
