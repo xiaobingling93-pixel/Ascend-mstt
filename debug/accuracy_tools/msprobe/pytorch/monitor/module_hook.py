@@ -467,7 +467,8 @@ class TrainerMon:
             grad_dict[tag] = grad
 
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
-        return self.grad_context.post, self.grad_context.pre
+        unreduced_grad = self.grad_context.acc_metric if self.weight_hooked else self.grad_context.pre
+        return self.grad_context.post, unreduced_grad
 
     def set_monitor(
             self,
