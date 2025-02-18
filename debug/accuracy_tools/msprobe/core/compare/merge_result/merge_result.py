@@ -368,8 +368,6 @@ def merge_result(input_dir, output_dir, config_path):
     compare_result_path_list = get_result_path(input_dir)   # 获得的input_dir中所有比对结果件的全路径，数量少于2，便提示退出
 
     config = load_yaml(config_path)
-    if 'compare_index' in config and config['compare_index'] is None:
-        del config['compare_index']
     if not config:
         logger.error('config.yaml is empty, please check.')
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
@@ -377,6 +375,8 @@ def merge_result(input_dir, output_dir, config_path):
     if not api_list:
         logger.error('The APIs required to merge data were not found')
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    if 'compare_index' in config and config['compare_index'] is None:
+        del config['compare_index']
 
     # 初始化共享全局变量share_compare_index_list
     initialize_compare_index(config)
