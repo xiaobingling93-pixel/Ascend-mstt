@@ -226,6 +226,23 @@ class TestPytorchDataProcessor(unittest.TestCase):
         }
         self.assertEqual(result, expected)
 
+    def test_analyze_reduce_op_successful(self):
+        arg = dist.ReduceOp.SUM
+        result = self.processor._analyze_reduce_op(arg)
+        expected = {'type': 'torch.distributed.ReduceOp', 'value': 'RedOpType.SUM'}
+        self.assertEqual(result, expected)
+
+    @patch.object(logger, 'warning')
+    def test_analyze_reduce_op_failed(self, mock_logger_warning):
+        class TestReduceOp:
+            def __str__(self):
+                raise Exception("failed to convert str type")
+        arg = TestReduceOp()
+        self.processor._analyze_reduce_op(arg)
+        mock_logger_warning.assert_called_with(
+            "Failed to get value of torch.distributed.ReduceOp with error info: failed to convert str type."
+        )
+
     def test_get_special_types(self):
         special_types = self.processor.get_special_types()
         self.assertIn(torch.Tensor, special_types)
