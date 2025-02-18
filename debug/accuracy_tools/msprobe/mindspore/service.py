@@ -311,7 +311,10 @@ class Service:
             if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
                 JitDump.set_data_collector(self.data_collector)
-                ms.common.api._MindsporeFunctionExecutor = JitDump
+                if hasattr(ms.common.api, "_MindsporeFunctionExecutor"):
+                    ms.common.api._MindsporeFunctionExecutor = JitDump
+                else:
+                    ms.common.api._JitExecutor = JitDump
                 ms.common.api._PyNativeExecutor.grad = JitDump.grad
                 if pijit_label:
                     PIJitCaptureContext.__enter__ = self.empty
