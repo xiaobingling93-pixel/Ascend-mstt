@@ -305,6 +305,9 @@ def get_dump_mode(input_param):
     if npu_task == Const.TENSOR:
         return Const.ALL
 
+    if npu_task == Const.STRUCTURE:
+        return Const.STRUCTURE
+
     if npu_task == Const.STATISTICS:
         npu_md5_compare = md5_find(npu_json_data['data'])
         bench_md5_compare = md5_find(bench_json_data['data'])
