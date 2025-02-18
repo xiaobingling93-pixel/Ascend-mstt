@@ -15,9 +15,11 @@
 """
 
 import unittest
+from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst
-from msprobe.core.compare.merge_result.utils import replace_compare_index_dict
+from msprobe.core.common.utils import CompareException
+from msprobe.core.compare.merge_result.utils import replace_compare_index_dict, check_config
 
 
 class TestReplaceCompareIndexDict(unittest.TestCase):
@@ -190,3 +192,75 @@ class TestReplaceCompareIndexDict(unittest.TestCase):
         # 测试空 compare_index_list 的情况
         result = replace_compare_index_dict(self.compare_index_dict, [], self.rank_num)
         self.assertEqual(result, self.compare_index_dict)
+
+
+class TestCheckConfig(unittest.TestCase):
+
+    @patch('msprobe.core.common.file_utils.logger.error')
+    def test_check_config_empty(self, mock_logger_error):
+        config = None
+
+        with self.assertRaises(CompareException):
+            check_config(config)
+
+        mock_logger_error.assert_called_once_with('config.yaml is empty, please check.')
+
+    @patch('msprobe.core.common.file_utils.logger.error')
+    def test_check_config_missing_api(self, mock_logger_error):
+        config = {
+            'compare_index': ['index1', 'index2']
+        }
+
+        with self.assertRaises(CompareException):
+            check_config(config)
+
+        mock_logger_error.assert_called_once_with('The APIs required to merge data were not found.')
+
+    @patch('msprobe.core.common.file_utils.logger.error')
+    def test_check_config_api_is_not_list(self, mock_logger_error):
+        config = {
+            'api': 'api1',
+            'compare_index': ['index1', 'index2']
+        }
+
+        with self.assertRaises(CompareException):
+            check_config(config)
+
+        mock_logger_error.assert_called_once_with("The config format of 'api' is incorrect, please check.")
+
+    @patch('msprobe.core.common.file_utils.logger.error')
+    def test_check_config_compare_index_is_not_list(self, mock_logger_error):
+        config = {
+            'api': ['api1', 'api2'],
+            'compare_index': 'index1'
+        }
+
+        with self.assertRaises(CompareException):
+            check_config(config)
+
+        mock_logger_error.assert_called_once_with("The config format of 'compare_index' is incorrect, please check.")
+
+    def test_check_config_compare_index_is_none(self):
+        config = {
+            'api': ['api1', 'api2'],
+            'compare_index': None
+        }
+        result_target = {
+            'api': ['api1', 'api2'],
+            'compare_index': []
+        }
+        result = check_config(config)
+
+        self.assertEqual(result, result_target)
+
+    @patch('msprobe.core.common.file_utils.logger.error')
+    def test_check_config_success(self, mock_logger_error):
+        config = {
+            'api': ['api1', 'api2'],
+            'compare_index': ['index1', 'index2']
+        }
+
+        result = check_config(config)
+
+        self.assertEqual(result, config)
+        mock_logger_error.assert_not_called()

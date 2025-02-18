@@ -14,6 +14,8 @@
 # limitations under the License.
 
 from msprobe.core.common.const import CompareConst
+from msprobe.core.common.file_utils import logger
+from msprobe.core.common.utils import CompareException
 
 
 def replace_compare_index_dict(compare_index_dict, compare_index_list, rank_num):
@@ -48,3 +50,32 @@ def replace_compare_index_dict(compare_index_dict, compare_index_list, rank_num)
     compare_index_dict.pop(CompareConst.NPU_MAX, None)
     compare_index_dict.pop(CompareConst.BENCH_MAX, None)
     return compare_index_dict
+
+
+def check_config(config):
+    """
+    config.yaml 内容检查
+    Args: config:
+    Returns: config
+    """
+    if not config:
+        logger.error('config.yaml is empty, please check.')
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
+    api_list = config.get('api')
+    if not api_list:
+        logger.error('The APIs required to merge data were not found.')
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    if not isinstance(api_list, list):
+        logger.error("The config format of 'api' is incorrect, please check.")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
+    compare_index_list = config.get('compare_index', [])
+    if compare_index_list is None:
+        compare_index_list = []
+        config['compare_index'] = compare_index_list
+    if not isinstance(compare_index_list, list):
+        logger.error("The config format of 'compare_index' is incorrect, please check.")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
+    return config
