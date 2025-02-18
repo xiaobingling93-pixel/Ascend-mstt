@@ -709,7 +709,13 @@ class TestGenOpItem(unittest.TestCase):
         op_data = {
             'data_name': 'test_data',
             'type': 'torch.Tensor',
-            'value': [1, 2, 3]
+            'dtype': 'torch.int64',
+            'shape': [3],
+            'value': [1, 2, 3],
+            'Max': 3,
+            'Min': 1,
+            'Mean': 2,
+            'Norm': 2
         }
         op_name = 'op_test'
 
@@ -717,12 +723,12 @@ class TestGenOpItem(unittest.TestCase):
 
         self.assertEqual(result['data_name'], 'test_data')
         self.assertEqual(result['full_op_name'], 'test_data')
-        self.assertEqual(result['dtype'], str(type(op_data['value'])))
-        self.assertEqual(result['shape'], '[]')
-        self.assertEqual(result['Max'], None)
-        self.assertEqual(result['Min'], None)
-        self.assertEqual(result['Mean'], None)
-        self.assertEqual(result['Norm'], None)
+        self.assertEqual(result['dtype'], 'torch.int64')
+        self.assertEqual(result['shape'], [3])
+        self.assertEqual(result['Max'], 3)
+        self.assertEqual(result['Min'], 1)
+        self.assertEqual(result['Mean'], 2)
+        self.assertEqual(result['Norm'], 2)
         self.assertEqual(result['md5'], f"{zlib.crc32(str(op_data['value']).encode()):08x}")
 
     def test_gen_op_item_with_empty_data_name(self):
@@ -764,7 +770,7 @@ class TestGenOpItem(unittest.TestCase):
         result = gen_op_item(op_data, op_name)
 
         self.assertEqual(result['dtype'], 'torch.Size')
-        self.assertEqual(result['shape'], str(np.shape(np.array(op_data['value']))))
+        self.assertEqual(result['shape'], '[2, 3, 4]')
         self.assertEqual(result['Max'], None)
         self.assertEqual(result['Min'], None)
         self.assertEqual(result['Mean'], None)
