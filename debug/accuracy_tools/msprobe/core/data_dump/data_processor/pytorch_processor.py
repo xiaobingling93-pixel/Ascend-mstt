@@ -215,9 +215,11 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_p2pop(element)
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
-            return self._analyze_numpy(converted_numpy, numpy_type)
+            return {"type": numpy_type, "value": converted_numpy}
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
+        if isinstance(element, np.ndarray):
+            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
@@ -291,6 +293,13 @@ class TensorDataProcessor(PytorchDataProcessor):
             saved_tensor = tensor.clone().contiguous().detach()
             save_pt(saved_tensor, file_path)
         return single_arg
+    
+    def _analyze_numpy(self, ndarray, suffix):
+        dump_data_name, file_path = self.get_save_file_path(suffix)
+        torch.save(ndarray, file_path)
+        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json.update({"data_name": dump_data_name})
+        return ndarray_json
 
 
 class OverflowCheckDataProcessor(PytorchDataProcessor):
