@@ -184,6 +184,7 @@ class TrainerMon:
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.origin_step_func = None
+        self.origin_start_grad_sync = None
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
@@ -248,7 +249,7 @@ class TrainerMon:
         self.dynamic_enable = os.getenv("DYNAMIC_MONITOR", 'False').lower() == 'true'
         if self.dynamic_enable:
             logger.warning(f"DYNAMIC_MONITOR is set, "
-                           f"please make sure you have 'dynamic_on' and 'collect_times' item in {self.config_file_path}")
+                           f"please make sure you have 'dynamic_on' and 'collect_times' in {self.config_file_path}")
             self.monitoring = False
         else:
             self.set_config()
@@ -752,7 +753,7 @@ class TrainerMon:
             bwd_context.reset()
         self.grad_context.reset()  # 权重梯度和激活值梯度都在这
 
-        if hasattr(self, 'origin_start_grad_sync'):  # megatron
+        if self.origin_start_grad_sync:  # megatron
             try:
                 from megatron.core.distributed.param_and_grad_buffer import Bucket
                 Bucket.start_grad_sync = self.origin_start_grad_sync
@@ -807,7 +808,7 @@ class TrainerMon:
                 config_timestamp = os.path.getmtime(self.config_file_path)
                 self.config_timestamp = config_timestamp
                 logger.info(
-                    "Finish monitor, set config'dynamic_on=False, will restart by set dynamic_on=True and update content")
+                    "Finish monitor, set config'dynamic_on=False, will restart by set it to True and update config")
             except Exception as e:
                 logger.warning(f"Finish monitor, set config'dynamic_on=False fail because {e}, please check!!!")
         logger.info("Finish monitor")
