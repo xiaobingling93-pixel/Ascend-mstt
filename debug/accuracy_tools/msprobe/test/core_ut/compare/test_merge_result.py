@@ -398,3 +398,20 @@ class TestUtilsMethods(unittest.TestCase):
         mock_load_yaml.assert_called_once_with(config_path)
         mock_handle_multi_process.assert_called_once()
         mock_generate_merge_result.assert_called_once()
+
+    @patch('msprobe.core.compare.merge_result.merge_result.load_yaml')
+    def test_merge_result_compare_index_none(self, mock_load_yaml):
+        config_data = {
+            'api': ['api1', 'api2'],
+            'compare_index': None
+        }
+
+        mock_load_yaml.return_value = config_data
+
+        input_dir = '/path/to/input'
+        output_dir = '/path/to/output'
+        config_path = '/path/to/config.yaml'
+
+        merge_result(input_dir, output_dir, config_path)
+
+        self.assertNotIn('compare_index', config_data)
