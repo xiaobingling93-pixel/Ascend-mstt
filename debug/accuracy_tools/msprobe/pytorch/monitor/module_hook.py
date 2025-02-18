@@ -184,7 +184,7 @@ class TrainerMon:
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.origin_step_func = None
-        self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过switch开关直接打开
+        self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
 
@@ -248,7 +248,7 @@ class TrainerMon:
         self.dynamic_enable = os.getenv("DYNAMIC_MONITOR", 'False').lower() == 'true'
         if self.dynamic_enable:
             logger.warning(f"DYNAMIC_MONITOR is set, "
-                           f"please make sure you have 'switch' and 'collect_times' item in {self.config_file_path}")
+                           f"please make sure you have 'dynamic_on' and 'collect_times' item in {self.config_file_path}")
             self.monitoring = False
         else:
             self.set_config()
@@ -337,6 +337,11 @@ class TrainerMon:
         if self.format not in FORMAT_MAPPING:
             logger.error(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
             self.format = MonitorConst.CSV
+
+        if self.ur_distribution and self.format != 'tensorboard':
+            logger.error("can only set ur_distribution when format is 'tensorboard', cancel ur_distribution")
+            self.ur_distribution = False
+
         writer = FORMAT_MAPPING[self.format]
         self.step_count_per_record = self.config.get('step_count_per_record', 1)
 
@@ -662,7 +667,7 @@ class TrainerMon:
             logger.error(f"get config.json wrong because {e}, not updated, please check!!!")
             return
 
-        if config.get("switch", False):
+        if config.get("dynamic_on", False):
             try:
                 validate_config(config)
                 self.config = config
@@ -747,10 +752,22 @@ class TrainerMon:
             bwd_context.reset()
         self.grad_context.reset()  # 权重梯度和激活值梯度都在这
 
-        for handle in self.handles['wgrads']:
-            handle.remove()
-        self.handles['wgrads'].clear()
-        self.weight_hooked = False
+        if self.weight_hooked:  # no megatron
+            for handle in self.handles['wgrads']:
+                handle.remove()
+            self.handles['wgrads'].clear()
+            self.weight_hooked = False
+        else:  # megatron
+            try:
+                from megatron.core.distributed.param_and_grad_buffer import Bucket
+                Bucket.start_grad_sync = self.origin_start_grad_sync
+            except ImportError:
+                pass
+            try:
+                from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
+                _ParamAndGradBucketGroup.start_grad_sync = self.origin_start_grad_sync
+            except ImportError:
+                pass
 
         if self.optimizer_hooked:
             optimizer.__class__.step = self.origin_step_func
@@ -780,17 +797,17 @@ class TrainerMon:
 
     def _remove_all_hooks_final(self, optimizer):
         if self.dynamic_enable:
-            # 结束后自动重置switch为False等待用户手动开启
+            # 结束后自动重置dynamic_on为False等待用户手动开启
             try:
                 config = load_json(self.config_file_path)
-                config['switch'] = False
+                config['dynamic_on'] = False
                 save_json(self.config_file_path, config, indent=2)
                 config_timestamp = os.path.getmtime(self.config_file_path)
                 self.config_timestamp = config_timestamp
                 logger.info(
-                    "Finish monitor, set config'switch=False, will restart by set switch=True and update content")
+                    "Finish monitor, set config'dynamic_on=False, will restart by set dynamic_on=True and update content")
             except Exception as e:
-                logger.warning(f"Finish monitor, set config'switch=False fail because {e}, please check!!!")
+                logger.warning(f"Finish monitor, set config'dynamic_on=False fail because {e}, please check!!!")
         logger.info("Finish monitor")
         self._remove_all_hooks(optimizer)
 
@@ -1017,6 +1034,7 @@ class TrainerMon:
 
         try:
             from megatron.core.distributed.param_and_grad_buffer import Bucket
+            self.origin_start_grad_sync = Bucket.start_grad_sync
             Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)
             self.enable_megatron = True
             logger.info("megatron version is >= core_r0.6.0 <= core_r0.8.0")
@@ -1025,6 +1043,7 @@ class TrainerMon:
 
         try:
             from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
+            self.origin_start_grad_sync = _ParamAndGradBucketGroup.start_grad_sync
             _ParamAndGradBucketGroup.start_grad_sync = patch_sync(_ParamAndGradBucketGroup.start_grad_sync)
             self.enable_megatron = True
             logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
