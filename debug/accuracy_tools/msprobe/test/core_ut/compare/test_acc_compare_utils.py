@@ -5,13 +5,16 @@ import os
 import shutil
 import unittest
 from unittest.mock import patch
+import zlib
+
+import numpy as np
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
     op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
-    table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list
+    table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list, gen_op_item
 
 # test_read_op_1
 op_data = {
@@ -699,3 +702,149 @@ class TestReorderOpXList(unittest.TestCase):
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, None)
+
+
+class TestGenOpItem(unittest.TestCase):
+    def test_gen_op_item_with_data_name(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'torch.Tensor',
+            'dtype': 'torch.int64',
+            'shape': [3],
+            'value': [1, 2, 3],
+            'Max': 3,
+            'Min': 1,
+            'Mean': 2,
+            'Norm': 2
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        self.assertEqual(result['data_name'], 'test_data')
+        self.assertEqual(result['full_op_name'], 'test_data')
+        self.assertEqual(result['dtype'], 'torch.int64')
+        self.assertEqual(result['shape'], [3])
+        self.assertEqual(result['Max'], 3)
+        self.assertEqual(result['Min'], 1)
+        self.assertEqual(result['Mean'], 2)
+        self.assertEqual(result['Norm'], 2)
+        self.assertEqual(result['md5'], f"{zlib.crc32(str(op_data['value']).encode()):08x}")
+
+    def test_gen_op_item_with_empty_data_name(self):
+        op_data = {
+            'data_name': '',
+            'type': 'torch.Tensor',
+            'value': [1, 2, 3]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        # data_name为空时，应该被设置为'-1'
+        self.assertEqual(result['data_name'], '-1')
+        self.assertEqual(result['full_op_name'], op_name)
+
+    def test_gen_op_item_with_none_data_name(self):
+        op_data = {
+            'data_name': None,
+            'type': 'torch.Tensor',
+            'value': [1, 2, 3]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        # data_name为None时，应该被设置为'-1'
+        self.assertEqual(result['data_name'], '-1')
+        self.assertEqual(result['full_op_name'], op_name)
+
+    def test_gen_op_item_with_type_torch_size(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'torch.Size',
+            'value': [2, 3, 4]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        self.assertEqual(result['dtype'], 'torch.Size')
+        self.assertEqual(result['shape'], '[2, 3, 4]')
+        self.assertEqual(result['Max'], None)
+        self.assertEqual(result['Min'], None)
+        self.assertEqual(result['Mean'], None)
+        self.assertEqual(result['Norm'], None)
+
+    def test_gen_op_item_with_type_slice(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'slice',
+            'value': [1, 2, 3]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        self.assertEqual(result['dtype'], 'slice')
+        self.assertEqual(result['shape'], str(np.shape(np.array(op_data['value']))))
+
+    def test_gen_op_item_with_type_ellipsis(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'ellipsis',
+            'value': '...'
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        self.assertEqual(result['dtype'], 'ellipsis')
+        self.assertEqual(result['shape'], '[]')
+        self.assertEqual(result['Max'], '...')
+        self.assertEqual(result['Min'], '...')
+        self.assertEqual(result['Mean'], '...')
+        self.assertEqual(result['Norm'], '...')
+
+    def test_gen_op_item_with_type_torch_process_group(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'torch.ProcessGroup',
+            'group_ranks': [0, 1]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        self.assertEqual(result['dtype'], 'torch.ProcessGroup')
+        self.assertEqual(result['shape'], '[]')
+        self.assertEqual(result['Max'], '[0, 1]')
+        self.assertEqual(result['Min'], '[0, 1]')
+        self.assertEqual(result['Mean'], '[0, 1]')
+        self.assertEqual(result['Norm'], '[0, 1]')
+
+    def test_gen_op_item_with_default_dtype(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'other_type',
+            'value': [1, 2, 3]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        self.assertEqual(result['dtype'], str(type(op_data['value'])))
+        self.assertEqual(result['shape'], '[]')
+
+    def test_gen_op_item_with_md5(self):
+        op_data = {
+            'data_name': 'test_data',
+            'type': 'torch.Tensor',
+            'value': [1, 2, 3]
+        }
+        op_name = 'op_test'
+
+        result = gen_op_item(op_data, op_name)
+
+        expected_md5 = f"{zlib.crc32(str(op_data['value']).encode()):08x}"
+        self.assertEqual(result['md5'], expected_md5)
