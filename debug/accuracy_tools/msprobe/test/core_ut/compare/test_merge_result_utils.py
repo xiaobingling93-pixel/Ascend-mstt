@@ -15,7 +15,7 @@
 """
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.utils import CompareException
