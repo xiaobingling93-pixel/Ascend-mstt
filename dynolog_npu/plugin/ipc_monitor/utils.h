@@ -50,6 +50,11 @@ std::string formatErrorCode(SubModule submodule, ErrCode errorCode);
 
 #define IPC_ERROR(error) formatErrorCode(SubModule::IPC, error)
 
+template<typename T, typename V>
+inline T ReinterpretConvert(V ptr) {
+    return reinterpret_cast<T>(ptr);
+}
+
 
 } // namespace ipc_monitor
 } // namespace dynolog_npu

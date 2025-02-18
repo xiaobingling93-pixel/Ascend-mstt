@@ -1,4 +1,3 @@
-// bindings.cpp
 #include <pybind11/pybind11.h>
 #include "ipc_monitor/PyDynamicMonitorProxy.h"
 

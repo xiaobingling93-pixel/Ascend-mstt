@@ -48,7 +48,7 @@ std::string IpcClient::IpcClientNpuConfig()
         std::cout << "[WARNING] Failed to receive on-demand config !" << std::endl;
         return "";
     }
-    std::string res = std::string((char *)message->buf.get(), message->metadata.size);
+    std::string res = std::string(ReinterpretConvert<char *>(message->buf.get()), message->metadata.size);
 
     return res;
 }
@@ -100,7 +100,6 @@ bool IpcClient::Recv()
         if (successFlag) {
             std::unique_ptr<Message> npuMessage = std::make_unique<Message>(Message());
             npuMessage->metadata = recvMetadata;
-            // npuMessage->buf = std::unique_ptr<unsigned char[]>(new unsigned char[recvMetadata.size]);
             npuMessage->buf = std::make_unique<unsigned char[]>(recvMetadata.size);
             npuMessage->src = std::string(ep_.GetName(*peekCtxt));
             std::vector<NpuPayLoad> npuPayLoad{ NpuPayLoad(sizeof(struct Metadata), (void *)&npuMessage->metadata),

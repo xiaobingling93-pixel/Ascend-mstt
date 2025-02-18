@@ -51,7 +51,7 @@ public:
         if (address.sun_path[0] != STR_END_CHAR) {
             unlink(address.sun_path);
         }
-        int res = bind(socketFd, (const struct sockaddr *)&address, addressLen);
+        int res = bind(socketFd, ReinterpretConvert<const struct sockaddr *>(&address), addressLen);
         if (res == -1) {
             throw std::runtime_error("Bind socket failed." + IPC_ERROR(ErrCode::PARAM));
         }
@@ -193,7 +193,7 @@ protected:
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_RIGHTS;
         cmsg->cmsg_len = CMSG_LEN(fileDesSize);
-        ctxt->fileDesPtr = (fileDesT *)CMSG_DATA(cmsg);
+        ctxt->fileDesPtr = ReinterpretConvert<fileDesT *>(CMSG_DATA(cmsg));
         return ctxt;
     }
 };
