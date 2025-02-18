@@ -199,7 +199,7 @@ class TrainerMon:
         self.is_select = self.config.get("is_select", False)
         self.module_rank_list = self.config.get("module_ranks", [])
         # only csv supported in mindspore
-        self.format = self.config.get('format', 'csv')
+        self.format = self.config.get('format', MonitorConst.CSV)
         self.eps = self.config.get('eps', 1e-8)
         # monitor mean/max/norm/min/nan...    
         self.ops = self.config.get('ops', [])
@@ -271,7 +271,8 @@ class TrainerMon:
             self.anomaly_data_factory = AnomalyDataFactory(rank, pp_stage, group_mates)
 
         if self.format not in FORMAT_MAPPING:
-            raise ValueError(f"Unsupported format: {self.format}")
+            logger.error(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
+            self.format = MonitorConst.CSV
         writer = FORMAT_MAPPING[self.format]
         self.step_count_per_record = self.config.get('step_count_per_record', 1)
 
