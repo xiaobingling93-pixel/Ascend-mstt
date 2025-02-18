@@ -422,10 +422,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_create_directory.return_value = None
         mock_get_result_path.return_value = ['/path/to/input/compare_result_rank1-rank1_20240101010101.xlsx',
                                              '/path/to/input/compare_result_rank2-rank2_20240101010101.xlsx']
-        mock_load_yaml.return_value = {
-            'api': ['api1', 'api2'],
-            'compare_index': ['index1', 'index2']
-        }
+
         mock_handle_multi_process.return_value = (
             [[{'index1': {'api1': {1: 100}}}], [{'index1': {'api1': {2: 100}}}]],  # all_compare_index_dict_list
             [[1], [2]],  # all_rank_num_list
