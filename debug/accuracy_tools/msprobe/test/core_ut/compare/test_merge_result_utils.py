@@ -240,6 +240,19 @@ class TestCheckConfig(unittest.TestCase):
 
         mock_logger_error.assert_called_once_with("The config format of 'compare_index' is incorrect, please check.")
 
+    def test_check_config_compare_index_is_none(self):
+        config = {
+            'api': ['api1', 'api2'],
+            'compare_index': None
+        }
+        result_target = {
+            'api': ['api1', 'api2'],
+            'compare_index': []
+        }
+        result = check_config(config)
+
+        self.assertEqual(result, result_target)
+
     @patch('msprobe.core.common.file_utils.logger.error')
     def test_check_config_success(self, mock_logger_error):
         config = {
