@@ -40,6 +40,7 @@ class DataCollector:
         self.scope = ScopeFactory(self.config).build_scope()
         self.backward_module_names = {}
         self.optimizer_status = ""
+        self.optimizer_status_first_start = {Const.OPTIMIZER: True, Const.CLIP_GRAD: True}
         atexit.register(self.write_json)
 
     @property
@@ -60,6 +61,8 @@ class DataCollector:
             data_info[list(data_info.keys())[0]]["is_recompute"] = is_recompute
 
     def reset_status(self):
+        self.optimizer_status = ""
+        self.optimizer_status_first_start = {Const.OPTIMIZER: True, Const.CLIP_GRAD: True}
         self.data_writer.reset_cache()
         self.backward_module_names.clear()
 
@@ -172,13 +175,13 @@ class DataCollector:
     def update_construct(self, name):
         if self.config.level not in DataCollector.level_without_construct:
             if self.optimizer_status in [Const.OPTIMIZER, Const.CLIP_GRAD]:
+                if self.optimizer_status_first_start[self.optimizer_status]:
+                    self.data_writer.update_construct({self.optimizer_status: None})
+                    self.optimizer_status_first_start[self.optimizer_status] = False
                 self.data_writer.update_construct({name: self.optimizer_status})
             else:
                 self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
-
-    def init_optimizer_construct(self, name):
-        self.data_writer.update_construct({name: None})
 
     def handle_data(self, name, data_info, flush=False):
         if data_info:
