@@ -151,11 +151,10 @@ def is_mindtorch():
         mindtorch_check_result = False
         try:
             import torch
-            from mindspore._c_expression import Tensor
         except ImportError:
             return mindtorch_check_result
         tensor = torch.tensor(0.0)
-        if isinstance(tensor, Tensor):
+        if isinstance(tensor, ms.Tensor):
             mindtorch_check_result = True
     return mindtorch_check_result
 
