@@ -19,6 +19,7 @@ from dataclasses import dataclass, is_dataclass
 from typing import Tuple, Dict, Optional, Any
 from functools import partial
 import copy
+from typing import Union
 
 import numpy as np
 
@@ -250,7 +251,7 @@ class BaseDataProcessor:
         return cls.special_type
 
     @classmethod
-    def recursive_apply_transform(cls, args, transform, depth=0):
+    def recursive_apply_transform(cls, args, transform, depth=0) -> Union[dict, list, None]:
         if depth > Const.MAX_DEPTH:
             logger.error(f"The maximum depth of recursive transform, {Const.MAX_DEPTH} is reached.")
             raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
