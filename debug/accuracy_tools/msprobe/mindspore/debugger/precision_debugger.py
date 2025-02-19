@@ -89,6 +89,7 @@ class PrecisionDebugger:
 
         self.config.execution_mode = self._get_execution_mode()
         if self._need_service():
+            self.config.check_config_with_l2()
             self.service = Service(self.config)
 
         Runtime.step_count = 0
@@ -139,11 +140,11 @@ class PrecisionDebugger:
     def _is_graph_dump(config):
         if config.level != MsConst.KERNEL:
             return False
-        if not config.list or len(config.list) > 1:
+        if not config.list:
             return True
-        if '-' in config.list[0] or '/' in config.list[0]:
-            return True
-        return False
+        is_graph = any(item.startswith("name-regex") for item in config.list)
+        is_graph |= all("." not in item for item in config.list)
+        return is_graph
 
     @classmethod
     def start(cls, model=None):

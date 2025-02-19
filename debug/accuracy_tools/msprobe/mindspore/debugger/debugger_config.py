@@ -16,6 +16,7 @@
 import os
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
@@ -82,3 +83,16 @@ class DebuggerConfig:
             )
             self.level_ori = Const.LEVEL_MIX
         return True
+
+    def check_config_with_l2(self):
+        if self.level_ori != Const.LEVEL_L2:
+            return
+        if self.task != Const.TENSOR:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the task must be set to tensor.")
+        if self.scope:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the scope cannot be configured.")
+        if not self.list or len(self.list) != 1:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the list must be configured as a list with one api name.")
