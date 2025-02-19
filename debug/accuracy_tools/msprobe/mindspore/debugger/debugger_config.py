@@ -85,8 +85,11 @@ class DebuggerConfig:
         return True
 
     def check_config_with_l2(self):
-        if self.level != Const.LEVEL_L2:
+        if self.level_ori != Const.LEVEL_L2:
             return
+        if self.task != Const.TENSOR:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the task must be set to tensor.")
         if self.scope:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the scope cannot be configured.")
