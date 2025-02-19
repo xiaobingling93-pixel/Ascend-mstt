@@ -375,7 +375,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
                 name += '.output'
         self.context_dict[name].append(scalar_value)
 
-    def write_metrics(self, op_list, metric_value, step, prefix=''):
+    def write_metrics(self, op_list, metric_value, step, prefix='', need_explain=False):
         need_explain = prefix == 'other'
         super().write_metrics(op_list, metric_value, step, prefix='', need_explain=need_explain)
 
