@@ -277,7 +277,7 @@ class TensorDataProcessor(PytorchDataProcessor):
     
     def _analyze_numpy(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        torch.save(ndarray, file_path)
+        save_pt(torch.tensor(ndarray), file_path)
         ndarray_json = super()._analyze_numpy(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
