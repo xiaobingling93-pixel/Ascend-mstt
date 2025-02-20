@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -41,8 +41,16 @@ except ImportError:
 
 
 class PytorchDataProcessor(BaseDataProcessor):
-    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, torch.memory_format, dist.ProcessGroup,
-                            dist.P2POp)
+    pytorch_special_type = (
+        torch.device,
+        torch.dtype,
+        torch.Size,
+        torch.Tensor,
+        torch.memory_format,
+        dist.ProcessGroup,
+        dist.P2POp,
+        dist.ReduceOp
+    )
     memory_format = {
         torch.contiguous_format: "contiguous_format",
         torch.channels_last: "channels_last",
@@ -183,7 +191,6 @@ class PytorchDataProcessor(BaseDataProcessor):
     def _analyze_memory_format(arg):
         # 获取内存格式
         format_type = PytorchDataProcessor.memory_format.get(arg)
-
         return {"type": "torch.memory_format", "format": format_type}
 
     @staticmethod
@@ -195,8 +202,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             group_id = PytorchDataProcessor.process_group_hash(arg)
             group_info.update({"group_id": group_id})
         except Exception as e:
-            logger.warning(f"Failed to get process group(id: {group_id}) ranks info with error info: {e}.")
+            logger.warning(f"Failed to get process group ranks info with error info: {e}.")
         return group_info
+
+    @staticmethod
+    def _analyze_reduce_op(arg):
+        op_type = None
+        try:
+            op_type = str(arg)
+        except Exception as e:
+            logger.warning(f"Failed to get value of torch.distributed.ReduceOp with error info: {e}.")
+        return {"type": "torch.distributed.ReduceOp", "value": op_type}
 
     @classmethod
     def get_special_types(cls):
@@ -213,6 +229,8 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_process_group(element)
         if isinstance(element, dist.P2POp):
             return self._analyze_p2pop(element)
+        if isinstance(element, dist.ReduceOp):
+            return self._analyze_reduce_op(element)
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
             return {"type": numpy_type, "value": converted_numpy}
