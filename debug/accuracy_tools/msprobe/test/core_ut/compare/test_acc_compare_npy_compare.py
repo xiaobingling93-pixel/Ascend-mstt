@@ -20,7 +20,7 @@ from unittest.mock import patch
 from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import handle_inf_nan, reshape_value, get_error_flag_and_msg, \
     npy_data_check, statistics_data_check, get_relative_err, GetCosineSimilarity, GetMaxAbsErr, GetMaxRelativeErr, \
-    GetErrRatio, error_value_process, compare_ops_apply
+    GetErrRatio, error_value_process, compare_ops_apply, GetEuclideanDistance
 
 
 op_name = 'Functional.conv2d.0.backward.input.0'
@@ -473,3 +473,81 @@ class TestUtilsMethods(unittest.TestCase):
         a, b = compare_ops_apply(n_value, b_value, error_flag, err_msg)
         self.assertEqual(a, [1.0, 0.0, 0.0, 1.0, 1.0])
         self.assertEqual(b, '')
+
+
+class TestGetEuclideanDistance(unittest.TestCase):
+
+    def setUp(self):
+        self.euc_distance = GetEuclideanDistance()
+
+    def test_shape_mismatch(self):
+        # 测试当两个张量的形状不匹配时，返回 UNSUPPORTED
+        n_value = np.array([1, 2, 3])
+        b_value = np.array([1, 2])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertIn("Cannot compare by Euclidean Distance", msg)
+
+    def test_empty_tensor(self):
+        # 测试当输入的张量为空时，返回 NAN
+        n_value = np.array([])
+        b_value = np.array([1, 2, 3])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertEqual(result, CompareConst.NAN)
+        self.assertIn("sizes of tensors must not be empty", msg)
+
+    def test_nan_in_tensor(self):
+        # 测试当张量包含 NaN 值时，返回 NAN
+        n_value = np.array([1, 2, np.nan])
+        b_value = np.array([1, 2, 3])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertEqual(result, CompareConst.NAN)
+        self.assertIn("Tensor contains NaN values", msg)
+
+    def test_inf_in_tensor(self):
+        # 测试当张量包含 Inf 值时，返回 NAN
+        n_value = np.array([1, 2, np.inf])
+        b_value = np.array([1, 2, 3])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertEqual(result, CompareConst.NAN)
+        self.assertIn("Tensor contains Inf values", msg)
+
+    def test_zero_tensors(self):
+        # 测试两个零张量的欧式距离
+        n_value = np.array([0, 0, 0])
+        b_value = np.array([0, 0, 0])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertEqual(result, 0.0)
+        self.assertIn("Zero tensors", msg)
+
+    def test_scalars(self):
+        # 测试当输入是标量时，返回 UNSUPPORTED
+        n_value = np.array(5)
+        b_value = np.array(10)
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertIn("input must be a vector, not a scalar", msg)
+
+    def test_large_values(self):
+        # 测试当张量包含大值时，应该返回大数值溢出的警告
+        n_value = np.array([1e11, 1e11, 1e11])
+        b_value = np.array([1e10, 1e10, 1e10])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        self.assertIn("tensors's values are large", msg)
+
+    def test_euclidean_distance(self):
+        # 测试计算两个张量之间的欧式距离
+        n_value = np.array([1, 2, 3])
+        b_value = np.array([4, 5, 6])
+
+        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        expected_distance = np.linalg.norm(n_value - b_value)
+        self.assertEqual(result, expected_distance)
+        self.assertEqual(msg, '')

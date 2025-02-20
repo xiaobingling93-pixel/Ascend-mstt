@@ -168,6 +168,7 @@ def statistics_data_check(result_dict):
 
 class TensorComparisonBasic(abc.ABC):
     """NPU和bench中npy数据的比较模板"""
+
     @abc.abstractmethod
     def apply(self, n_value, b_value, relative_err):
         raise NotImplementedError
@@ -190,6 +191,7 @@ def get_relative_err(n_value, b_value):
 
 class GetCosineSimilarity(TensorComparisonBasic):
     """计算cosine相似度"""
+
     @staticmethod
     def correct_data(result):
         if result == CompareConst.NAN:
@@ -224,8 +226,54 @@ class GetCosineSimilarity(TensorComparisonBasic):
         return result, ""
 
 
+class GetEuclideanDistance(TensorComparisonBasic):
+    """计算欧式距离"""
+
+    def apply(self, n_value, b_value, relative_err):
+        msg = ''
+
+        # 检查输入维度是否一致
+        if n_value.shape != b_value.shape:
+            msg = f"Cannot compare by Euclidean Distance, shapes of tensors do not match: \
+            npu:{n_value.shape} vs bench:{b_value.shape}"
+            return CompareConst.UNSUPPORTED, msg
+
+        # 检查输入是否为空
+        if n_value.size == 0 or b_value.size == 0:
+            msg = f"Cannot compare by Euclidean Distance, sizes of tensors must not be empty: \
+            npu:{n_value.size} vs bench:{b_value.size}"
+            return CompareConst.NAN, msg
+
+        # 检查是否包含 NaN 或 Inf
+        if np.any(np.isnan(n_value)) or np.any(np.isnan(b_value)):
+            msg = "Tensor contains NaN values."
+            return CompareConst.NAN, msg
+        if np.any(np.isinf(n_value)) or np.any(np.isinf(b_value)):
+            msg = "Tensor contains Inf values."
+            return CompareConst.NAN, msg
+
+        # 处理零向量
+        if np.all(n_value == 0) and np.all(b_value == 0):
+            return 0.0, "Zero tensors"
+
+        # 输入为标量
+        if np.ndim(n_value) == 0 or np.ndim(b_value) == 0:
+            msg = "Cannot compare by Euclidean Distance, input must be a vector, not a scalar."
+            return CompareConst.UNSUPPORTED, msg
+
+        # 大数值溢出
+        if np.any(np.abs(n_value) > 1e10) or np.any(np.abs(b_value) > 1e10):
+            msg = "tensors's values are large, which may cause overflow."
+
+        # 计算欧式距离
+        distance = np.linalg.norm(n_value - b_value)
+
+        return distance, msg
+
+
 class GetMaxAbsErr(TensorComparisonBasic):
     """计算最大绝对误差"""
+
     def apply(self, n_value, b_value, relative_err):
         temp_res = n_value - b_value
         max_value = np.max(np.abs(temp_res))
@@ -237,6 +285,7 @@ class GetMaxAbsErr(TensorComparisonBasic):
 
 class GetMaxRelativeErr(TensorComparisonBasic):
     """计算最大相对误差"""
+
     def apply(self, n_value, b_value, relative_err):
         max_relative_err = np.max(np.abs(relative_err))
         if np.isnan(max_relative_err):
@@ -247,6 +296,7 @@ class GetMaxRelativeErr(TensorComparisonBasic):
 
 class GetErrRatio(TensorComparisonBasic):
     """计算相对误差小于指定阈值(千分之一、千分之五)的比例"""
+
     def __init__(self, threshold):
         self.threshold = threshold
 
@@ -264,6 +314,7 @@ class GetErrRatio(TensorComparisonBasic):
 class CompareOps:
     compare_ops = {
         "cosine_similarity": GetCosineSimilarity(),
+        "euclidean_distance": GetEuclideanDistance(),
         "max_abs_error": GetMaxAbsErr(),
         "max_relative_error": GetMaxRelativeErr(),
         "one_thousand_err_ratio": GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD),

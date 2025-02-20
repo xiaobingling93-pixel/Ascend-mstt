@@ -110,6 +110,7 @@ def read_dump_data(result_df):
 @dataclass
 class ComparisonResult:
     cos_result: list
+    euc_dist_result: list
     max_err_result:  list
     max_relative_err_result: list
     err_msgs: list
@@ -135,6 +136,7 @@ def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
         for i, _ in enumerate(result.cos_result):
             process_index = i + offset
             result_df.loc[process_index, CompareConst.COSINE] = result.cos_result[i]
+            result_df.loc[process_index, CompareConst.EUC_DIST] = result.euc_dist_result[i]
             result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = result.max_err_result[i]
             result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = result.max_relative_err_result[i]
             result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]

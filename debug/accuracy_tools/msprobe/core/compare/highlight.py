@@ -17,6 +17,7 @@ import abc
 import math
 import multiprocessing
 import re
+from abc import ABC
 from collections import namedtuple
 
 import numpy as np
@@ -97,6 +98,13 @@ class CheckCosineSimilarity(HighlightCheck):
                                    "compared to the input/parameters's")
 
 
+class CheckEuclideanDistance(HighlightCheck):
+    """检查欧式距离"""
+
+    def apply(self, info, color_columns, dump_mode):
+        pass
+
+
 class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
 
@@ -146,11 +154,14 @@ class HighlightRules:
     }
 
     # 用于比较输入和输出的规则
+    # 真实数据检查规则
     compare_rules = {
         "check_order_magnitude": CheckOrderMagnitude(),
         "check_one_thousand_error": CheckOneThousandErrorRatio(),
-        "check_cosine_similarity": CheckCosineSimilarity()
+        "check_cosine_similarity": CheckCosineSimilarity(),
+        "check_euclidean_distance": CheckEuclideanDistance()
     }
+    # 统计量数据检查规则
     summary_compare_rules = {
         "check_order_magnitude": CheckOrderMagnitude(),
         "check_max_relative_diff": CheckMaxRelativeDiff(),
