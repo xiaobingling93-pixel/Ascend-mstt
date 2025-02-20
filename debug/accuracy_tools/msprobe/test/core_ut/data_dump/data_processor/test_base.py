@@ -9,6 +9,7 @@ import numpy as np
 from msprobe.core.common.log import logger
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs, \
     TensorStatInfo, BaseDataProcessor
+from msprobe.core.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
 
 
 class TestModuleForwardInputsOutputs(unittest.TestCase):
@@ -263,3 +264,67 @@ class TestBaseDataProcessor(unittest.TestCase):
         expected_file_name = "test_api.input.suffix.pt"
         expected_file_path = os.path.join(self.data_writer.dump_tensor_data_dir, expected_file_name)
         self.assertEqual(result, (expected_file_name, expected_file_path))
+
+    def test_get_save_file_path_with_save_name(self):
+        self.config.framework = "pytorch"
+        self.processor.save_name = "custom_name"
+        result = self.processor.get_save_file_path("suffix")
+        expected_file_name = "custom_name.pt"
+        expected_file_path = os.path.join(self.data_writer.dump_tensor_data_dir, expected_file_name)
+        self.assertEqual(result, (expected_file_name, expected_file_path))
+
+    def test_set_value_into_nested_structure(self):
+        dst_data_structure = {"key1": [None, None]}
+        self.processor.set_value_into_nested_structure(dst_data_structure, ["key1", 0], 12)
+        excepted_result = {"key1": [12, None]}
+        self.assertEqual(dst_data_structure, excepted_result)
+
+    def test_analyze_element_to_all_none(self):
+        element = {"key1": [12, 3, {"key2": 10, "key3":["12"]}]}
+        result = self.processor.analyze_element_to_all_none(element)
+        excepted_result = {"key1": [None, None, {"key2": None, "key3":[None]}]}
+        self.assertEqual(result, excepted_result)
+
+    @patch.object(MindsporeDataProcessor, "is_hookable_element", return_value=True)
+    def test_register_hook_single_element(self, _):
+        element = MagicMock()
+        element.hasattr = MagicMock(side_effect=lambda attr: attr == "register_hook")
+        element.requires_grad = True
+        hook_fn = MagicMock()
+        MindsporeDataProcessor.register_hook_single_element(element, [1, 2], hook_fn)
+        element.register_hook.assert_called_once()
+
+    @patch("msprobe.core.data_dump.data_processor.base.partial")
+    def test_analyze_debug_backward(self, mock_partial):
+        variable = MagicMock()  # 模拟输入变量
+        grad_name_with_count = "grad_name_1"
+        nested_data_structure = {"key": "value"}  # 模拟嵌套数据结构
+
+        self.processor.recursive_apply_transform = MagicMock()
+        self.processor.set_value_into_nested_structure = MagicMock()
+        self.processor.analyze_element = MagicMock(return_value="grad_data_info")
+        self.processor.register_hook_single_element = MagicMock()
+
+        # call
+        self.processor.analyze_debug_backward(variable, grad_name_with_count, nested_data_structure)
+
+        # check partial
+        args, kwargs = mock_partial.call_args
+        self.assertIn("hook_fn", kwargs)
+        self.assertEqual(args[0], self.processor.register_hook_single_element)
+        self.assertEqual(kwargs["hook_fn"].__name__, "hook_fn")
+
+        wrap_func = mock_partial.return_value
+        self.processor.recursive_apply_transform.assert_called_once_with(variable, wrap_func)
+
+        grad = MagicMock()
+        index = ["layer1", "layer2"]
+        result = kwargs["hook_fn"](grad, index)
+
+        # 验证 hook_fn 内部逻辑
+        self.processor.analyze_element.assert_called_once_with(grad)
+        self.processor.set_value_into_nested_structure.assert_called_once_with(
+            nested_data_structure, ["grad_name_1", "layer1", "layer2"], "grad_data_info"
+        )
+        self.assertIsNone(self.processor.save_name)
+        self.assertEqual(result, grad)
