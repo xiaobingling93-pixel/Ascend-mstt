@@ -19,6 +19,7 @@ import torch
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import replace_last_occurrence
 from torch.utils.checkpoint import checkpoint as origin_checkpoint
 from torch.utils.checkpoint import set_checkpoint_early_stop
 from torch.utils.hooks import BackwardHook
@@ -82,7 +83,7 @@ class ModuleProcesser:
         return hasattr(module, '_backward_hooks') and \
             len(module._backward_hooks) > 0 and \
             module._is_full_backward_hook is False
-    
+
     @staticmethod
     def get_modules_and_names(models):
         modules_and_names_with_index = {}
@@ -109,8 +110,8 @@ class ModuleProcesser:
                 if module == model:
                     continue
                 module_index = (index + Const.SEP) if index != "-1" else ""
-                prefix_name = (BaseScope.Module_Type_Module + Const.SEP + module_index + 
-                                name + Const.SEP + module.__class__.__name__ + Const.SEP)
+                prefix_name = (BaseScope.Module_Type_Module + Const.SEP + module_index +
+                               name + Const.SEP + module.__class__.__name__ + Const.SEP)
                 pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 = build_hook(
                     BaseScope.Module_Type_Module,
                     prefix_name
@@ -182,9 +183,9 @@ class ModuleProcesser:
             if not hasattr(module, "mindstudio_reserved_name") or not module.mindstudio_reserved_name:
                 module.mindstudio_reserved_name = []
             module.mindstudio_reserved_name.append(full_name)
-            forward_full_name = full_name.replace(Const.BACKWARD, Const.FORWARD)
-            ModuleProcesser.module_node[full_name] = ModuleProcesser.module_node[forward_full_name].replace(
-                Const.FORWARD, Const.BACKWARD) if ModuleProcesser.module_node[forward_full_name] else None
+            forward_full_name = replace_last_occurrence(full_name, Const.BACKWARD, Const.FORWARD)
+            ModuleProcesser.module_node[full_name] = replace_last_occurrence(
+                ModuleProcesser.module_node.get(forward_full_name), Const.FORWARD, Const.BACKWARD)
             ModuleProcesser.api_parent_node = None
             if self.scope:
                 self.scope.begin_module(full_name)

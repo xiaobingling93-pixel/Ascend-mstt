@@ -464,3 +464,12 @@ def check_save_param(variable, name, save_backward):
                        "should be bool. "
                        "Skip current save process.")
         raise ValueError
+
+
+def replace_last_occurrence(text, old, new):
+    if text is None:
+        return text
+    index = text.rfind(old)
+    if index != -1:
+        return text[:index] + text[index:].replace(old, new, 1)
+    return text
