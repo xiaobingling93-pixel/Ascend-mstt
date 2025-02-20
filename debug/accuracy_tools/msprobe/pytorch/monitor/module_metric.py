@@ -17,7 +17,7 @@ import re
 import torch
 
 from msprobe.pytorch.monitor.features import get_max, get_min, get_zeros, get_nans, get_norm, get_mean
-from msprobe.pytorch.monitor.utils import NAN_TENSOR_ON_DEVICE
+from msprobe.pytorch.monitor.utils import get_nan_tensor
 
 
 def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
@@ -164,7 +164,7 @@ def get_metrics(ops, tag2tensor, eps, out_dict=None):
             out_dict[tag] = {}
         if not torch.is_tensor(tensor):
             # Non-tensor in/output filled with nan.
-            out_dict[tag].update({metric_name: NAN_TENSOR_ON_DEVICE for metric_name in ops})
+            out_dict[tag].update({metric_name: get_nan_tensor() for metric_name in ops})
             continue
         for metric_name in ops:
             fun_metric = config_metric_registry.get(metric_name)
