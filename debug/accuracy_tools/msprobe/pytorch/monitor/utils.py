@@ -36,7 +36,7 @@ except ImportError:
     if torch.cuda.is_available():
         device = "cuda"
 
-NAN_TENSOR_ON_DEVICE = torch.tensor(torch.nan, device=device)
+NAN_TENSOR_ON_DEVICE = None
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
@@ -55,6 +55,13 @@ class MsgConst:
 
 def get_output_base_dir():
     return os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
+
+
+def get_nan_tensor():
+    global NAN_TENSOR_ON_DEVICE
+    if not NAN_TENSOR_ON_DEVICE:
+        NAN_TENSOR_ON_DEVICE = torch.tensor(torch.nan, device=device)
+    return NAN_TENSOR_ON_DEVICE
 
 
 def filter_special_chars(func):
