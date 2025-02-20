@@ -23,7 +23,7 @@ import numpy as np
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
-from msprobe.core.common.file_utils import path_len_exceeds_limit
+from msprobe.core.common.file_utils import path_len_exceeds_limit, save_npy
 from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
@@ -194,7 +194,7 @@ class TensorDataProcessor(MindsporeDataProcessor):
     
     def _analyze_numpy(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        np.save(file_path, ndarray)
+        save_npy(ndarray, file_path)
         ndarray_json = super()._analyze_numpy(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
