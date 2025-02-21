@@ -28,7 +28,7 @@ class HOOKModule(nn.Module):
     module_count = defaultdict(int)
     inner_stop_hook = {}
 
-    def __init__(self, build_hook) -> None:
+    def __init__(self, hook_build_func) -> None:
         super(HOOKModule, self).__init__()
         self.has_overflow = False
         self.prefix = ""
@@ -38,18 +38,20 @@ class HOOKModule(nn.Module):
         self.stop_hook = HOOKModule.inner_stop_hook.get(self.current_thread, False)
 
         if not self.stop_hook:
-            if hasattr(self, "prefix_op_name_"):
-                self.prefix = self.prefix_op_name_
+            if hasattr(self, "prefix_api_name"):
+                self.prefix = self.prefix_api_name
 
             self.forward_data_collected = False
-            forward_pre_hook, forward_hook, backward_hook, _ = build_hook(self.prefix)
-            if torch_version_above_or_equal_2:
-                self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
-                self.register_forward_hook(forward_hook, with_kwargs=True)
-            else:
-                self.register_forward_pre_hook(forward_pre_hook)
-                self.register_forward_hook(forward_hook)
-            self.register_backward_hook(backward_hook)
+
+            if callable(hook_build_func):
+                forward_pre_hook, forward_hook, backward_hook, _ = hook_build_func(self.prefix)
+                if torch_version_above_or_equal_2:
+                    self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
+                    self.register_forward_hook(forward_hook, with_kwargs=True)
+                else:
+                    self.register_forward_pre_hook(forward_pre_hook)
+                    self.register_forward_hook(forward_hook)
+                self.register_backward_hook(backward_hook)
 
     def __call__(self, *args, **kwargs):
         changed = False

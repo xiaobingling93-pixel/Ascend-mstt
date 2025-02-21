@@ -1,0 +1,175 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import Dict, Any, Optional, Callable, Union, List, Tuple
+
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import load_yaml
+
+
+def _get_attr(module, attr_name):
+    if Const.SEP in attr_name:
+        sub_module_name, sub_attr = attr_name.rsplit(Const.SEP, 1)
+        sub_module = getattr(module, sub_module_name, None)
+        attr = getattr(sub_module, sub_attr, None)
+    else:
+        attr = getattr(module, attr_name, None)
+    return attr
+
+
+class ApiWrapper:
+    def __init__(
+        self, api_types: Dict[str, Dict[str, Any]],
+        api_list_paths: Union[str, List[str], Tuple[str]]
+    ):
+        self.api_types = api_types
+        if not isinstance(api_list_paths, (list, tuple)):
+            api_list_paths = [api_list_paths] * len(self.api_types)
+        elif len(api_list_paths) != len(self.api_types):
+            raise RuntimeError("The number of api_list_paths must be equal to the number of frameworks in 'api_types', "
+                               "when api_list_paths is a list or tuple.")
+        self.api_list_paths = api_list_paths
+        self.api_names = self._get_api_names()
+        self.wrapped_api_functions = dict()
+
+    def wrap_api(
+        self, api_templates, hook_build_func: Optional[Callable]
+    ):
+        api_types_num = sum([len(v) for v in self.api_types.values()])
+        if not isinstance(api_templates, (list, tuple)):
+            api_templates = [api_templates] * api_types_num
+        elif len(api_templates) != len(api_types_num):
+            raise RuntimeError("The number of api_templates must be equal to the number of api_types, "
+                               "when api_templates is a list or tuple.")
+
+        self.wrapped_api_functions.clear()
+        # {"pytorch": {"torch": torch}, "mindspore": {"tensor": ms.Tensor}}
+        index = 0
+        for framework, api_types in self.api_types.items():
+            wrapped_functions_in_framework = dict()
+            for api_type, api_modules in api_types.items():
+                wrapped_functions = dict()
+                name_prefix = Const.API_DATA_PREFIX.get(framework, {}).get(api_type, "API")
+                api_template = api_templates[index]
+                index += 1
+                for api_name in self.api_names.get(framework, {}).get(api_type, []):
+                    ori_api = _get_attr(api_modules[0], api_name)
+                    if callable(ori_api):
+                        def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
+                            def api_function(*args, **kwargs):
+                                return api_template(api_name, api_func, prefix, hook_build_func)(*args, **kwargs)
+                            return api_function
+                        wrapped_functions[api_name] = wrap_api_func(api_name, ori_api, name_prefix,
+                                                                    hook_build_func, api_template)
+                wrapped_functions_in_framework[api_type] = wrapped_functions
+            self.wrapped_api_functions[framework] = wrapped_functions_in_framework
+        return self.wrapped_api_functions
+
+    def _get_api_names(self):
+        api_names = dict()
+
+        for index, framework in enumerate(self.api_types.keys()):
+            api_list = load_yaml(self.api_list_paths[index])
+            valid_names = dict()
+            for api_type, api_modules in self.api_types.get(framework, {}).items():
+                api_from_file = api_list.get(Const.SUPPORT_API_DICT_KEY_MAP.get(framework, {}).get(api_type), [])
+                names = set()
+                for api_name in api_from_file:
+                    target_attr = api_name
+                    target_module = api_modules[0]
+                    if Const.SEP in api_name:
+                        sub_module_name, target_attr = api_name.rsplit('.', 1)
+                        target_module = getattr(api_modules[0], sub_module_name)
+                    if target_attr in dir(target_module):
+                        names.add(api_name)
+                valid_names[api_type] = names
+            api_names[framework] = valid_names
+
+        return api_names
+
+
+class ApiRegistry:
+    """
+    Base class for api registry.
+    """
+
+    def __init__(self, api_types, inner_used_api, supported_api_list_path, api_templates):
+        self.ori_api_attr = dict()
+        self.wrapped_api_attr = dict()
+        self.inner_used_ori_attr = dict()
+        self.inner_used_wrapped_attr = dict()
+        self.api_types = api_types
+        self.inner_used_api = inner_used_api
+        self.supported_api_list_path = supported_api_list_path
+        self.api_templates = api_templates
+
+    @staticmethod
+    def store_ori_attr(ori_api_group, api_list, api_ori_attr):
+        for api in api_list:
+            ori_api_func = _get_attr(ori_api_group, api)
+            api_ori_attr[api] = ori_api_func
+
+    @staticmethod
+    def set_api_attr(api_group, attr_dict):
+        for api, api_attr in attr_dict.items():
+            if Const.SEP in api:
+                sub_module_name, sub_op = api.rsplit(Const.SEP, 1)
+                sub_module = getattr(api_group, sub_module_name, None)
+                if sub_module is not None:
+                    setattr(sub_module, sub_op, api_attr)
+            else:
+                setattr(api_group, api, api_attr)
+
+    def register_all_api(self):
+        for framework, api_types in self.api_types.items():
+            for api_type, api_modules in api_types.items():
+                api_type_with_framework = framework + Const.SEP + api_type
+                self.set_api_attr(api_modules[1], self.wrapped_api_attr.get(api_type_with_framework, {}))
+
+    def register_inner_used_api(self):
+        for api_type in self.inner_used_api.keys():
+            self.set_api_attr(self.inner_used_api.get(api_type)[0], self.inner_used_wrapped_attr.get(api_type, {}))
+
+    def restore_all_api(self):
+        for framework, api_types in self.api_types.items():
+            for api_type, api_modules in api_types.items():
+                api_type_with_framework = framework + Const.SEP + api_type
+                self.set_api_attr(api_modules[1], self.ori_api_attr.get(api_type_with_framework, {}))
+
+    def restore_inner_used_api(self):
+        for api_type in self.inner_used_api.keys():
+            self.set_api_attr(self.inner_used_api.get(api_type)[0], self.inner_used_ori_attr.get(api_type, {}))
+
+    def initialize_hook(self, hook_build_func):
+        api_wrapper = ApiWrapper(self.api_types, self.supported_api_list_path)
+        wrapped_api_functions = api_wrapper.wrap_api(self.api_templates, hook_build_func)
+
+        for framework, api_types in self.api_types.items():
+            for api_type, api_modules in api_types.items():
+                ori_attr = dict()
+                self.store_ori_attr(api_modules[0], api_wrapper.api_names.get(framework).get(api_type), ori_attr)
+                api_type_with_framework = framework + Const.SEP + api_type
+                self.ori_api_attr[api_type_with_framework] = ori_attr
+                self.wrapped_api_attr[api_type_with_framework] = wrapped_api_functions.get(framework).get(api_type)
+
+        for inner_used_api_type, inner_used_api_list in self.inner_used_api.items():
+            ori_attr = dict()
+            wrapped_attr = dict()
+            for api_name in inner_used_api_list[1:]:
+                if self.ori_api_attr.get(inner_used_api_type, {}).get(api_name):
+                    ori_attr[api_name] = self.ori_api_attr.get(inner_used_api_type).get(api_name)
+                    wrapped_attr[api_name] = self.wrapped_api_attr.get(inner_used_api_type).get(api_name)
+            self.inner_used_ori_attr[inner_used_api_type] = ori_attr
+            self.inner_used_wrapped_attr[inner_used_api_type] = wrapped_attr

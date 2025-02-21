@@ -28,7 +28,7 @@ def get_cell_count(name):
     return HOOKCell.cell_count[name]
 
 
-def __init__(self, build_hook) -> None:
+def __init__(self, hook_build_func) -> None:
     super(HOOKCell, self).__init__()
     self.changed_status = False
     self.input_kwargs = {}
@@ -40,11 +40,13 @@ def __init__(self, build_hook) -> None:
             self.prefix = self.prefix_api_name
 
         self.forward_data_collected = False
-        forward_pre_hook, forward_hook, backward_hook, backward_pre_hook = build_hook(self.prefix)
-        self.register_forward_pre_hook(forward_pre_hook)
-        self.register_forward_hook(forward_hook)
-        register_backward_hook_functions["full"](self, backward_hook)
-        register_backward_hook_functions["pre"](self, backward_pre_hook)
+
+        if callable(hook_build_func):
+            forward_pre_hook, forward_hook, backward_hook, backward_pre_hook = hook_build_func(self.prefix)
+            self.register_forward_pre_hook(forward_pre_hook)
+            self.register_forward_hook(forward_hook)
+            register_backward_hook_functions["full"](self, backward_hook)
+            register_backward_hook_functions["pre"](self, backward_pre_hook)
 
 
 # 重载call，加全局标志。

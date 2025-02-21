@@ -1913,3 +1913,7 @@ distributed:
   - all_gather_into_tensor
   - reduce_scatter_tensor
   - batch_isend_irecv
+
+npu_distributed:
+  - isend
+  - irecv
