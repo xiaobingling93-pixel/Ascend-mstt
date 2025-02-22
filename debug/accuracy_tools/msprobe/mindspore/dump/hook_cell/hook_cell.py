@@ -32,17 +32,14 @@ def __init__(self, hook_build_func) -> None:
     super(HOOKCell, self).__init__()
     self.changed_status = False
     self.input_kwargs = {}
-    self.prefix = ""
     if not HOOKCell.g_stop_hook:
         HOOKCell.g_stop_hook = True
         self.changed_status = True
-        if hasattr(self, "prefix_api_name"):
-            self.prefix = self.prefix_api_name
-
         self.forward_data_collected = False
 
+        prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
         if callable(hook_build_func):
-            forward_pre_hook, forward_hook, backward_hook, backward_pre_hook = hook_build_func(self.prefix)
+            forward_pre_hook, forward_hook, backward_hook, backward_pre_hook = hook_build_func(prefix)
             self.register_forward_pre_hook(forward_pre_hook)
             self.register_forward_hook(forward_hook)
             register_backward_hook_functions["full"](self, backward_hook)

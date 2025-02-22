@@ -50,12 +50,11 @@ class ApiWrapper:
         api_types_num = sum([len(v) for v in self.api_types.values()])
         if not isinstance(api_templates, (list, tuple)):
             api_templates = [api_templates] * api_types_num
-        elif len(api_templates) != len(api_types_num):
+        elif len(api_templates) != api_types_num:
             raise RuntimeError("The number of api_templates must be equal to the number of api_types, "
                                "when api_templates is a list or tuple.")
 
         self.wrapped_api_functions.clear()
-        # {"pytorch": {"torch": torch}, "mindspore": {"tensor": ms.Tensor}}
         index = 0
         for framework, api_types in self.api_types.items():
             wrapped_functions_in_framework = dict()
@@ -90,7 +89,7 @@ class ApiWrapper:
                     target_attr = api_name
                     target_module = api_modules[0]
                     if Const.SEP in api_name:
-                        sub_module_name, target_attr = api_name.rsplit('.', 1)
+                        sub_module_name, target_attr = api_name.rsplit(Const.SEP, 1)
                         target_module = getattr(api_modules[0], sub_module_name)
                     if target_attr in dir(target_module):
                         names.add(api_name)
@@ -118,8 +117,7 @@ class ApiRegistry:
     @staticmethod
     def store_ori_attr(ori_api_group, api_list, api_ori_attr):
         for api in api_list:
-            ori_api_func = _get_attr(ori_api_group, api)
-            api_ori_attr[api] = ori_api_func
+            api_ori_attr[api] = _get_attr(ori_api_group, api)
 
     @staticmethod
     def set_api_attr(api_group, attr_dict):
@@ -136,7 +134,8 @@ class ApiRegistry:
         for framework, api_types in self.api_types.items():
             for api_type, api_modules in api_types.items():
                 api_type_with_framework = framework + Const.SEP + api_type
-                self.set_api_attr(api_modules[1], self.wrapped_api_attr.get(api_type_with_framework, {}))
+                for module in api_modules[1]:
+                    self.set_api_attr(module, self.wrapped_api_attr.get(api_type_with_framework, {}))
 
     def register_inner_used_api(self):
         for api_type in self.inner_used_api.keys():
@@ -146,7 +145,8 @@ class ApiRegistry:
         for framework, api_types in self.api_types.items():
             for api_type, api_modules in api_types.items():
                 api_type_with_framework = framework + Const.SEP + api_type
-                self.set_api_attr(api_modules[1], self.ori_api_attr.get(api_type_with_framework, {}))
+                for module in api_modules[1]:
+                    self.set_api_attr(module, self.ori_api_attr.get(api_type_with_framework, {}))
 
     def restore_inner_used_api(self):
         for api_type in self.inner_used_api.keys():

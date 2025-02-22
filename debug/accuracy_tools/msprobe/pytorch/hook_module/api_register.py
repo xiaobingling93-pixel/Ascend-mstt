@@ -32,29 +32,29 @@ torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 
 _api_types = {
     Const.PT_FRAMEWORK: {
-        Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, torch.nn.functional),
-        Const.PT_API_TYPE_TENSOR: (torch.Tensor, torch.Tensor),
-        Const.PT_API_TYPE_TORCH: (torch, torch),
-        Const.PT_API_TYPE__VF: (torch._C._VariableFunctionsClass, torch._VF),
-        Const.PT_API_TYPE_DIST: (dist, dist),
-        Const.PT_API_TYPE_DIST_C10D: (dist.distributed_c10d, dist.distributed_c10d)
+        Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, (torch.nn.functional,)),
+        Const.PT_API_TYPE_TENSOR: (torch.Tensor, (torch.Tensor,)),
+        Const.PT_API_TYPE_TORCH: (torch, (torch,)),
+        Const.PT_API_TYPE_VF: (torch._C._VariableFunctionsClass, (torch._VF,)),
+        Const.PT_API_TYPE_DIST: (dist, (dist, dist.distributed_c10d))
     }
 }
 if not is_gpu:
     import torch_npu
     if torch_without_guard_version:
         _api_types.get(Const.PT_FRAMEWORK).update(
-            {Const.PT_API_TYPE_NPU: (torch.ops.npu, torch_npu)}
+            {
+                Const.PT_API_TYPE_NPU: (torch.ops.npu, (torch_npu, torch.ops.npu))
+            }
         )
     else:
         _api_types.get(Const.PT_FRAMEWORK).update(
-            {Const.PT_API_TYPE_NPU: (torch_npu._C._VariableFunctionsClass, torch_npu)}
+            {Const.PT_API_TYPE_NPU: (torch_npu._C._VariableFunctionsClass, (torch_npu,))}
         )
         _api_types.get(Const.PT_FRAMEWORK).update(
             {
-                Const.PT_API_TYPE_NPU_DIST: (torch_npu.distributed, torch_npu.distributed),
-                Const.PT_API_TYPE_NPU_DIST_C10D: (torch_npu.distributed.distributed_c10d,
-                                                  torch_npu.distributed.distributed_c10d)
+                Const.PT_API_TYPE_NPU_DIST: (torch_npu.distributed, (torch_npu.distributed,
+                                                                     torch_npu.distributed.distributed_c10d))
             }
         )
 
@@ -73,10 +73,10 @@ def dist_module_forward(module, *args, **kwargs):
     if kwargs.get("async_op") or module.api_name in ["isend", "irecv"]:
         if handle and hasattr(handle, 'wait'):
             handle.wait()
-        if module.api_name == "batch_isend_irecv":
-            if isinstance(handle, list):
-                for req in handle:
-                    req.wait()
+    if module.api_name == "batch_isend_irecv":
+        if isinstance(handle, list):
+            for req in handle:
+                req.wait()
     return handle
 
 
@@ -88,7 +88,7 @@ def npu_module_forward(module, *args, **kwargs):
             module.api_name = _cuda_func_mapping.get(module.api_name, module.api_name)
         if module.device in [Const.CUDA_LOWERCASE, Const.CPU_LOWERCASE]:
             return npu_custom_functions[module.api_name](*args, **kwargs)
-        return module.api_func(*args, **kwargs)
+    return module.api_func(*args, **kwargs)
 
 
 forward_methods = {
@@ -108,6 +108,8 @@ class ApiTemplate(HOOKModule):
         self.device = device
         if self.need_hook:
             super().__init__(hook_build_func)
+        if prefix == Const.DIST_API_TYPE_PREFIX:
+            self.op_is_distributed = True
 
     @torch_device_guard
     def forward(self, *args, **kwargs):

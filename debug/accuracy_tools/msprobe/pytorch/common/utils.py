@@ -57,7 +57,7 @@ def parameter_adapter(func):
 
     @wraps(func)
     def inner(self, *args, **kwargs):
-        if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
+        if self.api_name == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
             input_tensor = args[0]
             indices = args[1]
             if indices.dtype == torch.uint8:
@@ -77,7 +77,7 @@ def parameter_adapter(func):
                 else:
                     res = [input_tensor[tensor_index] for tensor_index in indices]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
-        if self.op_name_ == "__eq__" and len(args) > 1 and args[1] is None:
+        if self.api_name == "__eq__" and len(args) > 1 and args[1] is None:
             return False
         return func(self, *args, **kwargs)
 

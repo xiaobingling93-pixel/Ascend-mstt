@@ -20,6 +20,7 @@ from mindspore.mint.nn import functional
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.communication import comm_func
 
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.mindspore.common.const import Const as MsConst
@@ -29,12 +30,12 @@ from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 if not is_mindtorch():
     _api_types = {
         Const.MS_FRAMEWORK: {
-            Const.MS_API_TYPE_OPS: (ops, ops),
-            Const.MS_API_TYPE_TENSOR: (Tensor, Tensor),
-            Const.MS_API_TYPE_STUB_TENSOR: (StubTensor, StubTensor),
-            Const.MS_API_TYPE_MINT: (mint, mint),
-            Const.MS_API_TYPE_MINT_FUNC: (functional, functional),
-            Const.MS_API_TYPE_COM: (comm_func, comm_func)
+            Const.MS_API_TYPE_OPS: (ops, (ops,)),
+            Const.MS_API_TYPE_TENSOR: (Tensor, (Tensor,)),
+            Const.MS_API_TYPE_STUB_TENSOR: (StubTensor, (StubTensor,)),
+            Const.MS_API_TYPE_MINT: (mint, (mint,)),
+            Const.MS_API_TYPE_MINT_FUNC: (functional, (functional,)),
+            Const.MS_API_TYPE_COM: (comm_func, (comm_func,))
         }
     }
 else:
@@ -42,12 +43,11 @@ else:
     import torch_npu
     _api_types = {
         Const.MT_FRAMEWORK: {
-            Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, torch.nn.functional),
-            Const.PT_API_TYPE_TENSOR: (torch.Tensor, torch.Tensor),
-            Const.PT_API_TYPE_TORCH: (torch, torch),
-            Const.PT_API_TYPE_NPU: (torch_npu, torch_npu),
-            Const.PT_API_TYPE_DIST: (torch.distributed, torch.distributed),
-            Const.PT_API_TYPE_DIST_C10D: (torch.distributed.distributed_c10d, torch.distributed.distributed_c10d)
+            Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, (torch.nn.functional,)),
+            Const.PT_API_TYPE_TENSOR: (torch.Tensor, (torch.Tensor,)),
+            Const.PT_API_TYPE_TORCH: (torch, (torch,)),
+            Const.PT_API_TYPE_NPU: (torch_npu, (torch_npu,)),
+            Const.PT_API_TYPE_DIST: (torch.distributed, (torch.distributed, torch.distributed.distributed_c10d))
         }
     }
 
@@ -116,8 +116,10 @@ def get_api_register():
 
     if api_register is None:
         if not is_mindtorch():
-            for attr in dir(StubTensor):
-                if callable(attr):
-                    setattr(StubTensor, attr, stub_method(attr))
+            for attr_name in dir(StubTensor):
+                attr = getattr(StubTensor, attr_name)
+                api_names = load_yaml(_supported_api_list_path[0]).get(Const.MS_API_TYPE_TENSOR, [])
+                if attr_name in api_names and callable(attr):
+                    setattr(StubTensor, attr_name, stub_method(attr))
         api_register = ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
     return api_register

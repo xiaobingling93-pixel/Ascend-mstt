@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -18,8 +16,8 @@
 import os
 from collections import namedtuple
 import re
-import torch
 
+import torch
 try:
     import torch_npu
 except ImportError:
@@ -34,6 +32,7 @@ from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.hook_module.api_register import ApiTemplate, get_api_register
+from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 
 
 hf_32_standard_api = ["conv1d", "conv2d"]
@@ -105,6 +104,7 @@ def exec_api(exec_params):
     kwargs = exec_params.kwargs
     is_autocast = exec_params.is_autocast
     autocast_dtype = exec_params.autocast_dtype
+    out = None
 
     prefix_map = Const.API_DATA_PREFIX.get(Const.PT_FRAMEWORK, {})
     if not prefix_map or api_type not in prefix_map.values() or \
@@ -115,16 +115,19 @@ def exec_api(exec_params):
             Const.ATEN_API_TYPE_PREFIX,
             Const.NPU_API_TYPE_PREFIX
     ):
-        return
+        return out
 
-    api_register = get_api_register()
-    api_register.initialize_hook(None)
-    api_func_type = list(prefix_map.keys())[list(prefix_map.values()).index(api_type)]
-    api_func = api_register.ori_api_attr.get(Const.PT_FRAMEWORK + Const.SEP + api_func_type, {}).get(api_name)
-    if api_func is None:
-        return
+    if api_type == Const.ATEN_API_TYPE_PREFIX:
+        torch_api = AtenOPTemplate(api_name, None, False)
+    else:
+        api_register = get_api_register()
+        api_register.initialize_hook(None)
+        api_func_type = list(prefix_map.keys())[list(prefix_map.values()).index(api_type)]
+        api_func = api_register.ori_api_attr.get(Const.PT_FRAMEWORK + Const.SEP + api_func_type, {}).get(api_name)
+        if api_func is None:
+            return out
 
-    torch_api = ApiTemplate(api_name, api_func, api_type, None, need_hook=False, device=device)
+        torch_api = ApiTemplate(api_name, api_func, api_type, None, need_hook=False, device=device)
     if is_autocast:
         with autocast(dtype=autocast_dtype):
             out = torch_api.forward(*args, **kwargs)

@@ -21,12 +21,13 @@ from unittest.mock import MagicMock, patch
 from mindspore import nn, ops
 
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.utils import Const, DumpPathAggregation
+from msprobe.core.common.utils import Const
+from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import register_backward_hook_functions
-from msprobe.mindspore.dump.hook_cell.api_registry import ApiRegistry, api_register
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.service import Service
@@ -49,7 +50,7 @@ class TestService(unittest.TestCase):
         self.service.primitive_hook_service = MagicMock()
 
     def tearDown(self) -> None:
-        api_register.api_set_ori_func()
+        get_api_register().restore_all_api()
 
     def test_init(self):
         self.assertEqual(self.service.config.level, "L0")
@@ -197,7 +198,7 @@ class TestService(unittest.TestCase):
     @patch.object(Service, 'need_end_service', return_value=False)
     @patch.object(JitDump, 'set_config')
     @patch.object(JitDump, 'set_data_collector')
-    @patch.object(ApiRegistry, 'api_set_hook_func')
+    @patch.object(ApiRegistry, 'register_all_api')
     def test_start_with_jit_dump_enabled(self, mock_api_set_hook_func, mock_set_data_collector,
                                          mock_set_config, mock_need_end_service, mock_register_cell_hook,
                                          mock_register_primitive_hook):
@@ -269,7 +270,7 @@ class TestService(unittest.TestCase):
                          primitive_combined_name)
 
     @patch.object(ApiRegistry, 'initialize_hook')
-    @patch.object(ApiRegistry, 'api_set_hook_func')
+    @patch.object(ApiRegistry, 'register_all_api')
     @patch("msprobe.mindspore.service.logger.info")
     def test_register_hook_new_with_level_mix(self, mock_logger, mock_api_set_hook_func, mock_initialize_hook):
         self.service.config.level = Const.LEVEL_MIX
