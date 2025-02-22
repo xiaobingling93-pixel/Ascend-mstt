@@ -33,7 +33,7 @@ def is_mindtorch():
     mindtorch_check_result = False
     try:
         import torch as test_torch
-        from mindspore._c_expression import Tensor as MindsporeTensor
+        from mindspore import Tensor as MindsporeTensor
     except ImportError:
         return mindtorch_check_result
     tensor = test_torch.tensor(0.0)
