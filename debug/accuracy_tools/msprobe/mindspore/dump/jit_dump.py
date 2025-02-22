@@ -16,7 +16,6 @@
 import os
 from collections import defaultdict
 
-from mindspore import Tensor
 from mindspore._c_expression import PyNativeExecutor_
 try:
     from mindspore.common.api import _MindsporeFunctionExecutor
@@ -24,9 +23,8 @@ except ImportError:
     from mindspore.common.api import _JitExecutor as _MindsporeFunctionExecutor
 
 from msprobe.core.common.log import logger
-from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.common.const import Const
-from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs
+from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
 
@@ -43,8 +41,8 @@ def dump_jit(name, in_feat, out_feat, is_forward):
     if JitDump.need_dump():
         if is_forward:
             JitDump.jit_count[result] += 1
-            name_template = Const.JIT + Const.SEP + result + Const.SEP + str(JitDump.jit_count[result]) + Const.SEP + \
-                            Const.FORWARD
+            name_template = (Const.JIT + Const.SEP + result + Const.SEP +
+                             str(JitDump.jit_count[result]) + Const.SEP + Const.FORWARD)
             JitDump.data_collector.update_api_or_module_name(name_template)
             module_input_output = ModuleForwardInputsOutputs(args=in_feat, kwargs={}, output=out_feat)
             JitDump.data_collector.forward_data_collect(name_template, None, pid, module_input_output)
