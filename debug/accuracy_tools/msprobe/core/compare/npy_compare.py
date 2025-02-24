@@ -232,41 +232,7 @@ class GetEuclideanDistance(TensorComparisonBasic):
     def apply(self, n_value, b_value, relative_err):
         msg = ''
 
-        # 检查输入维度是否一致
-        if n_value.shape != b_value.shape:
-            msg = f"Cannot compare by Euclidean Distance, shapes of tensors do not match: \
-            npu:{n_value.shape} vs bench:{b_value.shape}"
-            return CompareConst.UNSUPPORTED, msg
-
-        # 检查输入是否为空
-        if n_value.size == 0 or b_value.size == 0:
-            msg = f"Cannot compare by Euclidean Distance, sizes of tensors must not be empty: \
-            npu:{n_value.size} vs bench:{b_value.size}"
-            return CompareConst.NAN, msg
-
-        # 检查是否包含 NaN 或 Inf
-        if np.any(np.isnan(n_value)) or np.any(np.isnan(b_value)):
-            msg = "Tensor contains NaN values."
-            return CompareConst.NAN, msg
-        if np.any(np.isinf(n_value)) or np.any(np.isinf(b_value)):
-            msg = "Tensor contains Inf values."
-            return CompareConst.NAN, msg
-
-        # 处理零向量
-        if np.all(n_value == 0) and np.all(b_value == 0):
-            return 0.0, "Zero tensors"
-
-        # 输入为标量
-        if np.ndim(n_value) == 0 or np.ndim(b_value) == 0:
-            msg = "Cannot compare by Euclidean Distance, input must be a vector, not a scalar."
-            return CompareConst.UNSUPPORTED, msg
-
-        # 大数值溢出
-        if np.any(np.abs(n_value) > 1e10) or np.any(np.abs(b_value) > 1e10):
-            msg = "tensors's values are large, which may cause overflow."
-
-        # 计算欧式距离
-        distance = np.linalg.norm(n_value - b_value)
+        distance = np.linalg.norm(n_value - b_value, ord=2)
 
         return distance, msg
 

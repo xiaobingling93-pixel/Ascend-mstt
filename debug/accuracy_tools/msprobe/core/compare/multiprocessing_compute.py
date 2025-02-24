@@ -15,8 +15,11 @@
 
 import multiprocessing
 from dataclasses import dataclass
+from functools import partial
+
 import pandas as pd
 from tqdm import tqdm
+
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import CompareConst
@@ -44,7 +47,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
 
     progress_bar = tqdm(total=len(result_df), desc="API/Module Item Compare Process", unit="row", ncols=100)
 
-    def update_progress(size, progress_lock):
+    def update_progress(size, progress_lock, extra_param=None):
         with progress_lock:
             progress_bar.update(size)
 
@@ -54,8 +57,10 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         result = pool.apply_async(func,
                                   args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
                                   error_callback=err_call,
-                                  callback=update_progress(chunk_size, lock))
+                                  callback=partial(update_progress, chunk_size, lock)
+                                  )
         results.append(result)
+
     final_results = [r.get() for r in results]
     pool.close()
     pool.join()
