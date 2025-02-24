@@ -112,3 +112,37 @@ dyno nputrace --activities NPU --analyse --data_simplification true --log-file /
 # 示例3：只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
 dyno nputrace --activities NPU --log-file /tmp/profile_data
 ```
+
+### NPU Monitor功能
+NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
+
+```bash
+dyno npu-monitor --help
+```
+
+- npu-monitor使用方式
+
+```bash
+dyno npu-monitor [SUBCOMMANDS]
+```
+
+npu-monitor子命令支持的参数选项
+| 子命令 | 参数类型 | 说明 |
+|-------|-------|-------|
+| npu_monitor_start | action | 开启性能监控，设置参数开启，默认不采集 |
+| npu_monitor_stop | action | 停止性能监控，设置参数开启，默认不采集 |
+| report_interval_s | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60 |
+| mspti_activity_kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，需要在启动时设置。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker`|
+
+- npu-monitor示例命令
+
+```bash
+# 示例1：开启性能监控，使用默认配置
+dyno npu-monitor --npu_monitor_start
+
+# 示例2：暂停性能监控
+dyno npu-monitor --npu_monitor_stop
+
+# 示例3：开启性能监控，上报周期30s, 上报数据类型Marker和Kernel
+dyno npu-monitor --npu_monitor_start 30 --mspti_activity_kind Marker,Kernel
+```

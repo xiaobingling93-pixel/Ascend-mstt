@@ -8,6 +8,7 @@ use std::net::ToSocketAddrs;
 
 use anyhow::Result;
 use clap::Parser;
+use std::collections::HashSet;
 
 // Make all the command modules accessible to this file.
 mod commands;
@@ -17,6 +18,7 @@ use commands::gputrace::GpuTraceTriggerConfig;
 use commands::nputrace::NpuTraceConfig;
 use commands::nputrace::NpuTraceOptions;
 use commands::nputrace::NpuTraceTriggerConfig;
+use commands::npumonitor::NpuMonitorConfig;
 use commands::*;
 
 /// Instructions on adding a new Dyno CLI command:
@@ -46,6 +48,22 @@ struct Opts {
     cmd: Command,
 }
 
+const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy"];
+
+fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
+    let allowed_values: HashSet<&str> = ALLOWED_VALUES.iter().cloned().collect();
+
+    let kinds: Vec<&str> = src.split(',').map(|s| s.trim()).collect();
+
+    for kind in &kinds {
+        if !allowed_values.contains(kind) {
+            return Err(format!("Invalid MSPTI activity kind: {}, Possible values: {:?}.]", kind, allowed_values));
+        }
+    }
+    
+    Ok(src.to_string())
+}
+
 #[derive(Debug, Parser)]
 enum Command {
     /// Check the status of a dynolog process
@@ -54,7 +72,7 @@ enum Command {
     Version,
     /// Capture gputrace
     Gputrace {
-        /// Job id of the application to trace
+        /// Job id of the application to trace.
         #[clap(long, default_value_t = 0)]
         job_id: u64,
         /// List of pids to capture trace for (comma separated).
@@ -69,35 +87,35 @@ enum Command {
         /// Log file for trace.
         #[clap(long)]
         log_file: String,
-        /// Unix timestamp used for synchronized collection (milliseconds since epoch)
+        /// Unix timestamp used for synchronized collection (milliseconds since epoch).
         #[clap(long, default_value_t = 0)]
         profile_start_time: u64,
         /// Start iteration roundup, starts an iteration based trace at a multiple
         /// of this value.
         #[clap(long, default_value_t = 1)]
         profile_start_iteration_roundup: u64,
-        /// Max number of processes to profile
+        /// Max number of processes to profile.
         #[clap(long, default_value_t = 3)]
         process_limit: u32,
-        /// Record PyTorch operator input shapes and types
+        /// Record PyTorch operator input shapes and types.
         #[clap(long, action)]
         record_shapes: bool,
-        /// Profile PyTorch memory
+        /// Profile PyTorch memory.
         #[clap(long, action)]
         profile_memory: bool,
-        /// Capture Python stacks in traces
+        /// Capture Python stacks in traces.
         #[clap(long, action)]
         with_stacks: bool,
-        /// Annotate operators with analytical flops
+        /// Annotate operators with analytical flops.
         #[clap(long, action)]
         with_flops: bool,
-        /// Capture PyTorch operator modules in traces
+        /// Capture PyTorch operator modules in traces.
         #[clap(long, action)]
         with_modules: bool,
     },
-    /// Capture nputrace. Subcommand functions aligned with Ascend Torch Profiler
+    /// Capture nputrace. Subcommand functions aligned with Ascend Torch Profiler.
     Nputrace {
-        /// Job id of the application to trace
+        /// Job id of the application to trace.
         #[clap(long, default_value_t = 0)]
         job_id: u64,
         /// List of pids to capture trace for (comma separated).
@@ -112,57 +130,72 @@ enum Command {
         /// Log file for trace.
         #[clap(long)]
         log_file: String,
-        /// Unix timestamp used for synchronized collection (milliseconds since epoch)
+        /// Unix timestamp used for synchronized collection (milliseconds since epoch).
         #[clap(long, default_value_t = 0)]
         profile_start_time: u64,
-        /// Number of steps to start profile
+        /// Number of steps to start profile.
         #[clap(long, default_value_t = 0)]
         start_step: u64,
-        /// Max number of processes to profile
+        /// Max number of processes to profile.
         #[clap(long, default_value_t = 3)]
         process_limit: u32,
-        /// Whether to record PyTorch operator input shapes and types
+        /// Whether to record PyTorch operator input shapes and types.
         #[clap(long, action)]
         record_shapes: bool,
-        /// Whether to profile PyTorch memory
+        /// Whether to profile PyTorch memory.
         #[clap(long, action)]
         profile_memory: bool,
-        /// Whether to profile the Python call stack in trace
+        /// Whether to profile the Python call stack in trace.
         #[clap(long, action)]
         with_stack: bool,
-        /// Annotate operators with analytical flops
+        /// Annotate operators with analytical flops.
         #[clap(long, action)]
         with_flops: bool,
-        /// Whether to profile PyTorch operator modules in traces
+        /// Whether to profile PyTorch operator modules in traces.
         #[clap(long, action)]
         with_modules: bool,
-        /// The scope of the profile's events
+        /// The scope of the profile's events.
         #[clap(long, value_parser = ["CPU,NPU", "NPU,CPU", "CPU", "NPU"], default_value = "CPU,NPU")]
         activities: String,
-        /// Profiler level
+        /// Profiler level.
         #[clap(long, value_parser = ["Level0", "Level1", "Level2", "Level_none"], default_value = "Level0")]
         profiler_level: String,
-        /// AIC metrics
+        /// AIC metrics.
         #[clap(long, value_parser = ["AiCoreNone", "PipeUtilization", "ArithmeticUtilization", "Memory", "MemoryL0", "ResourceConflictRatio", "MemoryUB", "L2Cache", "MemoryAccess"], default_value = "AiCoreNone")]
         aic_metrics: String,
-        /// Whether to analyse the data after collection
+        /// Whether to analyse the data after collection.
         #[clap(long, action)]
         analyse: bool,
-        /// Whether to collect L2 cache
+        /// Whether to collect L2 cache.
         #[clap(long, action)]
         l2_cache: bool,
-        /// Whether to collect op attributes
+        /// Whether to collect op attributes.
         #[clap(long, action)]
         op_attr: bool,
-        /// GC detect threshold
+        /// GC detect threshold.
         #[clap(long)]
         gc_detect_threshold: Option<f32>,
-        /// Whether to streamline data after analyse is complete 
+        /// Whether to streamline data after analyse is complete.
         #[clap(long, value_parser = ["true", "false"], default_value = "true")]
         data_simplification: String,
-        /// Types of data exported by the profiler
+        /// Types of data exported by the profiler.
         #[clap(long, value_parser = ["Text", "Db"], default_value = "Text")]
         export_type: String,
+    },
+    /// Ascend MSPTI Monitor
+    NpuMonitor {
+        /// Start NPU monitor.
+        #[clap(long, action)]
+        npu_monitor_start: bool,
+        /// Stop NPU monitor.
+        #[clap(long, action)]
+        npu_monitor_stop: bool,
+        /// NPU monitor report interval in seconds.
+        #[clap(long, default_value_t = 60)]
+        report_interval_s: u32,
+        /// MSPTI collect activity kind
+        #[clap(long, value_parser = parse_mspti_activity_kinds, default_value = "Marker")]
+        mspti_activity_kind: String,
     },
     /// Pause dcgm profiling. This enables running tools like Nsight compute and avoids conflicts.
     DcgmPause {
@@ -295,6 +328,20 @@ fn main() -> Result<()> {
                 trace_options,
             };
             nputrace::run_nputrace(dyno_client, job_id, &pids, process_limit, trace_config)
+        }
+        Command::NpuMonitor {
+            npu_monitor_start,
+            npu_monitor_stop,
+            report_interval_s,
+            mspti_activity_kind,
+        } => {
+            let npu_mon_config = NpuMonitorConfig {
+                npu_monitor_start,
+                npu_monitor_stop,
+                report_interval_s,
+                mspti_activity_kind
+            };
+            npumonitor::run_npumonitor(dyno_client, npu_mon_config)
         }
         Command::DcgmPause { duration_s } => dcgm::run_dcgm_pause(dyno_client, duration_s),
         Command::DcgmResume => dcgm::run_dcgm_resume(dyno_client),
