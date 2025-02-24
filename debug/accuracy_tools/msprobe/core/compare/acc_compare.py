@@ -311,9 +311,9 @@ class Comparator:
                 ]
 
                 if self.dump_mode == Const.SUMMARY:
-                    result_item = base_result_item + [" "] * 8
+                    result_item = base_result_item + [" "] * 8  # 8个统计量数据情况的比对指标
                 else:
-                    result_item = base_result_item + [" "] * 5
+                    result_item = base_result_item + [" "] * 6  # 6个真实数据情况的比对指标
 
                 npu_summary_data = npu_ops_all.get(ms_op_name).get("summary")
                 result_item.extend(npu_summary_data)
