@@ -8,6 +8,7 @@ use std::net::ToSocketAddrs;
 
 use anyhow::Result;
 use clap::Parser;
+use std::collections::HashSet;
 
 // Make all the command modules accessible to this file.
 mod commands;
@@ -45,6 +46,22 @@ struct Opts {
     port: u16,
     #[clap(subcommand)]
     cmd: Command,
+}
+
+const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy"];
+
+fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
+    let allowed_values: HashSet<&str> = ALLOWED_VALUES.iter().cloned().collect();
+
+    let kinds: Vec<&str> = src.split(',').map(|s| s.trim()).collect();
+
+    for kind in &kinds {
+        if !allowed_values.contains(kind) {
+            return Err(format!("Invalid MSPTI activity kind: {}, Possible values: {:?}.]", kind, allowed_values));
+        }
+    }
+    
+    Ok(src.to_string())
 }
 
 #[derive(Debug, Parser)]
@@ -177,7 +194,7 @@ enum Command {
         #[clap(long, default_value_t = 60)]
         report_interval_s: u32,
         /// MSPTI collect activity kind
-        #[clap(long, value_parser = ["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy"], default_value = "Marker")]
+        #[clap(long, value_parser = parse_mspti_activity_kinds, default_value = "Marker")]
         mspti_activity_kind: String,
     },
     /// Pause dcgm profiling. This enables running tools like Nsight compute and avoids conflicts.
