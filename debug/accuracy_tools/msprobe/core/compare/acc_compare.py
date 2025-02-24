@@ -459,9 +459,10 @@ class Comparator:
         euc_dist_result = []
         max_err_result = []
         max_relative_err_result = []
-        err_mess = []
         one_thousand_err_ratio_result = []
         five_thousand_err_ratio_result = []
+        err_mess = []
+
         is_print_compare_log = input_param.get("is_print_compare_log")
         bench_data = load_json(input_param.get("bench_json_path")).get('data')
         for i in range(len(result_df)):
@@ -483,18 +484,18 @@ class Comparator:
             euc_dist_result.append(euc_dist)
             max_err_result.append(max_abs_err)
             max_relative_err_result.append(max_relative_err)
-            err_mess.append(err_msg)
             one_thousand_err_ratio_result.append(one_thousand_err_ratio)
             five_thousand_err_ratio_result.append(five_thousand_err_ratio)
+            err_mess.append(err_msg)
 
         cr = ComparisonResult(
             cos_result=cos_result,
             euc_dist_result=euc_dist_result,
             max_err_result=max_err_result,
             max_relative_err_result=max_relative_err_result,
-            err_msgs=err_mess,
             one_thousand_err_ratio_result=one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result=five_thousand_err_ratio_result
+            five_thousand_err_ratio_result=five_thousand_err_ratio_result,
+            err_msgs=err_mess
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)

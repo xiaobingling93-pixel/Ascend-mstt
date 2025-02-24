@@ -191,17 +191,21 @@ summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_
                   'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
                   'Warning', '']
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
-              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 1, 1, 0.95, 1, 1, 1, 1, 1, 1.01, 1, 1, 1,
+              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0.5, 1, 1, 0.95, 1,
+              1, 1, 1, 1, 1.01, 1, 1, 1,
               'Yes', '']
 line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 1, 1, 0.59, 1, 'nan', 0, 1, 1, 19, 1, 1, 1,
-          'Warning', '']
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1, 1, 0.59, 1,
+          'nan', 0, 1, 1, 19, 1, 1, 1,
+          'Yes', '']
 line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 1, 1, 0.8, 1, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1,
-          'Warning', '']
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 0.5, 1, 1, 0.8, 1,
+          0, 0.12, 0, 1, 1, 0.1, 1, 1,
+          'Yes', '']
 line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 1.1e+10, 1, 0.85, 1, 9, 0.12, 0, 1, 1, 0.1, 1,
-          1, 1, 'Warning', '']
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1.1e+10, 1, 0.85, 1,
+          9, 0.12, 0, 1, 1, 0.1, 1, 1,
+          'Yes', '']
 
 op_data = {
     'input_args': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
@@ -363,7 +367,7 @@ class TestUtilsMethods(unittest.TestCase):
                            'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '', '', '',
                            1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', 'File']]
         result_all = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '',
+                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '',
                        1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', 'File', '-1']]
         columns_md5_stack_mode_true = CompareConst.MD5_COMPARE_RESULT_HEADER + ['NPU_Stack_Info']
         result_table_md5_true = pd.DataFrame(result_md5, columns=columns_md5_stack_mode_true, dtype=object)
@@ -403,10 +407,10 @@ class TestUtilsMethods(unittest.TestCase):
                            'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '', '', '',
                            1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']]
         result_all_test = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                            'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '',
+                            'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '',
                             1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '', '-1']]
         result_all = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '',
+                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '',
                        1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
         columns_md5_stack_mode_true = CompareConst.MD5_COMPARE_RESULT_HEADER
         result_table_md5_true = pd.DataFrame(result_md5, columns=columns_md5_stack_mode_true, dtype='object')
@@ -632,10 +636,10 @@ class TestUtilsMethods(unittest.TestCase):
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'unsupported', 'unsupported', 'unsupported',
-                   'unsupported', 'unsupported',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                   'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
                    1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', '-1']]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -669,7 +673,7 @@ class TestUtilsMethods(unittest.TestCase):
         result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, {})
 
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'No bench data matched.'])
+                                  'unsupported', 'No bench data matched.'])
 
     def test_compare_by_op_2(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
@@ -691,7 +695,7 @@ class TestUtilsMethods(unittest.TestCase):
                                               {'Functional.linear.0.forward': {'input_args': [
                                                   {'data_name': 'Functional.linear.0.forward.input.0.pt'}]}})
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  f'Dump file: {pt_path} not found.'])
+                                  'unsupported', f'Dump file: {pt_path} not found.'])
 
         pt_name = 'Functional.linear.0.forward.input.0.pt'
         pt_path = os.path.join(base_dir, pt_name)
@@ -699,13 +703,13 @@ class TestUtilsMethods(unittest.TestCase):
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, {})
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'Bench does not have data file.'])
+                                  'unsupported', 'Bench does not have data file.'])
 
         generate_pt(base_dir)
         result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param,
                                               {'Functional.linear.0.forward': {'input_args': [
                                                   {'data_name': 'Functional.linear.0.forward.input.0.pt'}]}})
-        self.assertEqual(result, [1.0, 0.0, 0.0, 1.0, 1.0, ''])
+        self.assertEqual(result, [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, ''])
 
     def test_get_bench_data_name_input(self):
         bench_op_name = "Functional.linear.0.forward.input.0"

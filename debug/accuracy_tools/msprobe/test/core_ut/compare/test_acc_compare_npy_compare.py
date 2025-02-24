@@ -471,7 +471,7 @@ class TestUtilsMethods(unittest.TestCase):
         error_flag = False
         err_msg = ''
         a, b = compare_ops_apply(n_value, b_value, error_flag, err_msg)
-        self.assertEqual(a, [1.0, 0.0, 0.0, 1.0, 1.0])
+        self.assertEqual(a, [1.0, 0.0, 0.0, 0.0, 1.0, 1.0])
         self.assertEqual(b, '')
 
 
@@ -492,7 +492,7 @@ class TestGetEuclideanDistance(unittest.TestCase):
     def test_empty_tensor(self):
         # 测试当输入的张量为空时，返回 NAN
         n_value = np.array([])
-        b_value = np.array([1, 2, 3])
+        b_value = np.array([])
 
         result, msg = self.euc_distance.apply(n_value, b_value, None)
         self.assertEqual(result, CompareConst.NAN)

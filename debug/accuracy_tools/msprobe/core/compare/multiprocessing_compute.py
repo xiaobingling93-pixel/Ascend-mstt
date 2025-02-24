@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -113,9 +113,9 @@ class ComparisonResult:
     euc_dist_result: list
     max_err_result:  list
     max_relative_err_result: list
-    err_msgs: list
     one_thousand_err_ratio_result: list
     five_thousand_err_ratio_result: list
+    err_msgs: list
 
 
 def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
@@ -139,13 +139,13 @@ def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
             result_df.loc[process_index, CompareConst.EUC_DIST] = result.euc_dist_result[i]
             result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = result.max_err_result[i]
             result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = result.max_relative_err_result[i]
-            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
-            result_df.loc[process_index, CompareConst.ACCURACY] = (
-                check_accuracy(result.cos_result[i], result.max_err_result[i]))
             result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = (
                 result.one_thousand_err_ratio_result)[i]
             result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = (
                 result.five_thousand_err_ratio_result)[i]
+            result_df.loc[process_index, CompareConst.ACCURACY] = (
+                check_accuracy(result.cos_result[i], result.max_err_result[i]))
+            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
         return result_df
     except ValueError as e:
         logger.error('result dataframe is not found.')
