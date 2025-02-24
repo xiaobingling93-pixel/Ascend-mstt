@@ -78,7 +78,7 @@ class TestMsGraphCompare(unittest.TestCase):
 
         result_correct = (
             f"[['{npu_file_path}', '{bench_file_path}', dtype('float16'), dtype('float16'), (10, 10), (10, 10), "
-            f"44.0, 44.0, 44.0, inf, 44.0, 44.0, 44.0, inf, 'Yes', '', 1.0, 0.0, 0.0, 1.0, 1.0]]")
+            f"44.0, 44.0, 44.0, inf, 44.0, 44.0, 44.0, inf, 'Yes', '', 1.0, 0.0, 0.0, 0.0, 1.0, 1.0]]")
 
         self.assertNotEqual(len(files), 0)
         self.assertEqual(result, result_correct)

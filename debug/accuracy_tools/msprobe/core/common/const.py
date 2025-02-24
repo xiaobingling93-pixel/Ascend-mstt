@@ -469,7 +469,7 @@ class CompareConst:
         BENCH_MEAN: None, BENCH_NORM: None, ACCURACY: '', ERROR_MESSAGE: ''
     }
     MS_GRAPH_NPY = {
-        COSINE: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
+        COSINE: None, EUC_DIST: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
         FIVE_THOUSANDTHS_ERR_RATIO: None
     }
     MS_GRAPH_STATISTIC = {

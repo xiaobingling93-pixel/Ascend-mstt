@@ -195,11 +195,12 @@ class GraphMSComparator:
             if not error_flag:
                 result_list, err_msg = compare_ops_apply(n_value, b_value, False, "")
                 result_dict[CompareConst.COSINE] = result_list[0]
-                result_dict[CompareConst.MAX_ABS_ERR] = result_list[1]
-                result_dict[CompareConst.MAX_RELATIVE_ERR] = result_list[2]
-                result_dict[CompareConst.ONE_THOUSANDTH_ERR_RATIO] = result_list[3]
-                result_dict[CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = result_list[4]
-                result_dict[CompareConst.ACCURACY] = check_accuracy(result_list[0], result_list[1])
+                result_dict[CompareConst.EUC_DIST] = result_list[1]
+                result_dict[CompareConst.MAX_ABS_ERR] = result_list[2]
+                result_dict[CompareConst.MAX_RELATIVE_ERR] = result_list[3]
+                result_dict[CompareConst.ONE_THOUSANDTH_ERR_RATIO] = result_list[4]
+                result_dict[CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = result_list[5]
+                result_dict[CompareConst.ACCURACY] = check_accuracy(result_list[0], result_list[2])
                 result_dict[CompareConst.ERROR_MESSAGE] = err_msg
 
             return pd.Series(result_dict)
