@@ -97,13 +97,6 @@ class CheckCosineSimilarity(HighlightCheck):
                                    "compared to the input/parameters's")
 
 
-class CheckEuclideanDistance(HighlightCheck):
-    """检查欧式距离"""
-
-    def apply(self, info, color_columns, dump_mode):
-        pass
-
-
 class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
 
@@ -157,8 +150,7 @@ class HighlightRules:
     compare_rules = {
         "check_order_magnitude": CheckOrderMagnitude(),
         "check_one_thousand_error": CheckOneThousandErrorRatio(),
-        "check_cosine_similarity": CheckCosineSimilarity(),
-        "check_euclidean_distance": CheckEuclideanDistance()
+        "check_cosine_similarity": CheckCosineSimilarity()
     }
     # 统计量数据检查规则
     summary_compare_rules = {
