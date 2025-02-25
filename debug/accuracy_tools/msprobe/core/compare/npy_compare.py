@@ -70,7 +70,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         error_flag = True
         return CompareConst.NONE, CompareConst.NONE, error_flag, err_msg
     if not n_value.shape:  # 判断数据是否为0维张量
-        err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', {CompareConst.EUC_DIST}"
+        err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', '{CompareConst.EUC_DIST}', "
                    f"'{CompareConst.ONE_THOUSANDTH_ERR_RATIO}' and '{CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}'. ")
         error_flag = False  # 0-d tensor 最大绝对误差、最大相对误差仍然支持计算，因此error_flag设置为False，不做统一处理
         return n_value, b_value, error_flag, err_msg

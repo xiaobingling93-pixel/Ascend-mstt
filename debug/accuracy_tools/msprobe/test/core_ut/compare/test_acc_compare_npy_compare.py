@@ -113,7 +113,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
 
         self.assertFalse(error_flag)
-        self.assertEqual(err_msg, "This is type of 0-d tensor, can not calculate 'Cosine', "
+        self.assertEqual(err_msg, "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', "
                                   "'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. ")
 
     def test_get_error_flag_and_msg_shape_unmatch(self):
@@ -239,15 +239,17 @@ class TestUtilsMethods(unittest.TestCase):
         b_value_1 = np.array(1)
         relative_err = get_relative_err(n_value_1, b_value_1)
         n_value_1, b_value_1 = reshape_value(n_value_1, b_value_1)
-        result, err_msg = op.apply(n_value_1, b_value_1, relative_err)
+        err_msg = "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', 'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. "
+        result, err_msg = op.apply(n_value_1, b_value_1, relative_err, err_msg)
         self.assertEqual(result, CompareConst.UNSUPPORTED)
-        self.assertEqual(err_msg, "")
+        self.assertEqual(err_msg, "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', 'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. ")
 
         n_value_2 = np.array([1, 2])
         b_value_2 = np.array([1, 2])
         relative_err = get_relative_err(n_value_2, b_value_2)
         n_value_2, b_value_2 = reshape_value(n_value_2, b_value_2)
-        result, err_msg = op.apply(n_value_2, b_value_2, relative_err)
+        err_msg = ""
+        result, err_msg = op.apply(n_value_2, b_value_2, relative_err, err_msg)
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
 
@@ -255,7 +257,8 @@ class TestUtilsMethods(unittest.TestCase):
         b_value_3 = np.array([0, 0])
         relative_err = get_relative_err(n_value_3, b_value_3)
         n_value_3, b_value_3 = reshape_value(n_value_3, b_value_3)
-        result, err_msg = op.apply(n_value_3, b_value_3, relative_err)
+        err_msg = ""
+        result, err_msg = op.apply(n_value_3, b_value_3, relative_err, err_msg)
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
 
@@ -263,7 +266,8 @@ class TestUtilsMethods(unittest.TestCase):
         b_value_4 = np.array([1, 2])
         relative_err = get_relative_err(n_value_4, b_value_4)
         n_value_4, b_value_4 = reshape_value(n_value_4, b_value_4)
-        result, err_msg = op.apply(n_value_4, b_value_4, relative_err)
+        err_msg = ""
+        result, err_msg = op.apply(n_value_4, b_value_4, relative_err, err_msg)
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.')
 
@@ -271,7 +275,8 @@ class TestUtilsMethods(unittest.TestCase):
         b_value_5 = np.array([0, 0])
         relative_err = get_relative_err(n_value_5, b_value_5)
         n_value_5, b_value_5 = reshape_value(n_value_5, b_value_5)
-        result, err_msg = op.apply(n_value_5, b_value_5, relative_err)
+        err_msg = ""
+        result, err_msg = op.apply(n_value_5, b_value_5, relative_err, err_msg)
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in Bench dump data.')
 
@@ -282,7 +287,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value_1 = np.array([1])
         relative_err = get_relative_err(n_value_1, b_value_1)
         n_value_1, b_value_1 = reshape_value(n_value_1, b_value_1)
-        result, err_msg = op.apply(n_value_1, b_value_1, relative_err)
+        err_msg = ""
+
+        result, err_msg = op.apply(n_value_1, b_value_1, relative_err, err_msg)
         self.assertEqual(result, CompareConst.UNSUPPORTED)
         self.assertEqual(err_msg, "This is a 1-d tensor of length 1.")
 
@@ -294,8 +301,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 1])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, "Cannot compare by Cosine Similarity, the dump data has NaN.")
@@ -319,8 +327,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([0, 0])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, 2.0)
         self.assertEqual(err_msg, "")
@@ -333,8 +342,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 1])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, "Cannot compare by MaxAbsError, the data contains nan/inf/-inf in dump data.")
@@ -347,8 +357,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 1])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
@@ -361,8 +372,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 1])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, "Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data.")
@@ -375,8 +387,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 1])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, 0.5)
         self.assertEqual(err_msg, "")
@@ -387,11 +400,12 @@ class TestUtilsMethods(unittest.TestCase):
         n_value = np.array(1)   # 标量
         b_value = np.array(1)
         relative_err = np.array(0)
+        err_msg = "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', 'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. "
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, CompareConst.UNSUPPORTED)
-        self.assertEqual(err_msg, "")
+        self.assertEqual(err_msg, "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', 'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. ")
 
     def test_GetThousandErrRatio_not_size(self):
         op = GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD)
@@ -399,8 +413,9 @@ class TestUtilsMethods(unittest.TestCase):
         n_value = np.array([1, 2])
         b_value = np.array([1, 2])
         relative_err = np.array([])     # 空数组
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, "")
@@ -412,8 +427,9 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 1])
         relative_err = get_relative_err(n_value, b_value)
         n_value, b_value = reshape_value(n_value, b_value)
+        err_msg = ""
 
-        result, err_msg = op.apply(n_value, b_value, relative_err)
+        result, err_msg = op.apply(n_value, b_value, relative_err, err_msg)
 
         self.assertEqual(result, 0.5)
         self.assertEqual(err_msg, "")
@@ -480,12 +496,25 @@ class TestGetEuclideanDistance(unittest.TestCase):
     def setUp(self):
         self.euc_distance = GetEuclideanDistance()
 
-    def test_euclidean_distance(self):
+    def test_euclidean_distance_normal(self):
         # 测试计算两个张量之间的欧式距离
         n_value = np.array([1, 2, 3])
         b_value = np.array([4, 5, 6])
+        relative_err = None
+        err_msg = ""
 
-        result, msg = self.euc_distance.apply(n_value, b_value, None)
+        result, msg = self.euc_distance.apply(n_value, b_value, relative_err, err_msg)
         expected_distance = np.linalg.norm(n_value - b_value)
         self.assertEqual(result, expected_distance)
         self.assertEqual(msg, '')
+
+    def test_euclidean_distance_0d_tensor(self):
+        # 测试计算两个张量之间的欧式距离
+        n_value = np.array(1)
+        b_value = np.array(1)
+        relative_err = None
+        err_msg = "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', 'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. "
+
+        result, msg = self.euc_distance.apply(n_value, b_value, relative_err, err_msg)
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertEqual(msg, "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', 'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. ")
