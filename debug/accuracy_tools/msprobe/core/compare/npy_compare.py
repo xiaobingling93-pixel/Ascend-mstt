@@ -230,11 +230,12 @@ class GetEuclideanDistance(TensorComparisonBasic):
     """计算欧式距离"""
 
     def apply(self, n_value, b_value, relative_err, err_msg):
-        msg = ''
+        if "This is type of 0-d tensor" in err_msg:
+            return CompareConst.UNSUPPORTED, err_msg
 
         distance = np.linalg.norm(n_value - b_value, ord=2)
 
-        return distance, msg
+        return distance, ""
 
 
 class GetMaxAbsErr(TensorComparisonBasic):
