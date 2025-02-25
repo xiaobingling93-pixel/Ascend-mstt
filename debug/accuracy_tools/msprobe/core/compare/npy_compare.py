@@ -201,7 +201,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
         return result
 
     def apply(self, n_value, b_value, relative_err, err_msg):
-        if "This is type of 0-d tensor" in n_value:
+        if "This is type of 0-d tensor" in err_msg:
             return CompareConst.UNSUPPORTED, err_msg
 
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -267,7 +267,7 @@ class GetErrRatio(TensorComparisonBasic):
         self.threshold = threshold
 
     def apply(self, n_value, b_value, relative_err, err_msg):
-        if "This is type of 0-d tensor" in n_value:
+        if "This is type of 0-d tensor" in err_msg:
             return CompareConst.UNSUPPORTED, err_msg
 
         if not np.size(relative_err):
