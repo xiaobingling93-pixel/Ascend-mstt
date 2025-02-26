@@ -351,7 +351,7 @@ class TestUtilsMethods(unittest.TestCase):
         finally:
             shutil.rmtree(data_path)
 
-    @patch('msprobe.mindspore.ms_compare.detect_framework_by_dump_json')
+    @patch('msprobe.mindspore.compare.ms_compare.detect_framework_by_dump_json')
     def test_check_cross_framework_valid_pytorch(self, mock_detect_framework):
         mock_detect_framework.return_value = Const.PT_FRAMEWORK
 
@@ -359,7 +359,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertTrue(result)
 
-    @patch('msprobe.mindspore.ms_compare.detect_framework_by_dump_json')
+    @patch('msprobe.mindspore.compare.ms_compare.detect_framework_by_dump_json')
     def test_check_cross_framework_invalid_framework(self, mock_detect_framework):
         mock_detect_framework.return_value = Const.MS_FRAMEWORK
 

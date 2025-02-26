@@ -494,7 +494,7 @@ class TestCheckCrtValid(TestCase):
 
 class TestDetectFrameworkByDumpJson(unittest.TestCase):
 
-    @patch('msprobe.common.utils.load_json')
+    @patch('msprobe.core.common.utils.load_json')
     def test_valid_pytorch_framework(self, mock_load_json):
         mock_load_json.return_value = {"framework": Const.PT_FRAMEWORK}
 
@@ -502,7 +502,7 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
 
         self.assertEqual(result, Const.PT_FRAMEWORK)
 
-    @patch('msprobe.common.utils.load_json')
+    @patch('msprobe.core.common.utils.load_json')
     def test_valid_mindspore_framework(self, mock_load_json):
         mock_load_json.return_value = {"framework": Const.MS_FRAMEWORK}
 
@@ -510,7 +510,7 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
 
         self.assertEqual(result, Const.MS_FRAMEWORK)
 
-    @patch('msprobe.common.utils.load_json')
+    @patch('msprobe.core.common.utils.load_json')
     def test_invalid_framework(self, mock_load_json):
         # 模拟 load_json 返回一个没有 "framework" 键的字典
         mock_load_json.return_value = {}
