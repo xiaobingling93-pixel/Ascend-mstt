@@ -40,6 +40,7 @@ struct AclTensorInfo {
     std::string dumpPath;
     const uint8_t* aclData;
     AclDtype dtype;
+    AclDtype oriDtype;
     AclFormat deviceFmt;
     AclFormat hostFmt;
     AclShape deviceShape;
@@ -52,7 +53,7 @@ struct AclTensorInfo {
     std::vector<uint8_t> transBuf;
 
     std::string ToString() const {
-        return "AclTensor(path=" + dumpPath + ",dtype=" + std::to_string(dtype) + ",inout=" + inout + ")";
+        return "AclTensor(path=" + dumpPath + ",dtype=" + DataUtils::GetDTypeString(dtype) + ",inout=" + inout + ")";
     }
 };
 
@@ -71,6 +72,7 @@ AclTensorInfo ParseAttrsFromDumpData(const std::string &dumpPath, const uint8_t*
                                      const std::string& io, uint32_t slot);
 DebuggerErrno TransFormatD2H(AclTensorInfo& tensor);
 DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to);
+bool IsDtypeSupportTrans(AclDtype dtype);
 
 }
 }

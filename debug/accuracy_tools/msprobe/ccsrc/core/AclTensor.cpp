@@ -291,7 +291,11 @@ static inline void AssertDim(const AclShape& shape, size_t dim)
 
 static inline void AssertConsis(const AclTensorInfo& tensor)
 {
-    if (EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor) != tensor.dataSize) {
+    size_t tensor_size = EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor);
+    // Processing dtype whose size < 1
+    // The ele num of quantization type(qint4*2) in MindSpore must be even.
+    if (tensor.dtype == AclDtype::DT_INT4) tensor_size = EleNumOfTensor(tensor, false) / 2;
+    if (tensor_size != tensor.dataSize) {
         throw std::runtime_error(tensor + ": The internal data of Tensor is inconsistent.");
     }
 }
@@ -343,7 +347,7 @@ AclTensorInfo ParseAttrsFromDumpData(const std::string& dumpPath, const uint8_t*
     }
 
     int32_t subFormat = tensor.sub_format();
-    return AclTensorInfo{dumpPath, data, dtype, dFmt, hFmt, dShape, hShape, dataSize, subFormat, io, slot, dumpOriginData};
+    return AclTensorInfo{dumpPath, data, dtype, dtype, dFmt, hFmt, dShape, hShape, dataSize, subFormat, io, slot, dumpOriginData};
 }
 
 template AclTensorInfo ParseAttrsFromDumpData<AclDumpMsg::OpOutput>(
@@ -763,34 +767,80 @@ static void TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* output, s
     }
 }
 
+static void TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint8_t* output, size_t bufferSize)
+{
+    if (bufferSize < elemNums * sizeof(int8_t)) {
+        LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, "Insufficient space for converting data from int4 to int8.");
+        return;
+    }
+    const int8_t *srcData = reinterpret_cast<const int8_t *>(input);
+    int8_t *dstData = reinterpret_cast<int8_t *>(output);
+    size_t inputLength = elemNums / 2;
+    int maxValue = 7;
+    int minValue = -8;
+    int signBitShift = 3;
+    int signBitMask = 0x08;
+    for (size_t i = 0; i < inputLength; ++i) {
+        int8_t s = *srcData;
+        int8_t t = s & 0xf;
+        // keep the sign bit not change
+        int8_t signBit = (t & signBitMask) >> signBitShift;
+        if (signBit == 1) {
+            t = t | 0xf0;
+        } else {
+            t = t & 0x0f;
+        }
+        if (t < minValue || t > maxValue) {
+            LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid int4 value.");
+        }
+        *dstData = t;
+        ++dstData;
+
+        int highByteShift = 4;
+        t = s >> highByteShift;
+        signBit = (t & signBitMask) >> signBitShift;
+        if (signBit == 1) {
+            t = t | 0xf0;
+        } else {
+            t = t & 0x0f;
+        }
+        if (t < minValue || t > maxValue) {
+            LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid int4 value.");
+        }
+        *dstData = t;
+        ++dstData;
+        ++srcData;
+    }
+    return;
+}
+
 DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to)
 {
-
-    const static std::set<std::pair<AclDtype, AclDtype>> kSupportedDtypeTrans = {
-        {AclDtype::DT_BF16, AclDtype::DT_FLOAT},
-    };
 
     if (tensor.dtype == to) {
         return DebuggerErrno::OK;
     }
 
-    if (kSupportedDtypeTrans.find({tensor.dtype, to}) == kSupportedDtypeTrans.end()) {
-        return DebuggerErrno::ERROR_UNKNOWN_TRANS;
-    }
-
+    tensor.oriDtype = tensor.dtype;
     std::vector<uint8_t> buffer;
     AssertConsis(tensor);
     size_t bufferSize = EleNumOfTensor(tensor) * SizeOfAclDType(to);
-    buffer.reserve(bufferSize);
+    buffer.resize(bufferSize);
     const uint8_t* input = tensor.transBuf.empty() ? tensor.aclData : tensor.transBuf.data();
     uint8_t* output = buffer.data();
 
-    /* 目前仅支持bf16->fp32，若有通用转换需求再用更泛化的方式重写 */
     if (tensor.dtype == AclDtype::DT_BF16 && to == AclDtype::DT_FLOAT) {
         TransBf16ToFp32(input, EleNumOfTensor(tensor), output, bufferSize);
+    } else if (tensor.dtype == AclDtype::DT_INT4 && to == AclDtype::DT_INT8) {
+        TransInt4ToInt8(input, EleNumOfTensor(tensor), output, bufferSize);
+    } else {
+        LOG_ERROR(DebuggerErrno::ERROR_UNKNOWN_TRANS, tensor + ": Trans " + DataUtils::GetDTypeString(tensor.dtype)
+                  + " to " + DataUtils::GetDTypeString(to) + " is not supported.");
+        return DebuggerErrno::ERROR_UNKNOWN_TRANS;
     }
 
     tensor.transBuf = std::move(buffer);
+    tensor.dtype = to;
     return DebuggerErrno::OK;
 }
 
