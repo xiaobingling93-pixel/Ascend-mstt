@@ -18,6 +18,7 @@ import json
 import os
 import tempfile
 from datetime import datetime, timezone
+import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -53,7 +54,8 @@ from msprobe.core.common.utils import (CompareException,
                                        recursion_depth_decorator,
                                        MsprobeBaseException,
                                        check_str_param,
-                                       is_json_file)
+                                       is_json_file,
+                                       detect_framework_by_dump_json)
 
 
 class TestUtils(TestCase):
@@ -488,3 +490,37 @@ class TestCheckCrtValid(TestCase):
         with self.assertRaises(RuntimeError) as context:
             check_crt_valid(self.cert_file_path)
         self.assertIn('The SSL certificate is invalid', str(context.exception))
+
+
+class TestDetectFrameworkByDumpJson(unittest.TestCase):
+
+    @patch('msprobe.common.utils.load_json')
+    def test_valid_pytorch_framework(self, mock_load_json):
+        mock_load_json.return_value = {"framework": Const.PT_FRAMEWORK}
+
+        result = detect_framework_by_dump_json("dummy_path")
+
+        self.assertEqual(result, Const.PT_FRAMEWORK)
+
+    @patch('msprobe.common.utils.load_json')
+    def test_valid_mindspore_framework(self, mock_load_json):
+        mock_load_json.return_value = {"framework": Const.MS_FRAMEWORK}
+
+        result = detect_framework_by_dump_json("dummy_path")
+
+        self.assertEqual(result, Const.MS_FRAMEWORK)
+
+    @patch('msprobe.common.utils.load_json')
+    def test_invalid_framework(self, mock_load_json):
+        # 模拟 load_json 返回一个没有 "framework" 键的字典
+        mock_load_json.return_value = {}
+
+        with self.assertRaises(CompareException):
+            detect_framework_by_dump_json("dummy_path")
+
+        # 模拟返回其他未知的框架
+        mock_load_json.return_value = {"framework": "tensorflow"}
+
+        with self.assertRaises(CompareException):
+            detect_framework_by_dump_json("dummy_path")
+

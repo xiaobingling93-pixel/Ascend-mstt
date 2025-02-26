@@ -247,14 +247,13 @@ def md5_find(data):
 
 
 def detect_framework_by_dump_json(file_path):
-    pattern_ms = r'"type":\s*"mindspore'
-    pattern_pt = r'"type":\s*"torch'
-    with FileOpen(file_path, 'r') as file:
-        for line in file:
-            if re.search(pattern_ms, line):
-                return Const.MS_FRAMEWORK
-            if re.search(pattern_pt, line):
-                return Const.PT_FRAMEWORK
+    bench_json_data = load_json(file_path)
+    framework = bench_json_data.get("framework", None)
+    if not framework:
+        logger.error("cannot find framework in dump.json")
+        raise CompareException(CompareException.INVALID_DUMP_FILE)
+    if framework in [Const.PT_FRAMEWORK, Const.MS_FRAMEWORK]:
+        return framework
     logger.error(f"{file_path} must be based on the MindSpore or PyTorch framework.")
     raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
