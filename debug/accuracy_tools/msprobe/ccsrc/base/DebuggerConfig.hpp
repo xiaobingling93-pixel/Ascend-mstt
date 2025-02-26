@@ -199,7 +199,7 @@ public:
     OverflowCheckCfg() = default;
     ~OverflowCheckCfg() = default;
 
-    uint32_t overflowNums{1};
+    int32_t overflowNums{1};
     DebuggerOpCheckLevel checkMode{DebuggerOpCheckLevel::CHECK_LEVEL_ALL};
 
 private:
