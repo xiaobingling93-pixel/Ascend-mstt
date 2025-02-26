@@ -564,15 +564,15 @@ tensor:
   - all
   - amax
   - amin
+  - angle
   - any
   - arccos
   - arccosh
-  - argmax
-  - angle
   - arcsin
   - arcsinh
   - arctan
   - arctanh
+  - argmax
   - argmin
   - argsort
   - asin
@@ -582,19 +582,23 @@ tensor:
   - atanh
   - baddbmm
   - bernoulli
+  - bfloat16
   - bincount
   - bitwise_and
   - bitwise_or
   - bitwise_xor
   - bmm
   - bool
+  - bool astype
   - broadcast_to
+  - byte
   - ceil
-  - cholesky_solve
   - cholesky
+  - cholesky_solve
   - clamp
   - clip
   - conj
+  - copy
   - copysign
   - cos
   - cosh
@@ -606,11 +610,13 @@ tensor:
   - deg2rad
   - diag
   - diagflat
+  - diagonal
   - diff
   - digamma
   - div
   - div_
   - divide
+  - double
   - equal
   - erf
   - erfc
@@ -618,13 +624,16 @@ tensor:
   - exp
   - expand_as
   - expm1
+  - flatten
   - flip
   - fliplr
   - flipud
+  - float
   - float_power
   - floor
   - fmod
   - frac
+  - from_numpy
   - gather_elements
   - ge
   - geqrf
@@ -648,12 +657,12 @@ tensor:
   - inner
   - int
   - inverse
+  - is_complex
+  - is_signed
   - isclose
   - isfinite
   - isinf
   - isnan
-  - is_complex
-  - is_signed
   - isneginf
   - isposinf
   - isreal
@@ -704,28 +713,27 @@ tensor:
   - new_ones
   - new_zeros
   - nextafter
-  - norm
   - nonzero
+  - norm
   - not_equal
   - ormqr
   - permute
   - pow
   - prod
   - qr
+  - rad2deg
   - ravel
   - real
   - reciprocal
   - remainder
   - renorm
-  - rad2deg
-  - tile
   - repeat_interleave
   - reshape
   - reshape
-  - round
+  - resize
   - rot90
+  - round
   - rsqrt
-  - sum_to_size
   - scatter
   - sgn
   - short
@@ -745,7 +753,8 @@ tensor:
   - sub
   - sub_
   - subtract
-  - subtract
+  - sum
+  - sum_to_size
   - svd
   - swapaxes
   - swapdims
@@ -753,13 +762,13 @@ tensor:
   - take
   - tan
   - tanh
-  - trace
-  - swapaxes
-  - tile
-  - topk
-  - tril
   - tensor_split
+  - tile
+  - to
+  - topk
+  - trace
   - transpose
+  - tril
   - true_divide
   - trunc
   - unbind
@@ -769,17 +778,6 @@ tensor:
   - view
   - where
   - xlogy
-  - from_numpy
-  - std
-  - take
-  - var
-  - all
-  - any
-  - copy
-  - diagonal
-  - flatten
-  - resize
-  - sum
 
 mint.ops:
   - abs

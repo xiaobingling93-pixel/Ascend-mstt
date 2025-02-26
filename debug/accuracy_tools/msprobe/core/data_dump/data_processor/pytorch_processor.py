@@ -78,14 +78,16 @@ class PytorchDataProcessor(BaseDataProcessor):
     def analyze_device_in_kwargs(element):
         single_arg = {}
         single_arg.update({'type': "torch.device"})
-        if not isinstance(element, str):
+        if isinstance(element, (int, str)):
+            single_arg.update({"value": element})
+        elif isinstance(element, torch.device):
             if hasattr(element, "index"):
                 device_value = element.type + ":" + str(element.index)
             else:
                 device_value = element.type
             single_arg.update({"value": device_value})
         else:
-            single_arg.update({"value": element})
+            logger.debug(f"Device type {type(element)} is not supported.")
         return single_arg
 
     @staticmethod
@@ -311,7 +313,7 @@ class TensorDataProcessor(PytorchDataProcessor):
             saved_tensor = tensor.clone().contiguous().detach()
             save_pt(saved_tensor, file_path)
         return single_arg
-    
+
     def _analyze_numpy(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_pt(torch.tensor(ndarray), file_path)
