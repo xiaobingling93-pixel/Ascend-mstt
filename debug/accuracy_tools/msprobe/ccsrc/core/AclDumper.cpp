@@ -153,10 +153,7 @@ bool AclDumper::IsCfgEnableAclDumper()
 
 bool AclDumper::IsOverflowCompleted()
 {
-    if (overflowNums != -1 && realOverflowNums > overflowNums) {
-        return true;
-    }
-    return false;
+    return overflowNums != -1 && realOverflowNums > overflowNums;
 }
 
 void AclDumper::CountOverflowNumbers(const acldumpChunk* chunk)
