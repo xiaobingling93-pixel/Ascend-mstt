@@ -338,7 +338,6 @@ class TrainerMon:
     ):
         global start_step
         start_step = start_iteration
-        logger.info(f'grad acc steps {grad_acc_steps}')
         self.micro_batch_number = grad_acc_steps
         self.dp_group = dp_group
         self.tp_group = tp_group
