@@ -18,13 +18,13 @@ import json
 import os
 import tempfile
 from datetime import datetime, timezone
-import re
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
 import OpenSSL
 import numpy as np
+from pathlib import Path
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import (
@@ -511,18 +511,22 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
 
         self.assertEqual(result, Const.MS_FRAMEWORK)
 
-    @patch("msprobe.core.common.utils.FileOpen", new_callable=mock_open)
-    @patch("re.search")  # 模拟 re.search
-    def test_detect_framework_in_file(self, mock_search, mock_open):
-        # 测试框架是 MindSpore
-        fake_file_content = '{"type": "mindspore.float16"}\n'
-        mock_open.return_value.read.side_effect = fake_file_content
+    def test_detect_framework_in_file(self):
+        self.current_dir = Path(__file__).parent
+        file_path = self.current_dir / "test_dump_file/pt_dump_no_framework.json"
+        result = detect_framework_by_dump_json(file_path)
+        self.assertEqual(result, Const.PT_FRAMEWORK)
 
-        result = detect_framework_by_dump_json("dummy_path")
+        self.current_dir = Path(__file__).parent
+        file_path = self.current_dir / "test_dump_file/ms_dump_no_framework.json"
+        result = detect_framework_by_dump_json(file_path)
         self.assertEqual(result, Const.MS_FRAMEWORK)
 
-        # 测试框架是 PyTorch
-        fake_file_content = '{"type": "torch.float16"}\n'
-        mock_open.return_value.read.side_effect = fake_file_content
-        result = detect_framework_by_dump_json("dummy_path")
-        self.assertEqual(result, Const.PT_FRAMEWORK)
+    @patch("msprobe.core.common.utils.logger")
+    def test_detect_framework_exception(self, mock_logger):
+        self.current_dir = Path(__file__).parent
+        file_path = self.current_dir / "test_dump_file/pt_dump_no_pt_no_ms.json"
+        with self.assertRaises(CompareException) as context:
+            result = detect_framework_by_dump_json(file_path)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
+        mock_logger.error.assert_called_once_with(f"{file_path} must be based on the MindSpore or PyTorch framework.")
