@@ -172,6 +172,9 @@ enum Command {
         /// Whether to collect op attributes.
         #[clap(long, action)]
         op_attr: bool,
+        /// Whether to enable MSTX.
+        #[clap(long, action)]
+        msprof_tx: bool,
         /// GC detect threshold.
         #[clap(long)]
         gc_detect_threshold: Option<f32>,
@@ -290,6 +293,7 @@ fn main() -> Result<()> {
             aic_metrics,
             l2_cache,
             op_attr,
+            msprof_tx,
             gc_detect_threshold,
             data_simplification,
             export_type,
@@ -318,6 +322,7 @@ fn main() -> Result<()> {
                 aic_metrics,
                 l2_cache,
                 op_attr,
+                msprof_tx,
                 gc_detect_threshold,
                 data_simplification,
                 export_type,
