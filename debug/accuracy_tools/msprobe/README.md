@@ -83,21 +83,21 @@ PyTorch 场景的[离线预检](./docs/07.accuracy_checker_PyTorch.md)和[在线
 
 MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.md)
 
-### 3 精度比对
+### 3 分级可视化构图比对
+
+该功能将msprobe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
+
+[PyTorch 场景的分级可视化构图比对](./docs/21.visualization_PyTorch.md)
+
+[MindSpore 场景的分级可视化构图比对](./docs/22.visualization_MindSpore.md)
+
+### 4 精度比对
 
 该功能进行 PyTorch 整网 API 粒度的数据 dump、精度比对，进而定位训练场景下的精度问题。
 
 [PyTorch 场景的精度比对](./docs/10.accuracy_compare_PyTorch.md)
 
 [MindSpore 场景的精度比对](./docs/11.accuracy_compare_MindSpore.md)
-
-### 4 溢出检测与解析
-
-溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。
-
-[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)
-
-[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)
 
 ### 5 数据解析
 
@@ -129,26 +129,26 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [兼容 PyTorch 和 MindSpore 框架的训练状态监控](./docs/19.monitor.md)
 
-### 10 分级可视化构图比对
-
-该功能将msprobe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
-
-[PyTorch 场景的分级可视化构图比对](./docs/21.visualization_PyTorch.md)
-
-[MindSpore 场景的分级可视化构图比对](./docs/22.visualization_MindSpore.md)
-
-
-### 11 单算子API自动生成脚本
+### 10 单算子API自动生成脚本
 
 该功能将msprobe工具dump的精度数据进行解析，自动生成单API脚本，用于复现整网中出现的算子问题，降低用户复现问题的成本，供开发分析算子问题。
 
 [PyTorch 单算子API自动生成脚本](./docs/23.generate_operator_PyTorch.md)
 
-### 12 数码关联
+### 11 数码关联
 
 该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
 
 [MindSpore 场景的数码关联](./docs/24.code_mapping_Mindspore.md)
+
+### 12 溢出检测与解析
+
+溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。 
+推荐直接使用[数据采集](#1-数据采集)功能采集统计量信息检测溢出问题。
+
+[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)
+
+[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)
 
 ## 📑 补充材料
 
