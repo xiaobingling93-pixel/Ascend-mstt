@@ -453,6 +453,19 @@ class TrainerMon:
         self.hook_modules()
         self.monitoring = True
 
+    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
+        rank = None
+        if dist.is_initialized():
+            rank = dist.get_rank()
+            if (rank not in rank_list) and len(rank_list) != 0:
+                return
+        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
+
+    def build_tbtag_tensor_map(self, module_name, tag, tensor):
+        key = get_summary_writer_tag_name(module_name, tag, self.rank)
+        self._register_param_call_id("_hook_module", key)
+        return {key: tensor}
+
     def generate_param_map(self, tag, param_tensor):
         metrics = {}
         for name in self.param2name.values():
@@ -871,19 +884,6 @@ class TrainerMon:
             if pattern in targets:
                 return pattern
         return ""
-
-    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
-        rank = None
-        if dist.is_initialized():
-            rank = dist.get_rank()
-            if (rank not in rank_list) and len(rank_list) != 0:
-                return
-        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
-
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        self._register_param_call_id("_hook_module", key)
-        return {key: tensor}
 
     def _hook_module(self, target_names, module: torch.nn.Module, vpp_stage=''):
         if '_modules' not in module.__dict__:

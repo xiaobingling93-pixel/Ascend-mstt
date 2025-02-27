@@ -424,6 +424,168 @@ class TrainerMon:
         self._patch_grad_sync()
         self.monitoring = True
 
+    def hook_modules(self):
+        if not self.is_target_rank():
+            return
+        module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.NAME_SEP not in key]
+
+        for key in module_in_all_stage:
+            struct = self.targets.pop(key)
+            self.targets.update(
+                {f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
+
+        hooked_count = 0
+        for vpp_stage, model_chunk in enumerate(self.model):
+            if not isinstance(model_chunk, nn.Cell):
+                logger.info("Target Model is not Cell")
+                continue
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
+            targets = [x for x, _ in model_chunk.cells_and_names()] if self.print_struct else self.targets.keys()
+            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
+        logger.info(f"> {hooked_count} modules are monitored.")
+
+    def hook_optimizer(self, optimizer):
+        def optimizer_pre_hook_function(opt, grad_names, gradients):
+            context = self.optimizer_context[opt]
+            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times,
+                            self.collect_times):
+                return
+            gradient_list = gradients[0] if isinstance(gradients, tuple) else gradients
+            is_select = self.is_select
+            for idx, grad in enumerate(gradient_list):
+                grad_name = grad_names[idx]
+                if is_select and grad_name not in self.targets:
+                    continue
+                get_single_metrics(self.ops, grad_name, grad, context.param_weight_grad)
+
+            if self.mv_distribution:
+                # fetch mean
+                for param in m_list:
+                    name = param.name
+                    if is_select and name not in self.targets:
+                        continue
+                    get_single_metrics(self.ops, name, param, context.exp_avg_metric)
+                # fetch variance
+                for param in v_list:
+                    name = param.name
+                    if is_select and name not in self.targets:
+                        continue
+                    get_single_metrics(self.ops, name, param, context.exp_avg_sq_metric)
+            if self.param_distribution:
+                for param in param_list:
+                    get_single_metrics(self.ops, param.name, param, context.param_metric)
+            self.generate_wgrad_metrics()
+            metric_dict = {}
+            for cc in self.cc_context.values():
+                cc.aggregate()
+                metric_dict.update(cc.data)
+                cc.reset()
+
+            if not metric_dict:
+                return
+            context.metric_dict = metric_dict
+            return
+
+        def optimizer_pre_hook_wrapper(func, grad_names):
+            def wrapper(opt, gradients):
+                return func(opt, grad_names, gradients)
+            return wrapper
+
+        if self.optimizer_hooked or not self.is_target_rank():
+            return
+
+        m_list = []
+        v_list = []
+        param_list = []
+        grad_names = []
+        for param in optimizer.get_parameters():
+            if MonitorConst.EXP_AVG_SQ in param.name:
+                v_list.append(param)
+            elif MonitorConst.EXP_AVG in param.name:
+                m_list.append(param)
+            elif param.name in ['global_step', 'learning_rate']:
+                pass
+            else:
+                param_list.append(param)
+                grad_names.append(param.name)
+
+        handle = optimizer.register_forward_pre_hook(
+            optimizer_pre_hook_wrapper(optimizer_pre_hook_function, grad_names))
+        self.handles['optimizer'].append(handle)
+        self.optimizer_hooked = True
+        return
+
+    def generate_wgrad_metrics(self):
+        if not self.wg_distribution:
+            return {}, {}
+
+        if self.weight_hooked:
+            try:
+                get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
+            except Exception as e:
+                logger.warning(f"An error occurred while generating wgrad pre metrics")
+                return {}, {}
+
+        grad_dict = {}
+        for param, name in self.param2name.items():
+            if self.duplicate_param.get(name, False):
+                continue
+            grad = param.main_grad if self.params_have_main_grad else param.grad
+            if grad is None:
+                logger.warning(f"grad is None: {name}, maybe something wrong happened.")
+                continue
+            tag = self.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
+            self._register_param_call_id("hook_optimizer", tag)
+            grad_dict[tag] = grad
+        try:
+            get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
+        except Exception as e:
+            logger.warning(f"An error occurred while generating wgrad post metrics")
+            return {}, {}
+        return self.grad_context.post, self.grad_context.pre
+
+    def write_xy_tb(self, step):
+        if not self.xy_distribution:
+            return
+        for _, fwd_context in self.module_fwd_hook_context_by_module.items():
+            if len(fwd_context.actv) == 0:
+                continue
+            self.summary_writer.write_metrics(self.ops, fwd_context.actv, step, 'actv')
+            fwd_context.actv.clear()
+        if self.grad_context.actv:
+            self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, 'actv_grad')
+
+    def write_param_tb(self, opt_context):
+        if not self.param_distribution:
+            return
+        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, 'param')
+
+    def write_mv_tb(self, opt_context):
+        if not self.mv_distribution:
+            return
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, opt_context.step, 'exp_avg')
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step, 'exp_avg_sq')
+
+    def write_grad_tb(self, step):
+        if not self.wg_distribution:
+            return
+
+        self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
+        self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
+
+    def is_target_rank(self):
+        if self.module_rank_list and (self.rank not in self.module_rank_list):
+            return False
+        return True
+
+    def build_tbtag_tensor_map(self, module_name, tag, tensor):
+        metrics = {}
+        key = get_summary_writer_tag_name(module_name, tag, str(self.rank))
+        if isinstance(tensor, Tensor):
+            self._register_param_call_id("_hook_module", key)
+            metrics[key] = tensor
+        return metrics
+
     def _register_param_name(self):
         for vpp_stage, model_chunk in enumerate(self.model):
             prefix = f'{vpp_stage}{MonitorConst.NAME_SEP}'
@@ -452,26 +614,6 @@ class TrainerMon:
                     MonitorConst.POST_GRAD: get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
                 }
                 index += 1
-
-    def hook_modules(self):
-        if not self.is_target_rank():
-            return
-        module_in_all_stage = [key for key in self.targets.keys() if MonitorConst.NAME_SEP not in key]
-
-        for key in module_in_all_stage:
-            struct = self.targets.pop(key)
-            self.targets.update(
-                {f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
-
-        hooked_count = 0
-        for vpp_stage, model_chunk in enumerate(self.model):
-            if not isinstance(model_chunk, nn.Cell):
-                logger.info("Target Model is not Cell")
-                continue
-            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
-            targets = [x for x, _ in model_chunk.cells_and_names()] if self.print_struct else self.targets.keys()
-            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
-        logger.info(f"> {hooked_count} modules are monitored.")
 
     def _hook_module(self, target_names, module, vpp_stage=''):
         if not isinstance(module, nn.Cell):
@@ -607,77 +749,6 @@ class TrainerMon:
                 hooked_count += 1
         return hooked_count
 
-    def hook_optimizer(self, optimizer):
-        def optimizer_pre_hook_function(opt, grad_names, gradients):
-            context = self.optimizer_context[opt]
-            if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times,
-                            self.collect_times):
-                return
-            gradient_list = gradients[0] if isinstance(gradients, tuple) else gradients
-            is_select = self.is_select
-            for idx, grad in enumerate(gradient_list):
-                grad_name = grad_names[idx]
-                if is_select and grad_name not in self.targets:
-                    continue
-                get_single_metrics(self.ops, grad_name, grad, context.param_weight_grad)
-
-            if self.mv_distribution:
-                # fetch mean
-                for param in m_list:
-                    name = param.name
-                    if is_select and name not in self.targets:
-                        continue
-                    get_single_metrics(self.ops, name, param, context.exp_avg_metric)
-                # fetch variance
-                for param in v_list:
-                    name = param.name
-                    if is_select and name not in self.targets:
-                        continue
-                    get_single_metrics(self.ops, name, param, context.exp_avg_sq_metric)
-            if self.param_distribution:
-                for param in param_list:
-                    get_single_metrics(self.ops, param.name, param, context.param_metric)
-            self.generate_wgrad_metrics()
-            metric_dict = {}
-            for cc in self.cc_context.values():
-                cc.aggregate()
-                metric_dict.update(cc.data)
-                cc.reset()
-
-            if not metric_dict:
-                return
-            context.metric_dict = metric_dict
-            return
-
-        def optimizer_pre_hook_wrapper(func, grad_names):
-            def wrapper(opt, gradients):
-                return func(opt, grad_names, gradients)
-            return wrapper
-
-        if self.optimizer_hooked or not self.is_target_rank():
-            return
-
-        m_list = []
-        v_list = []
-        param_list = []
-        grad_names = []
-        for param in optimizer.get_parameters():
-            if MonitorConst.EXP_AVG_SQ in param.name:
-                v_list.append(param)
-            elif MonitorConst.EXP_AVG in param.name:
-                m_list.append(param)
-            elif param.name in ['global_step', 'learning_rate']:
-                pass
-            else:
-                param_list.append(param)
-                grad_names.append(param.name)
-
-        handle = optimizer.register_forward_pre_hook(
-            optimizer_pre_hook_wrapper(optimizer_pre_hook_function, grad_names))
-        self.handles['optimizer'].append(handle)
-        self.optimizer_hooked = True
-        return
-
     def _patch_grad_sync(self):
         if not self.wg_distribution:
             return
@@ -705,6 +776,38 @@ class TrainerMon:
             handle = param.register_hook(param_hook_wrapper(param_hook, context_dict=context.acc, param=param, key=key))
             self.handles['wgrads'].append(handle)
         self.weight_hooked = True
+
+    def _is_target_param(self, param_name, param, prefix):
+        if not self.targets:
+            return True
+        squash_name = prefix + squash_param_name(param_name)
+        name = prefix + param_name
+        for target in self.targets.keys():
+            if param_name.startswith(target) or squash_name.startswith(target) or name.startswith(target):
+                setattr(param, "zero_out_wgrad", True)
+                return True
+        return False
+
+    def _is_target_module(self, module_name, targets, vpp_stage):
+        if self.all_xy or self.print_struct:
+            return vpp_stage + squash_param_name(module_name)
+        for pattern in [
+            vpp_stage + squash_param_name(module_name),
+            vpp_stage + module_name,
+        ]:
+            if pattern in targets:
+                return pattern
+        return ""
+
+    def _register_param_call_id(self, hook_name: str, key: str):
+        """
+        :param hook_name:
+        :param key: str, '0:relu_0/output_grad'
+        :return:
+        """
+        logger.debug(f"{hook_name} {key}: {self.call_id}")
+        self.param_name_call_id[key] = self.call_id
+        self.call_id += 1
 
     def _remove_all_hooks(self):
         # 清空hook handle
@@ -765,106 +868,3 @@ class TrainerMon:
                 logger.warning(f"Finish monitor, set config'dynamic_on=False fail because {e}, please check!!!")
         logger.info("Finish monitor")
         self._remove_all_hooks()
-
-    def generate_wgrad_metrics(self):
-        if not self.wg_distribution:
-            return {}, {}
-
-        if self.weight_hooked:
-            try:
-                get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
-            except Exception as e:
-                logger.warning(f"An error occurred while generating wgrad pre metrics")
-                return {}, {}
-
-        grad_dict = {}
-        for param, name in self.param2name.items():
-            if self.duplicate_param.get(name, False):
-                continue
-            grad = param.main_grad if self.params_have_main_grad else param.grad
-            if grad is None:
-                logger.warning(f"grad is None: {name}, maybe something wrong happened.")
-                continue
-            tag = self.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
-            self._register_param_call_id("hook_optimizer", tag)
-            grad_dict[tag] = grad
-        try:
-            get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
-        except Exception as e:
-            logger.warning(f"An error occurred while generating wgrad post metrics")
-            return {}, {}
-        return self.grad_context.post, self.grad_context.pre
-
-    def write_xy_tb(self, step):
-        if not self.xy_distribution:
-            return
-        for _, fwd_context in self.module_fwd_hook_context_by_module.items():
-            if len(fwd_context.actv) == 0:
-                continue
-            self.summary_writer.write_metrics(self.ops, fwd_context.actv, step, 'actv')
-            fwd_context.actv.clear()
-        if self.grad_context.actv:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, 'actv_grad')
-
-    def write_param_tb(self, opt_context):
-        if not self.param_distribution:
-            return
-        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, 'param')
-
-    def write_mv_tb(self, opt_context):
-        if not self.mv_distribution:
-            return
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, opt_context.step, 'exp_avg')
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step, 'exp_avg_sq')
-
-    def write_grad_tb(self, step):
-        if not self.wg_distribution:
-            return
-
-        self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
-        self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
-
-    def is_target_rank(self):
-        if self.module_rank_list and (self.rank not in self.module_rank_list):
-            return False
-        return True
-
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        metrics = {}
-        key = get_summary_writer_tag_name(module_name, tag, str(self.rank))
-        if isinstance(tensor, Tensor):
-            self._register_param_call_id("_hook_module", key)
-            metrics[key] = tensor
-        return metrics
-
-    def _is_target_param(self, param_name, param, prefix):
-        if not self.targets:
-            return True
-        squash_name = prefix + squash_param_name(param_name)
-        name = prefix + param_name
-        for target in self.targets.keys():
-            if param_name.startswith(target) or squash_name.startswith(target) or name.startswith(target):
-                setattr(param, "zero_out_wgrad", True)
-                return True
-        return False
-
-    def _is_target_module(self, module_name, targets, vpp_stage):
-        if self.all_xy or self.print_struct:
-            return vpp_stage + squash_param_name(module_name)
-        for pattern in [
-            vpp_stage + squash_param_name(module_name),
-            vpp_stage + module_name,
-        ]:
-            if pattern in targets:
-                return pattern
-        return ""
-
-    def _register_param_call_id(self, hook_name: str, key: str):
-        """
-        :param hook_name:
-        :param key: str, '0:relu_0/output_grad'
-        :return:
-        """
-        logger.debug(f"{hook_name} {key}: {self.call_id}")
-        self.param_name_call_id[key] = self.call_id
-        self.call_id += 1
