@@ -20,6 +20,7 @@ from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
 from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list, torch_dtype_to_dtype_str
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
+from msprobe.mindspore.api_accuracy_checker.bench_functions.fusion_operator import fusion
 from msprobe.mindspore.common.log import logger
 
 
@@ -64,7 +65,9 @@ api_parent_module_mapping = {
     (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): mindtorch_func,
     (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): torch.nn.functional,
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): mindtorch_dist,
-    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed
+    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed,
+    (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): mindspore.ops,
+    (MsCompareConst.FUNCTIONAL_API, Const.PT_FRAMEWORK): fusion
 
 }
 
@@ -83,7 +86,9 @@ api_parent_module_str_mapping = {
     (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): "mindtorch_func",
     (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): "torch.nn.functional",
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): "mindtorch_dist",
-    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed"
+    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed",
+    (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): "mindspore.ops",
+    (MsCompareConst.FUNCTIONAL_API, Const.PT_FRAMEWORK): "fusion"
 }
 
 
@@ -125,7 +130,7 @@ class ApiRunner:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] \
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API, MsCompareConst.FUNCTIONAL_API] \
                 and api_platform == Const.MS_FRAMEWORK:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))

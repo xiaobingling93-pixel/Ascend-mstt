@@ -543,6 +543,7 @@ class MsCompareConst:
     MINT = "Mint"
     MINT_FUNCTIONAL = "MintFunctional"
     TENSOR_API = "Tensor"
+    FUNCTIONAL_API = "Functional"
 
     API_NAME_STR_LENGTH = 4
     MAX_RECURSION_DEPTH = 20
@@ -559,6 +560,8 @@ class MsCompareConst:
     MT_VALID_API_TYPES = [
         MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
     ]
+    SUPPORTED_FUSION_LIST = ["flash_attention_score"]
+
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"

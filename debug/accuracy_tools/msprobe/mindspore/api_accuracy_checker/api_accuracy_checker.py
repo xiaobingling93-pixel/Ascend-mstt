@@ -156,6 +156,7 @@ class ApiAccuracyChecker:
         real_api_str = Const.SEP.join(api_name_str_list[1:-2])
         api_list = load_yaml(yaml_path)
         supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
+        supported_fusion_api_list = MsCompareConst.SUPPORTED_FUSION_LIST
         if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
                 and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
@@ -163,6 +164,9 @@ class ApiAccuracyChecker:
                 and global_context.get_framework() == Const.MT_FRAMEWORK:
             return True
         if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
+            return True
+        if api_type_str == MsCompareConst.FUNCTIONAL_API and real_api_str in supported_fusion_api_list \
                 and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
         return False
