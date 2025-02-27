@@ -18,6 +18,7 @@ import json
 import os
 import tempfile
 from datetime import datetime, timezone
+import re
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
@@ -510,17 +511,18 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
 
         self.assertEqual(result, Const.MS_FRAMEWORK)
 
-    @patch('msprobe.core.common.utils.load_json')
-    def test_invalid_framework(self, mock_load_json):
-        # 模拟 load_json 返回一个没有 "framework" 键的字典
-        mock_load_json.return_value = {}
+    @patch("msprobe.core.common.utils.FileOpen", new_callable=mock_open)
+    @patch("re.search")  # 模拟 re.search
+    def test_detect_framework_in_file(self, mock_search, mock_open):
+        # 测试框架是 MindSpore
+        fake_file_content = '{"type": "mindspore.float16"}\n'
+        mock_open.return_value.read.side_effect = fake_file_content
 
-        with self.assertRaises(CompareException):
-            detect_framework_by_dump_json("dummy_path")
+        result = detect_framework_by_dump_json("dummy_path")
+        self.assertEqual(result, Const.MS_FRAMEWORK)
 
-        # 模拟返回其他未知的框架
-        mock_load_json.return_value = {"framework": "tensorflow"}
-
-        with self.assertRaises(CompareException):
-            detect_framework_by_dump_json("dummy_path")
-
+        # 测试框架是 PyTorch
+        fake_file_content = '{"type": "torch.float16"}\n'
+        mock_open.return_value.read.side_effect = fake_file_content
+        result = detect_framework_by_dump_json("dummy_path")
+        self.assertEqual(result, Const.PT_FRAMEWORK)
