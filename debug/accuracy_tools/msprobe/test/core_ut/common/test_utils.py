@@ -525,7 +525,7 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
     @patch("msprobe.core.common.utils.logger")
     def test_detect_framework_exception(self, mock_logger):
         self.current_dir = Path(__file__).parent
-        file_path = self.current_dir / "test_dump_file/pt_dump_no_pt_no_ms.json"
+        file_path = self.current_dir / "test_dump_file/dump_no_pt_no_ms.json"
         with self.assertRaises(CompareException) as context:
             result = detect_framework_by_dump_json(file_path)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
