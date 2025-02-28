@@ -148,7 +148,7 @@ class ApiRunner:
         Args:
             api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Functional"]
             api_sub_name: str, e.g. "relu"
-            api_platform: str: Union["mindpore", "torch"]
+            api_platform: str: Union["mindpore", "pytorch"]
 
         Return:
             api_instance: function object
@@ -159,7 +159,7 @@ class ApiRunner:
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         """
         print(f"api_sub_name:{api_sub_name}")
-        if api_sub_name in MsCompareConst.SUPPORTED_FUSION_LIST:
+        if api_sub_name in MsCompareConst.SUPPORTED_FUSION_LIST and api_platform == "pytorch":
             api_parent_module = api_parent_module_mapping.get((MsCompareConst.FUSION_API, api_platform))
             api_parent_module_str = api_parent_module_str_mapping.get((MsCompareConst.FUSION_API, api_platform))
         else:
