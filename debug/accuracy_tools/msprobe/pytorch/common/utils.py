@@ -449,9 +449,9 @@ def is_recomputation():
 
 def check_save_param(variable, name, save_backward):
     # try catch this api to skip invalid call
-    if not isinstance(variable, (list, dict, torch.Tensor, int, float, str)):
+    if not isinstance(variable, (list, dict, tuple, torch.Tensor, int, float, str)):
         logger.warning("PrecisionDebugger.save variable type not valid, "
-                       "should be one of list, dict, torch.Tensor, int, float or string. "
+                       "should be one of list, dict, tuple, torch.Tensor, int, float or string. "
                        "Skip current save process.")
         raise ValueError
     if not isinstance(name, str):
