@@ -18,9 +18,10 @@ import torch.nn as nn
 
 from collections import namedtuple
 
-from msprobe.pytorch.bench_fuctions.npu_fusion_attention import softmax_forward\
+from msprobe.pytorch.common.utils import logger
+from msprobe.pytorch.bench_functions.npu_fusion_attention import softmax_forward\
     , softmax_grad, broadcast_kv, calculate_qk, fusion_attention_forward, fusion_attention_backward, parse_bsnd_args\
-    , convert_from_bnsd, convert_to_bnsd, convert_from_bsnd, convert_to_bsnd, generate_attn_mask,\
+    , convert_from_bnsd, convert_to_bnsd, convert_from_bsnd, convert_to_bsnd,\
     generate_kv, rebuid_softmax_by_qkv, rebuild_softmax_by_max_sum,\
     get_head_num, get_input_layout, npu_fusion_attention_forward_patch, npu_fusion_attention_backward_patch
 
@@ -34,6 +35,64 @@ FaBackwardParams = namedtuple("FaBackwardParams",
 RebuildSoftmaxParams = namedtuple("RebuildSoftmaxParams",
                                   ["q", "k", "attn_mask", "pse", "scalar_value", "softmax_max", "softmax_sum"])
 
+
+def generate_attn_mask(*args):
+    """
+    # 当sparse_mode=2、3、4时小算子到融合算子会走这个优化，反过来看就要拆解回原来的基本实现
+    ===> attn_mask = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1)).to(dtype)
+    """
+
+    sparse_mode, attn_mask, b, n1, s1, s2, pre_tocken, next_tocken, dtype = args
+    shape = [s1, s2]
+
+    if attn_mask is not None:
+        # 当FA的输入已经包含attn_mask时，可以认为已经是转换之后的mask矩阵了，有三种特殊场景，即稀疏矩阵场景，需要进行逆向还原
+        if sparse_mode == 2 or sparse_mode == 3 or sparse_mode == 4:
+            logger.info(f"s1: {s1}, s2:{s2}, attn_mask.shape:{attn_mask.shape}, attn_mask.dtype:{attn_mask.dtype}")
+
+            if attn_mask.dim() == 2 and attn_mask.shape[0] == 2048 and attn_mask.shape[1] == 2048:
+                if attn_mask.equal(torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1)).to(attn_mask.dtype)):
+                    if sparse_mode == 2:
+                        attn_mask = torch.from_numpy(np.triu(np.ones(shape), k=1))
+                    elif sparse_mode == 3:
+                        attn_mask = torch.from_numpy(np.triu(np.ones(shape), k=s2 - s1 + 1))
+                    elif sparse_mode == 4:
+                        attn_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
+                        attn_mask_l = torch.from_numpy(np.tril(np.ones(shape), k=-pre_tocken - 1))
+                        attn_mask = attn_mask_u + attn_mask_l
+                    logger.debug(f"反向转换attn_mask {attn_mask.shape}")
+                    return attn_mask.to(dtype)
+
+        return attn_mask.to(dtype)
+
+    if attn_mask is not None:
+        if attn_mask.dim() == 2:
+            if attn_mask.shape[0] != s1 or attn_mask.shape[1] != s2:
+                raise ValueError(f"Invalid attn_mask shape `SS` {attn_mask.shape}")
+            shape = [s1, s2]
+        elif attn_mask.dim() == 4:
+            if attn_mask.shape[1] == 1:
+                shape = [b, 1, s1, s2] if b != 1 else [1, 1, s1, s2]
+            else:
+                shape = [b, n1, s1, s2] if b != 1 else [1, n1, s1, s2]
+
+    if sparse_mode == 0:
+        attn_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
+        attn_mask_l = torch.from_numpy(np.tril(np.ones(shape), k=-pre_tocken - 1))
+        attn_mask = attn_mask_u + attn_mask_l
+    elif sparse_mode == 1:  # no sparse
+        attn_mask = torch.from_numpy(np.zeros(shape))
+    elif sparse_mode == 2:
+        attn_mask = torch.from_numpy(np.triu(np.ones(shape), k=1))
+    elif sparse_mode == 3:
+        attn_mask = torch.from_numpy(np.triu(np.ones(shape), k=s2 - s1 + 1))
+    elif sparse_mode == 4:
+        attn_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
+        attn_mask_l = torch.from_numpy(np.tril(np.ones(shape), k=-pre_tocken - 1))
+        attn_mask = attn_mask_u + attn_mask_l
+    # 注:不会出现sparse_mode=5的情况，该情况要求必须要传入attn_mask，且attn_mask矩阵数据格式须为BNSS或B1SS，
+    # 因此可以认为FA的输入已经是正确的attn_mask了
+    return attn_mask.to(dtype)
 
 class FlashAttentionScore(nn.Module):
     def __init__(self):
