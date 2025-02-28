@@ -158,7 +158,6 @@ class ApiRunner:
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         """
-        print(f"api_sub_name:{api_sub_name}")
         if api_sub_name in MsCompareConst.SUPPORTED_FUSION_LIST and api_platform == "pytorch":
             api_parent_module = api_parent_module_mapping.get((MsCompareConst.FUSION_API, api_platform))
             api_parent_module_str = api_parent_module_str_mapping.get((MsCompareConst.FUSION_API, api_platform))

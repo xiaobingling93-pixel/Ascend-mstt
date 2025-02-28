@@ -26,16 +26,16 @@ class FusionOperator:
         self.flash_attention_score = None  # 用于存放 FlashAttentionScore 操作符
         self._register_operators()
 
-    def _register_operators(self):
-        """ 注册操作符到父类，以便通过 fusion.xxx 调用 """
-        self.flash_attention_score = FlashAttentionScore()
-
     def __getattr__(self, name):
         """ 动态获取算子类 """
         if hasattr(self, name):
             return getattr(self, name)
         else:
             raise AttributeError(f"'FusionOperator' object has no attribute '{name}'")
+
+    def _register_operators(self):
+        """ 注册操作符到父类，以便通过 fusion.xxx 调用 """
+        self.flash_attention_score = FlashAttentionScore()
 
 
 fusion = FusionOperator()

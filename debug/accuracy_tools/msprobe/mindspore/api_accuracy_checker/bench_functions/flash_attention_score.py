@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import torch
 import torch.nn as nn
 import numpy as np
 
 from einops import rearrange
-from collections import namedtuple
+
 
 from msprobe.pytorch.common.utils import logger
 
