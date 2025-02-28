@@ -363,19 +363,6 @@ class TrainerMon:
                                                              self.rank)
                 self.anomaly_data_writer.init_detected_json()
 
-    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
-        rank = None
-        if dist.is_initialized():
-            rank = dist.get_rank()
-            if (rank not in rank_list) and len(rank_list) != 0:
-                return
-        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
-
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        self._register_param_call_id("_hook_module", key)
-        return {key: tensor}
-
     def common_info(self):
         if not self.xy_distribution:
             logger.info_on_rank_0("> module input/output input_grad/output_grad is not monitored. ")
@@ -428,9 +415,66 @@ class TrainerMon:
 
             return wrapped_setup
 
+        BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
-
         return
+
+    def set_monitor(
+            self,
+            model,
+            optimizer,
+            grad_acc_steps=1,
+            tp_group=None,
+            dp_group=None,
+            start_iteration=0
+    ):
+        """External interface"""
+        global start_step
+        start_step = start_iteration
+        logger.info(f'grad acc steps {grad_acc_steps}')
+        self.micro_batch_number = grad_acc_steps
+        self.dp_group = dp_group
+        self.tp_group = tp_group
+        self.optimizer_mon, self.optimizer_class = OptimizerMonFactory.create_optimizer_mon(optimizer)
+        self.hook_step_final(optimizer)
+        if not isinstance(model, list):
+            model = [model]
+        self.model = model
+        if len(model) > 1:
+            self.vpp = True
+            self._smallest_rank_print('vpp enabled')
+        if not self.dynamic_enable:
+            self.register_hooks(optimizer)
+
+    def register_hooks(self, optimizer):
+        self._register_param_name()
+        self.hook_optimizer(optimizer)
+        self._patch_grad_sync()
+        self.hook_modules()
+        self.monitoring = True
+
+    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
+        rank = None
+        if dist.is_initialized():
+            rank = dist.get_rank()
+            if (rank not in rank_list) and len(rank_list) != 0:
+                return
+        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
+
+    def build_tbtag_tensor_map(self, module_name, tag, tensor):
+        key = get_summary_writer_tag_name(module_name, tag, self.rank)
+        self._register_param_call_id("_hook_module", key)
+        return {key: tensor}
+
+    def generate_param_map(self, tag, param_tensor):
+        metrics = {}
+        for name in self.param2name.values():
+            key = get_summary_writer_tag_name(name, tag, self.rank)
+            self._register_param_call_id("optimizer_pre_step_hook", key)
+            if name not in param_tensor or param_tensor[name] is None:
+                continue
+            metrics[key] = param_tensor[name]
+        return metrics
 
     def generate_param_metrics(self, opt_context):
         if not self.param_distribution:
@@ -469,50 +513,6 @@ class TrainerMon:
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         unreduced_grad = self.grad_context.acc_metric if self.weight_hooked else self.grad_context.pre
         return self.grad_context.post, unreduced_grad
-
-    def set_monitor(
-            self,
-            model,
-            grad_acc_steps=1,
-            optimizer=None,
-            tp_group=None,
-            dp_group=None,
-            start_iteration=0
-    ):
-        """External interface"""
-        global start_step
-        start_step = start_iteration
-        logger.info(f'grad acc steps {grad_acc_steps}')
-        self.micro_batch_number = grad_acc_steps
-        self.dp_group = dp_group
-        self.tp_group = tp_group
-        self.optimizer_mon, self.optimizer_class = OptimizerMonFactory.create_optimizer_mon(optimizer)
-        self.hook_step_final(optimizer)
-        if not isinstance(model, list):
-            model = [model]
-        self.model = model
-        if len(model) > 1:
-            self.vpp = True
-            self._smallest_rank_print('vpp enabled')
-        if not self.dynamic_enable:
-            self.register_hooks(optimizer)
-
-    def register_hooks(self, optimizer):
-        self._register_param_name()
-        self.hook_optimizer(optimizer)
-        self._patch_grad_sync()
-        self.hook_modules()
-        self.monitoring = True
-
-    def generate_param_map(self, tag, param_tensor):
-        metrics = {}
-        for name in self.param2name.values():
-            key = get_summary_writer_tag_name(name, tag, self.rank)
-            self._register_param_call_id("optimizer_pre_step_hook", key)
-            if name not in param_tensor or param_tensor[name] is None:
-                continue
-            metrics[key] = param_tensor[name]
-        return metrics
 
     def generate_xy_metrics(self):
         actv = {}
@@ -572,7 +572,7 @@ class TrainerMon:
             self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
-    def hook_optimizer(self, optimizer=None):
+    def hook_optimizer(self, optimizer):
         # in DDP by default use params_have_main_grad
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
@@ -638,7 +638,6 @@ class TrainerMon:
                 optimizer_pre_step_hook(optimizer, args, kwargs)
                 out = func(*args, **kwargs)
                 return out
-
             return wrapper
 
         if self.optimizer_hooked:
@@ -956,7 +955,7 @@ class TrainerMon:
                 return
             if not context.verified:
                 context.focused_in_col = validate_config_spec(
-                    context.format_by_arg[MonitorConst.INPUT_GRAD], 
+                    context.format_by_arg[MonitorConst.INPUT_GRAD],
                     input_grad, context.module_name, MonitorConst.INPUT_GRAD)
                 context.focused_out_col = validate_config_spec(
                     context.format_by_arg[MonitorConst.OUTPUT_GRAD],
