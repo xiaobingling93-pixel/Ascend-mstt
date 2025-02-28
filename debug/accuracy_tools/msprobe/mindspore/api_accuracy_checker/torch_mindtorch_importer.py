@@ -19,7 +19,8 @@ import sys
 from pathlib import Path
 import mindspore
 from msprobe.mindspore.common.log import logger
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.mindspore.common.const import MsCompareConst
 import torch as mindtorch
 from torch import Tensor as mindtorch_tensor
 import torch.nn.functional as mindtorch_func

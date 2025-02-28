@@ -16,7 +16,7 @@
 import os
 from tqdm import tqdm
 
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json, load_yaml
 from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
@@ -25,6 +25,7 @@ from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compar
 from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
+from msprobe.mindspore.common.const import MsCompareConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 

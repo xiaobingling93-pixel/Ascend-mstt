@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock
 import os
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import DataManager
-from msprobe.core.common.const import MsCompareConst, CompareConst
+from msprobe.core.common.const import CompareConst
+from msprobe.mindspore.common.const import MsCompareConst
 
 
 class TestDataManager(unittest.TestCase):
