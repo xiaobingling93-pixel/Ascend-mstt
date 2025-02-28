@@ -1051,7 +1051,7 @@ class TrainerMon:
             self.enable_megatron = True
             logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
         except ImportError:
-            self.enable_megatron = False
+            self.enable_megatron = False | self.enable_megatron
 
         if not self.enable_megatron:
             self._hook_weights()
