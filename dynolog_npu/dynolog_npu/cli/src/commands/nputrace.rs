@@ -55,6 +55,7 @@ pub struct NpuTraceOptions {
     pub aic_metrics: String,
     pub l2_cache: bool,
     pub op_attr: bool,
+    pub msprof_tx: bool,
     pub gc_detect_threshold: Option<f32>,
     pub data_simplification: String,
     pub export_type: String,
@@ -75,6 +76,7 @@ PROFILE_PROFILER_LEVEL={}
 PROFILE_AIC_METRICS={}
 PROFILE_L2_CACHE={}
 PROFILE_OP_ATTR={}
+PROFILE_MSPROF_TX={}
 PROFILE_GC_DETECT_THRESHOLD={}
 PROFILE_DATA_SIMPLIFICATION={}
 PROFILE_EXPORT_TYPE={}"#,
@@ -89,6 +91,7 @@ PROFILE_EXPORT_TYPE={}"#,
             self.aic_metrics,
             self.l2_cache,
             self.op_attr,
+            self.msprof_tx,
             self.gc_detect_threshold.map_or("None".to_string(), |v| v.to_string()),
             self.data_simplification,
             self.export_type
@@ -213,6 +216,7 @@ ACTIVITIES_ITERATIONS=1000"#
                 aic_metrics: "AiCoreNone".to_string(),
                 l2_cache: true,
                 op_attr: true,
+                msprof_tx: true,
                 gc_detect_threshold: 0.1,
                 data_simplification: "true",
                 export_type: "Text".to_string(),
@@ -234,6 +238,7 @@ PROFILE_PROFILER_LEVEL=Level0
 PROFILE_AIC_METRICS=AiCoreNone
 PROFILE_L2_CACHE=true
 PROFILE_OP_ATTR=true
+PROFILE_MSPROF_TX=true
 PROFILE_GC_DETECT_THRESHOLD=0.1
 PROFILE_DATA_SIMPLIFICATION=true
 PROFILE_EXPORT_TYPE=Text"#
