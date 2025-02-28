@@ -285,9 +285,9 @@ def result_item_init(n_info, b_info, dump_mode):
             md5_compare_result = CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
             result_item.extend([n_info.struct[2], b_info.struct[2], md5_compare_result])
         elif dump_mode == Const.SUMMARY:
-            result_item.extend([" "] * 8)
+            result_item.extend([" "] * 8)  # 8个统计量数据情况的比对指标
         else:
-            result_item.extend([" "] * 5)
+            result_item.extend([" "] * 6)  # 6个真实数据情况的比对指标
     else:
         err_msg = "index out of bounds error will occur in result_item_init, please check!\n" \
                   f"npu_info_struct is {n_info.struct}\n" \
@@ -453,9 +453,9 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
             result.append(result_item)
             continue
         if dump_mode == Const.SUMMARY:
-            result_item.extend([CompareConst.N_A] * 8)
+            result_item.extend([CompareConst.N_A] * 8)  # 8个统计量数据情况的比对指标
         if dump_mode == Const.ALL:
-            result_item.extend([CompareConst.N_A] * 5)
+            result_item.extend([CompareConst.N_A] * 6)  # 6个真实数据情况的比对指标
 
         npu_summary_data = safe_get_value(summary_reorder, index, "summary_reorder")
         bench_summary_data = [CompareConst.N_A] * 4

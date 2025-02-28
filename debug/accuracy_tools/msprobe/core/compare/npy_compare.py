@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -70,7 +70,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         error_flag = True
         return CompareConst.NONE, CompareConst.NONE, error_flag, err_msg
     if not n_value.shape:  # 判断数据是否为0维张量
-        err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', "
+        err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', '{CompareConst.EUC_DIST}', "
                    f"'{CompareConst.ONE_THOUSANDTH_ERR_RATIO}' and '{CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}'. ")
         error_flag = False  # 0-d tensor 最大绝对误差、最大相对误差仍然支持计算，因此error_flag设置为False，不做统一处理
         return n_value, b_value, error_flag, err_msg
@@ -168,8 +168,9 @@ def statistics_data_check(result_dict):
 
 class TensorComparisonBasic(abc.ABC):
     """NPU和bench中npy数据的比较模板"""
+
     @abc.abstractmethod
-    def apply(self, n_value, b_value, relative_err):
+    def apply(self, n_value, b_value, relative_err, err_msg):
         raise NotImplementedError
 
 
@@ -190,6 +191,7 @@ def get_relative_err(n_value, b_value):
 
 class GetCosineSimilarity(TensorComparisonBasic):
     """计算cosine相似度"""
+
     @staticmethod
     def correct_data(result):
         if result == CompareConst.NAN:
@@ -198,9 +200,9 @@ class GetCosineSimilarity(TensorComparisonBasic):
             return round(float(result), 6)
         return result
 
-    def apply(self, n_value, b_value, relative_err):
-        if not n_value.shape:
-            return CompareConst.UNSUPPORTED, ""
+    def apply(self, n_value, b_value, relative_err, err_msg):
+        if "This is type of 0-d tensor" in err_msg:
+            return CompareConst.UNSUPPORTED, err_msg
 
         with np.errstate(divide="ignore", invalid="ignore"):
             if len(n_value) == 1:
@@ -224,9 +226,22 @@ class GetCosineSimilarity(TensorComparisonBasic):
         return result, ""
 
 
+class GetEuclideanDistance(TensorComparisonBasic):
+    """计算欧式距离"""
+
+    def apply(self, n_value, b_value, relative_err, err_msg):
+        if "This is type of 0-d tensor" in err_msg:
+            return CompareConst.UNSUPPORTED, err_msg
+
+        distance = np.linalg.norm(n_value - b_value, ord=2)
+
+        return distance, ""
+
+
 class GetMaxAbsErr(TensorComparisonBasic):
     """计算最大绝对误差"""
-    def apply(self, n_value, b_value, relative_err):
+
+    def apply(self, n_value, b_value, relative_err, err_msg):
         temp_res = n_value - b_value
         max_value = np.max(np.abs(temp_res))
         if np.isnan(max_value):
@@ -237,7 +252,8 @@ class GetMaxAbsErr(TensorComparisonBasic):
 
 class GetMaxRelativeErr(TensorComparisonBasic):
     """计算最大相对误差"""
-    def apply(self, n_value, b_value, relative_err):
+
+    def apply(self, n_value, b_value, relative_err, err_msg):
         max_relative_err = np.max(np.abs(relative_err))
         if np.isnan(max_relative_err):
             msg = "Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data."
@@ -247,12 +263,13 @@ class GetMaxRelativeErr(TensorComparisonBasic):
 
 class GetErrRatio(TensorComparisonBasic):
     """计算相对误差小于指定阈值(千分之一、千分之五)的比例"""
+
     def __init__(self, threshold):
         self.threshold = threshold
 
-    def apply(self, n_value, b_value, relative_err):
-        if not n_value.shape:
-            return CompareConst.UNSUPPORTED, ""
+    def apply(self, n_value, b_value, relative_err, err_msg):
+        if "This is type of 0-d tensor" in err_msg:
+            return CompareConst.UNSUPPORTED, err_msg
 
         if not np.size(relative_err):
             return CompareConst.NAN, ""
@@ -264,6 +281,7 @@ class GetErrRatio(TensorComparisonBasic):
 class CompareOps:
     compare_ops = {
         "cosine_similarity": GetCosineSimilarity(),
+        "euclidean_distance": GetEuclideanDistance(),
         "max_abs_error": GetMaxAbsErr(),
         "max_relative_error": GetMaxRelativeErr(),
         "one_thousand_err_ratio": GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD),
@@ -295,7 +313,7 @@ def compare_ops_apply(n_value, b_value, error_flag, err_msg):
     n_value, b_value = reshape_value(n_value, b_value)
 
     for op in CompareOps.compare_ops.values():
-        result, msg = op.apply(n_value, b_value, relative_err)
+        result, msg = op.apply(n_value, b_value, relative_err, err_msg)
         result_list.append(result)
         err_msg += msg
     return result_list, err_msg

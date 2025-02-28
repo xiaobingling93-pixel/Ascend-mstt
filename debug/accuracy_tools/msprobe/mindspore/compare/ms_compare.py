@@ -125,7 +125,8 @@ class MSComparator(Comparator):
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
             result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
         else:
-            fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
+            fill_cols = [CompareConst.COSINE, CompareConst.EUC_DIST,
+                         CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
                          CompareConst.ERROR_MESSAGE]
             result_df.loc[~condition_no_bench, fill_cols] = ''

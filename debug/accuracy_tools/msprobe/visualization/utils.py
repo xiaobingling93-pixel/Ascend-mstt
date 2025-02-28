@@ -182,11 +182,8 @@ class GraphConst:
     STR_MAX_LEN = 50
     SMALL_VALUE = 1e-3
     MD5_INDEX_LIST = [CompareConst.RESULT]
-    REAL_DATA_INDEX_LIST = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
-                            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO]
-    SUMMARY_INDEX_LIST = [CompareConst.MAX_DIFF, CompareConst.MIN_DIFF, CompareConst.MEAN_DIFF,
-                          CompareConst.NORM_DIFF, CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
-                          CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR]
+    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX
+    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX
     VALUE_INDEX_LIST = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     NULL = 'null'

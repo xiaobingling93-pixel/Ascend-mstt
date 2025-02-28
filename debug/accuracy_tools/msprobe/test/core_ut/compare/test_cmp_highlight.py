@@ -26,7 +26,7 @@ def generate_result_xlsx(base_dir):
     data_path = os.path.join(base_dir, 'target_result.xlsx')
     data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
              'torch.float32', 'torch.float32', [2, 2], [2, 2],
-             '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+             '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
             ]
     columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
     result_df = pd.DataFrame(data, columns=columns)
@@ -101,8 +101,8 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, None)
 
     def test_CheckOneThousandErrorRatio_str(self):
-        api_in = [1, 1, 1, 1, 1, 1, 1, 1, 1, "unsupported"]
-        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1, "unsupported"]
+        api_in = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, "unsupported"]
         info = (api_in, api_out, 1)
         color_columns = ()
         dump_mode = Const.ALL
@@ -113,8 +113,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     @patch("msprobe.core.compare.highlight.add_highlight_row_info")
     def test_CheckOneThousandErrorRatio_red(self, mock_add_highlight_row_info):
-        api_in = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]
+        api_in = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, 1]
+        api_out = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, 0.5]
         info = (api_in, api_out, 1)
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
         color_columns = ColorColumns(red=[], yellow=[])
@@ -315,7 +315,7 @@ class TestUtilsMethods(unittest.TestCase):
         columns = CompareConst.COMPARE_RESULT_HEADER
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']
                 ]
         result_df = pd.DataFrame(data, columns=columns)
 
@@ -329,7 +329,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_highlight_rows_xlsx_red(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -342,7 +342,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_highlight_rows_xlsx_yellow(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -356,7 +356,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_highlight_rows_xlsx_malicious_columns(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['=Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -378,10 +378,10 @@ class TestUtilsMethods(unittest.TestCase):
     def test_highlight_rows_xlsx_malicious_type(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  '=torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
                 ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  '=torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -416,10 +416,10 @@ class TestUtilsMethods(unittest.TestCase):
     def test_update_highlight_err_msg(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
                 ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -433,10 +433,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                    'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                   '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'a\nb', '-1'],
+                   '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'a\nb', '-1'],
                   ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                    'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                   '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'd', '-1']
+                   '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'd', '-1']
                   ]
         target_result_df = pd.DataFrame(t_data, columns=columns)
         self.assertTrue(result_df.equals(target_result_df))

@@ -16,12 +16,12 @@ from test_acc_compare import generate_dump_json
 
 data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
          'torch.float32', 'torch.float32', [2, 2], [2, 2],
-         '', '', '', '', '',
+         '', '', '', '', '', '',
          1, 1, 1, 1, 1, 1, 1, 1,
          'Yes', '', '-1']]
 o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
            'torch.float32', 'torch.float32', [2, 2], [2, 2],
-           'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
+           'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
            1, 1, 1, 1, 1, 1, 1, 1,
            'None', 'No bench data matched.', '-1']]
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
@@ -34,9 +34,9 @@ class TestUtilsMethods(unittest.TestCase):
 
     def setUp(self):
         self.result_df = pd.DataFrame(columns=[
-            CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
-            CompareConst.ERROR_MESSAGE, CompareConst.ACCURACY,
-            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
+            CompareConst.COSINE, CompareConst.EUC_DIST, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
+            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
+            CompareConst.ACCURACY, CompareConst.ERROR_MESSAGE
         ])
         os.makedirs(base_dir, mode=0o750, exist_ok=True)
         self.lock = threading.Lock()
@@ -72,9 +72,10 @@ class TestUtilsMethods(unittest.TestCase):
             cos_result=[0.99, 0.98],
             max_err_result=[0.01, 0.02],
             max_relative_err_result=[0.001, 0.002],
-            err_msgs=['', 'Error in comparison'],
+            euc_dist_result=[0.5, 0.49],
             one_thousand_err_ratio_result=[0.1, 0.2],
-            five_thousand_err_ratio_result=[0.05, 0.1]
+            five_thousand_err_ratio_result=[0.05, 0.1],
+            err_msgs=['', 'Error in comparison']
         )
         offset = 0
         updated_df = _save_cmp_result(offset, comparison_result, self.result_df, self.lock)
@@ -88,9 +89,10 @@ class TestUtilsMethods(unittest.TestCase):
             cos_result=[0.99],
             max_err_result=[],
             max_relative_err_result=[0.001],
-            err_msgs=[''],
+            euc_dist_result=[0.5],
             one_thousand_err_ratio_result=[0.1],
-            five_thousand_err_ratio_result=[0.05]
+            five_thousand_err_ratio_result=[0.05],
+            err_msgs=['']
         )
         with self.assertRaises(CompareException) as context:
             _save_cmp_result(0, comparison_result, self.result_df, self.lock)

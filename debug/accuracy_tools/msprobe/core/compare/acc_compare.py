@@ -311,9 +311,9 @@ class Comparator:
                 ]
 
                 if self.dump_mode == Const.SUMMARY:
-                    result_item = base_result_item + [" "] * 8
+                    result_item = base_result_item + [" "] * 8  # 8个统计量数据情况的比对指标
                 else:
-                    result_item = base_result_item + [" "] * 5
+                    result_item = base_result_item + [" "] * 6  # 6个真实数据情况的比对指标
 
                 npu_summary_data = npu_ops_all.get(ms_op_name).get("summary")
                 result_item.extend(npu_summary_data)
@@ -456,11 +456,13 @@ class Comparator:
 
     def compare_ops(self, idx, dump_path_dict, result_df, lock, input_param):
         cos_result = []
+        euc_dist_result = []
         max_err_result = []
         max_relative_err_result = []
-        err_mess = []
         one_thousand_err_ratio_result = []
         five_thousand_err_ratio_result = []
+        err_mess = []
+
         is_print_compare_log = input_param.get("is_print_compare_log")
         bench_data = load_json(input_param.get("bench_json_path")).get('data')
         for i in range(len(result_df)):
@@ -469,8 +471,8 @@ class Comparator:
             if is_print_compare_log:
                 logger.info("start compare: {}".format(npu_op_name))
 
-            cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = \
-                self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param, bench_data)
+            cos_sim, euc_dist, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg \
+                = self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param, bench_data)
 
             if is_print_compare_log:
                 logger.info(
@@ -479,26 +481,28 @@ class Comparator:
                     "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
                                                         err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
             cos_result.append(cos_sim)
+            euc_dist_result.append(euc_dist)
             max_err_result.append(max_abs_err)
             max_relative_err_result.append(max_relative_err)
-            err_mess.append(err_msg)
             one_thousand_err_ratio_result.append(one_thousand_err_ratio)
             five_thousand_err_ratio_result.append(five_thousand_err_ratio)
+            err_mess.append(err_msg)
 
         cr = ComparisonResult(
             cos_result=cos_result,
+            euc_dist_result=euc_dist_result,
             max_err_result=max_err_result,
             max_relative_err_result=max_relative_err_result,
-            err_msgs=err_mess,
             one_thousand_err_ratio_result=one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result=five_thousand_err_ratio_result
+            five_thousand_err_ratio_result=five_thousand_err_ratio_result,
+            err_msgs=err_mess
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)
 
-    def do_multi_process(self, input_parma, result_df):
+    def do_multi_process(self, input_param, result_df):
         try:
-            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df,
+            result_df = _handle_multi_process(self.compare_ops, input_param, result_df,
                                               multiprocessing.Manager().RLock())
             return result_df
         except ValueError as e:
