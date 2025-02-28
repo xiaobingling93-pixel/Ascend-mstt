@@ -76,6 +76,7 @@ class MsCompareConst:
     MINT_FUNCTIONAL = "MintFunctional"
     TENSOR_API = "Tensor"
     FUNCTIONAL_API = "Functional"
+    FUSION_API = "FUSION"
 
     API_NAME_STR_LENGTH = 4
     MAX_RECURSION_DEPTH = 20

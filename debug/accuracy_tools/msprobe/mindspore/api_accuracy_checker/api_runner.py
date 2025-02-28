@@ -68,7 +68,7 @@ api_parent_module_mapping = {
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): mindtorch_dist,
     (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed,
     (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): mindspore.ops,
-    (MsCompareConst.FUNCTIONAL_API, Const.PT_FRAMEWORK): fusion
+    (MsCompareConst.MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): fusion
 
 }
 
@@ -89,7 +89,7 @@ api_parent_module_str_mapping = {
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): "mindtorch_dist",
     (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed",
     (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): "mindspore.ops",
-    (MsCompareConst.FUNCTIONAL_API, Const.PT_FRAMEWORK): "fusion"
+    (MsCompareConst.MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): "fusion"
 }
 
 
@@ -146,7 +146,7 @@ class ApiRunner:
     def get_api_instance(api_type_str, api_sub_name, api_platform):
         """
         Args:
-            api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
+            api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Functional"]
             api_sub_name: str, e.g. "relu"
             api_platform: str: Union["mindpore", "torch"]
 
@@ -158,9 +158,13 @@ class ApiRunner:
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         """
-
-        api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
-        api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
+        print(f"api_sub_name:{api_sub_name}")
+        if api_sub_name in MsCompareConst.SUPPORTED_FUSION_LIST:
+            api_parent_module = api_parent_module_mapping.get((MsCompareConst.FUSION_API, api_platform))
+            api_parent_module_str = api_parent_module_str_mapping.get((MsCompareConst.FUSION_API, api_platform))
+        else:
+            api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
+            api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
         full_api_name = api_parent_module_str + Const.SEP + api_sub_name
 
         if not hasattr(api_parent_module, api_sub_name):
