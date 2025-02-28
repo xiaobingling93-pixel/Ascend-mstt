@@ -176,7 +176,8 @@ class GradContext:
 class TrainerMon:
     tensor_metrics = TensorMetrics()
 
-    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
+    # 保留原opt_ty参数，兼容msprobe1.2.2前旧版本
+    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
         # TYPE1: 只在这里初始化的变量, 不会随着训练中途config配置改变而重置
         self.config_file_path = config_file_path
         self.process_group = get_process_group(process_group)
@@ -379,45 +380,19 @@ class TrainerMon:
         if not self.cc_distribution.get('enable', False):
             logger.info_on_rank_0("> cc operator is not monitored.")
 
-    def hook_modules(self):
-        if self.module_rank_list and (self.rank not in self.module_rank_list):
-            return
+    # 保留原接口，兼容msprobe1.2.2前旧版本
+    def monitor_gnorm_with_ad(self, model, optimizer=None, grad_acc_steps=1, tp_group=None, dp_group=None,
+                              start_iteration=0):
+        if optimizer is None:
+            optimizer = getattr(self, 'optimizer_trans', None)  # 兼容老版本可传None的情况, 从set_wrapped_optimizer获取
+            if optimizer is None:
+                logger.error("monitor_gnorm_with_ad: please set_wrapped_optimizer before it or input optimizer!=None")
+                return
+        self.set_monitor(model, optimizer, grad_acc_steps, tp_group, dp_group, start_iteration)
 
-        targets = self.config['targets']
-        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
-        for key in module_in_all_stage:
-            struct = targets.pop(key)
-            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
-
-        hooked_count = 0
-        for vpp_stage, model_chunk in enumerate(self.model):
-            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
-            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
-                'targets'].keys()
-            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
-
-        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
-
-        def clone_if_tensor(args):
-            if isinstance(args, tuple):
-                return tuple([clone_if_tensor(arg) for arg in args])
-            elif isinstance(args, torch.Tensor):
-                return args.clone()
-            else:
-                return args
-
-        @torch.no_grad
-        def wrap_hook_setup(setup):
-            def wrapped_setup(*args, **kwargs):
-                args = setup(*args, **kwargs)
-                args = clone_if_tensor(args)
-                return args
-
-            return wrapped_setup
-
-        BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
-        BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
-        return
+    # 保留原接口，兼容msprobe1.2.2前旧版本
+    def set_wrapped_optimizer(self, optimizer):
+        self.optimizer_trans = optimizer
 
     def set_monitor(
             self,
@@ -557,9 +532,9 @@ class TrainerMon:
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, 
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric,
                                           opt_context.step, MonitorConst.EXP_AVG)
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, 
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric,
                                           opt_context.step, MonitorConst.EXP_AVG_SQ)
 
     def write_grad_tb(self, step):
@@ -571,6 +546,98 @@ class TrainerMon:
         else:
             self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
+
+    def hook_step_final(self, optimizer):
+        def step_final_hook(optimizer, args, kwargs):
+            context = self.optimizer_context[optimizer]
+            rank = dist.get_rank() if dist.is_initialized() else None
+            # 静态在第0步就可以保存, 动态在第0步不可以, 因为动态设计的就是重置后下一步开启, 第0步的self.monitoring还是False
+            if self.monitoring:
+                module_rank_valid = not self.module_rank_list or (
+                            dist.is_initialized() and dist.get_rank() in self.module_rank_list)
+                step_condition = (context.step >= self.start_step and (
+                            context.step - self.start_step) % self.step_interval == 0)
+                if module_rank_valid and step_condition:
+                    self.has_collect_times += 1
+
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_factory.set_call_id(self.param_name_call_id)
+                    self.write_xy_tb(context.step)
+                    self.write_grad_tb(context.step)
+                    self.write_mv_tb(context)
+                    self.write_param_tb(context)
+                    self.write_adhoc_check(context.step)
+
+                    if self.ur_distribution:
+                        for param_name, _ in context.param_adam_update.items():
+                            self.update_heatmap_visualizer[param_name].visualize(
+                                get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step,
+                                self.summary_writer)
+                        for param_name, _ in context.param_adam_ratio.items():
+                            self.ratio_heatmap_visualizer[param_name].visualize(
+                                get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step,
+                                self.summary_writer)
+
+                    if context.metric_dict:
+                        self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
+                    context.metric_dict.clear()
+
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
+                    self.summary_writer.clear_anomalies()
+                    self.call_id = 0
+                    self.param_name_call_id.clear()
+
+                    if self.has_collect_times >= self.collect_times:
+                        self._remove_all_hooks_final(optimizer)
+
+            context.step += 1
+            self.dynamic_monitor(optimizer)
+
+        def patch_step(func, optimizer):
+            def wrapper(*args, **kwargs):
+                out = func(*args, **kwargs)
+                step_final_hook(optimizer, args, kwargs)
+                return out
+            return wrapper
+
+        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+        self.origin_step_func = optimizer.__class__.step
+        return
+
+    def dynamic_monitor(self, optimizer):
+        """
+        If dynamic monitor enabled and config.json updated,
+        remove hooks and register new hooks according to new configuration.
+        """
+        context = self.optimizer_context[optimizer]
+        if not self.dynamic_enable:
+            return
+        try:
+            # 如果文件时间戳没变, 可以不读取节省时间
+            config_timestamp = os.path.getmtime(self.config_file_path)
+            if config_timestamp == self.config_timestamp:
+                return
+            # 更新config文件最新修改时间戳
+            self.config_timestamp = config_timestamp
+            config = load_json(self.config_file_path)
+        except Exception as e:
+            logger.error(f"get config.json wrong because {e}, not updated, please check!!!")
+            return
+
+        if config.get("dynamic_on", False):
+            try:
+                validate_config(config)
+                self.config = config
+                self.set_config()
+                logger.warning(f"config is updated at step{context.step - 1}, "
+                               f"will start new hook at step{context.step}.")
+            except Exception as e:
+                logger.error(f"set config wrong because {e}, not updated, please check!!!")
+                return
+
+            self._remove_all_hooks(optimizer)
+            self.register_hooks(optimizer)
 
     def hook_optimizer(self, optimizer):
         # in DDP by default use params_have_main_grad
@@ -648,97 +715,44 @@ class TrainerMon:
         self.optimizer_hooked = True
         return
 
-    def dynamic_monitor(self, optimizer):
-        """
-        If dynamic monitor enabled and config.json updated,
-        remove hooks and register new hooks according to new configuration.
-        """
-        context = self.optimizer_context[optimizer]
-        if not self.dynamic_enable:
-            return
-        try:
-            # 如果文件时间戳没变, 可以不读取节省时间
-            config_timestamp = os.path.getmtime(self.config_file_path)
-            if config_timestamp == self.config_timestamp:
-                return
-            # 更新config文件最新修改时间戳
-            self.config_timestamp = config_timestamp
-            config = load_json(self.config_file_path)
-        except Exception as e:
-            logger.error(f"get config.json wrong because {e}, not updated, please check!!!")
+    def hook_modules(self):
+        if self.module_rank_list and (self.rank not in self.module_rank_list):
             return
 
-        if config.get("dynamic_on", False):
-            try:
-                validate_config(config)
-                self.config = config
-                self.set_config()
-                logger.warning(f"config is updated at step{context.step - 1}, "
-                               f"will start new hook at step{context.step}.")
-            except Exception as e:
-                logger.error(f"set config wrong because {e}, not updated, please check!!!")
-                return
+        targets = self.config['targets']
+        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
+        for key in module_in_all_stage:
+            struct = targets.pop(key)
+            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
 
-            self._remove_all_hooks(optimizer)
-            self.register_hooks(optimizer)
+        hooked_count = 0
+        for vpp_stage, model_chunk in enumerate(self.model):
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
+            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
+                'targets'].keys()
+            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
 
-    def hook_step_final(self, optimizer):
-        def step_final_hook(optimizer, args, kwargs):
-            context = self.optimizer_context[optimizer]
-            rank = dist.get_rank() if dist.is_initialized() else None
-            # 静态在第0步就可以保存, 动态在第0步不可以, 因为动态设计的就是重置后下一步开启, 第0步的self.monitoring还是False
-            if self.monitoring:
-                module_rank_valid = not self.module_rank_list or (
-                            dist.is_initialized() and dist.get_rank() in self.module_rank_list)
-                step_condition = (context.step >= self.start_step and (
-                            context.step - self.start_step) % self.step_interval == 0)
-                if module_rank_valid and step_condition:
-                    self.has_collect_times += 1
+        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
 
-                    if self.anomaly_data_factory:
-                        self.anomaly_data_factory.set_call_id(self.param_name_call_id)
-                    self.write_xy_tb(context.step)
-                    self.write_grad_tb(context.step)
-                    self.write_mv_tb(context)
-                    self.write_param_tb(context)
-                    self.write_adhoc_check(context.step)
+        def clone_if_tensor(args):
+            if isinstance(args, tuple):
+                return tuple([clone_if_tensor(arg) for arg in args])
+            elif isinstance(args, torch.Tensor):
+                return args.clone()
+            else:
+                return args
 
-                    if self.ur_distribution:
-                        for param_name, _ in context.param_adam_update.items():
-                            self.update_heatmap_visualizer[param_name].visualize(
-                                get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step,
-                                self.summary_writer)
-                        for param_name, _ in context.param_adam_ratio.items():
-                            self.ratio_heatmap_visualizer[param_name].visualize(
-                                get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step,
-                                self.summary_writer)
+        @torch.no_grad
+        def wrap_hook_setup(setup):
+            def wrapped_setup(*args, **kwargs):
+                args = setup(*args, **kwargs)
+                args = clone_if_tensor(args)
+                return args
 
-                    if context.metric_dict:
-                        self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
-                    context.metric_dict.clear()
+            return wrapped_setup
 
-                    if self.anomaly_data_factory:
-                        self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
-                    self.summary_writer.clear_anomalies()
-                    self.call_id = 0
-                    self.param_name_call_id.clear()
-
-                    if self.has_collect_times >= self.collect_times:
-                        self._remove_all_hooks_final(optimizer)
-
-            context.step += 1
-            self.dynamic_monitor(optimizer)
-
-        def patch_step(func, optimizer):
-            def wrapper(*args, **kwargs):
-                out = func(*args, **kwargs)
-                step_final_hook(optimizer, args, kwargs)
-                return out
-            return wrapper
-
-        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-        self.origin_step_func = optimizer.__class__.step
-
+        BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
+        BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
         return
 
     def _remove_all_hooks(self, optimizer):
