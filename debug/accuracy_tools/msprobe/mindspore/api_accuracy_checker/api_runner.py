@@ -68,7 +68,7 @@ api_parent_module_mapping = {
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): mindtorch_dist,
     (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed,
     (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): mindspore.ops,
-    (MsCompareConst.MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): fusion
+    (MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): fusion
 
 }
 
@@ -89,7 +89,7 @@ api_parent_module_str_mapping = {
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): "mindtorch_dist",
     (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed",
     (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): "mindspore.ops",
-    (MsCompareConst.MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): "fusion"
+    (MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): "fusion"
 }
 
 
