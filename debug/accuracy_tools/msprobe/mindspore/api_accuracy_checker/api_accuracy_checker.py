@@ -16,7 +16,7 @@
 import os
 from tqdm import tqdm
 
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json, load_yaml
 from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
@@ -25,6 +25,7 @@ from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compar
 from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
+from msprobe.mindspore.common.const import MsCompareConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
 
@@ -156,6 +157,7 @@ class ApiAccuracyChecker:
         real_api_str = Const.SEP.join(api_name_str_list[1:-2])
         api_list = load_yaml(yaml_path)
         supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
+        supported_fusion_api_list = MsCompareConst.SUPPORTED_FUSION_LIST
         if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
                 and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
@@ -163,6 +165,9 @@ class ApiAccuracyChecker:
                 and global_context.get_framework() == Const.MT_FRAMEWORK:
             return True
         if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
+            return True
+        if api_type_str == MsCompareConst.FUNCTIONAL_API and real_api_str in supported_fusion_api_list \
                 and global_context.get_framework() == Const.MS_FRAMEWORK:
             return True
         return False

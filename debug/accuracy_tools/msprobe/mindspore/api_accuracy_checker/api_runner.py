@@ -15,11 +15,13 @@
 
 import mindspore
 from mindspore import ops
-from msprobe.core.common.const import Const, MsCompareConst
+from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
 from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list, torch_dtype_to_dtype_str
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
+from msprobe.mindspore.api_accuracy_checker.bench_functions.fusion_operator import fusion
+from msprobe.mindspore.common.const import MsCompareConst
 from msprobe.mindspore.common.log import logger
 
 
@@ -64,7 +66,9 @@ api_parent_module_mapping = {
     (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): mindtorch_func,
     (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): torch.nn.functional,
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): mindtorch_dist,
-    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed
+    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): torch.distributed,
+    (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): mindspore.ops,
+    (MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): fusion
 
 }
 
@@ -83,7 +87,9 @@ api_parent_module_str_mapping = {
     (MsCompareConst.MINDTORCH_FUNC, Const.MT_FRAMEWORK): "mindtorch_func",
     (MsCompareConst.MINDTORCH_FUNC, Const.PT_FRAMEWORK): "torch.nn.functional",
     (MsCompareConst.MINDTORCH_DIST, Const.MT_FRAMEWORK): "mindtorch_dist",
-    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed"
+    (MsCompareConst.MINDTORCH_DIST, Const.PT_FRAMEWORK): "torch.distributed",
+    (MsCompareConst.FUNCTIONAL_API, Const.MS_FRAMEWORK): "mindspore.ops",
+    (MsCompareConst.FUSION_API, Const.PT_FRAMEWORK): "fusion"
 }
 
 
@@ -125,7 +131,8 @@ class ApiRunner:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API] \
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API,
+                                MsCompareConst.FUNCTIONAL_API] \
                 and api_platform == Const.MS_FRAMEWORK:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
@@ -139,9 +146,9 @@ class ApiRunner:
     def get_api_instance(api_type_str, api_sub_name, api_platform):
         """
         Args:
-            api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
+            api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Functional"]
             api_sub_name: str, e.g. "relu"
-            api_platform: str: Union["mindpore", "torch"]
+            api_platform: str: Union["mindpore", "pytorch"]
 
         Return:
             api_instance: function object
@@ -151,9 +158,12 @@ class ApiRunner:
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         """
-
-        api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
-        api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
+        if api_sub_name in MsCompareConst.SUPPORTED_FUSION_LIST and api_platform == "pytorch":
+            api_parent_module = api_parent_module_mapping.get((MsCompareConst.FUSION_API, api_platform))
+            api_parent_module_str = api_parent_module_str_mapping.get((MsCompareConst.FUSION_API, api_platform))
+        else:
+            api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
+            api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
         full_api_name = api_parent_module_str + Const.SEP + api_sub_name
 
         if not hasattr(api_parent_module, api_sub_name):
