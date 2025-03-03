@@ -145,7 +145,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         if data.is_meta:
             return tensor_stat
         data_clone = data.detach()
-        if data_clone.numel() == 0:
+        if not data_clone.numel() or not data_clone.data_ptr():
             return tensor_stat
         else:
             if data_clone.device.type == Const.CPU_LOWERCASE or not async_dump:
