@@ -258,7 +258,7 @@ def validate_config(config):
     step_interval = config.get('step_interval', 1)
     validate_step_interval(step_interval)
 
-    collect_times = config.get('collect_times', 1e8)
+    collect_times = config.get('collect_times', int(1e8))
     validate_collect_times(collect_times)
 
     if not targets:
