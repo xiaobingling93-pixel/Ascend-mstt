@@ -77,6 +77,11 @@ static const std::map<DebuggerSummaryOption, std::pair<std::string, std::string>
     {DebuggerSummaryOption::MD5, {kStatsHeaderMD5, kStatsHeaderMD5}},
 };
 
+const static std::map<AclDtype, AclDtype> kDtypeTransMap = {
+    {AclDtype::DT_BF16, AclDtype::DT_FLOAT},
+    {AclDtype::DT_INT4, AclDtype::DT_INT8},
+};
+
 class AclTensorStats {
 public:
     AclTensorStats() = default;
@@ -605,7 +610,7 @@ static std::string GenDataPath(const std::string& path) {
 inline std::string GetTensorInfoSuffix(AclTensorInfo& tensor)
 {
     return "." + tensor.inout + "." + std::to_string(tensor.slot) +
-           "." + DataUtils::GetFormatString(tensor.hostFmt) + "." + DataUtils::GetDTypeString(tensor.dtype);
+           "." + DataUtils::GetFormatString(tensor.hostFmt) + "." + DataUtils::GetDTypeString(tensor.oriDtype);
 }
 
 static DebuggerErrno DumpOneAclTensorFmtBin(AclTensorInfo& tensor)
@@ -642,10 +647,13 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
         return DebuggerErrno::OK;
     }
 
-    if (tensor.dtype == AclDtype::DT_BF16) {
-        ret = AclTensor::TransDtype(tensor, AclDtype::DT_FLOAT);
+    auto it = kDtypeTransMap.find(tensor.dtype);
+    if (it != kDtypeTransMap.end()) {
+        AclDtype dstDtype = it->second;
+        ret = AclTensor::TransDtype(tensor, dstDtype);
         if (ret != DebuggerErrno::OK) {
-            LOG_ERROR(ret, tensor + ": Failed to transform dtype from bf16 to fp32.");
+            LOG_ERROR(ret, tensor + ": Failed to transform dtype from " + DataUtils::GetDTypeString(it->first) + " to " +
+                      DataUtils::GetDTypeString(it->second)+ ".");
             return ret;
         }
     }
@@ -738,7 +746,9 @@ static DebuggerErrno DumpOneAclTensor(AclTensorInfo& tensor, std::vector<Debugge
 {
     DEBUG_FUNC_TRACE();
     if (tensor.dumpOriginData || !FileOperation::IsDtypeSupportByNpy(tensor.dtype)) {
-        return DumpOneAclTensorFmtBin(tensor);
+        if (kDtypeTransMap.find(tensor.dtype) == kDtypeTransMap.end()) {
+            return DumpOneAclTensorFmtBin(tensor);
+        }
     }
 
     DebuggerErrno ret = ConvertFormatDeviceToHost(tensor);
