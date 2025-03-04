@@ -65,6 +65,7 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 
 not_backward_list = ['repeat_interleave']
 unsupported_backward_list = ['masked_select']
+unsupported_api_list = ["to"]
 
 
 tqdm_params = {
@@ -218,6 +219,7 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
     If api is both in black_list and black_list, black_list first.
     return: False for exec api, True for not exec
     """
+    black_list.extend(unsupported_api_list)
     if black_list and api_name in black_list:
         return True
     if white_list and api_name not in white_list:
