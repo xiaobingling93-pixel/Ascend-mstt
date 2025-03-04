@@ -182,9 +182,9 @@ def set_register_backward_hook_functions():
 
 def check_save_param(variable, name, save_backward):
     # try catch this api to skip invalid call
-    if not isinstance(variable, (list, dict, ms.Tensor, int, float, str)):
+    if not isinstance(variable, (list, dict, tuple, ms.Tensor, int, float, str)):
         logger.warning("PrecisionDebugger.save variable type not valid, "
-                       "should be one of list, dict, ms.Tensor, int, float or string. "
+                       "should be one of list, dict, tuple, ms.Tensor, int, float or string. "
                        "Skip current save process.")
         raise ValueError
     if not isinstance(name, str):
