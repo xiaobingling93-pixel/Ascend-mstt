@@ -247,6 +247,10 @@ def md5_find(data):
 
 
 def detect_framework_by_dump_json(file_path):
+    json_data = load_json(file_path)
+    framework = json_data.get("framework", None)
+    if framework in [Const.PT_FRAMEWORK, Const.MS_FRAMEWORK]:
+        return framework
     pattern_ms = r'"type":\s*"mindspore'
     pattern_pt = r'"type":\s*"torch'
     with FileOpen(file_path, 'r') as file:

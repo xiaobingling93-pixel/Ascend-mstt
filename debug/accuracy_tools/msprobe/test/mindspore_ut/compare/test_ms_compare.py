@@ -5,6 +5,7 @@ import random
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import torch
@@ -350,21 +351,21 @@ class TestUtilsMethods(unittest.TestCase):
         finally:
             shutil.rmtree(data_path)
 
-    def test_check_cross_framework(self):
-        ms_data = {
-            "data_name": "Cell.model.language_model.encoder.layers.5.input_norm.FusedRMSNorm.forward.0.input.0.npy",
-        }
-        pt_data = {
-            "data_name": "Module.module.module.language_model.encoder.layers.0.input_norm.RMSNorm.forward.0.input.0.pt",
-        }
+    @patch('msprobe.mindspore.compare.ms_compare.detect_framework_by_dump_json')
+    def test_check_cross_framework_valid_pytorch(self, mock_detect_framework):
+        mock_detect_framework.return_value = Const.PT_FRAMEWORK
 
-        def check_data(data):
-            with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', encoding='utf-8', delete=True) as temp_file:
-                json.dump(data, temp_file, ensure_ascii=False, indent=4)
-                temp_file.flush()
-                return check_cross_framework(temp_file.name)
-        self.assertFalse(check_data(ms_data))
-        self.assertTrue(check_data(pt_data))
+        result = check_cross_framework("dummy_path")
+
+        self.assertTrue(result)
+
+    @patch('msprobe.mindspore.compare.ms_compare.detect_framework_by_dump_json')
+    def test_check_cross_framework_invalid_framework(self, mock_detect_framework):
+        mock_detect_framework.return_value = Const.MS_FRAMEWORK
+
+        result = check_cross_framework("dummy_path")
+
+        self.assertFalse(result)
 
     def test_comapre_process(self):
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')

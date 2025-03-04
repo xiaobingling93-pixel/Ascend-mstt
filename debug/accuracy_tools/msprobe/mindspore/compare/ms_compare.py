@@ -22,10 +22,10 @@ import pandas as pd
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import FileOpen, create_directory, load_json, load_npy, load_yaml
+from msprobe.core.common.file_utils import create_directory, load_json, load_npy, load_yaml
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, \
-    check_op_str_pattern_valid, get_dump_mode, set_dump_path
+    check_op_str_pattern_valid, get_dump_mode, set_dump_path, detect_framework_by_dump_json
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
@@ -383,12 +383,11 @@ class MSComparator(Comparator):
 
 
 def check_cross_framework(bench_json_path):
-    pattern = r'"data_name":\s*"[^"]+\.pt"'
-    with FileOpen(bench_json_path, 'r') as file:
-        for line in file:
-            if re.search(pattern, line):
-                return True
-    return False
+    framework = detect_framework_by_dump_json(bench_json_path)
+    if framework == Const.PT_FRAMEWORK:
+        return True
+    else:
+        return False
 
 
 def ms_compare(input_param, output_path, **kwargs):

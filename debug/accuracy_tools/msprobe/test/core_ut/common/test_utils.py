@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,11 +18,13 @@ import json
 import os
 import tempfile
 from datetime import datetime, timezone
+import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
 import OpenSSL
 import numpy as np
+from pathlib import Path
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import (
@@ -53,7 +55,8 @@ from msprobe.core.common.utils import (CompareException,
                                        recursion_depth_decorator,
                                        MsprobeBaseException,
                                        check_str_param,
-                                       is_json_file)
+                                       is_json_file,
+                                       detect_framework_by_dump_json)
 
 
 class TestUtils(TestCase):
@@ -488,3 +491,42 @@ class TestCheckCrtValid(TestCase):
         with self.assertRaises(RuntimeError) as context:
             check_crt_valid(self.cert_file_path)
         self.assertIn('The SSL certificate is invalid', str(context.exception))
+
+
+class TestDetectFrameworkByDumpJson(unittest.TestCase):
+
+    @patch('msprobe.core.common.utils.load_json')
+    def test_valid_pytorch_framework(self, mock_load_json):
+        mock_load_json.return_value = {"framework": Const.PT_FRAMEWORK}
+
+        result = detect_framework_by_dump_json("dummy_path")
+
+        self.assertEqual(result, Const.PT_FRAMEWORK)
+
+    @patch('msprobe.core.common.utils.load_json')
+    def test_valid_mindspore_framework(self, mock_load_json):
+        mock_load_json.return_value = {"framework": Const.MS_FRAMEWORK}
+
+        result = detect_framework_by_dump_json("dummy_path")
+
+        self.assertEqual(result, Const.MS_FRAMEWORK)
+
+    def test_detect_framework_in_file(self):
+        self.current_dir = Path(__file__).parent
+        file_path = self.current_dir / "test_dump_file/pt_dump_no_framework.json"
+        result = detect_framework_by_dump_json(file_path)
+        self.assertEqual(result, Const.PT_FRAMEWORK)
+
+        self.current_dir = Path(__file__).parent
+        file_path = self.current_dir / "test_dump_file/ms_dump_no_framework.json"
+        result = detect_framework_by_dump_json(file_path)
+        self.assertEqual(result, Const.MS_FRAMEWORK)
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_detect_framework_exception(self, mock_logger):
+        self.current_dir = Path(__file__).parent
+        file_path = self.current_dir / "test_dump_file/dump_no_pt_no_ms.json"
+        with self.assertRaises(CompareException) as context:
+            result = detect_framework_by_dump_json(file_path)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
+        mock_logger.error.assert_called_once_with(f"{file_path} must be based on the MindSpore or PyTorch framework.")
