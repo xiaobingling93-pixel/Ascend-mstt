@@ -176,7 +176,7 @@ class GradContext:
 class TrainerMon:
     tensor_metrics = TensorMetrics()
 
-    # 保留原opt_ty参数，兼容msprobe1.2.2前旧版本
+    # 保留原opt_ty参数, 兼容msprobe1.2.2前旧版本
     def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
         # TYPE1: 只在这里初始化的变量, 不会随着训练中途config配置改变而重置
         self.config_file_path = config_file_path
@@ -380,17 +380,17 @@ class TrainerMon:
         if not self.cc_distribution.get('enable', False):
             logger.info_on_rank_0("> cc operator is not monitored.")
 
-    # 保留原接口，兼容msprobe1.2.2前旧版本
+    # 保留原接口, 兼容msprobe1.2.2前旧版本
     def monitor_gnorm_with_ad(self, model, optimizer=None, grad_acc_steps=1, tp_group=None, dp_group=None,
                               start_iteration=0):
         if optimizer is None:
-            optimizer = getattr(self, 'optimizer_trans', None)  # 兼容老版本可传None的情况, 从set_wrapped_optimizer获取
+            optimizer = getattr(self, "optimizer_trans", None)  # 兼容老版本可传None的情况, 从set_wrapped_optimizer获取
             if optimizer is None:
                 logger.error("monitor_gnorm_with_ad: please set_wrapped_optimizer before it or input optimizer!=None")
                 return
         self.set_monitor(model, optimizer, grad_acc_steps, tp_group, dp_group, start_iteration)
 
-    # 保留原接口，兼容msprobe1.2.2前旧版本
+    # 保留原接口, 兼容msprobe1.2.2前旧版本
     def set_wrapped_optimizer(self, optimizer):
         self.optimizer_trans = optimizer
 
