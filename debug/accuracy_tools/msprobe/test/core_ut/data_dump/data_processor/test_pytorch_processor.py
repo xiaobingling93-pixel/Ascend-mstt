@@ -19,6 +19,7 @@ from msprobe.core.data_dump.data_processor.pytorch_processor import (
     KernelDumpDataProcessor
 )
 from torch import distributed as dist
+from torch._subclasses import FakeTensorMode
 
 
 class TestPytorchDataProcessor(unittest.TestCase):
@@ -61,6 +62,15 @@ class TestPytorchDataProcessor(unittest.TestCase):
         mock_data = self.mock_tensor(is_meta=True)
         result = PytorchDataProcessor.get_stat_info(mock_data)
         self.assertIsInstance(result, TensorStatInfo)
+
+    def test_get_stat_info_with_fake_tensor(self):
+        with FakeTensorMode() as fake_tensor_mode:
+            fake_tensor = fake_tensor_mode.from_tensor(torch.randn(1, 2, 3))
+        result = PytorchDataProcessor.get_stat_info(fake_tensor)
+        self.assertIsNone(result.max)
+        self.assertIsNone(result.min)
+        self.assertIsNone(result.mean)
+        self.assertIsNone(result.norm)
 
     def test_get_stat_info_float(self):
         tensor = torch.tensor([1.0, 2.0, 3.0])
