@@ -51,6 +51,8 @@ sudo yum install -y cmake ninja
 
 ### 3. 编译
 
+- dynolog编译
+
 默认编译生成dyno和dynolog二进制文件, -t参数可以支持将二进制文件打包成deb包或rpm包.
 
 ```bash
@@ -63,6 +65,10 @@ bash scripts/build.sh -t deb
 # 编译rpm包, 当前只支持amd64平台
 bash scripts/build.sh -t rpm
 ```
+
+- dynolog_npu_plugin wheel包编译
+
+dynolog_npu_plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npu-monitor功能前必须安装该wheel包，具体编译安装指导可参考dynolog_npu\plugin\README.md。
 
 ## 使用方式
 
@@ -112,7 +118,9 @@ nputrace子命令支持的参数选项
 
 - nputrace使用方法
 
-Step1： 拉起dynolog daemon进程
+Step0: 参考`3.编译`章节完成dynolog的编译，以及dynolog_npu_plugin wheel包的编译和安装。
+
+Step1：拉起dynolog daemon进程
 ```bash
 # 方法1：使用systemd拉起service
 # 修改配置文件/etc/dynolog.gflags, 使能ipc_monitor
