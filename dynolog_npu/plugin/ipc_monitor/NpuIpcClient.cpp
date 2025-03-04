@@ -1,6 +1,5 @@
 #include "NpuIpcClient.h"
 
-#include <iostream>
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -15,14 +14,14 @@ bool IpcClient::RegisterInstance(int32_t id)
     std::unique_ptr<Message> message = Message::ConstructMessage<decltype(context)>(context, "ctxt");
     try {
         if (!SyncSendMessage(*message, std::string(DYNO_IPC_NAME))) {
-            std::cout << "[WARNING]Failed to send register ctxt for pid " << context.pid << " with dyno" << std::endl;
+            LOG(ERROR) << "Failed to send register ctxt for pid " << context.pid << " with dyno";
             return false;
         }
     } catch (const std::exception &e) {
-        std::cout << "[WARNING] Error when SyncSendMessage: " << e.what() << std::endl;
+        LOG(ERROR) << " Error when SyncSendMessage: " << e.what();
         return false;
     }
-    std::cout << "[INFO] Resigter pid " << context.pid << " for dynolog success !" << std::endl;
+    LOG(INFO) << "Resigter pid " << context.pid << " for dynolog success !";
     return true;
 }
 std::string IpcClient::IpcClientNpuConfig()
@@ -37,7 +36,7 @@ std::string IpcClient::IpcClientNpuConfig()
     }
     std::unique_ptr<Message> message = Message::ConstructMessage<NpuRequest, int32_t>(*req, "req", size);
     if (!SyncSendMessage(*message, std::string(DYNO_IPC_NAME))) {
-        std::cout << "[WARNING] Failed to send config  to dyno server fail !" << std::endl;
+        LOG(ERROR) << " Failed to send config  to dyno server fail !";
         free(req);
         req = nullptr;
         return "";
@@ -45,7 +44,7 @@ std::string IpcClient::IpcClientNpuConfig()
     free(req);
     message = PollRecvMessage(MAX_IPC_RETRIES, MAX_SLEEP_US);
     if (!message) {
-        std::cout << "[WARNING] Failed to receive on-demand config !" << std::endl;
+        LOG(ERROR) << " Failed to receive on-demand config !";
         return "";
     }
     std::string res = std::string(ReinterpretConvert<char *>(message->buf.get()), message->metadata.size);
@@ -65,7 +64,7 @@ std::unique_ptr<Message> IpcClient::ReceiveMessage()
 bool IpcClient::SyncSendMessage(const Message &message, const std::string &destName, int numRetry, int seepTimeUs)
 {
     if (destName.empty()) {
-        std::cout << "[WARNING] Can not send to empty socket name !" << std::endl;
+        LOG(ERROR) << " Can not send to empty socket name !";
         return false;
     }
     int i = 0;
@@ -79,7 +78,7 @@ bool IpcClient::SyncSendMessage(const Message &message, const std::string &destN
             seepTimeUs *= 2;  // 2: double sleep time
         }
     } catch (const std::exception &e) {
-        std::cout << "[ERROR] Error when SyncSendMessage: " << e.what() << std::endl;
+        LOG(ERROR) << " Error when SyncSendMessage: " << e.what();
         return false;
     }
     return i < numRetry;
@@ -94,7 +93,7 @@ bool IpcClient::Recv()
         try {
             successFlag = ep_.TryPeekMessage(*peekCtxt);
         } catch (std::exception &e) {
-            std::cout << "[ERROR] Error when TryPeekMessage: " << e.what() << std::endl;
+            LOG(ERROR) << " Error when TryPeekMessage: " << e.what();
             return false;
         }
         if (successFlag) {
@@ -108,7 +107,7 @@ bool IpcClient::Recv()
             try {
                 successFlag = ep_.TryRcvMessage(*recvCtxt);
             } catch (std::exception &e) {
-                std::cout << "[ERROR] Error when TryRecvMsg: " << e.what() << std::endl;
+                LOG(ERROR) << " Error when TryRecvMsg: " << e.what();
                 return false;
             }
             if (successFlag) {
@@ -118,7 +117,7 @@ bool IpcClient::Recv()
             }
         }
     } catch (std::exception &e) {
-        std::cout << "[ERROR] Error in Recv(): " << e.what() << std::endl;
+        LOG(ERROR) << " Error in Recv(): " << e.what();
         return false;
     }
     return false;
