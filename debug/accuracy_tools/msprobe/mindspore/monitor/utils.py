@@ -98,8 +98,8 @@ def validate_ranks(ranks):
     if not isinstance(ranks, list):
         raise TypeError("module_ranks should be a list")
     for rank in ranks:
-        if not isinstance(rank, str):
-            raise TypeError(f"element in module_ranks should be a str, get {type(rank)}")
+        if not isinstance(rank, int):
+            raise TypeError(f"element in module_ranks should be a int, get {type(rank)}")
 
 
 def validate_targets(targets):

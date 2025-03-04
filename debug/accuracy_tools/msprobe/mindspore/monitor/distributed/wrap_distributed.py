@@ -281,7 +281,7 @@ def create_hooks(context, monitor):
     global RANK
     pre_hooks = []
     hooks = []
-    RANK = str(get_rank())
+    RANK = get_rank()
     if communication.GlobalComm.INITED and RANK not in monitor.module_rank_list and monitor.module_rank_list != []:
         return [pre_hooks, hooks]
 
