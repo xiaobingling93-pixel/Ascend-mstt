@@ -223,6 +223,7 @@ class TrainerMon:
         self.micro_batch_number = 1
         self.optimizer_class = None
         self.optimizer_mon = None
+        self.optimizer_trans = None
 
         # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
