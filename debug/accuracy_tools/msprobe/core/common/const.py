@@ -364,13 +364,10 @@ class CompareConst:
                              MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
 
     # dtype match
-    MS_TYPE = [
-        [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
-        [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
-    ]
-    TORCH_TYPE = [
-        [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
-        [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
+
+    DTYPE_MATCH_GROUPS = [
+        {Const.FLOAT16, Const.FLOAT32, Const.BFLOAT16},
+        {Const.TORCH_FLOAT16, Const.TORCH_FLOAT32, Const.TORCH_BFLOAT16}
     ]
 
     # read_op

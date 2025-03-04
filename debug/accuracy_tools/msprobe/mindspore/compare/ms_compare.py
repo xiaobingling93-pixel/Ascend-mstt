@@ -270,15 +270,15 @@ class MSComparator(Comparator):
             bench_dtype = match_result['dtype_y']
             if self.cross_frame:
                 npu_dtype = npu_dtype.map(dtype_mapping).fillna(npu_dtype)
-            return ((npu_dtype == bench_dtype) |
-                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.FLOAT32)) |
-                    ((npu_dtype == Const.FLOAT32) & (bench_dtype == Const.FLOAT16)) |
-                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.BFLOAT16)) |
-                    ((npu_dtype == Const.BFLOAT16) & (bench_dtype == Const.FLOAT16)) |
-                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_FLOAT32)) |
-                    ((npu_dtype == Const.TORCH_FLOAT32) & (bench_dtype == Const.TORCH_FLOAT16)) |
-                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_BFLOAT16)) |
-                    ((npu_dtype == Const.TORCH_BFLOAT16) & (bench_dtype == Const.TORCH_FLOAT16)))
+
+            equal_condition = npu_dtype == bench_dtype
+            match_condition = (
+                    (npu_dtype.isin(CompareConst.DTYPE_MATCH_GROUPS[0]) & bench_dtype.isin(
+                        CompareConst.DTYPE_MATCH_GROUPS[0])) |
+                    (npu_dtype.isin(CompareConst.DTYPE_MATCH_GROUPS[1]) & bench_dtype.isin(
+                        CompareConst.DTYPE_MATCH_GROUPS[1]))
+            )
+            return equal_condition | match_condition
 
         match_result.loc[~gen_dtype_condition(), [i + '_y' for i in bench_df.columns]] = CompareConst.N_A
         return self.make_result_df(match_result)
