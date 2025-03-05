@@ -63,6 +63,8 @@ class Service:
         self.inner_switch = False
         self.primitive_switch = False
         self.current_iter = 0
+        self.loop = 0
+        self.init_step = 0
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
@@ -276,11 +278,12 @@ class Service:
             if self.config.task == Const.TENSOR:
                 self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
-        self.current_iter += 1
-        self.data_collector.update_iter(self.current_iter)
+        self.loop += 1
         self.reset_status()
 
     def start(self, model=None):
+        self.current_iter = self.loop + self.init_step
+        self.data_collector.update_iter(self.current_iter)
         if self.config.level == Const.LEVEL_DEBUG:
             return
         self.start_call = True

@@ -19,7 +19,7 @@ import torch
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import check_save_param
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
@@ -171,6 +171,14 @@ class PrecisionDebugger:
         except ValueError:
             return
         instance.service.save(variable, name, save_backward)
+
+    @classmethod
+    def set_init_step(cls, step):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        check_init_step(step)
+        instance.service.init_step = step
 
 
 def module_dump(module, dump_name):

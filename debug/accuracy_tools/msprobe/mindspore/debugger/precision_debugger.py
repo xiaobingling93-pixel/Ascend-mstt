@@ -22,7 +22,7 @@ from mindspore._c_expression import MSContext
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import set_register_backward_hook_functions, check_save_param
@@ -84,7 +84,7 @@ class PrecisionDebugger:
         common_config.dump_path = dump_path if dump_path else common_config.dump_path
         self.config = DebuggerConfig(common_config, task_config)
 
-        if _msprobe_c:
+        if self._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger(framework="MindSpore", config_path=config_path)
 
         self.config.execution_mode = self._get_execution_mode()
@@ -151,7 +151,7 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if _msprobe_c:
+        if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().start()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
@@ -180,7 +180,7 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if _msprobe_c:
+        if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
         if instance.task == Const.GRAD_PROBE:
             instance.gm.stop()
@@ -195,7 +195,7 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if _msprobe_c:
+        if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().step()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
@@ -234,6 +234,14 @@ class PrecisionDebugger:
             instance.service.save(variable, name, save_backward)
 
     @classmethod
+    def set_init_step(cls, step):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        check_init_step(step)
+        instance.service.init_step = step
+
+    @classmethod
     def _need_service(cls):
         instance = cls._instance
         if not instance:
@@ -242,3 +250,10 @@ class PrecisionDebugger:
             return False
         else:
             return instance.config.task != Const.FREE_BENCHMARK and not instance._is_graph_dump(instance.config)
+    
+    @classmethod
+    def _need_msprobe_c(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        return instance.config.level_ori == Const.LEVEL_L2

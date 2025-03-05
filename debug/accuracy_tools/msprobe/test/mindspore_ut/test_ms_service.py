@@ -218,10 +218,9 @@ class TestService(unittest.TestCase):
         HOOKCell.cell_count = {"test_api": 1}
         JitDump.jit_count = {"test_api": 1}
         self.service.primitive_hook_service.primitive_counters = {"test_api": 1}
-        self.service.current_iter = 0
+        self.service.loop = 0
         self.service.step()
-        self.assertEqual(self.service.current_iter, 1)
-        self.service.data_collector.update_iter.assert_called_once_with(1)
+        self.assertEqual(self.service.loop, 1)
         self.service.data_collector.reset_status.assert_called_once()
         self.assertEqual(JitDump.jit_count, defaultdict(int))
         self.assertEqual((self.service.primitive_hook_service.primitive_counters), {})
