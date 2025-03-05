@@ -25,7 +25,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import CompareConst
 
 
-def _handle_multi_process(func, input_parma, result_df, lock):
+def _handle_multi_process(func, input_param, result_df, lock):
     process_num = max(int((multiprocessing.cpu_count() + 1) // 4), 1)
     op_name_mapping_dict = read_dump_data(result_df)
 
@@ -55,7 +55,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         idx = df_chunk_size * process_idx
         chunk_size = len(df_chunk)
         result = pool.apply_async(func,
-                                  args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
+                                  args=(idx, op_name_mapping_dict, df_chunk, lock, input_param),
                                   error_callback=err_call,
                                   callback=partial(update_progress, chunk_size, lock)
                                   )
@@ -97,12 +97,12 @@ def _ms_graph_handle_multi_process(func, result_df, mode):
 def read_dump_data(result_df):
     try:
         npu_dump_name_list = result_df.iloc[0:, 0].tolist()
-        npu_dump_tensor_list = result_df.iloc[0:, -1].tolist()
+        dump_tensor_pair_list = result_df.iloc[0:, -1].tolist()
         op_name_mapping_dict = {}
         for index, _ in enumerate(npu_dump_name_list):
             npu_dump_name = npu_dump_name_list[index]
-            npu_dump_tensor = npu_dump_tensor_list[index]
-            op_name_mapping_dict[npu_dump_name] = [npu_dump_tensor, npu_dump_tensor]
+            dump_tensor_pair = dump_tensor_pair_list[index]
+            op_name_mapping_dict[npu_dump_name] = dump_tensor_pair
         return op_name_mapping_dict
     except ValueError as e:
         logger.error('result dataframe is not found.')
