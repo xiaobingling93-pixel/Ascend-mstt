@@ -67,7 +67,7 @@ class TestService(unittest.TestCase):
 
     def test_step_success(self):
         self.service.step()
-        self.assertEqual(self.service.current_iter, 1)
+        self.assertEqual(self.service.loop, 1)
 
     def test_step_fail(self):
         self.service.should_stop_service = True

@@ -428,6 +428,15 @@ def get_real_step_or_rank(step_or_rank_input, obj):
     return real_step_or_rank
 
 
+def check_init_step(step):
+    if not is_int(step):
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                        f"{step} must be an integer")
+    if not step >= 0:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                f"{step} must be greater than or equal to 0")
+
+
 def check_seed_all(seed, mode, rm_dropout):
     if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:
