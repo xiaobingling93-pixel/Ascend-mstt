@@ -14,7 +14,12 @@
 # limitations under the License.
 
 import os
-from msprobe.core.common.file_utils import load_yaml
+import importlib
+import inspect
+
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import load_yaml, check_link
+from msprobe.core.common.log import logger
 
 
 def get_ops():
@@ -26,3 +31,25 @@ def get_ops():
     wrap_torch = ops.get('torch')
     wrap_npu_ops = ops.get('torch_npu')
     return set(wrap_functional) | set(wrap_tensor) | set(wrap_torch) | set(wrap_npu_ops)
+
+
+def dynamic_import_op(package, white_list):
+    package_name = package.__name__
+    ops = {}
+    ops_dir, _ = os.path.split(package.__file__)
+    check_link(ops_dir)
+    for file_name in os.listdir(ops_dir):
+        if file_name in white_list:
+            sub_module_name = file_name[:-3]
+            module_name = f"{package_name}.{sub_module_name}"
+            try:
+                module = importlib.import_module(module_name)
+            except Exception as e:
+                logger.warning(f"import {module_name} failed!")
+                continue
+
+            func_members = inspect.getmembers(module, inspect.isfunction)
+            for func_member in func_members:
+                func_name, func = func_member[0], func_member[1]
+                ops[f"{sub_module_name}.{func_name}"] = func
+    return ops
