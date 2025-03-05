@@ -98,6 +98,9 @@ class TestPrecisionDebugger(unittest.TestCase):
             def __init__(self):
                 self.task = Const.TENSOR
                 self.service = None
+                self.config = MagicMock()
+                self.config.level_ori = MagicMock()
+                self.config.level_ori.return_value = Const.LEVEL_L1
         PrecisionDebugger._instance = None
         with self.assertRaises(Exception) as context:
             PrecisionDebugger.stop()

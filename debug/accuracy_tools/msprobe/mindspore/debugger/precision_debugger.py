@@ -248,4 +248,4 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        return cls.config.level_ori == Const.LEVEL_L2
+        return instance.config.level_ori == Const.LEVEL_L2
