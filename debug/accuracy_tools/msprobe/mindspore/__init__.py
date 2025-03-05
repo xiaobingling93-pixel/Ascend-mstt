@@ -24,5 +24,5 @@ except ImportError:
     logger.info("Module _msprobe_c has not been installed. L2-Dump may not work normally.")
 
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
-from msprobe.mindspore.common.utils import seed_all
+from msprobe.mindspore.common.utils import seed_all, MsprobeStep, MsprobeInitStep
 from msprobe.mindspore.monitor.module_hook import TrainerMon
