@@ -68,11 +68,11 @@ std::pair<int32_t, std::string> GetParentPidAndCommand(int32_t pid)
     if (std::getline(statFile, line)) {
         int ret = sscanf(line.c_str(), "%*d (%[^)]) %*c %d", command.data(), &parentPid);
         if (ret == 2) { // 2: 接收到2个字符
-            std::cout << "[INFO] Success to get parent pid: " << parentPid << std::endl;
+            LOG(INFO) << "Success to get parent pid: " << parentPid;
             return std::make_pair(parentPid, command);
         }
     }
-    std::cout << "[WARNING] Failed to parse /proc/" << pid << "/stat" << std::endl;
+    LOG(ERROR) << " Failed to parse /proc/" << pid << "/stat";
     return std::make_pair(0, "");
 }
 

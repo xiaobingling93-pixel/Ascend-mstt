@@ -25,13 +25,32 @@ logger = get_logger()
 
 
 class MsprofDataPreprocessor(DataPreprocessor):
-    DEVICE_HEAD = "device_"
+    DEVICE_PATTERN = "device_\d{1,2}$"
     INFO_JSON_PATTERN = r"^info\.json\.\d{1,2}$"
     DB_PATTERN = r"^msprof_\d{1,20}\.db$"
 
     def __init__(self, path_list: list):
         super().__init__(path_list)
         self.data_type = set()
+
+    @classmethod
+    def get_msprof_profiler_db_path(cls, data_path):
+        msprof_db_pattern = r"^msprof_\d{14}\.db$"
+        msprof_db_list = []
+        for file_name in os.listdir(data_path):
+            if re.match(msprof_db_pattern, file_name):
+                msprof_db_list.append(file_name)
+        if msprof_db_list:
+            msprof_db_list.sort(key=lambda x: x.split(".")[0].split("_")[-1])
+            return os.path.join(data_path, msprof_db_list[-1])
+        return ""
+
+    @classmethod
+    def get_device_id(cls, data_path):
+        for file_name in os.listdir(data_path):
+            if re.match(cls.DEVICE_PATTERN, file_name):
+                return int(file_name.split("_")[-1])
+        return None
 
     def get_data_map(self) -> dict:
         prof_data_uid = defaultdict(list)
@@ -86,7 +105,10 @@ class MsprofDataPreprocessor(DataPreprocessor):
 
     def _find_info_json_file(self, dir_name):
         for file_name in os.listdir(dir_name):
-            for device_file in os.listdir(os.path.join(dir_name, file_name)):
+            file_path = os.path.join(dir_name, file_name)
+            if not os.path.isdir(file_path):
+                continue
+            for device_file in os.listdir(file_path):
                 if re.match(self.INFO_JSON_PATTERN, device_file):
                     return os.path.join(dir_name, file_name, device_file)
         return None

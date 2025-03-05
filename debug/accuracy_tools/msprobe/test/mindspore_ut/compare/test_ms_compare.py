@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+import pandas as pd
 import torch
 import yaml
 
@@ -535,3 +536,27 @@ class TestUtilsMethods(unittest.TestCase):
         api_list = ["Mint"]
         with self.assertRaises(CompareException):
             ms_comparator.get_api_name(api_list)
+
+    def test_process_data_name(self):
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.ALL
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+        ms_comparator = MSComparator(mode_config, mapping_config)
+
+        data = pd.DataFrame({
+            'data_name_x': ['A', 'B', 'C'],
+            'data_name_y': ['X', 'Y', 'Z']
+        })
+
+        result = ms_comparator.process_data_name(data.copy())
+
+        expected = pd.DataFrame({
+            'data_name_x': [['A', 'X'], ['B', 'Y'], ['C', 'Z']],
+            'data_name_y': ['X', 'Y', 'Z']
+        })
+
+        pd.testing.assert_frame_equal(result, expected)

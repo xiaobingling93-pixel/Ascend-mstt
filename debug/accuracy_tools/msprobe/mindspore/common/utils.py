@@ -28,6 +28,30 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.utils import CompareException, check_seed_all
 
 
+class MsprobeStep(ms.train.Callback):
+    def __init__(self, debugger):
+        super(MsprobeStep, self).__init__()
+        self.debugger = debugger
+
+    def on_train_step_begin(self, run_context):
+        self.debugger.start()
+
+    def on_train_step_end(self, run_context):
+        self.debugger.stop()
+        self.debugger.step()
+
+
+class MsprobeInitStep(ms.train.Callback):
+    def on_train_begin(self, run_context):
+        try:
+            from ms._c_expression import _set_init_iter
+        except ImportError:
+            logger.warning('MsprobeInitStep does not work on this version of MindSpore.')
+            return
+        cb_params = run_context.original_args()
+        _set_init_iter(cb_params.cur_step_num)
+
+
 def get_rank_if_initialized():
     if ms.communication.GlobalComm.INITED:
         return ms.communication.get_rank()
@@ -91,20 +115,6 @@ def seed_all(seed=1234, mode=False, rm_dropout=True):
     os.environ['HCCL_DETERMINISTIC'] = str(mode)
     if rm_dropout:
         remove_dropout()
-
-
-class MsprobeStep(ms.train.Callback):
-
-    def __init__(self, debugger):
-        super(MsprobeStep, self).__init__()
-        self.debugger = debugger
-
-    def on_train_step_begin(self, run_context):
-        self.debugger.start()
-
-    def on_train_step_end(self, run_context):
-        self.debugger.stop()
-        self.debugger.step()
 
 
 class Dropout(ops.Dropout):

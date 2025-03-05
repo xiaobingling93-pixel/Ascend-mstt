@@ -321,8 +321,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
         has_stack = npu_stack_info and bench_stack_info
 
         if dump_mode == Const.ALL:
-            npu_data_name = n_dict.get("data_name", None)
-            bench_data_name = b_dict.get("data_name", None)
+            npu_data_name_list = n_dict.get("data_name", None)
+            bench_data_name_list = b_dict.get("data_name", None)
 
         for index in range(min_len):
             n_name = safe_get_value(n_dict, n_start + index, "n_dict", key="op_name")
@@ -353,7 +353,9 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             result_item.append(err_msg)
             result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
             if dump_mode == Const.ALL:
-                result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
+                npu_data_name = safe_get_value(npu_data_name_list, n_start + index, "npu_data_name_list")
+                bench_data_name = safe_get_value(bench_data_name_list, n_start + index, "bench_data_name_list")
+                result_item.append([npu_data_name, bench_data_name])
 
             result.append(result_item)
 
@@ -388,7 +390,9 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result_item.append(err_msg)
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
-                    result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
+                    npu_data_name = safe_get_value(npu_data_name_list, n_start + index, "npu_data_name_list")
+                    bench_data_name = safe_get_value(bench_data_name_list, n_start + index, "bench_data_name_list")
+                    result_item.append([npu_data_name, bench_data_name])
 
                 result.append(result_item)
 
@@ -467,7 +471,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         result_item.append(err_msg)
         append_stack_info(result_item, npu_stack_info, index)
         if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
-            result_item.extend(["-1"])
+            result_item.extend([["-1", "-1"]])
         result.append(result_item)
 
 

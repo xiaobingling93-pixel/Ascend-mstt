@@ -11,7 +11,7 @@ import torch
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
-from msprobe.core.compare.acc_compare import Comparator, ModeConfig, get_bench_data_name
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows, ApiBatch
 from msprobe.core.compare.utils import get_accuracy
 from msprobe.pytorch.compare.pt_compare import PTComparator
@@ -636,11 +636,11 @@ class TestUtilsMethods(unittest.TestCase):
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', ['-1', '-1']]]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                    'torch.float32', 'torch.float32', [2, 2], [2, 2],
                    'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                   1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', '-1']]
+                   1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', ['-1', '-1']]]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
         o_result = pd.DataFrame(o_data, columns=columns)
@@ -670,7 +670,7 @@ class TestUtilsMethods(unittest.TestCase):
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
 
         pt_comparator = PTComparator(mode_config)
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, {})
+        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
 
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
                                   'unsupported', 'No bench data matched.'])
@@ -688,42 +688,22 @@ class TestUtilsMethods(unittest.TestCase):
         pt_comparator = PTComparator(mode_config)
 
         pt_name = '-1'
-        pt_path = os.path.join(base_dir, pt_name)
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param,
-                                              {'Functional.linear.0.forward': {'input_args': [
-                                                  {'data_name': 'Functional.linear.0.forward.input.0.pt'}]}})
+        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', f'Dump file: {pt_path} not found.'])
+                                  'unsupported', 'No bench data matched.'])
 
         pt_name = 'Functional.linear.0.forward.input.0.pt'
-        pt_path = os.path.join(base_dir, pt_name)
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, {})
+        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', 'Bench does not have data file.'])
+                                  'unsupported', 'Dump file: Functional.linear.0.forward.input.0.pt not found.'])
 
         generate_pt(base_dir)
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param,
-                                              {'Functional.linear.0.forward': {'input_args': [
-                                                  {'data_name': 'Functional.linear.0.forward.input.0.pt'}]}})
+        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, ''])
-
-    def test_get_bench_data_name_input(self):
-        bench_op_name = "Functional.linear.0.forward.input.0"
-        bench_data = {"Functional.linear.0.forward": {"input_args": [{"data_name": "Functional.linear.0.forward.input.0.pt"}], "input_kwargs": {}, "output": []}}
-        result = get_bench_data_name(bench_op_name, bench_data)
-
-        self.assertEqual(result, "Functional.linear.0.forward.input.0.pt")
-
-    def test_get_bench_data_name_output(self):
-        bench_op_name = "Functional.linear.0.forward.output.0"
-        bench_data = {"Functional.linear.0.forward": {"input_args": [], "input_kwargs": {}, "output": [{"data_name": "Functional.linear.0.forward.output.0.pt"}]}}
-        result = get_bench_data_name(bench_op_name, bench_data)
-
-        self.assertEqual(result, "Functional.linear.0.forward.output.0.pt")
 
 
 class TestComparator(unittest.TestCase):
