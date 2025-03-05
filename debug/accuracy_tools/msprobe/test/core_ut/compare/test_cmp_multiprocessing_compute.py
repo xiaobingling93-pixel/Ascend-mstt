@@ -18,12 +18,12 @@ data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.inp
          'torch.float32', 'torch.float32', [2, 2], [2, 2],
          '', '', '', '', '', '',
          1, 1, 1, 1, 1, 1, 1, 1,
-         'Yes', '', '-1']]
+         'Yes', '', ['-1', '-1']]]
 o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
            'torch.float32', 'torch.float32', [2, 2], [2, 2],
            'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
            1, 1, 1, 1, 1, 1, 1, 1,
-           'None', 'No bench data matched.', '-1']]
+           'None', 'No bench data matched.', ['-1', '-1']]]
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
 result_df = pd.DataFrame(data, columns=columns)
 o_result = pd.DataFrame(o_data, columns=columns)
@@ -54,9 +54,9 @@ class TestUtilsMethods(unittest.TestCase):
 
         func = Comparator(mode_config).compare_ops
         generate_dump_json(base_dir)
-        input_parma = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
+        input_param = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
         lock = multiprocessing.Manager().RLock()
-        result = _handle_multi_process(func, input_parma, result_df, lock)
+        result = _handle_multi_process(func, input_param, result_df, lock)
         self.assertTrue(result.equals(o_result))
 
     def test_read_dump_data(self):

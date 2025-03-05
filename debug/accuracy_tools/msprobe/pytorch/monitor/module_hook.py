@@ -176,7 +176,8 @@ class GradContext:
 class TrainerMon:
     tensor_metrics = TensorMetrics()
 
-    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
+    # 保留原opt_ty参数, 兼容msprobe1.2.2前旧版本
+    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
         # TYPE1: 只在这里初始化的变量, 不会随着训练中途config配置改变而重置
         self.config_file_path = config_file_path
         self.process_group = get_process_group(process_group)
@@ -222,6 +223,7 @@ class TrainerMon:
         self.micro_batch_number = 1
         self.optimizer_class = None
         self.optimizer_mon = None
+        self.optimizer_trans = None
 
         # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
@@ -379,45 +381,19 @@ class TrainerMon:
         if not self.cc_distribution.get('enable', False):
             logger.info_on_rank_0("> cc operator is not monitored.")
 
-    def hook_modules(self):
-        if self.module_rank_list and (self.rank not in self.module_rank_list):
-            return
+    # 保留原接口, 兼容msprobe1.2.2前旧版本
+    def monitor_gnorm_with_ad(self, model, optimizer=None, grad_acc_steps=1, tp_group=None, dp_group=None,
+                              start_iteration=0):
+        if optimizer is None:
+            optimizer = getattr(self, "optimizer_trans", None)  # 兼容老版本可传None的情况, 从set_wrapped_optimizer获取
+            if optimizer is None:
+                logger.error("monitor_gnorm_with_ad: please set_wrapped_optimizer before it or input optimizer!=None")
+                return
+        self.set_monitor(model, optimizer, grad_acc_steps, tp_group, dp_group, start_iteration)
 
-        targets = self.config['targets']
-        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
-        for key in module_in_all_stage:
-            struct = targets.pop(key)
-            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
-
-        hooked_count = 0
-        for vpp_stage, model_chunk in enumerate(self.model):
-            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
-            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
-                'targets'].keys()
-            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
-
-        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
-
-        def clone_if_tensor(args):
-            if isinstance(args, tuple):
-                return tuple([clone_if_tensor(arg) for arg in args])
-            elif isinstance(args, torch.Tensor):
-                return args.clone()
-            else:
-                return args
-
-        @torch.no_grad
-        def wrap_hook_setup(setup):
-            def wrapped_setup(*args, **kwargs):
-                args = setup(*args, **kwargs)
-                args = clone_if_tensor(args)
-                return args
-
-            return wrapped_setup
-
-        BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
-        BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
-        return
+    # 保留原接口, 兼容msprobe1.2.2前旧版本
+    def set_wrapped_optimizer(self, optimizer):
+        self.optimizer_trans = optimizer
 
     def set_monitor(
             self,
@@ -557,9 +533,9 @@ class TrainerMon:
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, 
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric,
                                           opt_context.step, MonitorConst.EXP_AVG)
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, 
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric,
                                           opt_context.step, MonitorConst.EXP_AVG_SQ)
 
     def write_grad_tb(self, step):
@@ -738,7 +714,46 @@ class TrainerMon:
 
         optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
         self.origin_step_func = optimizer.__class__.step
+        return
 
+    def hook_modules(self):
+        if self.module_rank_list and (self.rank not in self.module_rank_list):
+            return
+
+        targets = self.config['targets']
+        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
+        for key in module_in_all_stage:
+            struct = targets.pop(key)
+            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
+
+        hooked_count = 0
+        for vpp_stage, model_chunk in enumerate(self.model):
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
+            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
+                'targets'].keys()
+            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
+
+        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
+
+        def clone_if_tensor(args):
+            if isinstance(args, tuple):
+                return tuple([clone_if_tensor(arg) for arg in args])
+            elif isinstance(args, torch.Tensor):
+                return args.clone()
+            else:
+                return args
+
+        @torch.no_grad
+        def wrap_hook_setup(setup):
+            def wrapped_setup(*args, **kwargs):
+                args = setup(*args, **kwargs)
+                args = clone_if_tensor(args)
+                return args
+
+            return wrapped_setup
+
+        BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
+        BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
         return
 
     def _remove_all_hooks(self, optimizer):

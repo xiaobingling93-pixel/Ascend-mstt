@@ -78,6 +78,11 @@ class MSComparator(Comparator):
             raise TypeError(f"The type of parameter `data_mapping` must be dict, str or None, but got "
                             f"{type(self.data_mapping)}")
 
+    @staticmethod
+    def process_data_name(result):
+        result['data_name_x'] = result.apply(lambda row: [row['data_name_x'], row['data_name_y']], axis=1)
+        return result
+
     def calc_accuracy(self, result_df, header):
         condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
         result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
@@ -140,6 +145,8 @@ class MSComparator(Comparator):
             header.append(CompareConst.STACK)
         if self.dump_mode == Const.ALL:
             header.append(CompareConst.DATA_NAME)
+            result = self.process_data_name(result)
+
         result.rename(columns={'op_name_x': CompareConst.NPU_NAME,
                                'op_name_y': CompareConst.BENCH_NAME,
                                'dtype_x': CompareConst.NPU_DTYPE,
@@ -170,6 +177,7 @@ class MSComparator(Comparator):
 
         result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
         result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
+
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:

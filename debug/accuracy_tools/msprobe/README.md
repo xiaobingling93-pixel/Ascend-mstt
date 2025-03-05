@@ -44,6 +44,7 @@ export MSPROBE_LOG_LEVEL={x}
 
 - msprobe支持AscendPyTorch 1.11.0或更高版本，支持的PyTorch和CANN以及PyTorch和python软件版本配套关系请参见《[Ascend Extension for PyTorch插件](https://gitee.com/ascend/pytorch)》。
 - msprobe支持MindSpore 2.4.0或更高版本，支持的MindSpore和CANN以及MindSpore和python软件版本配套关系请参见《[MindSpore版本发布列表](https://www.mindspore.cn/versions)》。
+- msprobe支持MSAdapter 2.1.0。
 - msprobe支持的固件驱动版本与配套CANN软件支持的固件驱动版本相同，开发者可通过“[昇腾社区-固件与驱动](https://gitee.com/link?target=https%3A%2F%2Fwww.hiascend.com%2Fhardware%2Ffirmware-drivers%2Fcommunity%3Fproduct%3D2%26model%3D28%26cann%3D8.0.RC3.alpha003%26driver%3D1.0.25.alpha)”页面根据产品型号与CANN软件版本获取配套的固件与驱动。
 
 
@@ -69,15 +70,17 @@ export MSPROBE_LOG_LEVEL={x}
 
 ### 1 数据采集
 
-msprobe 通过在训练脚本中添加 PrecisionDebugger 接口的方式对 API 执行精度数据 dump 操作，对应 config.json 中的 task 为 statistics 或 tensor。
+msprobe 通过在训练脚本中添加 PrecisionDebugger 接口的方式对 API 执行精度数据 dump 操作。对应 config.json 中的 "statistics" 或 "tensor" task。
 
 [PyTorch 场景的数据采集](./docs/05.data_dump_PyTorch.md)
 
 [MindSpore 场景的数据采集](./docs/06.data_dump_MindSpore.md)
 
+[MSAdapter 场景的数据采集](./docs/29.data_dump_MSAdapter.md)
+
 ### 2 精度预检
 
-精度预检旨在昇腾 NPU 上扫描训练模型中的所有 API 进行 API 复现，给出精度情况的诊断和分析。对应 config.json 中的 task 为 run_ut。
+精度预检旨在昇腾 NPU 上扫描训练模型中的所有 API 进行 API 复现，给出精度情况的诊断和分析。对应 config.json 中的 "run_ut" task。
 
 PyTorch 场景的[离线预检](./docs/07.accuracy_checker_PyTorch.md)和[在线预检](./docs/08.accuracy_checker_online_PyTorch.md)
 
@@ -143,12 +146,14 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ### 12 溢出检测与解析
 
-溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。 
-推荐直接使用[数据采集](#1-数据采集)功能采集统计量信息检测溢出问题。
+溢出检测用于采集溢出 API 或 模块的精度数据，而溢出解析则是通过对溢出数据的分析，进一步判断是否为正常溢出。对应 config.json 中的 "overflow_check" task。 
+推荐直接使用[数据采集](#1-数据采集)功能采集统计量信息,检测溢出问题。
 
 [PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)
 
-[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)
+[MindSpore 场景的溢出检测](./docs/13.overflow_check_MindSpore.md)
+
+[MSAdapter 场景的溢出检测](./docs/30.overflow_check_MSAdapter.md)
 
 ## 📑 补充材料
 
