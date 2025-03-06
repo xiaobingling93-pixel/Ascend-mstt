@@ -354,7 +354,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
             if dump_mode == Const.ALL:
                 npu_data_name = safe_get_value(npu_data_name_list, n_start + index, "npu_data_name_list")
-                bench_data_name = safe_get_value(bench_data_name_list, n_start + index, "bench_data_name_list")
+                bench_data_name = safe_get_value(bench_data_name_list, b_start + index, "bench_data_name_list")
                 result_item.append([npu_data_name, bench_data_name])
 
             result.append(result_item)
@@ -373,7 +373,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                         continue
                     result_item = [
                         n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                        " ", " ", " ", " ", " "
+                        " ", " ", " ", " ", " ", " "
                     ]
                     summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                     result_item.extend(summary_data)
@@ -391,8 +391,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
                     npu_data_name = safe_get_value(npu_data_name_list, n_start + index, "npu_data_name_list")
-                    bench_data_name = safe_get_value(bench_data_name_list, n_start + index, "bench_data_name_list")
-                    result_item.append([npu_data_name, bench_data_name])
+                    result_item.append([npu_data_name, "-1"])
 
                 result.append(result_item)
 
