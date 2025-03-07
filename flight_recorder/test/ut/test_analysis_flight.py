@@ -15,10 +15,11 @@
 
 import os
 import shutil
+import pickle
+
 from unittest.mock import patch
 
 import pytest
-import pickle
 
 from flight_recorder.flight_recorder_analyze.analysis_flight import (
     load_recorder_data,
@@ -101,7 +102,7 @@ def test_extract_hccl_info():
     recorder_dict = {str(rank): TEST_RECORDER_DATA for rank in range(WORLD_SIZE)}
     hccl_dict = extract_hccl_info(recorder_dict)
     assert len(hccl_dict) == WORLD_SIZE
-    for rank, info in hccl_dict.items():
+    for _, info in hccl_dict.items():
         assert info["state"] == "completed"
         assert info["record_id"] == 2
         assert info["pg_id"] == "pg1"
