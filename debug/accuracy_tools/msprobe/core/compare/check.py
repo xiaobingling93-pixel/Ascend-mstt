@@ -82,12 +82,8 @@ def check_type_shape_match(npu_struct, bench_struct):
                          f'should both be 2, please check!')
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         shape_match = npu_shape == bench_shape
-        type_match = npu_type == bench_type
-        if not type_match:
-            if ([npu_type, bench_type] in CompareConst.MS_TYPE) or ([npu_type, bench_type] in CompareConst.TORCH_TYPE):
-                type_match = True
-            else:
-                type_match = False
+        type_match = ((npu_type == bench_type) or
+                      any(npu_type in group and bench_type in group for group in CompareConst.DTYPE_MATCH_GROUPS))
         struct_match = shape_match and type_match
         if not struct_match:
             return False
