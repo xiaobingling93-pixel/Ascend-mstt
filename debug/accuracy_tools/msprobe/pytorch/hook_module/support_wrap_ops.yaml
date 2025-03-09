@@ -149,9 +149,10 @@ tensor:
   - __bool__
   - __div__
   - __eq__
+  - __floordiv__
   - __ge__
-  - __gt__
   - __getitem__
+  - __gt__
   - __iadd__
   - __iand__
   - __idiv__
@@ -160,23 +161,33 @@ tensor:
   - __imod__
   - __imul__
   - __ior__
+  - __ipow__
   - __irshift__
   - __isub__
   - __ixor__
+  - __le__
   - __lshift__
+  - __lt__
   - __matmul__
   - __mod__
   - __mul__
+  - __ne__
   - __nonzero__
   - __or__
+  - __pow__
   - __radd__
+  - __rdiv__
+  - __rmod__
   - __rmul__
+  - __ror__
+  - __rpow__
   - __rshift__
+  - __rsub__
+  - __rxor__
   - __setitem__
   - __sub__
   - __truediv__
   - __xor__
-  - __pow__
   - abs
   - abs_
   - absolute
@@ -199,12 +210,14 @@ tensor:
   - addmv_
   - addr
   - addr_
+  - adjoint
   - align_as
   - align_to
   - all
   - allclose
   - amax
   - amin
+  - aminmax
   - angle
   - any
   - arccos
@@ -216,12 +229,15 @@ tensor:
   - arcsinh
   - arcsinh_
   - arctan
+  - arctan2
+  - arctan2_
   - arctan_
   - arctanh
   - arctanh_
   - argmax
   - argmin
   - argsort
+  - argwhere
   - asin
   - asin_
   - asinh
@@ -236,39 +252,51 @@ tensor:
   - baddbmm_
   - bernoulli
   - bernoulli_
+  - bfloat16
   - bincount
   - bitwise_and
   - bitwise_and_
+  - bitwise_left_shift
+  - bitwise_left_shift_
   - bitwise_not
   - bitwise_not_
   - bitwise_or
   - bitwise_or_
+  - bitwise_right_shift
+  - bitwise_right_shift_
   - bitwise_xor
   - bitwise_xor_
   - bmm
+  - bool
   - broadcast_to
+  - byte
   - cauchy_
   - ceil
   - ceil_
+  - cfloat
+  - char
   - cholesky
+  - cholesky_inverse
+  - cholesky_solve
   - chunk
   - clamp
-  - cholesky_solve
-  - cholesky_inverse
   - clamp_
   - clamp_max
   - clamp_max_
-  - clip
   - clamp_min
   - clamp_min_
+  - clip
   - clip_
+  - conj_physical
   - copysign
   - copysign_
+  - corrcoef
   - cos
   - cos_
   - cosh
   - cosh_
   - count_nonzero
+  - cov
   - cummax
   - cummin
   - cumprod
@@ -282,20 +310,23 @@ tensor:
   - diag_embed
   - diagflat
   - diagonal
+  - diagonal_scatter
   - diff
-  - dist
   - digamma
   - digamma_
+  - dist
   - div
   - div_
   - divide
   - divide_
   - dot
+  - double
+  - dsplit
   - eig
   - eq
   - eq_
-  - erf
   - equal
+  - erf
   - erf_
   - erfc
   - erfc_
@@ -304,18 +335,21 @@ tensor:
   - exp
   - exp2
   - exp2_
-  - expm1
   - exp_
+  - expand
+  - expand_as
+  - expm1
   - expm1_
   - exponential_
   - fill_
-  - fix
   - fill_diagonal_
+  - fix
   - fix_
+  - flatten
   - flip
   - fliplr
-  - flatten
   - flipud
+  - float
   - float_power
   - float_power_
   - floor
@@ -328,6 +362,7 @@ tensor:
   - fmod_
   - frac
   - frac_
+  - frexp
   - gather
   - gcd
   - gcd_
@@ -338,31 +373,37 @@ tensor:
   - ger
   - greater
   - greater_
-  - gt
-  - gt_
   - greater_equal
   - greater_equal_
+  - gt
+  - gt_
+  - half
   - hardshrink
   - heaviside
   - heaviside_
   - histc
+  - histogram
+  - hsplit
   - hypot
   - hypot_
+  - i0
+  - i0_
   - igamma
   - igamma_
   - igammac
   - igammac_
   - index_add
   - index_add_
-  - inverse
   - index_copy
   - index_copy_
   - index_fill
   - index_fill_
   - index_put
   - index_put_
-  - inner
   - index_select
+  - inner
+  - int
+  - inverse
   - isclose
   - isfinite
   - isinf
@@ -380,7 +421,6 @@ tensor:
   - le_
   - lerp
   - lerp_
-  - where
   - less
   - less_
   - less_equal
@@ -397,43 +437,47 @@ tensor:
   - log_
   - log_normal_
   - log_softmax
-  - logcumsumexp
-  - logdet
   - logaddexp
   - logaddexp2
+  - logcumsumexp
+  - logdet
   - logical_and
   - logical_and_
   - logical_not
-  - logit
   - logical_not_
   - logical_or
   - logical_or_
   - logical_xor
   - logical_xor_
+  - logit
   - logit_
   - logsumexp
+  - long
   - lstsq
   - lt
   - lt_
+  - lu
   - lu_solve
   - map2_
   - map_
   - masked_fill
-  - matmul
   - masked_fill_
   - masked_scatter
   - masked_scatter_
   - masked_select
+  - matmul
   - matrix_exp
+  - matrix_power
   - max
   - maximum
   - mean
-  - matrix_power
   - median
   - min
   - minimum
   - mm
   - mode
+  - moveaxis
+  - movedim
   - msort
   - mul
   - mul_
@@ -443,6 +487,11 @@ tensor:
   - mv
   - mvlgamma
   - mvlgamma_
+  - nan_to_num
+  - nan_to_num_
+  - nanmean
+  - nanmedian
+  - nanquantile
   - nansum
   - narrow
   - narrow_copy
@@ -452,20 +501,29 @@ tensor:
   - neg_
   - negative
   - negative_
+  - nextafter
+  - nextafter_
   - nonzero
   - norm
   - normal_
   - not_equal
   - not_equal_
+  - numpy
+  - orgqr
+  - ormqr
+  - outer
   - permute
   - pinverse
   - polygamma
+  - polygamma_
   - pow
   - pow_
-  - polygamma_
   - prelu
   - prod
   - put_
+  - q_zero_point
+  - qr
+  - quantile
   - rad2deg
   - rad2deg_
   - ravel
@@ -474,15 +532,16 @@ tensor:
   - relu
   - relu_
   - remainder
-  - repeat_interleave
-  - reshape
   - remainder_
   - renorm
   - renorm_
   - repeat
+  - repeat_interleave
+  - reshape
   - reshape_as
   - resize_
   - resize_as_
+  - resolve_neg
   - roll
   - rot90
   - round
@@ -496,6 +555,7 @@ tensor:
   - select
   - sgn
   - sgn_
+  - short
   - sigmoid
   - sigmoid_
   - sign
@@ -507,11 +567,13 @@ tensor:
   - sinc_
   - sinh
   - sinh_
+  - slice_scatter
   - slogdet
   - smm
   - softmax
   - solve
   - sort
+  - split
   - split_with_sizes
   - sqrt
   - sqrt_
@@ -521,21 +583,29 @@ tensor:
   - squeeze_
   - sspaddmm
   - std
+  - stft
+  - stride
   - sub
   - sub_
+  - subtract
   - sum
   - sum_to_size
   - svd
+  - swapaxes
+  - swapdims
+  - swapdims_
   - symeig
   - t
   - t_
   - take
+  - take_along_dim
   - tan
   - tan_
   - tanh
   - tanh_
   - tensor_split
   - tile
+  - to
   - topk
   - transpose
   - transpose_
@@ -543,8 +613,8 @@ tensor:
   - tril
   - tril_
   - triu
-  - true_divide
   - triu_
+  - true_divide
   - true_divide_
   - trunc
   - trunc_
@@ -552,37 +622,20 @@ tensor:
   - unbind
   - unflatten
   - unfold
+  - unique
+  - unique_consecutive
   - unsafe_chunk
-  - unsqueeze
   - unsafe_split
   - unsafe_split_with_sizes
+  - unsqueeze
+  - unsqueeze_
   - var
   - vdot
-  - unsqueeze_
   - view_as
+  - vsplit
+  - where
   - xlogy
   - xlogy_
-  - split
-  - stft
-  - nan_to_num
-  - dsplit
-  - orgqr
-  - bitwise_left_shift_
-  - arctan2
-  - histogram
-  - q_zero_point
-  - adjoint
-  - ormqr
-  - bitwise_right_shift_
-  - nanquantile
-  - lu
-  - quantile
-  - arctan2_
-  - qr
-  - diagonal_scatter
-  - corrcoef
-  - vsplit
-  - aminmax
 
 torch:
   - linalg.norm
@@ -642,13 +695,14 @@ torch:
   - addmv
   - addmv_
   - addr
-  - amax
   - affine_grid_generator
   - align_tensors
   - all
   - alpha_dropout
-  - amin
   - alpha_dropout_
+  - amax
+  - amin
+  - aminmax
   - angle
   - any
   - arange
@@ -661,12 +715,14 @@ torch:
   - arcsinh
   - arcsinh_
   - arctan
+  - arctan2
   - arctan_
   - arctanh
   - arctanh_
   - argmax
   - argmin
   - argsort
+  - argwhere
   - asin
   - asin_
   - asinh
@@ -687,13 +743,13 @@ torch:
   - batch_norm_elemt
   - batch_norm_gather_stats
   - batch_norm_gather_stats_with_counts
-  - bernoulli
   - batch_norm_stats
   - batch_norm_update_stats
+  - bernoulli
   - bilinear
+  - binary_cross_entropy_with_logits
   - bincount
   - binomial
-  - binary_cross_entropy_with_logits
   - bitwise_and
   - bitwise_not
   - bitwise_or
@@ -739,9 +795,9 @@ torch:
   - conv_transpose1d
   - conv_transpose2d
   - conv_transpose3d
-  - cos
   - convolution
   - copysign
+  - cos
   - cos_
   - cosh
   - cosh_
@@ -755,14 +811,16 @@ torch:
   - cummin
   - cumprod
   - cumsum
+  - cumulative_trapezoid
   - deg2rad
   - deg2rad_
   - det
   - diag
   - diag_embed
-  - diff
   - diagflat
   - diagonal
+  - diagonal_scatter
+  - diff
   - digamma
   - dist
   - div
@@ -771,12 +829,15 @@ torch:
   - dropout
   - dropout_
   - dsmm
+  - dsplit
   - dstack
   - eig
   - einsum
   - embedding
   - embedding_bag
   - embedding_renorm_
+  - empty
+  - empty_like
   - eq
   - equal
   - erf
@@ -791,12 +852,12 @@ torch:
   - expm1
   - expm1_
   - eye
-  - feature_dropout
   - feature_alpha_dropout
   - feature_alpha_dropout_
+  - feature_dropout
   - feature_dropout_
-  - fix
   - fill_
+  - fix
   - fix_
   - flatten
   - flip
@@ -811,8 +872,9 @@ torch:
   - fmod
   - frac
   - frac_
-  - full
+  - frexp
   - frobenius_norm
+  - full
   - full_like
   - gather
   - gcd
@@ -824,8 +886,8 @@ torch:
   - greater_equal
   - grid_sampler
   - grid_sampler_2d
-  - group_norm
   - grid_sampler_3d
+  - group_norm
   - gru
   - gru_cell
   - gt
@@ -835,23 +897,29 @@ torch:
   - heaviside
   - hinge_embedding_loss
   - histc
+  - histogram
+  - histogramdd
   - hsmm
+  - hsplit
   - hspmm
   - hstack
   - hypot
+  - i0
+  - i0_
   - igamma
   - igammac
   - index_add
   - index_copy
-  - inner
   - index_fill
   - index_put
   - index_put_
   - index_select
+  - inner
   - instance_norm
   - inverse
   - isclose
   - isfinite
+  - isin
   - isinf
   - isnan
   - isneginf
@@ -879,8 +947,8 @@ torch:
   - log1p_
   - log2
   - log2_
-  - log_softmax
   - log_
+  - log_softmax
   - logaddexp
   - logaddexp2
   - logcumsumexp
@@ -899,18 +967,18 @@ torch:
   - lt
   - lu_solve
   - lu_unpack
-  - masked_fill
   - margin_ranking_loss
+  - masked_fill
   - masked_scatter
   - masked_select
-  - matrix_exp
   - matmul
+  - matrix_exp
   - matrix_power
   - matrix_rank
   - max
   - max_pool1d
-  - max_pool2d
   - max_pool1d_with_indices
+  - max_pool2d
   - max_pool3d
   - maximum
   - mean
@@ -929,18 +997,20 @@ torch:
   - mvlgamma
   - nan_to_num
   - nan_to_num_
+  - nanmean
   - nanmedian
+  - nanquantile
   - nansum
   - narrow
+  - narrow_copy
   - native_batch_norm
   - native_group_norm
-  - narrow_copy
   - native_layer_norm
   - native_norm
   - ne
   - neg
-  - negative
   - neg_
+  - negative
   - negative_
   - nextafter
   - nonzero
@@ -972,30 +1042,31 @@ torch:
   - ravel
   - real
   - reciprocal
-  - relu
   - reciprocal_
+  - relu
   - relu_
   - remainder
   - renorm
   - repeat_interleave
   - reshape
   - resize_as_
+  - resolve_neg
   - roll
   - rot90
   - round
   - round_
+  - row_stack
   - rrelu
   - rrelu_
   - rsqrt
-  - row_stack
   - rsqrt_
   - rsub
   - saddmm
   - scalar_tensor
   - scatter
-  - select
   - scatter_add
   - searchsorted
+  - select
   - selu
   - selu_
   - sgn
@@ -1015,12 +1086,12 @@ torch:
   - solve
   - sort
   - sparse_coo_tensor
-  - square
   - split
   - split_with_sizes
   - spmm
   - sqrt
   - sqrt_
+  - square
   - square_
   - squeeze
   - sspaddmm
@@ -1042,8 +1113,8 @@ torch:
   - tan_
   - tanh
   - tanh_
-  - tensordot
   - tensor_split
+  - tensordot
   - threshold
   - threshold_
   - tile
@@ -1059,19 +1130,21 @@ torch:
   - true_divide
   - trunc
   - trunc_
-  - unique_consecutive
-  - xlogy
   - unbind
+  - unflatten
+  - unique_consecutive
   - unsafe_chunk
   - unsafe_split
-  - vander
-  - var
-  - vdot
   - unsafe_split_with_sizes
   - unsqueeze
+  - vander
+  - var
   - var_mean
+  - vdot
+  - vsplit
   - vstack
   - where
+  - xlogy
   - xlogy_
 
 _VF:
@@ -1165,6 +1238,27 @@ torch_npu:
   - npu_moe_finalize_routing
   - npu_moe_gating_top_k_softmax
   - npu_trans_quant_param
+  - npu_gelu
+  - npu_ffn
+  - npu_quant_matmul
+  - npu_format_cast_
+  - npu_dynamic_quant
+  - npu_moe_compute_expert_tokens
+  - npu_weight_quant_batchmatmul
+  - npu_dynamic_quant_asymmetric
+  - npu_grouped_matmul
+  - npu_quant_scatter_
+  - npu_group_quant
+  - npu_fused_infer_attention_score
+  - npu_quantize
+  - npu_fast_gelu
+  - npu_weight_quant_batchmatmul
+  - scatter_update
+  - scatter_update_
+  - npu_moe_init_routing
+  - npu_scatter_nd_update_
+  - npu_scatter_nd_update
+  - npu_prefetch
 
 aten:
   - signbit

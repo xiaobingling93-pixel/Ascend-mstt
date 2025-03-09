@@ -151,6 +151,26 @@ bool AclDumper::IsCfgEnableAclDumper()
             ELE_IN_VECTOR(tasks, DebuggerTaskType::TASK_OVERFLOW_CHECK));
 }
 
+bool AclDumper::IsOverflowCompleted()
+{
+    return overflowNums != -1 && realOverflowNums > overflowNums;
+}
+
+void AclDumper::CountOverflowNumbers(const acldumpChunk* chunk)
+{
+    if (IsOverflowCompleted() || !isOverflowDump || !chunk->isLastChunk) {
+        return;
+    }
+    const std::string fileName = chunk->fileName;
+    auto separator = fileName.rfind("/");
+    auto fileBaseName = fileName.substr(separator + 1);
+    if (fileBaseName.rfind("Opdebug.Node_OpDebug.") == 0) {
+        // count according to the first file: Node_OpDebug
+        realOverflowNums++;
+    }
+    return;
+}
+
 std::string AclDumper::GetDumpPath(uint32_t curStep) const
 {
     if (!initialized || foreDumpPath.empty()) {
@@ -357,6 +377,11 @@ DebuggerErrno AclDumper::Initialize()
 void AclDumper::OnAclDumpCallBack(const acldumpChunk* chunk, int32_t len)
 {
     DEBUG_FUNC_TRACE();
+    CountOverflowNumbers(chunk);
+    if (IsOverflowCompleted()) {
+        return;
+    }
+
     std::string dumpPath = FileUtils::GetAbsPath(chunk->fileName);
     auto it = dataProcessors.find(dumpPath);
     if (it == dataProcessors.end()) {
@@ -424,6 +449,8 @@ void AclDumper::SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args)
         ret = AclDumpGenStatJson(statisticsCfg, rank, curStep, kernels);
     } else if (overflowCheckCfg != nullptr) {
         ret = AclDumpGenOverflowJson(overflowCheckCfg, rank, curStep);
+        overflowNums = overflowCheckCfg->overflowNums;
+        isOverflowDump = true;
     }
 
     if (ret != DebuggerErrno::OK) {

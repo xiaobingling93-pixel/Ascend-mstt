@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 
 from msprof_analyze.prof_common.db_manager import DBManager
 from msprof_analyze.cluster_analyse.common_func.utils import increase_shared_value
@@ -21,6 +22,9 @@ from msprof_analyze.cluster_analyse.prof_bean.step_trace_time_bean import StepTr
 from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.prof_common.file_manager import FileManager
 from msprof_analyze.prof_common.logger import get_logger
+from msprof_analyze.cluster_analyse.analysis.msprof_step_trace_time_adapter import MsprofStepTraceTimeAdapter
+from msprof_analyze.cluster_analyse.cluster_data_preprocess.msprof_data_preprocessor import MsprofDataPreprocessor
+from msprof_analyze.cluster_analyse.analysis.msprof_step_trace_time_adapter import MsprofStepTraceTimeDBAdapter
 
 logger = get_logger()
 
@@ -35,11 +39,13 @@ class StepTraceTimeAnalysis:
         self.collection_path = param.get(Constant.COLLECTION_PATH)
         self.cluster_analysis_output_path = param.get(Constant.CLUSTER_ANALYSIS_OUTPUT_PATH)
         self.data_map = param.get(Constant.DATA_MAP)
-        self.communication_group = param.get(Constant.COMM_DATA_DICT, {}).get(Constant.COMMUNICATION_GROUP)
+        self.communication_group = param.get(Constant.COMM_DATA_DICT, {}).get(Constant.COMMUNICATION_GROUP, {})
         self.step_time_dict = {}
         self.step_data_list = []
         self.data_type = param.get(Constant.DATA_TYPE)
         self.distributed_args = None
+        self.is_msprof = param.get(Constant.IS_MSPROF)
+        self.is_mindspore = param.get(Constant.IS_MINDSPORE)
 
     @staticmethod
     def get_max_data_row(data_group_list: list):
@@ -49,6 +55,26 @@ class StepTraceTimeAnalysis:
         for item in zip(*data_group_list):
             ret.append(max(item))
         return ret
+
+    @staticmethod
+    def find_msprof_json(path):
+        msprof_pattern = r'^msprof_\d{14}\.json$'
+        msprof_slice_pattern = r'^msprof_slice_\d{1}_\d{14}\.json$'
+        msprof_dict, msprof_slice_dict = {}, {}
+        for file_name in os.listdir(path):
+            if re.match(msprof_pattern, file_name):
+                timestamp = re.search(r"\d{14}", file_name).group()
+                msprof_dict.setdefault(timestamp, []).append(os.path.join(path, file_name))
+            elif re.match(msprof_slice_pattern, file_name):
+                timestamp = re.search(r"\d{14}", file_name).group()
+                msprof_slice_dict.setdefault(timestamp, []).append(os.path.join(path, file_name))
+        if msprof_dict:
+            max_timestamp = max(msprof_dict.keys())
+            return msprof_dict.get(max_timestamp)
+        if msprof_slice_dict:
+            max_timestamp = max(msprof_slice_dict.keys())
+            return msprof_slice_dict.get(max_timestamp)
+        return []
 
     def run(self, completed_processes, lock):
         self.load_step_trace_time_data()
@@ -132,19 +158,31 @@ class StepTraceTimeAnalysis:
                 metadata = FileManager.read_json_file(metadata_path)
                 self.distributed_args = metadata.get(Constant.DISTRIBUTED_ARGS, None) if metadata else None
             if self.data_type == Constant.TEXT:
-                step_time_file = os.path.join(profiling_dir_path, Constant.SINGLE_OUTPUT, Constant.STEP_TIME_CSV)
-                if os.path.exists(step_time_file):
-                    self.step_time_dict[rank_id] = FileManager.read_csv_file(step_time_file, StepTraceTimeBean)
+                if self.is_msprof:
+                    msprof_json = self.find_msprof_json(os.path.join(profiling_dir_path, "mindstudio_profiler_output"))
+                    self.step_time_dict[rank_id] = MsprofStepTraceTimeAdapter(
+                        msprof_json).generate_step_trace_time_data()
+                else:
+                    step_time_file = os.path.join(profiling_dir_path, Constant.SINGLE_OUTPUT, Constant.STEP_TIME_CSV)
+                    if os.path.exists(step_time_file):
+                        self.step_time_dict[rank_id] = FileManager.read_csv_file(step_time_file, StepTraceTimeBean)
             else:
-                step_time_file = os.path.join(profiling_dir_path, Constant.SINGLE_OUTPUT,
-                                              Constant.DB_COMMUNICATION_ANALYZER)
-                if (os.path.exists(step_time_file) and
-                        DBManager.check_tables_in_db(step_time_file, Constant.TABLE_STEP_TRACE)):
-                    conn, cursor = DBManager.create_connect_db(step_time_file)
-                    sql = "select * from {0}".format(Constant.TABLE_STEP_TRACE)
-                    data = DBManager.fetch_all_data(cursor, sql, is_dict=False)
-                    self.step_time_dict[rank_id] = data
-                    DBManager.destroy_db_connect(conn, cursor)
+                if self.is_msprof or self.is_mindspore:
+                    profiler_db = MsprofDataPreprocessor.get_msprof_profiler_db_path(profiling_dir_path) if \
+                        self.is_msprof else os.path.join(profiling_dir_path, Constant.SINGLE_OUTPUT,
+                                                         f"ascend_mindspore_profiler_{rank_id}.db")
+                    self.step_time_dict[rank_id] = MsprofStepTraceTimeDBAdapter(
+                        {Constant.PROFILER_DB_PATH: profiler_db}).generate_step_trace_time_data()
+                else:
+                    step_time_file = os.path.join(profiling_dir_path, Constant.SINGLE_OUTPUT,
+                                                  Constant.DB_COMMUNICATION_ANALYZER)
+                    if (os.path.exists(step_time_file) and
+                            DBManager.check_tables_in_db(step_time_file, Constant.TABLE_STEP_TRACE)):
+                        conn, cursor = DBManager.create_connect_db(step_time_file)
+                        sql = "select * from {0}".format(Constant.TABLE_STEP_TRACE)
+                        data = DBManager.fetch_all_data(cursor, sql, is_dict=False)
+                        self.step_time_dict[rank_id] = data
+                        DBManager.destroy_db_connect(conn, cursor)
             if not self.step_time_dict.get(rank_id):
                 logger.warning("Rank %s does not have a valid step_trace_time data in %s file.",
                                str(rank_id), str(self.data_type))

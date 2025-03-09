@@ -176,7 +176,8 @@ class GradContext:
 class TrainerMon:
     tensor_metrics = TensorMetrics()
 
-    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True) -> None:
+    # 保留原opt_ty参数, 兼容msprobe1.2.2前旧版本
+    def __init__(self, config_file_path, process_group=None, params_have_main_grad=True, opt_ty=None) -> None:
         # TYPE1: 只在这里初始化的变量, 不会随着训练中途config配置改变而重置
         self.config_file_path = config_file_path
         self.process_group = get_process_group(process_group)
@@ -222,6 +223,7 @@ class TrainerMon:
         self.micro_batch_number = 1
         self.optimizer_class = None
         self.optimizer_mon = None
+        self.optimizer_trans = None
 
         # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
@@ -363,19 +365,6 @@ class TrainerMon:
                                                              self.rank)
                 self.anomaly_data_writer.init_detected_json()
 
-    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
-        rank = None
-        if dist.is_initialized():
-            rank = dist.get_rank()
-            if (rank not in rank_list) and len(rank_list) != 0:
-                return
-        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
-
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        self._register_param_call_id("_hook_module", key)
-        return {key: tensor}
-
     def common_info(self):
         if not self.xy_distribution:
             logger.info_on_rank_0("> module input/output input_grad/output_grad is not monitored. ")
@@ -392,45 +381,76 @@ class TrainerMon:
         if not self.cc_distribution.get('enable', False):
             logger.info_on_rank_0("> cc operator is not monitored.")
 
-    def hook_modules(self):
-        if self.module_rank_list and (self.rank not in self.module_rank_list):
-            return
+    # 保留原接口, 兼容msprobe1.2.2前旧版本
+    def monitor_gnorm_with_ad(self, model, optimizer=None, grad_acc_steps=1, tp_group=None, dp_group=None,
+                              start_iteration=0):
+        if optimizer is None:
+            optimizer = getattr(self, "optimizer_trans", None)  # 兼容老版本可传None的情况, 从set_wrapped_optimizer获取
+            if optimizer is None:
+                logger.error("monitor_gnorm_with_ad: please set_wrapped_optimizer before it or input optimizer!=None")
+                return
+        self.set_monitor(model, optimizer, grad_acc_steps, tp_group, dp_group, start_iteration)
 
-        targets = self.config['targets']
-        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
-        for key in module_in_all_stage:
-            struct = targets.pop(key)
-            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
+    # 保留原接口, 兼容msprobe1.2.2前旧版本
+    def set_wrapped_optimizer(self, optimizer):
+        self.optimizer_trans = optimizer
 
-        hooked_count = 0
-        for vpp_stage, model_chunk in enumerate(self.model):
-            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
-            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
-                'targets'].keys()
-            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
+    def set_monitor(
+            self,
+            model,
+            optimizer,
+            grad_acc_steps=1,
+            tp_group=None,
+            dp_group=None,
+            start_iteration=0
+    ):
+        """External interface"""
+        global start_step
+        start_step = start_iteration
+        logger.info(f'grad acc steps {grad_acc_steps}')
+        self.micro_batch_number = grad_acc_steps
+        self.dp_group = dp_group
+        self.tp_group = tp_group
+        self.optimizer_mon, self.optimizer_class = OptimizerMonFactory.create_optimizer_mon(optimizer)
+        self.hook_step_final(optimizer)
+        if not isinstance(model, list):
+            model = [model]
+        self.model = model
+        if len(model) > 1:
+            self.vpp = True
+            self._smallest_rank_print('vpp enabled')
+        if not self.dynamic_enable:
+            self.register_hooks(optimizer)
 
-        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
+    def register_hooks(self, optimizer):
+        self._register_param_name()
+        self.hook_optimizer(optimizer)
+        self._patch_grad_sync()
+        self.hook_modules()
+        self.monitoring = True
 
-        def clone_if_tensor(args):
-            if isinstance(args, tuple):
-                return tuple([clone_if_tensor(arg) for arg in args])
-            elif isinstance(args, torch.Tensor):
-                return args.clone()
-            else:
-                return args
+    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
+        rank = None
+        if dist.is_initialized():
+            rank = dist.get_rank()
+            if (rank not in rank_list) and len(rank_list) != 0:
+                return
+        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
 
-        @torch.no_grad
-        def wrap_hook_setup(setup):
-            def wrapped_setup(*args, **kwargs):
-                args = setup(*args, **kwargs)
-                args = clone_if_tensor(args)
-                return args
+    def build_tbtag_tensor_map(self, module_name, tag, tensor):
+        key = get_summary_writer_tag_name(module_name, tag, self.rank)
+        self._register_param_call_id("_hook_module", key)
+        return {key: tensor}
 
-            return wrapped_setup
-
-        BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
-
-        return
+    def generate_param_map(self, tag, param_tensor):
+        metrics = {}
+        for name in self.param2name.values():
+            key = get_summary_writer_tag_name(name, tag, self.rank)
+            self._register_param_call_id("optimizer_pre_step_hook", key)
+            if name not in param_tensor or param_tensor[name] is None:
+                continue
+            metrics[key] = param_tensor[name]
+        return metrics
 
     def generate_param_metrics(self, opt_context):
         if not self.param_distribution:
@@ -469,50 +489,6 @@ class TrainerMon:
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         unreduced_grad = self.grad_context.acc_metric if self.weight_hooked else self.grad_context.pre
         return self.grad_context.post, unreduced_grad
-
-    def set_monitor(
-            self,
-            model,
-            grad_acc_steps=1,
-            optimizer=None,
-            tp_group=None,
-            dp_group=None,
-            start_iteration=0
-    ):
-        """External interface"""
-        global start_step
-        start_step = start_iteration
-        logger.info(f'grad acc steps {grad_acc_steps}')
-        self.micro_batch_number = grad_acc_steps
-        self.dp_group = dp_group
-        self.tp_group = tp_group
-        self.optimizer_mon, self.optimizer_class = OptimizerMonFactory.create_optimizer_mon(optimizer)
-        self.hook_step_final(optimizer)
-        if not isinstance(model, list):
-            model = [model]
-        self.model = model
-        if len(model) > 1:
-            self.vpp = True
-            self._smallest_rank_print('vpp enabled')
-        if not self.dynamic_enable:
-            self.register_hooks(optimizer)
-
-    def register_hooks(self, optimizer):
-        self._register_param_name()
-        self.hook_optimizer(optimizer)
-        self._patch_grad_sync()
-        self.hook_modules()
-        self.monitoring = True
-
-    def generate_param_map(self, tag, param_tensor):
-        metrics = {}
-        for name in self.param2name.values():
-            key = get_summary_writer_tag_name(name, tag, self.rank)
-            self._register_param_call_id("optimizer_pre_step_hook", key)
-            if name not in param_tensor or param_tensor[name] is None:
-                continue
-            metrics[key] = param_tensor[name]
-        return metrics
 
     def generate_xy_metrics(self):
         actv = {}
@@ -557,9 +533,9 @@ class TrainerMon:
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, 
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric,
                                           opt_context.step, MonitorConst.EXP_AVG)
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, 
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric,
                                           opt_context.step, MonitorConst.EXP_AVG_SQ)
 
     def write_grad_tb(self, step):
@@ -572,7 +548,7 @@ class TrainerMon:
             self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
-    def hook_optimizer(self, optimizer=None):
+    def hook_optimizer(self, optimizer):
         # in DDP by default use params_have_main_grad
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
@@ -638,7 +614,6 @@ class TrainerMon:
                 optimizer_pre_step_hook(optimizer, args, kwargs)
                 out = func(*args, **kwargs)
                 return out
-
             return wrapper
 
         if self.optimizer_hooked:
@@ -739,7 +714,46 @@ class TrainerMon:
 
         optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
         self.origin_step_func = optimizer.__class__.step
+        return
 
+    def hook_modules(self):
+        if self.module_rank_list and (self.rank not in self.module_rank_list):
+            return
+
+        targets = self.config['targets']
+        module_in_all_stage = [key for key in targets.keys() if MonitorConst.NAME_SEP not in key]
+        for key in module_in_all_stage:
+            struct = targets.pop(key)
+            targets.update({f'{vpp_stage}{MonitorConst.NAME_SEP}{key}': struct for vpp_stage in range(len(self.model))})
+
+        hooked_count = 0
+        for vpp_stage, model_chunk in enumerate(self.model):
+            vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
+            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
+                'targets'].keys()
+            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
+
+        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
+
+        def clone_if_tensor(args):
+            if isinstance(args, tuple):
+                return tuple([clone_if_tensor(arg) for arg in args])
+            elif isinstance(args, torch.Tensor):
+                return args.clone()
+            else:
+                return args
+
+        @torch.no_grad
+        def wrap_hook_setup(setup):
+            def wrapped_setup(*args, **kwargs):
+                args = setup(*args, **kwargs)
+                args = clone_if_tensor(args)
+                return args
+
+            return wrapped_setup
+
+        BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
+        BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
         return
 
     def _remove_all_hooks(self, optimizer):
@@ -956,7 +970,7 @@ class TrainerMon:
                 return
             if not context.verified:
                 context.focused_in_col = validate_config_spec(
-                    context.format_by_arg[MonitorConst.INPUT_GRAD], 
+                    context.format_by_arg[MonitorConst.INPUT_GRAD],
                     input_grad, context.module_name, MonitorConst.INPUT_GRAD)
                 context.focused_out_col = validate_config_spec(
                     context.format_by_arg[MonitorConst.OUTPUT_GRAD],
@@ -1052,7 +1066,7 @@ class TrainerMon:
             self.enable_megatron = True
             logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
         except ImportError:
-            self.enable_megatron = False
+            self.enable_megatron = False | self.enable_megatron
 
         if not self.enable_megatron:
             self._hook_weights()

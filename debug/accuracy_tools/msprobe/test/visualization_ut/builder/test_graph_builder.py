@@ -66,6 +66,17 @@ class TestGraphBuilder(unittest.TestCase):
         self.assertEqual(node_id_b, 'Module.root.backward.0')
         node_id_c = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.c.backward.0', None)
         self.assertIsNone(node_id_c)
+        construct_dict = {'Module.module.a.forward': 'Module.root.forward', 'Module.module.a.backward': None,
+                          'Module.root.forward': None, 'Module.root.backward': None,
+                          'Module.module.b.forward': 'Module.root.forward',
+                          'Module.module.b.backward': 'Module.root.backward', 'Module.module.c.backward': None}
+        node_id_a = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.a.backward', None)
+        self.assertEqual(node_id_a, 'Module.root.backward')
+        node_id_b = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.b.backward',
+                                                                 'Module.root.backward')
+        self.assertEqual(node_id_b, 'Module.root.backward')
+        node_id_c = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.c.backward', None)
+        self.assertIsNone(node_id_c)
 
     def test__collect_apis_between_modules_only_apis(self):
         graph = Graph('TestNet')

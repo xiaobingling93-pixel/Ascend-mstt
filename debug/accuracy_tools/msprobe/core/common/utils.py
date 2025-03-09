@@ -247,6 +247,10 @@ def md5_find(data):
 
 
 def detect_framework_by_dump_json(file_path):
+    json_data = load_json(file_path)
+    framework = json_data.get("framework", None)
+    if framework in [Const.PT_FRAMEWORK, Const.MS_FRAMEWORK]:
+        return framework
     pattern_ms = r'"type":\s*"mindspore'
     pattern_pt = r'"type":\s*"torch'
     with FileOpen(file_path, 'r') as file:
@@ -304,6 +308,9 @@ def get_dump_mode(input_param):
 
     if npu_task == Const.TENSOR:
         return Const.ALL
+
+    if npu_task == Const.STRUCTURE:
+        return Const.STRUCTURE
 
     if npu_task == Const.STATISTICS:
         npu_md5_compare = md5_find(npu_json_data['data'])
@@ -419,6 +426,15 @@ def get_real_step_or_rank(step_or_rank_input, obj):
     real_step_or_rank = list(set(real_step_or_rank))
     real_step_or_rank.sort()
     return real_step_or_rank
+
+
+def check_init_step(step):
+    if not is_int(step):
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                        f"{step} must be an integer")
+    if not step >= 0:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                f"{step} must be greater than or equal to 0")
 
 
 def check_seed_all(seed, mode, rm_dropout):

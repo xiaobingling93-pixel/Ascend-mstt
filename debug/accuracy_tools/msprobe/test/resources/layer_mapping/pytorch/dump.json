@@ -1,6 +1,7 @@
 {
   "task": "statistics",
   "level": "mix",
+  "framework": "pytorch",
   "dump_data_dir": null,
   "data": {
     "Module.module.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0": {

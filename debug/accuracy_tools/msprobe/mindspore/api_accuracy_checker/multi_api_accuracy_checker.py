@@ -27,10 +27,11 @@ import numpy as np
 from tqdm import tqdm
 
 # 本地应用/库特定导入
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker, BasicInfoAndStatus
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.const import MsCompareConst
 
 
 class MultiApiAccuracyChecker(ApiAccuracyChecker):

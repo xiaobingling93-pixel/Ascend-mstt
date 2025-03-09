@@ -50,6 +50,8 @@ class Service:
         self.switch = False
         self.inner_switch = False
         self.current_iter = 0
+        self.loop = 0
+        self.init_step = 0
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
@@ -247,6 +249,8 @@ class Service:
         return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
     def start(self, model):
+        self.current_iter = self.loop + self.init_step
+        self.data_collector.update_iter(self.current_iter)
         if self.config.level == Const.LEVEL_DEBUG:
             return
         if self.need_stop_service():
@@ -305,8 +309,7 @@ class Service:
             if self.config.task == Const.TENSOR:
                 self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
-        self.current_iter += 1
-        self.data_collector.update_iter(self.current_iter)
+        self.loop += 1
         self.reset_status()
 
     def need_stop_service(self):

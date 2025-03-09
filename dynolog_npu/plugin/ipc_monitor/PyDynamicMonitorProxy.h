@@ -1,7 +1,7 @@
 #ifndef PYDYNAMIC_MONITOR_PROXY_H
 #define PYDYNAMIC_MONITOR_PROXY_H
 
-#include <iostream>
+#include <glog/logging.h>
 #include <memory>
 #include "MonitorBase.h"
 #include "DynoLogNpuMonitor.h"
@@ -14,15 +14,21 @@ public:
     PyDynamicMonitorProxy() = default;
     bool InitDyno(int npuId)
     {
-         try {
-             monitor_ = DynoLogNpuMonitor::GetInstance();
-             monitor_->SetNpuId(npuId);
-             bool res = monitor_->Init();
-             return res;
-         } catch (const std::exception &e) {
-             std::cout << "[ERROR] Error when init dyno " << e.what() << std::endl;
-             return false;
-         }
+        try {
+            if (!google::IsGoogleLoggingInitialized()) {
+                google::InitGoogleLogging("DynoLogNpuMonitor");
+                google::SetLogDestination(google::GLOG_INFO, "/var/log/dynolog_npu_");
+                google::SetLogFilenameExtension(".log");
+            }
+            monitor_ = DynoLogNpuMonitor::GetInstance();
+            monitor_->SetNpuId(npuId);
+            bool res = monitor_->Init();
+            LOG(ERROR) << res;
+            return res;
+        } catch (const std::exception &e) {
+            LOG(ERROR) << "Error when init dyno " << e.what();
+            return false;
+        }
     }
 
     std::string PollDyno()

@@ -22,10 +22,10 @@ import pandas as pd
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import FileOpen, create_directory, load_json, load_npy, load_yaml
+from msprobe.core.common.file_utils import create_directory, load_json, load_npy, load_yaml
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, \
-    check_op_str_pattern_valid, get_dump_mode, set_dump_path
+    check_op_str_pattern_valid, get_dump_mode, set_dump_path, detect_framework_by_dump_json
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
@@ -78,6 +78,11 @@ class MSComparator(Comparator):
             raise TypeError(f"The type of parameter `data_mapping` must be dict, str or None, but got "
                             f"{type(self.data_mapping)}")
 
+    @staticmethod
+    def process_data_name(result):
+        result['data_name_x'] = result.apply(lambda row: [row['data_name_x'], row['data_name_y']], axis=1)
+        return result
+
     def calc_accuracy(self, result_df, header):
         condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
         result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
@@ -125,7 +130,8 @@ class MSComparator(Comparator):
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
             result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
         else:
-            fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
+            fill_cols = [CompareConst.COSINE, CompareConst.EUC_DIST,
+                         CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
                          CompareConst.ERROR_MESSAGE]
             result_df.loc[~condition_no_bench, fill_cols] = ''
@@ -139,6 +145,8 @@ class MSComparator(Comparator):
             header.append(CompareConst.STACK)
         if self.dump_mode == Const.ALL:
             header.append(CompareConst.DATA_NAME)
+            result = self.process_data_name(result)
+
         result.rename(columns={'op_name_x': CompareConst.NPU_NAME,
                                'op_name_y': CompareConst.BENCH_NAME,
                                'dtype_x': CompareConst.NPU_DTYPE,
@@ -169,6 +177,7 @@ class MSComparator(Comparator):
 
         result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
         result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
+
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:
@@ -269,15 +278,15 @@ class MSComparator(Comparator):
             bench_dtype = match_result['dtype_y']
             if self.cross_frame:
                 npu_dtype = npu_dtype.map(dtype_mapping).fillna(npu_dtype)
-            return ((npu_dtype == bench_dtype) |
-                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.FLOAT32)) |
-                    ((npu_dtype == Const.FLOAT32) & (bench_dtype == Const.FLOAT16)) |
-                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.BFLOAT16)) |
-                    ((npu_dtype == Const.BFLOAT16) & (bench_dtype == Const.FLOAT16)) |
-                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_FLOAT32)) |
-                    ((npu_dtype == Const.TORCH_FLOAT32) & (bench_dtype == Const.TORCH_FLOAT16)) |
-                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_BFLOAT16)) |
-                    ((npu_dtype == Const.TORCH_BFLOAT16) & (bench_dtype == Const.TORCH_FLOAT16)))
+
+            equal_condition = npu_dtype == bench_dtype
+            match_condition = (
+                    (npu_dtype.isin(CompareConst.DTYPE_MATCH_GROUPS[0]) & bench_dtype.isin(
+                        CompareConst.DTYPE_MATCH_GROUPS[0])) |
+                    (npu_dtype.isin(CompareConst.DTYPE_MATCH_GROUPS[1]) & bench_dtype.isin(
+                        CompareConst.DTYPE_MATCH_GROUPS[1]))
+            )
+            return equal_condition | match_condition
 
         match_result.loc[~gen_dtype_condition(), [i + '_y' for i in bench_df.columns]] = CompareConst.N_A
         return self.make_result_df(match_result)
@@ -382,12 +391,11 @@ class MSComparator(Comparator):
 
 
 def check_cross_framework(bench_json_path):
-    pattern = r'"data_name":\s*"[^"]+\.pt"'
-    with FileOpen(bench_json_path, 'r') as file:
-        for line in file:
-            if re.search(pattern, line):
-                return True
-    return False
+    framework = detect_framework_by_dump_json(bench_json_path)
+    if framework == Const.PT_FRAMEWORK:
+        return True
+    else:
+        return False
 
 
 def ms_compare(input_param, output_path, **kwargs):

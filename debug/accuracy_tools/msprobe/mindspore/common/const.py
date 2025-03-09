@@ -70,6 +70,67 @@ class Const:
     }
 
 
+class MsCompareConst:
+    # api_info field
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+    FUNCTIONAL_API = "Functional"
+    FUSION_API = "FUSION"
+
+    API_NAME_STR_LENGTH = 4
+    MAX_RECURSION_DEPTH = 20
+
+    # Mindtorch api_info field
+    MINDTORCH_TENSOR = "Tensor"
+    MINDTORCH = "Torch"
+    MINDTORCH_FUNC = "Functional"
+    MINDTORCH_NPU = "NPU"
+    MINDTORCH_DIST = "Distributed"
+
+
+
+    MT_VALID_API_TYPES = [
+        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
+    ]
+    SUPPORTED_FUSION_LIST = ["flash_attention_score"]
+
+
+    TASK_FIELD = "task"
+    STATISTICS_TASK = "statistics"
+    FRAMEWORK = "framework"
+    TENSOR_TASK = "tensor"
+    DUMP_DATA_DIR_FIELD = "dump_data_dir"
+    DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
+
+    # detail_csv
+    DETAIL_CSV_API_NAME = "API Name"
+    DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
+    DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
+    DETAIL_CSV_SHAPE = "Shape"
+    DETAIL_CSV_PASS_STATUS = "Status"
+    DETAIL_CSV_MESSAGE = "Message"
+    DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
+
+    # result_csv
+    RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
+    RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
+    RESULT_CSV_FILE_NAME = "accuracy_checking_result"
+
+    EPSILON = 1e-8
+
+    class ProcessStatus:
+        SUCCESS = "success"
+        API_NOT_FOUND = "api_not_found"
+        EXCEPTION_SKIP = "exception_skip"
+
+
+
+
 class FreeBenchmarkConst:
     ADD_NOISE = "add_noise"
     BIT_NOISE = "bit_noise"

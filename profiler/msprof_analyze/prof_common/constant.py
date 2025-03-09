@@ -43,6 +43,7 @@ class Constant(object):
     FRAMEWORK_DIR = "FRAMEWORK"
     CLUSTER_ANALYSIS_OUTPUT = "cluster_analysis_output"
     SINGLE_OUTPUT = "ASCEND_PROFILER_OUTPUT"
+    ANALYZE_DIR = "analyze"
     COMM_JSON = "communication.json"
     COMM_MATRIX_JSON = "communication_matrix.json"
     STEP_TIME_CSV = "step_trace_time.csv"
@@ -61,6 +62,7 @@ class Constant(object):
     # communication
     P2P = "p2p"
     COLLECTIVE = "collective"
+    TOTAL = "total"
     STEP_ID = "step_id"
     RANK_ID = "rank_id"
     GROUP_NAME = "group_name"
@@ -86,6 +88,7 @@ class Constant(object):
     ELAPSE_TIME_MS = "Elapse Time(ms)"
     IDLE_TIME_MS = "Idle Time(ms)"
     LARGE_PACKET_RATIO = "Large Packet Ratio"
+    TYPE = "type"
 
     # params
     DATA_MAP = "data_map"
@@ -97,6 +100,8 @@ class Constant(object):
     TRANSPORT_TYPE = "Transport Type"
     COMM_DATA_DICT = "comm_data_dict"
     DATA_TYPE = "data_type"
+    IS_MSPROF = "is_prof"
+    IS_MINDSPORE = "is_mindspore"
 
     # step time
     RANK = "rank"
@@ -126,14 +131,17 @@ class Constant(object):
     TABLE_HOST_INFO = "HostInfo"
     TABLE_RANK_DEVICE_MAP = "RankDeviceMap"
     TABLE_CLUSTER_BASE_INFO = "ClusterBaseInfo"
+    TABLE_META_DATA = "META_DATA"
 
     # data config key
     CONFIG = "config"
     EXPER_CONFIG = "experimental_config"
     EXPER_EXPORT_TYPE = "_export_type"
+    PROFILER_PARAMETER = "profiler_parameters"
 
     # metadata key
     DISTRIBUTED_ARGS = "distributed_args"
+    PARALLEL_GROUP_INFO = "parallel_group_info"
 
     # mode
     ALL = "all"
@@ -161,6 +169,7 @@ class Constant(object):
     BLUE_COLOR = "00BFFF"
     LIGHT_BLUE_COLOR = "87CEFA"
     US_TO_MS = 1000
+    NS_TO_US = 1000
     KB_TO_MB = 1024
     INVALID_VALUE = -1
     MILLISECONDS_TO_SECONDS = 10 ** 3
@@ -421,6 +430,7 @@ class Constant(object):
 
     CONCURRENT_MODE = "concurrent"
     PROFILER_DB_PATH = "profiler_db_path"
+    ANALYSIS_DB_PATH = "analysis_db_path"
     RANK_LIST = "rank_list"
     EXPORT_TYPE = "export_type"
     EXTRA_ARGS = "args"
@@ -431,3 +441,12 @@ class Constant(object):
     # hccl_sum
     UINT32_BITS = 32
     UINT32_MASK = 0xffffffff
+
+    # slow rank
+    MAX_DIXON_NUM = 100
+    DIXON_THRESHOLD_1 = 7
+    DIXON_THRESHOLD_2 = 10
+    DIXON_THRESHOLD_3 = 13
+
+    UNKNOWN = "unknown"
+

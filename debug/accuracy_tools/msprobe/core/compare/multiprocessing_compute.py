@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -15,14 +15,17 @@
 
 import multiprocessing
 from dataclasses import dataclass
+from functools import partial
+
 import pandas as pd
 from tqdm import tqdm
+
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import CompareConst
 
 
-def _handle_multi_process(func, input_parma, result_df, lock):
+def _handle_multi_process(func, input_param, result_df, lock):
     process_num = max(int((multiprocessing.cpu_count() + 1) // 4), 1)
     op_name_mapping_dict = read_dump_data(result_df)
 
@@ -44,7 +47,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
 
     progress_bar = tqdm(total=len(result_df), desc="API/Module Item Compare Process", unit="row", ncols=100)
 
-    def update_progress(size, progress_lock):
+    def update_progress(size, progress_lock, extra_param=None):
         with progress_lock:
             progress_bar.update(size)
 
@@ -52,10 +55,12 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         idx = df_chunk_size * process_idx
         chunk_size = len(df_chunk)
         result = pool.apply_async(func,
-                                  args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
+                                  args=(idx, op_name_mapping_dict, df_chunk, lock, input_param),
                                   error_callback=err_call,
-                                  callback=update_progress(chunk_size, lock))
+                                  callback=partial(update_progress, chunk_size, lock)
+                                  )
         results.append(result)
+
     final_results = [r.get() for r in results]
     pool.close()
     pool.join()
@@ -92,12 +97,12 @@ def _ms_graph_handle_multi_process(func, result_df, mode):
 def read_dump_data(result_df):
     try:
         npu_dump_name_list = result_df.iloc[0:, 0].tolist()
-        npu_dump_tensor_list = result_df.iloc[0:, -1].tolist()
+        dump_tensor_pair_list = result_df.iloc[0:, -1].tolist()
         op_name_mapping_dict = {}
         for index, _ in enumerate(npu_dump_name_list):
             npu_dump_name = npu_dump_name_list[index]
-            npu_dump_tensor = npu_dump_tensor_list[index]
-            op_name_mapping_dict[npu_dump_name] = [npu_dump_tensor, npu_dump_tensor]
+            dump_tensor_pair = dump_tensor_pair_list[index]
+            op_name_mapping_dict[npu_dump_name] = dump_tensor_pair
         return op_name_mapping_dict
     except ValueError as e:
         logger.error('result dataframe is not found.')
@@ -110,11 +115,12 @@ def read_dump_data(result_df):
 @dataclass
 class ComparisonResult:
     cos_result: list
+    euc_dist_result: list
     max_err_result:  list
     max_relative_err_result: list
-    err_msgs: list
     one_thousand_err_ratio_result: list
     five_thousand_err_ratio_result: list
+    err_msgs: list
 
 
 def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
@@ -135,15 +141,16 @@ def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
         for i, _ in enumerate(result.cos_result):
             process_index = i + offset
             result_df.loc[process_index, CompareConst.COSINE] = result.cos_result[i]
+            result_df.loc[process_index, CompareConst.EUC_DIST] = result.euc_dist_result[i]
             result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = result.max_err_result[i]
             result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = result.max_relative_err_result[i]
-            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
-            result_df.loc[process_index, CompareConst.ACCURACY] = (
-                check_accuracy(result.cos_result[i], result.max_err_result[i]))
             result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = (
                 result.one_thousand_err_ratio_result)[i]
             result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = (
                 result.five_thousand_err_ratio_result)[i]
+            result_df.loc[process_index, CompareConst.ACCURACY] = (
+                check_accuracy(result.cos_result[i], result.max_err_result[i]))
+            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
         return result_df
     except ValueError as e:
         logger.error('result dataframe is not found.')

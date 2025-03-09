@@ -342,6 +342,7 @@ class CompareConst:
     MEAN_DIFF = "Mean diff"
     NORM_DIFF = "L2norm diff"
     COSINE = "Cosine"
+    EUC_DIST = "EucDist"
     MAX_ABS_ERR = "MaxAbsErr"
     MAX_RELATIVE_ERR = "MaxRelativeErr"
     MIN_RELATIVE_ERR = "MinRelativeErr"
@@ -416,8 +417,8 @@ class CompareConst:
     ULP_ERR_STATUS = "ulp_err_status"
 
     COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
-        ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
+        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, EUC_DIST,
+        MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
         NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
     ]
 
@@ -443,18 +444,16 @@ class CompareConst:
         Const.MD5: MD5_COMPARE_RESULT_HEADER
     }
 
-    ALL_COMPARE_INDEX = [COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO]
+    ALL_COMPARE_INDEX = [COSINE, EUC_DIST, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO,
+                         FIVE_THOUSANDTHS_ERR_RATIO]
     SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
                              MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
 
     # dtype match
-    MS_TYPE = [
-        [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
-        [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
-    ]
-    TORCH_TYPE = [
-        [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
-        [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
+
+    DTYPE_MATCH_GROUPS = [
+        {Const.FLOAT16, Const.FLOAT32, Const.BFLOAT16},
+        {Const.TORCH_FLOAT16, Const.TORCH_FLOAT32, Const.TORCH_BFLOAT16}
     ]
 
     # read_op
@@ -553,7 +552,7 @@ class CompareConst:
         BENCH_MEAN: None, BENCH_NORM: None, ACCURACY: '', ERROR_MESSAGE: ''
     }
     MS_GRAPH_NPY = {
-        COSINE: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
+        COSINE: None, EUC_DIST: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
         FIVE_THOUSANDTHS_ERR_RATIO: None
     }
     MS_GRAPH_STATISTIC = {
@@ -622,61 +621,6 @@ class OverflowConst:
     """
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
-
-
-class MsCompareConst:
-    # api_info field
-    MINT = "Mint"
-    MINT_FUNCTIONAL = "MintFunctional"
-    TENSOR_API = "Tensor"
-
-    API_NAME_STR_LENGTH = 4
-    MAX_RECURSION_DEPTH = 20
-
-    # Mindtorch api_info field
-    MINDTORCH_TENSOR = "Tensor"
-    MINDTORCH = "Torch"
-    MINDTORCH_FUNC = "Functional"
-    MINDTORCH_NPU = "NPU"
-    MINDTORCH_DIST = "Distributed"
-
-
-
-    MT_VALID_API_TYPES = [
-        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
-    ]
-
-    TASK_FIELD = "task"
-    STATISTICS_TASK = "statistics"
-    FRAMEWORK = "framework"
-    TENSOR_TASK = "tensor"
-    DUMP_DATA_DIR_FIELD = "dump_data_dir"
-    DATA_FIELD = "data"
-
-    # supported api yaml
-    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
-    SUPPORTED_TENSOR_LIST_KEY = "tensor"
-
-    # detail_csv
-    DETAIL_CSV_API_NAME = "API Name"
-    DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
-    DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
-    DETAIL_CSV_SHAPE = "Shape"
-    DETAIL_CSV_PASS_STATUS = "Status"
-    DETAIL_CSV_MESSAGE = "Message"
-    DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
-
-    # result_csv
-    RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
-    RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
-    RESULT_CSV_FILE_NAME = "accuracy_checking_result"
-
-    EPSILON = 1e-8
-
-    class ProcessStatus:
-        SUCCESS = "success"
-        API_NOT_FOUND = "api_not_found"
-        EXCEPTION_SKIP = "exception_skip"
 
 
 class MsgConst:

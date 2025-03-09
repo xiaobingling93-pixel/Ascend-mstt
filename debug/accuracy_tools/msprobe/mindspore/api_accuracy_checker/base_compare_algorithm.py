@@ -18,9 +18,10 @@ from abc import ABC, abstractmethod
 import mindspore
 import numpy as np
 import torch
-from msprobe.core.common.const import CompareConst, MsCompareConst
+from msprobe.core.common.const import CompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.const import MsCompareConst
 
 
 class CompareResult:

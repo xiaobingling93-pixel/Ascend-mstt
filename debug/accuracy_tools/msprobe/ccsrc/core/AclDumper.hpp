@@ -58,11 +58,17 @@ private:
                                      uint32_t curStep, const char** kernels);
     DebuggerErrno AclDumpGenOverflowJson(std::shared_ptr<const OverflowCheckCfg> overflowCfg, uint32_t rank,
                                          uint32_t curStep);
+    void CountOverflowNumbers(const acldumpChunk* chunk);
+    bool IsOverflowCompleted();
+
     bool initialized{false};
     bool aclDumpHasSet{false};
     std::string foreDumpPath;
     std::vector<DebuggerSummaryOption> hostAnalysisOpt;
     std::map<std::string, std::shared_ptr<AclDumpDataProcessor>> dataProcessors;
+    bool isOverflowDump{false};
+    int32_t overflowNums{1};
+    int32_t realOverflowNums{0};
 };
 
 void KernelInitDump();

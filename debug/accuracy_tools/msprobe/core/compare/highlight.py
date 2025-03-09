@@ -146,11 +146,13 @@ class HighlightRules:
     }
 
     # 用于比较输入和输出的规则
+    # 真实数据检查规则
     compare_rules = {
         "check_order_magnitude": CheckOrderMagnitude(),
         "check_one_thousand_error": CheckOneThousandErrorRatio(),
         "check_cosine_similarity": CheckCosineSimilarity()
     }
+    # 统计量数据检查规则
     summary_compare_rules = {
         "check_order_magnitude": CheckOrderMagnitude(),
         "check_max_relative_diff": CheckMaxRelativeDiff(),

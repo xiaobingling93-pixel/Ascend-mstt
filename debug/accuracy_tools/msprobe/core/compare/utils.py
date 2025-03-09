@@ -285,9 +285,9 @@ def result_item_init(n_info, b_info, dump_mode):
             md5_compare_result = CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
             result_item.extend([n_info.struct[2], b_info.struct[2], md5_compare_result])
         elif dump_mode == Const.SUMMARY:
-            result_item.extend([" "] * 8)
+            result_item.extend([" "] * 8)  # 8个统计量数据情况的比对指标
         else:
-            result_item.extend([" "] * 5)
+            result_item.extend([" "] * 6)  # 6个真实数据情况的比对指标
     else:
         err_msg = "index out of bounds error will occur in result_item_init, please check!\n" \
                   f"npu_info_struct is {n_info.struct}\n" \
@@ -321,8 +321,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
         has_stack = npu_stack_info and bench_stack_info
 
         if dump_mode == Const.ALL:
-            npu_data_name = n_dict.get("data_name", None)
-            bench_data_name = b_dict.get("data_name", None)
+            npu_data_name_list = n_dict.get("data_name", None)
+            bench_data_name_list = b_dict.get("data_name", None)
 
         for index in range(min_len):
             n_name = safe_get_value(n_dict, n_start + index, "n_dict", key="op_name")
@@ -353,7 +353,9 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             result_item.append(err_msg)
             result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
             if dump_mode == Const.ALL:
-                result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
+                npu_data_name = safe_get_value(npu_data_name_list, n_start + index, "npu_data_name_list")
+                bench_data_name = safe_get_value(bench_data_name_list, b_start + index, "bench_data_name_list")
+                result_item.append([npu_data_name, bench_data_name])
 
             result.append(result_item)
 
@@ -371,7 +373,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                         continue
                     result_item = [
                         n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                        " ", " ", " ", " ", " "
+                        " ", " ", " ", " ", " ", " "
                     ]
                     summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                     result_item.extend(summary_data)
@@ -388,7 +390,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result_item.append(err_msg)
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
-                    result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
+                    npu_data_name = safe_get_value(npu_data_name_list, n_start + index, "npu_data_name_list")
+                    result_item.append([npu_data_name, "-1"])
 
                 result.append(result_item)
 
@@ -453,9 +456,9 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
             result.append(result_item)
             continue
         if dump_mode == Const.SUMMARY:
-            result_item.extend([CompareConst.N_A] * 8)
+            result_item.extend([CompareConst.N_A] * 8)  # 8个统计量数据情况的比对指标
         if dump_mode == Const.ALL:
-            result_item.extend([CompareConst.N_A] * 5)
+            result_item.extend([CompareConst.N_A] * 6)  # 6个真实数据情况的比对指标
 
         npu_summary_data = safe_get_value(summary_reorder, index, "summary_reorder")
         bench_summary_data = [CompareConst.N_A] * 4
@@ -467,7 +470,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         result_item.append(err_msg)
         append_stack_info(result_item, npu_stack_info, index)
         if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
-            result_item.extend(["-1"])
+            result_item.extend([["-1", "-1"]])
         result.append(result_item)
 
 

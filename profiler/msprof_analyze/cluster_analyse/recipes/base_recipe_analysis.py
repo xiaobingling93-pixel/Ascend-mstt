@@ -26,6 +26,7 @@ from msprof_analyze.cluster_analyse.common_func.utils import convert_unit
 from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.prof_common.logger import get_logger
 from msprof_analyze.prof_common.path_manager import PathManager
+from msprof_analyze.cluster_analyse.cluster_data_preprocess.msprof_data_preprocessor import MsprofDataPreprocessor
 
 logger = get_logger()
 
@@ -42,6 +43,8 @@ class BaseRecipeAnalysis(ABC):
         self._recipe_name = params.get(Constant.RECIPE_NAME, "")
         self._parallel_mode = params.get(Constant.PARALLEL_MODE, "")
         self._export_type = params.get(Constant.EXPORT_TYPE, "")
+        self._is_msprof = params.get(Constant.IS_MSPROF)
+        self._is_mindspore = params.get(Constant.IS_MINDSPORE)
         self._cluster_analysis_output_path = os.path.join(
             params.get(Constant.CLUSTER_ANALYSIS_OUTPUT_PATH, self._collection_dir), Constant.CLUSTER_ANALYSIS_OUTPUT)
         self._output_path = self._cluster_analysis_output_path if self._export_type == "db" else os.path.join(
@@ -107,7 +110,7 @@ class BaseRecipeAnalysis(ABC):
             result_db = custom_db_path if custom_db_path else os.path.join(self.output_path, file_name)
             conn, cursor = DBManager.create_connect_db(result_db)
             if isinstance(data, pd.DataFrame):
-                data.to_sql(table_name, conn, if_exists='replace', index=True)
+                data.to_sql(table_name, conn, if_exists='replace', index=index)
             else:
                 logger.error(f"Unknown dump data type: {type(data)}")
             DBManager.destroy_db_connect(conn, cursor)
@@ -158,15 +161,40 @@ class BaseRecipeAnalysis(ABC):
         db_paths = []
         for rank_id in rank_ids:
             rank_path = self._data_map[rank_id]
-            db_path = os.path.join(rank_path, Constant.SINGLE_OUTPUT, f"ascend_pytorch_profiler_{rank_id}.db")
-            if os.path.exists(db_path):
-                db_paths.append({Constant.RANK_ID: rank_id, Constant.PROFILER_DB_PATH: db_path,
-                                 Constant.STEP_RANGE: self._get_step_range(db_path)})
+            db_path_dict = {Constant.RANK_ID: rank_id, Constant.PROFILER_DB_PATH: "", Constant.ANALYSIS_DB_PATH: "",
+                            Constant.STEP_RANGE: {}}
+            profiler_db_path = self._get_profiler_db_path(rank_id, rank_path)
+            analysis_db_path = self._get_analysis_db_path(rank_path)
+            if os.path.exists(profiler_db_path):
+                db_path_dict[Constant.PROFILER_DB_PATH] = profiler_db_path
+                db_path_dict[Constant.STEP_RANGE] = self._get_step_range(profiler_db_path)
             else:
-                logger.warning(f"DB file not found, rank id: {rank_id}, db path: {db_path}.")
+                logger.warning(f"Profiler DB file not found, rank id: {rank_id}, db path: {profiler_db_path}.")
+
+            if os.path.exists(analysis_db_path):
+                db_path_dict[Constant.ANALYSIS_DB_PATH] = analysis_db_path
+            else:
+                logger.warning(f"Analysis DB file not found, rank id: {rank_id}, db path: {analysis_db_path}.")
+            if db_path_dict.get(Constant.PROFILER_DB_PATH):
+                db_paths.append(db_path_dict)
         if invalid_rank_id:
             logger.warning(f"Invalid Rank id: [{','.join(invalid_rank_id)}].")
         return db_paths
+
+    def _get_profiler_db_path(self, rank_id, data_path):
+        if self._is_msprof:
+            db_path = MsprofDataPreprocessor.get_msprof_profiler_db_path(data_path)
+            return db_path if db_path else os.path.join(data_path, "msprof_xx.db")
+        if self._is_mindspore:
+            return os.path.join(data_path, Constant.SINGLE_OUTPUT, f"ascend_mindspore_profiler_{rank_id}.db")
+        return os.path.join(data_path, Constant.SINGLE_OUTPUT, f"ascend_pytorch_profiler_{rank_id}.db")
+
+    def _get_analysis_db_path(self, data_path):
+        if self._is_msprof:
+            return os.path.join(data_path, Constant.ANALYZE_DIR, "communication_analyzer.db")
+        if self._is_mindspore:
+            return os.path.join(data_path, Constant.SINGLE_OUTPUT, "communication_analyzer.db")
+        return os.path.join(data_path, Constant.SINGLE_OUTPUT, "analysis.db")
 
     def _get_step_range(self, db_path):
         step_range = {}
@@ -204,9 +232,14 @@ class BaseRecipeAnalysis(ABC):
         Extract the profiling data required for cluster analysis from each device, and then aggregate the
         results from each device to be processed by a reduce function.
         Params:
-            data_map: eg. {"RANK_ID": 1,
-                           "profiler_db_path": "xxxx/ascend_pytorch_profiler_1.db",
-                           "step_range": {"id": 2, "startNs": 12345, "endNs": 12443]}
+            data_map: eg1. {"RANK_ID": 1,
+                            "profiler_db_path": "xxx/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_1.db",
+                            "analysis_db_path": "xxx/ASCEND_PROFILER_OUTPUT/analysis.db",
+                            "step_range": {"id": 2, "startNs": 12345, "endNs": 12443]}
+                      eg2. {"RANK_ID": 1,
+                            "profiler_db_path": "xxx/msprof_20250227145123.db",
+                            "analysis_db_path": "xxx/analyze/communication_analyzer.db",
+                            "step_range": {"id": 2, "startNs": 12345, "endNs": 12443]}
             analysis_class: hccl_sum, compute_op_sum, cann_api_sum, mstx_sum……
         """
         pass

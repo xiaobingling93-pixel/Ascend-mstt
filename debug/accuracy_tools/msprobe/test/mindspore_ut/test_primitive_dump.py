@@ -84,9 +84,9 @@ class TestService(unittest.TestCase):
         self.assertEqual(self.service.primitive_hook_service.primitive_counters[primitive_name], 1)
 
     def test_step_updates_iteration(self):
-        initial_iter = self.service.current_iter
+        initial_iter = self.service.loop
         self.service.step()
-        self.assertEqual(self.service.current_iter, initial_iter + 1)
+        self.assertEqual(self.service.loop, initial_iter + 1)
 
     @patch.object(HOOKCell, 'cell_count', new_callable=lambda: defaultdict(int))
     def test_step_resets_counters(self, _):
@@ -96,12 +96,13 @@ class TestService(unittest.TestCase):
         self.assertEqual(self.service.primitive_hook_service.primitive_counters, {})
         self.assertEqual(HOOKCell.cell_count, defaultdict(int))
 
-    def test_step_calls_update_iter(self):
-        # 检查是否在调用 step 时调用了 update_iter
+    def test_start_calls_update_iter(self):
+        # 检查是否在调用 start 时调用了 update_iter
         with patch.object(self.service.data_collector, 'update_iter') as mock_update_iter:
-            initial_iter = self.service.current_iter
-            self.service.step()
-            mock_update_iter.assert_called_once_with(initial_iter + 1)
+            initial_iter = self.service.loop
+            init_step = self.service.init_step
+            self.service.start()
+            mock_update_iter.assert_called_once_with(initial_iter + init_step)
 
 
 class TestPrimitiveHookService(unittest.TestCase):

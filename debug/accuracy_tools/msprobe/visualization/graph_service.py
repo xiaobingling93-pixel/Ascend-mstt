@@ -16,8 +16,8 @@
 import os
 import time
 import json
-from msprobe.core.common.file_utils import (FileOpen, check_file_type, create_directory, FileChecker,
-                                            check_file_or_directory_path)
+from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
+                                            check_file_or_directory_path, load_json)
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.overflow_check.checker import AnomalyDetector
@@ -220,8 +220,7 @@ def _graph_service_parser(parser):
 
 
 def _graph_service_command(args):
-    with FileOpen(args.input_path, "r") as file:
-        input_param = json.load(file)
+    input_param = load_json(args.input_path)
     npu_path = input_param.get("npu_path")
     bench_path = input_param.get("bench_path")
     check_file_or_directory_path(npu_path, isdir=True)

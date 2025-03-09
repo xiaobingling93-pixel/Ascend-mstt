@@ -12,13 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
+import re
+from datetime import datetime
 from mindspore import dtype as mstype, Tensor
 
 from msprobe.mindspore.monitor.features import FUNC_MAP
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
 def get_single_metrics(op_list, tag, tensor, output=None):
@@ -95,8 +98,8 @@ def validate_ranks(ranks):
     if not isinstance(ranks, list):
         raise TypeError("module_ranks should be a list")
     for rank in ranks:
-        if not isinstance(rank, str):
-            raise TypeError(f"element in module_ranks should be a str, get {type(rank)}")
+        if not isinstance(rank, int):
+            raise TypeError(f"element in module_ranks should be a int, get {type(rank)}")
 
 
 def validate_targets(targets):
@@ -255,7 +258,7 @@ def validate_config(config):
     step_interval = config.get('step_interval', 1)
     validate_step_interval(step_interval)
 
-    collect_times = config.get('collect_times', 1e8)
+    collect_times = config.get('collect_times', int(1e8))
     validate_collect_times(collect_times)
 
     if not targets:
@@ -265,3 +268,34 @@ def validate_config(config):
         config["is_select"] = False
     else:
         config["is_select"] = True
+
+
+def time_str2time_digit(time_str):
+    time_format = '%b%d_%H-%M-%S'
+    try:
+        time_digit = datetime.strptime(time_str, time_format)
+    except Exception as e:
+        raise RuntimeError(f"illegal timestamp: {time_str}, timestamp should be prefix \
+                           of existing output dirpath, like 'Dec03_21-34-40'.") from e
+    return time_digit
+
+
+def get_target_output_dir(monitor_path, time_start, time_end):
+    check_file_or_directory_path(monitor_path, isdir=True)
+    time_start = time_str2time_digit(time_start) if time_start is not None else time_start
+    time_end = time_str2time_digit(time_end) if time_end is not None else time_end
+    if time_start and time_end and time_start > time_end:
+        raise ValueError(f"time_start({time_start}) greater than time_end({time_end})")
+    result = {}
+    for dirname in os.listdir(monitor_path):
+        match = re.match(MonitorConst.OUTPUT_DIR_PATTERN, dirname)
+        if not match:
+            continue
+        time_tag = match.group(1)
+        rank = match.group(2)
+        target_time = time_str2time_digit(time_tag)
+        start_ok = time_start is None or target_time >= time_start
+        end_ok = time_end is None or target_time <= time_end
+        if start_ok and end_ok:
+            result[rank] = os.path.join(monitor_path, dirname)
+    return result

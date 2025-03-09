@@ -78,14 +78,16 @@ class PytorchDataProcessor(BaseDataProcessor):
     def analyze_device_in_kwargs(element):
         single_arg = {}
         single_arg.update({'type': "torch.device"})
-        if not isinstance(element, str):
+        if isinstance(element, (int, str)):
+            single_arg.update({"value": element})
+        elif isinstance(element, torch.device):
             if hasattr(element, "index"):
                 device_value = element.type + ":" + str(element.index)
             else:
                 device_value = element.type
             single_arg.update({"value": device_value})
         else:
-            single_arg.update({"value": element})
+            logger.debug(f"Device type {type(element)} is not supported.")
         return single_arg
 
     @staticmethod
@@ -143,7 +145,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         if data.is_meta:
             return tensor_stat
         data_clone = data.detach()
-        if data_clone.numel() == 0:
+        if not data_clone.numel() or not data_clone.data_ptr():
             return tensor_stat
         else:
             if data_clone.device.type == Const.CPU_LOWERCASE or not async_dump:
@@ -228,7 +230,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         if isinstance(element, dist.ProcessGroup):
             return self._analyze_process_group(element)
         if isinstance(element, dist.P2POp):
-            return self._analyze_p2pop(element)
+            return self._analyze_p2pop(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, dist.ReduceOp):
             return self._analyze_reduce_op(element)
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
@@ -247,10 +249,10 @@ class PytorchDataProcessor(BaseDataProcessor):
             module_input_output.update_output_with_args_and_kwargs()
         return super().analyze_forward_output(name, module, module_input_output)
 
-    def _analyze_p2pop(self, arg):
+    def _analyze_p2pop(self, arg, suffix):
         p2pop_info = {"class_type": "torch.distributed.P2POp"}
         try:
-            tensor_info = self._analyze_tensor(arg.tensor, [])
+            tensor_info = self._analyze_tensor(arg.tensor, suffix)
             p2pop_info.update({"tensor": tensor_info})
             p2pop_info.update({"op": arg.op.__name__})
             p2pop_info.update({"peer": arg.peer})
@@ -311,7 +313,7 @@ class TensorDataProcessor(PytorchDataProcessor):
             saved_tensor = tensor.clone().contiguous().detach()
             save_pt(saved_tensor, file_path)
         return single_arg
-    
+
     def _analyze_numpy(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_pt(torch.tensor(ndarray), file_path)

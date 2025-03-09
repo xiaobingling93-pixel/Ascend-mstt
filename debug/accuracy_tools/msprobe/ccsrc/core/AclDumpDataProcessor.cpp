@@ -56,23 +56,30 @@ constexpr const char* kStatsHeaderShape = "Shape";
 constexpr const char* kStatsHeaderMax = "Max Value";
 constexpr const char* kStatsHeaderMin = "Min Value";
 constexpr const char* kStatsHeaderAvg = "Avg Value";
-constexpr const char* kStatsHeaderL2Norm = "L2 Norm Value";
+constexpr const char* kStatsHeaderL2Norm = "l2norm";
+constexpr const char* kStatsHeaderL2NormInCsv = "L2Norm Value";
 constexpr const char* kStatsHeaderMD5 = "MD5 Value";
 constexpr const char* kStatsHeaderNan = "Nan Count";
+constexpr const char* kStatsHeaderNanInCsv = "NaN Count";
 constexpr const char* kStatsHeaderNegInf = "Negative Inf Count";
 constexpr const char* kStatsHeaderPosInf = "Positive Inf Count";
 constexpr const char* kRankId = "RANK_ID";
 constexpr const char* kDigitalNumbers = "0123456789";
 
-static const std::map<DebuggerSummaryOption, std::string> summaryOptionHeaderStrMap = {
-    {DebuggerSummaryOption::MAX, kStatsHeaderMax},
-    {DebuggerSummaryOption::MIN, kStatsHeaderMin},
-    {DebuggerSummaryOption::MEAN, kStatsHeaderAvg},
-    {DebuggerSummaryOption::L2NORM, kStatsHeaderL2Norm},
-    {DebuggerSummaryOption::NAN_CNT, kStatsHeaderNan},
-    {DebuggerSummaryOption::NEG_INF_CNT, kStatsHeaderNegInf},
-    {DebuggerSummaryOption::POS_INF_CNT, kStatsHeaderPosInf},
-    {DebuggerSummaryOption::MD5, kStatsHeaderMD5},
+static const std::map<DebuggerSummaryOption, std::pair<std::string, std::string>> summaryOptionHeaderStrMap = {
+    {DebuggerSummaryOption::MAX, {kStatsHeaderMax, kStatsHeaderMax}},
+    {DebuggerSummaryOption::MIN, {kStatsHeaderMin, kStatsHeaderMin}},
+    {DebuggerSummaryOption::MEAN, {kStatsHeaderAvg, kStatsHeaderAvg}},
+    {DebuggerSummaryOption::L2NORM, {kStatsHeaderL2Norm, kStatsHeaderL2NormInCsv}},
+    {DebuggerSummaryOption::NAN_CNT, {kStatsHeaderNan, kStatsHeaderNanInCsv}},
+    {DebuggerSummaryOption::NEG_INF_CNT, {kStatsHeaderNegInf, kStatsHeaderNegInf}},
+    {DebuggerSummaryOption::POS_INF_CNT, {kStatsHeaderPosInf, kStatsHeaderPosInf}},
+    {DebuggerSummaryOption::MD5, {kStatsHeaderMD5, kStatsHeaderMD5}},
+};
+
+const static std::map<AclDtype, AclDtype> kDtypeTransMap = {
+    {AclDtype::DT_BF16, AclDtype::DT_FLOAT},
+    {AclDtype::DT_INT4, AclDtype::DT_INT8},
 };
 
 class AclTensorStats {
@@ -170,7 +177,7 @@ static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(c
     for (uint32_t pos = 0; pos < segs.size(); ++pos) {
         const std::string& opt = segs[pos];
         for (auto it = summaryOptionHeaderStrMap.begin(); it != summaryOptionHeaderStrMap.end(); ++it) {
-            if (opt == it->second) {
+            if (opt == it->second.first) {
                 ret[pos] = it->first;
                 break;
             }
@@ -233,7 +240,7 @@ std::string AclTensorStats::GetCsvHeader() const
     ret.append("Op Type,Op Name,Task ID,Stream ID,Timestamp,Input/Output,Slot,Data Size,Data Type,Format,Shape");
     for (auto it = stats.begin(); it != stats.end(); it++) {
         ret.append(",");
-        ret.append(summaryOptionHeaderStrMap.at(it->first));
+        ret.append(summaryOptionHeaderStrMap.at(it->first).second);
     }
     ret.append("\n");
 
@@ -603,7 +610,7 @@ static std::string GenDataPath(const std::string& path) {
 inline std::string GetTensorInfoSuffix(AclTensorInfo& tensor)
 {
     return "." + tensor.inout + "." + std::to_string(tensor.slot) +
-           "." + DataUtils::GetFormatString(tensor.hostFmt) + "." + DataUtils::GetDTypeString(tensor.dtype);
+           "." + DataUtils::GetFormatString(tensor.hostFmt) + "." + DataUtils::GetDTypeString(tensor.oriDtype);
 }
 
 static DebuggerErrno DumpOneAclTensorFmtBin(AclTensorInfo& tensor)
@@ -640,10 +647,13 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
         return DebuggerErrno::OK;
     }
 
-    if (tensor.dtype == AclDtype::DT_BF16) {
-        ret = AclTensor::TransDtype(tensor, AclDtype::DT_FLOAT);
+    auto it = kDtypeTransMap.find(tensor.dtype);
+    if (it != kDtypeTransMap.end()) {
+        AclDtype dstDtype = it->second;
+        ret = AclTensor::TransDtype(tensor, dstDtype);
         if (ret != DebuggerErrno::OK) {
-            LOG_ERROR(ret, tensor + ": Failed to transform dtype from bf16 to fp32.");
+            LOG_ERROR(ret, tensor + ": Failed to transform dtype from " + DataUtils::GetDTypeString(it->first) + " to " +
+                      DataUtils::GetDTypeString(it->second)+ ".");
             return ret;
         }
     }
@@ -736,7 +746,9 @@ static DebuggerErrno DumpOneAclTensor(AclTensorInfo& tensor, std::vector<Debugge
 {
     DEBUG_FUNC_TRACE();
     if (tensor.dumpOriginData || !FileOperation::IsDtypeSupportByNpy(tensor.dtype)) {
-        return DumpOneAclTensorFmtBin(tensor);
+        if (kDtypeTransMap.find(tensor.dtype) == kDtypeTransMap.end()) {
+            return DumpOneAclTensorFmtBin(tensor);
+        }
     }
 
     DebuggerErrno ret = ConvertFormatDeviceToHost(tensor);

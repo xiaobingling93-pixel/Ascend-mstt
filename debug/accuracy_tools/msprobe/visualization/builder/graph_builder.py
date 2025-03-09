@@ -26,6 +26,7 @@ from msprobe.visualization.utils import save_json_file, GraphConst
 
 class GraphBuilder:
     backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
+    forward_pattern = re.compile(r"(\.forward\.)(\d+)$")
     # 匹配以大写字母开头，后接任意字母，并以Template(结尾
     template_pattern = re.compile(r'\b[A-Z][a-zA-Z]*Template\(')
 
@@ -113,12 +114,17 @@ class GraphBuilder:
         如果backward节点的父级节点是null，则尝试从同名的forward节点寻找父级节点
         """
         # 匹配以.backward.后跟一个或多个数字结尾的模式
-        backward_pattern = r"(\.backward\.)(\d+)$"
-        forward_pattern = r"(\.forward\.)(\d+)$"
-        if re.search(backward_pattern, subnode_id) and not upnode_id:
-            forward_upnode_id = construct_dict.get(re.sub(backward_pattern, r".forward.\2", subnode_id))
+        if GraphBuilder.backward_pattern.search(subnode_id) and not upnode_id:
+            forward_upnode_id = construct_dict.get(GraphBuilder.backward_pattern.sub(r".forward.\2", subnode_id))
             if forward_upnode_id:
-                new_upnode_id = re.sub(forward_pattern, r".backward.\2", forward_upnode_id)
+                new_upnode_id = GraphBuilder.forward_pattern.sub(r".backward.\2", forward_upnode_id)
+                if new_upnode_id in construct_dict:
+                    return new_upnode_id
+        # 匹配以.backward结尾的节点
+        if subnode_id.endswith(Const.SEP + Const.BACKWARD) and not upnode_id:
+            forward_upnode_id = construct_dict.get(subnode_id.replace(Const.BACKWARD, Const.FORWARD))
+            if forward_upnode_id:
+                new_upnode_id = forward_upnode_id.replace(Const.FORWARD, Const.BACKWARD)
                 if new_upnode_id in construct_dict:
                     return new_upnode_id
         return upnode_id

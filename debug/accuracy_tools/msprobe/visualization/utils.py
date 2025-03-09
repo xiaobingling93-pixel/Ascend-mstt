@@ -155,6 +155,7 @@ class GraphConst:
     SUMMARY_COMPARE = 0
     MD5_COMPARE = 1
     REAL_DATA_COMPARE = 2
+    STRUCTURE_COMPARE = 3
     JSON_NPU_KEY = 'NPU'
     JSON_BENCH_KEY = 'Bench'
     JSON_TIP_KEY = 'ToolTip'
@@ -181,11 +182,8 @@ class GraphConst:
     STR_MAX_LEN = 50
     SMALL_VALUE = 1e-3
     MD5_INDEX_LIST = [CompareConst.RESULT]
-    REAL_DATA_INDEX_LIST = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
-                            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO]
-    SUMMARY_INDEX_LIST = [CompareConst.MAX_DIFF, CompareConst.MIN_DIFF, CompareConst.MEAN_DIFF,
-                          CompareConst.NORM_DIFF, CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
-                          CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR]
+    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX
+    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX
     VALUE_INDEX_LIST = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     NULL = 'null'
@@ -200,13 +198,15 @@ class GraphConst:
     DUMP_MODE_TO_GRAPHCOMPARE_MODE_MAPPING = {
         Const.ALL: REAL_DATA_COMPARE,
         Const.SUMMARY: SUMMARY_COMPARE,
-        Const.MD5: MD5_COMPARE
+        Const.MD5: MD5_COMPARE,
+        Const.STRUCTURE: STRUCTURE_COMPARE
     }
 
     GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING = {
         REAL_DATA_COMPARE: Const.ALL,
         SUMMARY_COMPARE: Const.SUMMARY,
-        MD5_COMPARE: Const.MD5
+        MD5_COMPARE: Const.MD5,
+        STRUCTURE_COMPARE: Const.STRUCTURE
     }
 
     RANKS = 'ranks'

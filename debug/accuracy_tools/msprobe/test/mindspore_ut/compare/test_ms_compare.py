@@ -5,8 +5,10 @@ import random
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
+import pandas as pd
 import torch
 import yaml
 
@@ -350,21 +352,21 @@ class TestUtilsMethods(unittest.TestCase):
         finally:
             shutil.rmtree(data_path)
 
-    def test_check_cross_framework(self):
-        ms_data = {
-            "data_name": "Cell.model.language_model.encoder.layers.5.input_norm.FusedRMSNorm.forward.0.input.0.npy",
-        }
-        pt_data = {
-            "data_name": "Module.module.module.language_model.encoder.layers.0.input_norm.RMSNorm.forward.0.input.0.pt",
-        }
+    @patch('msprobe.mindspore.compare.ms_compare.detect_framework_by_dump_json')
+    def test_check_cross_framework_valid_pytorch(self, mock_detect_framework):
+        mock_detect_framework.return_value = Const.PT_FRAMEWORK
 
-        def check_data(data):
-            with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', encoding='utf-8', delete=True) as temp_file:
-                json.dump(data, temp_file, ensure_ascii=False, indent=4)
-                temp_file.flush()
-                return check_cross_framework(temp_file.name)
-        self.assertFalse(check_data(ms_data))
-        self.assertTrue(check_data(pt_data))
+        result = check_cross_framework("dummy_path")
+
+        self.assertTrue(result)
+
+    @patch('msprobe.mindspore.compare.ms_compare.detect_framework_by_dump_json')
+    def test_check_cross_framework_invalid_framework(self, mock_detect_framework):
+        mock_detect_framework.return_value = Const.MS_FRAMEWORK
+
+        result = check_cross_framework("dummy_path")
+
+        self.assertFalse(result)
 
     def test_comapre_process(self):
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
@@ -534,3 +536,27 @@ class TestUtilsMethods(unittest.TestCase):
         api_list = ["Mint"]
         with self.assertRaises(CompareException):
             ms_comparator.get_api_name(api_list)
+
+    def test_process_data_name(self):
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.ALL
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+        ms_comparator = MSComparator(mode_config, mapping_config)
+
+        data = pd.DataFrame({
+            'data_name_x': ['A', 'B', 'C'],
+            'data_name_y': ['X', 'Y', 'Z']
+        })
+
+        result = ms_comparator.process_data_name(data.copy())
+
+        expected = pd.DataFrame({
+            'data_name_x': [['A', 'X'], ['B', 'Y'], ['C', 'Z']],
+            'data_name_y': ['X', 'Y', 'Z']
+        })
+
+        pd.testing.assert_frame_equal(result, expected)

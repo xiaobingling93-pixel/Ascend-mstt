@@ -16,12 +16,13 @@
 import os
 import csv
 
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, read_csv
 from msprobe.core.common.utils import add_time_as_suffix, MsprobeBaseException
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
 from msprobe.core.common.file_utils import check_file_or_directory_path
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.const import MsCompareConst
 
 
 class ResultCsvEntry:

@@ -10,7 +10,7 @@
 #include <sstream>
 #include <chrono>
 #include <iomanip>
-#include <iostream>
+#include <glog/logging.h>
 #include <unordered_map>
 
 

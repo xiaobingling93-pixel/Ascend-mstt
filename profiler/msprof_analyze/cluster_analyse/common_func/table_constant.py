@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 class TableConstant:
-
     RANK_SET = "rank_set"
     STEP = "step"
     RANK_ID = "rank_id"
@@ -39,3 +38,13 @@ class TableConstant:
     DST_RANK = "dst_rank"
     TRANSPORT_TYPE = "transport_type"
     OPNAME = "op_name"
+    GROUP_ID = "group_id"
+    PG_NAME = "pg_name"
+    NAME = "name"
+    VALUE = "value"
+
+    # table name
+    TABLE_STRING_IDS = "STRING_IDS"
+    TABLE_COMPUTE_TASK_INFO = "COMPUTE_TASK_INFO"
+    TABLE_COMMUNICATION_OP = "COMMUNICATION_OP"
+    TABLE_TASK = "TASK"

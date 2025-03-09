@@ -13,24 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from glob import glob
 from setuptools import setup
 from pybind11.setup_helpers import Pybind11Extension
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+DYNOLOG_PATH = os.path.join(os.path.dirname(BASE_DIR), "third_party", "dynolog")
+GLOG_INC_PATH = os.path.join(DYNOLOG_PATH, "third_party", "glog", "src")
+GLOG_LIB_PATH = os.path.join(DYNOLOG_PATH, "build", "third_party", "glog")
 
 # Define the extension module
 ext_modules = [
     Pybind11Extension(
         "IPCMonitor",  # Name of the Python module
-        sources=["bindings.cpp",
-                 "ipc_monitor/utils.cpp",
-                 "ipc_monitor/DynoLogNpuMonitor.cpp",
-                 "ipc_monitor/NpuIpcClient.cpp",
-                 ],  # Source files
-        include_dirs=[os.path.join(BASE_DIR, "ipc_monitor")],  # Include Pybind11 headers
+        sources=["bindings.cpp"] + list(glob("ipc_monitor/*.cpp")), # Source files
+        include_dirs=[os.path.join(BASE_DIR, "ipc_monitor"), GLOG_INC_PATH, GLOG_LIB_PATH],  # Include Pybind11 headers
+        library_dirs=[GLOG_LIB_PATH],
+        libraries=["glog"],
         language="c++",  # Specify the language
     ),
 ]
+
 
 # Set up the package
 setup(
