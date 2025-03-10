@@ -25,7 +25,10 @@ except ImportError:
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
+
+
+_api_register = get_api_register()
 
 
 def dump_jit(name, in_feat, out_feat, is_forward):
@@ -69,7 +72,7 @@ class JitDump(_MindsporeFunctionExecutor):
 
     def __call__(self, *args, **kwargs):
         if JitDump.jit_dump_switch:
-            api_register.api_set_ori_func()
+            _api_register.restore_all_api()
         out = super().__call__(*args, **kwargs)
         if JitDump.jit_dump_switch and len(args) > 0:
             if self.name and self.name != "construct":
@@ -80,7 +83,7 @@ class JitDump(_MindsporeFunctionExecutor):
         elif len(args) == 0:
             logger.warning(f"The jit function {self.name} has no input arguments, nothing will be dumped.")
         if JitDump.jit_dump_switch:
-            api_register.api_set_hook_func()
+            _api_register.register_all_api()
         return out
 
     @classmethod
@@ -101,9 +104,9 @@ class JitDump(_MindsporeFunctionExecutor):
 
     def grad(self, obj, grad, weights, grad_position, *args, **kwargs):
         if JitDump.jit_dump_switch and JitDump.jit_enable:
-            api_register.api_set_ori_func()
+            _api_register.restore_all_api()
         output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
         if JitDump.jit_dump_switch and JitDump.jit_enable:
             dump_jit(obj, args, None, False)
-            api_register.api_set_hook_func()
+            _api_register.register_all_api()
         return output

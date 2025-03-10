@@ -30,7 +30,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized, is_recomputation
 from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
-from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.hook_module.api_register import get_api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
 
@@ -60,6 +60,7 @@ class Service:
         self.params_grad_info = {}
         self.hook_handle_dict = {}
         # 提前注册，确保注册尽可能多的API hook
+        self.api_register = get_api_register()
         self.register_api_hook()
         self.init_for_debug_level()
 
@@ -373,11 +374,10 @@ class Service:
     def register_api_hook(self):
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
             logger.info_on_rank_0(f"The api {self.config.task} hook function is successfully mounted to the model.")
-            api_register.initialize_hook(
-                functools.partial(self.build_hook, BaseScope.Module_Type_API),
-                self.config.online_run_ut
+            self.api_register.initialize_hook(
+                functools.partial(self.build_hook, BaseScope.Module_Type_API)
             )
-            api_register.api_modularity()
+            self.api_register.register_all_api()
 
     def register_module_hook(self):
         if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:

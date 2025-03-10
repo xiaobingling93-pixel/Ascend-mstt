@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -18,8 +16,8 @@
 import os
 from collections import namedtuple
 import re
-import torch
 
+import torch
 try:
     import torch_npu
 except ImportError:
@@ -33,11 +31,9 @@ from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
+from msprobe.pytorch.hook_module.api_register import ApiTemplate, get_api_register
 from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
-from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
-from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate
-from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
-from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
+
 
 hf_32_standard_api = ["conv1d", "conv2d"]
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
@@ -108,17 +104,30 @@ def exec_api(exec_params):
     kwargs = exec_params.kwargs
     is_autocast = exec_params.is_autocast
     autocast_dtype = exec_params.autocast_dtype
+    out = None
 
-    if api_type == "Functional":
-        torch_api = FunctionalOPTemplate(api_name, str, False)
-    if api_type == "Tensor":
-        torch_api = TensorOPTemplate(api_name, str, False)
-    if api_type == "Torch":
-        torch_api = TorchOPTemplate(api_name, str, False)
-    if api_type == "Aten":
+    prefix_map = Const.API_DATA_PREFIX.get(Const.PT_FRAMEWORK, {})
+    if not prefix_map or api_type not in prefix_map.values() or \
+        api_type not in (
+            Const.FUNCTIONAL_API_TYPE_PREFIX,
+            Const.TENSOR_API_TYPE_PREFIX,
+            Const.TORCH_API_TYPE_PREFIX,
+            Const.ATEN_API_TYPE_PREFIX,
+            Const.NPU_API_TYPE_PREFIX
+    ):
+        return out
+
+    if api_type == Const.ATEN_API_TYPE_PREFIX:
         torch_api = AtenOPTemplate(api_name, None, False)
-    if api_type == "NPU":
-        torch_api = NpuOPTemplate(api_name, None, False, device)
+    else:
+        api_register = get_api_register()
+        api_register.initialize_hook(None)
+        api_func_type = list(prefix_map.keys())[list(prefix_map.values()).index(api_type)]
+        api_func = api_register.ori_api_attr.get(Const.PT_FRAMEWORK + Const.SEP + api_func_type, {}).get(api_name)
+        if api_func is None:
+            return out
+
+        torch_api = ApiTemplate(api_name, api_func, api_type, None, need_hook=False, device=device)
     if is_autocast:
         with autocast(dtype=autocast_dtype):
             out = torch_api.forward(*args, **kwargs)

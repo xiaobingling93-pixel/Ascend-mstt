@@ -230,6 +230,92 @@ class Const:
 
     TENSOR_STAT_LEN = 2
 
+    SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
+
+    PT_API_TYPE_FUNCTIONAL = "functional"
+    PT_API_TYPE_TENSOR = "tensor"
+    PT_API_TYPE_TORCH = "torch"
+    PT_API_TYPE_VF = "_VF"
+    PT_API_TYPE_NPU = "torch_npu"
+    PT_API_TYPE_ATEN = "aten"
+    PT_API_TYPE_DIST = "distributed"
+    PT_API_TYPE_NPU_DIST = "npu_distributed"
+
+    MS_API_TYPE_OPS = "ops"
+    MS_API_TYPE_TENSOR = "tensor"
+    MS_API_TYPE_STUB_TENSOR = "stubtensor"
+    MS_API_TYPE_MINT = "mint.ops"
+    MS_API_TYPE_MINT_FUNC = "mint.nn.functional"
+    MS_API_TYPE_COM = "communication.comm_func"
+
+    FUNCTIONAL_API_TYPE_PREFIX = "Functional"
+    TENSOR_API_TYPE_PREFIX = "Tensor"
+    DIST_API_TYPE_PREFIX = "Distributed"
+
+    TORCH_API_TYPE_PREFIX = "Torch"
+    NPU_API_TYPE_PREFIX = "NPU"
+    ATEN_API_TYPE_PREFIX = "Aten"
+    VF_API_TYPE_PREFIX = "VF"
+
+    MINT_API_TYPE_PREFIX = "Mint"
+    MINT_FUNC_API_TYPE_PREFIX = "MintFunctional"
+
+    SUPPORT_API_DICT_KEY_MAP = {
+        PT_FRAMEWORK: {
+            PT_API_TYPE_FUNCTIONAL: PT_API_TYPE_FUNCTIONAL,
+            PT_API_TYPE_TENSOR: PT_API_TYPE_TENSOR,
+            PT_API_TYPE_TORCH: PT_API_TYPE_TORCH,
+            PT_API_TYPE_VF: PT_API_TYPE_VF,
+            PT_API_TYPE_NPU: PT_API_TYPE_NPU,
+            PT_API_TYPE_ATEN: PT_API_TYPE_ATEN,
+            PT_API_TYPE_DIST: PT_API_TYPE_DIST,
+            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST
+        },
+        MS_FRAMEWORK: {
+            MS_API_TYPE_OPS: MS_API_TYPE_OPS,
+            MS_API_TYPE_TENSOR: MS_API_TYPE_TENSOR,
+            MS_API_TYPE_STUB_TENSOR: MS_API_TYPE_TENSOR,
+            MS_API_TYPE_MINT: MS_API_TYPE_MINT,
+            MS_API_TYPE_MINT_FUNC: MS_API_TYPE_MINT_FUNC,
+            MS_API_TYPE_COM: MS_API_TYPE_COM
+        },
+        MT_FRAMEWORK: {
+            PT_API_TYPE_FUNCTIONAL: PT_API_TYPE_FUNCTIONAL,
+            PT_API_TYPE_TENSOR: PT_API_TYPE_TENSOR,
+            PT_API_TYPE_TORCH: PT_API_TYPE_TORCH,
+            PT_API_TYPE_NPU: PT_API_TYPE_NPU,
+            PT_API_TYPE_DIST: PT_API_TYPE_DIST
+        }
+    }
+
+    API_DATA_PREFIX = {
+        PT_FRAMEWORK: {
+            PT_API_TYPE_FUNCTIONAL: FUNCTIONAL_API_TYPE_PREFIX,
+            PT_API_TYPE_TENSOR: TENSOR_API_TYPE_PREFIX,
+            PT_API_TYPE_TORCH: TORCH_API_TYPE_PREFIX,
+            PT_API_TYPE_VF: VF_API_TYPE_PREFIX,
+            PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
+            PT_API_TYPE_ATEN: ATEN_API_TYPE_PREFIX,
+            PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX,
+            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX
+        },
+        MS_FRAMEWORK: {
+            MS_API_TYPE_OPS: FUNCTIONAL_API_TYPE_PREFIX,
+            MS_API_TYPE_TENSOR: TENSOR_API_TYPE_PREFIX,
+            MS_API_TYPE_STUB_TENSOR: TENSOR_API_TYPE_PREFIX,
+            MS_API_TYPE_MINT: MINT_API_TYPE_PREFIX,
+            MS_API_TYPE_MINT_FUNC: MINT_FUNC_API_TYPE_PREFIX,
+            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX
+        },
+        MT_FRAMEWORK: {
+            PT_API_TYPE_FUNCTIONAL: FUNCTIONAL_API_TYPE_PREFIX,
+            PT_API_TYPE_TENSOR: TENSOR_API_TYPE_PREFIX,
+            PT_API_TYPE_TORCH: TORCH_API_TYPE_PREFIX,
+            PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
+            PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX
+        }
+    }
+
 
 class CompareConst:
     """

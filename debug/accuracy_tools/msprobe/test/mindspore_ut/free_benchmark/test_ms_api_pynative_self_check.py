@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,12 +23,18 @@ from mindspore import Tensor, mint, ops
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
-from msprobe.mindspore.free_benchmark.api_pynative_self_check import (ApiPyNativeSelfCheck, check_all_tensor,
-                                                                      check_self, data_pre_deal,
-                                                                      deal_fuzzed_and_original_result,
-                                                                      get_module, get_supported_ops,
-                                                                      get_target_arg_index, need_wrapper_func)
+from msprobe.mindspore.free_benchmark.api_pynative_self_check import (
+    ApiPyNativeSelfCheck,
+    check_all_tensor,
+    check_self,
+    data_pre_deal,
+    deal_fuzzed_and_original_result,
+    get_module,
+    get_supported_ops,
+    get_target_arg_index,
+    need_wrapper_func,
+    _api_register
+)
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
@@ -83,8 +89,8 @@ class TestApiPyNativeSelfCheck(TestCase):
         self.assertEqual(self_checker.ori_func, target_ori_func)
 
     def test_handle(self):
-        with patch.object(api_register, "initialize_hook") as mock_init_hook, \
-             patch.object(api_register, "api_set_hook_func") as mock_set_hook:
+        with patch.object(_api_register, "initialize_hook") as mock_init_hook, \
+             patch.object(_api_register, "register_all_api") as mock_set_hook:
             self.checker.handle()
         mock_init_hook.assert_called_with(self.checker.build_hook)
         mock_set_hook.assert_called_once()
@@ -156,8 +162,8 @@ class TestApiPyNativeSelfCheck(TestCase):
         mock_warning.reset_mock()
         Config.stage = Const.FORWARD
         with patch.object(logger, "info") as mock_info, \
-             patch.object(api_register, "api_set_ori_func") as mock_set_ori, \
-             patch.object(api_register, "api_set_hook_func") as mock_set_hook, \
+             patch.object(_api_register, "restore_all_api") as mock_set_ori, \
+             patch.object(_api_register, "register_all_api") as mock_set_hook, \
              patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.deal_fuzzed_and_original_result",
                    return_value="ret"):
             args = (1.0, 1.0)

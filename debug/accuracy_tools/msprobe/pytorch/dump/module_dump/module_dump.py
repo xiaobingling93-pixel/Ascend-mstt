@@ -17,7 +17,7 @@ import torch
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.hook_module.api_register import get_api_register
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
@@ -26,13 +26,14 @@ class ModuleDumper:
     def __init__(self, service):
         self.service = service
         self.hook_handle_list = []
+        self.api_register = get_api_register()
 
     def start_module_dump(self, module, dump_name):
-        api_register.api_originality()
+        self.api_register.restore_all_api()
         self.register_hook(module, dump_name)
 
     def stop_module_dump(self):
-        api_register.api_modularity()
+        self.api_register.register_all_api()
         for hook_handle in self.hook_handle_list:
             if isinstance(hook_handle, torch.utils.hooks.RemovableHandle):
                 hook_handle.remove()

@@ -1,0 +1,128 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import functools
+import os
+
+import torch
+import torch.distributed as dist
+
+from msprobe.core.common.const import Const
+from msprobe.core.data_dump.api_registry import ApiRegistry
+from msprobe.pytorch.common.utils import (
+    torch_without_guard_version, is_gpu, torch_device_guard, parameter_adapter
+)
+from msprobe.pytorch.function_factory import npu_custom_functions
+from msprobe.pytorch.hook_module.hook_module import HOOKModule
+
+
+torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
+
+_api_types = {
+    Const.PT_FRAMEWORK: {
+        Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, (torch.nn.functional,)),
+        Const.PT_API_TYPE_TENSOR: (torch.Tensor, (torch.Tensor,)),
+        Const.PT_API_TYPE_TORCH: (torch, (torch,)),
+        Const.PT_API_TYPE_VF: (torch._C._VariableFunctionsClass, (torch._VF,)),
+        Const.PT_API_TYPE_DIST: (dist, (dist, dist.distributed_c10d))
+    }
+}
+if not is_gpu:
+    import torch_npu
+    if torch_without_guard_version:
+        _api_types.get(Const.PT_FRAMEWORK).update(
+            {
+                Const.PT_API_TYPE_NPU: (torch.ops.npu, (torch_npu, torch.ops.npu))
+            }
+        )
+    else:
+        _api_types.get(Const.PT_FRAMEWORK).update(
+            {Const.PT_API_TYPE_NPU: (torch_npu._C._VariableFunctionsClass, (torch_npu,))}
+        )
+        _api_types.get(Const.PT_FRAMEWORK).update(
+            {
+                Const.PT_API_TYPE_NPU_DIST: (torch_npu.distributed, (torch_npu.distributed,
+                                                                     torch_npu.distributed.distributed_c10d))
+            }
+        )
+
+_inner_used_api = {}
+_supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
+_cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
+
+
+@parameter_adapter
+def tensor_module_forward(module, *args, **kwargs):
+    return module.api_func(*args, **kwargs)
+
+
+def dist_module_forward(module, *args, **kwargs):
+    handle = module.api_func(*args, **kwargs)
+    if kwargs.get("async_op") or module.api_name in ["isend", "irecv"]:
+        if handle and hasattr(handle, 'wait'):
+            handle.wait()
+    if module.api_name == "batch_isend_irecv":
+        if isinstance(handle, list):
+            for req in handle:
+                req.wait()
+    return handle
+
+
+def npu_module_forward(module, *args, **kwargs):
+    if not module.need_hook:
+        if module.api_name not in npu_custom_functions:
+            raise Exception(f'There is not bench function {module.api_name}')
+        if module.device == Const.CUDA_LOWERCASE:
+            module.api_name = _cuda_func_mapping.get(module.api_name, module.api_name)
+        if module.device in [Const.CUDA_LOWERCASE, Const.CPU_LOWERCASE]:
+            return npu_custom_functions[module.api_name](*args, **kwargs)
+    return module.api_func(*args, **kwargs)
+
+
+forward_methods = {
+    "Tensor": tensor_module_forward,
+    "Distributed": dist_module_forward,
+    "NPU": npu_module_forward
+}
+
+
+class ApiTemplate(HOOKModule):
+    def __init__(self, api_name, api_func, prefix, hook_build_func, need_hook=True, device=Const.CPU_LOWERCASE):
+        self.api_name = api_name
+        self.api_func = api_func
+        self.prefix = prefix
+        self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
+        self.need_hook = need_hook
+        self.device = device
+        if self.need_hook:
+            super().__init__(hook_build_func)
+        if prefix == Const.DIST_API_TYPE_PREFIX:
+            self.op_is_distributed = True
+
+    @torch_device_guard
+    def forward(self, *args, **kwargs):
+        exec_func = forward_methods.get(self.prefix)
+        exec_func = functools.partial(exec_func, self) if exec_func else self.api_func
+        return exec_func(*args, **kwargs)
+
+
+api_register = None
+
+
+def get_api_register():
+    global api_register
+    if api_register is None:
+        api_register = ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
+    return api_register

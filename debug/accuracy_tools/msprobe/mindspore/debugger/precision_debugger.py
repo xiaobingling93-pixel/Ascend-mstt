@@ -27,7 +27,7 @@ from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import set_register_backward_hook_functions, check_save_param
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
 from msprobe.mindspore.ms_config import parse_json_config
@@ -163,7 +163,7 @@ class PrecisionDebugger:
             instance.service.start(model)
         else:
             if not instance.first_start:
-                api_register.api_set_ori_func()
+                get_api_register().restore_all_api()
                 handler = TaskHandlerFactory.create(instance.config)
                 handler.handle()
 

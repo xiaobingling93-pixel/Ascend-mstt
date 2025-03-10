@@ -19,6 +19,7 @@ import os
 import traceback
 
 import mindspore as ms
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import check_path_length, load_yaml
@@ -27,7 +28,7 @@ from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import get_rank_if_initialized
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
@@ -35,6 +36,9 @@ from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.handler_factory import HandlerFactory
 from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import PerturbationFactory
 from msprobe.mindspore.runtime import Runtime
+
+
+_api_register = get_api_register()
 
 
 class ApiPyNativeSelfCheck:
@@ -60,8 +64,8 @@ class ApiPyNativeSelfCheck:
         self.store_original_func()
 
     def handle(self):
-        api_register.initialize_hook(self.build_hook)
-        api_register.api_set_hook_func()
+        _api_register.initialize_hook(self.build_hook)
+        _api_register.register_all_api()
 
     def build_hook(self, api_name):
         def pre_hook(cell, input_data):
@@ -166,13 +170,13 @@ def check_self(api_name_with_id, output, ori_func, *args, **kwargs):
         return ret
 
     logger.info(f"[{api_name_with_id}] is {Config.handler_type}ing.")
-    api_register.api_set_ori_func()
+    _api_register.restore_all_api()
 
     try:
         perturbation = PerturbationFactory.create(api_name_with_id)
         params.fuzzed_result = perturbation.handle(params)
         if params.fuzzed_result is False:
-            api_register.api_set_hook_func()
+            _api_register.register_all_api()
             return ret
         if Config.stage == Const.BACKWARD:
             params.original_result = Tools.get_grad(params.original_func, *params.args, **params.kwargs)
@@ -183,7 +187,7 @@ def check_self(api_name_with_id, output, ori_func, *args, **kwargs):
         logger.error(f"[{api_name_with_id}] Error: {str(e)}")
         logger.error(f"[{api_name_with_id}] Error detail: {traceback.format_exc()}")
 
-    api_register.api_set_hook_func()
+    _api_register.register_all_api()
     return ret
 
 

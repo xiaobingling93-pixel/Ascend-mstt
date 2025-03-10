@@ -41,7 +41,7 @@ from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (get_rank_if_initialized, clean_input_kwargs,
                                             is_mindtorch, register_backward_hook_functions)
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -73,6 +73,7 @@ class Service:
         self.params_grad_info = {}
         self.hook_handle_dict = {}
         # 提前注册，确保注册尽可能多的API hook
+        self.api_register = get_api_register()
         self.register_api_hook()
         self.init_for_debug_level()
 
@@ -324,7 +325,7 @@ class Service:
                     PIJitCaptureContext.__exit__ = self.empty
             self.first_start = False
 
-        api_register.api_set_hook_func()
+        self.api_register.register_all_api()
         self.switch = True
         self.primitive_switch = True
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
@@ -413,8 +414,8 @@ class Service:
     def register_api_hook(self):
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
             logger.info(f"The api {self.config.task} hook function is successfully mounted to the model.")
-            api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
-            api_register.api_set_hook_func()
+            self.api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
+            self.api_register.register_all_api()
 
     def get_cells_and_names(self):
         cells_and_names_with_index = {}

@@ -1,0 +1,125 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+
+from mindspore import Tensor, ops, mint
+from mindspore.mint.nn import functional
+from mindspore.common._stub_tensor import StubTensor
+from mindspore.communication import comm_func
+
+from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.utils import Const
+from msprobe.core.data_dump.api_registry import ApiRegistry
+from msprobe.mindspore.common.const import Const as MsConst
+from msprobe.mindspore.common.utils import is_mindtorch
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+
+if not is_mindtorch():
+    _api_types = {
+        Const.MS_FRAMEWORK: {
+            Const.MS_API_TYPE_OPS: (ops, (ops,)),
+            Const.MS_API_TYPE_TENSOR: (Tensor, (Tensor,)),
+            Const.MS_API_TYPE_STUB_TENSOR: (StubTensor, (StubTensor,)),
+            Const.MS_API_TYPE_MINT: (mint, (mint,)),
+            Const.MS_API_TYPE_MINT_FUNC: (functional, (functional,)),
+            Const.MS_API_TYPE_COM: (comm_func, (comm_func,))
+        }
+    }
+else:
+    import torch
+    import torch_npu
+    _api_types = {
+        Const.MT_FRAMEWORK: {
+            Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, (torch.nn.functional,)),
+            Const.PT_API_TYPE_TENSOR: (torch.Tensor, (torch.Tensor,)),
+            Const.PT_API_TYPE_TORCH: (torch, (torch,)),
+            Const.PT_API_TYPE_NPU: (torch_npu, (torch_npu,)),
+            Const.PT_API_TYPE_DIST: (torch.distributed, (torch.distributed, torch.distributed.distributed_c10d))
+        }
+    }
+
+
+_inner_used_api = {
+    Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_OPS: (
+        ops, "norm", "square", "sqrt", "is_complex", "stack", "is_floating_point"
+    ),
+    Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_TENSOR: (
+        Tensor, "to", "numel"
+    ),
+    Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_MINT: (
+        mint, "max", "min", "mean", "norm"
+    )
+}
+
+_supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), MsConst.SUPPORTED_API_LIST_FILE),)
+
+
+class ApiTemplate(HOOKCell):
+    def __init__(self, api_name, api_func, prefix, hook_build_func):
+        self.api_name = api_name
+        self.api_func = api_func
+        self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
+        super().__init__(hook_build_func)
+
+    @staticmethod
+    def async_to_sync(output):
+        # Fake handle, used to return after the CommHandle executes the wait method
+        fake_handle = type("FakeHandle", (), {"wait": lambda self: None})()
+        if isinstance(output, tuple) and len(output) == 2 and hasattr(output[1], "wait"):
+            output[1].wait()
+            output = (output[0], fake_handle)
+        elif hasattr(output, "wait"):
+            output.wait()
+            output = fake_handle
+        return output
+
+    def construct(self, *args, **kwargs):
+        if self.api_name.startswith(MsConst.DROPOUT_API_NAME_PREFIX):
+            return args[0] if args else kwargs.get(Const.INPUT)
+
+        output = self.api_func(*args, **kwargs)
+
+        if self.prefix_api_name.startswith(MsConst.DISTRIBUTED_DATA_PREFIX):
+            if kwargs.get("async_op") or self.api_name in ["isend", "irecv"]:
+                output = self.async_to_sync(output)
+        return output
+
+    def forward(self, *args, **kwargs):
+        if self.api_name.startswith(MsConst.DROPOUT_API_NAME_PREFIX):
+            return args[0] if args else kwargs.get(Const.INPUT)
+        return self.api_func(*args, **kwargs)
+
+
+api_register = None
+
+
+def get_api_register():
+    global api_register
+
+    def stub_method(method):
+        def wrapped_method(*args, **kwargs):
+            return method(*args, **kwargs)
+        return wrapped_method
+
+    if api_register is None:
+        if not is_mindtorch():
+            for attr_name in dir(StubTensor):
+                attr = getattr(StubTensor, attr_name)
+                api_names = load_yaml(_supported_api_list_path[0]).get(Const.MS_API_TYPE_TENSOR, [])
+                if attr_name in api_names and callable(attr):
+                    setattr(StubTensor, attr_name, stub_method(attr))
+        api_register = ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
+    return api_register
