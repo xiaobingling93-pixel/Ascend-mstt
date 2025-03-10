@@ -206,16 +206,16 @@ class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
 
 
 class DeepSpeedZeroOptimizerStage0Mon(OptimizerMon):
-    def get_group_index(self, params2name, torch_opt):
-        fp16_groups = torch_opt.bf16_groups
+    def get_group_index(self, torch_opt):
+        bit16_groups = torch_opt.bf16_groups
         param2group = defaultdict()
-        for group_idx, fp16_group in enumerate(fp16_groups):
-            for param in fp16_group:
+        for group_idx, bit16_group in enumerate(bit16_groups):
+            for param in bit16_group:
                 param2group[param] = group_idx
         return param2group
 
     def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
-        param2group = self.get_group_index(params2name, torch_opt)
+        param2group = self.get_group_index(torch_opt)
         exp_avg_dict = defaultdict(float)
         exp_avg_sq_dict = defaultdict(float)
         update_dict = defaultdict()
