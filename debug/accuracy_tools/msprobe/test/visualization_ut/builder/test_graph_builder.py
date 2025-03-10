@@ -111,3 +111,23 @@ class TestGraphBuilder(unittest.TestCase):
         self.assertEqual(graph.root.subnodes[2].op, NodeOp.module)
         self.assertEqual(len(graph.root.subnodes[0].subnodes), 0)
         self.assertEqual(graph.root.subnodes[0].id, 'Module.a.0')
+
+    def test_add_parameters_grad(self):
+        graph = Graph('TestNet')
+        graph.add_node(NodeOp.module, 'Module.a.backward.0', graph.root)
+        graph.add_node(NodeOp.module, 'Module.b.backward.0', graph.root)
+        graph.add_node(NodeOp.module, 'Module.a.backward.1', graph.root)
+        graph.add_node(NodeOp.module, 'Module.aa.backward.0', graph.get_node('Module.a.backward.0'))
+        graph.add_node(NodeOp.module, 'Module.aaa.backward.0', graph.get_node('Module.a.backward.0'))
+        graph.add_node(NodeOp.module, 'Module.aa.backward.1', graph.get_node('Module.a.backward.1'))
+        graph.add_node(NodeOp.module, 'Module.aaa.backward.1', graph.get_node('Module.a.backward.1'))
+
+        data_dict = {'Module.a.parameters_grad': {}, 'Module.aaa.parameters_grad': {}}
+        GraphBuilder._add_parameters_grad(graph, data_dict)
+        root_nodes_id = [node.id for node in graph.get_node('TestNet').subnodes]
+        sub_nodes_id0 = [node.id for node in graph.get_node('Module.a.backward.0').subnodes]
+        sub_nodes_id1 = [node.id for node in graph.get_node('Module.a.backward.1').subnodes]
+
+        self.assertEqual(root_nodes_id[-1], 'Module.a.backward.1')
+        self.assertEqual(sub_nodes_id0[-1], 'Module.aaa.backward.0')
+        self.assertEqual(sub_nodes_id1[-1], 'Module.a.parameters_grad')

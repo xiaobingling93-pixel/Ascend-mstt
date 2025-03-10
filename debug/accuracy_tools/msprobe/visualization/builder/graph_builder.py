@@ -51,6 +51,7 @@ class GraphBuilder:
         graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict)
         GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
         GraphBuilder._collect_apis_between_modules(graph)
+        GraphBuilder._add_parameters_grad(graph, data_dict)
         return graph
 
     @staticmethod
@@ -234,6 +235,44 @@ class GraphBuilder:
                 i += 1
 
         graph.root.subnodes = output
+
+    @staticmethod
+    def _add_parameters_grad(graph, data_dict):
+        """
+        将parameters_grad信息添加到graph中，
+        对应模块的parameters_grad节点添加到对应模块的最后一次backward节点（backward计数最大）内作为子节点
+
+        例如，graph有节点Module.a.backward.0, Module.a.backward.1, Module.a.backward.2
+        则Module.a.parameters_grad添加在Module.a.backward.2内作为子节点
+        """
+        prefixes = []
+        suffix = Const.SEP + Const.PARAMS_GRAD
+        for node_id, data in data_dict.items():
+            if node_id not in graph.node_map and node_id.endswith(suffix):
+                prefixes.append(node_id.replace(suffix, ''))
+
+        max_info = {prefix: 0 for prefix in prefixes}
+
+        for key in graph.node_map.keys():
+            for prefix in prefixes:
+                # 构建正则表达式，匹配以 "backward.数字" 结尾的键
+                pattern = re.compile(r'^' + re.escape(prefix) + r'\.backward\.(\d+)$')
+                match = pattern.match(key)
+                if match:
+                    num = int(match.group(1))
+                    if num > max_info[prefix]:
+                        max_info[prefix] = num
+
+        for prefix, num in max_info.items():
+            node_id = prefix + Const.SEP + Const.BACKWARD + Const.SEP + str(num)
+            node = graph.get_node(node_id)
+            if node:
+                parameters_grad_node_id = graph.add_node(NodeOp.module, prefix + suffix, up_node=node)
+                # 添加输入输出数据
+                node_data = data_dict.get(parameters_grad_node_id, {})
+                input_data, output_data = get_input_output(node_data, parameters_grad_node_id)
+                # 更新数据
+                graph.get_node(parameters_grad_node_id).set_input_output(input_data, output_data)
 
 
 class GraphExportConfig:
