@@ -247,7 +247,7 @@ class GraphBuilder:
         """
         prefixes = []
         suffix = Const.SEP + Const.PARAMS_GRAD
-        for node_id, data in data_dict.items():
+        for node_id in data_dict.keys():
             if node_id not in graph.node_map and node_id.endswith(suffix):
                 prefixes.append(node_id.replace(suffix, ''))
 
