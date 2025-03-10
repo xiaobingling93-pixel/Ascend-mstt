@@ -319,7 +319,8 @@ def run_torch_api_online(api_full_name, api_data, backward_content):
     if kwargs.get("device"):
         del kwargs["device"]
 
-    device_out = exec_api(api_type, api_name, Const.CUDA_LOWERCASE, args, kwargs)
+    device_exec_params = ExecParams(api_type, api_name, current_device, args, kwargs, False, None)
+    device_out = exec_api(device_exec_params)
     device_out = move2device_exec(device_out, "cpu")
     return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 
