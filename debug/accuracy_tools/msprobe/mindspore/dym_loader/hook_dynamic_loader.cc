@@ -78,25 +78,13 @@ bool HookDynamicLoader::validateLibraryPath(const std::string &libPath) {
 }
 
 bool HookDynamicLoader::LoadLibrary() {
-  const char *libPath = std::getenv("HOOK_TOOL_PATH");
-  if (!libPath) {
-    MS_LOG(WARNING) << "HOOK_TOOL_PATH is not set!";
-    return false;
-  }
-
-  std::string resolvedLibPath(libPath);
-  if (!validateLibraryPath(resolvedLibPath)) {
-    MS_LOG(WARNING) << "Library path validation failed.";
-    return false;
-  }
-
   std::lock_guard<std::mutex> lock(mutex_);
   if (handle_) {
     MS_LOG(WARNING) << "Hook library already loaded!";
     return false;
   }
 
-  handle_ = dlopen(resolvedLibPath.c_str(), RTLD_LAZY | RTLD_LOCAL);
+  handle_ = dlopen(kMsprobeExtName, RTLD_LAZY | RTLD_LOCAL);
   if (!handle_) {
     MS_LOG(WARNING) << "Failed to load Hook library: " << dlerror();
     return false;
@@ -104,7 +92,7 @@ bool HookDynamicLoader::LoadLibrary() {
 
   for (const auto &functionName : functionList_) {
     if (!loadFunction(handle_, functionName)) {
-      MS_LOG(WARNING) << "Failed to load function: " << functionName;
+      MS_LOG(WARNING) << "Failed to load adump function";
       dlclose(handle_);
       handle_ = nullptr;
       return false;
