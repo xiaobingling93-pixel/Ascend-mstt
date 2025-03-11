@@ -75,6 +75,7 @@ class MsprobeBaseException(Exception):
     MERGE_COMPARE_RESULT_ERROR = 33
     NAMES_STRUCTS_MATCH_ERROR = 34
     INVALID_STATE_ERROR = 35
+    INVALID_API_NAME_ERROR = 36
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
