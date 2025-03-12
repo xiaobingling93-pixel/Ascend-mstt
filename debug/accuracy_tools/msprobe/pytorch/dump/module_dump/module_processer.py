@@ -109,6 +109,8 @@ class ModuleProcesser:
             for name, module in modules_and_names:
                 if module == model:
                     continue
+                if module.__class__.__name__ == "FullyShardedDataParallel":
+                    continue
                 module_index = (index + Const.SEP) if index != "-1" else ""
                 prefix_name = (BaseScope.Module_Type_Module + Const.SEP + module_index +
                                name + Const.SEP + module.__class__.__name__ + Const.SEP)
