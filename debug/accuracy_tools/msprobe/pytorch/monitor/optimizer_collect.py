@@ -185,7 +185,7 @@ class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
             for opt in torch_opt.chained_optimizers:
                 self.map_fp16_tp_fp32_param(opt)
 
-        if not isinstance(torch_opt, torch.optim.Optimizer):
+        if not isinstance(torch_opt, torch.optim.Optimizer) and not hasattr(torch_opt, 'state'):
             torch_opt.state = {}
             for opt in torch_opt.chained_optimizers:
                 torch_opt.state.update(opt.optimizer.state)
@@ -198,7 +198,7 @@ class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
             for opt in torch_opt.chained_optimizers:
                 self.map_fp16_tp_fp32_param(opt)
 
-        if not isinstance(torch_opt, torch.optim.Optimizer):
+        if not isinstance(torch_opt, torch.optim.Optimizer) and not hasattr(torch_opt, 'state'):
             torch_opt.state = {}
             for opt in torch_opt.chained_optimizers:
                 torch_opt.state.update(opt.optimizer.state)
@@ -206,9 +206,60 @@ class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
 
 
 class DeepSpeedZeroOptimizerStage0Mon(OptimizerMon):
-    def fetch_mv(self, monitor, torch_opt, params2name):
-        return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
+    def get_group_index(self, torch_opt):
+        bit16_groups = torch_opt.bf16_groups
+        param2group = defaultdict()
+        for group_idx, bit16_group in enumerate(bit16_groups):
+            for param in bit16_group:
+                param2group[param] = group_idx
+        return param2group
 
+    def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
+        param2group = self.get_group_index(torch_opt)
+        exp_avg_dict = defaultdict(float)
+        exp_avg_sq_dict = defaultdict(float)
+        update_dict = defaultdict()
+        ratio_dict = defaultdict()
+
+        param_slice_mappings = torch_opt.state_dict()['param_slice_mappings']
+        for param, name in params2name.items():
+            group_idx = param2group[param]
+            state = torch_opt.state[torch_opt.fp32_groups_flat_partition[group_idx]]
+            if state.get('exp_avg', None) is None:
+                logger.warning(f"optimizer state is None. Something is wrong if this is not the first step")
+                break
+            param_slice_mapping = param_slice_mappings[group_idx]
+            hp_address = param_slice_mapping.get(torch_opt.param_names[param])
+            if hp_address is None:
+                continue
+            start = hp_address.start
+            numel = hp_address.numel
+
+            if monitor.mv_distribution:
+                exp_avg_dict[name] = state['exp_avg'].narrow(0, start, numel)
+                exp_avg_sq_dict[name] = state['exp_avg_sq'].narrow(0, start, numel)
+            if monitor.mg_direction:
+                exp_avg_dict[name] = state['exp'].narrow(0, start, numel)
+            if monitor.ur_distribution:
+                if len(torch_opt.param_groups) > 1:
+                    logger.info(f"the length of torch_opt.param_groups is {len(torch_opt.param_groups)}.")
+                if 'step' in state:
+                    step = state['step']  # Optimizer from pytorch or FusedAdam from apex(used by megatron)
+                elif 'step' in torch_opt.param_groups[0]:
+                    step = torch_opt.param_groups[0]['step']  # AdamW from mindspeed
+                else:
+                    logger.warning(f"step of {name} is None, maybe something wrong happened.")
+                    continue
+                exp_avg = state['exp_avg'].narrow(0, start, numel)
+                exp_avg_sq = state['exp_avg_sq'].narrow(0, start, numel)
+                exp_avg_hat = exp_avg / (1 - torch_opt.defaults['betas'][0] ** step)
+                exp_avg_sq_hat = exp_avg_sq / (1 - torch_opt.defaults['betas'][1] ** step)
+                update_dict[name] = exp_avg_hat / (torch.sqrt(exp_avg_sq_hat) + torch_opt.defaults['eps'])
+                ratio_dict[name] = exp_avg_hat / torch.sqrt(exp_avg_sq_hat)
+                monitor.update_heatmap_visualizer[name].pre_cal(update_dict[name])
+                monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
+        return MVResult(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict)
+    
 
 class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
     def get_param_index(self, params2name, name2index, torch_opt):
