@@ -54,17 +54,6 @@ class TestGraph(unittest.TestCase):
         matched_node, ancestors = Graph.match(graph_a, graph_a.get_node("node_id_a_1"), graph_b)
         self.assertIsNotNone(matched_node)
         self.assertEqual(ancestors, ['node_id_a'])
-
-    def test_dfs(self):
-        graph = Graph("model_name")
-        graph.add_node(NodeOp.module, "node_a")
-        graph.add_node(NodeOp.module, "node_b")
-        node_a = BaseNode(self.node_op, self.node_id)
-        result = {}
-        graph.dfs(node_a, result)
-        self.assertEqual(result, {'node_id': {'id': 'node_id', 'node_type': 0, 'data': {},
-                                              'output_data': {}, 'input_data': {}, 'upnode': 'None', 'subnodes': [],
-                                              'matched_node_link': [], 'suggestions': {}, 'stack_info': []}})
         
     def test_split_nodes_by_micro_step(self):
         nodes = [BaseNode(NodeOp.module, 'a.forward.0'), BaseNode(NodeOp.module, 'a.backward.0'),

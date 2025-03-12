@@ -17,9 +17,9 @@ import re
 from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
 from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file, get_csv_df
 from msprobe.visualization.graph.graph import Graph, NodeOp
-from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import recursion_depth_decorator
 
 
 class GraphComparator:
@@ -103,6 +103,7 @@ class GraphComparator:
                         else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
                 node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
+    @recursion_depth_decorator('GraphComparator._compare_nodes', max_depth=1000)
     def _compare_nodes(self, node_n):
         """
         递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
@@ -126,6 +127,7 @@ class GraphComparator:
         for subnode in node_n.subnodes:
             self._compare_nodes(subnode)
 
+    @recursion_depth_decorator('GraphComparator._compare_nodes_fuzzy', max_depth=1000)
     def _compare_nodes_fuzzy(self, node_n):
         if node_n.op != NodeOp.function_api:
             # 模块经过模糊匹配
