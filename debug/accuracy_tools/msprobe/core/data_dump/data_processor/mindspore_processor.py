@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+import hashlib
 import zlib
 
 import mindspore as ms
 from mindspore import mint, ops, hal
+from mindspore.mint import distributed
 from mindspore._c_expression.typing import Number
 import numpy as np
 
@@ -36,7 +37,7 @@ except ImportError:
 
 
 class MindsporeDataProcessor(BaseDataProcessor):
-    mindspore_special_type = tuple([ms.Tensor, Number])
+    mindspore_special_type = tuple([ms.Tensor, Number, distributed.P2POp])
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -103,6 +104,12 @@ class MindsporeDataProcessor(BaseDataProcessor):
     @staticmethod
     def is_hookable_element(element):
         return hasattr(element, "register_hook") and callable(element.register_hook)
+    
+    @staticmethod
+    def process_group_hash(arg):
+        group_ranks = distributed.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
 
     @classmethod
     def get_special_types(cls):
@@ -136,7 +143,23 @@ class MindsporeDataProcessor(BaseDataProcessor):
             return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
+        if isinstance(element, distributed.P2POp):
+            return self._analyze_p2pop(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
         return {}
+
+    def _analyze_p2pop(self, arg, suffix):
+        p2pop_info = {"class_type": "mindspore.mint.distributed.P2POp"}
+        try:
+            tensor_info = self._analyze_tensor(arg.tensor, suffix)
+            p2pop_info.update({"tensor": tensor_info})
+            p2pop_info.update({"op": arg.op})
+            p2pop_info.update({"peer": arg.peer})
+            p2pop_info.update({"tag": arg.tag})
+            group_id = self.process_group_hash(arg.group) if arg.group else None
+            p2pop_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to parse the P2POp content with error info: {e}.")
+        return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)

@@ -178,10 +178,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         return group_ranks_hash
 
     @staticmethod
-    def is_distributed_op(module):
-        return getattr(module, "op_is_distributed", False)
-
-    @staticmethod
     def is_hookable_element(element):
         return (hasattr(element, "register_hook") and callable(element.register_hook)) and \
             (hasattr(element, "requires_grad") and element.requires_grad)
@@ -256,11 +252,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
-
-    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
-        if self.is_distributed_op(module):
-            module_input_output.update_output_with_args_and_kwargs()
-        return super().analyze_forward_output(name, module, module_input_output)
 
     def _analyze_p2pop(self, arg, suffix):
         p2pop_info = {"class_type": "torch.distributed.P2POp"}
