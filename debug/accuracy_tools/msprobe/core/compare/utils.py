@@ -545,6 +545,10 @@ def get_name_and_state(name):
 
     state type: input, output, kwargs, parameters, parameters_grad
     """
+    if not isinstance(name, str):
+        logger.error(f'Invalid name string: {name}, type should be string, please check.')
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
+
     if Const.PARAMS_GRAD in name.split(Const.SEP):
         return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
 
