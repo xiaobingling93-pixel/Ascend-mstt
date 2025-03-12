@@ -41,7 +41,7 @@ class GraphComparator:
         else:
             self._compare_nodes(self.graph_n.root)
         self._postcompare()
-    
+
     def add_compare_result_to_node(self, node, compare_result_list):
         """
         将比对结果添加到节点的输入输出数据中
@@ -66,42 +66,6 @@ class GraphComparator:
             self.ma.parse_result(node, [compare_in_dict, compare_out_dict]))
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index
         node.data.update(other_dict)
-    
-    def _parse_param(self, dump_path_param, output_path):
-        self.dump_path_param = dump_path_param
-        self.output_path = output_path
-        compare_mode = get_compare_mode(self.dump_path_param)
-        self.ma = ModeAdapter(compare_mode)
-        self.data_n_dict = load_data_json_file(dump_path_param.get('npu_json_path'))
-        self.data_b_dict = load_data_json_file(dump_path_param.get('bench_json_path'))
-        self.stack_json_data = load_json_file(dump_path_param.get('stack_json_path'))
-
-    def _postcompare(self):
-        self._handle_api_collection_index()
-        if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
-            return
-        df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df, self.framework, True if self.mapping_dict else False)
-        compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
-        for node in self.ma.compare_nodes:
-            precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
-            node.data[GraphConst.JSON_INDEX_KEY] = precision_index
-
-    def _handle_api_collection_index(self):
-        """
-        api集合的指标, md5模式使用集合中所有api最小的指标，statistics和tensor模式使用集合中所有api最大的指标
-        md5模式下指标为0代表最差，statistics和tensor模式下指标为1代表最差
-        """
-        for node in self.graph_n.root.subnodes:
-            if node.op == NodeOp.api_collection:
-                precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
-                    else GraphConst.MIN_INDEX_KEY
-                for api in node.subnodes:
-                    precision_index = min(precision_index,
-                                          api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
-                        if self.ma.compare_mode == GraphConst.MD5_COMPARE \
-                        else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
-                node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
     @recursion_depth_decorator('GraphComparator._compare_nodes', max_depth=1000)
     def _compare_nodes(self, node_n):
@@ -147,6 +111,42 @@ class GraphComparator:
                         self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
         for sub_node in node_n.subnodes:
             self._compare_nodes_fuzzy(sub_node)
+
+    def _parse_param(self, dump_path_param, output_path):
+        self.dump_path_param = dump_path_param
+        self.output_path = output_path
+        compare_mode = get_compare_mode(self.dump_path_param)
+        self.ma = ModeAdapter(compare_mode)
+        self.data_n_dict = load_data_json_file(dump_path_param.get('npu_json_path'))
+        self.data_b_dict = load_data_json_file(dump_path_param.get('bench_json_path'))
+        self.stack_json_data = load_json_file(dump_path_param.get('stack_json_path'))
+
+    def _postcompare(self):
+        self._handle_api_collection_index()
+        if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
+            return
+        df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
+        df = run_real_data(self.dump_path_param, df, self.framework, True if self.mapping_dict else False)
+        compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
+        for node in self.ma.compare_nodes:
+            precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
+            node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+
+    def _handle_api_collection_index(self):
+        """
+        api集合的指标, md5模式使用集合中所有api最小的指标，statistics和tensor模式使用集合中所有api最大的指标
+        md5模式下指标为0代表最差，statistics和tensor模式下指标为1代表最差
+        """
+        for node in self.graph_n.root.subnodes:
+            if node.op == NodeOp.api_collection:
+                precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                    else GraphConst.MIN_INDEX_KEY
+                for api in node.subnodes:
+                    precision_index = min(precision_index,
+                                          api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
+                        if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                        else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
+                node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
     def _get_and_add_result(self, node_n, node_b):
         compare_result_list = compare_node([node_n.id, node_b.id],
