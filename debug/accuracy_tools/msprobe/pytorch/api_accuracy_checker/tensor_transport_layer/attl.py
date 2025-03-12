@@ -176,17 +176,17 @@ def move2device_exec(obj, device, depth=0):
         logger.error("Maximum recursion depth exceeded")
         raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
     if isinstance(obj, (tuple, list)):
-        data_list = [move2device_exec(val, device, depth = depth + 1) for val in obj]
+        data_list = [move2device_exec(val, device, depth=depth + 1) for val in obj]
         return data_list if isinstance(obj, list) else tuple(data_list)
     if isinstance(obj, dict): 
-        return {key: move2device_exec(val, device, depth = depth + 1) for key, val in obj.items()}
+        return {key: move2device_exec(val, device, depth=depth + 1) for key, val in obj.items()}
     elif isinstance(obj, torch.Tensor):
         obj = obj.detach()
         if obj.device.type != device:
             obj = obj.to(device)
         return obj
     elif "return_types" in str(type(obj)):
-        return move2device_exec(tuple(obj), device, depth = depth + 1)
+        return move2device_exec(tuple(obj), device, depth=depth + 1)
     elif isinstance(obj, torch._C.device):
         return torch.device(device)
     else:
