@@ -90,8 +90,8 @@ class ApiWrapper:
                     target_module = api_modules[0]
                     if Const.SEP in api_name:
                         sub_module_name, target_attr = api_name.rsplit(Const.SEP, 1)
-                        target_module = getattr(api_modules[0], sub_module_name)
-                    if target_attr in dir(target_module):
+                        target_module = getattr(api_modules[0], sub_module_name, None)
+                    if target_module and target_attr in dir(target_module):
                         names.add(api_name)
                 valid_names[api_type] = names
             api_names[framework] = valid_names

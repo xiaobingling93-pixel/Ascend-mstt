@@ -121,7 +121,10 @@ class ApiTemplate(HOOKModule):
 api_register = None
 
 
-def get_api_register():
+def get_api_register(return_new=False):
+    if return_new:
+        return ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
+
     global api_register
     if api_register is None:
         api_register = ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)

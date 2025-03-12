@@ -27,6 +27,8 @@ from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 
+
+cur_path = os.path.dirname(os.path.realpath(__file__))
 if not is_mindtorch():
     _api_types = {
         Const.MS_FRAMEWORK: {
@@ -38,6 +40,7 @@ if not is_mindtorch():
             Const.MS_API_TYPE_COM: (comm_func, (comm_func,))
         }
     }
+    _supported_api_list_path = (os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE),)
 else:
     import torch
     import torch_npu
@@ -50,7 +53,8 @@ else:
             Const.PT_API_TYPE_DIST: (torch.distributed, (torch.distributed, torch.distributed.distributed_c10d))
         }
     }
-
+    _supported_api_list_path = (os.path.join(cur_path, '../../../pytorch/hook_module',
+                                             MsConst.SUPPORTED_API_LIST_FILE),)
 
 _inner_used_api = {
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_OPS: (
@@ -63,8 +67,6 @@ _inner_used_api = {
         mint, "max", "min", "mean", "norm"
     )
 }
-
-_supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), MsConst.SUPPORTED_API_LIST_FILE),)
 
 
 class ApiTemplate(HOOKCell):
@@ -104,22 +106,28 @@ class ApiTemplate(HOOKCell):
 
 
 api_register = None
+stub_tensor_set = False
 
 
-def get_api_register():
-    global api_register
+def get_api_register(return_new=False):
+    global stub_tensor_set
 
     def stub_method(method):
         def wrapped_method(*args, **kwargs):
             return method(*args, **kwargs)
         return wrapped_method
+    if not is_mindtorch() and not stub_tensor_set:
+        for attr_name in dir(StubTensor):
+            attr = getattr(StubTensor, attr_name)
+            api_names = load_yaml(_supported_api_list_path[0]).get(Const.MS_API_TYPE_TENSOR, [])
+            if attr_name in api_names and callable(attr):
+                setattr(StubTensor, attr_name, stub_method(attr))
+        stub_tensor_set = True
 
+    if return_new:
+        return ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
+
+    global api_register
     if api_register is None:
-        if not is_mindtorch():
-            for attr_name in dir(StubTensor):
-                attr = getattr(StubTensor, attr_name)
-                api_names = load_yaml(_supported_api_list_path[0]).get(Const.MS_API_TYPE_TENSOR, [])
-                if attr_name in api_names and callable(attr):
-                    setattr(StubTensor, attr_name, stub_method(attr))
         api_register = ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
     return api_register

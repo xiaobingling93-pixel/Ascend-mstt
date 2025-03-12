@@ -179,7 +179,7 @@ def set_register_backward_hook_functions():
         from msprobe.mindspore.mindtorch import (_call_impl,
                                                  register_full_backward_pre_hook,
                                                  register_full_backward_hook)
-        if not hasattr(torch, "register_full_backward_hook"):
+        if not hasattr(torch.nn.Module, "register_full_backward_hook"):
             setattr(torch.nn.Module, "_call_impl", _call_impl)
             setattr(torch.nn.Module, "register_full_backward_pre_hook", register_full_backward_pre_hook)
             setattr(torch.nn.Module, "register_full_backward_hook", register_full_backward_hook)
