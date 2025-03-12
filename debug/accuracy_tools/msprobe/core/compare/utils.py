@@ -545,10 +545,17 @@ def get_name_and_state(name):
 
     state type: input, output, kwargs, parameters, parameters_grad
     """
+    if not isinstance(name, str):
+        logger.error(f'Invalid name: {name}, type should be string, please check.')
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
+
     if Const.PARAMS_GRAD in name.split(Const.SEP):
         return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
 
     split = re.split(Const.REGEX_FORWARD_BACKWARD, name)
+    if len(split) < 3:
+        logger.error(f'Invalid name string: {name}, can not be split by forward/backward, please check.')
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
     api = f'{split[0]}.{split[1]}.'
     state_str = split[2]
     match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
