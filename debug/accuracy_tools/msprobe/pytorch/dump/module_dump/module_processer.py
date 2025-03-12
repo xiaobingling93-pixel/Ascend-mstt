@@ -17,6 +17,7 @@ from functools import wraps
 
 import torch
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import replace_last_occurrence
@@ -58,6 +59,7 @@ class ModuleProcesser:
         return clone_return_value_func
 
     @staticmethod
+    @recursion_depth_decorator("ModuleDump: ModuleProcesser.clone_if_tensor")
     def clone_if_tensor(result):
         if isinstance(result, torch.Tensor):
             return result.clone()

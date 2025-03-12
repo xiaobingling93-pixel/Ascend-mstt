@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -110,6 +110,10 @@ class HOOKModule(nn.Module):
                         return result
                 else:
                     return result
+
+            if not (var.requires_grad and torch.is_grad_enabled()):
+                return result
+
             grad_fn = var.grad_fn
             if grad_fn is not None:
                 for hook in non_full_backward_hooks:
