@@ -106,13 +106,13 @@ def data_to_cpu(data, deep, data_cpu, depth=0):
         return tensor_copy
     elif isinstance(data, list):
         for v in data:
-            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu, depth=depth+1))
+            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu, depth = depth + 1))
         if deep == 0:
             data_cpu.append(list_cpu)
         return list_cpu
     elif isinstance(data, tuple):
         for v in data:
-            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu, depth=depth+1))
+            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu, depth = depth + 1))
         tuple_cpu = tuple(list_cpu)
         if deep == 0:
             data_cpu.append(tuple_cpu)
@@ -120,7 +120,7 @@ def data_to_cpu(data, deep, data_cpu, depth=0):
     elif isinstance(data, dict):
         dict_cpu = {}
         for k, v in data.items():
-            dict_cpu[k] = data_to_cpu(v, deep + 1, data_cpu, depth=depth+1)
+            dict_cpu[k] = data_to_cpu(v, deep + 1, data_cpu, depth = depth + 1)
         if deep == 0:
             data_cpu.append(dict_cpu)
         return dict_cpu

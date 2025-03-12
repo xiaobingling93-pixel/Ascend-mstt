@@ -99,7 +99,7 @@ def dump_data(data, prefix, dump_path, depth=0):
         raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
     if isinstance(data, (tuple, list)) and data:
         for i, item in enumerate(data):
-            dump_data(item, "{}.{}".format(prefix, i), dump_path, depth=depth+1)
+            dump_data(item, "{}.{}".format(prefix, i), dump_path, depth = depth + 1)
         return
     elif support_basic_type(data):
         if isinstance(data, torch.Tensor) and data.is_meta:
