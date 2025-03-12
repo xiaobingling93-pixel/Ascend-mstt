@@ -50,6 +50,9 @@ def split_json_file(input_file, num_splits, filter_api):
         backward_data[f"{data_name}.backward"] = backward_data.pop(data_name)
 
     input_data = load_json(input_file)
+    if input_data.get("dump_data_dir") is None:
+        logger.error("Invalid input file, 'dump_data_dir' field is missing")
+        raise CompareException("Invalid input file, 'dump_data_dir' field is missing")
     if input_data.get("data") is None:
         logger.error("Invalid input file, 'data' field is missing")
         raise CompareException("Invalid input file, 'data' field is missing")

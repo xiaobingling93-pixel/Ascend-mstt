@@ -19,6 +19,8 @@ import os
 from datetime import datetime, timezone
 
 import torch
+from msprobe.core.common.const import Const
+from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_utils import FileOpen, save_npy, save_json
 from msprobe.pytorch.common.log import logger
 
@@ -91,10 +93,13 @@ def support_basic_type(data):
     return False
 
 
-def dump_data(data, prefix, dump_path):
+def dump_data(data, prefix, dump_path, depth=0):
+    if depth > Const.MAX_DEPTH:
+        logger.error(f'dump data depth exceeds max depth:{Const.MAX_DEPTH}')
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
     if isinstance(data, (tuple, list)) and data:
         for i, item in enumerate(data):
-            dump_data(item, "{}.{}".format(prefix, i), dump_path)
+            dump_data(item, "{}.{}".format(prefix, i), dump_path, depth=depth+1)
         return
     elif support_basic_type(data):
         if isinstance(data, torch.Tensor) and data.is_meta:
