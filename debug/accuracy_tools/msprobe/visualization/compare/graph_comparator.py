@@ -23,6 +23,8 @@ from msprobe.core.common.utils import recursion_depth_decorator
 
 
 class GraphComparator:
+    MAX_DEPTH = 1000
+
     def __init__(self, graphs, dump_path_param, args, mapping_dict=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
@@ -67,7 +69,7 @@ class GraphComparator:
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index
         node.data.update(other_dict)
 
-    @recursion_depth_decorator('GraphComparator._compare_nodes', max_depth=1000)
+    @recursion_depth_decorator('GraphComparator._compare_nodes', max_depth=MAX_DEPTH)
     def _compare_nodes(self, node_n):
         """
         递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
@@ -91,7 +93,7 @@ class GraphComparator:
         for subnode in node_n.subnodes:
             self._compare_nodes(subnode)
 
-    @recursion_depth_decorator('GraphComparator._compare_nodes_fuzzy', max_depth=1000)
+    @recursion_depth_decorator('GraphComparator._compare_nodes_fuzzy', max_depth=MAX_DEPTH)
     def _compare_nodes_fuzzy(self, node_n):
         if node_n.op != NodeOp.function_api:
             # 模块经过模糊匹配
