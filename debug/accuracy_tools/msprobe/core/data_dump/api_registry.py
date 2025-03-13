@@ -69,6 +69,7 @@ class ApiWrapper:
                         def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
                             def api_function(*args, **kwargs):
                                 return api_template(api_name, api_func, prefix, hook_build_func)(*args, **kwargs)
+                            api_function.__name__ = api_name
                             return api_function
                         wrapped_functions[api_name] = wrap_api_func(api_name, ori_api, name_prefix,
                                                                     hook_build_func, api_template)
