@@ -26,6 +26,7 @@ from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import is_recomputation
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
@@ -735,6 +736,7 @@ class TrainerMon:
 
         logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
 
+        @recursion_depth_decorator('msprobe.pytorch.monitor.clone_if_tensor')
         def clone_if_tensor(args):
             if isinstance(args, tuple):
                 return tuple([clone_if_tensor(arg) for arg in args])
