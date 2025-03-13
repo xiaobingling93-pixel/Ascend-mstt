@@ -38,7 +38,7 @@ WrapDistributedOps = load_yaml(OpsPath).get("distributed", [])
 
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
 StackBlackList = load_yaml(StackBlackListPath).get("stack", [])
-MaxStringLength = 10000
+MaxStringLength = 1000
 
 distributed_func = {}
 for f in dir(dist):
