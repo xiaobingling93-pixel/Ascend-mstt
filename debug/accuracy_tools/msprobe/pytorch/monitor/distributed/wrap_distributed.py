@@ -38,7 +38,7 @@ WrapDistributedOps = load_yaml(OpsPath).get("distributed", [])
 
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
 StackBlackList = load_yaml(StackBlackListPath).get("stack", [])
-MaxStringLength = 1000
+MAX_STRING_LENGTH = 1000
 
 distributed_func = {}
 for f in dir(dist):
@@ -141,8 +141,8 @@ def get_process_group(process_group):
 
 
 def stack_filter(stack):
-    if len(stack) > MaxStringLength:
-        logger.warning(f'The character strin contains more than {MaxStringLength}. re match is skipped.')
+    if len(stack) > MAX_STRING_LENGTH:
+        logger.warning(f'The character strin contains more than {MAX_STRING_LENGTH}. re match is skipped.')
     for pattern in StackBlackList:
         if re.search(pattern, stack):
             return False
@@ -196,8 +196,8 @@ def is_target_line(codeline):
         return True
     stack = get_callstack()
     whole_stack = ';'.join(stack)
-    if len(whole_stack) > MaxStringLength:
-        logger.warning(f'The character strin contains more than {MaxStringLength}. re match is skipped.')
+    if len(whole_stack) > MAX_STRING_LENGTH:
+        logger.warning(f'The character strin contains more than {MAX_STRING_LENGTH}. re match is skipped.')
     for pattern in codeline:
         if re.search(pattern, whole_stack):
             return True
