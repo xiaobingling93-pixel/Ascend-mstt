@@ -12,10 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from msprobe.core.overflow_check.level import OverflowLevel
-from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data, compare_data_fuzzy
+from msprobe.core.common.log import logger
 
 
 class BaseNode:
@@ -114,7 +115,13 @@ class BaseNode:
         """
         ancestors = []
         current_node = self.upnode
+        seen_nodes = set()
         while current_node:
+            if current_node.id in seen_nodes:
+                logger.warning(f'Detected a cycle in the node structure and cannot get node ancestors, '
+                               f'current node is {current_node.id}.')
+                return []
+            seen_nodes.add(current_node.id)
             ancestors.append(current_node.id)
             current_node = current_node.upnode
         return list(reversed(ancestors))

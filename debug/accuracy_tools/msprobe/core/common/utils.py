@@ -486,13 +486,13 @@ recursion_depth = defaultdict(int)
 
 
 # 装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。
-def recursion_depth_decorator(func_info):
+def recursion_depth_decorator(func_info, max_depth=Const.MAX_DEPTH):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             func_id = id(func)
             recursion_depth[func_id] += 1
-            if recursion_depth[func_id] > Const.MAX_DEPTH:
+            if recursion_depth[func_id] > max_depth:
                 msg = f"call {func_info} exceeds the recursion limit."
                 logger.error_log_with_exp(
                     msg,

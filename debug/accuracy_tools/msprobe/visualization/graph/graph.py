@@ -19,7 +19,6 @@ from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 
-
 MAX_RECUR_LEVEL = 100
 
 
@@ -67,7 +66,6 @@ class Graph:
         ancestors_b = node_b.get_ancestors()
         return node_b, ancestors_n, ancestors_b
 
-
     @staticmethod
     def fuzzy_match(node_n, node_b):
         if not node_n or not node_b or not node_n.fuzzy_eq(node_b):
@@ -75,13 +73,6 @@ class Graph:
         ancestors_n = node_n.get_ancestors()
         ancestors_b = node_b.get_ancestors()
         return node_b, ancestors_n, ancestors_b
-
-    @staticmethod
-    def dfs(node, result):
-        info = node.to_dict()
-        result[node.id] = info
-        for subnode in node.subnodes:
-            Graph.dfs(subnode, result)
 
     @staticmethod
     def split_nodes_by_micro_step(nodes):

@@ -2,7 +2,8 @@ import json
 import unittest
 from unittest.mock import patch, MagicMock
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
-from msprobe.visualization.graph.base_node import BaseNode, NodeOp
+from msprobe.visualization.graph.base_node import BaseNode
+from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst, ToolTip
 from msprobe.core.common.const import CompareConst
 

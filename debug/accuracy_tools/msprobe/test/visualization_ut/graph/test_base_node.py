@@ -1,6 +1,6 @@
 import unittest
-from msprobe.visualization.graph.base_node import BaseNode, NodeOp
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.graph.base_node import BaseNode
+from msprobe.visualization.graph.node_op import NodeOp
 
 
 class TestBaseNode(unittest.TestCase):
