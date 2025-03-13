@@ -27,8 +27,7 @@ from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import T
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.core.common.file_utils import remove_path
 from msprobe.pytorch.common.utils import logger, save_api_data, load_api_data, save_pkl, load_pkl
-from msprobe.core.common.const import Const
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import recursion_depth_decorator
 
 
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
@@ -171,22 +170,20 @@ class ATTL:
         return buffer
 
 
-def move2device_exec(obj, device, depth=0):
-    if depth > Const.MAX_DEPTH:
-        logger.error("Maximum recursion depth exceeded")
-        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+@recursion_depth_decorator("move2device_exec")
+def move2device_exec(obj, device):
     if isinstance(obj, (tuple, list)):
-        data_list = [move2device_exec(val, device, depth=depth + 1) for val in obj]
+        data_list = [move2device_exec(val, device) for val in obj]
         return data_list if isinstance(obj, list) else tuple(data_list)
     if isinstance(obj, dict): 
-        return {key: move2device_exec(val, device, depth=depth + 1) for key, val in obj.items()}
+        return {key: move2device_exec(val, device) for key, val in obj.items()}
     elif isinstance(obj, torch.Tensor):
         obj = obj.detach()
         if obj.device.type != device:
             obj = obj.to(device)
         return obj
     elif "return_types" in str(type(obj)):
-        return move2device_exec(tuple(obj), device, depth=depth + 1)
+        return move2device_exec(tuple(obj), device)
     elif isinstance(obj, torch._C.device):
         return torch.device(device)
     else:

@@ -26,8 +26,8 @@ except ImportError:
 else:
     pta_cpu_device = torch.device("cpu")
 
-from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import CompareConst
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
 
 
@@ -87,10 +87,8 @@ def get_callstack():
     return callstack
 
 
-def data_to_cpu(data, deep, data_cpu, depth=0):
-    if depth > Const.MAX_DEPTH:
-        logger.error("Failed to convert data to cpu, depth exceeds max depth:{}".format(Const.MAX_DEPTH))
-        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+@recursion_depth_decorator("data_to_cpu")
+def data_to_cpu(data, deep, data_cpu):
     global cpu_device
     list_cpu = []
     if isinstance(data, torch.Tensor):
@@ -106,13 +104,13 @@ def data_to_cpu(data, deep, data_cpu, depth=0):
         return tensor_copy
     elif isinstance(data, list):
         for v in data:
-            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu, depth=depth + 1))
+            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu))
         if deep == 0:
             data_cpu.append(list_cpu)
         return list_cpu
     elif isinstance(data, tuple):
         for v in data:
-            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu, depth=depth + 1))
+            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu))
         tuple_cpu = tuple(list_cpu)
         if deep == 0:
             data_cpu.append(tuple_cpu)
@@ -120,7 +118,7 @@ def data_to_cpu(data, deep, data_cpu, depth=0):
     elif isinstance(data, dict):
         dict_cpu = {}
         for k, v in data.items():
-            dict_cpu[k] = data_to_cpu(v, deep + 1, data_cpu, depth=depth + 1)
+            dict_cpu[k] = data_to_cpu(v, deep + 1, data_cpu)
         if deep == 0:
             data_cpu.append(dict_cpu)
         return dict_cpu
