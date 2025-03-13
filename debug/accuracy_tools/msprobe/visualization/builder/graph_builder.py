@@ -27,8 +27,8 @@ from msprobe.visualization.utils import save_json_file, GraphConst
 class GraphBuilder:
     backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
     forward_pattern = re.compile(r"(\.forward\.)(\d+)$")
-    # 匹配以大写字母开头，后接任意字母，并以Template(结尾
-    template_pattern = re.compile(r'\b[A-Z][a-zA-Z]*Template\(')
+    # 匹配以大写字母开头，后接任意字母，并以Template(结尾，或包含api_template(的字符串
+    template_pattern = re.compile(r'\b([A-Z][a-zA-Z]*Template|api_template)\(')
 
     @staticmethod
     def build(construct_path, data_path, stack_path, model_name='DefaultModel', complete_stack=False):
