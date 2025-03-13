@@ -16,6 +16,7 @@
 import os
 from collections import defaultdict
 
+import mindspore
 from mindspore._c_expression import PyNativeExecutor_
 try:
     from mindspore.common.api import _MindsporeFunctionExecutor
@@ -105,7 +106,10 @@ class JitDump(_MindsporeFunctionExecutor):
     def grad(self, obj, grad, weights, grad_position, *args, **kwargs):
         if JitDump.jit_dump_switch and JitDump.jit_enable:
             _api_register.restore_all_api()
-        output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
+        if mindspore.__version__ >= "2.5":
+            output = self._executor.grad(grad, obj, weights, grad_position, False, *args, *(kwargs.values()))
+        else:
+            output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
         if JitDump.jit_dump_switch and JitDump.jit_enable:
             dump_jit(obj, args, None, False)
             _api_register.register_all_api()
