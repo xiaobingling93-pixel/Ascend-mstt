@@ -24,6 +24,7 @@ import torch.nn as nn
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name
+from msprobe.pytorch.common.log import logger
 
 try:
     import torch_npu
@@ -37,6 +38,7 @@ WrapDistributedOps = load_yaml(OpsPath).get("distributed", [])
 
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
 StackBlackList = load_yaml(StackBlackListPath).get("stack", [])
+MaxStringLength = 10000
 
 distributed_func = {}
 for f in dir(dist):
@@ -139,6 +141,8 @@ def get_process_group(process_group):
 
 
 def stack_filter(stack):
+    if len(stack) > MaxStringLength:
+        logger.warning(f'The character strin contains more than {MaxStringLength}. re match is skipped.')
     for pattern in StackBlackList:
         if re.search(pattern, stack):
             return False
@@ -188,10 +192,12 @@ def update_data(old, new):
 
 
 def is_target_line(codeline):
-    stack = get_callstack()
-    whole_stack = ';'.join(stack)
     if codeline == []:
         return True
+    stack = get_callstack()
+    whole_stack = ';'.join(stack)
+    if len(whole_stack) > MaxStringLength:
+        logger.warning(f'The character strin contains more than {MaxStringLength}. re match is skipped.')
     for pattern in codeline:
         if re.search(pattern, whole_stack):
             return True
