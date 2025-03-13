@@ -19,6 +19,8 @@ import os
 from datetime import datetime, timezone
 
 import torch
+from msprobe.core.common.const import Const
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.core.common.file_utils import FileOpen, save_npy, save_json
 from msprobe.pytorch.common.log import logger
 
@@ -91,6 +93,7 @@ def support_basic_type(data):
     return False
 
 
+@recursion_depth_decorator("dump_data")
 def dump_data(data, prefix, dump_path):
     if isinstance(data, (tuple, list)) and data:
         for i, item in enumerate(data):

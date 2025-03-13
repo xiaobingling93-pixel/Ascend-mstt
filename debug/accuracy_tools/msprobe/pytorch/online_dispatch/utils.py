@@ -27,7 +27,9 @@ else:
     pta_cpu_device = torch.device("cpu")
 
 from msprobe.core.common.const import CompareConst
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
+
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'
@@ -85,6 +87,7 @@ def get_callstack():
     return callstack
 
 
+@recursion_depth_decorator("data_to_cpu")
 def data_to_cpu(data, deep, data_cpu):
     global cpu_device
     list_cpu = []

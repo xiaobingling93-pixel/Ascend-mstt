@@ -136,7 +136,7 @@ class TestMultiRunUT(unittest.TestCase):
 
     def setUp(self):
         self.test_json_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dump.json")
-        self.test_data = {'data': {'key1': 'TRUE', 'key2': 'TRUE', 'key3': 'TRUE'}}
+        self.test_data = {'dump_data_dir': '/test', 'data': {'key1': 'TRUE', 'key2': 'TRUE', 'key3': 'TRUE'}}
         self.test_json_content = json.dumps(self.test_data)
         self.forward_split_files_content = [
             {'key1': 'TRUE', 'key2': 'TRUE'},
