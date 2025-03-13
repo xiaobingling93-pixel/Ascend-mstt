@@ -183,6 +183,7 @@ class APIExtractor:
                     self.update_data_name(v, dump_data_dir)
         return value
 
+    @recursion_depth_decorator("OpGenerator: APIExtractor.update_data_name")
     def update_data_name(self, data, dump_data_dir):
         if isinstance(data, list):
             for item in data:
