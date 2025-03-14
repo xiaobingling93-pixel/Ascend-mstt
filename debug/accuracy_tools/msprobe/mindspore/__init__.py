@@ -18,10 +18,6 @@ import os
 try:
     from msprobe.lib import _msprobe_c
     os.environ["MS_HOOK_ENABLE"] = "on"
-    dir_path = os.path.dirname(os.path.abspath(_msprobe_c.__file__))
-    current_ld_path = os.environ.get("LD_LIBRARY_PATH", "")
-    # 更新环境变量
-    os.environ["LD_LIBRARY_PATH"] = f"{current_ld_path}:{dir_path}"
 except ImportError:
     from .common.log import logger
     logger.info("Module _msprobe_c has not been installed. L2-Dump may not work normally.")

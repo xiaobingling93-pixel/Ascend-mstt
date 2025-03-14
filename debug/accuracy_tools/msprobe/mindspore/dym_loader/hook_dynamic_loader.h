@@ -25,7 +25,6 @@
 
 constexpr auto kHookBegin = "MS_DbgOnStepBegin";
 constexpr auto kHookEnd = "MS_DbgOnStepEnd";
-constexpr const char* kMsprobeExtName = "_msprobe_c.so";
 
 class HookDynamicLoader {
  public:
