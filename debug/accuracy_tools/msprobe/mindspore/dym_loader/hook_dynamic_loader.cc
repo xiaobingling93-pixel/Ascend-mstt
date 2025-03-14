@@ -45,12 +45,12 @@ bool HookDynamicLoader::LoadLibrary() {
   try {
     py::module msprobeMod = py::module::import("msprobe.lib._msprobe_c");
 		if (!py::hasattr(msprobeMod, "__file__")) {
-			MS_LOG(INFO) << "Adump mod not found";
+			MS_LOG(WARNING) << "Adump mod not found";
 			return false;
 		}
 		msprobePath = msprobeMod.attr("__file__").cast<std::string>();
   } catch (const std::exception& e) {
-		MS_LOG(INFO) << "Adump mod path unable to get" << e.what();
+		MS_LOG(WARNING) << "Adump mod path unable to get: " << e.what();
 		return false;
 	}
   std::lock_guard<std::mutex> lock(mutex_);
@@ -59,7 +59,7 @@ bool HookDynamicLoader::LoadLibrary() {
     return false;
   }
 	if (msprobePath == "") {
-		MS_LOG(INFO) << "Adump path not loaded";
+		MS_LOG(WARNING) << "Adump path not loaded";
 		return false;
 	}
   handle_ = dlopen(msprobePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
