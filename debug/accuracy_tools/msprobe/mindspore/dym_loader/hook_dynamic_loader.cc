@@ -18,37 +18,10 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <cstring>
+#include <pybind11/embed.h>
 #include "utils/log_adapter.h"
 
-namespace {
-
-// Utility function to check if a file path is valid
-bool IsValidPath(const std::string &path) {
-  struct stat fileStat;
-  if (stat(path.c_str(), &fileStat) != 0) {
-    MS_LOG(ERROR) << "File does not exist or cannot be accessed: " << path;
-    return false;
-  }
-
-  if (S_ISLNK(fileStat.st_mode)) {
-    MS_LOG(ERROR) << "File is a symbolic link, which is not allowed: " << path;
-    return false;
-  }
-
-  if (!S_ISREG(fileStat.st_mode)) {
-    MS_LOG(ERROR) << "File is not a regular file: " << path;
-    return false;
-  }
-
-  if (path.substr(path.find_last_of(".")) != ".so") {
-    MS_LOG(ERROR) << "File is not a .so file: " << path;
-    return false;
-  }
-
-  return true;
-}
-
-}  // namespace
+namespace py = pybind11;
 
 HookDynamicLoader &HookDynamicLoader::GetInstance() {
   static HookDynamicLoader instance;
@@ -65,38 +38,31 @@ bool HookDynamicLoader::loadFunction(void *handle, const std::string &functionNa
   return true;
 }
 
-bool HookDynamicLoader::validateLibraryPath(const std::string &libPath) {
-  char *realPath = realpath(libPath.c_str(), nullptr);
-  if (!realPath) {
-    MS_LOG(WARNING) << "Failed to resolve realpath for the library: " << libPath;
-    return false;
-  }
-
-  bool isValid = IsValidPath(realPath);
-  free(realPath);  // Free memory allocated by realpath
-  return isValid;
-}
-
 bool HookDynamicLoader::LoadLibrary() {
-  const char *libPath = std::getenv("HOOK_TOOL_PATH");
-  if (!libPath) {
-    MS_LOG(WARNING) << "HOOK_TOOL_PATH is not set!";
-    return false;
-  }
-
-  std::string resolvedLibPath(libPath);
-  if (!validateLibraryPath(resolvedLibPath)) {
-    MS_LOG(WARNING) << "Library path validation failed.";
-    return false;
-  }
-
+  std::string msprobePath = "";
+  // 获取gil锁
+  py::gil_scoped_acquire acquire;
+  try {
+    py::module msprobeMod = py::module::import("msprobe.lib._msprobe_c");
+		if (!py::hasattr(msprobeMod, "__file__")) {
+			MS_LOG(WARNING) << "Adump mod not found";
+			return false;
+		}
+		msprobePath = msprobeMod.attr("__file__").cast<std::string>();
+  } catch (const std::exception& e) {
+		MS_LOG(WARNING) << "Adump mod path unable to get: " << e.what();
+		return false;
+	}
   std::lock_guard<std::mutex> lock(mutex_);
   if (handle_) {
     MS_LOG(WARNING) << "Hook library already loaded!";
     return false;
   }
-
-  handle_ = dlopen(resolvedLibPath.c_str(), RTLD_LAZY | RTLD_LOCAL);
+	if (msprobePath == "") {
+		MS_LOG(WARNING) << "Adump path not loaded";
+		return false;
+	}
+  handle_ = dlopen(msprobePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
   if (!handle_) {
     MS_LOG(WARNING) << "Failed to load Hook library: " << dlerror();
     return false;
@@ -104,7 +70,7 @@ bool HookDynamicLoader::LoadLibrary() {
 
   for (const auto &functionName : functionList_) {
     if (!loadFunction(handle_, functionName)) {
-      MS_LOG(WARNING) << "Failed to load function: " << functionName;
+      MS_LOG(WARNING) << "Failed to load adump function";
       dlclose(handle_);
       handle_ = nullptr;
       return false;

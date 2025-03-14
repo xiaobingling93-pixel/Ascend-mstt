@@ -40,7 +40,6 @@ class HookDynamicLoader {
  private:
   // Helper functions
   bool loadFunction(void *handle, const std::string &functionName);
-  bool validateLibraryPath(const std::string &libPath);
 
   HookDynamicLoader() = default;
 
