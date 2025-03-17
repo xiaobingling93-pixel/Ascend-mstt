@@ -28,12 +28,14 @@ class MsprobeException(CodedException):
     OVERFLOW_NUMS_ERROR = 1
     RECURSION_LIMIT_ERROR = 2
     INTERFACE_USAGE_ERROR = 3
+    UNSUPPORTED_TYPE_ERROR = 4
 
     err_strs = {
         INVALID_PARAM_ERROR: "[msprobe] 无效参数：",
         OVERFLOW_NUMS_ERROR: "[msprobe] 超过预设溢出次数 当前溢出次数：",
         RECURSION_LIMIT_ERROR: "[msprobe] 递归调用超过限制：",
-        INTERFACE_USAGE_ERROR: "[msprobe] Invalid interface usage: "
+        INTERFACE_USAGE_ERROR: "[msprobe] Invalid interface usage: ",
+        UNSUPPORTED_TYPE_ERROR: "[msprobe] Unsupported type: "
     }
 
 
