@@ -368,7 +368,7 @@ class DistributedAnalyzer:
                 target_api_name = self.config.get(api_name)[0]
                 target_rank = int(id_info[1].replace(Const.RANK, ''))
             except Exception as e:
-                logger.warning(f'Failed to parsing batch p2p parameter with error info: {e}.')
+                logger.warning(f'Failed to parse batch p2p parameter with error info: {e}.')
                 continue
             target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
             if not target_node:
