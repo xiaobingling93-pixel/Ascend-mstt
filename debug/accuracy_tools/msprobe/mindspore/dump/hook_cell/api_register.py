@@ -17,7 +17,6 @@ import os
 
 from mindspore import Tensor, ops, mint
 from mindspore.mint.nn import functional
-from mindspore.common._stub_tensor import StubTensor
 from mindspore.communication import comm_func
 
 from msprobe.core.common.file_utils import load_yaml
@@ -28,18 +27,28 @@ from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 
 
+stub_tensor_existed = True
+try:
+    from mindspore.common._stub_tensor import StubTensor
+except ImportError:
+    stub_tensor_existed = False
+
 cur_path = os.path.dirname(os.path.realpath(__file__))
 if not is_mindtorch():
     _api_types = {
         Const.MS_FRAMEWORK: {
             Const.MS_API_TYPE_OPS: (ops, (ops,)),
             Const.MS_API_TYPE_TENSOR: (Tensor, (Tensor,)),
-            Const.MS_API_TYPE_STUB_TENSOR: (StubTensor, (StubTensor,)),
             Const.MS_API_TYPE_MINT: (mint, (mint,)),
             Const.MS_API_TYPE_MINT_FUNC: (functional, (functional,)),
             Const.MS_API_TYPE_COM: (comm_func, (comm_func,))
         }
     }
+    if stub_tensor_existed:
+        _api_types.get(Const.MS_FRAMEWORK).update(
+            {Const.MS_API_TYPE_STUB_TENSOR: (StubTensor, (StubTensor,))}
+        )
+
     _supported_api_list_path = (os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE),)
 else:
     import torch
@@ -116,10 +125,10 @@ def get_api_register(return_new=False):
         def wrapped_method(*args, **kwargs):
             return method(*args, **kwargs)
         return wrapped_method
-    if not is_mindtorch() and not stub_tensor_set:
+    if not is_mindtorch() and stub_tensor_existed and not stub_tensor_set:
+        api_names = load_yaml(_supported_api_list_path[0]).get(Const.MS_API_TYPE_TENSOR, [])
         for attr_name in dir(StubTensor):
             attr = getattr(StubTensor, attr_name)
-            api_names = load_yaml(_supported_api_list_path[0]).get(Const.MS_API_TYPE_TENSOR, [])
             if attr_name in api_names and callable(attr):
                 setattr(StubTensor, attr_name, stub_method(attr))
         stub_tensor_set = True
