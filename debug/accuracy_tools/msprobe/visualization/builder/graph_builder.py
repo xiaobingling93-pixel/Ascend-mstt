@@ -16,12 +16,12 @@
 import re
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
-from msprobe.visualization.utils import save_json_file, GraphConst
+from msprobe.visualization.utils import GraphConst
 
 
 class GraphBuilder:
@@ -74,7 +74,7 @@ class GraphBuilder:
         if config.task:
             result[GraphConst.JSON_TASK_KEY] = config.task
         result[GraphConst.OVERFLOW_CHECK] = config.overflow_check
-        save_json_file(filename, result)
+        save_json(filename, result, indent=4)
 
     @staticmethod
     def _simplify_stack(stack_dict):
