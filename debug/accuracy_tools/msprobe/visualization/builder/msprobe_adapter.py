@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
-import math
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst

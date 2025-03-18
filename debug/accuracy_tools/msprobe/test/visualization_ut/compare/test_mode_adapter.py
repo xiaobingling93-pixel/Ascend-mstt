@@ -226,27 +226,6 @@ class TestModeAdapter(unittest.TestCase):
         self.adapter.add_csv_data(compare_result_list)
         self.assertEqual(self.adapter.csv_data, compare_result_list)
 
-    def test_add_error_key(self):
-        node_data = {'key': {}}
-        self.adapter.compare_mode = GraphConst.REAL_DATA_COMPARE
-        self.adapter.add_error_key(node_data)
-        self.assertEqual(node_data['key'][GraphConst.ERROR_KEY],
-                         [CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO])
-        node_data = {'key': {}}
-        self.adapter.compare_mode = GraphConst.SUMMARY_COMPARE
-        self.adapter.add_error_key(node_data)
-        self.assertEqual(node_data['key'][GraphConst.ERROR_KEY],
-                         [CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
-                          CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR])
-        node_data = {'key': []}
-        self.adapter.add_error_key(node_data)
-        self.assertEqual(node_data['key'], [])
-
-        node_data = {'key': {}}
-        self.adapter.compare_mode = '111'
-        self.adapter.add_error_key(node_data)
-        self.assertEqual(node_data['key'], {'error_key': []})
-
     def test_get_tool_tip(self):
         self.adapter.compare_mode = GraphConst.MD5_COMPARE
         tips = self.adapter.get_tool_tip()
