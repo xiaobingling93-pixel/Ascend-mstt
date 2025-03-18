@@ -73,14 +73,6 @@ def str2float(percentage_str):
         return 0
 
 
-def is_integer(s):
-    try:
-        int(s)
-        return True
-    except Exception:
-        return False
-
-
 def check_directory_content(input_path):
     """
     检查input_path内容, 是否全是step{数字}命名的文件夹(例如step0), 或者全是rank{数字}命名的文件夹(例如rank0), 或者全是文件
