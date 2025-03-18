@@ -42,14 +42,6 @@ def load_data_json_file(file_path):
     return load_json_file(file_path).get(GraphConst.DATA_KEY, {})
 
 
-def save_json_file(file_path, data):
-    """
-    保存json文件
-    """
-    with FileOpen(file_path, 'w') as f:
-        f.write(json.dumps(data, indent=4))
-
-
 def get_csv_df(stack_mode, csv_data, compare_mode):
     """
     调用acc接口写入csv
