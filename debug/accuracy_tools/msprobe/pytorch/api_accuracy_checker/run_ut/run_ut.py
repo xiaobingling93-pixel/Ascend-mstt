@@ -591,4 +591,3 @@ def run_ut_command(args):
 
 if __name__ == '__main__':
     _run_ut()
-    logger.info("UT task completed.")
