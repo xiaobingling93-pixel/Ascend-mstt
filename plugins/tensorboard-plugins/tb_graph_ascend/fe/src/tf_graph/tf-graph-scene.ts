@@ -336,7 +336,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
             // not be used to indicate an actual click on the graph).
             let dragDistance = Math.sqrt(
               Math.pow(this._zoomStartCoords.x - this._zoomTransform.x, 2) +
-                Math.pow(this._zoomStartCoords.y - this._zoomTransform.y, 2),
+              Math.pow(this._zoomStartCoords.y - this._zoomTransform.y, 2),
             );
             if (dragDistance < this._maxZoomDistanceForClick) {
               this._fireEnableClick();
@@ -473,8 +473,8 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       const translateX = (mouseX - currentTransform.x) / k;
       const translateY = (mouseY - currentTransform.y) / k;
       const newScale = currentTransform.k * scaleFactor;
-      this.x = (mouseX - translateX) * newScale;
-      this.y = (mouseY - translateY) * newScale;
+      this.x = mouseX - (translateX * newScale);
+      this.y = mouseY - (translateY * newScale);
       const newTransform = d3.zoomIdentity.translate(this.x, this.y).scale(newScale);
       d3.select(this.$.svg).call(d3.zoom().transform, newTransform);
       d3.select(this.$.root).attr('transform', newTransform.toString());
