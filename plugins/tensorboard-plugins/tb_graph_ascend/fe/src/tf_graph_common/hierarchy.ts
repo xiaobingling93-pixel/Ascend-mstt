@@ -11,6 +11,9 @@ distributed under the License is distributed on an 'AS IS' BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+Copyright (c) 2025, Huawei Technologies.
+Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
 /**
  * Package for the Graph Hierarchy for TensorFlow graph.

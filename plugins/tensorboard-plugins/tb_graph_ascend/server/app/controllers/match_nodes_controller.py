@@ -24,8 +24,8 @@ class MatchNodesController:
     def process_md5_task_add(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})
         bench_match_nodes_list = graph_data.get('bench_match_nodes', {})
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
         # 去除节点名称前缀
         npu_input_data = GraphUtils.remove_prefix(npu_node_data.get('input_data', {}), npu_node_name + '.')
         bench_input_data = GraphUtils.remove_prefix(bench_node_data.get('input_data', {}), bench_node_name + '.')
@@ -55,8 +55,8 @@ class MatchNodesController:
     def process_md5_task_delete(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})
         bench_match_nodes_list = graph_data.get('bench_match_nodes', {})
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
         # 在原始数据上，删除匹配节点，和匹配节点信息
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []
@@ -81,8 +81,8 @@ class MatchNodesController:
     def process_summary_task_add(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})
         bench_match_nodes_list = graph_data.get('bench_match_nodes', {})
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
         # 计算统计误差
         intput_statistical_diff = MatchNodesController.calculate_statistical_diff(
             npu_node_data.get('input_data'), bench_node_data.get('input_data'), npu_node_name, bench_node_name
@@ -128,8 +128,8 @@ class MatchNodesController:
     def process_summary_task_delete(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})
         bench_match_nodes_list = graph_data.get('bench_match_nodes', {})
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
         # 在原始数据上，删除匹配节点，和匹配节点信息
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []

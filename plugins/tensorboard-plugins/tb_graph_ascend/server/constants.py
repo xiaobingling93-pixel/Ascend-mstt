@@ -50,3 +50,4 @@ UNMATCH_NAME_SET = [
     'Five Thousandth Err Ratio',
 ]
 SCREEN_MAP = {'precision_index': 'precision_index', 'overflow_level': 'overflow_level'}
+UNMATCHED_NODE_NAME = '无匹配节点'

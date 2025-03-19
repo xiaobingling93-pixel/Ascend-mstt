@@ -31,10 +31,10 @@ class GraphUtils:
 
     @staticmethod
     def get_graph_data(meta_data):
-        run = meta_data.get('run')
         tag = meta_data.get('tag')
         graph_data = GraphUtils.check_jsondata(tag)
         if graph_data is None:
+            run = meta_data.get('run')
             return GraphUtils.get_jsondata(run, tag)  # 直接返回获取结果
         return graph_data, None
 
@@ -74,7 +74,7 @@ class GraphUtils:
 
         # 检查 tag 是否为合法文件名
         if not re.match(FILE_NAME_REGEX, tag):
-            raise ValueError(f"Invalid tag: {tag}.") from e
+            raise ValueError(f"Invalid tag: {tag}.")
 
         # 检查 run 目录是否存在，如果不存在则创建
         if not os.path.exists(run):
@@ -100,7 +100,7 @@ class GraphUtils:
 
         # 权限校验：检查目录是否有写权限
         if not os.access(run, os.W_OK):
-            raise PermissionError(f"No write permission for directory: {run}\n") from e
+            raise PermissionError(f"No write permission for directory: {run}\n")
 
         # 尝试写入文件
         try:

@@ -27,6 +27,7 @@ import * as tf_graph_render from '../../../tf_graph_common/render';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
 
+const UNMATCHED_NODE_NAME = '无匹配节点';
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
@@ -432,7 +433,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
         if (item[1].value.length === 0) {
-          item[1].value.push('无匹配节点');
+          item[1].value.push(UNMATCHED_NODE_NAME);
         }
       }
       this.colorSetChanged = colorsets;
@@ -520,7 +521,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     }
     // 无匹配节点图例一定存在
     newColorsList[UNMATCHED_COLOR] = {
-      value: '无匹配节点',
+      value: UNMATCHED_NODE_NAME,
       description: '对比过程中节点未匹配上',
     };
     // 更新颜色列表

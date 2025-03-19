@@ -306,7 +306,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
             this._graphRunTag = { run, tag }; // 图形构建完成后执行
           });
         });
-        return null;
+        break;
       }
       default:
         console.error(`Unknown selection type: ${selectionType}`);

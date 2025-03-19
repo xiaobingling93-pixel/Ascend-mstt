@@ -134,10 +134,9 @@ class GraphsPlugin(base_plugin.TBPlugin):
     # 拿所有nodename的
     def get_all_node_names(self, json_data, request):
         npu_ids, bench_ids = [], []
-        try:
-            batch = request.args.get("batch")
-            step = request.args.get("step")
-        except ValueError:
+        batch = request.args.get("batch")
+        step = request.args.get("step")
+        if batch is None or step is None:
             logger.error('The param "batch" or "step" does not exist or not a valid value')
         # 获取 NPU 和 Bench 数据
         npu_data = self.json_get(json_data, 'NPU')
@@ -200,15 +199,15 @@ class GraphsPlugin(base_plugin.TBPlugin):
         screen = ''
         # 尝试获取 screen_set 和 screen 的值
         for key, value in constants.SCREEN_MAP.items():
-            if request.args.get(key):
+            if key in request.args:
                 screen_set = request.args.get(key)
                 screen = value
                 break  # 找到一个匹配的 key 后跳出循环
 
         if screen == 'precision_index':
             precision_set_str = screen_set.split(',')
-            if '无匹配节点' in precision_set_str:
-                precision_set_str = [p for p in precision_set_str if p != '无匹配节点']
+            if constants.UNMATCHED_NODE_NAME in precision_set_str:
+                precision_set_str = [p for p in precision_set_str if p != constants.UNMATCHED_NODE_NAME]
                 precision_none = 1
             grouped_screen_set = [
                 list(map(float, precision_set_str[i: i + 2])) 
@@ -252,7 +251,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
             # 对于 inaccuracy 是数字类型，检查是否在某个子范围内，精度误差
             if isinstance(inaccuracy, (int, float)):
                 for group in grouped_screen_set:
-                    if all(g is not None for g in group) and group[0] <= inaccuracy <= group[1]:
+                    if len(group) > 1 and all(g is not None for g in group) and group[0] <= inaccuracy <= group[1]:
                         inaccuracy_node_ids.append(node)
                         break  # 找到符合条件的，跳出当前循环
             # 对于非数字的 inaccuracy，检查是否在 grouped_screen_set 中，溢出检测
