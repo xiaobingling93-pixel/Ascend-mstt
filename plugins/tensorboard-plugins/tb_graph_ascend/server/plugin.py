@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Copyright (c) 2024, Huawei Technologies.
+# Copyright (c) 2025, Huawei Technologies.
 # Adapt to the model hierarchical visualization data collected by the msprobe tool
 # ==============================================================================
 """The TensorBoard Graphs plugin."""
@@ -297,9 +297,8 @@ class GraphsPlugin(base_plugin.TBPlugin):
             if matched_node_link_list:
                 result = matched_node_link_list[-1]  # 获取匹配的最后一个节点
                 return http_util.Respond(request, result, "application/json")  # 返回响应
-
-            # 如果没有找到 matched_node_link，继续递归查找上级节点
             else:
+                # 如果没有找到 matched_node_link，继续递归查找上级节点
                 upnode = self.json_get(json_data, constants.PREFIX_MAP[prefix], 'node', node, 'upnode')
                 if upnode:
                     return find_upnode(upnode)  # 递归查找上级节点

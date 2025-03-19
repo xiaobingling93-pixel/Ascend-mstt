@@ -266,9 +266,7 @@ function parsePbtxtFile(
       value = JSON.parse((value as string).replace(/'/g, '"')) as string[];
     } else if (name === 'suggestions') {
       value = JSON.parse((value as string).replace(/'{/g, '{').replace(/}'/g, '}').replace(/'/g, '"')) as object;
-    } else {
-    }
-    if (name === 'attr') {
+    } else if (name === 'attr') {
       const valueObj = JSON.parse((value as string).replace(/'/g, '"')) as object;
       value = Object.keys(valueObj).map((key) => {
         return {

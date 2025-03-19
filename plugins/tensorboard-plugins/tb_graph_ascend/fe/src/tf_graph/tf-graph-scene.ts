@@ -32,14 +32,13 @@ import * as tf_graph_util from '../tf_graph_common/util';
 import './tf-graph-minimap';
 import { template } from './tf-graph-scene.html';
 
+// 限制滚动速度
+const MOUSE_MOVE_DELTA = 800;
 @customElement('tf-graph-scene')
 class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) implements TfGraphScene {
   static readonly template = template;
   @property({ type: Number })
   _step: number = 20;
-
-  @property({ type: Number })
-  _scaleStep: number = 1;
 
   @property({ type: Number })
   mouseX: number = 0;
@@ -395,7 +394,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     let startY;
     let lastTime = 0;
     const smoothFactor = 0.2; // 控制平滑的因子
-    const maxDelta = 800; // 限制滚动速度
+    const maxDelta = MOUSE_MOVE_DELTA; // 限制滚动速度
     const svgElement = this.$.svg as SVGSVGElement;
     svgElement.setAttribute('tabindex', '0');
 
@@ -440,13 +439,11 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       switch (event.key) {
         case 'w':
         case 'W':
-          this._scaleStep = 1.1;
-          this._scaleView(this._scaleStep);
+          this._scaleView(1.1);
           break;
         case 's':
         case 'S':
-          this._scaleStep = 0.9;
-          this._scaleView(this._scaleStep);
+          this._scaleView(0.9);
           break;
         case 'a':
         case 'A':
@@ -560,7 +557,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
 
   fit(): void {
     this._hasRenderHierarchyBeenFitOnce = true;
-    this._scaleStep = 1;
     tf_graph_scene.fit(
       this.$.svg,
       this.$.root,

@@ -144,12 +144,8 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
       .enter()
       .append('li')
       .on('click', (d, i) => {
-        switch (d.action) {
-          case 'expand':
-            sceneElement.fire('parent-node-toggle-expand', { nodeData });
-            break;
-          default:
-            break;
+        if (d.action === 'expand') {
+          sceneElement.fire('parent-node-toggle-expand', { nodeData });
         }
         maybeCloseMenu();
       })
