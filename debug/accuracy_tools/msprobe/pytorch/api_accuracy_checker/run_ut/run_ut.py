@@ -469,12 +469,12 @@ def preprocess_forward_content(forward_content):
     return processed_content
 
 
-# def _run_ut(parser=None):
-#     if not parser:
-#         parser = argparse.ArgumentParser()
-#     _run_ut_parser(parser)
-#     args = parser.parse_args(sys.argv[1:])
-#     run_ut_command(args)
+def _run_ut(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
+    _run_ut_parser(parser)
+    args = parser.parse_args(sys.argv[1:])
+    run_ut_command(args)
     
 
 
@@ -589,6 +589,6 @@ def run_ut_command(args):
     logger.info("UT task completed.")
 
 
-# if __name__ == '__main__':
-#     _run_ut()
-#     logger.info("UT task completed.")
+if __name__ == '__main__':
+    _run_ut()
+    logger.info("UT task completed.")
