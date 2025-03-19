@@ -224,7 +224,3 @@ def main():
     args = parser.parse_args()
     config = prepare_config(args)
     run_parallel_ut(config)
-
-
-if __name__ == '__main__':
-    main()
