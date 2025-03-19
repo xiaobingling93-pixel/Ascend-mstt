@@ -166,7 +166,7 @@ export function selectOrCreateChild(
   if (!child.empty()) {
     return child;
   }
-  let newElement = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+  let newElement = document.createElementNS(SVG_NAMESPACE, tagName);
   if (className instanceof Array) {
     for (let i = 0; i < className.length; i++) {
       newElement.classList.add(className[i]);
