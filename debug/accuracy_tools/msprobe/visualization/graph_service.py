@@ -159,7 +159,7 @@ def _compare_graph_steps(input_param, args):
     bench_steps = sorted(check_and_return_dir_contents(dump_step_b, Const.STEP))
 
     if npu_steps != bench_steps:
-        logger.error('The number of steps in the two runs are different. Unable to match the steps.')
+        logger.error('The number of steps in the two runs is different. Unable to match the steps.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     for folder_step in npu_steps:

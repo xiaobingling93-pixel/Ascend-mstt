@@ -24,7 +24,6 @@ class NodeOp(Enum):
     function_api = 1
     api_collection = 9
 
-
     @staticmethod
     def get_node_op(node_name: str):
         """
@@ -37,5 +36,5 @@ class NodeOp(Enum):
             pattern = op_patterns[index]
             if re.match(pattern, node_name):
                 return op
-        logger.warning(f"Cannot parsing node_name {node_name} into NodeOp, default parsing as module.")
+        logger.warning(f"Cannot parse node_name {node_name} into NodeOp, default parsing as module.")
         return NodeOp.module
