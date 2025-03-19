@@ -100,13 +100,13 @@ class BitNoiseLayer(NpuBaseLayer):
         except Exception:
             logger.warning_on_rank_0(
                 f"[msprobe] Free Benchmark: For {self.api_name}, "
-                f"when calculate maximun value, tensor is changed to float32."
+                f"when calculate the maximum value, the tensor is changed to float32."
             )
             max_val = TorchC.max(TorchC.abs(tensor_obj.to(torch.float32))).item()
         if max_val < abs_tol:
             logger.warning_on_rank_0(
                 f"[msprobe] Free Benchmark: For {self.api_name}, "
-                f"Maximun value is less than the minimun threshold. Cancel add noise."
+                f"maximum value is less than the minimum threshold. Cancel adding noise."
             )
             return False
         return True
