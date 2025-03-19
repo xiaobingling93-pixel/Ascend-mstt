@@ -430,6 +430,7 @@ def _api_precision_compare(parser=None):
     _api_precision_compare_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     _api_precision_compare_command(args)
+    logger.info("Compare task completed.")
 
 
 def _api_precision_compare_command(args):
@@ -457,8 +458,3 @@ def _api_precision_compare_parser(parser):
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The api precision compare task result out path.",
                         required=False)
-
-
-if __name__ == '__main__':
-    _api_precision_compare()
-    logger.info("Compare task completed.")

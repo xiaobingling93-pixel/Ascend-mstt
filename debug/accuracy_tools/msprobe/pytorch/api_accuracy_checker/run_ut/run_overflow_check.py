@@ -161,6 +161,7 @@ def _run_overflow_check(parser=None):
     _run_overflow_check_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     _run_overflow_check_command(args)
+    logger.info("UT task completed.")
 
 
 def _run_overflow_check_command(args):
@@ -175,8 +176,3 @@ def _run_overflow_check_command(args):
         logger.error(f"Set NPU device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
     run_overflow_check(api_info)
-
-
-if __name__ == '__main__':
-    _run_overflow_check()
-    logger.info("UT task completed.")
