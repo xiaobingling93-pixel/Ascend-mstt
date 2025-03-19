@@ -166,7 +166,7 @@ class TestPerturbedLayer(TestCase):
         layer.pre_check(y)
         mock_logger.assert_called_with(
             "[msprobe] Free Benchmark: For test_api_name, "
-            "Maximun value is less than the minimun threshold. Cancel add noise."
+            "maximum value is less than the minimum threshold. Cancel adding noise."
         )
 
     # 对于输入张量，add_noise扰动因子对大于极小值的部分增加一个小值
@@ -212,7 +212,7 @@ class TestPerturbedLayer(TestCase):
         layer.pre_check(y)
         mock_logger.assert_called_with(
             "[msprobe] Free Benchmark: For test_api_name, "
-            "Maximun value is less than the minimun threshold. Cancel add noise."
+            "maximum value is less than the minimum threshold. Cancel adding noise."
         )
 
     # 对于低精度输入、run cpu会升精度在cpu上计算，并会打印日志

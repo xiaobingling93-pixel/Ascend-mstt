@@ -27,6 +27,7 @@ from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.prof_common.logger import get_logger
 from msprof_analyze.prof_common.path_manager import PathManager
 from msprof_analyze.cluster_analyse.cluster_data_preprocess.msprof_data_preprocessor import MsprofDataPreprocessor
+from msprof_analyze.prof_common.file_manager import FileManager
 
 logger = get_logger()
 
@@ -121,7 +122,7 @@ class BaseRecipeAnalysis(ABC):
             result_csv = os.path.join(self.output_path, file_name)
             if isinstance(data, pd.DataFrame):
                 data = convert_unit(data, self.DB_UNIT, self.UNIT)
-                data.to_csv(result_csv, index=index)
+                FileManager.create_csv_from_dataframe(result_csv, data, index=index)
             else:
                 logger.error(f"Unknown dump data type: {type(data)}")
 
@@ -134,13 +135,12 @@ class BaseRecipeAnalysis(ABC):
         template_file = os.path.join(template_path, self.base_dir, filename)
         if replace_dict is None:
             shutil.copy(template_file, output_file_path)
+            os.chmod(output_file_path, Constant.FILE_AUTHORITY)
         else:
-            with open(template_file, 'r') as f:
-                template_content = f.read()
-                for key, value in replace_dict.items():
-                    template_content = template_content.replace(str(key), str(value))
-            with open(output_file_path, 'w') as f:
-                f.write(template_content)
+            template_content = FileManager.read_common_file(template_file)
+            for key, value in replace_dict.items():
+                template_content = template_content.replace(str(key), str(value))
+            FileManager.create_common_file(output_file_path, template_content)
         logger.info(f"Notebook export path is: {output_file_path}")
 
     def add_helper_file(self, helper_file):
@@ -149,6 +149,7 @@ class BaseRecipeAnalysis(ABC):
 
         if helper_file_path is not None:
             shutil.copy(helper_file_path, helper_output_path)
+            os.chmod(helper_output_path, Constant.FILE_AUTHORITY)
 
     def _get_rank_db(self):
         invalid_rank_id = []

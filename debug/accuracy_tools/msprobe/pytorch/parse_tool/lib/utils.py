@@ -264,7 +264,7 @@ class Util:
             match = re_pattern.match(name)
             if not match:
                 continue
-            if extern_pattern != '' and re_pattern.match(extern_pattern) and not re.match(extern_pattern, name):
+            if extern_pattern != '' and re_pattern.match(extern_pattern) and not name.startswith(extern_pattern):
                 continue
             file_list[name] = gen_info_func(name, match, file["root"])
         return file_list

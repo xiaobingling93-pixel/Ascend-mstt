@@ -42,14 +42,6 @@ def load_data_json_file(file_path):
     return load_json_file(file_path).get(GraphConst.DATA_KEY, {})
 
 
-def save_json_file(file_path, data):
-    """
-    保存json文件
-    """
-    with FileOpen(file_path, 'w') as f:
-        f.write(json.dumps(data, indent=4))
-
-
 def get_csv_df(stack_mode, csv_data, compare_mode):
     """
     调用acc接口写入csv
@@ -71,14 +63,6 @@ def str2float(percentage_str):
         return float(percentage_str) / 100
     except (ValueError, AttributeError):
         return 0
-
-
-def is_integer(s):
-    try:
-        int(s)
-        return True
-    except Exception:
-        return False
 
 
 def check_directory_content(input_path):
