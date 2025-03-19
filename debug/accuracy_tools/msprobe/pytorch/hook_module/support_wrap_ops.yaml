@@ -151,7 +151,6 @@ tensor:
   - __eq__
   - __floordiv__
   - __ge__
-  - __getitem__
   - __gt__
   - __iadd__
   - __iand__
