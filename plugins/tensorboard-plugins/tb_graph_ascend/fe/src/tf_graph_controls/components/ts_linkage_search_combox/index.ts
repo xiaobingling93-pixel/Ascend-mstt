@@ -1,0 +1,193 @@
+/* Copyright (c) 2025, Huawei Technologies.
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0  (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import '@vaadin/button';
+import '@vaadin/details';
+import '@vaadin/combo-box';
+import '@vaadin/vaadin-select';
+import '@vaadin/text-field';
+import { NPU_PREFIX, BENCH_PREFIX } from '../../../tf_graph_common/common';
+import { PolymerElement, html } from '@polymer/polymer';
+import { customElement, property, observe } from '@polymer/decorators';
+import '@vaadin/progress-bar';
+import * as tf_graph_render from '../../../tf_graph_common/render';
+import '../tf_search_combox/index';
+@customElement('tf-linkage-search-combox')
+class legend extends PolymerElement {
+  static get shadowRootOptions(): { mode: string } {
+    return { mode: 'open' }; // 确保启用了 Shadow DOM
+  }
+  // 定义模板
+  static get template(): HTMLTemplateElement {
+    return html`
+      <style>
+        :host {
+          --select-border-color: #3b5998;
+        }
+        .condition {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        vaadin-combo-box {
+          flex: 1;
+          font-size: small;
+          width: 100%;
+        }
+
+        vaadin-text-field input {
+          min-height: 0;
+        }
+
+        .result vaadin-combo-box {
+          padding-top: 0;
+        }
+        .vaadin-field-container {
+          width: 100%;
+        }
+        vaadin-combo-box::part(input-field) {
+          background-color: white;
+          border: 1px solid #0d0d0d;
+          height: 30px;
+          border-radius: 0;
+        }
+
+        vaadin-text-field::part(input-field) {
+          background-color: white;
+          border: 1px solid #0d0d0d;
+          height: 30px;
+          border-radius: 0;
+          font-size: 14px;
+        }
+
+        vaadin-select {
+          width: 100px;
+        }
+
+        vaadin-select::part(input-field) {
+          background-color: white;
+          border: 1px solid var(--select-border-color);
+          height: 30px;
+          border-radius: 0;
+        }
+
+        vaadin-select-item {
+          font-size: smaller;
+        }
+      </style>
+      <div class="control-holder">
+        <div class="condition">
+          <vaadin-select
+            label="数据侧"
+            readonly="[[!isCompareGraph]]"
+            items="[[menuSideItem]]"
+            value="{{selectedSide}}"
+          ></vaadin-select>
+          <vaadin-text-field
+            label="节点搜索"
+            value="{{searchText}}"
+            on-change="_onChangeSearchText"
+            clear-button-visible
+          ></vaadin-text-field>
+        </div>
+        <div class="result">
+          <tf-search-combox
+            label="节点列表([[menuItem.length]])"
+            items="[[menuItem]]"
+            selected-value="{{selectedMenuNode}}"
+            on-select-change="[[_onSelectedMenuNode]]"
+          ></tf-search-combox>
+        </div>
+      </div>
+    `;
+  }
+
+  @property({ type: Object })
+  renderHierarchy: tf_graph_render.MergedRenderGraphInfo = {} as any;
+
+  @property({ type: String, notify: true })
+  selectedNode = '';
+
+  @property({ type: Boolean })
+  isCompareGraph: boolean = true;
+
+  @property({ type: Array })
+  menu = [];
+
+  @property({ type: String })
+  selectedMenuNode = '';
+
+  @property({ type: Array })
+  menuItem = [];
+
+  @property({ type: String })
+  searchText = '';
+
+  @property({ type: String })
+  selectedSide = '0';
+  menuSideItem = [
+    { label: '调试侧', value: '0' },
+    { label: '标杆侧', value: '1' },
+  ];
+
+  @observe('selectedSide')
+  _observeSelectSide(): void {
+    if (this.menu) {
+      this.set('menuItem', this.menu[Number(this.selectedSide)]);
+      this.set('searchText', '');
+      this.set('selectedMenuNode', '');
+    }
+  }
+
+  @observe('menu')
+  _observeMenu(): void {
+    this.set('selectedMenuNode', '');
+    this.set('selectedSide', '0');
+    this.set('searchText', '');
+    this.set('menuItem', this.menu[Number(this.selectedSide)]);
+  }
+
+  @observe('renderHierarchy')
+  _observeRenderHierarchy(): void {
+    const isCompareGraphTemp = this.renderHierarchy.bench?.renderedOpNames.some((name: string) =>
+      name.startsWith(BENCH_PREFIX),
+    );
+    this.updateStyles({ '--select-border-color': isCompareGraphTemp ? '#0d0d0d' : 'white' });
+    this.set('isCompareGraph', isCompareGraphTemp);
+  }
+
+  _onSelectedMenuNode = (): void => {
+    const prefix = this.isCompareGraph ? (this.selectedSide === '0' ? NPU_PREFIX : BENCH_PREFIX) : '';
+    const node = prefix + this.selectedMenuNode;
+    this.set('selectedNode', node);
+  };
+
+  _onChangeSearchText(): void {
+    const allNodeItems = this.menu[Number(this.selectedSide)] as Array<string>;
+    if (!this.searchText) {
+      this.set('menuItem', allNodeItems);
+      return;
+    }
+    const searchTextLower = this.searchText.trim().toLowerCase(); // 将搜索文本转换为小写
+    const filterItem = allNodeItems?.filter((item: string) => {
+      return item.toLowerCase().indexOf(searchTextLower) !== -1; // 将目标文本转换为小写
+    });
+    this.set('selectedMenuNode', '');
+    this.set('menuItem', filterItem);
+  }
+}

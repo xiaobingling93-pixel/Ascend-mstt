@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+.npmrc
+yarn.lock
+dist/
+build/
+tb_graph_ascend.egg-info/
+__pycache__/
+/server/static/index.html
