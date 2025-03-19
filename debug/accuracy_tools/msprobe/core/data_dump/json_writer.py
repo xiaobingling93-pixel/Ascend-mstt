@@ -16,12 +16,14 @@
 import csv
 import os
 import copy
-import numpy as np
+import threading
 
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
+
+lock = threading.Lock()
 
 
 class DataWriter:
@@ -90,28 +92,32 @@ class DataWriter:
             self.write_json()
 
     def update_data(self, new_data):
-        if not isinstance(new_data, dict) or len(new_data.keys()) != 1:
-            logger.warning(f"The data info({new_data}) should be a dict with only one outer key.")
-            return
-        dump_data = self.cache_data.get(Const.DATA)
-        if not isinstance(dump_data, dict):
-            logger.warning(f"The dump data({dump_data}) should be a dict.")
-            return
+        with lock:
+            if not isinstance(new_data, dict) or len(new_data.keys()) != 1:
+                logger.warning(f"The data info({new_data}) should be a dict with only one outer key.")
+                return
+            dump_data = self.cache_data.get(Const.DATA)
+            if not isinstance(dump_data, dict):
+                logger.warning(f"The dump data({dump_data}) should be a dict.")
+                return
 
-        key = next(iter(new_data.keys()))
-        if key in dump_data:
-            dump_data.get(key).update(new_data.get(key))
-        else:
-            dump_data.update(new_data)
+            key = next(iter(new_data.keys()))
+            if key in dump_data:
+                dump_data.get(key).update(new_data.get(key))
+            else:
+                dump_data.update(new_data)
 
     def update_stack(self, new_data):
-        self.cache_stack.update(new_data)
+        with lock:
+            self.cache_stack.update(new_data)
 
     def update_construct(self, new_data):
-        self.cache_construct.update(new_data)
+        with lock:
+            self.cache_construct.update(new_data)
 
     def update_debug(self, new_data):
-        self.cache_debug['data'].update(new_data)
+        with lock:
+            self.cache_debug['data'].update(new_data)
 
     def write_data_json(self, file_path):
         logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
@@ -127,14 +133,15 @@ class DataWriter:
         save_json(file_path, self.cache_debug, indent=1)
 
     def write_json(self):
-        if self.cache_data:
-            self.write_data_json(self.dump_file_path)
-        if self.cache_stack:
-            self.write_stack_info_json(self.stack_file_path)
-        if self.cache_construct:
-            self.write_construct_info_json(self.construct_file_path)
-        if self.cache_debug:
-            self.write_debug_info_json(self.debug_file_path)
+        with lock:
+            if self.cache_data:
+                self.write_data_json(self.dump_file_path)
+            if self.cache_stack:
+                self.write_stack_info_json(self.stack_file_path)
+            if self.cache_construct:
+                self.write_construct_info_json(self.construct_file_path)
+            if self.cache_debug:
+                self.write_debug_info_json(self.debug_file_path)
 
     def fill_stack_tensor_data(self):
         self.process_stat_data_recursive(self.cache_data)
