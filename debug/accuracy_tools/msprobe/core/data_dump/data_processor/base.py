@@ -252,8 +252,8 @@ class BaseDataProcessor:
 
     @classmethod
     def recursive_apply_transform(cls, args, transform, depth=0) -> Union[dict, list, None]:
-        if depth > Const.MAX_DEPTH:
-            logger.error(f"The maximum depth of recursive transform, {Const.MAX_DEPTH} is reached.")
+        if depth > Const.DUMP_MAX_DEPTH:
+            logger.error(f"The maximum depth of recursive transform, {Const.DUMP_MAX_DEPTH} is reached.")
             raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(args, cls.get_special_types()):
             arg_transform = transform(args, cls._recursive_key_stack)
