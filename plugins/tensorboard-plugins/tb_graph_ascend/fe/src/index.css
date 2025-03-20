@@ -1,0 +1,17 @@
+html,
+body,
+graph-app {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, sans-serif;
+}
+
+vaadin-combo-box-scroller {
+  overflow: scroll;
+  font-size: 14px;
+}
+
+vaadin-combo-box-item {
+  overflow: unset;
+  font-size: 14px;
+}

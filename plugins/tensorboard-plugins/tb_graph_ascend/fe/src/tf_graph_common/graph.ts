@@ -1,0 +1,1248 @@
+/* Copyright 2015 The TensorFlow Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the 'License');
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an 'AS IS' BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Copyright (c) 2025, Huawei Technologies.
+Adapt to the model hierarchical visualization data collected by the msprobe tool
+==============================================================================*/
+import { graphlib } from 'dagre';
+import * as _ from 'lodash';
+import * as tb_debug from '../tb_debug';
+import { ProgressTracker } from './common';
+import { Hierarchy } from './hierarchy';
+import * as tf_graph_proto from './proto';
+import * as tf_graph_util from './util';
+import { safeJSONParse } from '../utils';
+
+export const NAMESPACE_DELIM = '/';
+export const ROOT_NAME = '__root__';
+export const FUNCTION_LIBRARY_NODE_PREFIX = '__function_library__';
+/** Attribute key used for storing attributes that are too large. */
+export const LARGE_ATTRS_KEY = '_too_large_attrs';
+/** Precision attributes are used to represent the color of nodes. */
+export const NODE_TYPE = 'node_type';
+export const PRECISION_INDEX = 'precision_index';
+export const MATCHED_NODE_LINK = 'matched_node_link';
+export const OVERFLOW_LEVEL = 'overflow_level';
+/**
+ * Maximum allowed size in bytes, before the attribute is considered large
+ * and filtered out of the graph.
+ */
+export const LIMIT_ATTR_SIZE = 1024;
+// Separator between the source and the destination name of the edge.
+export const EDGE_KEY_DELIM = '--';
+export enum GraphType {
+  FULL = 0,
+  EMBEDDED = 1,
+  META = 2,
+  SERIES = 3,
+  CORE = 4,
+  SHADOW = 5,
+  BRIDGE = 6,
+  EDGE = 7,
+}
+export enum NodeType {
+  META = 0,
+  OP = 1,
+  SERIES = 2,
+  BRIDGE = 3,
+  ELLIPSIS = 4,
+  MULTI_COLLECTION = 8,
+  API_LIST = 9,
+}
+/** Indicates if a node is to be included in the main graph when rendered. */
+export enum InclusionType {
+  INCLUDE = 0,
+  EXCLUDE = 1,
+  UNSPECIFIED = 2,
+}
+/** Indicates if a series is to be grouped in the graph when rendered. */
+export enum SeriesGroupingType {
+  GROUP = 0,
+  UNGROUP = 1,
+}
+/** Attribute key reserved for the shapes of the output tensors. */
+const OUTPUT_SHAPES_KEY = '_output_shapes';
+/**
+ * A BaseEdge is the label object (in the graphlib sense) for an edge in the
+ * original, full graph produced after parsing. Subsequent graphs, like those
+ * which belong to Metanodes, should not use BaseEdge objects, but instead
+ * contain Metaedges (which in turn may contain any number of BaseEdges).
+ */
+export interface BaseEdge {
+  isReferenceEdge: boolean;
+  /** The index of the output tensor of the source node. */
+  outputTensorKey: string;
+  attr?: {
+    [key: string]: any;
+  };
+  v?: string;
+  w?: string;
+}
+// Including both the NPU and benchmark slimgraph.
+export interface MergedSlimGraph {
+  npu: SlimGraph;
+  bench?: SlimGraph;
+}
+/**
+ * A SlimGraph is inspired by graphlib.Graph, but having only the functionality
+ * that we need.
+ */
+export class SlimGraph {
+  nodes: {
+    [nodeName: string]: OpNode;
+  };
+  metaNodes: {
+    [nodeName: string]: Metanode;
+  };
+  edges: BaseEdge[];
+  constructor() {
+    this.nodes = {};
+    this.metaNodes = {};
+    this.edges = [];
+  }
+}
+export interface NormalizedInput {
+  name: string;
+  /** The index of the output tensor of the source node. */
+  outputTensorKey: string;
+}
+export interface BuildParams {
+  enableEmbedding: boolean;
+  inEmbeddingTypes: string[];
+  outEmbeddingTypes: string[];
+  refEdges: {
+    [inputEdge: string]: boolean;
+  };
+}
+/**
+ * The most basic information about a node in the hierarchical graph.
+ */
+export interface Node {
+  /** The name of the node, used frequently to look up nodes by name. */
+  name: string;
+  /** Which type of node this is. */
+  type: NodeType;
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  suggestions: {
+    [key: string]: string;
+  };
+  /**
+   * Whether this node is a type that may contain other nodes. Those types
+   * should extend from GroupNode.
+   *
+   * For an OpNode, isGroupNode will be false, even though it may have
+   * embeddings. These embedding Nodes will have their parentNode set to the
+   * OpNode. However, embeddings are later rendered as annotations, not as
+   * children to be made visible on expansion (like a Metanode or SeriesNode).
+   */
+  isGroupNode: boolean;
+  /**
+   * The number of nodes this node represents. For OpNodes, this will be 1, and
+   * for GroupNodes it will be a count of the total number of descendents it
+   * contains.
+   */
+  cardinality: number;
+  /**
+   * The Node which is this Node's parent. This is of type Node and not
+   * GroupNode because of embeddings, which will have a parent OpNode.
+   */
+  parentNode: Node | null;
+  /** If the node is to be included or excluded from the main graph when
+   *  rendered. Defaults to UNSPECIFIED, which means that the rendering
+   *  algorithm determines if it will be included or not. Then can be set to
+   *  INCLUDE or EXCLUDE manually by the user.
+   */
+  include: InclusionType;
+  /**
+   * Node attributes specify customizable visual aspects of a node and
+   * application-specific metadata associated with a node. The name
+   * 'nodeAttributes' is meant to avoid naming-conflicts with the 'attr' in
+   * subclasses of Node.
+   */
+  nodeAttributes: {
+    [key: string]: any;
+  };
+}
+export type TensorShape = number[];
+export interface OpNode extends Node {
+  op: string;
+  attr: {
+    key: string;
+    value: any;
+  }[];
+  inputs: NormalizedInput[];
+  inEmbeddings: OpNode[];
+  outEmbeddings: OpNode[];
+  // The name of the SeriesNode that can contain this node in its series.
+  // If there is no such node, then this is null.
+  owningSeries: string;
+  /**
+   * Object mapping output channel string to tensor shapes. The output channel
+   * is a string rather than a number because within TensorFlow functions, an
+   * output may be a cross between an output variable and a number (combined
+   * with a colon) such as "foo:2" rather than just a number alone.
+   *
+   * Each tensor shape is an array of numbers, or null. Details:
+   * - null means unknown rank, and therefore entire shape is unknown.
+   * - [4, 2, 1] means rank-3 tensor of size 4x2x1.
+   * - [] means a scalar (rank-0 tensor).
+   * - [1] means rank-1 tensor of size 1 (not the same as scalar).
+   * - [5, -1, 3] means rank-3 tensor of shape is 5x?x3. The size
+   *       of the middle dimension is unknown (encoded as -1).
+   */
+  outputShapes: {
+    [key: string]: TensorShape;
+  };
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  stackData: [];
+  matchedNodeLink: [];
+  suggestions: {
+    [key: string]: string;
+  };
+}
+export interface BridgeNode extends Node {
+  /**
+   * Whether this bridge node represents edges coming into its parent node.
+   */
+  inbound: boolean;
+}
+/**
+ * A node that is used when there are more than the maximum number of allowed
+ * annotations hanging off of a node.  This node represents an ellipsis
+ * annotation, indicating a number of additional annotations.
+ */
+export interface EllipsisNode extends Node {
+  /**
+   * The number of nodes this ellipsis represents.
+   */
+  numMoreNodes: number;
+  /**
+   * Sets the number of nodes this ellipsis represents and changes the node
+   * name accordingly.
+   */
+  setNumMoreNodes: (numNodes: number) => void;
+}
+export interface GroupNode extends Node {
+  /**
+   * The metagraph contains nodes and metaedges between the immediate children
+   * of this group. The node label objects may be other GroupNodes (like
+   * SeriesNodes and Metanodes) or individual OpNodes. All edge label objects
+   * are Metaedges, each of which contains references to the original
+   * BaseEdge(s) from which it was created.
+   */
+  metagraph: graphlib.Graph;
+  /**
+   * The bridgegraph contains only edges which link immediate children of this
+   * group with nodes outside of the metagraph. As in the metagraph, all edge
+   * label objects are Metaedges which contain references to the original
+   * BaseEdge(s) that contribute to it.
+   *
+   * For a Metaedge in the bridgegraph, its external endpoint will be the same
+   * as the metagraph edge from which it came. This is most easily explained
+   * by example.
+   *
+   * Consider an original graph that contains a BaseEdge A/B/C->Z/Y/X.
+   *
+   *     +-------+    (BaseEdge)     +-------+
+   *     | A/B/C |>----------------->| Z/Y/X |
+   *     +-------+                   +-------+
+   *
+   * When we construct the Root's metagraph, it will contain nodes for A and Z,
+   * and a Metaedge A->Z. The A->Z Metaedge will contain the original BaseEdge
+   * A/B/C->Z/Y/X in its baseEdgeGraph. The Root's bridgegraph will always be
+   * empty.
+   *
+   *     +---+    (Root.metagraph edge)    +---+
+   *     | A |>--------------------------->| Z |
+   *     +---+                             +---+
+   *
+   * Now consider the Metanode A. Its metagraph will contain a Metanode for A/B
+   * and no edges. A's bridgegraph will have one Metaedge from A/B->Z, which
+   * was derived from the Root's Metaedge A->Z. That Metaedge will contain the
+   * original BaseEdge in its baseEdgeGraph.
+   *
+   *     +---------+
+   *     | A       |
+   *     |  +---+  |   (A.bridgegraph edge)    +---+
+   *     |  | B |>---------------------------->| Z |
+   *     |  +---+  |                           +---+
+   *     +---------+
+   *
+   * Finally, consider the Metanode A/B. Its metagraph will contain a Metanode
+   * for A/B/C and again no edges. A/B's bridgegraph will have one Metaedge
+   * from A/B/C->Z, which was derived from A's bridgegraph Metaedge A/B->Z.
+   * As before, the A/B/C->Z Metaedge will contain the original BaseEdge in its
+   * baseEdgeGraph.
+   *
+   *     +---------------+
+   *     | A             |
+   *     |  +---------+  |
+   *     |  | B       |  |
+   *     |  |  +---+  |  |   (A/B.bridgegraph edge)      +---+
+   *     |  |  | C |>----------------------------------->| Z |
+   *     |  |  +---+  |  |                               +---+
+   *     |  +---------+  |
+   *     +---------------+
+   *
+   * Likewise, under the Metanode Z and Z/Y, to compute the bridgegraph, we'll
+   * end up with Metaedges A->Z/Y and A->Z/Y/X respectively. So the original
+   * BaseEdge A/B/C->Z/Y/X becomes four different Metaedges in four different
+   * bridgegraphs:
+   *
+   *   + A/B->Z in GroupNode A's bridgegraph,
+   *   + A/B/C->Z in GroupNode A/B's bridgegraph,
+   *   + A->Z/Y in GroupNode Z's bridgegraph, and
+   *   + A->Z/Y/X in GroupNode Z/Y's bridgegraph.
+   *
+   * Considering any BaseEdge then, if N is the number of path segments in the
+   * source and M is the number of path segments in the destination, then the
+   * total number of bridgegraph edges you could create would be (N-1)(M-1).
+   *
+   * For this reason, it is computationally expensive to generate all the
+   * bridgegraphs for all the Metanodes, and instead they should be computed
+   * on demand as needed.
+   */
+  bridgegraph: graphlib.Graph;
+  /**
+   * Flag indicating whether this GroupNode's metagraph contains any edges that
+   * are not control edges. Used to quickly determine how to draw a collapsed
+   * series (vertically or horizontally).
+   */
+  hasNonControlEdges: boolean;
+}
+export interface Metanode extends GroupNode {
+  depth: number;
+  templateId: string;
+  opHistogram: {
+    [op: string]: number;
+  };
+  attr: {
+    key: string;
+    value: any;
+  }[];
+  // The name of the function this metanode is associated with if any.
+  associatedFunction: string;
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  stackData: [];
+  matchedNodeLink: [];
+  suggestions: {
+    [key: string]: string;
+  };
+  getFirstChild: () => GroupNode | OpNode;
+  getRootOp: () => OpNode;
+  /** Return name of all leaves inside a metanode. */
+  leaves: () => string[];
+}
+export interface SeriesNode extends GroupNode {
+  hasLoop: boolean;
+  prefix: string;
+  suffix: string;
+  clusterId: number;
+  ids: number[];
+  parent: string;
+}
+export class EllipsisNodeImpl implements EllipsisNode {
+  name: string;
+  numMoreNodes: number;
+  type: NodeType;
+  isGroupNode: boolean;
+  cardinality: number;
+  parentNode: Node | null;
+  include: InclusionType;
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  suggestions: {
+    [key: string]: string;
+  };
+  nodeAttributes: {
+    [key: string]: any;
+  };
+
+  /**
+   * Constructs a new ellipsis annotation node.
+   *
+   * @param numNodes The number of additional annotations this node represents.
+   */
+  constructor(numNodes: number) {
+    this.type = NodeType.ELLIPSIS;
+    this.isGroupNode = false;
+    this.cardinality = 1;
+    this.parentNode = null;
+    this.setNumMoreNodes(numNodes);
+    this.include = InclusionType.UNSPECIFIED;
+  }
+
+  setNumMoreNodes(numNodes: number): void {
+    this.numMoreNodes = numNodes;
+    this.name = `... ${numNodes} more`;
+  }
+}
+/**
+ * A label object for nodes in the full graph and leaf nodes in the render
+ * graph.
+ */
+export class OpNodeImpl implements OpNode {
+  name: string;
+  op: string;
+  attr: {
+    key: string;
+    value: any;
+  }[];
+  inputs: NormalizedInput[];
+  type: NodeType;
+  isGroupNode: boolean;
+  cardinality: number;
+  inEmbeddings: OpNode[];
+  outEmbeddings: OpNode[];
+  parentNode: Node | null;
+  include: InclusionType;
+  owningSeries: string;
+  outputShapes: {
+    [key: string]: TensorShape;
+  };
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  stackData: [];
+  matchedNodeLink: [];
+  suggestions: {
+    [key: string]: string;
+  };
+  nodeAttributes: {
+    [key: string]: any;
+  };
+
+  /**
+   * Constructs a new Op node.
+   *
+   * @param rawNode The raw node.
+   */
+  constructor(rawNode: tf_graph_proto.NodeDef) {
+    this.op = rawNode.op;
+    this.name = rawNode.name;
+    this.attr = rawNode.attr;
+    // An array of normalized inputs that denote the incoming edges to
+    // the current node. Each input contains the normalized name of the
+    // source node, whether it has a number part and whether it is a
+    // control dependency.
+    this.inputs = normalizeInputs(rawNode.input);
+    this.outputShapes = extractOutputShapes(rawNode.attr);
+    // additional properties
+    this.type = NodeType.OP;
+    this.isGroupNode = false;
+    this.cardinality = 1;
+    this.inEmbeddings = [];
+    this.outEmbeddings = [];
+    this.parentNode = null;
+    this.include = InclusionType.UNSPECIFIED;
+    this.owningSeries = '';
+    this.inputData = rawNode.input_data;
+    this.outputData = rawNode.output_data;
+    this.suggestions = rawNode.suggestions;
+    this.stackData = rawNode.stack_info;
+    this.matchedNodeLink = rawNode.matched_node_link;
+    this.nodeAttributes = {};
+  }
+}
+
+export function createMetanode(name: string, opt = {}): Metanode {
+  return new MetanodeImpl(name, opt);
+}
+
+export class MetanodeImpl implements Metanode {
+  name: string;
+  type: NodeType;
+  depth: number;
+  isGroupNode: boolean;
+  cardinality: number;
+  metagraph: graphlib.Graph;
+  bridgegraph: graphlib.Graph;
+  templateId: string;
+  opHistogram: {
+    [op: string]: number;
+  };
+  parentNode: Node | null;
+  hasNonControlEdges: boolean;
+  include: InclusionType;
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  stackData: [];
+  matchedNodeLink: [];
+  suggestions: {
+    [key: string]: string;
+  };
+  nodeAttributes: {
+    [key: string]: any;
+  };
+  associatedFunction: string;
+  attr: {
+    key: string;
+    value: any;
+  }[];
+
+  /** A label object for meta-nodes in the graph hierarchy */
+  constructor(name: string, opt = {}) {
+    this.name = name;
+    this.type = NodeType.META;
+    /** number of levels under this group */
+    this.depth = 1;
+    this.isGroupNode = true;
+    /** # of leaf nodes (including embedded ones) */
+    this.cardinality = 0;
+    /** graph contains metanodes, nodes, edges
+     * and metaedges for main items within this metanode
+     */
+    this.metagraph = createGraph<GroupNode | OpNode, Metaedge>(name, GraphType.META, opt);
+    /** bridgegraph must be constructed lazily-see hierarchy.getBridgegraph() */
+    this.bridgegraph = null;
+    /**
+     * A dictionary that count ops type of nodes in this metanode
+     * (op type => count).
+     */
+    this.opHistogram = {};
+    /** unique id for a metanode of similar subgraph */
+    this.templateId = '';
+    /** Metanode which contains this node, if any */
+    this.parentNode = null;
+    this.hasNonControlEdges = false;
+    this.include = InclusionType.UNSPECIFIED;
+    this.associatedFunction = '';
+    this.attr = [];
+    this.inputData = {};
+    this.outputData = {};
+    this.stackData = [];
+    this.matchedNodeLink = [];
+    this.suggestions = {};
+    this.nodeAttributes = {};
+  }
+
+  getFirstChild(): GroupNode | OpNode {
+    return this.metagraph.node(this.metagraph.nodes()[0]) as any;
+  }
+
+  /**
+   * Returns the op node associated with the metanode.
+   * For example, if the metanode is 'sgd', the associated
+   * op node is sgd/(sgd).
+   */
+  getRootOp(): OpNode {
+    let nameSplit = this.name.split('/');
+    let rootOpName = `${this.name}/(${nameSplit[nameSplit.length - 1]})`;
+    return this.metagraph.node(rootOpName) as any;
+  }
+
+  /**
+   * Return an array of the names of all the leaves (non-GroupNodes) inside
+   * this metanode. This performs a breadth-first search of the tree, so
+   * immediate child leaves will appear earlier in the output array than
+   * descendant leaves.
+   */
+  leaves(): string[] {
+    let leaves: string[] = [];
+    let queue = [this as Node];
+    let metagraph; // Defined here due to a limitation of ES6->5 compilation.
+    while (queue.length) {
+      let node = queue.shift();
+      if (node?.isGroupNode) {
+        metagraph = (<GroupNode>node).metagraph;
+        _.each(metagraph.nodes(), (name) => queue.push(metagraph.node(name)));
+      } else {
+        leaves.push(node?.name ?? '');
+      }
+    }
+    return leaves;
+  }
+}
+
+export interface Metaedge {
+  /**
+   * Stores the original BaseEdges represented by this Metaedge.
+   */
+  baseEdgeList: BaseEdge[];
+  /**
+   * Whether this edge represents a relationship that is inbound (or outbound)
+   * to the object which contains this information. For example, in a Metanode's
+   * bridgegraph, each edge connects an immediate child to something outside
+   * the Metanode. If the destination of the edge is inside the Metanode, then
+   * its inbound property should be true. If the destination is outside the
+   * Metanode, then its inbound property should be false.
+   *
+   * The property is optional because not all edges can be described as
+   * inbound/outbound. For example, in a Metanode's metagraph, all of the edges
+   * connect immediate children of the Metanode. None should have an inbound
+   * property, or they should be null/undefined.
+   */
+  inbound?: boolean;
+  /**
+   * Number of regular edges (not control dependency edges).
+   */
+  numRegularEdges: number;
+  /**
+   * Number of reference edges, which is an edge to an operation
+   * that takes a reference to its input and changes its value.
+   */
+  numRefEdges: number;
+  /**
+   * Total size (number of units) of all the tensors flowing through this edge.
+   */
+  totalSize: number;
+  addBaseEdge: (edge: BaseEdge, h: Hierarchy) => void;
+  v?: string;
+  w?: string;
+}
+
+export function createMetaedge(v: string, w: string): Metaedge {
+  return new MetaedgeImpl(v, w);
+}
+
+/**
+ * A label object for edges between metanodes of subgraphs in the render graph.
+ */
+export class MetaedgeImpl implements Metaedge {
+  v: string;
+  w: string;
+  baseEdgeList: BaseEdge[];
+  inbound: boolean;
+  numRegularEdges: number;
+  numRefEdges: number;
+  totalSize: number;
+  constructor(v: string, w: string) {
+    this.v = v;
+    this.w = w;
+    this.baseEdgeList = [];
+    this.inbound = false;
+    this.numRegularEdges = 0;
+    this.numRefEdges = 0;
+    this.totalSize = 0;
+  }
+
+  addBaseEdge(edge: BaseEdge, h: Hierarchy): void {
+    this.baseEdgeList.push(edge);
+    this.numRegularEdges += 1;
+    if (edge.isReferenceEdge) {
+      this.numRefEdges += 1;
+    }
+    // Compute the size of the tensor flowing through this
+    // base edge.
+    this.totalSize += (safeJSONParse(edge.outputTensorKey) as number[]).reduce((accumulated, currSize) => {
+      let currSizeNew = currSize;
+      if (currSize === -1) {
+        currSizeNew = 1;
+      }
+      return accumulated * currSizeNew;
+    }, 1);
+    h.maxMetaEdgeSize = Math.max(h.maxMetaEdgeSize, this.totalSize);
+  }
+}
+export function createSeriesNode(
+  prefix: string,
+  suffix: string,
+  parent: string,
+  clusterId: number,
+  name: string,
+  graphOptions: LabeledGraphOptions,
+): SeriesNode {
+  return new SeriesNodeImpl(prefix, suffix, parent, clusterId, name, graphOptions);
+}
+
+export function getSeriesNodeName(
+  prefix: string,
+  suffix: string,
+  parent: string,
+  startId?: number,
+  endId?: number,
+): string {
+  let numRepresentation = `${typeof startId !== 'undefined' && typeof endId !== 'undefined' ? `[${startId}-${endId}]` : '#'}`;
+  let pattern = prefix + numRepresentation + suffix;
+  return `${parent ? `${parent}/` : ''}${pattern}`;
+}
+
+class SeriesNodeImpl implements SeriesNode {
+  name: string;
+  type: NodeType;
+  hasLoop: boolean;
+  prefix: string;
+  suffix: string;
+  clusterId: number;
+  ids: number[];
+  parent: string;
+  isGroupNode: boolean;
+  cardinality: number;
+  metagraph: graphlib.Graph;
+  bridgegraph: graphlib.Graph;
+  parentNode: Node | null;
+  hasNonControlEdges: boolean;
+  include: InclusionType;
+  inputData: {
+    [key: string]: any;
+  };
+  outputData: {
+    [key: string]: any;
+  };
+  stackData: [];
+  matchedNodeLink: [];
+  suggestions: {
+    [key: string]: string;
+  };
+  nodeAttributes: {
+    [key: string]: any;
+  };
+
+  constructor(
+    prefix: string,
+    suffix: string,
+    parent: string,
+    clusterId: number,
+    name: string,
+    graphOptions: LabeledGraphOptions,
+  ) {
+    this.name = name || getSeriesNodeName(prefix, suffix, parent);
+    this.type = NodeType.SERIES;
+    this.hasLoop = false;
+    this.prefix = prefix;
+    this.suffix = suffix;
+    this.clusterId = clusterId;
+    this.ids = [];
+    this.parent = parent;
+    this.isGroupNode = true;
+    this.cardinality = 0;
+    this.metagraph = createGraph<Metanode, Metaedge>(name, GraphType.SERIES, graphOptions);
+    // bridgegraph must be constructed lazily-see hierarchy.getBridgegraph()
+    this.bridgegraph = null;
+    this.parentNode = null;
+    this.hasNonControlEdges = false;
+    this.include = InclusionType.UNSPECIFIED;
+  }
+}
+
+/**
+ * Extracts the shapes of the output tensors from the attr property in the
+ * node proto.
+ */
+// tslint:disable-next-line:no-any
+function extractOutputShapes(
+  attr: Array<{
+    key: string;
+    value: any;
+  }>,
+): {
+  [key: string]: TensorShape;
+} {
+  let result = {};
+  // We don't know anything about the output tensors.
+  if (!attr) {
+    return result;
+  }
+  for (let i = 0; i < attr.length; i++) {
+    let { key, value } = attr[i];
+    if (key === OUTPUT_SHAPES_KEY) {
+      if (!value.list || !value.list.shape) {
+        // The OUTPUT_SHAPES_KEY lacks a value. We know nothing about the shape.
+        return {};
+      }
+      // Map all output tensors into array of numbers denoting their shape.
+      result = value.list.shape.map((shape) => {
+        if (shape.unknown_rank) {
+          // This output tensor is of unknown rank. We don't know if it is a
+          // scalar, or a tensor, or of what shape it is.
+          return null;
+        }
+        if (shape.dim == null || (shape.dim.length === 1 && shape.dim[0].size == null)) {
+          // This output tensor is a scalar.
+          return [];
+        }
+        // This output tensor has a known rank. Map each dimension size
+        // into a number.
+        return shape.dim.map((dim) => {
+          // Size can be -1 if this particular dimension is unknown.
+          // If we actually have a 0-dimension tensor `dim.size` returns null,
+          // so we default to 0 in this case to avoid upstream null-handling
+          // issues.
+          return dim.size || 0;
+        });
+      });
+      // Since we already processed it, remove the entry from the attribute
+      // list (saves memory).
+      attr.splice(i, 1);
+      return result;
+    }
+  }
+  // We didn't find OUTPUT_SHAPES_KEY in attributes, so we don't know anything
+  // about the output tensors.
+  return result;
+}
+
+/**
+ * Matches node name that encodes output tensor name and/or its index.
+ * - <node_name>:<tensor_index>
+ * - <node_name>:<tensor_name>:<tensor_index>
+ */
+const INPUT_NAME_PART_MATCHER = /^(?<name>[^:]+):(?<type>\w+:)?(?<id>\d+)$/;
+/**
+ * Normalizes the inputs and extracts associated metadata:
+ * 1) Inputs can contain a colon followed by a suffix of characters.
+ *    That suffix may be a single number (e.g. inputName:1) or several word
+ *    characters separated from a number by a colon (e.g. inputName:foo:1). The
+ *    latter case is used to denote inputs and outputs of functions.
+ * 2) Control dependency inputs contain caret at the beginning and we
+ *    remove this and annotate the edge as a control dependency.
+ * @param inputs Array of unnormalized names of input nodes.
+ */
+function normalizeInputs(inputs?: string[]): NormalizedInput[] {
+  const normalizedInputs: NormalizedInput[] = [];
+  let lastName: string | null = null;
+  for (let inputName of inputs ?? []) {
+    let name = inputName;
+    let outputTensorKey = '0';
+    const match = inputName.includes(':') && inputName.match(INPUT_NAME_PART_MATCHER);
+    if (match) {
+      // The output string consists of optionally several characters and a number
+      // separated by a colon.
+      name = match[1];
+      outputTensorKey = match[2];
+    }
+
+    if (lastName !== name) {
+      lastName = name;
+      normalizedInputs.push({
+        name: name,
+        outputTensorKey: outputTensorKey,
+      });
+    }
+  }
+  return normalizedInputs;
+}
+
+function addEdgeToGraphByAttr(graph: SlimGraph, node: OpNode | Metanode, edgeInfo: any): void {
+  const { shape, source, target, ...attr } = edgeInfo;
+  // Don't allow loops in the graph.
+  const isTargetAndSourceEmpty = !target && !source;
+  const isNodeRelated = edgeInfo.target === node.name || edgeInfo.source === node.name;
+  if (isTargetAndSourceEmpty || isNodeRelated) {
+    return;
+  }
+  let outputTensorKey = shape;
+  if (!shape || shape === 'N/A') {
+    outputTensorKey = '[]';
+  }
+  const edge = {
+    v: !!target ? node.name : source,
+    w: target || node.name,
+    outputTensorKey,
+    isReferenceEdge: false,
+    attr,
+  };
+  if (!graph.edges.find((item) => JSON.stringify(item) === JSON.stringify(edge))) {
+    graph.edges.push(edge);
+  }
+}
+
+export const DefaultBuildParams: BuildParams = {
+  enableEmbedding: true,
+  inEmbeddingTypes: ['Const'],
+  outEmbeddingTypes: ['^[a-zA-Z]+Summary$'],
+  // This is the whitelist of inputs on op types that are considered
+  // reference edges. "Assign 0" indicates that the first input to
+  // an OpNode with operation type "Assign" is a reference edge.
+  refEdges: {
+    'Assign 0': true,
+    'AssignAdd 0': true,
+    'AssignSub 0': true,
+    'assign 0': true,
+    'assign_add 0': true,
+    'assign_sub 0': true,
+    'count_up_to 0': true,
+    'ScatterAdd 0': true,
+    'ScatterSub 0': true,
+    'ScatterUpdate 0': true,
+    'scatter_add 0': true,
+    'scatter_sub 0': true,
+    'scatter_update 0': true,
+  },
+};
+
+export function build(
+  graphDef: tf_graph_proto.GraphDef,
+  params: BuildParams,
+  tracker?: ProgressTracker,
+): Promise<SlimGraph> {
+  /**
+   * A dictionary that maps each in-embedding node name to the node
+   * object.
+   */
+  let inEmbedding: {
+    [nodeName: string]: OpNode;
+  } = {};
+  /**
+   * A dictionary that maps each out-embedding node name to the node
+   * object.
+   */
+  let outEmbedding: {
+    [nodeName: string]: OpNode;
+  } = {};
+  /**
+   * A dictionary that maps each node name to an array of the node's
+   * out-embedding node label objects.
+   */
+  let outEmbeddings: {
+    [inputName: string]: OpNode[];
+  } = {};
+  let isInEmbeddedPred = getEmbedPredicate(params.inEmbeddingTypes);
+  let isOutEmbeddedPred = getEmbedPredicate(params.outEmbeddingTypes);
+  let embeddingNodeNames: string[] = [];
+  let rawNodes = graphDef.node;
+  /**
+   * A list of all the non-embedding node names which appear in the processed
+   * list of raw nodes. Here we pre-allocate enough room for all the rawNodes,
+   * even though there will some number of embeddings. The excess array length
+   * is spliced off later.
+   *
+   * Experimentation shows that around 30% of the array will go unused, and
+   * even for very large networks that amounts to less than 10k spaces.
+   */
+  let nodeNames = new Array<string>(rawNodes.length);
+  return tf_graph_util
+    .runAsyncTask(
+      'Normalizing names',
+      30,
+      () => {
+        let opNodes = new Array<OpNode | Metanode>(rawNodes.length);
+        let index = 0;
+        const processRawNode = (rawNode: tf_graph_proto.NodeDef): OpNodeImpl | MetanodeImpl => {
+          if (!rawNode.isLeaf) {
+            let metaNode = new MetanodeImpl(rawNode.name);
+            metaNode.attr = rawNode.attr;
+            metaNode.nodeAttributes._order = index;
+            if (rawNode.matched_node_link && rawNode.matched_node_link.length > 0) {
+              metaNode.nodeAttributes._linked_node = rawNode.matched_node_link;
+            }
+            metaNode.inputData = rawNode.input_data;
+            metaNode.outputData = rawNode.output_data;
+            metaNode.stackData = rawNode.stack_info;
+            metaNode.matchedNodeLink = rawNode.matched_node_link;
+            metaNode.suggestions = rawNode.suggestions;
+            if (Number(rawNode.node_type) === 1) {
+              metaNode.type = 0;
+            } else {
+              metaNode.type = Number(rawNode.node_type);
+            }
+            opNodes[index] = metaNode;
+            nodeNames[index] = metaNode.name;
+            index++;
+            return metaNode;
+          } else {
+            let opNode = new OpNodeImpl(rawNode);
+            opNode.nodeAttributes._order = index;
+            if (rawNode.matched_node_link && rawNode.matched_node_link.length > 0) {
+              opNode.nodeAttributes._linked_node = rawNode.matched_node_link;
+            }
+            if (isInEmbeddedPred(opNode)) {
+              embeddingNodeNames.push(opNode.name);
+              inEmbedding[opNode.name] = opNode;
+              return opNode;
+            }
+            if (isOutEmbeddedPred(opNode)) {
+              embeddingNodeNames.push(opNode.name);
+              outEmbedding[opNode.name] = opNode;
+              _.each(opNode.inputs, (input) => {
+                let inputName = input.name;
+                outEmbeddings[inputName] = outEmbeddings[inputName] || [];
+                outEmbeddings[inputName].push(opNode);
+              });
+              return opNode;
+            }
+            // The node is not an embedding, so add it to the names and nodes
+            // lists.
+            opNodes[index] = opNode;
+            nodeNames[index] = opNode.name;
+            index++;
+            return opNode;
+          }
+        };
+        _.each(rawNodes, processRawNode);
+        opNodes.splice(index);
+        nodeNames.splice(index);
+        return opNodes;
+      },
+      tracker,
+      tb_debug.GraphDebugEventId.NORMALIZING_NAMES,
+    )
+    .then((opNodes) => {
+      // Create the graph data structure from the graphlib library.
+      return tf_graph_util.runAsyncTask(
+        'Building the data structure',
+        70,
+        () => {
+          let normalizedNameDict = mapStrictHierarchy(nodeNames, embeddingNodeNames);
+          let graph = new SlimGraph();
+          // Add the nodes to the graph.
+          _.each(opNodes, (opNode) => {
+            if (opNode instanceof OpNodeImpl) {
+              let normalizedName = normalizedNameDict[opNode.name] || opNode.name;
+              graph.nodes[normalizedName] = opNode;
+              // Check if the node has out-embeddings. If yes, add them to the
+              // node.
+              if (opNode.name in outEmbeddings) {
+                opNode.outEmbeddings = outEmbeddings[opNode.name];
+                // Normalize the names of the out-embeddings.
+                _.each(opNode.outEmbeddings, (node) => {
+                  node.name = normalizedNameDict[node.name] || node.name;
+                });
+              }
+              // Update the name of the node.
+              opNode.name = normalizedName;
+            } else {
+              graph.metaNodes[opNode.name] = opNode as MetanodeImpl;
+            }
+          });
+          // Visit each node's inputs to add the edges to the graph. If the
+          // input
+          // is an in-embedding, then add it to the node's in-embeddings
+          // instead.
+          _.each(opNodes, (opNode) => {
+            _.each(opNode.attr, ({ key, value }) => {
+              if (key === 'edge_info') {
+                addEdgeToGraphByAttr(graph, opNode, value);
+              }
+            });
+            // Removes repeated edge info.
+            opNode.attr = _.filter(opNode.attr, ({ key, value }) => key !== 'edge_info');
+          });
+          // Normalize the names of in-embeddings.
+          _.each(inEmbedding, (node, name) => {
+            node.name = normalizedNameDict[node.name] || node.name;
+          });
+          return graph;
+        },
+        tracker,
+        tb_debug.GraphDebugEventId.BUILD_SLIM_GRAPH,
+      );
+    });
+}
+
+/**
+ * Create a new graphlib.Graph() instance with default parameters
+ */
+export function createGraph<N, E>(name: string, type, graphOptions: LabeledGraphOptions = {}): graphlib.Graph {
+  const graph = new graphlib.Graph({ ...graphOptions, multigraph: true });
+  graph.setGraph({
+    name: name,
+    rankdir: graphOptions.rankdir || 'TB',
+    type: type,
+  } as any);
+  return graph;
+}
+
+/**
+ * Create a predicate for checking whether a node should be embedded based on
+ * the specified types.
+ */
+function getEmbedPredicate(types: string[]) {
+  return function (node: OpNode): boolean {
+    // check types
+    for (let i = 0; i < types.length; i++) {
+      let regExp = new RegExp(types[i]);
+      if (typeof node.op === 'string' && node.op.match(regExp)) {
+        return true;
+      }
+    }
+    return false;
+  };
+}
+
+/**
+ * Returns a strict node name (name => name/(name)) to avoid conflicts
+ * where the node name is also a namespace.
+ */
+export function getStrictName(name: string): string {
+  let parts = name.split(NAMESPACE_DELIM);
+  return `${name}${NAMESPACE_DELIM}(${parts[parts.length - 1]})`;
+}
+
+/**
+ * For each op node (embedding or non-embedding), rename it if there is a
+ * non-embedding node under its namespace. For example, assume node name 'A'.
+ * If there is a non-embedding node under its namespace (e.g. 'A/B'), 'A' will
+ * be renamed to 'A/(A)'. Then the namespace 'A' will contain 2 nodes: '(A)'
+ * and 'B'. If all the nodes under 'A' are embedding nodes (e.g. constant and
+ * summary), keep 'A' as an Op node and don't create a namespace.
+ *
+ * @param nodeNames An array of regular (non-embedding) node names.
+ * @param embeddingNodeNames An array of embedding node names.
+ * @return Dictionary object mapping names that need to be renamed to
+ *     new names.
+ */
+function mapStrictHierarchy(
+  nodeNames: string[],
+  embeddingNodeNames: string[],
+): {
+  [oldName: string]: string;
+} {
+  /** Dictionary that maps the old new to the new name */
+  let newNameDictionary: {
+    [oldName: string]: string;
+  } = {};
+  /** Set used to store all namespaces. */
+  let namespaceSet: {
+    [namespace: string]: boolean;
+  } = {};
+  // sort the nodes to make prefix check faster
+  nodeNames.sort();
+  // look for nodes with a prefix a,a/b -> a/(a),a/b
+  for (let i = 0; i < nodeNames.length - 1; ++i) {
+    let a = nodeNames[i];
+    // Get all the parent namespaces of the current node
+    // and add them in the namespace set.
+    _.each(getHierarchicalPath(a).slice(0, -1), (ns) => {
+      namespaceSet[ns] = true;
+    });
+    for (let j = i + 1; j < nodeNames.length; ++j) {
+      let b = nodeNames[j];
+      if (_.startsWith(b, a)) {
+        if (b.length > a.length && b.charAt(a.length) === NAMESPACE_DELIM) {
+          newNameDictionary[a] = getStrictName(a);
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+  }
+  // Go through all the embedding node names and rename them in case they
+  // collide with namespaces.
+  _.each(embeddingNodeNames, (embeddingName) => {
+    if (embeddingName in namespaceSet) {
+      // Rename to follow strict hierarchy.
+      newNameDictionary[embeddingName] = getStrictName(embeddingName);
+    }
+  });
+  return newNameDictionary;
+}
+
+/**
+ * Returns a list of the degrees of each node in the graph.
+ */
+function degreeSequence(graph: graphlib.Graph): number[] {
+  let degrees = graph.nodes().map((name) => {
+    return graph.neighbors(name)?.length;
+  });
+  degrees.sort();
+  return degrees;
+}
+
+/**
+ * Returns if the degree sequence of the two graphs is the same.
+ */
+export function hasSimilarDegreeSequence(graph1: graphlib.Graph, graph2: graphlib.Graph): boolean {
+  let dg1 = degreeSequence(graph1);
+  let dg2 = degreeSequence(graph2);
+  for (let i = 0; i < dg1.length; i++) {
+    if (dg1[i] !== dg2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Returns the hierarchical path of the current node, based on the node's name.
+ * For example, if the name is 'a/b/c', the returned path is
+ * ['a', 'a/b', 'a/b/c'].
+ */
+export function getHierarchicalPath(
+  name: string,
+  seriesNames?: {
+    [name: string]: string;
+  },
+): string[] {
+  let path: string[] = [];
+  let i = name.indexOf(NAMESPACE_DELIM);
+  // Push all parent portions of the path.
+  while (i >= 0) {
+    path.push(name.substring(0, i));
+    i = name.indexOf(NAMESPACE_DELIM, i + 1);
+  }
+  // If the node's path is under a series, then add the series node name to the
+  // hierarchical path as the parent of the leaf.
+  if (seriesNames) {
+    let seriesName = seriesNames[name];
+    if (seriesName) {
+      path.push(seriesName);
+    }
+  }
+  // Push the leaf of the path.
+  path.push(name);
+  return path;
+}
+
+export interface Edges {
+  control: Metaedge[];
+  regular: Metaedge[];
+}
+
+/**
+ * Class used to store data on library functions. This specifically stores data
+ * on the library function, not individual calls to those functions.
+ */
+export interface LibraryFunctionData {
+  // The metanode representing this function in the library scene group.
+  node: Metanode;
+  // A list of nodes that represent calls to this library function.
+  usages: Node[];
+}
+
+/**
+ * An extended variant of the options object for `graphlib.Graph`, used
+ * to configure a `graphlib.Graph` at its creation.
+ *
+ * Dagre's constructor has an `opts` object as a parameter, let's call it
+ * 'GraphCtorOptions'. The Graph's `setGraph()` has a `label` parameter,
+ * let's call it `LabelOptions`.
+ *
+ * Since both are configured when a `graphlib.Graph` is first initialized,
+ * TensorBoard's Graph code passes around this hybrid object which includes
+ * properties from both `GraphCtorOptions` (compound) and `LabelOptions`
+ * (rankdir).
+ */
+export interface LabeledGraphOptions {
+  compound?: boolean;
+  rankdir?: string;
+  multigraph?: boolean;
+}
