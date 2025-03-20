@@ -620,10 +620,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
     // 检查是否存在小数点
     const parts = valueStr.split('.');
-    const hasDecimal = parts.indexOf('.') !== -1;
 
     // 如果存在小数点且小数部分长度超过最大限制
-    if (hasDecimal && parts[1].length > 5) {
+    if (parts.length > 1 && parts[1].length > 5) {
       // 使用 toFixed 保留最多5位小数
       value = parseFloat(value.toFixed(5));
     }

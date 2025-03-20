@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import { isEmpty, zip } from 'lodash';
+import { isEmpty } from 'lodash';
 import { fetchPbTxt } from '../../../tf_graph_common/parser';
-import { Notification } from '@vaadin/notification';
 import { NPU_PREFIX, BENCH_PREFIX } from '../../../tf_graph_common/common';
 import { safeJSONParse } from '../../../utils';
 

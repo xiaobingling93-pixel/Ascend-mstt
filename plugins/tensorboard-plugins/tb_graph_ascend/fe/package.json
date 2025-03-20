@@ -1,7 +1,7 @@
 {
   "name": "tb-graph-ascend",
   "version": "0.1.0",
-  "description": "#### Description {**When you're done, you can delete the content in this README and update the file with details for others getting started with your repository**}",
+  "private": "true",
   "main": "index.js",
   "scripts": {
     "buildLinux": "cross-env NODE_ENV=production webpack && cp dist/index.html ../server/static/",

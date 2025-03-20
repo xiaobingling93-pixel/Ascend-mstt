@@ -15,12 +15,12 @@ limitations under the License.
 Copyright (c) 2025, Huawei Technologies.
 Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
+import { Notification } from '@vaadin/notification';
 import * as d3 from 'd3';
 import * as _ from 'lodash';
 import * as tf_graph_common from './common';
 import { Class, FontSizeInPx, selectChild, selectOrCreateChild } from './common';
 import * as contextmenu from './contextmenu';
-import { ContextMenuItem } from './contextmenu';
 import * as edge from './edge';
 import * as tf_graph from './graph';
 import { MetanodeImpl, Node, NodeType, OpNode, OpNodeImpl, SeriesNode } from './graph';
@@ -663,7 +663,11 @@ export function getFillForNode(renderInfo: render.RenderNodeInfo): string {
         case 'critical':
           return '#4668B8';
         default:
-          console.error('Unknown overflow level.');
+          Notification.show('Unknown overflow level', {
+            position: 'middle',
+            duration: 1000,
+            theme: 'error',
+          });
           // 处理未知情况
           return 'transparent';
       }
