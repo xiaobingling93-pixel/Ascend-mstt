@@ -99,9 +99,5 @@ DebuggerErrno CheckDirCommon(const std::string &path);
 DebuggerErrno CheckFileBeforeRead(const std::string &path, const std::string& authority="r",
                                   FileType type=FileType::COMMON);
 DebuggerErrno CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite=false);
-
-/* 其他文件操作工具 */
-std::vector<std::string> ListAll(const std::string &path, size_t max = 1024);
-
 }
 }
