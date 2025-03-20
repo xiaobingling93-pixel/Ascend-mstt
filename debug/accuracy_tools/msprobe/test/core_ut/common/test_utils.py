@@ -206,7 +206,7 @@ class TestUtils(TestCase):
         with self.assertRaises(CompareException) as context:
             set_dump_path(input_param)
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-        mock_error.assert_called_with("Please check the json path is valid. npu_path: None, bench_path: bench_path")
+        mock_error.assert_called_with("Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
 
     @patch.object(logger, "error")
     def test_get_dump_mode(self, mock_error):
