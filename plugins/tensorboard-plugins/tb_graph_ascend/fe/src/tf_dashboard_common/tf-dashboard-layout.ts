@@ -121,6 +121,7 @@ class TfDashboardLayout extends DarkModeMixin(PolymerElement) {
         flex-shrink: 1;
         height: 100%;
         overflow: hidden;
+        background:white;
       }
 
       ::slotted([slot='center']) {
