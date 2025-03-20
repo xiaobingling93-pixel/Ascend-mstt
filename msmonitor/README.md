@@ -1,4 +1,4 @@
-# Ascend Extension for dynolog
+# msMonitor: MindStudio一站式在线监控工具
 
 ## 安装方式
 
@@ -122,6 +122,7 @@ Step0: 参考`3.编译`章节完成dynolog的编译，以及dynolog_npu_plugin w
 
 Step1：拉起dynolog daemon进程
 ```bash
+# 方法1和方法2 二选一
 # 方法1：使用systemd拉起service
 # 修改配置文件/etc/dynolog.gflags, 使能ipc_monitor
 echo "--enable_ipc_monitor" | sudo tee -a /etc/dynolog.gflags
@@ -156,7 +157,7 @@ dyno nputrace --start-step 10 --iterations 2 --activities NPU --analyse --data-s
 dyno nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
 ```
 
-### NPU Monitor功能
+### NPU Monitor功能（POC分支）
 NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
 
 ```bash
@@ -175,12 +176,13 @@ npu-monitor子命令支持的参数选项
 | npu-monitor-start | action | 开启性能监控，设置参数开启，默认不采集 |
 | npu-monitor-stop | action | 停止性能监控，设置参数开启，默认不采集 |
 | report-interval-s | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60 |
-| mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，需要在启动时设置。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker`|
+| mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker`|
 
 - npu-monitor使用方法
 
 Step1： 拉起dynolog daemon进程
 ```bash
+# 方法1和方法2 二选一
 # 方法1：使用systemd拉起service
 # 修改配置文件/etc/dynolog.gflags, 使能ipc_monitor
 echo "--enable_ipc_monitor" | sudo tee -a /etc/dynolog.gflags
@@ -189,16 +191,21 @@ sudo systemctl start dynolog
 # 方法2：命令行执行
 dynolog --enable-ipc-monitor
 
-#dynolog daemon的日志路径为：/var/log/dynolog.log
+# 使用Prometheus上报数据需要指定参数：--use_prometheus
+# dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
 
-Step 2：使能dynolog trace dump环境变量
+Step 2：使能dynolog环境变量
 ```bash
 export KINETO_USE_DAEMON=1
 ```
 
 Step 3: 拉起训练任务
 ```bash
+# 训练任务拉起前需要设置LD_PRELOAD
+# 示例：export LD_PRELOAD=/usr/local/ascend-tookit/latest/lib64/libmspti.so
+export LD_PRELOAD=<CANN tookkit安装路径>/ascend-tookit/latest/lib64/libmspti.so
+
 # 训练任务中需要使用pytorch的优化器/继承原生优化器
 bash train.sh
 ```
@@ -218,4 +225,10 @@ dyno npu-monitor --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 # 示例4：性能监控开启时修改配置
 # 上报周期30s, 上报数据类型Marker和Kernel
 dyno npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
+```
+
+Step5: 观测Prometheus上报数据
+```
+# Prometheus默认端口为8080
+curl 127.0.0.1:8080/metrics
 ```
