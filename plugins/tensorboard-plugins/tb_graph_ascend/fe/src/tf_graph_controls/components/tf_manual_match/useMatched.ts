@@ -24,24 +24,24 @@ export interface UseMatchedType {
   saveMatchedNodesLink: (selection: any) => Promise<any>;
   addMatchedNodesLink: (
     npuNodeName: string,
-    beachNodeName: string,
+    benchNodeName: string,
     selection: any,
     renderHierarchy: any,
   ) => Promise<any>;
   queryMatchedStateList: (selection: any) => Promise<any>;
   deleteMatchedNodesLink: (
     npuNodeName: string,
-    beachNodeName: string,
+    benchNodeName: string,
     selection: any,
     renderHierarchy: any,
   ) => Promise<any>;
 }
 
 const useMatched = (): UseMatchedType => {
-  const requestAddMatchNodes = async (npuNodeName: string, beachNodeName: string, metaData: any): Promise<any> => {
+  const requestAddMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
     const params = new URLSearchParams();
     params.set('npuNodeName', JSON.stringify(npuNodeName));
-    params.set('beachNodeName', JSON.stringify(beachNodeName));
+    params.set('benchNodeName', JSON.stringify(benchNodeName));
     params.set('metaData', JSON.stringify(metaData));
     // 接口请求
     const precisionPath = `addMatchNodes?${String(params)}`;
@@ -53,10 +53,10 @@ const useMatched = (): UseMatchedType => {
     return mactchResult;
   };
 
-  const requestDeleteMatchNodes = async (npuNodeName: string, beachNodeName: string, metaData: any): Promise<any> => {
+  const requestDeleteMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
     const params = new URLSearchParams();
     params.set('npuNodeName', JSON.stringify(npuNodeName));
-    params.set('beachNodeName', JSON.stringify(beachNodeName));
+    params.set('benchNodeName', JSON.stringify(benchNodeName));
     params.set('metaData', JSON.stringify(metaData));
     // 接口请求
     const precisionPath = `deleteMatchNodes?${String(params)}`;
@@ -109,26 +109,24 @@ const useMatched = (): UseMatchedType => {
 
   const addMatchedNodesLink = async (
     npuNodeName: string,
-    beachNodeName: string,
+    benchNodeName: string,
     selection: any,
     renderHierarchy: any,
   ): Promise<any> => {
-    if (isEmpty(npuNodeName) || isEmpty(beachNodeName)) {
-      Notification.show('错误：调试侧节点或标杆节点为空', {
-        position: 'middle',
-        duration: 2000,
-        theme: 'error',
-      });
-      return {};
+    if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
+      return {
+        success: false,
+        error:'调试侧节点或标杆节点为空'
+      };
     }
     const metaData = {
       run: selection.run,
       tag: selection.tag,
     };
-    const matchResult = await requestAddMatchNodes(npuNodeName, beachNodeName, metaData);
+    const matchResult = await requestAddMatchNodes(npuNodeName, benchNodeName, metaData);
     if (matchResult.success) {
       const graphNpuNodeName = NPU_PREFIX + npuNodeName;
-      const graphBeachNodeName = BENCH_PREFIX + beachNodeName;
+      const graphBenchNodeName = BENCH_PREFIX + benchNodeName;
       const graphNpuNodeInputData = renderHierarchy.npu?.index?.[graphNpuNodeName]?.node?.inputData;
       const graphNpuNodeOutputData = renderHierarchy.npu?.index?.[graphNpuNodeName]?.node?.outputData;
       const intputStatisticalDiff = matchResult.data.intput_statistical_diff;
@@ -136,10 +134,10 @@ const useMatched = (): UseMatchedType => {
       // 更新节点之间的匹配关系
       updateGraphNodeData(graphNpuNodeInputData, intputStatisticalDiff);
       updateGraphNodeData(graphNpuNodeOutputData, outputStatisticalDiff);
-      renderHierarchy.npu.index[graphNpuNodeName].node.matchedNodeLink = [graphBeachNodeName];
-      renderHierarchy.bench.index[graphBeachNodeName].node.matchedNodeLink = [graphNpuNodeName];
-      renderHierarchy.npu.index[graphNpuNodeName].node.nodeAttributes._linked_node = [graphBeachNodeName];
-      renderHierarchy.bench.index[graphBeachNodeName].node.nodeAttributes._linked_node = [graphNpuNodeName];
+      renderHierarchy.npu.index[graphNpuNodeName].node.matchedNodeLink = [graphBenchNodeName];
+      renderHierarchy.bench.index[graphBenchNodeName].node.matchedNodeLink = [graphNpuNodeName];
+      renderHierarchy.npu.index[graphNpuNodeName].node.nodeAttributes._linked_node = [graphBenchNodeName];
+      renderHierarchy.bench.index[graphBenchNodeName].node.nodeAttributes._linked_node = [graphNpuNodeName];
       // 更新匹配精度,节点重新上色
       const precisionIndex = matchResult.data.precision_error;
       const nodeAtts = renderHierarchy.npu.index[graphNpuNodeName].node.attr;
@@ -158,36 +156,34 @@ const useMatched = (): UseMatchedType => {
 
   const deleteMatchedNodesLink = async (
     npuNodeName: string,
-    beachNodeName: string,
+    benchNodeName: string,
     selection: any,
     renderHierarchy: any,
   ): Promise<any> => {
-    if (isEmpty(npuNodeName) || isEmpty(beachNodeName)) {
-      Notification.show('错误：调试侧节点或标杆节点为空', {
-        position: 'middle',
-        duration: 2000,
-        theme: 'error',
-      });
-      return null;
+    if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
+      return {
+        success: false,
+        error:'调试侧节点或标杆节点为空'
+      };
     }
     const metaData = {
       run: selection.run,
       tag: selection.tag,
     };
-    const matchResult = await requestDeleteMatchNodes(npuNodeName, beachNodeName, metaData);
+    const matchResult = await requestDeleteMatchNodes(npuNodeName, benchNodeName, metaData);
     matchResult.success = true;
     if (matchResult.success) {
       const graphNpuNodeName = NPU_PREFIX + npuNodeName;
-      const graphBeachNodeName = BENCH_PREFIX + beachNodeName;
+      const graphBenchNodeName = BENCH_PREFIX + benchNodeName;
       const graphNpuNodeInputData = renderHierarchy.npu?.index?.[graphNpuNodeName]?.node?.inputData;
       const graphNpuNodeOutputData = renderHierarchy.npu?.index?.[graphNpuNodeName]?.node?.outputData;
       // 清空节点之间的匹配关系
       deleteMatchedNodeData(graphNpuNodeInputData);
       deleteMatchedNodeData(graphNpuNodeOutputData);
       renderHierarchy.npu.index[graphNpuNodeName].node.matchedNodeLink = [];
-      renderHierarchy.bench.index[graphBeachNodeName].node.matchedNodeLink = [];
+      renderHierarchy.bench.index[graphBenchNodeName].node.matchedNodeLink = [];
       renderHierarchy.npu.index[graphNpuNodeName].node.nodeAttributes._linked_node = [];
-      renderHierarchy.bench.index[graphBeachNodeName].node.nodeAttributes._linked_node = [];
+      renderHierarchy.bench.index[graphBenchNodeName].node.nodeAttributes._linked_node = [];
       // 更新匹配精度,节点重新上色
       const nodeAtts = renderHierarchy.npu.index[graphNpuNodeName].node.attr;
       const precisionIndexObj = nodeAtts?.filter((item) => item.key === 'precision_index');

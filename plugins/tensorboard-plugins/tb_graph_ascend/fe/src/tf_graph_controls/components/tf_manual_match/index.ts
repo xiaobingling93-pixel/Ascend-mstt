@@ -116,12 +116,14 @@ class Legend extends PolymerElement {
             items="[[npuUnMatchedNodes]]"
             selected-value="{{selectedNpuUnMatchedNode}}"
             on-select-change="[[_changeNpuUnMatchedNode]]"
+            is-compare-graph="[[isCompareGraph]]"
           ></tf-search-combox>
           <tf-search-combox
             label="标杆侧([[benchUnMatchedNodes.length]])"
             items="[[benchUnMatchedNodes]]"
             selected-value="{{selectedBenchUnMatchedNode}}"
             on-select-change="[[_changeBenchUnMatchedNode]]"
+            is-compare-graph="[[isCompareGraph]]"
           ></tf-search-combox>
           <div class="match-button">
             <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">点击匹配</vaadin-button>
@@ -202,6 +204,8 @@ class Legend extends PolymerElement {
   _observeUnmatchedNode(): void {
     this.set('npuUnMatchedNodes', this.unmatched[0]);
     this.set('benchUnMatchedNodes', this.unmatched[1]);
+    this.set('selectedNpuUnMatchedNode', '');
+    this.set('selectedBenchUnMatchedNode', '');
   }
 
   @observe('renderHierarchy')
@@ -278,7 +282,6 @@ class Legend extends PolymerElement {
       const node = NPU_PREFIX + this.selectedNpuMatchedNode;
       this.set('selectedBenchMatchedNode', this.npuMatchedNodeList[this.selectedNpuMatchedNode]);
       this.set('selectedNode', node);
-      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode);
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -293,7 +296,6 @@ class Legend extends PolymerElement {
       const node = BENCH_PREFIX + this.selectedBenchMatchedNode;
       this.set('selectedNpuMatchedNode', this.benchMatchedNodeList[this.selectedBenchMatchedNode]);
       this.set('selectedNode', node);
-      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode);
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',

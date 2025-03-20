@@ -103,12 +103,25 @@ class Legend extends PolymerElement {
   @property({ type: Array })
   items: string[] = [];
 
+  @property({ type: Boolean })
+  isCompareGraph: boolean = true;
+
   _onChange(): void {
     this.onSelectChange();
   }
 
   // 选择列表中的下一个节点
   _selectNext(): void {
+
+    if (!this.isCompareGraph) {
+      Notification.show('提示：单图节点不支持匹配', {
+        position: 'middle',
+        duration: 2000,
+        theme: 'contrast',
+      });
+      return;
+    }
+
     if (isEmpty(this.items)) {
       Notification.show('提示：列表为空', {
         position: 'middle',
@@ -138,6 +151,15 @@ class Legend extends PolymerElement {
 
   // 选择列表中的上一个节点
   _selectPrevious(): void {
+    if (!this.isCompareGraph) {
+      Notification.show('提示：单图节点不支持匹配', {
+        position: 'middle',
+        duration: 2000,
+        theme: 'contrast',
+      });
+      return;
+    }
+
     if (isEmpty(this.items)) {
       Notification.show('提示：列表为空', {
         position: 'middle',

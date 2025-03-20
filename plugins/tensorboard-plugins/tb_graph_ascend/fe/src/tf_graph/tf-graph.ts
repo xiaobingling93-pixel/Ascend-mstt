@@ -313,53 +313,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
     }
   }
 
-  @observe('selectedEdge')
-  // Called when the selected edge changes, ie there is a new selected edge or
-  // the current one is unselected.
-  _selectedEdgeChanged(): void {
-    let selectedEdge = this.selectedEdge;
-    this._deselectPreviousEdge();
-    // Visually mark this new edge as selected.
-    if (selectedEdge) {
-      this._lastSelectedEdgeGroup.classed(tf_graph_scene.Class.Edge.SELECTED, true);
-      // Update the color of the marker too if the edge has one.
-      this._updateMarkerOfSelectedEdge(selectedEdge, true);
-    }
-    if (this.handleEdgeSelected) {
-      // A higher-level component provided a callback. Run it.
-      this.handleEdgeSelected(selectedEdge);
-    }
-  }
-
-  @observe('highlightedEdge')
-  // Called when the highlighted edge changes.
-  _highlightedEdgeChange(): void {
-    let highlightedEdge = this.highlightedEdge;
-    this._lastHighlightedEdgeGroup.classed(tf_graph_scene.Class.Edge.HIGHLIGHTED, !!highlightedEdge);
-
-    if (highlightedEdge) {
-      this._updateMarkerOfSelectedEdge(highlightedEdge, false);
-    } else {
-      this._lastHighlightedEdgeGroup
-        .selectAll(`path.${tf_graph_scene.Class.Edge.LINE}`)
-        .each((d: tf_graph_render.EdgeData, i) => {
-          function areEdgesEqual(edge1: any, edge2: any): boolean {
-            return edge1.v === edge2.v && edge1.w === edge2.w && edge1.id === edge2.id;
-          }
-          // Reset its marker.
-          if (d.label && !areEdgesEqual(d, this.selectedEdge)) {
-            const paths = this._lastHighlightedEdgeGroup.selectAll('path.edgeline');
-            if (d.label.startMarkerId) {
-              paths.style('marker-start', `url(#${d.label.startMarkerId.replace('highlighted', 'dataflow')})`);
-            }
-            if (d.label.endMarkerId) {
-              paths.style('marker-end', `url(#${d.label.endMarkerId.replace('highlighted', 'dataflow')})`);
-            }
-          }
-        });
-    }
-  }
-
   /**
    * Pans to a node. Assumes that the node exists.
    * @param nodeName {string} The name of the node to pan to.
@@ -376,7 +329,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
     this.addEventListener('enable-click', this._enableClick.bind(this));
     // Nodes
     this.addEventListener('node-toggle-expand', this._nodeToggleExpand.bind(this));
-    document.addEventListener('menu-expand-node-changed', this._handleMenuExpandNodeChanged.bind(this));
     document.addEventListener('parent-node-toggle-expand', this._parentNodeToggleExpand.bind(this));
     this.addEventListener('node-select', this._nodeSelected.bind(this));
     this.addEventListener('node-highlight', this._nodeHighlighted.bind(this));
@@ -546,23 +498,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
       const parentNode = new TextDecoder().decode(parentStr).replace(/'/g, '"');
       this.set('selectedNode', parentNode);
     }
-  }
-
-  _handleMenuExpandNodeChanged(event): void {
-    const nodeName = event.detail.name;
-    const isBench = nodeName.startsWith(BENCH_PREFIX);
-    const open = event.detail.open;
-    const renderNode = isBench
-      ? this.renderHierarchy.bench?.getRenderNodeByName(nodeName)
-      : this.renderHierarchy.npu.getRenderNodeByName(nodeName);
-    if (renderNode) {
-      if (!renderNode.expanded && open === 'expand') {
-        this._nodeToggleExpand({ detail: { name: nodeName } });
-      } else if (renderNode.expanded && open === 'unexpand') {
-        this._nodeToggleExpand({ detail: { name: nodeName } });
-      }
-    }
-    this._nodeSelected({ detail: { name: nodeName } });
   }
 
   async _nodeToggleExpand(event): Promise<void> {

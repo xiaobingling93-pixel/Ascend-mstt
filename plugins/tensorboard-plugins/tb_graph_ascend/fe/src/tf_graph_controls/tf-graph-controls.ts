@@ -843,20 +843,4 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   _statsNotNull(stats: tf_graph_proto.StepStats): boolean {
     return stats !== null;
   }
-
-  triggerMenuExpandEvent(newName): void {
-    const detailsElement = this.shadowRoot?.getElementById(newName) as HTMLDetailsElement;
-    if (detailsElement?.open) {
-      const event = new CustomEvent('menu-expand-node-changed', {
-        detail: { name: newName, open: 'unexpand' },
-      });
-
-      document.dispatchEvent(event);
-    } else {
-      const event = new CustomEvent('menu-expand-node-changed', {
-        detail: { name: newName, open: 'expand' },
-      });
-      document.dispatchEvent(event);
-    }
-  }
 }

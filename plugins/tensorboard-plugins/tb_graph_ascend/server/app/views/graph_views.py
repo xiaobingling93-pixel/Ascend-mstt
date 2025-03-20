@@ -36,9 +36,9 @@ class GraphView:
     @wrappers.Request.application
     def add_match_nodes(request):
         npu_node_name = json.loads(request.args.get("npuNodeName"))
-        beach_node_name = json.loads(request.args.get("beachNodeName"))
+        bench_node_name = json.loads(request.args.get("benchNodeName"))
         meta_data = json.loads(request.args.get("metaData"))
-        match_result = GraphService.add_match_nodes(npu_node_name, beach_node_name, meta_data)
+        match_result = GraphService.add_match_nodes(npu_node_name, bench_node_name, meta_data)
         return http_util.Respond(request, match_result, "application/json")
 
     # 取消节点匹配
@@ -46,9 +46,9 @@ class GraphView:
     @wrappers.Request.application
     def delete_match_nodes(request):
         npu_node_name = json.loads(request.args.get("npuNodeName"))
-        beach_node_name = json.loads(request.args.get("beachNodeName"))
+        bench_node_name = json.loads(request.args.get("benchNodeName"))
         meta_data = json.loads(request.args.get("metaData"))
-        match_result = GraphService.delete_match_nodes(npu_node_name, beach_node_name, meta_data)
+        match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data)
         return http_util.Respond(request, match_result, "application/json")
 
     # 获取匹配节点列表
