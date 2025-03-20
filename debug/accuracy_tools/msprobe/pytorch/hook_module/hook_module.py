@@ -21,6 +21,8 @@ import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
+from msprobe.pytorch.common.utils import is_float8_tensor
+
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
@@ -111,7 +113,7 @@ class HOOKModule(nn.Module):
                 else:
                     return result
 
-            if not (var.requires_grad and torch.is_grad_enabled()):
+            if is_float8_tensor(var) or not (var.requires_grad and torch.is_grad_enabled()):
                 return result
 
             grad_fn = var.grad_fn

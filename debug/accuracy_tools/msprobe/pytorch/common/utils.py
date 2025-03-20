@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -261,6 +261,10 @@ class Const:
     NPU = 'NPU'
     DISTRIBUTED = 'Distributed'
 
+    HIFLOAT8_TYPE = "torch_npu.HiFloat8Tensor"
+    FLOAT8_E5M2_TYPE = "torch.float8_e5m2"
+    FLOAT8_E4M3FN_TYPE = "torch.float8_e4m3fn"
+
     RAISE_PRECISION = {
         torch.float16: torch.float32,
         torch.bfloat16: torch.float32,
@@ -473,3 +477,15 @@ def replace_last_occurrence(text, old, new):
     if index != -1:
         return text[:index] + text[index:].replace(old, new, 1)
     return text
+
+
+def is_hifloat8_tensor(tensor):
+    if not is_gpu and hasattr(torch_npu, "HiFloat8Tensor") and isinstance(tensor, torch_npu.HiFloat8Tensor):
+        return True
+    return False
+
+
+def is_float8_tensor(tensor):
+    if str(tensor.dtype) in [Const.FLOAT8_E5M2_TYPE, Const.FLOAT8_E4M3FN_TYPE]:
+        return True
+    return is_hifloat8_tensor(tensor)
