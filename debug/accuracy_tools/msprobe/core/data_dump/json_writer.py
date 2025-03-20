@@ -157,8 +157,6 @@ class DataWriter:
                     logger.warning("Some bad data in async dump")
                 else:
                     tensor_stat_index, tensor_stat_data = tensor_stat[0], tensor_stat[1]
-                    if hasattr(tensor_stat_data, "device") and tensor_stat_data.device != Const.CPU_LOWERCASE:
-                        tensor_stat_data = tensor_stat_data.cpu()
                     for index, stat in zip(tensor_stat_index, tensor_stat_data):
                         data.update({index: stat.item()})
                 del data["tensor_stat"]
