@@ -64,6 +64,7 @@ def get_result_path(input_dir):
                                 for f in os.listdir(input_dir) if f.endswith(FileCheckConst.XLSX_SUFFIX)]
     filt_compare_result_path_list = []
     for file_path in compare_result_path_list:
+        FileChecker(file_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
         file_name = os.path.basename(file_path)
         if check_compare_result_name(file_name):
             compare_result_path_checker = FileChecker(file_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
