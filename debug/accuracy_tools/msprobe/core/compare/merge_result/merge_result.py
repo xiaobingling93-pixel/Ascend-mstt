@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -21,7 +21,8 @@ from functools import partial
 import pandas as pd
 from tqdm import tqdm
 
-from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory
+from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory, \
+    remove_path
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx
 from msprobe.core.compare.utils import table_value_is_valid
@@ -329,6 +330,10 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
     for i, df in enumerate(merge_df_list):
         # merge_df_list中df与compare_index_list中compare_index一一对应
         final_result_df_list.append((df, compare_index_list[i]))
+
+    if os.path.exists(output_path):
+        logger.warning(f"{output_path} will be recovered")
+        remove_path(output_path)
     save_excel(output_path, final_result_df_list)
     logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")
 
