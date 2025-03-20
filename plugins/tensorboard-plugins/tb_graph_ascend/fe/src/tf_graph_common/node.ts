@@ -155,8 +155,8 @@ export function buildGroup(sceneGroup, nodeData: render.RenderNodeInfo[], sceneE
       }
       if (d.outAnnotations.list.length > 0) {
         nodeGroup
-          .select('.' + Class.Annotation.OUTBOX)
-          .selectAll('.' + Class.Annotation.GROUP)
+          .select(`.${Class.Annotation.OUTBOX}`)
+          .selectAll(`.${Class.Annotation.GROUP}`)
           .each((a) => {
             sceneElement.removeAnnotationGroup(a, d);
           });
@@ -191,8 +191,8 @@ function subsceneBuild(nodeGroup, renderNodeInfo: render.RenderGroupNodeInfo, sc
  */
 function subscenePosition(nodeGroup, d: render.RenderNodeInfo): void {
   // Translate the subscene to the middle of the parent node in vertical direction.
-  let x0 = d.x - d.coreBox.width / 2;
-  let y0 = d.y - d.height / 2 + d.paddingTop;
+  let x0 = d.x - (d.coreBox.width / 2);
+  let y0 = d.y - (d.height / 2) + d.paddingTop;
   let subscene = tf_graph_scene.selectChild(nodeGroup, 'g', Class.Subscene.GROUP);
   tf_graph_scene.translate(subscene, x0, y0);
 }
@@ -388,7 +388,9 @@ export function enforceLabelWidth(
     default:
       break;
   }
-  if (maxLength === null) return null;
+  if (maxLength === null) {
+    return;
+  }
 
   txtNode.textContent = tf_graph_util.maybeTruncateString(txtNode.textContent ?? '', fontSize, maxLength);
   // Add tooltip with full name and return.
@@ -431,7 +433,6 @@ function labelPosition(nodeGroup, cx: number, cy: number, yOffset: number): void
 export function buildShape(nodeGroup, d, nodeClassName: string): d3.Selection<any, any, any, any> {
   // Create a group to house the underlying visual elements.
   let shapeGroup = tf_graph_common.selectOrCreateChild(nodeGroup, 'g', nodeClassName);
-  // TODO: DOM structure should be templated in HTML somewhere, not JS.
   switch (d.node.type) {
     case NodeType.OP: {
       const opNode = d.node as OpNode;
@@ -513,10 +514,10 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
       let OFFSET_VALUE = 8.1;
       if (d.expanded) {
         tf_graph_scene.positionRect(shapes, d.x, d.y, d.width, d.height);
-        INSIDE_RECT_OFFSET = d.y - d.height / 2 + OFFSET_VALUE;
+        INSIDE_RECT_OFFSET = d.y - (d.height / 2) + OFFSET_VALUE;
         subscenePosition(nodeGroup, d);
         // Put the label on top.
-        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
+        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
       } else {
         tf_graph_scene.positionRect(shapes, cx, d.y, d.coreBox.width, d.coreBox.height);
         // Place the label in the middle.
@@ -527,7 +528,7 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         tf_graph_scene.positionRect(shapesHeader, d.x, INSIDE_RECT_OFFSET, d.width - 1, 15);
         subscenePosition(nodeGroup, d);
         // Put the label on top.
-        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
+        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
       } else {
         tf_graph_scene.positionRect(shapesHeader, cx, d.y, d.coreBox.width, d.coreBox.height);
         // Place the label in the middle.
@@ -541,7 +542,7 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         tf_graph_scene.positionRect(shape, d.x, d.y, d.width, d.height);
         subscenePosition(nodeGroup, d);
         // put label on top
-        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
+        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
       } else {
         tf_graph_scene.positionRect(shape, cx, d.y, d.coreBox.width, d.coreBox.height);
         labelPosition(nodeGroup, cx, d.y, d.labelOffset);
@@ -564,7 +565,7 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         tf_graph_scene.positionRect(shapes, d.x, d.y, d.width, d.height);
         subscenePosition(nodeGroup, d);
         // Put the label on top.
-        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
+        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
       } else {
         tf_graph_scene.positionRect(shapes, cx, d.y, d.coreBox.width, d.coreBox.height);
         // Place the label in the middle.
@@ -603,7 +604,7 @@ export function getColorByPrecisionIndex(precisionStr: string): string {
     for (const [color, details] of Object.entries(colorStorage)) {
       const detailsArray: any[] = [details];
       const [start, end] = detailsArray[0].value;
-      //进入md5模式
+      // 进入md5模式
       const isPrecisionInRange = precision >= start && precision < end;
       const isPrecisionAtEnd = precision === end && end === 1;
       if (start === end) {
@@ -611,7 +612,7 @@ export function getColorByPrecisionIndex(precisionStr: string): string {
           return color;
         }
       }
-      //其他区间模式, 最后一个区间的右侧一定为1，所以特化precision == 1的情况
+      // 其他区间模式, 最后一个区间的右侧一定为1，所以特化precision == 1的情况
       else if (isPrecisionInRange || isPrecisionAtEnd) {
         return color;
       }
@@ -686,11 +687,11 @@ export function stylize(
   sceneElement: TfGraphScene,
   nodeClassName?,
 ): void {
-  nodeClassName = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
+  const resolvedNodeClassName  = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
   const isHighlighted = sceneElement.isNodeHighlighted(renderInfo.node.name);
   const isSelected = sceneElement.isNodeSelected(renderInfo.node.name);
   const isExtract = renderInfo.isInExtract || renderInfo.isOutExtract || renderInfo.isLibraryFunction;
-  const isExpanded = renderInfo.expanded && nodeClassName !== Class.Annotation.NODE;
+  const isExpanded = renderInfo.expanded && resolvedNodeClassName !== Class.Annotation.NODE;
   const isFadedOut = renderInfo.isFadedOut;
   const isLinked = sceneElement.isNodeLinked(renderInfo.node.name);
   nodeGroup.classed('highlighted', isHighlighted);
@@ -701,9 +702,8 @@ export function stylize(
   nodeGroup.classed('linked', isLinked);
   // Main node always exists here and it will be reached before subscene,
   // so d3 selection is fine here.OLOR_TARGET)
-  const node = nodeGroup.select(`.${nodeClassName} .${Class.Node.COLOR_TARGET}`);
+  const node = nodeGroup.select(`.${resolvedNodeClassName} .${Class.Node.COLOR_TARGET}`);
   const outerNode = nodeGroup.select(`.${Class.Node.OUTER} .${Class.Node.COLOR_TARGET}`);
-  const text = nodeGroup.select(`.${nodeClassName}`);
   const fillColor = getFillForNode(renderInfo);
   if (
     renderInfo.node.type === tf_graph.NodeType.META ||
@@ -759,7 +759,7 @@ export function updateInputTrace(
   }
   let opNodes = _getAllContainedOpNodes(selectedNodeName, renderGraphInfo);
   let allTracedNodes = {};
-  _.each(opNodes, function (nodeInstance) {
+  _.each(opNodes, (nodeInstance) => {
     allTracedNodes = traceAllInputsOfOpNode(svgRoot, renderGraphInfo, nodeInstance, allTracedNodes);
   });
   // Highlight all parent nodes of each OpNode as input parent to allow
@@ -771,7 +771,7 @@ export function updateInputTrace(
   svg
     .selectAll('g.node:not(.selected):not(.input-highlight)' + ':not(.input-parent):not(.input-children)')
     .classed('non-input', true)
-    .each(function (d: RenderNodeInfo) {
+    .each((d: RenderNodeInfo) => {
       // Mark all nodes with the specified name as non-inputs. This
       // results in Annotation nodes which are attached to inputs to be
       // tagged as well.
@@ -798,7 +798,7 @@ function _getAllContainedOpNodes(nodeName: string, renderGraphInfo: render.Rende
   }
   // Otherwise, make recursive call for each node contained by the GroupNode.
   let childNodeNames = (node as tf_graph.GroupNode).metagraph.nodes();
-  _.each(childNodeNames, function (childNodeName) {
+  _.each(childNodeNames, (childNodeName) => {
     opNodes = opNodes.concat(_getAllContainedOpNodes(childNodeName, renderGraphInfo));
   });
   return opNodes;
@@ -835,7 +835,7 @@ function traceAllInputsOfOpNode(
   d3.select(svgRoot).select(`.node[data-name="${currentVisibleParent.name}"]`).classed('input-highlight', true);
   // Find the visible parent of each input.
   let visibleInputs = {};
-  _.each(inputs, function (nodeInstance) {
+  _.each(inputs, (nodeInstance) => {
     let resolvedNode = renderGraphInfo.getNodeByName(nodeInstance.name);
     if (resolvedNode === undefined) {
       // Node could not be found in rendered Hierarchy, which happens when
@@ -881,12 +881,13 @@ function traceAllInputsOfOpNode(
     indexedStartNodeParents[index] = currentNode;
   }
   // Find first mutual parent of each input node and highlight connection.
-  _.forOwn(visibleInputs, function (visibleParentInfo: VisibleParent, key) {
+  _.forOwn(visibleInputs, (visibleParentInfo: VisibleParent, key) => {
     let nodeInstance = visibleParentInfo.visibleParent;
     // Make recursive call for each input-OpNode contained by the visible
     // parent.
-    _.each(visibleParentInfo.opNodes, function (opNode: OpNode) {
-      allTracedNodes = traceAllInputsOfOpNode(svgRoot, renderGraphInfo, opNode, allTracedNodes);
+    _.each(visibleParentInfo.opNodes, (opNode: OpNode) => {
+      let newAllTracedNodes = allTracedNodes;
+      allTracedNodes = traceAllInputsOfOpNode(svgRoot, renderGraphInfo, opNode, newAllTracedNodes);
     });
     if (nodeInstance.name !== currentVisibleParent.name) {
       _createVisibleTrace(svgRoot, nodeInstance, startNodeParents, indexedStartNodeParents);
@@ -963,7 +964,7 @@ function _createVisibleTrace(
   const svg = d3.select(svgRoot);
   svg.selectAll(`[data-edge="${endNodeName}--${startNodeName}"]`).classed('input-edge-highlight', true);
   // Trace up the parents of the input.
-  _.each(destinationParentPairs, function (value) {
+  _.each(destinationParentPairs, (value) => {
     let inner = value[0];
     let outer = value[1];
     let edgeSelector = `[data-edge="${inner.name}--${startNodeTopParentName}` + `~~${outer.name}~~OUT"]`;
@@ -990,7 +991,7 @@ function _findVisibleParentsFromOpNodes(renderGraphInfo, nodeNames: string[]): {
   let visibleParents: {
     [nodeName: string]: Node;
   } = {};
-  _.each(nodeNames, function (nodeName) {
+  _.each(nodeNames, (nodeName) => {
     let currentNode = renderGraphInfo.getNodeByName(nodeName);
     let visibleParent = getVisibleParent(renderGraphInfo, currentNode);
     visibleParents[visibleParent.name] = visibleParent;
@@ -1010,7 +1011,7 @@ function _markParentsOfNodes(
     [nodeName: string]: Node;
   },
 ): void {
-  _.forOwn(visibleNodes, function (nodeInstance: Node) {
+  _.forOwn(visibleNodes, (nodeInstance: Node) => {
     // Mark all parents of the node as input-parents.
     let currentNode = nodeInstance;
     function shouldSkip(renderedElementSelection: any): boolean {
@@ -1048,8 +1049,8 @@ export function getVisibleParent(renderGraphInfo: render.RenderGraphInfo, curren
   let currentParent = currentNode;
   while (!found) {
     // Get parent element, to extract name.
-    currentNode = currentParent;
-    currentParent = currentNode.parentNode;
+    const newCurrentNode = currentParent;
+    currentParent = newCurrentNode.parentNode;
     if (currentParent === undefined) {
       found = true;
     } else {
@@ -1124,7 +1125,7 @@ export function buildGroupForAnnotation(
     });
   annotationGroups
     .exit()
-    .each(function (a) {
+    .each((a) => {
       // Remove annotation from the index in the scene
       sceneElement.removeAnnotationGroup(a, d);
     })
@@ -1223,7 +1224,7 @@ function update(aGroup, d: render.RenderNodeInfo, a: render.Annotation, sceneEle
   aGroup
     .select(`text.${Class.Annotation.LABEL}`)
     .transition()
-    .attr('x', cx + a.dx + (a.isIn ? -1 : 1) * (a.width / 2 + a.labelOffset))
+    .attr('x', cx + a.dx + ((a.isIn ? -1 : 1) * ((a.width / 2) + a.labelOffset)))
     .attr('y', d.y + a.dy);
   // Some annotations (such as summary) are represented using a 12x12 image tag.
   // Purposely omitted units (e.g. pixels) since the images are vector graphics.
@@ -1293,9 +1294,9 @@ export function buildGroupForScene(
   sceneElement: TfGraphScene,
   sceneClass?: string,
 ): void {
-  sceneClass = sceneClass ?? Class.Scene.GROUP;
-  let isNewSceneGroup = selectChild(container, 'g', sceneClass).empty();
-  let sceneGroup = selectOrCreateChild(container, 'g', sceneClass);
+  const newSceneClass = sceneClass ?? Class.Scene.GROUP;
+  let isNewSceneGroup = selectChild(container, 'g', newSceneClass).empty();
+  let sceneGroup = selectOrCreateChild(container, 'g', newSceneClass);
   // core
   let coreGroup = selectOrCreateChild(sceneGroup, 'g', Class.Scene.CORE);
   let coreNodes = _.reduce(

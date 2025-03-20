@@ -224,7 +224,9 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   get _fill(): string {
     let type = this.type;
     let fillOverride = this.fillOverride;
-    if (fillOverride != null) return fillOverride;
+    if (fillOverride != null) {
+      return fillOverride;
+    }
     switch (type) {
       case GraphIconType.META:
         return MetanodeColors.DEFAULT_FILL;
@@ -239,7 +241,9 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   get _stroke(): string {
     let type = this.type;
     let strokeOverride = this.strokeOverride;
-    if (strokeOverride != null) return strokeOverride;
+    if (strokeOverride != null) {
+      return strokeOverride;
+    }
     switch (type) {
       case GraphIconType.META:
         return MetanodeColors.DEFAULT_STROKE;
@@ -249,6 +253,7 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         return OpNodeColors.DEFAULT_STROKE;
     }
   }
+
   /**
    * Test whether the specified node's type, or the literal type string,
    * match a particular other type.
@@ -256,7 +261,8 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   _isType(type: GraphIconType, targetType: GraphIconType): boolean {
     return type === targetType;
   }
+
   _fadedClass(faded: boolean, shape: string): string {
-    return `${faded ? 'faded-' + shape : ''}`;
+    return `${faded ? `faded-${shape}` : ''}`;
   }
 }

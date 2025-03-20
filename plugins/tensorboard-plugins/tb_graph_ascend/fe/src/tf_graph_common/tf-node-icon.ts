@@ -135,8 +135,12 @@ class TfNodeIcon extends LegacyElementMixin(PolymerElement) {
       switch (inputNode.type) {
         case tf_graph.NodeType.OP: {
           const opName = inputNode.op;
-          if (typeof opName !== 'string') return GraphIconType.OP;
-          if (opName === 'Const' || isConst) return GraphIconType.CONST;
+          if (typeof opName !== 'string') {
+            return GraphIconType.OP;
+          }
+          if (opName === 'Const' || isConst) {
+            return GraphIconType.CONST;
+          }
           if (opName.endsWith('Summary') || isSummary) {
             return GraphIconType.SUMMARY;
           }

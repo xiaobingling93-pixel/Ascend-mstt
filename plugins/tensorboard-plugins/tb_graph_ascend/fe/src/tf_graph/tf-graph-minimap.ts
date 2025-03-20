@@ -70,6 +70,7 @@ export class TfGraphMinimap extends PolymerElement {
     <canvas class="second"></canvas>
     <canvas class="download"></canvas>
   `;
+
   /**
    * Initializes the minimap and returns a minimap object to notify when
    * things update.
@@ -80,7 +81,6 @@ export class TfGraphMinimap extends PolymerElement {
    * @param maxWAndH The maximum width/height for the minimap.
    * @param labelPadding Padding in pixels due to the main graph labels.
    */
-
   init(svg, zoomG, mainZoom, maxWAndH, labelPadding): tf_scene_minimap.Minimap {
     return new tf_scene_minimap.Minimap(svg, zoomG, mainZoom, this, maxWAndH, labelPadding);
   }

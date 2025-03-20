@@ -214,7 +214,9 @@ class Legend extends PolymerElement {
 
   @observe('selection')
   async _observeSelection(): Promise<void> {
-    if (isEmpty(this.selection)) return;
+    if (isEmpty(this.selection)) {
+      return;
+    }
     const result = await this.useMatched.queryMatchedStateList(this.selection);
     if (result.success) {
       // 初始化已匹配节点列表
@@ -234,7 +236,9 @@ class Legend extends PolymerElement {
 
   @observe('selectedNode')
   _observeSelectedNode(): void {
-    if (isEmpty(this.selectedNode)) return;
+    if (isEmpty(this.selectedNode)) {
+      return;
+    }
     if (this.selectedNode.startsWith(NPU_PREFIX)) {
       this.set('selectedNpuUnMatchedNode', this.selectedNode.replace(NPU_PREFIX, ''));
     } else if (this.selectedNode.startsWith(BENCH_PREFIX)) {

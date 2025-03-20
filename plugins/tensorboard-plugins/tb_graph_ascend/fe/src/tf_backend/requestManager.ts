@@ -15,6 +15,8 @@ limitations under the License.
 Copyright (c) 2025, Huawei Technologies.
 Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
+import { safeJSONParse } from "../utils";
+
 const FEATURE_FLAGS_HEADER_NAME = 'X-TensorBoard-Feature-Flags';
 
 interface ResolveReject {
@@ -211,7 +213,7 @@ export class RequestManager {
       req.setRequestHeader(FEATURE_FLAGS_HEADER_NAME, JSON.stringify({}));
       req.onload = function (): void {
         if (req.status === 200) {
-          resolve(JSON.parse(req.responseText) as any);
+          resolve(safeJSONParse(req.responseText) as any);
         } else {
           reject(new RequestNetworkError(req, url));
         }

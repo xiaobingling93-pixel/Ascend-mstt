@@ -115,10 +115,14 @@ const useNodeInfo = (): UseNodeInfoType => {
    * }]
    */
   const converMatchArrayToObject = (resArray: Array<any>): Array<MactchResult['result']> => {
-    if (resArray.length === 0) return [];
+    if (resArray.length === 0) {
+      return [];
+    }
     //内部函数，将二维数组转换为对象
     const _covertIo = (arrayData: Array<any>): Record<string, unknown> | undefined => {
-      if (isEmpty(arrayData)) return undefined;
+      if (isEmpty(arrayData)) {
+        return undefined;
+      }
       const inputItems = {};
       arrayData.forEach((inputArray: any) => {
         const inputKey = inputArray[0];
@@ -226,20 +230,29 @@ const useNodeInfo = (): UseNodeInfoType => {
     const stackInfo: Record<string, unknown> = {};
     const npustackInfo = npuNode?.stackData;
     const benchstackInfo = benchNode?.stackData;
-    if (!isEmpty(npustackInfo)) stackInfo[nodeName] = JSON.parse(npustackInfo.replace(/'/g, '"')).join('\n');
-    if (!isEmpty(benchstackInfo)) stackInfo[benchNodeName] = JSON.parse(benchstackInfo.replace(/'/g, '"'));
+    const title = 'title';
+    if (!isEmpty(npustackInfo)) {
+      stackInfo[nodeName] = JSON.parse(npustackInfo.replace(/'/g, '"')).join('\n');
+    }
+    if (!isEmpty(benchstackInfo)) {
+      stackInfo[benchNodeName] = JSON.parse(benchstackInfo.replace(/'/g, '"'));
+    }
     if (!isEmpty(stackInfo)) {
-      stackInfo['title'] = 'stackInfo';
+      stackInfo[title] = 'stackInfo';
       detailData.push(stackInfo);
     }
     // 获取suggestions
     const suggestion: Record<string, unknown> = {};
     const npusuggestion = npuNode?.suggestions;
     const benchsuggestion = benchNode?.suggestions;
-    if (!isEmpty(npusuggestion)) suggestion[nodeName] = converObjectToString(npusuggestion);
-    if (!isEmpty(benchsuggestion)) suggestion[benchNodeName] = converObjectToString(benchsuggestion);
+    if (!isEmpty(npusuggestion)) {
+      suggestion[nodeName] = converObjectToString(npusuggestion);
+    }
+    if (!isEmpty(benchsuggestion)) {
+      suggestion[benchNodeName] = converObjectToString(benchsuggestion);
+    }
     if (!isEmpty(suggestion)) {
-      suggestion['title'] = 'suggestions';
+      suggestion[title] = 'suggestions';
       detailData.push(suggestion);
     }
     return detailData;

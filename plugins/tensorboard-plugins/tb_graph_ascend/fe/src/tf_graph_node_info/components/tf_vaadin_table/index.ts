@@ -162,13 +162,19 @@ class TfVaadinTable extends PolymerElement {
   _renderDefaultValue(root: HTMLElement, column: any, rowData: any): void {
     const selectedColor = this._getCssVariable('--selected-color');
     const matchedColor = this._getCssVariable('--matched-color');
+    const isBench = 'isBench';
+    const isMatched = 'isMatched';
     root.classList.remove('splitter');
-    if (rowData.item['isBench']) {
+    if (rowData.item[isBench]) {
       root.style.backgroundColor = matchedColor;
-      if (rowData.item['isMatched']) root.classList.add('splitter');
-    } else root.style.backgroundColor = selectedColor;
+      if (rowData.item[isMatched]) {
+        root.classList.add('splitter');
+      }
+    } else {
+      root.style.backgroundColor = selectedColor;
+    }
     if (column.path === 'name' && !this.isSingleGraphNode) {
-      const className = rowData.item['isMatched'] ? 'avater-matched' : 'avater-unmatched';
+      const className = rowData.item[isMatched] ? 'avater-matched' : 'avater-unmatched';
       root.innerHTML = `<span class='${className}'>${rowData.item[column.path]}</span>`;
       return;
     }

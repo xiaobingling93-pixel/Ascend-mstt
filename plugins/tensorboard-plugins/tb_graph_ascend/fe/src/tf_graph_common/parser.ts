@@ -16,6 +16,7 @@ Copyright (c) 2025, Huawei Technologies.
 Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
 import * as tb_debug from '../tb_debug';
+import { safeJSONParse } from '../utils';
 import { ProgressTracker } from './common';
 import * as tf_graph_proto from './proto';
 import * as tf_graph_util from './util';
@@ -262,15 +263,17 @@ function parsePbtxtFile(
     let name = line.substring(0, colonIndex).trim();
     let value: any = parseValue(line.substring(colonIndex + 2).trim());
     if (name === 'input_data' || name === 'output_data') {
-      value = JSON.parse((value as string).replace(/'{/g, '{').replace(/}'/g, '}').replace(/'/g, '"')) as object;
+      value = safeJSONParse((value as string).replace(/'{/g, '{').replace(/}'/g, '}').replace(/'/g, '"')) as object;
     } else if (name === 'matched_node_link') {
-      value = JSON.parse((value as string).replace(/'/g, '"')) as string[];
+      value = safeJSONParse((value as string).replace(/'/g, '"')) as string[];
     } else if (name === 'subnodes') {
-      value = JSON.parse((value as string).replace(/'/g, '"')) as string[];
+      value = safeJSONParse((value as string).replace(/'/g, '"')) as string[];
     } else if (name === 'suggestions') {
-      value = JSON.parse((value as string).replace(/'{/g, '{').replace(/}'/g, '}').replace(/'/g, '"')) as object;
-    } else if (name === 'attr') {
-      const valueObj = JSON.parse((value as string).replace(/'/g, '"')) as object;
+      value = safeJSONParse((value as string).replace(/'{/g, '{').replace(/}'/g, '}').replace(/'/g, '"')) as object;
+    } else {
+    }
+    if (name === 'attr') {
+      const valueObj = safeJSONParse((value as string).replace(/'/g, '"')) as object;
       value = Object.keys(valueObj).map((key) => {
         return {
           key,
@@ -329,14 +332,16 @@ function parsePbtxtFile(
         current = newValue;
         break;
       }
-      case '}':
+      case '}': {
         current = stack.pop() ?? {};
         path.pop();
         break;
-      default:
+      }
+      default: {
         let x = splitNameAndValueInAttribute(lineNew);
         addAttribute(current, x.name, x.value, path.concat(x.name));
         break;
+      }
     }
   }).then(() => {
     return output;

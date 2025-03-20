@@ -151,8 +151,8 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 node_data = (
                     self.json_get(npu_data, 'node', node) if npu_data else self.json_get(json_data, 'node', node)
                 )
-                micro_step_id = str(node_data.get('micro_step_id'))
-                if micro_step_id == batch or micro_step_id is None:
+                micro_step_id = node_data.get('micro_step_id')
+                if str(micro_step_id) == batch or micro_step_id is None:
                     npu_ids.append(node)
                     traverse_npu(node_data.get('subnodes', []))
 

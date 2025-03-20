@@ -162,7 +162,7 @@ export function runAsyncTask<T>(
     }
     // Run the expensive task with a delay that gives enough time for the
     // UI to update.
-    setTimeout(function () {
+    setTimeout(() => {
       try {
         let result = time(msg, task, debugEventId);
         // Update the progress value.
@@ -204,11 +204,11 @@ export function runAsyncPromiseTask<T>(
     tracker.setMessage(msg);
     // Run the expensive task with a delay that gives enough time for the
     // UI to update.
-    setTimeout(function () {
+    setTimeout(() => {
       try {
         let start = Date.now();
         task()
-          .then(function (value) {
+          .then((value) => {
             const durationInMs = Date.now() - start;
             // Update the progress value.
             tracker.updateProgress(incProgressValue);
@@ -293,7 +293,9 @@ const measurerContext = canvas.getContext('2d');
  * Returns width of `text` rendered with Roboto at provided fontSize.
  */
 export function measureTextWidth(text: string, fontSize: number): number {
-  if (measurerContext) measurerContext.font = `${fontSize}px Roboto, sans-serif`;
+  if (measurerContext) {
+    measurerContext.font = `${fontSize}px Roboto, sans-serif`;
+  }
   return measurerContext?.measureText(text).width as number;
 }
 
@@ -302,8 +304,12 @@ export function measureTextWidth(text: string, fontSize: number): number {
  * ellipsis.
  */
 export function maybeTruncateString(text: string, fontSize: number, maxWidth: number): string {
-  if (!text) return '';
-  if (measureTextWidth(text, fontSize) <= maxWidth) return text;
+  if (!text) {
+    return '';
+  }
+  if (measureTextWidth(text, fontSize) <= maxWidth) {
+    return text;
+  }
 
   let start = 0;
   let end = text.length;

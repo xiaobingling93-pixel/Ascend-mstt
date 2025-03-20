@@ -65,7 +65,7 @@ export const OpNodeColors = {
  * Color parameters for node encoding.
  * @type {Object}
  */
-export let MetanodeColors = {
+export const MetanodeColors = {
   /**
    * Default fill and stroke to use when no other information is available.
    */
@@ -89,7 +89,7 @@ export let MetanodeColors = {
     let n = hues.length;
     let hue = hues[id % n];
     let m = Math.sin((hue * Math.PI) / 360);
-    let sat = lightened ? 30 : 90 - 60 * m;
+    let sat = lightened ? 30 : 90 - (60 * m);
     let light = lightened ? 95 : 80;
     return d3.hsl(hue, 0.01 * sat, 0.01 * light).toString();
   },
@@ -329,7 +329,10 @@ export class RenderGraphInfo {
     // displayed.
     if (i === path.length - 2) {
       let nextName = path[i + 1];
-      if (renderNode?.inAnnotations.nodeNames[nextName] || renderNode?.outAnnotations.nodeNames[nextName]) {
+      if (renderNode?.inAnnotations.nodeNames[nextName]) {
+        return nextName;
+      }
+      if (renderNode?.outAnnotations.nodeNames[nextName]) {
         return nextName;
       }
     }
@@ -344,7 +347,7 @@ export class RenderGraphInfo {
    * Returns true if the renderNode is an isolated node within its parent node.
    */
   isNodeAuxiliary(renderNode: RenderNodeInfo): boolean {
-    let parentNode = <RenderGroupNodeInfo>this.getRenderNodeByName(renderNode.node.parentNode.name);
+    let parentNode = this.getRenderNodeByName(renderNode.node.parentNode.name) as RenderGroupNodeInfo;
     let found = _.find(parentNode.isolatedInExtract, (node) => {
       return node.node.name === renderNode.node.name;
     });
@@ -462,7 +465,6 @@ export class RenderGraphInfo {
     if (!parentNode) {
       return;
     }
-    let parentNodeInfo = <RenderGroupNodeInfo>this.index[parentNode.name];
     // Utility function for computing the name of a bridge node.
     let getBridgeNodeName = (inbound, ...rest): string => rest.concat([inbound ? 'IN' : 'OUT']).join('~~');
     if (subGraph) {
@@ -775,6 +777,7 @@ export class Annotation {
     dx: number;
     dy: number;
   }[];
+
   /**
    * Creates a new Annotation.
    *
@@ -838,6 +841,7 @@ export class AnnotationList {
   nodeNames: {
     [nodeName: string]: boolean;
   };
+
   constructor() {
     this.list = [];
     this.nodeNames = {};

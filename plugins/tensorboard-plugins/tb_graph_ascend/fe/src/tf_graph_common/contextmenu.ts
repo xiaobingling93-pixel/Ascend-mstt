@@ -21,6 +21,7 @@ import * as tf_graph_parser from '../tf_graph_common/parser';
 import { getColorByPrecisionIndex } from './node';
 import { setRankJump } from '../tf_graph/tf-graph';
 import { BENCH_PREFIX, NPU_PREFIX, EXPAND_NODE, DATA_SEND, DATA_RECEIVE, DATA_SEND_RECEIVE } from './common';
+import { safeJSONParse } from '../utils';
 
 export interface TitleFunction {
   (data: any): string;
@@ -115,15 +116,23 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
     const sidePath = `rank?${String(params)}`;
     const sideStr = await tf_graph_parser.fetchPbTxt(sidePath);
     const decodedStr = new TextDecoder().decode(sideStr);
-    const decodedObj = JSON.parse(decodedStr);
+    const decodedObj = safeJSONParse(decodedStr);
+    if (decodedObj === null) {
+      console.error("Error: loading contextmenu failed please check data or getMenu function.");
+      return;
+    }
     // 构建菜单选项
     let communicationsType = decodedObj.communications_type;
     const menuOptions = [{ text: EXPAND_NODE, action: 'expand' }];
     if (communicationsType || decodedObj[0]?.communications_type) {
       // 定义一个函数来生成 titleText
       const getTitleText = (type: string): string => {
-        if (type === 'send') return DATA_SEND;
-        if (type === 'receive') return DATA_RECEIVE;
+        if (type === 'send') {
+          return DATA_SEND;
+        }
+        if (type === 'receive') {
+          return DATA_RECEIVE;
+        }
         return DATA_SEND_RECEIVE;
       };
 
@@ -148,7 +157,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
       .append('li')
       .on('click', (d, i) => {
         if (d.action === 'expand') {
-          sceneElement.fire('parent-node-toggle-expand', { nodeData });
+            sceneElement.fire('parent-node-toggle-expand', { nodeData });
         }
         maybeCloseMenu();
       })
@@ -158,7 +167,9 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
           // 第一项是expand，rank一定从第二项开始，所以是i-1
           const id = decodedObj[i - 1]?.communications_type || decodedObj.communications_type;
           // 检查是否已经有子菜单，防止重复添加
-          if (!parentLi.select(`#submenu-${id}`).empty()) return;
+          if (!parentLi.select(`#submenu-${id}`).empty()) {
+            return;
+          }
           // 动态生成子菜单
           let nodeInfo: Record<string, [number, string]>;
           if (decodedObj[0]?.communications_type) {

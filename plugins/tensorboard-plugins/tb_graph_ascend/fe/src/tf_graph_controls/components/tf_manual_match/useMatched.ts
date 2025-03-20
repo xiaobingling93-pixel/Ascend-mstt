@@ -18,6 +18,7 @@ import { isEmpty, zip } from 'lodash';
 import { fetchPbTxt } from '../../../tf_graph_common/parser';
 import { Notification } from '@vaadin/notification';
 import { NPU_PREFIX, BENCH_PREFIX } from '../../../tf_graph_common/common';
+import { safeJSONParse } from '../../../utils';
 
 export interface UseMatchedType {
   saveMatchedNodesLink: (selection: any) => Promise<any>;
@@ -48,7 +49,7 @@ const useMatched = (): UseMatchedType => {
     const decoder = new TextDecoder();
     const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
     // 接口返回
-    const mactchResult = JSON.parse(decodedStr.replace(/"None"/g, '{}'));
+    const mactchResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
     return mactchResult;
   };
 
@@ -63,7 +64,7 @@ const useMatched = (): UseMatchedType => {
     const decoder = new TextDecoder();
     const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
     // 接口返回
-    const mactchResult = JSON.parse(decodedStr.replace(/"None"/g, '{}'));
+    const mactchResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
     return mactchResult;
   };
 
@@ -76,7 +77,7 @@ const useMatched = (): UseMatchedType => {
     const decoder = new TextDecoder();
     const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
     // 接口返回
-    const mactchResult = JSON.parse(decodedStr.replace(/"None"/g, '{}'));
+    const mactchResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
     return mactchResult;
   };
 
@@ -102,7 +103,7 @@ const useMatched = (): UseMatchedType => {
     const decoder = new TextDecoder();
     const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
     // 接口返回
-    const saveResult = JSON.parse(decodedStr.replace(/"None"/g, '{}'));
+    const saveResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
     return saveResult;
   };
 
@@ -118,7 +119,7 @@ const useMatched = (): UseMatchedType => {
         duration: 2000,
         theme: 'error',
       });
-      return;
+      return {};
     }
     const metaData = {
       run: selection.run,

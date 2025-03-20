@@ -179,9 +179,10 @@ class TfVaadinTable extends PolymerElement {
     container.className = 'copyable-input';
 
     const title = document.createElement('div');
+    const textTitle = 'title';
     title.className = 'copyable-input-title';
     title.style.fontWeight = 'bold';
-    title.textContent = `${rowData.item['title']}:`;
+    title.textContent = `${rowData.item[textTitle]}:`;
     container.appendChild(title);
 
     const textarea = document.createElement('textarea');
@@ -218,9 +219,14 @@ class TfVaadinTable extends PolymerElement {
 
   _updateCopyableTextarea(root: HTMLElement, propertyName: any, rowData: any): void {
     const title = root.querySelector('.copyable-input-title');
-    if (title) title.textContent = `${rowData.item['title']}:`;
+    const textTitle = 'title';
+    if (title) {
+      title.textContent = `${rowData.item[textTitle]}:`;
+    }
     const textarea = root.querySelector('textarea');
-    if (textarea) textarea.value = rowData.item[propertyName];
+    if (textarea) {
+      textarea.value = rowData.item[propertyName];
+    }
   }
 
   _tooltipGenerator = (context: GridEventContext<Record<string, string>>): string => {

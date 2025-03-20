@@ -141,7 +141,7 @@ export function fit(svg, zoomG, d3zoom, callback): void {
 export function panToNode(nodeName: string, svg, zoomG, d3zoom): boolean {
   const node = <SVGAElement>d3.select(svg).select(`[data-name="${nodeName}"]`).node();
   if (!node) {
-    console.warn(`panToNode() failed for node name "${nodeName}"`);
+    console.warn(`panToNode failed for node name "${nodeName}"`);
     return false;
   }
   // Check if the selected node is off-screen in either
@@ -175,8 +175,8 @@ export function panToNode(nodeName: string, svg, zoomG, d3zoom): boolean {
     // by this logic.
     let centerX = (pointTL.x + pointBR.x) / 2;
     let centerY = (pointTL.y + pointBR.y) / 2;
-    let dx = svgRect.left + svgRect.width / 2 - centerX;
-    let dy = svgRect.top + svgRect.height / 2 - centerY;
+    let dx = svgRect.left + (svgRect.width / 2) - centerX;
+    let dy = svgRect.top + (svgRect.height / 2) - centerY;
 
     // We translate by this amount. We divide the X and Y translations by the
     // scale to undo how translateBy scales the translations (in d3 v4).
@@ -219,10 +219,10 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   if (hasInExtract) {
     let inExtractX = renderNode.coreBox.width;
     if (auxWidth < layout.MIN_AUX_WIDTH) {
-      inExtractX = inExtractX - layout.MIN_AUX_WIDTH + renderNode.inExtractBox.width / 2;
+      inExtractX = inExtractX - layout.MIN_AUX_WIDTH + (renderNode.inExtractBox.width / 2);
     } else {
       inExtractX =
-        inExtractX - renderNode.inExtractBox.width / 2 - renderNode.outExtractBox.width - (hasOutExtract ? offset : 0);
+        inExtractX - (renderNode.inExtractBox.width / 2) - renderNode.outExtractBox.width - (hasOutExtract ? offset : 0);
     }
     inExtractX = inExtractX - renderNode.libraryFunctionsBox.width - (hasLibraryFunctions ? offset : 0);
     translate(selectChild(sceneGroup, 'g', Class.Scene.INEXTRACT), inExtractX, yTranslate);
@@ -231,7 +231,7 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   if (hasOutExtract) {
     let outExtractX = renderNode.coreBox.width;
     if (auxWidth < layout.MIN_AUX_WIDTH) {
-      outExtractX = outExtractX - layout.MIN_AUX_WIDTH + renderNode.outExtractBox.width / 2;
+      outExtractX = outExtractX - layout.MIN_AUX_WIDTH + (renderNode.outExtractBox.width / 2);
     } else {
       outExtractX -= renderNode.outExtractBox.width / 2;
     }
@@ -239,7 +239,7 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
     translate(selectChild(sceneGroup, 'g', Class.Scene.OUTEXTRACT), outExtractX, yTranslate);
   }
   if (hasLibraryFunctions) {
-    let libraryFunctionsExtractX = renderNode.coreBox.width - renderNode.libraryFunctionsBox.width / 2;
+    let libraryFunctionsExtractX = renderNode.coreBox.width - (renderNode.libraryFunctionsBox.width / 2);
     translate(selectChild(sceneGroup, 'g', Class.Scene.FUNCTION_LIBRARY), libraryFunctionsExtractX, yTranslate);
   }
 }
@@ -269,8 +269,8 @@ export function translate(selection, x0: number, y0: number): void {
 export function positionRect(rect, cx: number, cy: number, width: number, height: number): void {
   rect
     .transition()
-    .attr('x', cx - width / 2)
-    .attr('y', cy - height / 2)
+    .attr('x', cx - (width / 2))
+    .attr('y', cy - (height / 2))
     .attr('width', width)
     .attr('height', height);
 }
@@ -304,8 +304,8 @@ export function positionButton(button, renderNode: render.RenderNodeInfo): void 
   // with space given the draw the button inside of the corner.
   let width = renderNode.expanded ? renderNode.width : renderNode.coreBox.width;
   let height = renderNode.expanded ? renderNode.height : renderNode.coreBox.height;
-  let x = cx + width / 2 - 6;
-  let y = renderNode.y - height / 2 + 6;
+  let x = cx + (width / 2) - 6;
+  let y = renderNode.y - (height / 2) + 6;
 
   // For unexpanded series nodes, the button has special placement due
   // to the unique visuals of this group node.
@@ -332,274 +332,4 @@ export function positionEllipse(ellipse, cx: number, cy: number, width: number, 
     .attr('cy', cy)
     .attr('rx', width / 2)
     .attr('ry', height / 2);
-}
-/**
- * @param {number} stat A stat for a health pill (such as mean or variance).
- * @param {boolean} shouldRoundOnesDigit Whether to round this number to the
- *     ones digit. Useful for say int, uint, and bool output types.
- * @return {string} A human-friendly string representation of that stat.
- */
-export function humanizeHealthPillStat(stat: number, shouldRoundOnesDigit: boolean): string {
-  if (shouldRoundOnesDigit) {
-    return stat.toFixed(0);
-  }
-  if (Math.abs(stat) >= 1) {
-    return stat.toFixed(1);
-  }
-  return stat.toExponential(1);
-}
-/**
- * Get text content describing a health pill.
- */
-function _getHealthPillTextContent(
-  healthPill: HealthPill,
-  totalCount: number,
-  elementsBreakdown: number[],
-  numericStats: HealthPillNumericStats,
-): string {
-  let text = `Device: ${healthPill.device_name}\n`;
-  text += `dtype: ${healthPill.dtype}\n`;
-  let shapeStr = '(scalar)';
-  if (healthPill.shape.length > 0) {
-    shapeStr = `(${healthPill.shape.join(',')})`;
-  }
-  text += `\nshape: ${shapeStr}\n\n`;
-  text += `#(elements): ${totalCount}\n`;
-
-  const breakdownItems: string[] = [];
-  for (let i = 0; i < elementsBreakdown.length; i++) {
-    if (elementsBreakdown[i] > 0) {
-      breakdownItems.push(`#(${healthPillEntries[i].label}): ${elementsBreakdown[i]}`);
-    }
-  }
-  text += `${breakdownItems.join(', ')}\n\n`;
-  // In some cases (e.g., size-0 tensors; all elements are nan or inf) the
-  // min/max and mean/stddev stats are meaningless.
-  if (numericStats.max >= numericStats.min) {
-    text += `min: ${numericStats.min}, max: ${numericStats.max}\n`;
-    text += `mean: ${numericStats.mean}, stddev: ${numericStats.stddev}`;
-  }
-  return text;
-}
-/**
- * Renders a health pill for an op atop a node.
- * nodeGroupElement: The SVG element in which to render.
- * healthPill: A list of backend.HealthPill objects.
- * nodeInfo: Info on the associated node.
- * healthPillId: A unique numeric ID assigned to this health pill.
- * healthPillWidth: Optional width of the health pill.
- * healthPillHeight: Optional height of the health pill.
- * healthPillYOffset: Optional y-offset of the health pill (that is, the
- *   color-coded region).
- * textOffset: Optional value for the x-offset of the top text label
- *   relative to the left edge of the health pill. If not provided, will
- *   default to `healthPillWidth / 2`.
- */
-export function addHealthPill(
-  nodeGroupElement: SVGElement,
-  healthPill: HealthPill | null,
-  nodeInfo: render.RenderNodeInfo,
-  healthPillId: number,
-  healthPillWidth = 60,
-  healthPillHeight = 10,
-  healthPillYOffset = 0,
-  textXOffset?: number,
-): void {
-  let healthPillWidthTemp = healthPillWidth;
-  let healthPillHeightTemp = healthPillHeight;
-  // Check if text already exists at location.
-  d3.select(nodeGroupElement.parentNode as any)
-    .selectAll('.health-pill')
-    .remove();
-  if (!healthPill) {
-    return;
-  }
-  const lastHealthPillData = healthPill.value;
-  // For now, we only visualize the 6 values that summarize counts of tensor
-  // elements of various categories: -Inf, negative, 0, positive, Inf, and NaN.
-  const lastHealthPillElementsBreakdown = lastHealthPillData.slice(2, 8);
-  const nanCount = lastHealthPillElementsBreakdown[0];
-  const negInfCount = lastHealthPillElementsBreakdown[1];
-  const posInfCount = lastHealthPillElementsBreakdown[5];
-  let totalCount = lastHealthPillData[1];
-  const numericStats: HealthPillNumericStats = {
-    min: lastHealthPillData[8],
-    max: lastHealthPillData[9],
-    mean: lastHealthPillData[10],
-    stddev: Math.sqrt(lastHealthPillData[11]),
-  };
-
-  if (healthPillWidthTemp == null) {
-    healthPillWidthTemp = 60;
-  }
-  if (healthPillHeightTemp == null) {
-    healthPillHeightTemp = 10;
-  }
-  if (healthPillYOffset == null) {
-    healthPillYOffset = 0;
-  }
-  if (nodeInfo != null && nodeInfo.node.type === NodeType.OP) {
-    // Use a smaller health pill for op nodes (rendered as smaller ellipses).
-    healthPillWidthTemp /= 2;
-    healthPillHeightTemp /= 2;
-  }
-  let healthPillGroup = document.createElementNS(SVG_NAMESPACE, 'g');
-  healthPillGroup.classList.add('health-pill');
-  // Define the gradient for the health pill.
-  let healthPillDefs = document.createElementNS(SVG_NAMESPACE, 'defs');
-  healthPillGroup.appendChild(healthPillDefs);
-  let healthPillGradient = document.createElementNS(SVG_NAMESPACE, 'linearGradient');
-  // Every element in a web page must have a unique ID.
-  const healthPillGradientId = `health-pill-gradient-${healthPillId}`;
-  healthPillGradient.setAttribute('id', healthPillGradientId);
-  let cumulativeCount = 0;
-  let previousOffset = '0%';
-  for (let i = 0; i < lastHealthPillElementsBreakdown.length; i++) {
-    if (!lastHealthPillElementsBreakdown[i]) {
-      // Exclude empty categories.
-      continue;
-    }
-    cumulativeCount += lastHealthPillElementsBreakdown[i];
-    // Create a color interval using 2 stop elements.
-    let stopElement0 = document.createElementNS(SVG_NAMESPACE, 'stop');
-    stopElement0.setAttribute('offset', previousOffset);
-    stopElement0.setAttribute('stop-color', healthPillEntries[i].background_color);
-    healthPillGradient.appendChild(stopElement0);
-    let stopElement1 = document.createElementNS(SVG_NAMESPACE, 'stop');
-    let percent = `${(cumulativeCount * 100) / totalCount}%`;
-    stopElement1.setAttribute('offset', percent);
-    stopElement1.setAttribute('stop-color', healthPillEntries[i].background_color);
-    healthPillGradient.appendChild(stopElement1);
-    previousOffset = percent;
-  }
-  healthPillDefs.appendChild(healthPillGradient);
-  // Create the rectangle for the health pill.
-  let rect = document.createElementNS(SVG_NAMESPACE, 'rect');
-  rect.setAttribute('fill', `url(#${healthPillGradientId})`);
-  rect.setAttribute('width', String(healthPillWidthTemp));
-  rect.setAttribute('height', String(healthPillHeightTemp));
-  rect.setAttribute('y', String(healthPillYOffset));
-  healthPillGroup.appendChild(rect);
-  // Show a title with specific counts on hover.
-  let titleSvg = document.createElementNS(SVG_NAMESPACE, 'title');
-  titleSvg.textContent = _getHealthPillTextContent(
-    healthPill,
-    totalCount,
-    lastHealthPillElementsBreakdown,
-    numericStats,
-  );
-  healthPillGroup.appendChild(titleSvg);
-  // Center this health pill just right above the node for the op.
-  let shouldRoundOnesDigit = false;
-
-  function calculateHealthPillPosition(
-    nodeInfo,
-    healthPillWidth,
-    healthPillHeight,
-  ): { healthPillX: number; healthPillY: number } {
-    let healthPillX = nodeInfo.x - healthPillWidth / 2;
-    let healthPillY = nodeInfo.y - healthPillHeight - nodeInfo.height / 2 - 2;
-
-    if (nodeInfo.labelOffset < 0) {
-      healthPillY += nodeInfo.labelOffset;
-    }
-
-    return { healthPillX, healthPillY };
-  }
-
-  function hasNonInfOrNaNValue(lastHealthPillElementsBreakdown): any {
-    return (
-      lastHealthPillElementsBreakdown[2] || lastHealthPillElementsBreakdown[3] || lastHealthPillElementsBreakdown[4]
-    );
-  }
-
-  function isIntegerOutputType(attributes): boolean {
-    if (!attributes?.length) {
-      return false;
-    }
-
-    for (let i = 0; i < attributes.length; i++) {
-      if (attributes[i].key === 'T') {
-        let outputType = attributes[i].value.type;
-        return outputType && /^DT_(?<type>BOOL|INT|UINT)/.test(outputType);
-      }
-    }
-
-    return false;
-  }
-
-  // 主逻辑
-  if (nodeInfo != null) {
-    let { healthPillX, healthPillY } = calculateHealthPillPosition(nodeInfo, healthPillWidthTemp, healthPillHeightTemp);
-    healthPillGroup.setAttribute('transform', `translate(${healthPillX}, ${healthPillY})`);
-
-    if (hasNonInfOrNaNValue(lastHealthPillElementsBreakdown)) {
-      let node = nodeInfo.node as OpNode;
-      shouldRoundOnesDigit = isIntegerOutputType(node.attr);
-    }
-  }
-  let statsSvg = document.createElementNS(SVG_NAMESPACE, 'text');
-  if (Number.isFinite(numericStats.min) && Number.isFinite(numericStats.max)) {
-    const minString = humanizeHealthPillStat(numericStats.min, shouldRoundOnesDigit);
-    const maxString = humanizeHealthPillStat(numericStats.max, shouldRoundOnesDigit);
-    if (totalCount > 1) {
-      statsSvg.textContent = `${minString} ~ ${maxString}`;
-    } else {
-      statsSvg.textContent = minString;
-    }
-    if (nanCount > 0 || negInfCount > 0 || posInfCount > 0) {
-      statsSvg.textContent += ' (';
-      const badValueStrings: string[] = [];
-      if (nanCount > 0) {
-        badValueStrings.push(`NaN×${nanCount}`);
-      }
-      if (negInfCount > 0) {
-        badValueStrings.push(`-∞×${negInfCount}`);
-      }
-      if (posInfCount > 0) {
-        badValueStrings.push(`+∞×${posInfCount}`);
-      }
-      statsSvg.textContent += `${badValueStrings.join('; ')} )`;
-    }
-  } else {
-    statsSvg.textContent = '(No finite elements)';
-  }
-  statsSvg.classList.add('health-pill-stats');
-  if (textXOffset == null) {
-    textXOffset = healthPillWidthTemp / 2;
-  }
-  statsSvg.setAttribute('x', String(textXOffset));
-  statsSvg.setAttribute('y', String(healthPillYOffset - 2));
-  healthPillGroup.appendChild(statsSvg);
-  (PolymerDom.dom(nodeGroupElement.parentNode) as any).appendChild(healthPillGroup);
-}
-
-/**
- * Adds health pills (which visualize tensor summaries) to a graph group.
- * @param svgRoot The root SVG element of the graph to add heath pills to.
- * @param nodeNamesToHealthPills An object mapping node name to health pill.
- * @param colors A list of colors to use.
- */
-export function addHealthPills(
-  svgRoot: SVGElement,
-  nodeNamesToHealthPills: {
-    [key: string]: HealthPill[];
-  },
-  healthPillStepIndex: number,
-): void {
-  if (!nodeNamesToHealthPills) {
-    // No health pill information available.
-    return;
-  }
-  // We generate a unique ID for each health pill because the ID of each element
-  // in a web page must be unique, and each health pill generates a gradient
-  // that its code later refers to.
-  let healthPillId = 1;
-  let svgRootSelection = d3.select(svgRoot);
-  svgRootSelection.selectAll('g.nodeshape').each(function (nodeInfo: render.RenderNodeInfo) {
-    // Only show health pill data for this node if it is available.
-    const healthPills = nodeNamesToHealthPills[nodeInfo.node.name];
-    const healthPill = healthPills ? healthPills[healthPillStepIndex] : null;
-    addHealthPill(this as SVGElement, healthPill, nodeInfo, healthPillId++);
-  });
 }

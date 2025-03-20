@@ -71,7 +71,7 @@ function consumeNumber(s: string, i: number): number {
     EXPONENT = 3,
   }
   let state = State.NATURAL;
-  for (; i < s.length; i++) {
+  for (let i = 0; i < s.length; i++) {
     if (state === State.NATURAL) {
       if (s[i] === '.') {
         state = State.REAL;

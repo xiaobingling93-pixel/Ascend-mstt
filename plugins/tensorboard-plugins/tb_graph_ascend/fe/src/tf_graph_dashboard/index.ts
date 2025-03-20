@@ -181,10 +181,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
       }
     </style>
   `;
+
   /**
    * @type {!Array<!RunItem>}
    */
-
   @property({ type: Array })
   _datasets: any[] = [];
 
@@ -318,9 +318,13 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     let datasetsFetched = this._datasetsFetched;
     let datasets = this._datasets;
     let selectedDataset = this._selectedDataset;
-    if (!datasetsFetched) return;
+    if (!datasetsFetched) {
+      return;
+    }
     // Cannot update `run` to update the hash in case datasets for graph is empty.
-    if (datasets.length <= selectedDataset) return;
+    if (datasets.length <= selectedDataset) {
+      return;
+    }
     this.set('run', datasets[selectedDataset].name);
   }
 
@@ -354,8 +358,12 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
   }
 
   _datasetsState(datasetsFetched, datasets, state): boolean {
-    if (!datasetsFetched) return state === 'NOT_LOADED';
-    if (!datasets || !datasets.length) return state === 'EMPTY';
+    if (!datasetsFetched) {
+      return state === 'NOT_LOADED';
+    }
+    if (!datasets || !datasets.length) {
+      return state === 'EMPTY';
+    }
     return state === 'PRESENT';
   }
 }

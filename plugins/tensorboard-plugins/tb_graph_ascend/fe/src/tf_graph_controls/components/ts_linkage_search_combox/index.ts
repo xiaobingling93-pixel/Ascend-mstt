@@ -26,10 +26,11 @@ import '@vaadin/progress-bar';
 import * as tf_graph_render from '../../../tf_graph_common/render';
 import '../tf_search_combox/index';
 @customElement('tf-linkage-search-combox')
-class legend extends PolymerElement {
+class Legend extends PolymerElement {
   static get shadowRootOptions(): { mode: string } {
     return { mode: 'open' }; // 确保启用了 Shadow DOM
   }
+
   // 定义模板
   static get template(): HTMLTemplateElement {
     return html`
@@ -171,8 +172,15 @@ class legend extends PolymerElement {
     this.set('isCompareGraph', isCompareGraphTemp);
   }
 
-  _onSelectedMenuNode = (): void => {
-    const prefix = this.isCompareGraph ? (this.selectedSide === '0' ? NPU_PREFIX : BENCH_PREFIX) : '';
+  _onSelectedMenuNode = () => {
+    let prefix = '';
+    if (this.isCompareGraph) {
+      if (this.selectedSide === '0') {
+        prefix = NPU_PREFIX;
+      } else {
+        prefix = BENCH_PREFIX;
+      }
+    }
     const node = prefix + this.selectedMenuNode;
     this.set('selectedNode', node);
   };

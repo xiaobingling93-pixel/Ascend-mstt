@@ -208,8 +208,8 @@ export class Minimap {
     };
     // Update the size of the minimap's svg, the buffer canvas and the
     // viewpoint rect.
-    d3.select(this.minimapSvg).attr(<any>this.minimapSize);
-    d3.select(this.canvasBuffer).attr(<any>this.minimapSize);
+    d3.select(this.minimapSvg).attr(this.minimapSize as any);
+    d3.select(this.canvasBuffer).attr(this.minimapSize as any);
     // Download canvas width and height are multiples of the style width and
     // height in order to increase pixel density of the PNG for clarity.
     const downloadCanvasSelection = d3.select(this.downloadCanvas);
@@ -252,6 +252,7 @@ export class Minimap {
     };
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgXml)}`;
   }
+
   /**
    * Handles changes in zooming/panning. Should be called from the main svg
    * to notify that a zoom/pan was performed and this minimap will update it's

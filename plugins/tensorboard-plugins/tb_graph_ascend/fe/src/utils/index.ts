@@ -14,13 +14,24 @@
  * limitations under the License.
  */
 
-export const getElementBySelectors = (selectors): Element | null => {
-  let currentElement = document.querySelector('graph-app');
-  for (const selector of selectors) {
-    currentElement = currentElement?.shadowRoot?.querySelector(selector);
-    if (!currentElement) {
-      return null;
+const removePrototypePollution = (obj: any): void => {
+  if (obj &&  typeof obj === 'object') {
+    for (let key in obj) {
+      if (key === '__proto__' || key === 'constructor') {
+        delete obj[key];
+      } else if (typeof obj[key] === 'object') {
+        removePrototypePollution(obj[key])
+      }
     }
   }
-  return currentElement;
+};
+
+export const safeJSONParse = (str:any, defaultValue: any = null): any => {
+  try {
+    const res = JSON.parse(str);
+    removePrototypePollution(res);
+    return res;
+  } catch (error) {
+    return defaultValue;
+  }
 };

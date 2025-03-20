@@ -38,7 +38,9 @@ export function DarkModeMixin<T extends PolymerElement>(Base: new () => PolymerE
         const classChanged = mutations.some((mutation) => {
           return mutation.attributeName === 'class';
         });
-        if (classChanged) this._maybeSetDarkMode();
+        if (classChanged) {
+          this._maybeSetDarkMode();
+        }
       });
       this.observer.observe(document.body, { attributes: true });
     }

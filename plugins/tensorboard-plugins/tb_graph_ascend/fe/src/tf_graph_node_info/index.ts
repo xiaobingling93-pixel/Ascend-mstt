@@ -235,7 +235,9 @@ class TfGraphNodeInfo extends PolymerElement {
     const isNodeStartWithN = this._node.name.startsWith(NPU_PREFIX);
     const isSingleGraphNode = !isNodeStartWithN && !this._node?.name?.startsWith(BENCH_PREFIX);
     this.set('isSingleGraphNode', isSingleGraphNode);
-    if (!isSingleGraphNode) await this._updateMatchedNodeLink(this.selectedNode);
+    if (!isSingleGraphNode) {
+      await this._updateMatchedNodeLink(this.selectedNode);
+    }
     // 考虑选中的节点是匹配节点的情况
     const npuNode = isNodeStartWithN || isSingleGraphNode ? this._node : this._matchedNode;
     let benchNode;
@@ -306,9 +308,14 @@ class TfGraphNodeInfo extends PolymerElement {
   handleGridCellClick(e: MouseEvent, syncGrid: HTMLElement): void {
     const target = e.composedPath()[0] as HTMLElement; // 获取点击的目标元素
     const slotValue = target.getAttribute('slot'); // 提取 slot 属性
-    if (!slotValue || !slotValue.startsWith('vaadin-grid-cell-content-')) return;
+    if (!slotValue || !slotValue.startsWith('vaadin-grid-cell-content-')) {
+      return;
+    }
     const cellIndex = parseInt(slotValue.split('-').pop() || '0', 10);
-    if (cellIndex <= 8) return; // 前8个元素是表头不可选中，所以跳过
+    // 前8个元素是表头不可选中，所以跳过
+    if (cellIndex <= 8) {
+      return;
+    }
     const highlightedCells = this.shadowRoot?.querySelectorAll('.highlight-cell');
     highlightedCells?.forEach((cell) => cell.classList.remove('highlight-cell')); // 清除所有高亮样式
     target.classList.add('highlight-cell'); // 添加高亮样式到当前单元格

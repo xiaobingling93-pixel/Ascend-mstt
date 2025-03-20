@@ -22,6 +22,7 @@ import { ProgressTracker } from './common';
 import { Hierarchy } from './hierarchy';
 import * as tf_graph_proto from './proto';
 import * as tf_graph_util from './util';
+import { safeJSONParse } from '../utils';
 
 export const NAMESPACE_DELIM = '/';
 export const ROOT_NAME = '__root__';
@@ -575,7 +576,7 @@ export class MetanodeImpl implements Metanode {
    */
   leaves(): string[] {
     let leaves: string[] = [];
-    let queue = [<Node>this];
+    let queue = [this as Node];
     let metagraph; // Defined here due to a limitation of ES6->5 compilation.
     while (queue.length) {
       let node = queue.shift();
@@ -660,7 +661,7 @@ export class MetaedgeImpl implements Metaedge {
     }
     // Compute the size of the tensor flowing through this
     // base edge.
-    this.totalSize += (JSON.parse(edge.outputTensorKey) as number[]).reduce((accumulated, currSize) => {
+    this.totalSize += (safeJSONParse(edge.outputTensorKey) as number[]).reduce((accumulated, currSize) => {
       let currSizeNew = currSize;
       if (currSize === -1) {
         currSizeNew = 1;
@@ -688,9 +689,9 @@ export function getSeriesNodeName(
   startId?: number,
   endId?: number,
 ): string {
-  let numRepresentation = `${typeof startId !== 'undefined' && typeof endId !== 'undefined' ? '[' + startId + '-' + endId + ']' : '#'}`;
+  let numRepresentation = `${typeof startId !== 'undefined' && typeof endId !== 'undefined' ? `[${startId}-${endId}]` : '#'}`;
   let pattern = prefix + numRepresentation + suffix;
-  return `${parent ? parent + '/' : ''}${pattern}`;
+  return `${parent ? `${parent}/` : ''}${pattern}`;
 }
 
 class SeriesNodeImpl implements SeriesNode {
@@ -813,7 +814,7 @@ function extractOutputShapes(
  * - <node_name>:<tensor_index>
  * - <node_name>:<tensor_name>:<tensor_index>
  */
-const INPUT_NAME_PART_MATCHER = /^(?<name>[^:]+):((?<type>\w+:|)\d+)$/;
+const INPUT_NAME_PART_MATCHER = /^(?<name>[^:]+):(?<type>\w+:)?(?<id>\d+)$/;
 /**
  * Normalizes the inputs and extracts associated metadata:
  * 1) Inputs can contain a colon followed by a suffix of characters.

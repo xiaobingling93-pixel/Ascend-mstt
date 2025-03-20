@@ -644,7 +644,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     // 检查输入值是否与其他区间冲突
     const isConflict = this.hiddenSelects.some((item, i) => {
       // 排除当前输入框
-      if (i === index) return false;
+      if (i === index) {
+        return false;
+      }
 
       const [leftInput, rightInput] = item.values;
       return (
@@ -766,8 +768,12 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       overflowCheckbox = this.shadowRoot?.getElementById(`overflowCheckbox-${event.model.index}`) as HTMLInputElement;
     }
     const params = new URLSearchParams();
-    if (run) params.set('run', run);
-    if (tag) params.set('tag', tag);
+    if (run) {
+      params.set('run', run);
+    }
+    if (tag) {
+      params.set('tag', tag);
+    }
     params.set('batch', String(batch === -1 ? -1 : batch - 1));
     params.set('step', String(step === -1 ? -1 : step - 1));
     // 更新 selectColor 数组
@@ -793,7 +799,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const precisionmenu = JSON.parse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
         this.set('precisionmenu', precisionmenu);
       } catch (e) {
-        console.error('Parse tooltips failed, please check the format of tooltips in the input vis file');
+        console.error('Get precision menu failed, please check the toggleCheckbox and the data in vis file');
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
@@ -817,7 +823,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const screenStr = tf_graph_parser.fetchPbTxt(screenPath);
         this.overflowmenu = JSON.parse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
       } catch (e) {
-        console.error('Parse tooltips failed, please check the format of tooltips in the input vis file');
+        console.error('Get overflow menu failed, please check the toggleCheckbox and the data in vis file');
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);

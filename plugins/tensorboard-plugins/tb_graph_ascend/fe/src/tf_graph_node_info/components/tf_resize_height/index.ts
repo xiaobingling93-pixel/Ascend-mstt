@@ -96,7 +96,9 @@ class ResizableTabsheet extends PolymerElement {
 
     // 拖拽过程
     this._resize = (event): void => {
-      if (!isResizing) return;
+      if (!isResizing) {
+        return;
+      }
       const deltaY = startY - event.clientY; // 向上拖拽为正
       this.set('height', Math.max(10, startHeight + deltaY)); // 更新高度
     };

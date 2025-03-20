@@ -21,6 +21,7 @@ import { BaseEdge, EDGE_KEY_DELIM, Metaedge, OpNode, TensorShape } from './graph
 import * as render from './render';
 import { EdgeData } from './render';
 import { TfGraphScene } from './tf-graph-scene';
+import { safeJSONParse } from '../utils';
 
 /** Delimiter between dimensions when showing sizes of tensors. */
 const TENSOR_SHAPE_DELIM = '\u00D7';
@@ -146,7 +147,7 @@ export function getLabelForBaseEdge(baseEdge: BaseEdge, renderInfo: render.Rende
   const outTensorKey = baseEdge.outputTensorKey;
   let shape: TensorShape = [];
   if (outTensorKey?.startsWith('[')) {
-    shape = JSON.parse(outTensorKey) as TensorShape;
+    shape = safeJSONParse(outTensorKey) as TensorShape;
   } else {
     let node = <OpNode>renderInfo.getNodeByName(baseEdge.v ?? '');
     if (node.outputShapes == null || _.isEmpty(node.outputShapes)) {
@@ -234,7 +235,7 @@ function adjustPathPointsForMarker(
   if (isStart) {
     // The edge flows downwards. Do not make the edge go the whole way, lest we
     // clobber the arrowhead.
-    const fractionStickingOut = 1 - refX / viewBoxWidth;
+    const fractionStickingOut = 1 - (refX / viewBoxWidth);
     const length = markerWidth * fractionStickingOut;
     const point = pathNode.getPointAtLength(length);
     // Figure out how many segments of the path we need to remove in order
@@ -249,7 +250,7 @@ function adjustPathPointsForMarker(
     // The edge flows upwards. Do not make the edge go the whole way, lest we
     // clobber the arrowhead.
     const fractionStickingOut = 1 - refX / viewBoxWidth;
-    const length = pathNode.getTotalLength() - markerWidth * fractionStickingOut;
+    const length = pathNode.getTotalLength() - (markerWidth * fractionStickingOut);
     const point = pathNode.getPointAtLength(length);
     // Figure out how many segments of the path we need to remove in order
     // to shorten the path.

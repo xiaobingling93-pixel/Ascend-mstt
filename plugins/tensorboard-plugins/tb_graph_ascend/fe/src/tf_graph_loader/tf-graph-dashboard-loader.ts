@@ -25,7 +25,7 @@ import * as tf_graph_util from '../tf_graph_common/util';
 import * as tf_graph_node from '../tf_graph_common/node';
 import { DATA_LOAD_TIME, DATA_NOTICE_TIME } from '../tf_graph_common/common';
 import * as tf_graph_controls from '../tf_graph_controls/tf-graph-controls';
-import { error } from 'console';
+import { safeJSONParse } from '../utils';
 
 interface GraphRunTag {
   run: string;
@@ -201,7 +201,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         while (timer <= DATA_LOAD_TIME && !shouldBreak) {
           if (timer < DATA_NOTICE_TIME) {
             const progress = Math.log(timer + 1) / Math.log(DATA_NOTICE_TIME);
-            const progressIncrement = progress * 100 - previousProgress;
+            const progressIncrement = (progress * 100) - previousProgress;
             dataTracker.updateProgress(progressIncrement);
             previousProgress = progress * 100;
           } else {
@@ -239,7 +239,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
           if (componentsStr) {
             components = {
               ...components,
-              ...(JSON.parse(new TextDecoder().decode(componentsStr).replace(/'/g, '"')) as Components),
+              ...(safeJSONParse(new TextDecoder().decode(componentsStr).replace(/'/g, '"')) as Components),
             };
           }
         } catch (e) {
@@ -288,13 +288,13 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
       case tf_graph_common.SelectionType.OP_GRAPH:
       case tf_graph_common.SelectionType.CONCEPTUAL_GRAPH: {
         // Clear stats about the previous graph.
-        (function (): void {
-          this._setOutStats(null);
-        }).bind(this)();
+        this.set('outStats', null)
         const params = new URLSearchParams();
         params.set('run', run);
         params.set('conceptual', String(selectionType === tf_graph_common.SelectionType.CONCEPTUAL_GRAPH));
-        if (tag) params.set('tag', tag);
+        if (tag) {
+          params.set('tag', tag);
+        }
         params.set('batch', String(batch === -1 ? -1 : batch - 1));
         params.set('step', String(step === -1 ? -1 : step - 1));
         const componentsPath = `components?${String(params)}`;
@@ -306,7 +306,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
             this._graphRunTag = { run, tag }; // 图形构建完成后执行
           });
         });
-        break;
+        return;
       }
       default:
         console.error(`Unknown selection type: ${selectionType}`);
@@ -321,9 +321,9 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     });
     let tracker = tf_graph_util.getTracker(this);
     tf_graph_parser.fetchAndParseMetadata(path, tracker).then(
-      function (stats): void {
-        this._setOutStats(stats);
-      }.bind(this),
+      (stats) => {
+        this.set('outStats', stats)
+      }
     );
   }
 

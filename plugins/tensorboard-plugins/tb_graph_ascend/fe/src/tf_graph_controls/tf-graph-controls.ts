@@ -752,7 +752,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   _updateFileInput(e: Event): void {
     const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     // Strip off everything before the last "/" and strip off the file
     // extension in order to get the name of the PNG for the graph.
     let filePath = file.name;
@@ -797,7 +799,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   }
 
   _selectedRunIndexChanged(runIndex: number): void {
-    if (!this.datasets) return;
+    if (!this.datasets) {
+      return;
+    }
     this._selectedTagIndex = 0;
     this._selectedGraphType = this._getDefaultSelectionType();
     this.traceInputs = false; // Set trace input to off-state.
@@ -809,16 +813,16 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   }
 
   _getDefaultSelectionType(): SelectionType {
-    const { datasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
+    const { datasets: newDatasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
     function shouldSkip(datasets: any, run: any, tag: any): boolean {
       return (
-        !datasets || !datasets[run] || !(datasets[run] as any).tags[tag] || (datasets[run] as any).tags[tag].opGraph
+        !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph
       );
     }
-    if (shouldSkip(datasets, run, tag)) {
+    if (shouldSkip(newDatasets, run, tag)) {
       return SelectionType.OP_GRAPH;
     }
-    const datasetForRun = datasets[run] as any;
+    const datasetForRun = newDatasets[run] as any;
     if (datasetForRun.tags[tag].profile) {
       return SelectionType.PROFILE;
     }

@@ -37,6 +37,7 @@ import * as tf_hierarchy from '../tf_graph_common/hierarchy';
 import * as tf_graph_parser from '../tf_graph_common/parser';
 
 import { BENCH_PREFIX } from '../tf_graph_common/common';
+import { safeJSONParse } from '../utils';
 
 let _isRankJump = '';
 
@@ -197,7 +198,9 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   @observe('graphHierarchy', 'edgeWidthFunction', 'handleNodeSelected', 'edgeLabelFunction', 'handleEdgeSelected')
   _buildNewRenderHierarchy(): void {
     let graphHierarchy = this.graphHierarchy;
-    if (!graphHierarchy) return;
+    if (!graphHierarchy) {
+      return;
+    }
     this._buildRenderHierarchy(graphHierarchy);
   }
 
@@ -253,8 +256,8 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
     function shouldSkip(renderHierarchy: any, selectedNode: any): boolean {
       const hasRenderHierarchy = !!renderHierarchy;
       const isNodeRendered =
-        renderHierarchy.npu.renderedOpNames.includes(selectedNode) ||
-        renderHierarchy.bench?.renderedOpNames.includes(selectedNode);
+        renderHierarchy?.npu?.renderedOpNames?.includes(selectedNode) ||
+        renderHierarchy?.bench?.renderedOpNames?.includes(selectedNode);
       const hasSelectedNode = !!selectedNode;
 
       return !hasRenderHierarchy || isNodeRendered || !hasSelectedNode;
@@ -282,9 +285,9 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
         const expandnodeStr = await tf_graph_parser.fetchPbTxt(expandnodesPath);
         let expandnodes;
         try {
-          expandnodes = JSON.parse(new TextDecoder().decode(expandnodeStr).replace(/'/g, '"')) as object;
+          expandnodes = safeJSONParse(new TextDecoder().decode(expandnodeStr).replace(/'/g, '"')) as object;
         } catch (e) {
-          console.error('Parse tooltips failed, please check the format of tooltips in the input vis file');
+          console.error('Get expandnodes failed, please check expanded function and the nodedata in vis file');
         }
         if (expandnodes[1].length === 0 && expandnodes[2].length === 0) {
           return;

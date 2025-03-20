@@ -28,6 +28,7 @@ class Legend extends PolymerElement {
   static get shadowRootOptions(): { mode: string } {
     return { mode: 'open' }; // 确保启用了 Shadow DOM
   }
+  
   // 定义模板
   static get template(): HTMLTemplateElement {
     return html`
