@@ -49,6 +49,6 @@ class CheckerHandler(FuzzHandler):
         except Exception as e:
             logger.warning_on_rank_0(
                 f"[msprobe] Free Benchmark: For {self.params.api_name}, "
-                f"when campare the result exception raise {e}"
+                f"when comparing the results, an exception is raised: {e}"
             )
         return data_params.original_result
