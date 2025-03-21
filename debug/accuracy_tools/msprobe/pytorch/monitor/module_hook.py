@@ -28,7 +28,7 @@ from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import is_recomputation
+from msprobe.pytorch.common.utils import is_recomputation, is_float8_tensor
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -740,7 +740,7 @@ class TrainerMon:
         def clone_if_tensor(args):
             if isinstance(args, tuple):
                 return tuple([clone_if_tensor(arg) for arg in args])
-            elif isinstance(args, torch.Tensor):
+            elif isinstance(args, torch.Tensor) and not is_float8_tensor(args):
                 return args.clone()
             else:
                 return args
@@ -1083,9 +1083,12 @@ class TrainerMon:
             if param.micro_step == self.micro_batch_number:
                 param.micro_step = 0
                 if self.params_have_main_grad:
-                    context_dict[key] = param.main_grad.clone()
+                    grad = param.main_grad
                 else:
-                    context_dict[key] = param.grad.clone()
+                    grad = param.grad
+                if is_float8_tensor(grad):
+                    grad = grad.float()
+                context_dict[key] = grad.clone()
 
         logger.info("hooking weights.")
         for param, name in self.param2name.items():
