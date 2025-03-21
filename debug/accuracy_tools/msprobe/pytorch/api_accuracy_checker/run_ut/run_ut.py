@@ -84,6 +84,9 @@ tqdm_params = {
 }
 
 
+seed_all()
+
+
 def run_ut(config):
     logger.info("start UT test")
     if config.online_config.is_online:
@@ -472,6 +475,7 @@ def _run_ut(parser=None):
     _run_ut_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     run_ut_command(args)
+    
 
 
 def checked_online_config(online_config):
@@ -582,9 +586,8 @@ def run_ut_command(args):
     }
     run_ut_config = checker_config.get_run_ut_config(**config_params)
     run_ut(run_ut_config)
+    logger.info("UT task completed.")
 
 
 if __name__ == '__main__':
-    seed_all()
     _run_ut()
-    logger.info("UT task completed.")

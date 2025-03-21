@@ -224,7 +224,7 @@ class DeepSpeedZeroOptimizerStage0Mon(OptimizerMon):
         param_slice_mappings = torch_opt.state_dict()['param_slice_mappings']
         for param, name in params2name.items():
             group_idx = param2group[param]
-            state = torch_opt.state[torch_opt.fp32_groups_flat_partition[group_idx]]
+            state = torch_opt.optimizer.state[torch_opt.fp32_groups_flat_partition[group_idx]]
             if state.get('exp_avg', None) is None:
                 logger.warning(f"optimizer state is None. Something is wrong if this is not the first step")
                 break

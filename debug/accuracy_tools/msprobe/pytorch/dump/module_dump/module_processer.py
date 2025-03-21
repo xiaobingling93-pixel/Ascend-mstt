@@ -20,7 +20,7 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import replace_last_occurrence
+from msprobe.pytorch.common.utils import replace_last_occurrence, is_float8_tensor
 from torch.utils.checkpoint import checkpoint as origin_checkpoint
 from torch.utils.checkpoint import set_checkpoint_early_stop
 from torch.utils.hooks import BackwardHook
@@ -61,7 +61,7 @@ class ModuleProcesser:
     @staticmethod
     @recursion_depth_decorator("ModuleDump: ModuleProcesser.clone_if_tensor")
     def clone_if_tensor(result):
-        if isinstance(result, torch.Tensor):
+        if isinstance(result, torch.Tensor) and not is_float8_tensor(result):
             return result.clone()
         elif type(result) is tuple:
             return tuple(ModuleProcesser.clone_if_tensor(x) for x in result)

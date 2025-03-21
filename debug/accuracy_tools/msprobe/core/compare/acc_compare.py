@@ -282,6 +282,8 @@ class Comparator:
         result = []
         bench_ops_all[CompareConst.N_A] = self._generate_na_data(bench_ops_all)
         for ms_op_name, bench_op_name in self.data_mapping_dict.items():
+            check_op_str_pattern_valid(ms_op_name)
+            check_op_str_pattern_valid(bench_op_name)
             if ms_op_name in npu_ops_all and bench_op_name in bench_ops_all:
                 npu_stack_info = npu_ops_all.get(ms_op_name).get("stack_info", None)
                 bench_stack_info = bench_ops_all.get(bench_op_name).get("stack_info", None)
@@ -333,6 +335,7 @@ class Comparator:
                     pt_data_name = bench_ops_all.get(bench_op_name).get("data_name", None)
                     result_item.append([ms_data_name, pt_data_name])
                 result.append(result_item)
+                logger.info(f"{ms_op_name}, {bench_op_name} compared.")
             elif ms_op_name not in npu_ops_all:
                 logger.warning(f'Can not find npu op name : `{ms_op_name}` in npu dump json file.')
             elif bench_op_name not in npu_ops_all:
@@ -430,7 +433,9 @@ class Comparator:
         logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
         file_name = add_time_with_xlsx("compare_result" + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
-        remove_path(file_path)
+        if os.path.exists(file_path):
+            logger.warning(f"{file_path} will be recovered")
+            remove_path(file_path)
         highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
 
         npu_json = input_param.get("npu_json_path")

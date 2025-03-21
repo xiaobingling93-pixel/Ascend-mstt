@@ -19,8 +19,6 @@ from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 
-MAX_RECUR_LEVEL = 100
-
 
 class Graph:
     def __init__(self, model_name, data_path='', dump_data=None):

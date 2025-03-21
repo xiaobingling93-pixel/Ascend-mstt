@@ -397,13 +397,13 @@ class TestRunUTConfig(unittest.TestCase):
     def test_check_nfs_path_config_not_exist(self, mock_exists):
         with self.assertRaises(Exception) as context:
             RunUTConfig.check_nfs_path_config("./invalid_nfs")
-        self.assertIn("does not exist", str(context.exception))
+        self.assertIn("[msprobe] 非法文件路径：", str(context.exception))
 
     @patch('os.path.exists', return_value=False)
     def test_check_tls_path_config_not_exist(self, mock_exists):
         with self.assertRaises(Exception) as context:
             RunUTConfig.check_tls_path_config("./invalid_tls")
-        self.assertIn("does not exist", str(context.exception))
+        self.assertIn("[msprobe] 非法文件路径：", str(context.exception))
 
     def test_check_run_ut_config(self):
         with patch.object(RunUTConfig, 'check_filter_list_config') as mock_filter, \

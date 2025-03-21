@@ -715,6 +715,7 @@ static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorStats& stat)
 
     if (i >= retry) {
         LOG_ERROR(DebuggerErrno::ERROR_SYSCALL_FAILED, "Failed to occupy file " + dumpfile);
+        close(fd);
         return DebuggerErrno::ERROR_SYSCALL_FAILED;
     }
 

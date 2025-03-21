@@ -32,7 +32,7 @@ class TestGraphBuilder(unittest.TestCase):
         self.assertIsInstance(graph, Graph)
         self.assertEqual(len(graph.node_map), 3)
 
-    @patch('msprobe.visualization.builder.graph_builder.save_json_file')
+    @patch('msprobe.visualization.builder.graph_builder.save_json')
     def test_to_json(self, mock_save_json_file):
         GraphBuilder.to_json("step/rank/output.vis", self.config)
         mock_save_json_file.assert_called_once()

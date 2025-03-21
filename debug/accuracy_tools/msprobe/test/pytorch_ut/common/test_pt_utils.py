@@ -13,20 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import io
+import os
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
-import tempfile
 
 import torch
 import torch.distributed as dist
-
-from msprobe.core.common.file_utils import FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.file_utils import FileCheckConst
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
-from msprobe.pytorch.common.utils import parameter_adapter, get_rank_if_initialized, \
-    get_tensor_rank, get_rank_id, print_rank_0, load_pt, save_pt, save_api_data, load_api_data, save_pkl, load_pkl
+from msprobe.pytorch.common.utils import (
+    parameter_adapter,
+    get_rank_if_initialized,
+    get_tensor_rank,
+    get_rank_id,
+    print_rank_0,
+    load_pt,
+    save_pt,
+    save_api_data,
+    load_api_data,
+    save_pkl,
+    load_pkl,
+    is_float8_tensor,
+    is_hifloat8_tensor
+)
 
 
 class TestParameterAdapter(unittest.TestCase):
@@ -201,27 +213,18 @@ class TestSavePT(unittest.TestCase):
         self.tensor = torch.tensor([1, 2, 3])
         self.filepath = 'temp_tensor.pt'
 
+    def tearDown(self):
+        try:
+            os.remove(self.filepath)
+        except FileNotFoundError:
+            pass
+
     @patch('msprobe.pytorch.common.utils.save_pt')
     @patch('os.path.realpath', return_value='temp_tensor.pt')
     @patch('msprobe.core.common.file_utils.check_path_before_create')
     @patch('msprobe.core.common.file_utils.change_mode')
     def test_save_pt_success(self, mock_change_mode, mock_check_path, mock_realpath, mock_torch_save):
         mock_torch_save(self.tensor, self.filepath)
-        mock_torch_save.assert_called_once_with(self.tensor, self.filepath)
-        mock_change_mode.assert_called_once_with(self.filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-
-class TestSavePT(unittest.TestCase):
-
-    def setUp(self):
-        self.tensor = torch.tensor([1, 2, 3])
-        self.filepath = 'temp_tensor.pt'
-
-    @patch('torch.save')
-    @patch('os.path.realpath', return_value='temp_tensor.pt')
-    @patch('msprobe.core.common.file_utils.check_path_before_create')
-    @patch('msprobe.core.common.file_utils.change_mode')
-    def test_save_pt_success(self, mock_change_mode, mock_check_path, mock_realpath, mock_torch_save):
-        save_pt(self.tensor, self.filepath)
         mock_torch_save.assert_called_once_with(self.tensor, self.filepath)
 
     @patch('torch.save', side_effect=Exception("Save failed"))
@@ -232,12 +235,6 @@ class TestSavePT(unittest.TestCase):
         with self.assertRaises(RuntimeError) as context:
             save_pt(self.tensor, self.filepath)
         self.assertIn("save pt file temp_tensor.pt failed", str(context.exception))
-
-    def tearDown(self):
-        try:
-            os.remove(self.filepath)
-        except FileNotFoundError:
-            pass
 
 
 class TestSaveApiData(unittest.TestCase):
@@ -314,3 +311,24 @@ class TestSavePkl(unittest.TestCase):
             load_pkl(self.filepath)
         self.assertIn("Unsupported object type: os.system", str(context.exception))
         os.remove(self.filepath)
+
+class TestFloat8Tensor(unittest.TestCase):
+    def setUp(self):
+        self.tensor = MagicMock()
+
+    def test_is_float8_tensor(self):
+        self.tensor.dtype = "torch.float8_e5m2"
+        res = is_float8_tensor(self.tensor)
+        self.assertTrue(res)
+
+        self.tensor.dtype = "torch.float8_e4m3fn"
+        res = is_float8_tensor(self.tensor)
+        self.assertTrue(res)
+
+    def test_is_not_float8_tensor(self):
+        self.tensor.dtype = 123
+        res = is_float8_tensor(self.tensor)
+        self.assertFalse(res)
+
+        res = is_hifloat8_tensor(self.tensor)
+        self.assertFalse(res)

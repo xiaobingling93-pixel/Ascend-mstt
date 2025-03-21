@@ -180,8 +180,6 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if cls._need_msprobe_c() and _msprobe_c:
-            _msprobe_c._PrecisionDebugger().stop()
         if instance.task == Const.GRAD_PROBE:
             instance.gm.stop()
         if instance.task in PrecisionDebugger.task_not_need_service:
@@ -195,8 +193,6 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if cls._need_msprobe_c() and _msprobe_c:
-            _msprobe_c._PrecisionDebugger().step()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
         if instance.service:

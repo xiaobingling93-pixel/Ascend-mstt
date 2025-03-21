@@ -16,9 +16,10 @@
 import os
 import re
 
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, check_crt_valid
+from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, check_crt_valid, \
+    FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
@@ -271,13 +272,13 @@ class RunUTConfig(BaseConfig):
 
     @classmethod
     def check_nfs_path_config(cls, nfs_path):
-        if nfs_path and not os.path.exists(nfs_path):
-            raise Exception("nfs_path: %s does not exist" % nfs_path)
+        if nfs_path:
+            FileChecker(nfs_path, FileCheckConst.DIR, FileCheckConst.READ_ABLE).common_check()
 
     @classmethod
     def check_tls_path_config(cls, tls_path):
-        if tls_path and not os.path.exists(tls_path):
-            raise Exception("tls_path: %s does not exist" % tls_path)
+        if tls_path:
+            FileChecker(tls_path, FileCheckConst.DIR, FileCheckConst.READ_ABLE).common_check()
 
     def check_run_ut_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)

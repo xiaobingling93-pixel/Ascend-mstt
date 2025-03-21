@@ -107,15 +107,6 @@ class DistributedAnalyzer:
             return None, None
         return group_ranks, group_id
 
-    @staticmethod
-    def _get_batch_group_info(node, rank):
-        for data in node.input_data.values():
-            group_id = data.get('group_id')
-            if group_id is not None:
-                return group_id
-        logger.warning(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
-        return None
-
     def distributed_match(self):
         for rank, graph in self.graphs.items():
             nodes = graph.node_map
@@ -377,7 +368,7 @@ class DistributedAnalyzer:
                 target_api_name = self.config.get(api_name)[0]
                 target_rank = int(id_info[1].replace(Const.RANK, ''))
             except Exception as e:
-                logger.warning(f'Failed to parsing batch p2p parameter with error info: {e}.')
+                logger.warning(f'Failed to parse batch p2p parameter with error info: {e}.')
                 continue
             target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
             if not target_node:

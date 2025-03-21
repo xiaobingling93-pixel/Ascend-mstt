@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import json
-import math
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.visualization.utils import ToolTip, GraphConst, str2float
 
@@ -156,24 +155,6 @@ class ModeAdapter:
         if self.compare_mode != GraphConst.REAL_DATA_COMPARE:
             return
         self.csv_data.extend(compare_result_list)
-
-    def add_error_key(self, node_data):
-        """
-        根据不同的模式进行提供不同错误信息
-        """
-        for key, value in node_data.items():
-            if not isinstance(value, dict):
-                continue
-            if self.compare_mode == GraphConst.SUMMARY_COMPARE:
-                message = [CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
-                           CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR]
-            elif self.compare_mode == GraphConst.REAL_DATA_COMPARE:
-                message = [CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO]
-            else:
-                # 输出件优化
-                message = []
-            value[GraphConst.ERROR_KEY] = message
-            node_data[key] = value
 
     def get_tool_tip(self):
         """
