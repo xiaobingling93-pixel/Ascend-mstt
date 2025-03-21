@@ -49,7 +49,7 @@ from msprobe.core.common.file_utils import FileChecker, change_mode, \
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
-from msprobe.core.common.utils import safe_get_value, CompareException, is_int, check_str_param
+from msprobe.core.common.utils import safe_get_value, CompareException, is_int, check_op_str_pattern_valid
 from msprobe.pytorch.common.utils import seed_all
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
@@ -121,7 +121,7 @@ def run_ut(config):
 def run_api_offline(config, compare, api_name_set):
     err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
-        check_str_param(api_full_name)
+        check_op_str_pattern_valid(api_full_name)
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
@@ -440,7 +440,7 @@ def preprocess_forward_content(forward_content):
     arg_cache = {}
 
     for key, value in forward_content.items():
-        check_str_param(key)
+        check_op_str_pattern_valid(key)
         base_key = key.rsplit(Const.SEP, 1)[0]
 
         if key not in arg_cache:

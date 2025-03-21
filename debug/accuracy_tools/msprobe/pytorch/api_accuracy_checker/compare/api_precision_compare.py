@@ -40,7 +40,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validat
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments, extract_basic_api_segments
 from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import CompareException, check_str_param
+from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
@@ -151,7 +151,7 @@ def analyse_csv(npu_data, gpu_data, config):
         message = ''
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
-        check_str_param(full_api_name_with_direction_status)
+        check_op_str_pattern_valid(full_api_name_with_direction_status)
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
         api_name, api_full_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
         if not api_full_name:

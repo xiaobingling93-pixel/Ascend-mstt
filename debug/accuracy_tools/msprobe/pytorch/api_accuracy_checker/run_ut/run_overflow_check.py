@@ -34,7 +34,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, i
 from msprobe.core.common.file_utils import check_link, FileChecker
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.core.common.const import FileCheckConst, Const
-from msprobe.core.common.utils import check_str_param
+from msprobe.core.common.utils import check_op_str_pattern_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 
@@ -92,7 +92,7 @@ def run_overflow_check(forward_file):
         dump_path = os.path.dirname(forward_file)
         real_data_path = os.path.join(dump_path, Const.DUMP_TENSOR_DATA)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
-        check_str_param(api_full_name)
+        check_op_str_pattern_valid(api_full_name)
         if is_unsupported_api(api_full_name, is_overflow_check=True):
             continue
         try:
