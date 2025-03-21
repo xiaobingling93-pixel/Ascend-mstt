@@ -52,6 +52,7 @@ class Const:
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
     MAX_DEPTH = 10
+    MAX_PROCESS_NUM = 8
 
     # dump mode
     ALL = "all"

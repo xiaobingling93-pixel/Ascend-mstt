@@ -49,7 +49,7 @@ from msprobe.core.common.file_utils import FileChecker, change_mode, \
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
-from msprobe.core.common.utils import safe_get_value, CompareException
+from msprobe.core.common.utils import safe_get_value, CompareException, is_int, check_str_param
 from msprobe.pytorch.common.utils import seed_all
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
@@ -97,7 +97,7 @@ def run_ut(config):
         logger.info(f"UT task details will be saved in {config.details_csv_path}")
 
     if config.save_error_data:
-        logger.info(f"UT task error_datas will be saved in {config.error_data_path}")
+        logger.info(f"UT task error_data will be saved in {config.error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut, config=config)
 
     if config.online_config.is_online:
@@ -121,6 +121,7 @@ def run_ut(config):
 def run_api_offline(config, compare, api_name_set):
     err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
+        check_str_param(api_full_name)
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
@@ -350,6 +351,9 @@ def need_to_backward(grad_index, out):
 
 def run_backward(args, grad, grad_index, out):
     if grad_index is not None:
+        if not is_int(grad_index):
+            logger.error(f"{grad_index} dtype is not int")
+            raise TypeError(f"{grad_index} dtype is not int")
         if grad_index >= len(out):
             logger.error(f"Run backward error when grad_index is {grad_index}")
             raise IndexError(f"Run backward error when grad_index is {grad_index}")
@@ -436,6 +440,7 @@ def preprocess_forward_content(forward_content):
     arg_cache = {}
 
     for key, value in forward_content.items():
+        check_str_param(key)
         base_key = key.rsplit(Const.SEP, 1)[0]
 
         if key not in arg_cache:
