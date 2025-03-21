@@ -16,6 +16,7 @@
 import json
 import os
 import time
+import multiprocessing
 from multiprocessing import Pool
 
 import torch
@@ -86,9 +87,11 @@ class PtdbgDispatch(TorchDispatchMode):
         self.get_ops(yaml_path)
 
         self.lock = None
-        if process_num > Const.MAX_PROCESS_NUM:
-            logger.error(f"The process_num should be less than {Const.MAX_PROCESS_NUM}!")
-            raise DispatchException("The process_num should be less than 8!")
+        max_process_num = max(int((multiprocessing.cpu_count() + 1) // 4), 1)
+        if process_num > max_process_num:
+            logger.error(f"process_num should be less than or equal to {max_process_num}, but got {process_num}!")
+            raise DispatchException(f'process_num should be less than or equal to {max_process_num}, '
+                                    f'but got {process_num}!')
         if process_num > 0:
             self.pool = Pool(process_num)
         if debug:
