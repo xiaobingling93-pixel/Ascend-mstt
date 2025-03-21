@@ -61,7 +61,7 @@ def dump_jit(name, in_feat, out_feat, is_forward):
 class JitDump(_MindsporeFunctionExecutor):
     dump_config = None
     jit_enable = False
-    jit_dump_switch = True
+    jit_dump_switch = False
     jit_count = defaultdict(int)
 
     def __init__(self, *args, **kwargs):
@@ -72,8 +72,7 @@ class JitDump(_MindsporeFunctionExecutor):
         self._executor = PyNativeExecutor_.get_instance()
 
     def __call__(self, *args, **kwargs):
-        if JitDump.jit_dump_switch:
-            _api_register.restore_all_api()
+        _api_register.restore_all_api()
         out = super().__call__(*args, **kwargs)
         if JitDump.jit_dump_switch and len(args) > 0:
             if self.name and self.name != "construct":
@@ -83,8 +82,7 @@ class JitDump(_MindsporeFunctionExecutor):
             JitDump.jit_enable = True
         elif len(args) == 0:
             logger.warning(f"The jit function {self.name} has no input arguments, nothing will be dumped.")
-        if JitDump.jit_dump_switch:
-            _api_register.register_all_api()
+        _api_register.register_all_api()
         return out
 
     @classmethod

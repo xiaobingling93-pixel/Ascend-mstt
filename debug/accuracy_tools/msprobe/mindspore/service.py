@@ -283,6 +283,18 @@ class Service:
         self.reset_status()
 
     def start(self, model=None):
+        if self.current_iter == 0:
+            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
+                JitDump.set_config(self.config)
+                JitDump.set_data_collector(self.data_collector)
+                if hasattr(ms.common.api, "_MindsporeFunctionExecutor"):
+                    ms.common.api._MindsporeFunctionExecutor = JitDump
+                else:
+                    ms.common.api._JitExecutor = JitDump
+                ms.common.api._PyNativeExecutor.grad = JitDump.grad
+                if pijit_label:
+                    PIJitCaptureContext.__enter__ = self.empty
+                    PIJitCaptureContext.__exit__ = self.empty
         self.current_iter = self.loop + self.init_step
         self.data_collector.update_iter(self.current_iter)
         if self.config.level == Const.LEVEL_DEBUG:
@@ -297,7 +309,9 @@ class Service:
             print_tools_ends_info()
             return
         if self.config.step and self.current_iter not in self.config.step:
+            JitDump.jit_dump_switch = False
             return
+        JitDump.jit_dump_switch = True
         self.model = self.check_model_valid(model)
 
         logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
@@ -312,17 +326,6 @@ class Service:
                 return
             self.register_primitive_hook()
             self.register_cell_hook()
-            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
-                JitDump.set_config(self.config)
-                JitDump.set_data_collector(self.data_collector)
-                if hasattr(ms.common.api, "_MindsporeFunctionExecutor"):
-                    ms.common.api._MindsporeFunctionExecutor = JitDump
-                else:
-                    ms.common.api._JitExecutor = JitDump
-                ms.common.api._PyNativeExecutor.grad = JitDump.grad
-                if pijit_label:
-                    PIJitCaptureContext.__enter__ = self.empty
-                    PIJitCaptureContext.__exit__ = self.empty
             self.first_start = False
 
         self.api_register.register_all_api()
