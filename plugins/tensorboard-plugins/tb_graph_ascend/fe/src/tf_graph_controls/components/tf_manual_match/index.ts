@@ -255,6 +255,8 @@ class Legend extends PolymerElement {
     if (this.isCompareGraph) {
       const node = NPU_PREFIX + this.selectedNpuUnMatchedNode;
       this.set('selectedNode', node);
+      // 展开对应侧节点
+      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode);
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -268,6 +270,8 @@ class Legend extends PolymerElement {
     if (this.isCompareGraph) {
       const node = BENCH_PREFIX + this.selectedBenchUnMatchedNode;
       this.set('selectedNode', node);
+      // 展开对应侧节点
+      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode);
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
