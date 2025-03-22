@@ -25,10 +25,10 @@
 
 #### 2.2 从源代码安装
 
-1. 从仓库下载源码并切换到 poc 分支:
+1. 从仓库下载源码并切换到 master 分支:
 
     ```
-    git clone https://gitee.com/ascend/mstt.git -b poc
+    git clone https://gitee.com/ascend/mstt.git -b master
     ```
 
 2. 进入目录 `plugins/tensorboard-plugins/tb_graph_ascend` 下
@@ -114,6 +114,7 @@
 ### 3.3 名称搜索
 ![输入图片说明](./doc/images/vis_search_info.png)
 ### 3.4 精度筛选/溢出筛选
+注意：单图场景不存在精度筛选和溢出筛选，下图为双图比对场景。
 ![输入图片说明](./doc/images/vis_precision_info.png)
 ### 3.5 未匹配节点筛选
 参考匹配说明 ，不符合匹配规则的节点为无匹配节点，颜色标灰。适用于排查两个模型结构差异的场景。
