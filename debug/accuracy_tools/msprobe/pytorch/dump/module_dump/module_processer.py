@@ -16,16 +16,17 @@
 from functools import wraps
 
 import torch
+from torch.utils.hooks import BackwardHook
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import replace_last_occurrence, is_float8_tensor
-from torch.utils.checkpoint import checkpoint as origin_checkpoint
-from torch.utils.checkpoint import set_checkpoint_early_stop
-from torch.utils.hooks import BackwardHook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+if torch_version_above_or_equal_2:
+    from torch.utils.checkpoint import checkpoint as origin_checkpoint, set_checkpoint_early_stop
 
 
 def checkpoint_without_early_stop(*args, **kwargs):
@@ -34,7 +35,8 @@ def checkpoint_without_early_stop(*args, **kwargs):
 
 
 def replace_checkpoint():
-    torch.utils.checkpoint.checkpoint = checkpoint_without_early_stop
+    if torch_version_above_or_equal_2:
+        torch.utils.checkpoint.checkpoint = checkpoint_without_early_stop
 
 
 class ModuleProcesser:
@@ -59,7 +61,7 @@ class ModuleProcesser:
         return clone_return_value_func
 
     @staticmethod
-    @recursion_depth_decorator("ModuleDump: ModuleProcesser.clone_if_tensor")
+    @recursion_depth_decorator("ModuleDump: ModuleProcesser.clone_if_tensor", max_depth=Const.DUMP_MAX_DEPTH)
     def clone_if_tensor(result):
         if isinstance(result, torch.Tensor) and not is_float8_tensor(result):
             return result.clone()
