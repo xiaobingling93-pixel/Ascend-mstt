@@ -18,7 +18,7 @@ import { html, PolymerElement } from '@polymer/polymer';
 import { DarkModeMixin } from '../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import '../tf_dashboard_common/tensorboard-color';
-import { MetanodeColors, OpNodeColors, SeriesNodeColors } from './render';
+import { MetanodeColors, OpNodeColors } from './render';
 
 export enum GraphIconType {
   CONST = 'CONST',
@@ -230,8 +230,6 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     switch (type) {
       case GraphIconType.META:
         return MetanodeColors.DEFAULT_FILL;
-      case GraphIconType.SERIES:
-        return SeriesNodeColors.DEFAULT_FILL;
       default:
         return OpNodeColors.DEFAULT_FILL;
     }
@@ -247,8 +245,6 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     switch (type) {
       case GraphIconType.META:
         return MetanodeColors.DEFAULT_STROKE;
-      case GraphIconType.SERIES:
-        return SeriesNodeColors.DEFAULT_STROKE;
       default:
         return OpNodeColors.DEFAULT_STROKE;
     }

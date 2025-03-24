@@ -201,7 +201,7 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   // expanded metanodes, the graphs are below the labels.  Do not shift them
   // down for series nodes as series nodes don't have labels inside of their
   // bounding boxes.
-  let yTranslate = renderNode.node.type === NodeType.SERIES ? 0 : layout.PARAMS.subscene.meta.labelHeight;
+  let yTranslate = layout.PARAMS.subscene.meta.labelHeight;
   // core
   translate(selectChild(sceneGroup, 'g', Class.Scene.CORE), 0, yTranslate);
   // in-extract

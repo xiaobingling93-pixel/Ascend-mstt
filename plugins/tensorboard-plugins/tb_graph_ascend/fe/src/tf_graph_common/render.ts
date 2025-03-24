@@ -32,7 +32,6 @@ import {
   GroupNode,
   InclusionType,
   Metaedge,
-  MetaedgeImpl,
   Metanode,
   Node,
   NodeType,
@@ -71,50 +70,8 @@ export const MetanodeColors = {
    */
   DEFAULT_FILL: '#d9d9d9',
   DEFAULT_STROKE: '#a6a6a6',
-  SATURATION: 0.6,
-  LIGHTNESS: 0.85,
-  /**
-   * Neutral color to use when the node is expanded (used when coloring by
-   * compute time, memory and device).
-   */
-  EXPANDED_COLOR: '#f0f0f0',
-  /**
-   * Standard hue values for node color palette.
-   */
-  HUES: [220, 100, 180, 40, 20, 340, 260, 300, 140, 60],
-  STRUCTURE_PALETTE(id: number, lightened?: boolean): string {
-    // The code below is a flexible way to computationally create a set
-    // of colors that go well together.
-    let hues = MetanodeColors.HUES;
-    let n = hues.length;
-    let hue = hues[id % n];
-    let m = Math.sin((hue * Math.PI) / 360);
-    let sat = lightened ? 30 : 90 - (60 * m);
-    let light = lightened ? 95 : 80;
-    return d3.hsl(hue, 0.01 * sat, 0.01 * light).toString();
-  },
-  DEVICE_PALETTE(index: number): string {
-    return MetanodeColors.STRUCTURE_PALETTE(index);
-  },
-  XLA_CLUSTER_PALETTE(index: number): string {
-    return MetanodeColors.STRUCTURE_PALETTE(index);
-  },
-  UNKNOWN: '#eee',
   GRADIENT_OUTLINE: '#888',
 };
-/**
- * Color parameters for op nodes.
- */
-export const SeriesNodeColors = {
-  DEFAULT_FILL: 'white',
-  DEFAULT_STROKE: '#b2b2b2',
-};
-/**
- * Function that computes edge thickness in pixels.
- */
-export interface EdgeThicknessFunction {
-  (edgeData: EdgeData, edgeClass: string): number;
-}
 /**
  * Function that computes edge label strings. This function accepts a Metaedge,
  * which could actually encapsulate several base edges. For instance, several
@@ -130,66 +87,6 @@ export interface EdgeLabelFunction {
  * Parameters that affect how the graph is rendered on the screen.
  */
 const PARAMS = {
-  /**
-   * The minimum number of nodes for a graph to have in order for high in and
-   * out degree nodes to be extracted in auxiliary. The aim here is to prevent
-   * nodes from being extracted from small graphs.
-   */
-  minNodeCountForExtraction: 15,
-  /**
-   * The minimum in or out degree a node must have in order to be possibly
-   * extracted.
-   */
-  minDegreeForExtraction: 5,
-  /**
-   * Maximum number of control edges a node can have before they aren't
-   * displayed.
-   */
-  maxControlDegree: 4,
-  /**
-   * Maximum in (for outbound bridge paths) or out (for inbound bridge paths)
-   * degree of a node allowed for a bridge path to be rendered to it from a
-   * subhierarchy of nodes. Having a max prevents having too many nodes emanate
-   * from a subhierarchy and crowding up.
-   */
-  maxBridgePathDegree: 4,
-  /**
-   * Types patterns for predefined out-extract nodes, which are
-   * sink-like nodes that will be extracted from the main graph.
-   */
-  outExtractTypes: ['NoOp'],
-  /**
-   * Types patterns for predefined in-extract nodes, which are
-   * source-like nodes that will be extracted from the main graph.
-   */
-  inExtractTypes: [],
-  /**
-   * When removing edges from a high degree node, remove all of its edges if
-   * detachAllEdgesForHighDegree is true.  Otherwise remove all in-edges if
-   * the node has high in-degree, or all out-edges if the node has high
-   * out-degree.
-   */
-  detachAllEdgesForHighDegree: true,
-  /**
-   * After extracting high in/out degree nodes and predefined
-   * source-like/sink-like, extract isolated nodes to the side
-   * if this extractIsolatedNodesWithAnnotationsOnOneSide is true.
-   */
-  extractIsolatedNodesWithAnnotationsOnOneSide: true,
-  /**
-   * Whether to add bridge nodes and edges to the core when building the
-   * subhierarchy of an expanded metanode. See buildSubhierarchy().
-   */
-  enableBridgegraph: true,
-  /**
-   * 2 colors, for the minimum and maximum value respectively, whenever we
-   * have a gradient scale.
-   */
-  minMaxColors: ['#fff5f0', '#fb6a4a'],
-  /**
-   * Maximum number of annotations to be displayed on a node before an
-   * ellipsis is used.
-   */
   maxAnnotations: 5,
 };
 /**
@@ -339,10 +236,6 @@ export class RenderGraphInfo {
     return nodeName;
   }
 
-  setDepth(depth: number): void {
-    setGroupNodeDepth(this.root, Number(depth));
-  }
-
   /**
    * Returns true if the renderNode is an isolated node within its parent node.
    */
@@ -358,15 +251,6 @@ export class RenderGraphInfo {
       return node.node.name === renderNode.node.name;
     });
     return !!found;
-  }
-
-  /**
-   * Returns a list of ops that have been rendered so far for this graph. More
-   * ops may later be rendered if the user expands nodes for instance. The list
-   * returned here can only stay the same size or grow on successive calls.
-   */
-  getNamesOfRenderedOps(): string[] {
-    return this.renderedOpNames;
   }
 
   buildSubhierarchy(nodeName: string, subGraph: tf_graph.SlimGraph | undefined = undefined): void {
@@ -432,184 +316,12 @@ export class RenderGraphInfo {
         });
       }
     });
-    // Add render metaedge info for edges in the metagraph.
-    _.each(metagraph.edges(), (edgeObj) => {
-      if (edgeObj.v.includes(tf_graph.NAMESPACE_DELIM) || edgeObj.w.includes(tf_graph.NAMESPACE_DELIM)) {
-        let inbound = edgeObj.w.includes(tf_graph.NAMESPACE_DELIM);
-        if (inbound) {
-          let pathNames = edgeObj.w.split(tf_graph.NAMESPACE_DELIM);
-          this.toRenderEdgeObjs.push({
-            v: edgeObj.v,
-            w: pathNames[pathNames.length - 1],
-            id: edgeObj.name,
-            edge: metagraph.edge(edgeObj),
-          });
-        } else {
-          let pathNames = edgeObj.v.split(tf_graph.NAMESPACE_DELIM);
-          this.toRenderEdgeObjs.push({
-            v: pathNames[pathNames.length - 1],
-            w: edgeObj.w,
-            id: edgeObj.name,
-            edge: metagraph.edge(edgeObj),
-          });
-        }
-        return;
-      }
-      let metaedge = metagraph.edge(edgeObj);
-      let renderMetaedgeInfo = new RenderMetaedgeInfo(metaedge as any);
-      renderMetaedgeInfo.isFadedOut = this.index[edgeObj.v].isFadedOut || this.index[edgeObj.w].isFadedOut;
-      coreGraph.setEdge(edgeObj.v, edgeObj.w, renderMetaedgeInfo, edgeObj.name);
-    });
     // Look up the parent node's render information and short circuit if none.
     let parentNode = renderGroupNodeInfo.node.parentNode;
     if (!parentNode) {
       return;
     }
-    // Utility function for computing the name of a bridge node.
-    let getBridgeNodeName = (inbound, ...rest): string => rest.concat([inbound ? 'IN' : 'OUT']).join('~~');
-    if (subGraph) {
-      const subNodes = Object.keys(subGraph.metaNodes).concat(Object.keys(subGraph.nodes));
-      renderNodeInfo.node.cardinality += subNodes.length;
-      const parentMetagraph = (parentNode as GroupNode).metagraph;
-      const parentBridgegraph = (parentNode as GroupNode).bridgegraph;
-      _.each(subNodes, (subName) => {
-        this.toRenderEdgeObjs
-          .filter((e) => e.v === subName || e.w === subName)
-          .forEach((item) => {
-            const edgeObj = item.edge;
-            const inbound = item.w === subName;
-            const edgeIO = inbound
-              ? [edgeObj.v?.split(tf_graph.NAMESPACE_DELIM)[0], nodeName]
-              : [nodeName, edgeObj.w?.split(tf_graph.NAMESPACE_DELIM)[0]];
-            let bridgeMetaedge = parentMetagraph.edge(...edgeIO, item.id);
-            if (!bridgeMetaedge) {
-              bridgeMetaedge = parentBridgegraph.edge(...edgeIO, item.id);
-              if (!bridgeMetaedge) {
-                return;
-              }
-            }
-            _.each(edgeObj.baseEdgeList, (baseEdge) => {
-              let name = inbound ? baseEdge.v : baseEdge.w;
-              if (baseEdge.attr) {
-                baseEdge.attr._path = name;
-              } else {
-                baseEdge.attr = { _path: name };
-              }
-              if (inbound) {
-                baseEdge.v = name?.split(tf_graph.NAMESPACE_DELIM).pop();
-                baseEdge.w = subName;
-              } else {
-                baseEdge.v = subName;
-                baseEdge.w = name?.split(tf_graph.NAMESPACE_DELIM).pop();
-              }
-              bridgeMetaedge.addBaseEdge(baseEdge, this.hierarchy, true);
-            });
-          });
-      });
-    }
-    // Remove rendered edges to save memory.
-    this.toRenderEdgeObjs = this.toRenderEdgeObjs.filter((e) => !this.index[e.v] || !this.index[e.w]);
-    // Build out the bridgegraph.
-    let bridgegraph = this.hierarchy.getBridgegraph(nodeName);
-    // Look for popular nodes so we can make annotations instead of paths.
-    let otherCounts = {
-      // Counts of edges coming INTO other nodes by name (outgoing from self).
-      in: <
-        {
-          [nodeName: string]: number;
-        }
-      >{},
-      // Counts of edges going OUT from other nodes by name (coming into self).
-      out: <
-        {
-          [nodeName: string]: number;
-        }
-      >{},
-      // Counts of all control edges involving other nodes by name.
-      control: <
-        {
-          [nodeName: string]: number;
-        }
-      >{},
-    };
-    _.each(bridgegraph.edges(), (e) => {
-      // An edge is inbound if its destination node is in the metagraph.
-      let inbound = !!metagraph.node(e.w);
-      let otherName = inbound ? e.v : e.w;
-      let metaedge = bridgegraph.edge(e);
-      if (!metaedge.numRegularEdges) {
-        otherCounts.control[otherName] = (otherCounts.control[otherName] || 0) + 1;
-      } else if (inbound) {
-        otherCounts.out[otherName] = (otherCounts.out[otherName] || 0) + 1;
-      } else {
-        otherCounts.in[otherName] = (otherCounts.in[otherName] || 0) + 1;
-      }
-    });
-    // For each bridge container (IN and/or OUT), add structural edges between
-    // terminal nodes and that container. A terminal node is one which has no
-    // non-bridge edges in the direction of the container.
-    //
-    // For example, consider a Metanode A which contains two child nodes A/B
-    // and A/C. Let's say it has one edge in the metagraph from A/B->A/C, and
-    // one edge in the bridgegraph from Z->A/C.
-    //
-    // At this point, we've added a container bridge node IN to house all
-    // incoming bridge nodes. We've also added a bridge node Z' (with parent IN)
-    // to A, and a bridge edge from Z'->C.
-    //
-    //     +----------------------+
-    //     | A          +---+     |
-    //     |    +------>| C |     |
-    //     |    |       +---+     |
-    //     |    |         ^       |
-    //     |    |         |       |
-    //     |    |    +----|----+  |
-    //     |    |    | IN |    |  |
-    //     |  +---+  |  +---+  |  |
-    //     |  | B |  |  | Z'|  |  |
-    //     |  +---+  |  +---+  |  |
-    //     |         +---------+  |
-    //     +----------------------+
-    //
-    // With no other help, dagre would lay out B and Z' on the same level,
-    // because both of them have no incoming edges. In other words, B is a
-    // terminal node in the INCOMING direction.
-    //
-    // But we want to force dagre to lay out Z' (and everything in IN) lower
-    // than all non-bridge nodes, so that there's enough room for the bridge
-    // edges after they've been adjusted to meet up with paths coming in from
-    // outside.
-    //
-    // To force Z' (and all other bridge nodes) to be lowest in the graph, we
-    // identify terminal nodes like B and give them structural edges to
-    // a new structural bridge node S which we add to IN.
-    //
-    //     +----------------------+
-    //     | A          +---+     |
-    //     |       +--->| C |     |
-    //     |       |    +---+     |
-    //     |     +---+    ^       |
-    //     |     | B |    |       |
-    //     |     +---+    |       |
-    //     |       ^      |       |
-    //     |       |      |       |
-    //     |  +----|------|----+  |
-    //     |  |IN  |      |    |  |
-    //     |  |  +---+  +---+  |  |
-    //     |  |  | S |  | Z'|  |  |
-    //     |  |  +---+  +---+  |  |
-    //     |  +----------------+  |
-    //     +----------------------+
-    //
-    // This ensures that dagre will lay out the bridge containers strictly at
-    // the ends of the graph. The structural edges will never be seen in the
-    // visualization except as a debugging aid.
     _.each([true, false], (inbound) => {
-      let bridgeContainerName = getBridgeNodeName(inbound, nodeName);
-      let bridgeContainerInfo = coreGraph.node(bridgeContainerName);
-      if (!bridgeContainerInfo) {
-        return;
-      }
       _.each(coreGraph.nodes(), (childName) => {
         // Short-circuit if this child is a bridge node or it's not a terminal
         // node in the direction we're interested in.
@@ -623,44 +335,6 @@ export class RenderGraphInfo {
         if (!isTerminal) {
           return;
         }
-        // Find or create a bridge node in the container for all structural
-        // metaedges. It would have been nice to skip this step and simply
-        // set a metaedge between the terminal node and the container node, but
-        // in that case, something about the graph upsets dagre.layout()'s
-        // longestPath algorithm (was getting errors due to an undefined).
-        let structuralNodeName = getBridgeNodeName(inbound, nodeName, 'STRUCTURAL_TARGET');
-        let structuralRenderInfo = coreGraph.node(structuralNodeName);
-        if (!structuralRenderInfo) {
-          let bridgeNode: BridgeNode = {
-            // Important Node properties.
-            name: structuralNodeName,
-            type: NodeType.BRIDGE,
-            // Unimportant Node properties.
-            isGroupNode: false,
-            cardinality: 1,
-            parentNode: null,
-            include: InclusionType.UNSPECIFIED,
-            // BridgeNode properties.
-            inbound: inbound,
-            inputData: {},
-            outputData: {},
-            suggestions: {},
-            nodeAttributes: {},
-          };
-          structuralRenderInfo = new RenderNodeInfo(bridgeNode);
-          structuralRenderInfo.structural = true;
-          this.index[structuralNodeName] = structuralRenderInfo as any;
-          coreGraph.setNode(structuralNodeName, structuralRenderInfo);
-          bridgeContainerInfo.node.cardinality++;
-          coreGraph.setParent(structuralNodeName, bridgeContainerName);
-        }
-        // Create the structural Metaedge and insert it.
-        let structuralMetaedgeInfo = new RenderMetaedgeInfo(null);
-        structuralMetaedgeInfo.structural = true;
-        structuralMetaedgeInfo.weight--; // Reduce weight for dagre layout.
-        inbound
-          ? coreGraph.setEdge(structuralNodeName, childName, structuralMetaedgeInfo)
-          : coreGraph.setEdge(childName, structuralNodeName, structuralMetaedgeInfo);
       });
     });
   }
@@ -944,21 +618,6 @@ export class RenderNodeInfo {
   paddingRight: number;
   paddingBottom: number;
   /**
-   * Whether a node is extracted as source-like (having high out-degree or
-   * matching predefined in-extract pattern.)
-   */
-  isInExtract: boolean;
-  /**
-   * Whether a node is extracted as sink-like (having high in-degree or matching
-   * predefined out-extract pattern.)
-   */
-  isOutExtract: boolean;
-  /**
-   * Whether a node represents a function template within the library, in which
-   * case it should be rendered in a special scene group.
-   */
-  isLibraryFunction: boolean;
-  /**
    * Whether this node is faded out. Used when displaying stats.
    */
   isFadedOut: boolean;
@@ -990,8 +649,6 @@ export class RenderNodeInfo {
     this.paddingLeft = 0;
     this.paddingRight = 0;
     this.paddingBottom = 0;
-    this.isInExtract = false;
-    this.isOutExtract = false;
     this.coreBox = { width: 0, height: 0 };
     // By default, we don't fade nodes out. Default to false for safety.
     this.isFadedOut = false;
@@ -1037,10 +694,6 @@ export class RenderNodeInfo {
         this.displayName = this.displayName.substring(tf_graph.FUNCTION_LIBRARY_NODE_PREFIX.length);
       }
     }
-  }
-
-  isInCore(): boolean {
-    return !this.isInExtract && !this.isOutExtract && !this.isLibraryFunction;
   }
 }
 /**
@@ -1131,7 +784,6 @@ function setGraphDepth(graph: graphlib.Graph, depth: number): void {
         case NodeType.META:
         case NodeType.MULTI_COLLECTION:
         case NodeType.API_LIST:
-        case NodeType.SERIES:
           setGroupNodeDepth(<RenderGroupNodeInfo>child, depth - 1);
           break;
         default:
@@ -1187,166 +839,4 @@ function setGroupNodeDepth(renderInfo: RenderGroupNodeInfo, depth: number): void
   if (renderInfo.coreGraph) {
     setGraphDepth(renderInfo.coreGraph, depth);
   }
-}
-/**
- * Remove an edge from the graph and add annotations to both ends of the edge.
- *
- * @param The core graph.
- * @param v Source name.
- * @param w Sink name.
- */
-function createShortcut(graph: graphlib.Graph, v: string, w: string): void {
-  let src = graph.node(v) as any;
-  let sink = graph.node(w) as any;
-  let edge = graph.edge(v, w) as any;
-  // If either of the nodes is explicitly included in the main graph and
-  // both nodes are in the main graph then do not create the shortcut
-  // and instead keep the real edge.
-  const isInclude = src.node.include === InclusionType.INCLUDE || sink.node.include === InclusionType.INCLUDE;
-  const isExclude = src.node.include === InclusionType.EXCLUDE || sink.node.include === InclusionType.EXCLUDE;
-  if (isInclude && !isExclude) {
-    return;
-  }
-
-  // Add each annotation.
-  addOutAnnotation(src, sink.node, sink, edge, AnnotationType.SHORTCUT);
-  addInAnnotation(sink, src.node, src, edge, AnnotationType.SHORTCUT);
-  // Remove the edge from the core graph.
-  graph.removeEdge(v, w);
-}
-/**
- * Remove edges from a node, and set its isOutExtract property to true,
- * and remove the node and move it to isolatedOutExtract.
- *
- * If detachAllEdgesForHighDegree or forceDetach is true, extract all of its
- * edges. Otherwise, only extract all in-edges.
- */
-function makeOutExtract(renderNode: RenderGroupNodeInfo, n: string, forceDetach?: boolean): void {
-  let graph = renderNode.coreGraph;
-  let child = graph.node(n) as any;
-  child.isOutExtract = true;
-  _.each(graph.predecessors(n), (p, index) => {
-    createShortcut(graph, p, n);
-  });
-  if (PARAMS.detachAllEdgesForHighDegree || forceDetach) {
-    _.each(graph.successors(n), (s, index) => {
-      createShortcut(graph, n, s);
-    });
-  }
-  // Remove the node from the core graph if it no longer has neighbors.
-  if (graph.neighbors(n)?.length === 0) {
-    child.node.include = InclusionType.EXCLUDE;
-    renderNode.isolatedOutExtract.push(child);
-    graph.removeNode(n);
-  }
-}
-/**
- * Remove edges from a node, set its isInExtract property to true,
- * and remove the node and move it to isolatedInExtract.
- *
- * If detachAllEdgesForHighDegree or forceDetach is true, extract all of its
- * edges. Otherwise, only remove all out-edges.
- */
-export function makeInExtract(renderNode: RenderGroupNodeInfo, n: string, forceDetach?: boolean): void {
-  let graph = renderNode.coreGraph;
-  let child = graph.node(n) as any;
-  child.isInExtract = true;
-  _.each(graph.successors(n), (s, index) => {
-    createShortcut(graph, n, s);
-  });
-  if (PARAMS.detachAllEdgesForHighDegree || forceDetach) {
-    _.each(graph.predecessors(n), (p, index) => {
-      createShortcut(graph, p, n);
-    });
-  }
-  // Remove the node from the core graph if it no longer has neighbors.
-  if (graph.neighbors(n)?.length === 0) {
-    child.node.include = InclusionType.EXCLUDE;
-    renderNode.isolatedInExtract.push(child);
-    graph.removeNode(n);
-  }
-}
-/**
- * Check whether the node's type is a member of the given list of types.
- *
- * @param node Node.
- * @param types List of type to match.
- */
-function hasTypeIn(node: Node, types: string[]): boolean {
-  if (node.type === NodeType.OP) {
-    for (let i = 0; i < types.length; i++) {
-      if ((<OpNode>node).op === types[i]) {
-        return true;
-      }
-    }
-  } else if (node.type === NodeType.META) {
-    let rootOpNode = (<Metanode>node).getRootOp();
-    if (rootOpNode) {
-      for (let i = 0; i < types.length; i++) {
-        if (rootOpNode.op === types[i]) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-/**
- * Given an integer, picks a hue that is far apart from other colors.
- * The formula for picking color that avoid collision is:
- *     hue = (color range * golden ratio * index) % color range
- */
-export function mapIndexToHue(id: number): number {
-  let GOLDEN_RATIO = 1.61803398875;
-  // Hue of 0 is reserved for the gray nodes.
-  let MIN_HUE = 1;
-  let MAX_HUE = 359;
-  let COLOR_RANGE = MAX_HUE - MIN_HUE;
-  return MIN_HUE + ((COLOR_RANGE * GOLDEN_RATIO * id) % COLOR_RANGE);
-}
-/**
- * Remove edges and add to annotation instead.
- *
- * For root node, consider predefined types for source and sink.
- * We do not extract predefined type from non-root so that Variables and the
- * sgd node (op type = 'NoOp') do not get extract from inside own group.
- *
- * The order of extraction is important here as swapping the order can totally
- * screw up the graph layout.
- *
- * @param {Render.Node} renderNode Node to manipulate.
- *   nodes from the main graph. If false, only exclude predefined nodes.
- */
-/**
- * Expands nodes in the graph until the desired node is visible.
- *
- * @param scene The scene polymer component.
- * @param renderHierarchy The render hierarchy.
- * @param tensorName The name of a tensor.
- * @return A string that is the name of the node representing the given tensor.
- *     Note that the original tensor name might differ from this returned node
- *     name. Specifically, for instance, the tensor name usually ends with an
- *     output slot index (such as :0), while the node name lacks that suffix.
- */
-export function expandUntilNodeIsShown(scene, renderHierarchy: RenderGraphInfo, tensorName: string): string {
-  const splitTensorName = tensorName.split('/');
-  // Graph names do not take into account the output slot. Strip it.
-  const lastNodeNameMatch = splitTensorName[splitTensorName.length - 1].match(/(?<name>.*)\w+/);
-  if (lastNodeNameMatch?.length === 2) {
-    splitTensorName[splitTensorName.length - 1] = lastNodeNameMatch?.[1];
-  }
-  let nodeName = splitTensorName[0];
-  let renderNode = renderHierarchy.getRenderNodeByName(nodeName);
-  for (let i = 1; i < splitTensorName.length; i++) {
-    // Op nodes are not expandable.
-    if (renderNode.node.type === tf_graph.NodeType.OP) {
-      break;
-    }
-    renderHierarchy.buildSubhierarchy(nodeName);
-    renderNode.expanded = true;
-    scene.setNodeExpanded(renderNode);
-    nodeName += `/${splitTensorName[i]}`;
-    renderNode = renderHierarchy.getRenderNodeByName(nodeName);
-  }
-  return renderNode.node.name;
 }

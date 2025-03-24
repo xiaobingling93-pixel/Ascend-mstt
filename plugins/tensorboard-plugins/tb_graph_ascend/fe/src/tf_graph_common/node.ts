@@ -435,28 +435,7 @@ export function buildShape(nodeGroup, d, nodeClassName: string): d3.Selection<an
   let shapeGroup = tf_graph_common.selectOrCreateChild(nodeGroup, 'g', nodeClassName);
   switch (d.node.type) {
     case NodeType.OP: {
-      const opNode = d.node as OpNode;
       tf_graph_common.selectOrCreateChild(shapeGroup, 'ellipse', Class.Node.COLOR_TARGET);
-      break;
-    }
-    case NodeType.SERIES: {
-      // Choose the correct stamp to use to represent this series.
-      let stampType = 'annotation';
-      let groupNodeInfo = <render.RenderGroupNodeInfo>d;
-      if (groupNodeInfo.coreGraph) {
-        stampType = groupNodeInfo.node.hasNonControlEdges ? 'vertical' : 'horizontal';
-      }
-      let classList = [Class.Node.COLOR_TARGET];
-      if (groupNodeInfo.isFadedOut) {
-        classList.push('faded-ellipse');
-      }
-      tf_graph_common
-        .selectOrCreateChild(shapeGroup, 'use', classList)
-        .attr('xlink:href', `#op-series-${stampType}-stamp`);
-      tf_graph_common
-        .selectOrCreateChild(shapeGroup, 'rect', Class.Node.COLOR_TARGET)
-        .attr('rx', d.radius)
-        .attr('ry', d.radius);
       break;
     }
     case NodeType.META:
@@ -478,12 +457,6 @@ export function nodeClass(d: render.RenderNodeInfo): string {
       return Class.OPNODE;
     case NodeType.META:
       return Class.METANODE;
-    case NodeType.SERIES:
-      return Class.SERIESNODE;
-    case NodeType.BRIDGE:
-      return Class.BRIDGENODE;
-    case NodeType.ELLIPSIS:
-      return Class.ELLIPSISNODE;
     case NodeType.MULTI_COLLECTION:
       return Class.MULTI_COLLECTION;
     case NodeType.API_LIST:
@@ -694,13 +667,11 @@ export function stylize(
   const resolvedNodeClassName  = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
   const isHighlighted = sceneElement.isNodeHighlighted(renderInfo.node.name);
   const isSelected = sceneElement.isNodeSelected(renderInfo.node.name);
-  const isExtract = renderInfo.isInExtract || renderInfo.isOutExtract || renderInfo.isLibraryFunction;
   const isExpanded = renderInfo.expanded && resolvedNodeClassName !== Class.Annotation.NODE;
   const isFadedOut = renderInfo.isFadedOut;
   const isLinked = sceneElement.isNodeLinked(renderInfo.node.name);
   nodeGroup.classed('highlighted', isHighlighted);
   nodeGroup.classed('selected', isSelected);
-  nodeGroup.classed('extract', isExtract);
   nodeGroup.classed('expanded', isExpanded);
   nodeGroup.classed('faded', isFadedOut);
   nodeGroup.classed('linked', isLinked);

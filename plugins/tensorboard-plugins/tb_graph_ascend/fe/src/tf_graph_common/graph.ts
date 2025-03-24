@@ -724,32 +724,6 @@ class SeriesNodeImpl implements SeriesNode {
   nodeAttributes: {
     [key: string]: any;
   };
-
-  constructor(
-    prefix: string,
-    suffix: string,
-    parent: string,
-    clusterId: number,
-    name: string,
-    graphOptions: LabeledGraphOptions,
-  ) {
-    this.name = name || getSeriesNodeName(prefix, suffix, parent);
-    this.type = NodeType.SERIES;
-    this.hasLoop = false;
-    this.prefix = prefix;
-    this.suffix = suffix;
-    this.clusterId = clusterId;
-    this.ids = [];
-    this.parent = parent;
-    this.isGroupNode = true;
-    this.cardinality = 0;
-    this.metagraph = createGraph<Metanode, Metaedge>(name, GraphType.SERIES, graphOptions);
-    // bridgegraph must be constructed lazily-see hierarchy.getBridgegraph()
-    this.bridgegraph = null;
-    this.parentNode = null;
-    this.hasNonControlEdges = false;
-    this.include = InclusionType.UNSPECIFIED;
-  }
 }
 
 /**
