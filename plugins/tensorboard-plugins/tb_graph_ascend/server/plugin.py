@@ -174,38 +174,35 @@ class GraphsPlugin(base_plugin.TBPlugin):
         root_subnodes_set = []
         all_node_names = []
         try:
-            batch = request.args.get("batch")
+            request_micro_step_id = request.args.get("batch")
         except ValueError:
             logger.error('The param "batch" or "step" does not exist or not a valid value')
-
-        root_node = self.json_get(json_data, 'NPU', 'root') or \
+        root_name = self.json_get(json_data, 'NPU', 'root') or \
                     self.json_get(json_data, 'root')
-
-        root_subnodes = self.json_get(json_data, 'NPU', 'node', root_node, 'subnodes') \
+        root_subnodes = self.json_get(json_data, 'NPU', 'node', root_name, 'subnodes') \
                         if 'NPU' in json_data else \
-                        self.json_get(json_data, 'node', root_node, 'subnodes')
-
-        for node in root_subnodes:
-            micro_step_id = self.json_get(json_data, 'NPU', 'node', node, 'micro_step_id') \
-                            if 'NPU' in json_data else \
-                            self.json_get(json_data, 'node', node, 'micro_step_id')
-            
-            if batch == '-1' or str(micro_step_id) == batch:
-                root_subnodes_set.append(node)
+                        self.json_get(json_data, 'node', root_name, 'subnodes')
+        if root_subnodes:
+            for node in root_subnodes:
+                json_path = ['NPU', 'node', node, 'micro_step_id'] if 'NPU' in json_data \
+                    else ['node', node, 'micro_step_id']   
+                micro_step_id = self.json_get(json_data, *json_path)
+                if request_micro_step_id == '-1' or str(micro_step_id) == request_micro_step_id:
+                    root_subnodes_set.append(node)
         
-        def traverse_npu(subnodes_set):
+        def getLeafNodes(subnodes_set):
             npu_data = self.json_get(json_data, 'NPU')
             for node in subnodes_set:
                 node_data = (
                     self.json_get(npu_data, 'node', node) if npu_data else self.json_get(json_data, 'node', node)
                 )
-                if node_data.get('subnodes'):
-                    traverse_npu(node_data.get('subnodes'))
-                else:
-                    all_node_names.append(node)
+                if node_data:
+                    if node_data.get('subnodes'):
+                        getLeafNodes(node_data.get('subnodes'))
+                    else:
+                        all_node_names.append(node)
         
-        traverse_npu(root_subnodes_set)
-
+        getLeafNodes(root_subnodes_set)
         return all_node_names
 
     # 拿所有precisonNodes的，与controls的精度筛选联动
