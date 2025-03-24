@@ -23,7 +23,7 @@ import { Class, FontSizeInPx, selectChild, selectOrCreateChild } from './common'
 import * as contextmenu from './contextmenu';
 import * as edge from './edge';
 import * as tf_graph from './graph';
-import { MetanodeImpl, Node, NodeType, OpNode, OpNodeImpl, SeriesNode } from './graph';
+import { MetanodeImpl, Node, NodeType, OpNode, OpNodeImpl } from './graph';
 import * as layout from './layout';
 import * as render from './render';
 import { RenderNodeInfo } from './render';
@@ -507,27 +507,6 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         // Place the label in the middle.
         labelPosition(nodeGroup, cx, d.y, 0);
       }
-      break;
-    }
-    case NodeType.SERIES: {
-      let shape = tf_graph_scene.selectChild(shapeGroup, 'use');
-      if (d.expanded) {
-        tf_graph_scene.positionRect(shape, d.x, d.y, d.width, d.height);
-        subscenePosition(nodeGroup, d);
-        // put label on top
-        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
-      } else {
-        tf_graph_scene.positionRect(shape, cx, d.y, d.coreBox.width, d.coreBox.height);
-        labelPosition(nodeGroup, cx, d.y, d.labelOffset);
-      }
-      break;
-    }
-    case NodeType.BRIDGE: {
-      // position shape
-      // NOTE: In reality, these will not be visible, but it helps to put them
-      // in the correct position for debugging purposes.
-      let shape = tf_graph_scene.selectChild(shapeGroup, 'rect');
-      tf_graph_scene.positionRect(shape, d.x, d.y, d.width, d.height);
       break;
     }
     case NodeType.MULTI_COLLECTION:
