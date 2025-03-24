@@ -29,6 +29,7 @@ from msprobe.pytorch.monitor.utils import get_target_output_dir
 
 all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
 CSV_FILE_SUFFIX = r"_\d+-\d+\.csv"
+MAX_PROCESS_NUM = 128
 
 
 def parse_step_line(line, ops):
@@ -115,6 +116,8 @@ def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
 def check_process_num(process_num):
     if not is_int(process_num) or process_num <= 0:
         raise ValueError(f"process_num({process_num}) is not a positive integer")
+    if process_num > MAX_PROCESS_NUM:
+        raise ValueError(f"The maximum supported process_num is {MAX_PROCESS_NUM}, current value: {process_num}.")
 
 
 def check_data_type_list(data_type_list):

@@ -105,6 +105,15 @@ def validate_ops(ops):
     return valid_ops
 
 
+def validate_ndigits(ndigits):
+    if not ndigits:
+        return
+    if not is_int(ndigits) or ndigits <= 0:
+        raise ValueError(f"ndigits({ndigits}) is not a positive integer, current is: {ndigits}.")
+    if ndigits > MonitorConst.MAX_NDIGITS:
+        raise ValueError(f"The maximum supported ndigits is {MonitorConst.MAX_NDIGITS}, current value: {ndigits}.")
+
+
 def validate_ranks(ranks):
     if not isinstance(ranks, list):
         raise TypeError("module_ranks should be a list")
@@ -208,6 +217,9 @@ def validate_step_count_per_record(step_count_per_record):
 
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
+
+    ndigits = config.get('ndigits')
+    validate_ndigits(ndigits)
 
     eps = config.get('eps', 1e-8)
     if not isinstance(eps, float):
