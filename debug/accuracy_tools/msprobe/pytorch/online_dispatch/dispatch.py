@@ -87,7 +87,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.get_ops(yaml_path)
 
         self.lock = None
-        max_process_num = max(int((multiprocessing.cpu_count() + 1) // 4), 1)
+        max_process_num = max(int((multiprocessing.cpu_count() + 1) // Const.CPU_QUARTER), 1)
         if process_num > max_process_num:
             logger.error(f"process_num should be less than or equal to {max_process_num}, but got {process_num}!")
             raise DispatchException(f'process_num should be less than or equal to {max_process_num}, '
