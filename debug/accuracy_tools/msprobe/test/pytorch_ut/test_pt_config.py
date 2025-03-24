@@ -268,7 +268,7 @@ class TestFreeBenchmarkCheckConfig(unittest.TestCase):
         invalid_config["fuzz_device"] = "cpu"
         invalid_config["pert_mode"] = "INVALID_CPU_MODE"
         config = FreeBenchmarkCheckConfig(invalid_config)
-        self.assertIn("You neet to and can only set fuzz_device as ", str(mock_error.call_args))
+        self.assertIn("You need to and can only set fuzz_device as ", str(mock_error.call_args))
 
     @patch('msprobe.core.common.log.logger.error_log_with_exp')
     def test_check_handler_type_invalid(self, mock_error):

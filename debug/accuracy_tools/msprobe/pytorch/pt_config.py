@@ -95,6 +95,8 @@ class OverflowCheckConfig(BaseConfig):
     def check_overflow_config(self):
         if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_num is invalid")
+        if self.overflow_nums is not None and self.overflow_nums != -1 and self.overflow_nums <= 0:
+            raise Exception("overflow_nums should be -1 or positive integer")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
 
@@ -148,7 +150,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
                 self.pert_mode in PytorchFreeBenchmarkConst.CPU_MODE_LIST
         ):
             msg = (
-                f"You neet to and can only set fuzz_device as {DeviceType.CPU} "
+                f"You need to and can only set fuzz_device as {DeviceType.CPU} "
                 f"when pert_mode in {PytorchFreeBenchmarkConst.CPU_MODE_LIST}"
             )
             logger.error_log_with_exp(
