@@ -220,9 +220,9 @@ class MatchNodesController:
     @staticmethod
     def calculate_md5_diff(npu_data, bench_data):
         # 对比每个NPU和Bench所有数据md值，如果有一个不一样则返回0,否则返回1
-        for key in zip(npu_data, npu_data):
-            npu_md5 = npu_data[key].get('md5', '')
-            bench_md5 = bench_data[key].get('md5', '')
+        for npu_key, bench_key in zip(npu_data, npu_data):
+            npu_md5 = npu_data[npu_key].get('md5', '')
+            bench_md5 = bench_data[bench_key].get('md5', '')
             if npu_md5 != bench_md5:
                 return 0
         return 1

@@ -51,8 +51,10 @@ class Const:
     FOUR_SEGMENT = 4
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
+
     MAX_DEPTH = 10
     CPU_QUARTER = 4
+    DUMP_MAX_DEPTH = 50
 
     # dump mode
     ALL = "all"

@@ -212,6 +212,11 @@ def validate_collect_times(collect_times):
         raise ValueError("collect_times must greater than 1")
 
 
+def validate_dynamic_on(dynamic_on):
+    if not isinstance(dynamic_on, bool):
+        raise TypeError('dynamic_on should be a bool')
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -260,6 +265,9 @@ def validate_config(config):
 
     collect_times = config.get('collect_times', int(1e8))
     validate_collect_times(collect_times)
+
+    dynamic_on = config.get('dynamic_on', False)
+    validate_dynamic_on(dynamic_on)
 
     if not targets:
         if xy_distribution:

@@ -325,8 +325,6 @@ class TrainerMon:
             self.cc_log_only = self.cc_distribution.get('cc_log_only', False)
             self.cc_logged_stack = defaultdict(set)
             self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
-            self.handles['cc'] = api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
-            api_register.redirect_api()
 
         self.common_info()
 
@@ -428,6 +426,9 @@ class TrainerMon:
         self.hook_optimizer(optimizer)
         self._patch_grad_sync()
         self.hook_modules()
+        if self.cc_distribution.get('enable', False):
+            self.handles['cc'] = api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
+            api_register.redirect_api()
         self.monitoring = True
 
     def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
@@ -650,6 +651,7 @@ class TrainerMon:
                 validate_config(config)
                 self.config = config
                 self.set_config()
+                self.start_step = context.step  # 动态启停时不受原start_step影响，永远从下一步开始
                 logger.warning(f"config is updated at step{context.step - 1}, "
                                f"will start new hook at step{context.step}.")
             except Exception as e:
@@ -799,6 +801,7 @@ class TrainerMon:
         for handle in self.handles['cc']:
             handle.remove()
         self.handles['cc'].clear()
+        api_register.restore_api()
         for _, context in self.cc_context.items():
             context.reset()
 

@@ -4,9 +4,9 @@
   "private": "true",
   "main": "index.js",
   "scripts": {
+    "dev": "webpack serve --config webpack.dev.js",
     "buildLinux": "cross-env NODE_ENV=production webpack && cp dist/index.html ../server/static/",
     "buildWin": "cross-env NODE_ENV=production webpack && copy dist\\index.html ..\\server\\static\\",
-    "dev": "webpack server",
     "prettier": "prettier --config ./.prettierrc --write ./src/**/*.ts"
   },
   "devDependencies": {
@@ -24,7 +24,8 @@
     "tslib": "^2.6.2",
     "typescript": "^5.4.5",
     "webpack": "^5.96.1",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "4.15.1"
   },
   "dependencies": {
     "@polymer/decorators": "^3.0.0",
@@ -84,6 +85,7 @@
     "dagre": "^0.8.5",
     "lodash": "^4.17.21",
     "prettier": "^3.4.2",
-    "style-loader": "^4.0.0"
+    "style-loader": "^4.0.0",
+    "ws": "8.13.0"
   }
 }
