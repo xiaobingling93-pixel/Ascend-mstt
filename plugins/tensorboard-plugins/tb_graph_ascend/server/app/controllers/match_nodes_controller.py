@@ -20,6 +20,9 @@ from ..utils.global_state import ADD_MATCH_KEYS
 
 class MatchNodesController:
 
+    def add(a, b):
+        return a + b
+
     @staticmethod
     def process_md5_task_add(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})

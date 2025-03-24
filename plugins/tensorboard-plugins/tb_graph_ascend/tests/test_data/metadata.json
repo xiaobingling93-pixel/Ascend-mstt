@@ -1,0 +1,44 @@
+{
+  "test_cases": [
+    {
+      "metaData": {
+        "run": "C:/code/mstt/plugins/tensorboard-plugins/tb_graph_ascend/tests/test_data",
+        "tag": "compare_statis"
+      },
+      "operations": [
+        {
+          "type": "add_relation",
+          "source": "NodeA",
+          "target": "NodeB",
+          "expected": "success"
+        },
+        {
+          "type": "remove_node",
+          "node": "NodeC",
+          "expected": null,
+          "error": "NodeNotFound"
+        }
+      ]
+    },
+    {
+      "metaData": {
+        "run": "C:/code/mstt/plugins/tensorboard-plugins/tb_graph_ascend/tests/test_data",
+        "tag": "compare_statis"
+      },
+      "operations": [
+        {
+          "type": "add_relation",
+          "source": "NodeA",
+          "target": "NodeB",
+          "expected": "success"
+        },
+        {
+          "type": "remove_node",
+          "node": "NodeC",
+          "expected": null,
+          "error": "NodeNotFound"
+        }
+      ]
+    }
+  ]
+}
