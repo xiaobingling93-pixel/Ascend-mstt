@@ -18,6 +18,7 @@ import useNodeInfoDomain from './domain/useNodeInfoDomain';
 import type { MatchNodeInfo } from './type';
 import type { MactchResult } from '../types/service';
 import { BENCH_PREFIX, NPU_PREFIX } from '../tf_graph_common/common';
+import { safeJSONParse } from '../utils';
 
 export interface UseNodeInfoType {
   getNodeInfo: (
@@ -232,10 +233,10 @@ const useNodeInfo = (): UseNodeInfoType => {
     const benchstackInfo = benchNode?.stackData;
     const title = 'title';
     if (!isEmpty(npustackInfo)) {
-      stackInfo[nodeName] = JSON.parse(npustackInfo.replace(/'/g, '"')).join('\n');
+      stackInfo[nodeName] = safeJSONParse(npustackInfo.replace(/'/g, '"'))?.join('\n');
     }
     if (!isEmpty(benchstackInfo)) {
-      stackInfo[benchNodeName] = JSON.parse(benchstackInfo.replace(/'/g, '"'));
+      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"'));
     }
     if (!isEmpty(stackInfo)) {
       stackInfo[title] = 'stackInfo';

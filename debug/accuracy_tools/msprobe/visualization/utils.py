@@ -127,14 +127,12 @@ class ToolTip:
         '当最大相对误差越接近0表示其计算的误差越小。'
         '当dump数据中存在0或Nan时，比对结果中最大相对误差则出现inf或Nan的情况，属于正常现象'
     )
-    SMALL_VALUE_TIP = '{}, 由于{}小于{}, 建议不参考此相对误差，请参考绝对误差'
 
 
 class GraphConst:
     CONSTRUCT_FILE = 'construct.json'
     DUMP_FILE = 'dump.json'
     STACK_FILE = 'stack.json'
-    GRAPH_FILE = 'graph.vis'
     ERROR_KEY = 'error_key'
     SUMMARY_COMPARE = 0
     MD5_COMPARE = 1
@@ -148,32 +146,22 @@ class GraphConst:
     JSON_DATA_KEY = 'dump_data_dir'
     JSON_TASK_KEY = 'task'
     DATA_KEY = 'data'
-    REAL_DATA_TH = 0.1
-    MAX_RELATIVE_ERR_TH = 0.5
     ROUND_TH = 6
     JSON_INDEX_KEY = 'precision_index'
     MATCHED_DISTRIBUTED = 'matched_distributed'
     OVERFLOW_LEVEL = 'overflow_level'
     MAX_INDEX_KEY = 1
     MIN_INDEX_KEY = 0
-    SUGGEST_KEY = 'text'
-    TAG_NA = 'na'
-    OUTPUT_INDEX_TWO = -2
-    OUTPUT_INDEX_THREE = -3
-    OUTPUT_MIN_LEN = 3
     INPUT = '.input.'
     OUTPUT = '.output.'
     STR_MAX_LEN = 50
-    SMALL_VALUE = 1e-3
     MD5_INDEX_LIST = [CompareConst.RESULT]
     REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX
     SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX
-    VALUE_INDEX_LIST = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     NULL = 'null'
     NONE = 'None'
     VALUE = 'value'
-    BRACE = '{}'
     DESCRIPTION = 'description'
     COLORS = 'Colors'
     MICRO_STEPS = 'MicroSteps'

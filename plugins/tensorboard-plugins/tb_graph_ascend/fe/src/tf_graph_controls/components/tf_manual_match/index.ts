@@ -229,6 +229,8 @@ class Legend extends PolymerElement {
       this.benchMatchedNodeList = bench_match_nodes;
       this.set('npuMatchedNodes', Object.keys(npu_match_nodes));
       this.set('benchMatchedNodes', Object.keys(bench_match_nodes));
+      this.set('selectedNpuMatchedNode', '');
+      this.set('selectedBenchMatchedNode', '');
     } else {
       Notification.show(`错误：${result.error}`, {
         position: 'middle',
@@ -282,6 +284,8 @@ class Legend extends PolymerElement {
       const node = NPU_PREFIX + this.selectedNpuMatchedNode;
       this.set('selectedBenchMatchedNode', this.npuMatchedNodeList[this.selectedNpuMatchedNode]);
       this.set('selectedNode', node);
+      // 展开对应侧节点
+      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode);
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -296,6 +300,8 @@ class Legend extends PolymerElement {
       const node = BENCH_PREFIX + this.selectedBenchMatchedNode;
       this.set('selectedNpuMatchedNode', this.benchMatchedNodeList[this.selectedBenchMatchedNode]);
       this.set('selectedNode', node);
+      // 展开对应侧节点
+      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode);
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
