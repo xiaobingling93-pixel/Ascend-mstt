@@ -311,7 +311,6 @@ class Service:
         if self.config.step and self.current_iter not in self.config.step:
             JitDump.jit_dump_switch = False
             return
-        JitDump.jit_dump_switch = True
         self.model = self.check_model_valid(model)
 
         logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
