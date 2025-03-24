@@ -142,7 +142,7 @@ def get_process_group(process_group):
 
 def stack_filter(stack):
     if len(stack) > MAX_STRING_LENGTH:
-        logger.warning(f'The character strin contains more than {MAX_STRING_LENGTH}. re match is skipped.')
+        logger.warning(f'The character string contains more than {MAX_STRING_LENGTH}. re match is skipped.')
     for pattern in StackBlackList:
         if re.search(pattern, stack):
             return False
@@ -197,7 +197,7 @@ def is_target_line(codeline):
     stack = get_callstack()
     whole_stack = ';'.join(stack)
     if len(whole_stack) > MAX_STRING_LENGTH:
-        logger.warning(f'The character strin contains more than {MAX_STRING_LENGTH}. re match is skipped.')
+        logger.warning(f'The character string contains more than {MAX_STRING_LENGTH}. re match is skipped.')
     for pattern in codeline:
         if re.search(pattern, whole_stack):
             return True

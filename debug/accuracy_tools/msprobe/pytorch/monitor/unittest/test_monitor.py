@@ -92,7 +92,7 @@ def valid_reduce(reduced, unreduced, tp_size, dp_size, sequence_parallel):
     if errors:
         logger.info(errors)
     else:
-        logger.info(f'grad mean is in consist between unreduced grad and reduced grad monitord.')
+        logger.info(f'grad mean is in consist between unreduced grad and reduced grad monitored.')
 
 
 def assert_equal(a, b):

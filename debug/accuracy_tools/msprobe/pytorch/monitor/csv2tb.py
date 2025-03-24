@@ -119,7 +119,7 @@ def check_process_num(process_num):
 
 def check_data_type_list(data_type_list):
     if data_type_list is None:
-        logger.info(f"data_type_list is None, use defualt all_data_type_list: {all_data_type_list}")
+        logger.info(f"data_type_list is None, use default all_data_type_list: {all_data_type_list}")
         return
     if not isinstance(data_type_list, list):
         raise ValueError(f"data_type_list({data_type_list}) is not a list")
