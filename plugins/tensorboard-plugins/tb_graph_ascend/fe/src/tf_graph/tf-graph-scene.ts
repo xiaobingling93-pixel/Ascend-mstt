@@ -605,14 +605,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     delete this._nodeGroupIndex[n];
   }
 
-  addEdgeGroup(n, selection): void {
-    this._edgeGroupIndex[n] = selection;
-  }
-
-  getEdgeGroup(e): any {
-    return this._edgeGroupIndex[e];
-  }
-
   /**
    * Update node and annotation node of the given name.
    * @param  {String} n node name

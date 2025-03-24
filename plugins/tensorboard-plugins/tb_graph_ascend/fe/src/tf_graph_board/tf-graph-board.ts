@@ -307,8 +307,4 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
     }
     return result;
   }
-
-  _onNodeInclusionToggled(event): void {
-    (this.$.graph as any).nodeToggleExtract(event.detail.name);
-  }
 }
