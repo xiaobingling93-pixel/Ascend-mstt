@@ -13,16 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import wraps
-
 import torch
-from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import replace_last_occurrence, is_float8_tensor
+from msprobe.pytorch.common.utils import replace_last_occurrence
+from msprobe.pytorch.dump.module_dump.hook_wrapper import wrap_setup_input_output_hook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
@@ -47,32 +44,8 @@ class ModuleProcesser:
 
     def __init__(self, scope):
         self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
-        BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
-        BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
+        wrap_setup_input_output_hook()
         replace_checkpoint()
-
-    @staticmethod
-    def clone_return_value(func):
-        @wraps(func)
-        def clone_return_value_func(*args, **kwargs):
-            result = func(*args, **kwargs)
-            return ModuleProcesser.clone_if_tensor(result)
-
-        return clone_return_value_func
-
-    @staticmethod
-    @recursion_depth_decorator("ModuleDump: ModuleProcesser.clone_if_tensor", max_depth=Const.DUMP_MAX_DEPTH)
-    def clone_if_tensor(result):
-        if isinstance(result, torch.Tensor) and not is_float8_tensor(result):
-            return result.clone()
-        elif type(result) is tuple:
-            return tuple(ModuleProcesser.clone_if_tensor(x) for x in result)
-        elif type(result) is list:
-            return list(ModuleProcesser.clone_if_tensor(x) for x in result)
-        elif type(result) is dict:
-            return {k: ModuleProcesser.clone_if_tensor(v) for k, v in result.items()}
-        else:
-            return result
 
     @staticmethod
     def module_count_func(module_name):
