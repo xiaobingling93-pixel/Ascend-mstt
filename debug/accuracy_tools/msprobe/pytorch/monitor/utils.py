@@ -25,7 +25,7 @@ import torch
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
-from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
 
 
 device = "cpu"
@@ -296,3 +296,13 @@ def get_target_output_dir(monitor_path, time_start, time_end):
         if start_ok and end_ok:
             result[rank] = os.path.join(monitor_path, dirname)
     return result
+
+
+def chmod_tensorboard_dir(path):
+    """
+        format配置为tensorboard时，需要补充文件权限设置
+    """
+    try:
+        recursive_chmod(path)
+    except Exception as e:
+        logger.warning(f"chmod tensorboard dir wrong because {e}, not updated, please check!!!")

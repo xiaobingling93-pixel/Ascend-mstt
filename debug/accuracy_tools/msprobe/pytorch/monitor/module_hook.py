@@ -40,7 +40,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
-    get_output_base_dir, get_target_output_dir
+    get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -697,6 +697,9 @@ class TrainerMon:
                     if self.anomaly_data_factory:
                         self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
                     self.summary_writer.clear_anomalies()
+
+                    if self.format == MonitorConst.TENSORBOARD:
+                        chmod_tensorboard_dir(self.tensorboard_dir)
                     self.call_id = 0
                     self.param_name_call_id.clear()
 

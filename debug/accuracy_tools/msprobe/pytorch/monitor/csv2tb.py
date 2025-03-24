@@ -22,7 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import read_csv, create_directory, remove_path
+from msprobe.core.common.file_utils import read_csv, create_directory, remove_path, recursive_chmod
 from msprobe.core.common.utils import is_int
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import get_target_output_dir
@@ -164,4 +164,5 @@ def csv2tensorboard_by_step(
         p.start()
     for p in processes:
         p.join()
+    recursive_chmod(output_dirpath)
     logger.info(f"output has been saved to: {output_dirpath}")
