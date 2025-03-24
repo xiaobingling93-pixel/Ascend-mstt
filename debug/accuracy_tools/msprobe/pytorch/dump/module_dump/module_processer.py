@@ -19,7 +19,7 @@ import torch
 from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import replace_last_occurrence, is_float8_tensor

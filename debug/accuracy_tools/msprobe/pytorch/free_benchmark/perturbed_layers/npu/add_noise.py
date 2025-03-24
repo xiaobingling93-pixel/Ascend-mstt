@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import torch
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode

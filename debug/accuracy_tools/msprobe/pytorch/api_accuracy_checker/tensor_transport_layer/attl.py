@@ -27,8 +27,7 @@ from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import T
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.core.common.file_utils import remove_path
 from msprobe.pytorch.common.utils import logger, save_api_data, load_api_data, save_pkl, load_pkl
-from msprobe.core.common.utils import recursion_depth_decorator
-
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
 

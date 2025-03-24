@@ -26,7 +26,7 @@ from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import is_recomputation, is_float8_tensor
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter

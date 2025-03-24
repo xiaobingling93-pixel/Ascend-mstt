@@ -31,7 +31,7 @@ from msprobe.core.common.utils import check_file_or_directory_path, check_op_str
 from msprobe.core.common.const import Const, MonitorConst, MsgConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import make_dir
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
 TORCH_BOOL_TYPE = ["torch.bool"]
