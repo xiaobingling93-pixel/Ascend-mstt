@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def load_test_cases():
-    meta_path = Path(__file__).parent / "test_data/metadata.json"  # 修改文件扩展名为 .json
+    meta_path = Path(__file__).parent / "data/metadata.json"  # 修改文件扩展名为 .json
     with open(meta_path) as f:
         return json.load(f)["test_cases"]  # 使用 json.load 代替 yaml.safe_load
 

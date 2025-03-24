@@ -2,7 +2,7 @@
   "test_cases": [
     {
       "metaData": {
-        "run": "C:/code/mstt/plugins/tensorboard-plugins/tb_graph_ascend/tests/test_data",
+        "run": "C:/code/mstt/plugins/tensorboard-plugins/tb_graph_ascend/tests/data",
         "tag": "compare_statis"
       },
       "operations": [
@@ -22,7 +22,7 @@
     },
     {
       "metaData": {
-        "run": "C:/code/mstt/plugins/tensorboard-plugins/tb_graph_ascend/tests/test_data",
+        "run": "C:/code/mstt/plugins/tensorboard-plugins/tb_graph_ascend/tests/data",
         "tag": "compare_statis"
       },
       "operations": [

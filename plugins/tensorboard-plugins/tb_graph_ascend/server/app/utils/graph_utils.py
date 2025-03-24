@@ -145,7 +145,6 @@ class GraphUtils:
         """Load a single .vis file from a given directory based on the tag."""
         file_path = os.path.join(run_dir, f"{tag}.vis")
         file_path = os.path.normpath(file_path)  # 标准化路径
-        print(os.path.exists(file_path))
         if os.path.exists(file_path):
             # 校验文件的读权限
             if not os.access(file_path, os.R_OK):
