@@ -56,7 +56,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
         self.batch_id = 0  # 将 batch_id 声明为实例变量
         self.step_id = 0  # 可以同样声明 step_id
         self.dfs_node_ids = []  # batch和step没变的话就将所有的nodename存起来，方便快速读取
-        self.check_batch_id = 0  # 来配合node_ids监察用的，他不变node_ids就不用重新读取了
+        self.check_batch_id = -1  # 来配合node_ids监察用的，他不变node_ids就不用重新读取了
         self.check_step_id = 0  # 同上
         self.check_tag = None
 
@@ -170,25 +170,42 @@ class GraphsPlugin(base_plugin.TBPlugin):
         # 返回格式为 [[NPU节点ID列表], [Bench节点ID列表]]
         return [npu_ids, bench_ids]
 
-    def dfs_collect_nodes(self, json_data, request):
+    def dfs_collect_nodes(self, json_data, request):   
+        root_subnodes_set = []
         all_node_names = []
         try:
             batch = request.args.get("batch")
-            step = request.args.get("step")
         except ValueError:
             logger.error('The param "batch" or "step" does not exist or not a valid value')
 
-        def should_include_node(micro_step_id, step_id):
-            return (micro_step_id == batch or batch == '-1' or micro_step_id is None) and (
-                step_id == step or step == '-1' or step_id is None
-            )
+        root_node = self.json_get(json_data, 'NPU', 'root') or \
+                    self.json_get(json_data, 'root')
 
-        nodes_data = self.json_get(json_data, 'NPU', 'node') or self.json_get(json_data, 'node')
-        for node in nodes_data:
-            micro_step_id = self.json_get(nodes_data, node, 'micro_step_id')
-            step_id = self.json_get(nodes_data, node, 'step_id')
-            if should_include_node(micro_step_id, step_id) and not self.json_get(nodes_data, node, 'subnodes'):
-                all_node_names.append(node)
+        root_subnodes = self.json_get(json_data, 'NPU', 'node', root_node, 'subnodes') \
+                        if 'NPU' in json_data else \
+                        self.json_get(json_data, 'node', root_node, 'subnodes')
+
+        for node in root_subnodes:
+            micro_step_id = self.json_get(json_data, 'NPU', 'node', node, 'micro_step_id') \
+                            if 'NPU' in json_data else \
+                            self.json_get(json_data, 'node', node, 'micro_step_id')
+            
+            if batch == '-1' or str(micro_step_id) == batch:
+                root_subnodes_set.append(node)
+        
+        def traverse_npu(subnodes_set):
+            npu_data = self.json_get(json_data, 'NPU')
+            for node in subnodes_set:
+                node_data = (
+                    self.json_get(npu_data, 'node', node) if npu_data else self.json_get(json_data, 'node', node)
+                )
+                if node_data.get('subnodes'):
+                    traverse_npu(node_data.get('subnodes'))
+                else:
+                    all_node_names.append(node)
+        
+        traverse_npu(root_subnodes_set)
+
         return all_node_names
 
     # 拿所有precisonNodes的，与controls的精度筛选联动
@@ -218,15 +235,15 @@ class GraphsPlugin(base_plugin.TBPlugin):
         tag = request.args.get("tag")
         json_data = self.check_jsondata(request)
 
-        def has_conditions_changed(tag):
+        def has_conditions_changed(tag, batch):
             return (
-                self.check_batch_id != self.batch_id
+                self.check_batch_id != batch
                 or self.check_step_id != self.step_id
                 or self.check_tag != tag
                 or self.check_tag is None
             )
 
-        if has_conditions_changed(tag):
+        if has_conditions_changed(tag, self.batch_id):
             self.dfs_node_ids = self.dfs_collect_nodes(json_data, request)
             self.check_batch_id = self.batch_id
             self.check_step_id = self.step_id
