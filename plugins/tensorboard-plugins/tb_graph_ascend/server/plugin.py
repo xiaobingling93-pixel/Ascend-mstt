@@ -190,7 +190,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 if request_micro_step_id == '-1' or str(micro_step_id) == request_micro_step_id:
                     root_subnodes_set.append(node)
         
-        def getLeafNodes(subnodes_set):
+        def get_leaf_nodes(subnodes_set):
             npu_data = self.json_get(json_data, 'NPU')
             for node in subnodes_set:
                 node_data = (
@@ -198,11 +198,12 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 )
                 if node_data:
                     if node_data.get('subnodes'):
-                        getLeafNodes(node_data.get('subnodes'))
+                        get_leaf_nodes(node_data.get('subnodes'))
                     else:
                         all_node_names.append(node)
         
-        getLeafNodes(root_subnodes_set)
+        get_leaf_nodes(root_subnodes_set)
+        
         return all_node_names
 
     # 拿所有precisonNodes的，与controls的精度筛选联动
