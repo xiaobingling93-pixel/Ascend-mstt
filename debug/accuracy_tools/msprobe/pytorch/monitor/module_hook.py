@@ -339,11 +339,11 @@ class TrainerMon:
 
         # 初始化writer, 创建输出目录
         if self.format not in FORMAT_MAPPING:
-            logger.error(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
+            logger.warning(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
             self.format = MonitorConst.CSV
 
         if self.ur_distribution and self.format != 'tensorboard':
-            logger.error("can only set ur_distribution when format is 'tensorboard', cancel ur_distribution")
+            logger.warning("can only set ur_distribution when format is 'tensorboard', cancel ur_distribution")
             self.ur_distribution = False
 
         writer = FORMAT_MAPPING[self.format]
