@@ -53,6 +53,7 @@ class PtdbgDispatch(TorchDispatchMode):
             return
         if dump_path is None:
             logger.error("Please set dump_path when dump_mode is config!")
+            raise DispatchException("Please set dump_path when dump_mode is config!")
         check_file_or_directory_path(dump_path, True)
 
         self.device_id = torch_npu._C._npu_getDevice()
@@ -87,6 +88,10 @@ class PtdbgDispatch(TorchDispatchMode):
 
         self.lock = None
         max_process_num = max(int((multiprocessing.cpu_count() + 1) // Const.CPU_QUARTER), 1)
+        if process_num > max_process_num:
+            logger.error(f"process_num should be less than or equal to {max_process_num}, but got {process_num}!")
+            raise DispatchException(f'process_num should be less than or equal to {max_process_num}, '
+                                    f'but got {process_num}!')
         if process_num > 0:
             self.pool = Pool(process_num)
         if debug:

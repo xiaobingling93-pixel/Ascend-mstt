@@ -206,6 +206,11 @@ def validate_step_count_per_record(step_count_per_record):
         raise ValueError("step_count_per_record must smaller than 1e6")
 
 
+def validate_dynamic_on(dynamic_on):
+    if not isinstance(dynamic_on, bool):
+        raise TypeError('dynamic_on should be a bool')
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -248,6 +253,9 @@ def validate_config(config):
 
     squash_name = config.get('squash_name', True)
     validate_squash_name(squash_name)
+
+    dynamic_on = config.get('dynamic_on', False)
+    validate_dynamic_on(dynamic_on)
 
     if not targets:
         if xy_distribution:

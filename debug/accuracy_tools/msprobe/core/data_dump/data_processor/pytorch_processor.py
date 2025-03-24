@@ -573,7 +573,10 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
         self.stop_kernel_dump()
         logger.info(f"The kernel data of {name} is dumped successfully.")
 
-    @recursion_depth_decorator("KernelDump: KernelDumpDataProcessor.clone_and_detach_tensor")
+    @recursion_depth_decorator(
+        "KernelDump: KernelDumpDataProcessor.clone_and_detach_tensor",
+        max_depth=Const.DUMP_MAX_DEPTH
+    )
     def clone_and_detach_tensor(self, input_params):
         if isinstance(input_params, torch.Tensor):
             if is_float8_tensor(input_params):

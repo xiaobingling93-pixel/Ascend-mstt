@@ -423,7 +423,11 @@ def is_recomputation():
         bool: True if in the re-computation phase, False otherwise.
     """
     backward_function_indices = []
-    call_stack = inspect.stack()
+    try:
+        call_stack = inspect.stack()
+    except Exception as e:
+        logger.warning(f"Failed to capture stack trace, recomputation validation may be incorrect, error info: {e}.")
+        return False
 
     # Identify the function 'backward' is being executed within the 'torch/_tensor.py' file.
     for frame_info in call_stack:
