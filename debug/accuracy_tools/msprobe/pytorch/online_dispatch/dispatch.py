@@ -16,6 +16,7 @@
 import json
 import os
 import time
+import multiprocessing
 from multiprocessing import Pool
 
 import torch
@@ -85,6 +86,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.get_ops(yaml_path)
 
         self.lock = None
+        max_process_num = max(int((multiprocessing.cpu_count() + 1) // Const.CPU_QUARTER), 1)
         if process_num > 0:
             self.pool = Pool(process_num)
         if debug:
