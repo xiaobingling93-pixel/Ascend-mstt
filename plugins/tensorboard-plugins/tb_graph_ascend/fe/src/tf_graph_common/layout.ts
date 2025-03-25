@@ -253,19 +253,6 @@ function dagreLayout(graph: graphlib.Graph, params): { height: number; width: nu
     ranksep: params.rankSep,
     edgesep: params.edgeSep,
   });
-  let nonBridgeNodeNames: any[] = [];
-  // Split out nodes into bridge and non-bridge nodes, and calculate the total
-  // width we should use for bridge nodes.
-  _.each(graph.nodes(), (nodeName) => {
-    nonBridgeNodeNames.push(nodeName);
-  });
-  // If there are no non-bridge nodes, then the graph has zero size.
-  if (!nonBridgeNodeNames.length) {
-    return {
-      width: 0,
-      height: 0,
-    };
-  }
   dagre.layout(graph);
   // Calculate the true bounding box of the graph by iterating over nodes and
   // edges rather than accepting dagre's word for it. In particular, we should
@@ -275,7 +262,7 @@ function dagreLayout(graph: graphlib.Graph, params): { height: number; width: nu
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  _.each(nonBridgeNodeNames, (nodeName) => {
+  _.each(graph.nodes(), (nodeName) => {
     let nodeInfo = graph.node(nodeName);
     let w = 0.5 * nodeInfo.width;
     let x1 = nodeInfo.x - w;
