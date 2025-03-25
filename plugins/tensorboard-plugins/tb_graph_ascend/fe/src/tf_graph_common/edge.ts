@@ -97,32 +97,6 @@ export function buildGroup(sceneGroup, graph: graphlib.Graph, sceneElement: TfGr
       d.label.edgeGroup = edgeGroup;
       // index node group for quick highlighting
       sceneComponent._edgeGroupIndex[getEdgeKey(d)] = edgeGroup;
-
-      edgeGroup
-        .on('click', (dClick) => {
-          // Stop this event's propagation so that it isn't also considered
-          // a graph-select.
-          (<Event>d3.event).stopPropagation();
-          sceneComponent.fire('edge-select', {
-            edgeData: dClick,
-            edgeGroup: edgeGroup,
-          });
-        })
-        .on('mouseover', (dMouseOver) => {
-          sceneElement.fire('edge-highlight', {
-            edgeData: dMouseOver,
-            edgeGroup: edgeGroup,
-          });
-        })
-        .on('mouseout', (dMouseOut) => {
-          sceneElement.fire('edge-unhighlight', {
-            edgeData: dMouseOut,
-            edgeGroup: edgeGroup,
-          });
-        });
-      // Add line during enter because we're assuming that type of line
-      // normally does not change.
-      appendEdge(edgeGroup, d, sceneComponent);
     })
     .merge(edgeGroups)
     .each(function () {
@@ -167,6 +141,7 @@ export function getLabelForBaseEdge(baseEdge: BaseEdge, renderInfo: render.Rende
     })
     .join(TENSOR_SHAPE_DELIM);
 }
+
 /**
  * Creates the label for the given metaedge. If the metaedge consists
  * of only 1 tensor, and it's shape is known, the label will contain that
@@ -179,89 +154,7 @@ export function getLabelForEdge(metaedge: Metaedge, renderInfo: render.RenderGra
     ? `${metaedge.baseEdgeList.length}tensors`
     : getLabelForBaseEdge(metaedge.baseEdgeList[0], renderInfo);
 }
-/**
- * Computes the index into a set of points that constitute a path for which the
- * distance along the path from the initial point is as large as possible
- * without exceeding the length. This function was introduced after the
- * native getPathSegAtLength method got deprecated by SVG 2.
- * @param points Array of path control points. A point has x and y properties.
- *   Must be of length at least 2.
- * @param length The length (float).
- * @param lineFunc A function that takes points and returns the "d" attribute
- *   of a path made from connecting the points.
- * @return The index into the points array.
- */
-function getPathSegmentIndexAtLength(
-  points: render.Point[],
-  length: number,
-  lineFunc: (points: render.Point[]) => string,
-): number {
-  const path = document.createElementNS(tf_graph_common.SVG_NAMESPACE, 'path');
-  for (let i = 1; i < points.length; i++) {
-    path.setAttribute('d', lineFunc(points.slice(0, i)));
-    if (path.getTotalLength() > length) {
-      // This many points has already exceeded the length.
-      return i - 1;
-    }
-  }
-  // The entire path is shorter than the specified length.
-  return points.length - 1;
-}
-/**
- * Shortens the path enought such that the tip of the start/end marker will
- * point to the start/end of the path. The marker can be of arbitrary size.
- *
- * @param points Array of path control points.
- * @param marker D3 selection of the <marker> svg element.
- * @param isStart Is the marker a `start-marker`. If false, the marker is
- *     an `end-marker`.
- * @return The new array of control points.
- */
-function adjustPathPointsForMarker(
-  points: render.Point[],
-  marker: d3.Selection<any, any, any, any>,
-  isStart: boolean,
-): render.Point[] {
-  let lineFunc = d3
-    .line<render.Point>()
-    .x((d) => d.x)
-    .y((d) => d.y);
-  let path = d3.select(document.createElementNS('http://www.w3.org/2000/svg', 'path')).attr('d', lineFunc(points));
-  let markerWidth = Number(marker.attr('markerWidth'));
-  let viewBox = marker.attr('viewBox').split(' ').map(Number);
-  let viewBoxWidth = viewBox[2] - viewBox[0];
-  let refX = Number(marker.attr('refX'));
-  let pathNode = <SVGPathElement>path.node();
-  if (isStart) {
-    // The edge flows downwards. Do not make the edge go the whole way, lest we
-    // clobber the arrowhead.
-    const fractionStickingOut = 1 - (refX / viewBoxWidth);
-    const length = markerWidth * fractionStickingOut;
-    const point = pathNode.getPointAtLength(length);
-    // Figure out how many segments of the path we need to remove in order
-    // to shorten the path.
-    // @ts-expect-error TS2345: Argument of type 'Line<Point>' is not assignable to parameter of type '(points: Point[]) => string'.
-    const segIndex = getPathSegmentIndexAtLength(points, length, lineFunc);
-    // Update the very first segment.
-    points[segIndex - 1] = { x: point.x, y: point.y };
-    // Ignore every point before segIndex - 1.
-    return points.slice(segIndex - 1);
-  } else {
-    // The edge flows upwards. Do not make the edge go the whole way, lest we
-    // clobber the arrowhead.
-    const fractionStickingOut = 1 - refX / viewBoxWidth;
-    const length = pathNode.getTotalLength() - (markerWidth * fractionStickingOut);
-    const point = pathNode.getPointAtLength(length);
-    // Figure out how many segments of the path we need to remove in order
-    // to shorten the path.
-    // @ts-expect-error TS2345: Argument of type 'Line<Point>' is not assignable to parameter of type '(points: Point[]) => string'.
-    const segIndex = getPathSegmentIndexAtLength(points, length, lineFunc);
-    // Update the very last segment.
-    points[segIndex] = { x: point.x, y: point.y };
-    // Ignore every point after segIndex.
-    return points.slice(0, segIndex + 1);
-  }
-}
+
 /**
  * For a given d3 selection and data object, create a path to represent the
  * edge described in d.label.
@@ -330,8 +223,6 @@ export function appendEdge(
     // We have no information to show on this edge.
     return;
   }
-  // Put edge label in the middle of edge only if the edge is thick enough.
-  let baseline = strokeWidth > CENTER_EDGE_LABEL_MIN_STROKE_WIDTH ? 'central' : 'text-after-edge';
   edgeGroup
     .append('text')
     .append('textPath')
@@ -341,6 +232,7 @@ export function appendEdge(
     .attr('dominant-baseline', 'central')
     .text(labelForEdge);
 }
+
 export const interpolate: d3.Line<{
   x: number;
   y: number;
@@ -356,68 +248,13 @@ export const interpolate: d3.Line<{
   .y((d) => {
     return d.y;
   });
-/**
- * Returns a tween interpolator for the endpoint of an edge path.
- */
-function getEdgePathInterpolator(
-  component: HTMLElement,
-  renderPath: SVGPathElement,
-  d: EdgeData,
-  i: number,
-  a: SVGPathElement[],
-): ((t: number) => string) | ((t: any) => string | null) {
-  let renderMetaedgeInfo = <render.RenderMetaedgeInfo>d.label;
-  let adjoiningMetaedge = renderMetaedgeInfo.adjoiningMetaedge;
-  let points = renderMetaedgeInfo.points;
-  // Adjust the path so that start/end markers point to the end
-  // of the path.
-  const { shadowRoot } = component;
-  if (d.label.startMarkerId) {
-    points = adjustPathPointsForMarker(
-      points,
-      d3.select(shadowRoot?.querySelector(`#${d.label.startMarkerId}`) as Element),
-      true,
-    );
-  }
-  if (d.label.endMarkerId) {
-    points = adjustPathPointsForMarker(
-      points,
-      d3.select(shadowRoot?.querySelector(`#${d.label.endMarkerId}`) as Element),
-      false,
-    );
-  }
-  if (!adjoiningMetaedge) {
-    return d3.interpolate(a, interpolate(points) ?? '');
-  }
-  // Get the adjoining path that matches the adjoining metaedge.
-  let adjoiningPath = <SVGPathElement>(<HTMLElement>adjoiningMetaedge.edgeGroup.node()).firstChild;
-  // Find the desired SVGPoint along the adjoining path, then convert those
-  // coordinates into the space of the renderPath using its Current
-  // Transformation Matrix (CTM).
-  let inbound = renderMetaedgeInfo.metaedge?.inbound;
-  return function (t): string | null {
-    let adjoiningPoint = adjoiningPath
-      .getPointAtLength(inbound ? adjoiningPath.getTotalLength() : 0)
-      .matrixTransform(adjoiningPath.getCTM() as DOMMatrixInit)
-      .matrixTransform(renderPath.getCTM()?.inverse());
-    // Update the relevant point in the renderMetaedgeInfo's points list, then
-    // re-interpolate the path.
-    let index = inbound ? 0 : points.length - 1;
-    points[index].x = adjoiningPoint.x;
-    points[index].y = adjoiningPoint.y;
-    let dPath = interpolate(points);
-    return dPath;
-  };
-}
+
 function position(component: HTMLElement, edgeGroup: HTMLElement): void {
   d3.select(edgeGroup)
     .select(`path.${Class.Edge.LINE}`)
     .transition()
-    // @ts-expect-error TS2769: No overload matches this call. complicated return type mismatch issue
-    .attrTween('d', function (d: EdgeData, i: number, a: SVGPathElement[]) {
-      return getEdgePathInterpolator(component, this as SVGPathElement, d, i, a);
-    });
 }
+
 /**
  * For a given d3 selection and data object, mark the edge as a control
  * dependency if it contains only control edges.

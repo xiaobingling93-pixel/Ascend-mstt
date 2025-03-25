@@ -39,15 +39,6 @@ class Legend extends PolymerElement {
           font-size: 12px;
         }
         .legend-clarifier {
-        }
-        .legend-item {
-          margin-right: 10px;
-        }
-        .legend-item-value {
-          margin-left: 5px;
-          font-size: 12px;
-        }
-        .legend-clarifier {
           color: #266236;
           cursor: pointer;
           height: 16px;

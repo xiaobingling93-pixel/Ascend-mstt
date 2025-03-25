@@ -313,20 +313,6 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     }
   }
 
-  _readAndParseMetadata(path: string): void {
-    // Reset the progress bar to 0.
-    this.set('progress', {
-      value: 0,
-      msg: '',
-    });
-    let tracker = tf_graph_util.getTracker(this);
-    tf_graph_parser.fetchAndParseMetadata(path, tracker).then(
-      (stats) => {
-        this.set('outStats', stats)
-      }
-    );
-  }
-
   _fetchAndConstructHierarchicalGraph(path: string | null, pbTxtFile?: Blob): Promise<void> {
     // Reset the progress bar to 0.
     this.set('progress', {

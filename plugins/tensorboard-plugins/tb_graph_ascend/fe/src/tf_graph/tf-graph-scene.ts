@@ -231,19 +231,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     setTimeout(this.fit.bind(this), tf_graph_layout.PARAMS.animation.duration);
   }
 
-  // When renderHierarchy changes, we need to first build the new SVG based
-  // on the new hierarchy (and it is asynchronous). We will let that observer
-  // update the input trace.
-  @observe('traceInputs', 'selectedNode')
-  _updateInputTrace(): void {
-    tf_graph_scene_node.updateInputTrace(
-      this.getGraphSvgRoot(),
-      this.renderHierarchy,
-      this.selectedNode,
-      this.traceInputs,
-    );
-  }
-
   getNode(nodeName): tf_graph_render.RenderNodeInfo {
     return this.renderHierarchy.getRenderNodeByName(nodeName);
   }
@@ -313,7 +300,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       (): void => {
         tf_graph_scene_node.buildGroupForScene(d3.select(this.$.root), renderHierarchy.root, this);
         tf_graph_scene.addGraphClickListener(this.$.svg, this);
-        this._updateInputTrace();
       },
       tb_debug.GraphDebugEventId.RENDER_SCENE_BUILD_SCENE,
     );
@@ -605,14 +591,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     delete this._nodeGroupIndex[n];
   }
 
-  addEdgeGroup(n, selection): void {
-    this._edgeGroupIndex[n] = selection;
-  }
-
-  getEdgeGroup(e): any {
-    return this._edgeGroupIndex[e];
-  }
-
   /**
    * Update node and annotation node of the given name.
    * @param  {String} n node name
@@ -628,8 +606,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     }
     if (
       node.node.type === (tf_graph.NodeType.META || tf_graph.NodeType.API_LIST || tf_graph.NodeType.MULTI_COLLECTION) &&
-      (node.node as any).associatedFunction &&
-      !node.isLibraryFunction
+      (node.node as any).associatedFunction
     ) {
       // The node is that of a function call. Also link the node within the
       // function library. This clarifies to the user that the library function

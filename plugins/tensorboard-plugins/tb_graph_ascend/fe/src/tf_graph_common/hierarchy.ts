@@ -27,19 +27,15 @@ import {
   createGraph,
   createMetaedge,
   createMetanode,
-  createSeriesNode,
   Edges,
-  getSeriesNodeName,
   GraphType,
   GroupNode,
   Metaedge,
   MetaedgeImpl,
   Metanode,
   Node,
-  NodeType,
   OpNode,
   ROOT_NAME,
-  SeriesNode,
   SlimGraph,
   MetanodeImpl,
 } from './graph';
@@ -51,9 +47,6 @@ export enum HierarchyEvent {
    */
   TEMPLATES_UPDATED = 0,
 }
-
-// A map from the name of a series node to its grouping type.
-type SeriesGroupMap = Map<string, tf_graph.SeriesGroupingType>;
 
 // Including both the NPU and the benchmark hierarchy.
 export interface MergedHierarchy {
@@ -87,38 +80,15 @@ export class Hierarchy extends tf_graph_util.Dispatcher<HierarchyEvent> {
   private index: {
     [nodeName: string]: GroupNode | OpNode;
   };
-  private readonly seriesGroupMap: SeriesGroupMap;
 
   constructor(params: HierarchyParams) {
     super();
     this.graphOptions.compound = true;
     this.graphOptions.rankdir = params.rankDirection;
     this.root = createMetanode(ROOT_NAME, this.graphOptions);
-    this.seriesGroupMap = new Map(params.seriesMap);
-    /**
-     * @type {Object} Dictionary object that maps node name to the node
-     * (could be op-node, metanode, or series-node)
-     */
     this.index = {};
     this.index[ROOT_NAME] = this.root;
     this.orderings = {};
-  }
-
-  getSeriesGroupType(nodeName: string): tf_graph.SeriesGroupingType {
-    // If grouping was not specified, assume it should be grouped by default.
-    return this.seriesGroupMap.get(nodeName) ?? tf_graph.SeriesGroupingType.GROUP;
-  }
-
-  setSeriesGroupType(nodeName: string, groupType: tf_graph.SeriesGroupingType): SeriesGroupMap {
-    return this.seriesGroupMap.set(nodeName, groupType);
-  }
-
-  buildSeriesGroupMapToggled(nodeName: string): Map<string, tf_graph.SeriesGroupingType> {
-    const newGroupType =
-      this.getSeriesGroupType(nodeName) === tf_graph.SeriesGroupingType.GROUP
-        ? tf_graph.SeriesGroupingType.UNGROUP
-        : tf_graph.SeriesGroupingType.GROUP;
-    return new Map([...this.seriesGroupMap, [nodeName, newGroupType]]);
   }
 
   getNodeMap(): {
@@ -133,77 +103,6 @@ export class Hierarchy extends tf_graph_util.Dispatcher<HierarchyEvent> {
 
   setNode(name: string, node: GroupNode | OpNode): void {
     this.index[name] = node;
-  }
-
-  /**
-   * Given the name of a node in this hierarchy, get its bridgegraph, creating
-   * it on the fly if necessary. If the node is not a GroupNode, then this
-   * method returns null. If the provided name does not map to a node in the
-   * hierarchy, an error will be thrown.
-   */
-  getBridgegraph(nodeName: string): graphlib.Graph {
-    let node = this.index[nodeName];
-    if (!node) {
-      throw Error(`Could not find node in hierarchy: ${nodeName}`);
-    }
-    if (!('metagraph' in node)) {
-      return null;
-    }
-    let groupNode = <GroupNode>node;
-    if (groupNode.bridgegraph) {
-      return groupNode.bridgegraph;
-    }
-    let bridgegraph = createGraph<GroupNode | OpNode, Metaedge>('BRIDGEGRAPH', GraphType.BRIDGE, this.graphOptions);
-    groupNode.bridgegraph = bridgegraph;
-    if (!node.parentNode || !('metagraph' in node.parentNode)) {
-      return bridgegraph;
-    }
-    let parentNode = <GroupNode>node.parentNode;
-    let parentMetagraph = parentNode.metagraph;
-    let parentBridgegraph = this.getBridgegraph(parentNode.name);
-    // For each of the parent node's two Metaedge containing graphs, process
-    // each Metaedge involving this node.
-    _.each([parentMetagraph, parentBridgegraph], (parentGraph) => {
-      parentGraph
-        .edges()
-        .filter((e) => e.v === nodeName || e.w === nodeName)
-        .forEach((parentEdgeObj) => {
-          let inbound = parentEdgeObj.w === nodeName;
-          let parentMetaedge = parentGraph.edge(parentEdgeObj);
-          // The parent's Metaedge represents some number of underlying
-          // BaseEdges from the original full graph. For each of those, we need
-          // to determine which immediate child is involved and make sure
-          // there's a Metaedge in the bridgegraph that covers it.
-          _.each(parentMetaedge.baseEdgeList, (baseEdge) => {
-            // Based on the direction, figure out which is the descendant node
-            // and which is the 'other' node (sibling of parent or ancestor).
-            let [descendantName, otherName] = inbound ? [baseEdge.w, parentEdgeObj.v] : [baseEdge.v, parentEdgeObj.w];
-            // Determine the immediate child containing this descendant node.
-            if (nodeName !== descendantName) {
-              let childName = this.getChildName(nodeName, descendantName);
-              if (!childName) {
-                return;
-              }
-              // Look for an existing Metaedge in the bridgegraph (or create a
-              // new one) that covers the relationship between child and other.
-              let bridgeEdgeObj = <any>{
-                v: inbound ? otherName : childName,
-                w: inbound ? childName : otherName,
-              };
-              let bridgeMetaedge = bridgegraph.edge(bridgeEdgeObj);
-              if (!bridgeMetaedge) {
-                bridgeMetaedge = createMetaedge(bridgeEdgeObj.v, bridgeEdgeObj.w) as any;
-                bridgeMetaedge.inbound = inbound;
-                bridgegraph.setEdge(bridgeEdgeObj.v, bridgeEdgeObj.w, bridgeMetaedge, baseEdge.attr?.id);
-              }
-              // Copy the BaseEdge from the parent's Metaedge into this
-              // bridgegraph Metaedge.
-              bridgeMetaedge.addBaseEdge(baseEdge, this);
-            }
-          });
-        });
-    });
-    return bridgegraph;
   }
 
   /** Given the name of a node, return its incoming metaedges. */
@@ -380,9 +279,7 @@ export class Hierarchy extends tf_graph_util.Dispatcher<HierarchyEvent> {
     }
     let parentNode = <GroupNode>node.parentNode;
     let metagraph = parentNode.metagraph;
-    let bridgegraph = this.getBridgegraph(parentNode.name);
     findEdgeTargetsInGraph(metagraph, node, inEdges, edges);
-    findEdgeTargetsInGraph(bridgegraph, node, inEdges, edges);
     return edges;
   }
 }
@@ -410,24 +307,12 @@ function findEdgeTargetsInGraph(graph: graphlib.Graph, node: Node, inbound: bool
 
 export interface HierarchyParams {
   verifyTemplate: boolean;
-  seriesNodeMinSize: number;
-  // The initial map of explicit series group types.
-  seriesMap: SeriesGroupMap;
-  // This string is supplied to dagre as the 'rankdir' property for laying out
-  // the graph. TB, BT, LR, or RL. The default is 'BT' (bottom to top).
   rankDirection: string;
-  // Whether to detect numeric patterns for series nodes using entire names of
-  // nodes. If false, only uses numeric suffixes to find patterns to collapse
-  // into series nodes.
-  useGeneralizedSeriesPatterns: boolean;
 }
 
 export const DefaultHierarchyParams: HierarchyParams = {
   verifyTemplate: true,
-  seriesNodeMinSize: 5,
-  seriesMap: new Map(),
   rankDirection: 'TB',
-  useGeneralizedSeriesPatterns: false,
 };
 
 /**
@@ -440,9 +325,6 @@ export function build(
   tracker?: ProgressTracker,
 ): Promise<Hierarchy> {
   const h = new Hierarchy(params);
-  const seriesNames: {
-    [name: string]: string;
-  } = {};
   return tf_graph_util
     .runAsyncTask(
       'Adding nodes',
@@ -453,26 +335,6 @@ export function build(
       tracker,
       tb_debug.GraphDebugEventId.HIERARCHY_ADD_NODES,
     )
-    .then(() => {
-      return tf_graph_util.runAsyncTask(
-        'Detect series',
-        30,
-        () => {
-          if (params.seriesNodeMinSize > 0) {
-            groupSeries(
-              h.root,
-              h,
-              seriesNames,
-              params.seriesNodeMinSize,
-              params.seriesMap,
-              params.useGeneralizedSeriesPatterns,
-            );
-          }
-        },
-        tracker,
-        tb_debug.GraphDebugEventId.HIERARCHY_DETECT_SERIES,
-      );
-    })
     .then(() => {
       return tf_graph_util.runAsyncTask(
         'Adding edges',
@@ -568,396 +430,4 @@ function addEdgesInVis(h: Hierarchy, graph: SlimGraph, nodeName: string): void {
     }
     metaedge.addBaseEdge(baseEdge, h, true);
   });
-}
-
-/**
- * Using the hierarchy template information, detect series in the provided
- * metanode.  For each detected series, create a new SeriesNode
- * and remove series members from the metanode's metagraph and move them to
- * the new series node's metagraph.
- *
- * @param metanode
- * @param hierarchy
- * @param seriesNames Map of node names to their series they are contained in.
- *     This should be provided empty and is populated by this method.
- * @param threshold If the series has this many nodes or more, then group them
- *     into a series.
- * @param map Map of series names to their series grouping type, if one has
- *     been set.
- * @param useGeneralizedSeriesPatterns Whether to use find patterns for series
- *     nodes using any parts of names of nodes. If false, only uses patterns
- *     discovered within numeric suffixes of nodes names.
- * @return A dictionary from node name to series node name that contains the
- *     node.
- */
-function groupSeries(
-  metanode: Metanode,
-  hierarchy: Hierarchy,
-  seriesNames: {
-    [name: string]: string;
-  },
-  threshold: number,
-  seriesMap: SeriesGroupMap,
-  useGeneralizedSeriesPatterns: boolean,
-): void {
-  let metagraph = metanode.metagraph;
-  _.each(metagraph.nodes(), (n) => {
-    let child = metagraph.node(n);
-    if (child.type === (tf_graph.NodeType.META || tf_graph.NodeType.MULTI_COLLECTION || tf_graph.NodeType.API_LIST)) {
-      groupSeries(
-        child as unknown as Metanode,
-        hierarchy,
-        seriesNames,
-        threshold,
-        seriesMap,
-        useGeneralizedSeriesPatterns,
-      );
-    }
-  });
-  let clusters = clusterNodes(metagraph);
-  const detectSeriesMethod = useGeneralizedSeriesPatterns
-    ? detectSeriesAnywhereInNodeName
-    : detectSeriesUsingNumericSuffixes;
-  let seriesDict = detectSeriesMethod(clusters, metagraph, hierarchy.graphOptions);
-  // Add each series node to the graph and add its grouped children to its own
-  // metagraph.
-  _.each(seriesDict, (seriesNode: SeriesNode, seriesName: string) => {
-    let nodeMemberNames = seriesNode.metagraph.nodes();
-    _.each(nodeMemberNames, (n) => {
-      let child = metagraph.node(n) as any;
-      if (!child.owningSeries) {
-        child.owningSeries = seriesName;
-      }
-    });
-    // If the series contains less than the threshold number of nodes, then set
-    // this series to be shown ungrouped in the map.
-    if (
-      nodeMemberNames.length < threshold &&
-      hierarchy.getSeriesGroupType(seriesNode.name) === tf_graph.SeriesGroupingType.GROUP
-    ) {
-      hierarchy.setSeriesGroupType(seriesNode.name, tf_graph.SeriesGroupingType.UNGROUP);
-    }
-    // If the series is in the map as ungrouped then do not group the series.
-    if (hierarchy.getSeriesGroupType(seriesNode.name) === tf_graph.SeriesGroupingType.UNGROUP) {
-      return;
-    }
-    hierarchy.setNode(seriesName, seriesNode); // add to the index
-    metagraph.setNode(seriesName, seriesNode);
-    _.each(nodeMemberNames, (n) => {
-      let child = metagraph.node(n) as any;
-      seriesNode.metagraph.setNode(n, child);
-      seriesNode.parentNode = child.parentNode;
-      seriesNode.cardinality++;
-      child.parentNode = seriesNode;
-      seriesNames[n] = seriesName;
-      // Remove now-grouped node from its original parent's metagraph.
-      metagraph.removeNode(n);
-    });
-  });
-}
-
-/**
- * Cluster op-nodes with similar op. This examines only the direct children of
- * the metagraph, does not recursively check descendants.
- * @return A map from op to a list of node names.
- */
-function clusterNodes(metagraph: graphlib.Graph): {
-  [clusterId: string]: string[];
-} {
-  let result: {
-    [clusterId: string]: string[];
-  } = {};
-  return _.reduce(
-    metagraph.nodes(),
-    (
-      clusters: {
-        [clusterId: string]: string[];
-      },
-      n: string,
-    ) => {
-      let child = metagraph.node(n);
-      if (child.type === (NodeType.META || NodeType.MULTI_COLLECTION || NodeType.API_LIST)) {
-        // skip metanodes
-        return clusters;
-      }
-      let template = (child as any).op;
-      if (template) {
-        clusters[template] = clusters[template] || [];
-        clusters[template].push(child.name);
-      }
-      return clusters;
-    },
-    result,
-  );
-}
-
-/**
- * For each cluster of op-nodes based op type, try to detect groupings.
- * Infer series name using by trying to find pattern '<number>' towards the end
- * of node names.
- *
- * @param clusters Dictionary output from clusterNodes().
- * @param metagraph
- * @return A dictionary from series name => seriesNode
- */
-function detectSeriesUsingNumericSuffixes(
-  clusters: {
-    [clusterId: string]: string[];
-  },
-  metagraph: graphlib.Graph,
-  graphOptions: tf_graph.LabeledGraphOptions,
-): {
-  [seriesName: string]: SeriesNode;
-} {
-  let seriesDict: {
-    [seriesName: string]: SeriesNode;
-  } = {};
-  _.each(clusters, (members, clusterId: string) => {
-    if (members.length <= 1) {
-      return;
-    } // isolated clusters can't make series
-    /** @type {Object}  A dictionary mapping seriesName to seriesInfoArray,
-     * which is an array that contains objects with name, id, prefix, suffix,
-     * and parent properties.
-     */
-    let candidatesDict: {
-      [seriesName: string]: SeriesNode[];
-    } = {};
-    // Group all nodes that have the same name, with the exception of a
-    // number at the end of the name after an underscore, which is allowed to
-    // vary.
-    _.each(members, (name: string) => {
-      const isGroup = name.charAt(name.length - 1) === '*';
-      const namepath = name.split('/');
-      const leaf = namepath[namepath.length - 1];
-      const parent = namepath.slice(0, namepath.length - 1).join('/');
-      const matches = leaf.match(/^(?<nonDigits>\D*)(?<digits>\d+)$/);
-
-      let prefix;
-      let id;
-      let suffix = '';
-      if (matches) {
-        // if found '<number>' in the name, assign id.
-        prefix = matches[1]; // the front non-numeric characters
-        id = matches[2]; // the digits
-      } else {
-        // for node without '_<number>', make them zero-th items.
-        prefix = isGroup ? leaf.substr(0, leaf.length - 1) : leaf;
-        id = 0;
-        suffix = isGroup ? '*' : '';
-      }
-      const seriesName = getSeriesNodeName(prefix, suffix, parent);
-      candidatesDict[seriesName] = candidatesDict[seriesName] || [];
-      const seriesNode = createSeriesNode(prefix, suffix, parent, Number(id), name, graphOptions);
-      candidatesDict[seriesName].push(seriesNode);
-    });
-    // In each group of nodes, group nodes in bunches that have monotonically
-    // increasing numbers in their names.  Each of these bunches is a series.
-    _.each(candidatesDict, (seriesInfoArray: SeriesNode[], seriesName) => {
-      if (seriesInfoArray.length < 2) {
-        return;
-      }
-      seriesInfoArray.sort((a, b) => {
-        return Number(a.clusterId) - Number(b.clusterId);
-      });
-      // Loop through the nodes sorted by its detected series number, grouping
-      // all nodes with monotonically-increasing series numbers.
-      let seriesNodes = [seriesInfoArray[0]];
-      for (let index = 1; index < seriesInfoArray.length; index++) {
-        let nextNode = seriesInfoArray[index];
-        if (nextNode.clusterId === seriesNodes[seriesNodes.length - 1].clusterId + 1) {
-          seriesNodes.push(nextNode);
-          continue;
-        }
-        addSeriesToDict(seriesNodes, seriesDict, Number(clusterId), metagraph, graphOptions);
-        seriesNodes = [nextNode];
-      }
-      addSeriesToDict(seriesNodes, seriesDict, Number(clusterId), metagraph, graphOptions);
-    });
-  });
-  return seriesDict;
-}
-
-/**
- * For each cluster of op-nodes based op type, try to detect groupings.
- * Infer series name using by trying to find a pattern of numbers
- * anywhere within node names.
- *
- * @param clusters Dictionary output from clusterNodes().
- * @param metagraph
- * @return A dictionary from series name => seriesNode
- */
-function detectSeriesAnywhereInNodeName(
-  clusters: {
-    [clusterId: string]: string[];
-  },
-  metagraph: graphlib.Graph,
-  graphOptions: tf_graph.LabeledGraphOptions,
-): {
-  [seriesName: string]: SeriesNode;
-} {
-  let seriesDict: {
-    [seriesName: string]: SeriesNode;
-  } = {};
-  _.each(clusters, (members, clusterId: string) => {
-    if (members.length <= 1) {
-      return;
-    } // isolated clusters can't make series
-    /**
-     * @type {Object}  A dictionary mapping a series name to a SeriesNode.
-     */
-    let forwardDict: {
-      [seriesName: string]: SeriesNode;
-    } = {};
-    /**
-     * @type {Object}  A dictionary mapping member name to an array of series
-     * names this member could potentially be grouped under and the
-     * corresponding ids.
-     */
-    let reverseDict: {
-      [seriesName: string]: any[];
-    } = {};
-    // Group all nodes that have the same name, with the exception of a
-    // number at the end of the name after an underscore, which is allowed to
-    // vary.
-    _.each(members, (name: string) => {
-      let isGroup = name.charAt(name.length - 1) === '*';
-      let namepath = name.split('/');
-      let leaf = namepath[namepath.length - 1];
-      let parent = namepath.slice(0, namepath.length - 1).join('/');
-      const numRegex = /(?<number>\d+)/g;
-      let matches = [];
-      let matchResult;
-      let prefix;
-      let id;
-      let suffix;
-      let seriesName;
-      let matched = 0;
-      // Scan over the entire leaf name and match any possible numbers,
-      // and put the results into corresponding dictionaries.
-      while ((matchResult = numRegex.exec(leaf))) {
-        ++matched;
-        prefix = leaf.slice(0, matchResult.index);
-        id = matchResult[0];
-        suffix = leaf.slice(matchResult.index + matchResult[0].length);
-        seriesName = getSeriesNodeName(prefix, suffix, parent);
-        forwardDict[seriesName] = forwardDict[seriesName];
-        if (!forwardDict[seriesName]) {
-          forwardDict[seriesName] = createSeriesNode(prefix, suffix, parent, Number(id), name, graphOptions);
-        }
-        forwardDict[seriesName].ids.push(id);
-        reverseDict[name] = reverseDict[name] || [];
-        reverseDict[name].push([seriesName, id]);
-      }
-      if (matched < 1) {
-        prefix = isGroup ? leaf.substr(0, leaf.length - 1) : leaf;
-        id = 0;
-        suffix = isGroup ? '*' : '';
-        seriesName = getSeriesNodeName(prefix, suffix, parent);
-        forwardDict[seriesName] = forwardDict[seriesName];
-        if (!forwardDict[seriesName]) {
-          forwardDict[seriesName] = createSeriesNode(prefix, suffix, parent, Number(id), name, graphOptions);
-        }
-        forwardDict[seriesName].ids.push(id);
-        reverseDict[name] = reverseDict[name] || [];
-        reverseDict[name].push([seriesName, id]);
-      }
-    });
-    /** @type {Object}  A dictionary mapping seriesName to seriesInfoArray,
-     * which is an array that contains objects with name, id, prefix, suffix,
-     * and parent properties.
-     */
-    let candidatesDict: {
-      [seriesName: string]: SeriesNode[];
-    } = {};
-    // For each of the member, put it into the maximum possible series,
-    // and create candidatesDict accordingly.
-    _.each(reverseDict, (seriesNameIdArray, name) => {
-      seriesNameIdArray.sort((a, b) => {
-        return forwardDict[b[0]].ids.length - forwardDict[a[0]].ids.length;
-      });
-      let seriesName = seriesNameIdArray[0][0];
-      let id = seriesNameIdArray[0][1];
-      candidatesDict[seriesName] = candidatesDict[seriesName] || [];
-      const namepath = name.split('/');
-      const leaf = namepath[namepath.length - 1];
-      const parent = namepath.slice(0, namepath.length - 1).join('/');
-      let seriesNode = createSeriesNode(
-        forwardDict[seriesName].prefix,
-        forwardDict[seriesName].suffix,
-        parent,
-        Number(id),
-        name,
-        graphOptions,
-      );
-      candidatesDict[seriesName].push(seriesNode);
-    });
-    // In each group of nodes, group nodes in bunches that have monotonically
-    // increasing numbers in their names.  Each of these bunches is a series.
-    _.each(candidatesDict, (seriesInfoArray: SeriesNode[], seriesName) => {
-      if (seriesInfoArray.length < 2) {
-        return;
-      }
-      seriesInfoArray.sort((a, b) => {
-        return Number(a.clusterId) - Number(b.clusterId);
-      });
-      // Loop through the nodes sorted by its detected series number, grouping
-      // all nodes with monotonically-increasing series numbers.
-      let seriesNodes = [seriesInfoArray[0]];
-      for (let index = 1; index < seriesInfoArray.length; index++) {
-        let nextNode = seriesInfoArray[index];
-        if (nextNode.clusterId === seriesNodes[seriesNodes.length - 1].clusterId + 1) {
-          seriesNodes.push(nextNode);
-          continue;
-        }
-        addSeriesToDict(seriesNodes, seriesDict, Number(clusterId), metagraph, graphOptions);
-        seriesNodes = [nextNode];
-      }
-      addSeriesToDict(seriesNodes, seriesDict, Number(clusterId), metagraph, graphOptions);
-    });
-  });
-  return seriesDict;
-}
-
-/**
- * Add a series to the provided dictionary mapping series names to series.
- *
- * @param seriesNodes the nodes in the series. Contains
- *     name, id, prefix, suffix and parent properties of the node.
- * @param seriesDict the dictionary of series
- * @param clusterId ID of the template of the nodes of the series
- * @param metagraph
- * @param graphOptions
- */
-function addSeriesToDict(
-  seriesNodes: SeriesNode[],
-  seriesDict: {
-    [seriesName: string]: SeriesNode;
-  },
-  clusterId: number,
-  metagraph: graphlib.Graph,
-  graphOptions: tf_graph.LabeledGraphOptions,
-): void {
-  if (seriesNodes.length > 1) {
-    let curSeriesName = getSeriesNodeName(
-      seriesNodes[0].prefix,
-      seriesNodes[0].suffix,
-      seriesNodes[0].parent,
-      seriesNodes[0].clusterId,
-      seriesNodes[seriesNodes.length - 1].clusterId,
-    );
-    let curSeriesNode = createSeriesNode(
-      seriesNodes[0].prefix,
-      seriesNodes[0].suffix,
-      seriesNodes[0].parent,
-      clusterId,
-      curSeriesName,
-      graphOptions,
-    );
-    _.each(seriesNodes, (node) => {
-      curSeriesNode.ids.push(node.clusterId);
-      curSeriesNode.metagraph.setNode(node.name, metagraph.node(node.name));
-    });
-    seriesDict[curSeriesName] = curSeriesNode;
-  }
 }

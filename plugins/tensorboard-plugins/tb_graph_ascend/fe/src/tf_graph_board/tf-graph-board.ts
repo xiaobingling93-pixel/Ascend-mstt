@@ -204,10 +204,10 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   hierarchyParams: tf_graph_hierarchy.HierarchyParams = tf_graph_hierarchy.DefaultHierarchyParams;
 
   /**
-   * A number between 0 and 100 denoting the % of progress
-   * for the progress bar and the displayed message.
-   * @type {{value: number, msg: string}}
-   */
+ * A number between 0 and 100 denoting the % of progress
+ * for the progress bar and the displayed message.
+ * @type {{value: number, msg: string}}
+ */
   @property({ type: Object })
   progress: object;
 
@@ -219,18 +219,6 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object, notify: true })
   renderHierarchy: tf_graph_render.MergedRenderGraphInfo;
-
-  // Whether debugger data is enabled for this instance of Tensorboard.
-  @property({ type: Boolean })
-  debuggerDataEnabled: boolean;
-
-  @property({ type: Array, notify: true })
-  // An array of alerts (in chronological order) provided by debugging libraries on when bad
-  // values (NaN, +/- Inf) appear.
-  debuggerNumericAlerts: unknown[];
-
-  @property({ type: Boolean, notify: true })
-  allStepsModeEnabled: boolean = false;
 
   @property({ type: Object })
   menu: any;
@@ -273,6 +261,8 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   tooltips: object;
+  
+  @property({ type: String })
   selectNodeCopy: string = '';
 
   ready(): void {
@@ -306,9 +296,5 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
       result += ' loading';
     }
     return result;
-  }
-
-  _onNodeInclusionToggled(event): void {
-    (this.$.graph as any).nodeToggleExtract(event.detail.name);
   }
 }

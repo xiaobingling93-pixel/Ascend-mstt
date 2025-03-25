@@ -42,26 +42,6 @@ export const PARAMS = {
        */
       edgeSep: 5,
     },
-    /** Graph parameter for metanode. */
-    series: {
-      /**
-       * Dagre's nodesep param - number of pixels that
-       * separate nodes horizontally in the layout.
-       *
-       */
-      nodeSep: 5,
-      /**
-       * Dagre's ranksep param - number of pixels
-       * between each rank in the layout.
-       *
-       */
-      rankSep: 25,
-      /**
-       * Dagre's edgesep param - number of pixels that separate
-       * edges horizontally in the layout.
-       */
-      edgeSep: 5,
-    },
     /**
      * Padding is used to correctly position the graph SVG inside of its parent
      * element. The padding amounts are applied using an SVG transform of X and
@@ -84,13 +64,6 @@ export const PARAMS = {
       extractXOffset: 15,
       /** Y-space between each extracted node. */
       extractYOffset: 20,
-    },
-    series: {
-      paddingTop: 10,
-      paddingBottom: 10,
-      paddingLeft: 10,
-      paddingRight: 10,
-      labelHeight: 10,
     },
   },
   nodeSize: {
@@ -136,51 +109,15 @@ export const PARAMS = {
       labelOffset: -12,
       maxLabelWidth: 40,
     },
-    /** Size of series nodes. */
-    series: {
-      expanded: {
-        // For expanded series nodes, width and height will be
-        // computed to account for the subscene.
-        radius: 10,
-        labelOffset: 0,
-      },
-      vertical: {
-        // When unexpanded, series whose underlying metagraphs contain
-        // one or more non-control edges will show as a vertical stack
-        // of ellipses.
-        width: 16,
-        height: 13,
-        labelOffset: -13,
-      },
-      horizontal: {
-        // When unexpanded, series whose underlying metagraphs contain
-        // no non-control edges will show as a horizontal stack of
-        // ellipses.
-        width: 24,
-        height: 8,
-        radius: 10,
-        labelOffset: -10,
-      },
-    },
-    /** Size of bridge nodes. */
-    bridge: {
-      // NOTE: bridge nodes will normally be invisible, but they must
-      // take up some space so that the layout step leaves room for
-      // their edges.
-      width: 20,
-      height: 20,
-      radius: 2,
-      labelOffset: 0,
-    },
   },
   shortcutSize: {
     /** Size of shortcuts for op nodes */
     op: { width: 10, height: 4 },
     /** Size of shortcuts for meta nodes */
     meta: { width: 12, height: 4, radius: 1 },
-    /** Size of shortcuts for series nodes */
-    series: { width: 14, height: 4 },
+    /** Size of shortcuts for multi_collection nodes */
     multi_collection: { width: 12, height: 4, radius: 1 },
+    /** Size of shortcuts for api_list nodes */
     api_list: { width: 12, height: 4, radius: 1 },
   },
   annotations: {
@@ -198,20 +135,6 @@ export const PARAMS = {
     maxLabelWidth: 40,
   },
   constant: { size: { width: 4, height: 4 } },
-  series: {
-    /** Maximum number of repeated item for unexpanded series node. */
-    maxStackCount: 3,
-    /**
-     * Positioning offset ratio for collapsed stack
-     * of parallel series (series without edges between its members).
-     */
-    parallelStackOffsetRatio: 0.2,
-    /**
-     * Positioning offset ratio for collapsed stack
-     * of tower series (series with edges between its members).
-     */
-    towerStackOffsetRatio: 0.5,
-  },
   minimap: {
     /** The maximum width/height the minimap can have. */
     size: 150,
@@ -242,8 +165,6 @@ export function layoutScene(renderNodeInfo: render.RenderGroupNodeInfo): void {
   // Update position of its children nodes and edges
   if (renderNodeInfo.node.type === NodeType.META) {
     layoutMetanode(renderNodeInfo, 10);
-  } else if (renderNodeInfo.node.type === NodeType.SERIES) {
-    layoutSeriesNode(renderNodeInfo);
   } else if (renderNodeInfo.node.type === NodeType.MULTI_COLLECTION) {
     layoutMetanode(renderNodeInfo, 10);
   } else if (renderNodeInfo.node.type === NodeType.API_LIST) {
@@ -292,9 +213,6 @@ function layoutChildren(renderNodeInfo: render.RenderGroupNodeInfo): void {
       case NodeType.OP:
         _.extend(childNodeInfo, PARAMS.nodeSize.op);
         break;
-      case NodeType.BRIDGE:
-        _.extend(childNodeInfo, PARAMS.nodeSize.bridge);
-        break;
       case NodeType.META:
       case NodeType.MULTI_COLLECTION:
       case NodeType.API_LIST:
@@ -309,19 +227,6 @@ function layoutChildren(renderNodeInfo: render.RenderGroupNodeInfo): void {
         } else {
           let childGroupNodeInfo = <render.RenderGroupNodeInfo>childNodeInfo;
           layoutScene(childGroupNodeInfo); // Recursively layout its subscene.
-        }
-        break;
-      case NodeType.SERIES:
-        if (childNodeInfo.expanded) {
-          _.extend(childNodeInfo, PARAMS.nodeSize.series.expanded);
-          let childGroupNodeInfo = <render.RenderGroupNodeInfo>childNodeInfo;
-          layoutScene(childGroupNodeInfo); // Recursively layout its subscene.
-        } else {
-          let childGroupNodeInfo = <render.RenderGroupNodeInfo>childNodeInfo;
-          let seriesParams = childGroupNodeInfo.node.hasNonControlEdges
-            ? PARAMS.nodeSize.series.vertical
-            : PARAMS.nodeSize.series.horizontal;
-          _.extend(childNodeInfo, seriesParams);
         }
         break;
       default:
@@ -348,25 +253,6 @@ function dagreLayout(graph: graphlib.Graph, params): { height: number; width: nu
     ranksep: params.rankSep,
     edgesep: params.edgeSep,
   });
-  let bridgeNodeNames: any[] = [];
-  let nonBridgeNodeNames: any[] = [];
-  // Split out nodes into bridge and non-bridge nodes, and calculate the total
-  // width we should use for bridge nodes.
-  _.each(graph.nodes(), (nodeName) => {
-    let nodeInfo = graph.node(nodeName);
-    if (nodeInfo.node.type === NodeType.BRIDGE) {
-      bridgeNodeNames.push(nodeName);
-    } else {
-      nonBridgeNodeNames.push(nodeName);
-    }
-  });
-  // If there are no non-bridge nodes, then the graph has zero size.
-  if (!nonBridgeNodeNames.length) {
-    return {
-      width: 0,
-      height: 0,
-    };
-  }
   dagre.layout(graph);
   // Calculate the true bounding box of the graph by iterating over nodes and
   // edges rather than accepting dagre's word for it. In particular, we should
@@ -376,7 +262,7 @@ function dagreLayout(graph: graphlib.Graph, params): { height: number; width: nu
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  _.each(nonBridgeNodeNames, (nodeName) => {
+  _.each(graph.nodes(), (nodeName) => {
     let nodeInfo = graph.node(nodeName);
     let w = 0.5 * nodeInfo.width;
     let x1 = nodeInfo.x - w;
@@ -498,23 +384,7 @@ function layoutMetanode(renderNodeInfo: render.RenderGroupNodeInfo, rankSep: num
   // Determine the whole metanode's height (from top to bottom).
   renderNodeInfo.height = renderNodeInfo.paddingTop + renderNodeInfo.coreBox.height + renderNodeInfo.paddingBottom;
 }
-/**
- * Calculate layout for series node's core graph. Only called for an expanded
- * series.
- */
-function layoutSeriesNode(node: render.RenderGroupNodeInfo): void {
-  let graph = node.coreGraph;
-  let params = PARAMS.subscene.series;
-  _.extend(node, params);
-  // Layout the core.
-  _.extend(node.coreBox, dagreLayout(node.coreGraph, PARAMS.graph.series));
-  _.each(graph.nodes(), (nodeName) => {
-    graph.node(nodeName).excluded = false;
-  });
-  // Series do not have in/outExtractBox so no need to include them here.
-  node.width = node.coreBox.width + params.paddingLeft + params.paddingRight;
-  node.height = node.coreBox.height + params.paddingTop + params.paddingBottom;
-}
+
 /**
  * Calculate layout for annotations of a given node.
  * This will modify positions of the given node and its annotations.
@@ -641,8 +511,6 @@ function sizeAnnotation(a: render.Annotation): void {
         _.extend(a, PARAMS.shortcutSize.op);
       } else if (a.node.type === NodeType.META) {
         _.extend(a, PARAMS.shortcutSize.meta);
-      } else if (a.node.type === NodeType.SERIES) {
-        _.extend(a, PARAMS.shortcutSize.series);
       } else if (a.node.type === NodeType.MULTI_COLLECTION) {
         _.extend(a, PARAMS.shortcutSize.multi_collection);
       } else if (a.node.type === NodeType.API_LIST) {
