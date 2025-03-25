@@ -170,7 +170,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
         # 返回格式为 [[NPU节点ID列表], [Bench节点ID列表]]
         return [npu_ids, bench_ids]
 
-    def dfs_collect_nodes(self, json_data, request):   
+    def dfs_collect_nodes(self, json_data, request): 
         root_subnodes_set = []
         all_node_names = []
         try:
