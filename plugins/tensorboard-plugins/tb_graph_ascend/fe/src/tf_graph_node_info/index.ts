@@ -46,6 +46,12 @@ class TfGraphNodeInfo extends PolymerElement {
         width: 100%;
         height: 100%;
       }
+      vaadin-tabsheet::part(content){
+        background-color: white;
+      }
+      .vaadin-tabs{
+        background-color:white;
+      }
       .vaadin-tab{
         font-size: 14px;
       }
@@ -113,7 +119,7 @@ class TfGraphNodeInfo extends PolymerElement {
       }
     </style>
     <vaadin-tabsheet>
-      <vaadin-tabs slot="tabs">
+      <vaadin-tabs slot="tabs" class='vaadin-tabs'>
         <vaadin-tab id="io-tab" class='vaadin-tab' >
           <template is="dom-if" if="[[!isSingleGraphNode]]">
             比对详情
