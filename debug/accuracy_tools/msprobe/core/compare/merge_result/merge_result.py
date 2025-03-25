@@ -333,7 +333,7 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
         final_result_df_list.append((df, compare_index_list[i]))
 
     if os.path.exists(output_path):
-        logger.warning(f"{output_path} will be recovered")
+        logger.warning(f"{output_path} will be deleted.")
         remove_path(output_path)
     save_excel(output_path, final_result_df_list)
     logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")

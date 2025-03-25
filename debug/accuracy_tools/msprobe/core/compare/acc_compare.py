@@ -434,7 +434,7 @@ class Comparator:
         file_name = add_time_with_xlsx("compare_result" + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         if os.path.exists(file_path):
-            logger.warning(f"{file_path} will be recovered")
+            logger.warning(f"{file_path} will be deleted.")
             remove_path(file_path)
         highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
 

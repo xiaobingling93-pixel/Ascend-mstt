@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -21,7 +21,7 @@ import threading
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
 from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.utils import recursion_depth_decorator
 
 lock = threading.Lock()
 
@@ -146,10 +146,8 @@ class DataWriter:
     def fill_stack_tensor_data(self):
         self.process_stat_data_recursive(self.cache_data)
 
-    def process_stat_data_recursive(self, data, depth=0):
-        if depth > Const.MAX_DEPTH:
-            logger.error(f"The maximum depth of recursive process stat data, {Const.MAX_DEPTH} is reached.")
-            raise MsprobeException(MsprobeException.RECURSION_LIMIT_ERROR)
+    @recursion_depth_decorator("AsyncDump: DataWriter.process_stat_data_recursive", max_depth=Const.DUMP_MAX_DEPTH)
+    def process_stat_data_recursive(self, data):
         if isinstance(data, dict):
             if "tensor_stat" in data.keys():
                 tensor_stat = data["tensor_stat"]
@@ -162,7 +160,7 @@ class DataWriter:
                 del data["tensor_stat"]
             else:
                 for key in data.keys():
-                    self.process_stat_data_recursive(data[key], depth + 1)
+                    self.process_stat_data_recursive(data[key])
         elif isinstance(data, (list, tuple)):
             for i in data:
-                self.process_stat_data_recursive(i, depth + 1)
+                self.process_stat_data_recursive(i)
