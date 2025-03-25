@@ -504,6 +504,7 @@ def checked_online_config(online_config):
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
         check_crt_valid(os.path.join(online_config.tls_path, "server.crt"))
+        check_crt_valid(os.path.join(online_config.tls_path, "server.key"), True)
 
     # host and port
     if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
