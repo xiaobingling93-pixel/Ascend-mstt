@@ -24,7 +24,6 @@ export enum GraphIconType {
   CONST = 'CONST',
   META = 'META',
   OP = 'OP',
-  SERIES = 'SERIES',
   SUMMARY = 'SUMMARY',
   MULTI_COLLECTION = 'MULTI_COLLECTION',
   API_LIST = 'API_LIST',

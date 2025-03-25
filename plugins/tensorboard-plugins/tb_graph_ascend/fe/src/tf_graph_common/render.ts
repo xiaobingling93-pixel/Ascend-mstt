@@ -24,13 +24,10 @@ import * as _ from 'lodash';
 import { NPU_PREFIX, BENCH_PREFIX, EDGE_WIDTH_SIZE_BASED_SCALE } from './common';
 import * as tf_graph from './graph';
 import {
-  BridgeNode,
   createGraph,
-  EllipsisNode,
   getHierarchicalPath,
   GraphType,
   GroupNode,
-  InclusionType,
   Metaedge,
   Metanode,
   Node,
@@ -264,7 +261,7 @@ export class RenderGraphInfo {
     this.hasSubhierarchy[nodeName] = true;
     let renderNodeInfo = this.index[nodeName];
     // If it is not a meta node or a series node, don't do anything.
-    const excludedTypes = [NodeType.META, NodeType.MULTI_COLLECTION, NodeType.API_LIST, NodeType.SERIES];
+    const excludedTypes = [NodeType.META, NodeType.MULTI_COLLECTION, NodeType.API_LIST];
     if (!excludedTypes.includes(renderNodeInfo.node.type)) {
       return;
     }
@@ -323,12 +320,6 @@ export class RenderGraphInfo {
     }
     _.each([true, false], (inbound) => {
       _.each(coreGraph.nodes(), (childName) => {
-        // Short-circuit if this child is a bridge node or it's not a terminal
-        // node in the direction we're interested in.
-        let childNodeInfo = coreGraph.node(childName);
-        if (childNodeInfo.node.type === NodeType.BRIDGE) {
-          return;
-        }
         let isTerminal = inbound
           ? !coreGraph.predecessors(childName)?.length
           : !coreGraph.successors(childName)?.length;
@@ -519,31 +510,6 @@ export class AnnotationList {
   constructor() {
     this.list = [];
     this.nodeNames = {};
-  }
-
-  /**
-   * Append an annotation to the list, or a stand-in ellipsis annotation instead
-   * if this would make it too many.
-   */
-  push(annotation: Annotation): void {
-    if (annotation.node.name in this.nodeNames) {
-      return; // Skip duplicate annotation.
-    }
-    this.nodeNames[annotation.node.name] = true;
-    if (this.list.length < PARAMS.maxAnnotations) {
-      this.list.push(annotation);
-      return;
-    }
-    let lastAnnotation = this.list[this.list.length - 1];
-    if (lastAnnotation.annotationType === AnnotationType.ELLIPSIS) {
-      let ellipsisNode = <EllipsisNode>lastAnnotation.node;
-      ellipsisNode.setNumMoreNodes(++ellipsisNode.numMoreNodes);
-      return;
-    }
-    let ellipsisNode = new tf_graph.EllipsisNodeImpl(1);
-    this.list.push(
-      new Annotation(ellipsisNode, new RenderNodeInfo(ellipsisNode), null, AnnotationType.ELLIPSIS, annotation.isIn),
-    );
   }
 }
 /**

@@ -66,11 +66,6 @@ export enum InclusionType {
   EXCLUDE = 1,
   UNSPECIFIED = 2,
 }
-/** Indicates if a series is to be grouped in the graph when rendered. */
-export enum SeriesGroupingType {
-  GROUP = 0,
-  UNGROUP = 1,
-}
 /** Attribute key reserved for the shapes of the output tensors. */
 const OUTPUT_SHAPES_KEY = '_output_shapes';
 /**
@@ -221,108 +216,9 @@ export interface OpNode extends Node {
     [key: string]: string;
   };
 }
-export interface BridgeNode extends Node {
-  /**
-   * Whether this bridge node represents edges coming into its parent node.
-   */
-  inbound: boolean;
-}
-/**
- * A node that is used when there are more than the maximum number of allowed
- * annotations hanging off of a node.  This node represents an ellipsis
- * annotation, indicating a number of additional annotations.
- */
-export interface EllipsisNode extends Node {
-  /**
-   * The number of nodes this ellipsis represents.
-   */
-  numMoreNodes: number;
-  /**
-   * Sets the number of nodes this ellipsis represents and changes the node
-   * name accordingly.
-   */
-  setNumMoreNodes: (numNodes: number) => void;
-}
+
 export interface GroupNode extends Node {
-  /**
-   * The metagraph contains nodes and metaedges between the immediate children
-   * of this group. The node label objects may be other GroupNodes (like
-   * SeriesNodes and Metanodes) or individual OpNodes. All edge label objects
-   * are Metaedges, each of which contains references to the original
-   * BaseEdge(s) from which it was created.
-   */
   metagraph: graphlib.Graph;
-  /**
-   * The bridgegraph contains only edges which link immediate children of this
-   * group with nodes outside of the metagraph. As in the metagraph, all edge
-   * label objects are Metaedges which contain references to the original
-   * BaseEdge(s) that contribute to it.
-   *
-   * For a Metaedge in the bridgegraph, its external endpoint will be the same
-   * as the metagraph edge from which it came. This is most easily explained
-   * by example.
-   *
-   * Consider an original graph that contains a BaseEdge A/B/C->Z/Y/X.
-   *
-   *     +-------+    (BaseEdge)     +-------+
-   *     | A/B/C |>----------------->| Z/Y/X |
-   *     +-------+                   +-------+
-   *
-   * When we construct the Root's metagraph, it will contain nodes for A and Z,
-   * and a Metaedge A->Z. The A->Z Metaedge will contain the original BaseEdge
-   * A/B/C->Z/Y/X in its baseEdgeGraph. The Root's bridgegraph will always be
-   * empty.
-   *
-   *     +---+    (Root.metagraph edge)    +---+
-   *     | A |>--------------------------->| Z |
-   *     +---+                             +---+
-   *
-   * Now consider the Metanode A. Its metagraph will contain a Metanode for A/B
-   * and no edges. A's bridgegraph will have one Metaedge from A/B->Z, which
-   * was derived from the Root's Metaedge A->Z. That Metaedge will contain the
-   * original BaseEdge in its baseEdgeGraph.
-   *
-   *     +---------+
-   *     | A       |
-   *     |  +---+  |   (A.bridgegraph edge)    +---+
-   *     |  | B |>---------------------------->| Z |
-   *     |  +---+  |                           +---+
-   *     +---------+
-   *
-   * Finally, consider the Metanode A/B. Its metagraph will contain a Metanode
-   * for A/B/C and again no edges. A/B's bridgegraph will have one Metaedge
-   * from A/B/C->Z, which was derived from A's bridgegraph Metaedge A/B->Z.
-   * As before, the A/B/C->Z Metaedge will contain the original BaseEdge in its
-   * baseEdgeGraph.
-   *
-   *     +---------------+
-   *     | A             |
-   *     |  +---------+  |
-   *     |  | B       |  |
-   *     |  |  +---+  |  |   (A/B.bridgegraph edge)      +---+
-   *     |  |  | C |>----------------------------------->| Z |
-   *     |  |  +---+  |  |                               +---+
-   *     |  +---------+  |
-   *     +---------------+
-   *
-   * Likewise, under the Metanode Z and Z/Y, to compute the bridgegraph, we'll
-   * end up with Metaedges A->Z/Y and A->Z/Y/X respectively. So the original
-   * BaseEdge A/B/C->Z/Y/X becomes four different Metaedges in four different
-   * bridgegraphs:
-   *
-   *   + A/B->Z in GroupNode A's bridgegraph,
-   *   + A/B/C->Z in GroupNode A/B's bridgegraph,
-   *   + A->Z/Y in GroupNode Z's bridgegraph, and
-   *   + A->Z/Y/X in GroupNode Z/Y's bridgegraph.
-   *
-   * Considering any BaseEdge then, if N is the number of path segments in the
-   * source and M is the number of path segments in the destination, then the
-   * total number of bridgegraph edges you could create would be (N-1)(M-1).
-   *
-   * For this reason, it is computationally expensive to generate all the
-   * bridgegraphs for all the Metanodes, and instead they should be computed
-   * on demand as needed.
-   */
   bridgegraph: graphlib.Graph;
   /**
    * Flag indicating whether this GroupNode's metagraph contains any edges that
@@ -359,54 +255,7 @@ export interface Metanode extends GroupNode {
   /** Return name of all leaves inside a metanode. */
   leaves: () => string[];
 }
-export interface SeriesNode extends GroupNode {
-  hasLoop: boolean;
-  prefix: string;
-  suffix: string;
-  clusterId: number;
-  ids: number[];
-  parent: string;
-}
-export class EllipsisNodeImpl implements EllipsisNode {
-  name: string;
-  numMoreNodes: number;
-  type: NodeType;
-  isGroupNode: boolean;
-  cardinality: number;
-  parentNode: Node | null;
-  include: InclusionType;
-  inputData: {
-    [key: string]: any;
-  };
-  outputData: {
-    [key: string]: any;
-  };
-  suggestions: {
-    [key: string]: string;
-  };
-  nodeAttributes: {
-    [key: string]: any;
-  };
 
-  /**
-   * Constructs a new ellipsis annotation node.
-   *
-   * @param numNodes The number of additional annotations this node represents.
-   */
-  constructor(numNodes: number) {
-    this.type = NodeType.ELLIPSIS;
-    this.isGroupNode = false;
-    this.cardinality = 1;
-    this.parentNode = null;
-    this.setNumMoreNodes(numNodes);
-    this.include = InclusionType.UNSPECIFIED;
-  }
-
-  setNumMoreNodes(numNodes: number): void {
-    this.numMoreNodes = numNodes;
-    this.name = `... ${numNodes} more`;
-  }
-}
 /**
  * A label object for nodes in the full graph and leaf nodes in the render
  * graph.
@@ -670,60 +519,6 @@ export class MetaedgeImpl implements Metaedge {
     }, 1);
     h.maxMetaEdgeSize = Math.max(h.maxMetaEdgeSize, this.totalSize);
   }
-}
-export function createSeriesNode(
-  prefix: string,
-  suffix: string,
-  parent: string,
-  clusterId: number,
-  name: string,
-  graphOptions: LabeledGraphOptions,
-): SeriesNode {
-  return new SeriesNodeImpl(prefix, suffix, parent, clusterId, name, graphOptions);
-}
-
-export function getSeriesNodeName(
-  prefix: string,
-  suffix: string,
-  parent: string,
-  startId?: number,
-  endId?: number,
-): string {
-  let numRepresentation = `${typeof startId !== 'undefined' && typeof endId !== 'undefined' ? `[${startId}-${endId}]` : '#'}`;
-  let pattern = prefix + numRepresentation + suffix;
-  return `${parent ? `${parent}/` : ''}${pattern}`;
-}
-
-class SeriesNodeImpl implements SeriesNode {
-  name: string;
-  type: NodeType;
-  hasLoop: boolean;
-  prefix: string;
-  suffix: string;
-  clusterId: number;
-  ids: number[];
-  parent: string;
-  isGroupNode: boolean;
-  cardinality: number;
-  metagraph: graphlib.Graph;
-  bridgegraph: graphlib.Graph;
-  parentNode: Node | null;
-  hasNonControlEdges: boolean;
-  include: InclusionType;
-  inputData: {
-    [key: string]: any;
-  };
-  outputData: {
-    [key: string]: any;
-  };
-  stackData: [];
-  matchedNodeLink: [];
-  suggestions: {
-    [key: string]: string;
-  };
-  nodeAttributes: {
-    [key: string]: any;
-  };
 }
 
 /**
@@ -1162,9 +957,6 @@ export function hasSimilarDegreeSequence(graph1: graphlib.Graph, graph2: graphli
  */
 export function getHierarchicalPath(
   name: string,
-  seriesNames?: {
-    [name: string]: string;
-  },
 ): string[] {
   let path: string[] = [];
   let i = name.indexOf(NAMESPACE_DELIM);
@@ -1172,14 +964,6 @@ export function getHierarchicalPath(
   while (i >= 0) {
     path.push(name.substring(0, i));
     i = name.indexOf(NAMESPACE_DELIM, i + 1);
-  }
-  // If the node's path is under a series, then add the series node name to the
-  // hierarchical path as the parent of the leaf.
-  if (seriesNames) {
-    let seriesName = seriesNames[name];
-    if (seriesName) {
-      path.push(seriesName);
-    }
   }
   // Push the leaf of the path.
   path.push(name);

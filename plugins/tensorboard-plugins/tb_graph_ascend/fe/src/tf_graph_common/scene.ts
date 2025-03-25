@@ -228,13 +228,6 @@ export function positionButton(button, renderNode: render.RenderNodeInfo): void 
   let height = renderNode.expanded ? renderNode.height : renderNode.coreBox.height;
   let x = cx + (width / 2) - 6;
   let y = renderNode.y - (height / 2) + 6;
-
-  // For unexpanded series nodes, the button has special placement due
-  // to the unique visuals of this group node.
-  if (renderNode.node.type === NodeType.SERIES && !renderNode.expanded) {
-    x += 10;
-    y -= 2;
-  }
   let translateStr = `translate(${x},${y})`;
   button.selectAll('path').transition().attr('transform', translateStr);
   button.select('circle').transition().attr({ cx: x, cy: y, r: layout.PARAMS.nodeSize.meta.expandButtonRadius });

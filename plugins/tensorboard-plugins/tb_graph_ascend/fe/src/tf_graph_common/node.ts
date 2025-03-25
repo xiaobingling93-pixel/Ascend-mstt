@@ -1264,12 +1264,6 @@ export function buildGroupForScene(
     },
     Array<any>(),
   );
-  if (renderNode.node.type === NodeType.SERIES) {
-    // For series, we want the first item on top, so reverse the array so
-    // the first item in the series becomes last item in the top, and thus
-    // is rendered on the top.
-    coreNodes.reverse();
-  }
   // Create the layer of edges for this scene (paths).
   edge.buildGroup(coreGroup, renderNode.coreGraph, sceneElement);
   // Create the layer of nodes for this scene (ellipses, rects etc).
