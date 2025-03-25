@@ -650,7 +650,7 @@ def os_walk_for_files(path, depth):
     return res
 
 
-def check_crt_valid(pem_path):
+def check_crt_valid(pem_path, is_public_key=False):
     """
     Check the validity of the SSL certificate.
 
@@ -659,6 +659,7 @@ def check_crt_valid(pem_path):
 
     Parameters:
     pem_path (str): The file path of the SSL certificate.
+    is_public_key (bool): The file is public key or not.
 
     Raises:
     RuntimeError: If the SSL certificate is invalid or expired.
@@ -667,7 +668,10 @@ def check_crt_valid(pem_path):
     try:
         with FileOpen(pem_path, "r") as f:
             pem_data = f.read()
-        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
+        if is_public_key:
+            cert = OpenSSL.crypto.load_publickey(OpenSSL.crypto.FILETYPE_PEM, pem_data)
+        else:
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
         pem_start = parser.parse(cert.get_notBefore().decode("UTF-8"))
         pem_end = parser.parse(cert.get_notAfter().decode("UTF-8"))
         logger.info(f"The SSL certificate passes the verification and the validity period "
