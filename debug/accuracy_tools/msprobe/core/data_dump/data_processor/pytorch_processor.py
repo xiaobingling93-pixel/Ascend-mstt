@@ -27,7 +27,8 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import convert_tuple, recursion_depth_decorator
+from msprobe.core.common.utils import convert_tuple
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.common.utils import Const as PtConst, save_pt, is_hifloat8_tensor, is_float8_tensor

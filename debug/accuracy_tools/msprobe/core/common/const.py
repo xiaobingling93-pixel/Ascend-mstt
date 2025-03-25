@@ -707,3 +707,5 @@ class MonitorConst:
     CSV = "csv"
     API = "api"
     HEADER_NAME = 'name'
+
+    MAX_NDIGITS = 20

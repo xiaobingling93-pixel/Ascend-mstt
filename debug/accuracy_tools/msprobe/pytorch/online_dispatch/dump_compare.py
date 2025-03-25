@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 
 import torch
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.file_utils import FileOpen, save_npy, save_json
 from msprobe.pytorch.common.log import logger
 

@@ -22,13 +22,14 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import read_csv, create_directory, remove_path
+from msprobe.core.common.file_utils import read_csv, create_directory, remove_path, recursive_chmod
 from msprobe.core.common.utils import is_int
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import get_target_output_dir
 
 all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
 CSV_FILE_SUFFIX = r"_\d+-\d+\.csv"
+MAX_PROCESS_NUM = 128
 
 
 def parse_step_line(line, ops):
@@ -115,11 +116,13 @@ def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
 def check_process_num(process_num):
     if not is_int(process_num) or process_num <= 0:
         raise ValueError(f"process_num({process_num}) is not a positive integer")
+    if process_num > MAX_PROCESS_NUM:
+        raise ValueError(f"The maximum supported process_num is {MAX_PROCESS_NUM}, current value: {process_num}.")
 
 
 def check_data_type_list(data_type_list):
     if data_type_list is None:
-        logger.info(f"data_type_list is None, use defualt all_data_type_list: {all_data_type_list}")
+        logger.info(f"data_type_list is None, use default all_data_type_list: {all_data_type_list}")
         return
     if not isinstance(data_type_list, list):
         raise ValueError(f"data_type_list({data_type_list}) is not a list")
@@ -161,4 +164,5 @@ def csv2tensorboard_by_step(
         p.start()
     for p in processes:
         p.join()
+    recursive_chmod(output_dirpath)
     logger.info(f"output has been saved to: {output_dirpath}")

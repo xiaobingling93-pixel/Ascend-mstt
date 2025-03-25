@@ -26,6 +26,7 @@ import yaml
 import numpy as np
 import pandas as pd
 
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
@@ -330,6 +331,23 @@ def change_mode(path, mode):
     except PermissionError as ex:
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR,
                                  'Failed to change {} authority. {}'.format(path, str(ex))) from ex
+
+
+@recursion_depth_decorator('msprobe.core.common.file_utils.recursive_chmod')
+def recursive_chmod(path):
+    """
+    递归地修改目录及其子目录和文件的权限，文件修改为640，路径修改为750
+
+    :param path: 要修改权限的目录路径
+    """
+    for _, dirs, files in os.walk(path):
+        for file_name in files:
+            file_path = os.path.join(path, file_name)
+            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        for dir_name in dirs:
+            dir_path = os.path.join(path, dir_name)
+            change_mode(dir_path, FileCheckConst.DATA_DIR_AUTHORITY)
+            recursive_chmod(dir_path)
 
 
 def path_len_exceeds_limit(file_path):

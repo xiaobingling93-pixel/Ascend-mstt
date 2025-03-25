@@ -27,7 +27,7 @@ else:
     pta_cpu_device = torch.device("cpu")
 
 from msprobe.core.common.const import CompareConst
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
 
 

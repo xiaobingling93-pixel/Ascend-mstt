@@ -19,7 +19,7 @@ from msprobe.visualization.utils import GraphConst, load_json_file, load_data_js
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class GraphComparator:

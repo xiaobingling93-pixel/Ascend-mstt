@@ -25,7 +25,7 @@ import torch
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
-from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
 
 
 device = "cpu"
@@ -103,6 +103,15 @@ def validate_ops(ops):
         valid_ops.append(default_op)
         logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
     return valid_ops
+
+
+def validate_ndigits(ndigits):
+    if not ndigits:
+        return
+    if not is_int(ndigits) or ndigits <= 0:
+        raise ValueError(f"ndigits({ndigits}) is not a positive integer, current is: {ndigits}.")
+    if ndigits > MonitorConst.MAX_NDIGITS:
+        raise ValueError(f"The maximum supported ndigits is {MonitorConst.MAX_NDIGITS}, current value: {ndigits}.")
 
 
 def validate_ranks(ranks):
@@ -214,6 +223,9 @@ def validate_dynamic_on(dynamic_on):
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
+    ndigits = config.get('ndigits')
+    validate_ndigits(ndigits)
+
     eps = config.get('eps', 1e-8)
     if not isinstance(eps, float):
         raise TypeError("eps should be a float")
@@ -292,3 +304,13 @@ def get_target_output_dir(monitor_path, time_start, time_end):
         if start_ok and end_ok:
             result[rank] = os.path.join(monitor_path, dirname)
     return result
+
+
+def chmod_tensorboard_dir(path):
+    """
+        format配置为tensorboard时，需要补充文件权限设置
+    """
+    try:
+        recursive_chmod(path)
+    except Exception as e:
+        logger.warning(f"chmod tensorboard dir wrong because {e}, not updated, please check!!!")
