@@ -261,7 +261,7 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   tooltips: object;
-  
+
   @property({ type: String })
   selectNodeCopy: string = '';
 

@@ -53,6 +53,8 @@ interface Components {
  */
 @customElement('tf-graph-dashboard-loader')
 class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
+  static readonly _template = null;
+
   @property({ type: Array })
   datasets: any[];
 
@@ -100,7 +102,6 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   _graphRunTag: GraphRunTag;
-  override _template = null;
 
   @property({
     type: Object,
@@ -164,8 +165,21 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
   })
   matchedlist: object;
 
-  getColors(): any {
-    return this.colors;
+  @observe('selectedFile')
+  _selectedFileChanged(): void {
+    let e = this.selectedFile;
+    if (!e) {
+      return;
+    }
+    const target = (e as any).target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+    // Clear out the value of the file chooser. This ensures that if the user
+    // selects the same file, we'll re-read it.
+    target.value = '';
+    this._fetchAndConstructHierarchicalGraph(null, file);
   }
 
   @observe('selection')
@@ -178,6 +192,10 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     this.debounce('selectionchange', () => {
       this._load(this.selection);
     });
+  }
+
+  getColors(): any {
+    return this.colors;
   }
 
   _setCompoments(componentsPath): Promise<void> {
@@ -288,7 +306,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
       case tf_graph_common.SelectionType.OP_GRAPH:
       case tf_graph_common.SelectionType.CONCEPTUAL_GRAPH: {
         // Clear stats about the previous graph.
-        this.set('outStats', null)
+        this.set('outStats', null);
         const params = new URLSearchParams();
         params.set('run', run);
         params.set('conceptual', String(selectionType === tf_graph_common.SelectionType.CONCEPTUAL_GRAPH));
@@ -333,22 +351,5 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
           this._setOutGraphHierarchy(graphHierarchy);
         }.bind(this),
       );
-  }
-
-  @observe('selectedFile')
-  _selectedFileChanged(): void {
-    let e = this.selectedFile;
-    if (!e) {
-      return;
-    }
-    const target = (e as any).target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (!file) {
-      return;
-    }
-    // Clear out the value of the file chooser. This ensures that if the user
-    // selects the same file, we'll re-read it.
-    target.value = '';
-    this._fetchAndConstructHierarchicalGraph(null, file);
   }
 }

@@ -15,7 +15,7 @@ limitations under the License.
 Copyright (c) 2025, Huawei Technologies.
 Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
-import { safeJSONParse } from "../utils";
+import { safeJSONParse } from '../utils';
 
 const FEATURE_FLAGS_HEADER_NAME = 'X-TensorBoard-Feature-Flags';
 
