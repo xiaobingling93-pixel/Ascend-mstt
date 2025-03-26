@@ -170,7 +170,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
         # 返回格式为 [[NPU节点ID列表], [Bench节点ID列表]]
         return [npu_ids, bench_ids]
 
-    def dfs_collect_nodes(self, json_data, request):   
+    def dfs_collect_nodes(self, json_data, request): 
         root_subnodes_set = []
         all_node_names = []
         try:
@@ -354,9 +354,9 @@ class GraphsPlugin(base_plugin.TBPlugin):
             )
         self._current_file_data = json_data
         all_node_names = self.get_all_node_names(json_data, request)
-        response_data['Menu'] = all_node_names
-        response_data['UnMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
-        for field in ['MicroSteps', 'StepList', 'match', 'ToolTip']:
+        response_data['menu'] = all_node_names
+        response_data['unMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
+        for field in ['microSteps', 'stepList', 'match', 'tooltips']:
             if json_data.get(field, {}):
                 keys.append(field)
         for key in keys:
@@ -366,9 +366,9 @@ class GraphsPlugin(base_plugin.TBPlugin):
         file_path = self._get_first_vis_file_path()
         json_data = self._read_json_file(file_path)
         if 'Colors' in json_data:
-            response_data['Colors'] = json_data.get('Colors', {})
+            response_data['colors'] = json_data.get('Colors', {})
         if 'OverflowCheck' in json_data:
-            response_data['OverflowCheck'] = json_data.get('OverflowCheck', {})
+            response_data['overflowCheck'] = json_data.get('OverflowCheck', {})
         return http_util.Respond(request, response_data, "application/json")
 
     # 设置新的精度误差颜色
