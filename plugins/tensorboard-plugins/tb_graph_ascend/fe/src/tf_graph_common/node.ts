@@ -191,8 +191,8 @@ function subsceneBuild(nodeGroup, renderNodeInfo: render.RenderGroupNodeInfo, sc
  */
 function subscenePosition(nodeGroup, d: render.RenderNodeInfo): void {
   // Translate the subscene to the middle of the parent node in vertical direction.
-  let x0 = d.x - (d.coreBox.width / 2);
-  let y0 = d.y - (d.height / 2) + d.paddingTop;
+  let x0 = d.x - d.coreBox.width / 2;
+  let y0 = d.y - d.height / 2 + d.paddingTop;
   let subscene = tf_graph_scene.selectChild(nodeGroup, 'g', Class.Subscene.GROUP);
   tf_graph_scene.translate(subscene, x0, y0);
 }
@@ -487,10 +487,10 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
       let OFFSET_VALUE = 8.1;
       if (d.expanded) {
         tf_graph_scene.positionRect(shapes, d.x, d.y, d.width, d.height);
-        INSIDE_RECT_OFFSET = d.y - (d.height / 2) + OFFSET_VALUE;
+        INSIDE_RECT_OFFSET = d.y - d.height / 2 + OFFSET_VALUE;
         subscenePosition(nodeGroup, d);
         // Put the label on top.
-        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
+        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
       } else {
         tf_graph_scene.positionRect(shapes, cx, d.y, d.coreBox.width, d.coreBox.height);
         // Place the label in the middle.
@@ -501,7 +501,7 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         tf_graph_scene.positionRect(shapesHeader, d.x, INSIDE_RECT_OFFSET, d.width - 1, 15);
         subscenePosition(nodeGroup, d);
         // Put the label on top.
-        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
+        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
       } else {
         tf_graph_scene.positionRect(shapesHeader, cx, d.y, d.coreBox.width, d.coreBox.height);
         // Place the label in the middle.
@@ -517,7 +517,7 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         tf_graph_scene.positionRect(shapes, d.x, d.y, d.width, d.height);
         subscenePosition(nodeGroup, d);
         // Put the label on top.
-        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
+        labelPosition(nodeGroup, cx, d.y, -d.height / 2 + d.labelHeight / 2);
       } else {
         tf_graph_scene.positionRect(shapes, cx, d.y, d.coreBox.width, d.coreBox.height);
         // Place the label in the middle.
@@ -643,7 +643,7 @@ export function stylize(
   sceneElement: TfGraphScene,
   nodeClassName?,
 ): void {
-  const resolvedNodeClassName  = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
+  const resolvedNodeClassName = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
   const isHighlighted = sceneElement.isNodeHighlighted(renderInfo.node.name);
   const isSelected = sceneElement.isNodeSelected(renderInfo.node.name);
   const isExpanded = renderInfo.expanded && resolvedNodeClassName !== Class.Annotation.NODE;
@@ -1178,7 +1178,7 @@ function update(aGroup, d: render.RenderNodeInfo, a: render.Annotation, sceneEle
   aGroup
     .select(`text.${Class.Annotation.LABEL}`)
     .transition()
-    .attr('x', cx + a.dx + ((a.isIn ? -1 : 1) * ((a.width / 2) + a.labelOffset)))
+    .attr('x', cx + a.dx + (a.isIn ? -1 : 1) * (a.width / 2 + a.labelOffset))
     .attr('y', d.y + a.dy);
   // Some annotations (such as summary) are represented using a 12x12 image tag.
   // Purposely omitted units (e.g. pixels) since the images are vector graphics.

@@ -307,7 +307,7 @@ function layoutMetanode(renderNodeInfo: render.RenderGroupNodeInfo, rankSep: num
       let yOffset = i > 0 ? params.extractYOffset : 0;
       // use width/height here to avoid overlaps between extracts
       child.x = 0;
-      child.y = height + yOffset + (child.height / 2);
+      child.y = height + yOffset + child.height / 2;
       return height + yOffset + child.height;
     },
     0,
@@ -415,7 +415,7 @@ function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
     (height, a, i) => {
       let yOffset = i > 0 ? params.yOffset : 0;
       a.dx = -((renderNodeInfo.coreBox.width + a.width) / 2) - params.xOffset;
-      a.dy = height + yOffset + (a.height / 2);
+      a.dy = height + yOffset + a.height / 2;
       return height + yOffset + a.height;
     },
     0,
@@ -434,7 +434,7 @@ function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
     (height, a, i) => {
       let yOffset = i > 0 ? params.yOffset : 0;
       a.dx = (renderNodeInfo.coreBox.width + a.width) / 2 + params.xOffset;
-      a.dy = height + yOffset + (a.height / 2);
+      a.dy = height + yOffset + a.height / 2;
       return height + yOffset + a.height;
     },
     0,
@@ -447,7 +447,7 @@ function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
   });
   // Creating scales for touch point between the in-annotation edges
   // and their hosts.
-  let inTouchHeight = Math.min((renderNodeInfo.height / 2) - renderNodeInfo.radius, inboxHeight / 2);
+  let inTouchHeight = Math.min(renderNodeInfo.height / 2 - renderNodeInfo.radius, inboxHeight / 2);
 
   inTouchHeight = inTouchHeight < 0 ? 0 : inTouchHeight;
   let inY = d3
@@ -459,7 +459,7 @@ function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
     a.points = [
       // The annotation node end
       {
-        dx: a.dx + (a.width / 2),
+        dx: a.dx + a.width / 2,
         dy: a.dy,
       },
       // The host node end
@@ -473,7 +473,7 @@ function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
   });
   // Creating scales for touch point between the out-annotation edges
   // and their hosts.
-  let outTouchHeight = Math.min((renderNodeInfo.height / 2) - renderNodeInfo.radius, outboxHeight / 2);
+  let outTouchHeight = Math.min(renderNodeInfo.height / 2 - renderNodeInfo.radius, outboxHeight / 2);
   outTouchHeight = outTouchHeight < 0 ? 0 : outTouchHeight;
   let outY = d3
     .scaleLinear()
@@ -491,7 +491,7 @@ function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
       },
       // The annotation node end
       {
-        dx: a.dx - (a.width / 2),
+        dx: a.dx - a.width / 2,
         dy: a.dy,
       },
     ];
@@ -535,5 +535,5 @@ export function computeCXPositionOfNodeShape(renderInfo: render.RenderNodeInfo):
     return renderInfo.x;
   }
   let dx = renderInfo.inAnnotations.list.length ? renderInfo.inboxWidth : 0;
-  return renderInfo.x - (renderInfo.width / 2) + dx + (renderInfo.coreBox.width / 2);
+  return renderInfo.x - renderInfo.width / 2 + dx + renderInfo.coreBox.width / 2;
 }

@@ -114,8 +114,8 @@ export function panToNode(nodeName: string, svg, zoomG, d3zoom): boolean {
     // by this logic.
     let centerX = (pointTL.x + pointBR.x) / 2;
     let centerY = (pointTL.y + pointBR.y) / 2;
-    let dx = svgRect.left + (svgRect.width / 2) - centerX;
-    let dy = svgRect.top + (svgRect.height / 2) - centerY;
+    let dx = svgRect.left + svgRect.width / 2 - centerX;
+    let dy = svgRect.top + svgRect.height / 2 - centerY;
 
     // We translate by this amount. We divide the X and Y translations by the
     // scale to undo how translateBy scales the translations (in d3 v4).
@@ -158,10 +158,10 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   if (hasInExtract) {
     let inExtractX = renderNode.coreBox.width;
     if (auxWidth < layout.MIN_AUX_WIDTH) {
-      inExtractX = inExtractX - layout.MIN_AUX_WIDTH + (renderNode.inExtractBox.width / 2);
+      inExtractX = inExtractX - layout.MIN_AUX_WIDTH + renderNode.inExtractBox.width / 2;
     } else {
       inExtractX =
-        inExtractX - (renderNode.inExtractBox.width / 2) - renderNode.outExtractBox.width - (hasOutExtract ? offset : 0);
+        inExtractX - renderNode.inExtractBox.width / 2 - renderNode.outExtractBox.width - (hasOutExtract ? offset : 0);
     }
     inExtractX = inExtractX - renderNode.libraryFunctionsBox.width - (hasLibraryFunctions ? offset : 0);
     translate(selectChild(sceneGroup, 'g', Class.Scene.INEXTRACT), inExtractX, yTranslate);
@@ -170,7 +170,7 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   if (hasOutExtract) {
     let outExtractX = renderNode.coreBox.width;
     if (auxWidth < layout.MIN_AUX_WIDTH) {
-      outExtractX = outExtractX - layout.MIN_AUX_WIDTH + (renderNode.outExtractBox.width / 2);
+      outExtractX = outExtractX - layout.MIN_AUX_WIDTH + renderNode.outExtractBox.width / 2;
     } else {
       outExtractX -= renderNode.outExtractBox.width / 2;
     }
@@ -178,7 +178,7 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
     translate(selectChild(sceneGroup, 'g', Class.Scene.OUTEXTRACT), outExtractX, yTranslate);
   }
   if (hasLibraryFunctions) {
-    let libraryFunctionsExtractX = renderNode.coreBox.width - (renderNode.libraryFunctionsBox.width / 2);
+    let libraryFunctionsExtractX = renderNode.coreBox.width - renderNode.libraryFunctionsBox.width / 2;
     translate(selectChild(sceneGroup, 'g', Class.Scene.FUNCTION_LIBRARY), libraryFunctionsExtractX, yTranslate);
   }
 }
@@ -208,8 +208,8 @@ export function translate(selection, x0: number, y0: number): void {
 export function positionRect(rect, cx: number, cy: number, width: number, height: number): void {
   rect
     .transition()
-    .attr('x', cx - (width / 2))
-    .attr('y', cy - (height / 2))
+    .attr('x', cx - width / 2)
+    .attr('y', cy - height / 2)
     .attr('width', width)
     .attr('height', height);
 }
@@ -226,8 +226,8 @@ export function positionButton(button, renderNode: render.RenderNodeInfo): void 
   // with space given the draw the button inside of the corner.
   let width = renderNode.expanded ? renderNode.width : renderNode.coreBox.width;
   let height = renderNode.expanded ? renderNode.height : renderNode.coreBox.height;
-  let x = cx + (width / 2) - 6;
-  let y = renderNode.y - (height / 2) + 6;
+  let x = cx + width / 2 - 6;
+  let y = renderNode.y - height / 2 + 6;
   let translateStr = `translate(${x},${y})`;
   button.selectAll('path').transition().attr('transform', translateStr);
   button.select('circle').transition().attr({ cx: x, cy: y, r: layout.PARAMS.nodeSize.meta.expandButtonRadius });

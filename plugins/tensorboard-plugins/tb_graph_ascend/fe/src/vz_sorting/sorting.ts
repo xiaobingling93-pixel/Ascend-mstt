@@ -57,7 +57,8 @@ export function compareTagNames(a, b: string): number {
       return -1;
     } else if (a[ai] > b[bi]) {
       return 1;
-    } else { }
+    } else {
+    }
     ai++;
     bi++;
   }
@@ -79,13 +80,15 @@ function consumeNumber(s: string, i: number): number {
         state = State.EXPONENT_SIGN;
       } else if (!isDigit(s[i])) {
         break;
-      } else { }
+      } else {
+      }
     } else if (state === State.REAL) {
       if (s[i] === 'e' || s[i] === 'E') {
         state = State.EXPONENT_SIGN;
       } else if (!isDigit(s[i])) {
         break;
-      } else { }
+      } else {
+      }
     } else if (state === State.EXPONENT_SIGN) {
       if (isDigit(s[i]) || s[i] === '+' || s[i] === '-') {
         state = State.EXPONENT;
@@ -96,7 +99,8 @@ function consumeNumber(s: string, i: number): number {
       if (!isDigit(s[i])) {
         break;
       }
-    } else { }
+    } else {
+    }
   }
   return i;
 }
