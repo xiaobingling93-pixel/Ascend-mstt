@@ -86,9 +86,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
         /* 搜索容器样式 */
         .container-search {
-          display: flex;
           align-items: center;
-          padding-right: 8px;
         }
 
         /* 计数器样式 */
