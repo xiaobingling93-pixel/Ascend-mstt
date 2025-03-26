@@ -22,89 +22,70 @@ limitations under the License.
  * perform array comparison. Therefore it knows that 'a/a' < 'a+/a' even
  * though '+' < '/' in the ASCII table.
  */
-export function compareTagNames(a, b: string): number {
+export function compareTagNames(a: string, b: string): number {
   let ai = 0;
   let bi = 0;
   while (true) {
+    // Handle end of strings
     if (ai === a.length) {
       return bi === b.length ? 0 : -1;
     }
     if (bi === b.length) {
       return 1;
     }
+
+    // Check for digits
     if (isDigit(a[ai]) && isDigit(b[bi])) {
       const ais = ai;
       const bis = bi;
-      ai = consumeNumber(a, ai + 1);
-      bi = consumeNumber(b, bi + 1);
-      const an = parseFloat(a.slice(ais, ai));
-      const bn = parseFloat(b.slice(bis, bi));
-      if (an < bn) {
-        return -1;
-      }
-      if (an > bn) {
-        return 1;
+      
+      // Consume all consecutive digits (simplified from original)
+      while (ai < a.length && isDigit(a[ai])) ai++;
+      while (bi < b.length && isDigit(b[bi])) bi++;
+      
+      const an = parseInt(a.slice(ais, ai), 10);
+      const bn = parseInt(b.slice(bis, bi), 10);
+      
+      if (an !== bn) {
+        return an - bn;
       }
       continue;
     }
-    if (isBreak(a[ai])) {
-      if (!isBreak(b[bi])) {
-        return -1;
-      }
-    } else if (isBreak(b[bi])) {
-      return 1;
-    } else if (a[ai] < b[bi]) {
+
+    // Treat underscore as regular character (not a break)
+    if (a[ai] === '_' && b[bi] === '_') {
+      ai++;
+      bi++;
+      continue;
+    }
+
+    // Simplified break character handling
+    if (isBreak(a[ai]) && !isBreak(b[bi])) {
       return -1;
-    } else if (a[ai] > b[bi]) {
+    }
+    if (!isBreak(a[ai]) && isBreak(b[bi])) {
       return 1;
-    } else { }
+    }
+
+    // Regular character comparison
+    if (a[ai] < b[bi]) {
+      return -1;
+    }
+    if (a[ai] > b[bi]) {
+      return 1;
+    }
+
     ai++;
     bi++;
   }
 }
 
-function consumeNumber(s: string, i: number): number {
-  enum State {
-    NATURAL = 0,
-    REAL = 1,
-    EXPONENT_SIGN = 2,
-    EXPONENT = 3,
-  }
-  let state = State.NATURAL;
-  for (let i = 0; i < s.length; i++) {
-    if (state === State.NATURAL) {
-      if (s[i] === '.') {
-        state = State.REAL;
-      } else if (s[i] === 'e' || s[i] === 'E') {
-        state = State.EXPONENT_SIGN;
-      } else if (!isDigit(s[i])) {
-        break;
-      } else { }
-    } else if (state === State.REAL) {
-      if (s[i] === 'e' || s[i] === 'E') {
-        state = State.EXPONENT_SIGN;
-      } else if (!isDigit(s[i])) {
-        break;
-      } else { }
-    } else if (state === State.EXPONENT_SIGN) {
-      if (isDigit(s[i]) || s[i] === '+' || s[i] === '-') {
-        state = State.EXPONENT;
-      } else {
-        break;
-      }
-    } else if (state === State.EXPONENT) {
-      if (!isDigit(s[i])) {
-        break;
-      }
-    } else { }
-  }
-  return i;
-}
-
+// Simplified digit check
 function isDigit(c: string): boolean {
   return c >= '0' && c <= '9';
 }
 
+// Simplified break character check
 function isBreak(c: string): boolean {
-  return c === '/' || c === '_' || isDigit(c);
+  return c === '/'; // Only treat slash as break character
 }
