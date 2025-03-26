@@ -19,7 +19,7 @@ from unittest.mock import patch, MagicMock
 import zlib
 
 import mindspore as ms
-from mindspore import Tensor
+from mindspore import Tensor, ops, mint
 import numpy as np
 
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
@@ -30,6 +30,13 @@ from msprobe.core.data_dump.data_processor.mindspore_processor import (
     KernelDumpDataProcessor,
 )
 from msprobe.mindspore.common.log import logger
+
+
+def patch_norm(value):
+    return ops.norm(value)
+
+
+setattr(mint, "norm", patch_norm)
 
 
 class TestMindsporeDataProcessor(unittest.TestCase):
