@@ -20,9 +20,6 @@ from ..utils.global_state import ADD_MATCH_KEYS
 
 class MatchNodesController:
 
-    def add(a, b):
-        return a + b
-
     @staticmethod
     def process_md5_task_add(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})
@@ -41,10 +38,12 @@ class MatchNodesController:
         # 在原始数据上，添加匹配节点，和匹配节点信息
         npu_node_data['matched_node_link'] = [bench_node_name]
         bench_node_data['matched_node_link'] = [npu_node_name]
-        npu_node_data['data']['precision_index'] = precision_error
+        # 防止 KeyError 或 TypeError
+        npu_node_data.setdefault('data', {})['precision_index'] = precision_error
         # 后端维护一个匹配节点列表，前端展示
         npu_match_nodes_list[npu_node_name] = bench_node_name
         bench_match_nodes_list[bench_node_name] = npu_node_name
+      
         graph_data['npu_match_nodes'] = npu_match_nodes_list
         graph_data['bench_match_nodes'] = bench_match_nodes_list
         return {
@@ -84,8 +83,8 @@ class MatchNodesController:
     def process_summary_task_add(graph_data, npu_node_name, bench_node_name):
         npu_match_nodes_list = graph_data.get('npu_match_nodes', {})
         bench_match_nodes_list = graph_data.get('bench_match_nodes', {})
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
         # 计算统计误差
         intput_statistical_diff = MatchNodesController.calculate_statistical_diff(
             npu_node_data.get('input_data'), bench_node_data.get('input_data'), npu_node_name, bench_node_name
@@ -112,7 +111,8 @@ class MatchNodesController:
         bench_node_data['matched_node_link'] = [npu_node_name]
         MatchNodesController.update_graph_node_data(npu_node_data.get('input_data'), intput_statistical_diff)
         MatchNodesController.update_graph_node_data(npu_node_data.get('output_data'), output_statistical_diff)
-        npu_node_data['data']['precision_index'] = precision_error
+        # 防止 KeyError 或 TypeError
+        npu_node_data.setdefault('data', {})['precision_index'] = precision_error
         # 后端维护一个匹配节点列表，前端展示
         npu_match_nodes_list[npu_node_name] = bench_node_name
         bench_match_nodes_list[bench_node_name] = npu_node_name
@@ -141,7 +141,8 @@ class MatchNodesController:
         MatchNodesController.delete_matched_node_data(npu_node_data.get('output_data'))
         # 后端维护一个匹配节点列表，前端展示
         try:
-            del npu_node_data['data']['precision_index']
+            # 防止 KeyError 或 TypeError
+            npu_node_data.get('data', {}).pop('precision_index', None)
             del npu_match_nodes_list[npu_node_name]
             del bench_match_nodes_list[bench_node_name]
         except KeyError:
@@ -222,6 +223,8 @@ class MatchNodesController:
 
     @staticmethod
     def calculate_md5_diff(npu_data, bench_data):
+        if npu_data == {} or bench_data == {}:
+            return 0
         # 对比每个NPU和Bench所有数据md值，如果有一个不一样则返回0,否则返回1
         for npu_key, bench_key in zip(npu_data, npu_data):
             npu_md5 = npu_data[npu_key].get('md5', '')

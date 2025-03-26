@@ -1,13 +1,8 @@
 import pytest
 from server.app.service.graph_service import GraphService
-from server.app.utils.graph_utils import GraphUtils
 
 
 class TestMatchNodesService:
-
-    @pytest.fixture(autouse=True)
-    def setup_manager(self, meta_data):
-        self.graph_data = GraphUtils.get_graph_data(meta_data)
         
     def test_service(self, meta_data, operation_config):
         op_type = operation_config["type"]
