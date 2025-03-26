@@ -174,7 +174,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               <template is="dom-if" if="[[_filterSetting]]">
                 <div class="toolbar">
                   <div style="font-size: 15px">精度溢出</div>
-                  <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
+                  <template is="dom-if" if="[[hiddenTabChanged]]">
+                    <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
+                  </template>
                 </div>
               </template>
               <template is="dom-if" if="[[!_filterSetting]]">
@@ -447,7 +449,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     if (_.isEmpty(this.renderHierarchy)) {
       return;
     }
-
     if (this.renderHierarchy.bench) {
       this.set('hiddenAll', true);
       if (!this.overflowcheck) {
@@ -457,7 +458,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       if (this.overflowcheck) {
         this._selectedTabChanged();
         this.set('hiddenAll', true);
+        // 隐藏切换按钮
         this.set('hiddenTabChanged', false);
+        // 切换至精度溢出，隐藏精度筛选
+        this.set('_filterSetting', true);
       } else {
         this.set('hiddenAll', false);
       }
