@@ -18,13 +18,12 @@ import { html, PolymerElement } from '@polymer/polymer';
 import { DarkModeMixin } from '../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import '../tf_dashboard_common/tensorboard-color';
-import { MetanodeColors, OpNodeColors, SeriesNodeColors } from './render';
+import { MetanodeColors, OpNodeColors } from './render';
 
 export enum GraphIconType {
   CONST = 'CONST',
   META = 'META',
   OP = 'OP',
-  SERIES = 'SERIES',
   SUMMARY = 'SUMMARY',
   MULTI_COLLECTION = 'MULTI_COLLECTION',
   API_LIST = 'API_LIST',
@@ -64,47 +63,9 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     <!-- SVG for definitions -->
     <svg height="0" width="0" id="svgDefs">
       <defs>
-        <!-- Hatch patterns for faded out nodes. -->
-        <pattern id="rectHatch" patternTransform="rotate(45 0 0)" width="5" height="5" patternUnits="userSpaceOnUse">
-          <line x1="0" y1="0" x2="0" y2="5" style="stroke-width: 1"></line>
-        </pattern>
-        <pattern id="ellipseHatch" patternTransform="rotate(45 0 0)" width="2" height="2" patternUnits="userSpaceOnUse">
-          <line x1="0" y1="0" x2="0" y2="2" style="stroke-width: 1"></line>
-        </pattern>
-        <!-- Template for an Op node ellipse. -->
         <ellipse id="op-node-stamp" rx="7.5" ry="3" stroke="inherit" fill="inherit"></ellipse>
-        <!-- Template for an Op node annotation ellipse (smaller). -->
-        <ellipse id="op-node-annotation-stamp" rx="5" ry="2" stroke="inherit" fill="inherit"></ellipse>
-        <!-- Vertically stacked series of Op nodes when unexpanded. -->
-        <g id="op-series-vertical-stamp">
-          <use xlink:href="#op-node-stamp" x="8" y="9"></use>
-          <use xlink:href="#op-node-stamp" x="8" y="6"></use>
-          <use xlink:href="#op-node-stamp" x="8" y="3"></use>
-        </g>
-        <g id="op-series-horizontal-stamp">
-          <use xlink:href="#op-node-stamp" x="16" y="4"></use>
-          <use xlink:href="#op-node-stamp" x="12" y="4"></use>
-          <use xlink:href="#op-node-stamp" x="8" y="4"></use>
-        </g>
-        <g id="summary-icon" fill="#848484" height="12" viewBox="0 0 24 24" width="12">
-          <path
-            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
-          ></path>
-        </g>
       </defs>
     </svg>
-    <template is="dom-if" if="[[_isType(type, 'CONST')]]">
-      <svg height$="[[height]]" preserveAspectRatio="xMinYMid meet" viewBox="0 0 10 10">
-        <circle cx="5" cy="5" r="3" fill$="[[_fill]]" stroke$="[[_stroke]]"></circle>
-      </svg>
-    </template>
-    <template is="dom-if" if="[[_isType(type, 'SUMMARY')]]">
-      <svg width$="[[height]]" height$="[[height]]" viewBox="0 0 24 24" fill="#848484">
-        <path
-          d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
-        ></path>
-      </svg>
-    </template>
     <template is="dom-if" if="[[_isType(type, 'OP')]]">
       <svg height$="[[height]]" preserveAspectRatio="xMinYMid meet" viewBox="0 0 16 8">
         <use
@@ -168,34 +129,6 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         ></rect>
       </svg>
     </template>
-    <template is="dom-if" if="[[_isType(type, 'SERIES')]]">
-      <template is="dom-if" if="[[vertical]]">
-        <svg height$="[[height]]" preserveAspectRatio="xMinYMid meet" viewBox="0 0 16 15">
-          <use
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            xlink:href="#op-series-vertical-stamp"
-            fill$="[[_fill]]"
-            stroke$="[[_stroke]]"
-            class$="{{_fadedClass(faded, 'series')}}"
-            x="0"
-            y="2"
-          ></use>
-        </svg>
-      </template>
-      <template is="dom-if" if="[[!vertical]]">
-        <svg height$="[[height]]" preserveAspectRatio="xMinYMid meet" viewBox="0 0 24 10">
-          <use
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            xlink:href="#op-series-horizontal-stamp"
-            fill$="[[_fill]]"
-            stroke$="[[_stroke]]"
-            class$="{{_fadedClass(faded, 'series')}}"
-            x="0"
-            y="1"
-          ></use>
-        </svg>
-      </template>
-    </template>
   `;
 
   @property({ type: String })
@@ -230,8 +163,6 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     switch (type) {
       case GraphIconType.META:
         return MetanodeColors.DEFAULT_FILL;
-      case GraphIconType.SERIES:
-        return SeriesNodeColors.DEFAULT_FILL;
       default:
         return OpNodeColors.DEFAULT_FILL;
     }
@@ -247,8 +178,6 @@ class TfGraphIcon extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     switch (type) {
       case GraphIconType.META:
         return MetanodeColors.DEFAULT_STROKE;
-      case GraphIconType.SERIES:
-        return SeriesNodeColors.DEFAULT_STROKE;
       default:
         return OpNodeColors.DEFAULT_STROKE;
     }

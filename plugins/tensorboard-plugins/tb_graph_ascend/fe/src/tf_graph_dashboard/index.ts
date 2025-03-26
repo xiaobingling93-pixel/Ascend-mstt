@@ -20,7 +20,6 @@ import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import '../polymer/irons_and_papers';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
-import { Canceller } from '../tf_backend/canceller';
 import { RequestManager } from '../tf_backend/requestManager';
 import '../tf_dashboard_common/tf-dashboard-layout';
 import * as tf_storage from '../tf_storage';
@@ -199,9 +198,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   _requestManager: RequestManager = new RequestManager();
-
-  @property({ type: Object })
-  _canceller: Canceller = new Canceller();
 
   @property({ type: Boolean })
   _debuggerDataEnabled: boolean;

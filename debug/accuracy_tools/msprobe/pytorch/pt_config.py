@@ -67,6 +67,7 @@ class TensorConfig(BaseConfig):
             check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
             check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
             check_crt_valid(os.path.join(self.tls_path, "client.crt"))
+            check_crt_valid(os.path.join(self.tls_path, "client.key"), True)
 
         if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
             raise Exception(f"host: {self.host} is invalid.")

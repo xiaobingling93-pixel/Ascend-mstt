@@ -26,6 +26,7 @@ import yaml
 import numpy as np
 import pandas as pd
 
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
@@ -332,6 +333,23 @@ def change_mode(path, mode):
                                  'Failed to change {} authority. {}'.format(path, str(ex))) from ex
 
 
+@recursion_depth_decorator('msprobe.core.common.file_utils.recursive_chmod')
+def recursive_chmod(path):
+    """
+    递归地修改目录及其子目录和文件的权限，文件修改为640，路径修改为750
+
+    :param path: 要修改权限的目录路径
+    """
+    for _, dirs, files in os.walk(path):
+        for file_name in files:
+            file_path = os.path.join(path, file_name)
+            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        for dir_name in dirs:
+            dir_path = os.path.join(path, dir_name)
+            change_mode(dir_path, FileCheckConst.DATA_DIR_AUTHORITY)
+            recursive_chmod(dir_path)
+
+
 def path_len_exceeds_limit(file_path):
     return len(os.path.realpath(file_path)) > FileCheckConst.DIRECTORY_LENGTH or \
         len(os.path.basename(file_path)) > FileCheckConst.FILE_NAME_LENGTH
@@ -632,7 +650,7 @@ def os_walk_for_files(path, depth):
     return res
 
 
-def check_crt_valid(pem_path):
+def check_crt_valid(pem_path, is_public_key=False):
     """
     Check the validity of the SSL certificate.
 
@@ -641,6 +659,7 @@ def check_crt_valid(pem_path):
 
     Parameters:
     pem_path (str): The file path of the SSL certificate.
+    is_public_key (bool): The file is public key or not.
 
     Raises:
     RuntimeError: If the SSL certificate is invalid or expired.
@@ -649,7 +668,10 @@ def check_crt_valid(pem_path):
     try:
         with FileOpen(pem_path, "r") as f:
             pem_data = f.read()
-        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
+        if is_public_key:
+            cert = OpenSSL.crypto.load_publickey(OpenSSL.crypto.FILETYPE_PEM, pem_data)
+        else:
+            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
         pem_start = parser.parse(cert.get_notBefore().decode("UTF-8"))
         pem_end = parser.parse(cert.get_notAfter().decode("UTF-8"))
         logger.info(f"The SSL certificate passes the verification and the validity period "

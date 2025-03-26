@@ -35,18 +35,18 @@ class ResizableTabsheet extends PolymerElement {
         }
 
         .resize-handle {
-          height: 6px;
+          height: 2px;
           width: 100%;
-          background-color: #ddd;
           cursor: ns-resize;
+          bottom: 2px;
           z-index: 999;
           position: relative;
-          bottom: 10px;
-          background-color: transparent;
+          background-color:rgb(141, 141, 141);
         }
 
         .resize-handle:hover {
           background-color: hsl(214, 100%, 43%);
+          height: 4px;
         }
       </style>
 
@@ -63,8 +63,8 @@ class ResizableTabsheet extends PolymerElement {
   })
   height: number = 300;
 
-  _resize: (event: MouseEvent) => void = () => {};
-  _stopResize: (this: Document, ev: MouseEvent) => any = () => {};
+  _resize: (event: MouseEvent) => void = () => { };
+  _stopResize: (this: Document, ev: MouseEvent) => any = () => { };
 
   @observe('height')
   _updateHeight(newHeight): void {

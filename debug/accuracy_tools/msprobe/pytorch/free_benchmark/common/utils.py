@@ -16,7 +16,7 @@
 
 import torch
 from msprobe.core.common.exceptions import FreeBenchmarkException
-from msprobe.core.common.utils import recursion_depth_decorator
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark.common.enums import DeviceType
 
 

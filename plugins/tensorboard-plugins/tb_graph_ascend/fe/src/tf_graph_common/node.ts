@@ -23,7 +23,7 @@ import { Class, FontSizeInPx, selectChild, selectOrCreateChild } from './common'
 import * as contextmenu from './contextmenu';
 import * as edge from './edge';
 import * as tf_graph from './graph';
-import { MetanodeImpl, Node, NodeType, OpNode, OpNodeImpl, SeriesNode } from './graph';
+import { MetanodeImpl, Node, NodeType, OpNode, OpNodeImpl } from './graph';
 import * as layout from './layout';
 import * as render from './render';
 import { RenderNodeInfo } from './render';
@@ -435,28 +435,7 @@ export function buildShape(nodeGroup, d, nodeClassName: string): d3.Selection<an
   let shapeGroup = tf_graph_common.selectOrCreateChild(nodeGroup, 'g', nodeClassName);
   switch (d.node.type) {
     case NodeType.OP: {
-      const opNode = d.node as OpNode;
       tf_graph_common.selectOrCreateChild(shapeGroup, 'ellipse', Class.Node.COLOR_TARGET);
-      break;
-    }
-    case NodeType.SERIES: {
-      // Choose the correct stamp to use to represent this series.
-      let stampType = 'annotation';
-      let groupNodeInfo = <render.RenderGroupNodeInfo>d;
-      if (groupNodeInfo.coreGraph) {
-        stampType = groupNodeInfo.node.hasNonControlEdges ? 'vertical' : 'horizontal';
-      }
-      let classList = [Class.Node.COLOR_TARGET];
-      if (groupNodeInfo.isFadedOut) {
-        classList.push('faded-ellipse');
-      }
-      tf_graph_common
-        .selectOrCreateChild(shapeGroup, 'use', classList)
-        .attr('xlink:href', `#op-series-${stampType}-stamp`);
-      tf_graph_common
-        .selectOrCreateChild(shapeGroup, 'rect', Class.Node.COLOR_TARGET)
-        .attr('rx', d.radius)
-        .attr('ry', d.radius);
       break;
     }
     case NodeType.META:
@@ -478,12 +457,6 @@ export function nodeClass(d: render.RenderNodeInfo): string {
       return Class.OPNODE;
     case NodeType.META:
       return Class.METANODE;
-    case NodeType.SERIES:
-      return Class.SERIESNODE;
-    case NodeType.BRIDGE:
-      return Class.BRIDGENODE;
-    case NodeType.ELLIPSIS:
-      return Class.ELLIPSISNODE;
     case NodeType.MULTI_COLLECTION:
       return Class.MULTI_COLLECTION;
     case NodeType.API_LIST:
@@ -534,27 +507,6 @@ function position(nodeGroup, d: render.RenderNodeInfo): void {
         // Place the label in the middle.
         labelPosition(nodeGroup, cx, d.y, 0);
       }
-      break;
-    }
-    case NodeType.SERIES: {
-      let shape = tf_graph_scene.selectChild(shapeGroup, 'use');
-      if (d.expanded) {
-        tf_graph_scene.positionRect(shape, d.x, d.y, d.width, d.height);
-        subscenePosition(nodeGroup, d);
-        // put label on top
-        labelPosition(nodeGroup, cx, d.y, (-d.height / 2) + (d.labelHeight / 2));
-      } else {
-        tf_graph_scene.positionRect(shape, cx, d.y, d.coreBox.width, d.coreBox.height);
-        labelPosition(nodeGroup, cx, d.y, d.labelOffset);
-      }
-      break;
-    }
-    case NodeType.BRIDGE: {
-      // position shape
-      // NOTE: In reality, these will not be visible, but it helps to put them
-      // in the correct position for debugging purposes.
-      let shape = tf_graph_scene.selectChild(shapeGroup, 'rect');
-      tf_graph_scene.positionRect(shape, d.x, d.y, d.width, d.height);
       break;
     }
     case NodeType.MULTI_COLLECTION:
@@ -694,13 +646,11 @@ export function stylize(
   const resolvedNodeClassName  = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
   const isHighlighted = sceneElement.isNodeHighlighted(renderInfo.node.name);
   const isSelected = sceneElement.isNodeSelected(renderInfo.node.name);
-  const isExtract = renderInfo.isInExtract || renderInfo.isOutExtract || renderInfo.isLibraryFunction;
   const isExpanded = renderInfo.expanded && resolvedNodeClassName !== Class.Annotation.NODE;
   const isFadedOut = renderInfo.isFadedOut;
   const isLinked = sceneElement.isNodeLinked(renderInfo.node.name);
   nodeGroup.classed('highlighted', isHighlighted);
   nodeGroup.classed('selected', isSelected);
-  nodeGroup.classed('extract', isExtract);
   nodeGroup.classed('expanded', isExpanded);
   nodeGroup.classed('faded', isFadedOut);
   nodeGroup.classed('linked', isLinked);
@@ -1314,12 +1264,6 @@ export function buildGroupForScene(
     },
     Array<any>(),
   );
-  if (renderNode.node.type === NodeType.SERIES) {
-    // For series, we want the first item on top, so reverse the array so
-    // the first item in the series becomes last item in the top, and thus
-    // is rendered on the top.
-    coreNodes.reverse();
-  }
   // Create the layer of edges for this scene (paths).
   edge.buildGroup(coreGroup, renderNode.coreGraph, sceneElement);
   // Create the layer of nodes for this scene (ellipses, rects etc).

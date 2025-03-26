@@ -52,11 +52,11 @@ from msprobe.core.common.utils import (CompareException,
                                        get_stack_construct_by_dump_json_path,
                                        check_seed_all,
                                        safe_get_value,
-                                       recursion_depth_decorator,
                                        MsprobeBaseException,
                                        check_str_param,
                                        is_json_file,
                                        detect_framework_by_dump_json)
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class TestUtils(TestCase):

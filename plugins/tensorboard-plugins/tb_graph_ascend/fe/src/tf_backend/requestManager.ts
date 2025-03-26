@@ -185,22 +185,6 @@ export class RequestManager {
     });
   }
 
-  public clearQueue(): void {
-    while (this._queue.length > 0) {
-      this._queue.pop()?.reject(new RequestCancellationError('Request cancelled by clearQueue'));
-    }
-  }
-
-  /* Return number of currently pending requests */
-  public activeRequests(): number {
-    return this._nActiveRequests;
-  }
-
-  /* Return total number of outstanding requests (includes queue) */
-  public outstandingRequests(): number {
-    return this._nActiveRequests + this._queue.length;
-  }
-
   /* Actually get promise from url using XMLHttpRequest */
   protected _promiseFromUrl(url: string, requestOptions: RequestOptions): Promise<unknown> {
     return new Promise((resolve, reject) => {

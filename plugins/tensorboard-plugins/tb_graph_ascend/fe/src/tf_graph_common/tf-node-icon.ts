@@ -148,8 +148,6 @@ class TfNodeIcon extends LegacyElementMixin(PolymerElement) {
         }
         case tf_graph.NodeType.META:
           return GraphIconType.META;
-        case tf_graph.NodeType.SERIES:
-          return GraphIconType.SERIES;
         default:
       }
     }

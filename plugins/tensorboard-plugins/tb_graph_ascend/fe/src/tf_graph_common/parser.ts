@@ -50,38 +50,7 @@ export function fetchPbTxt(filepath: string): Promise<ArrayBuffer> {
     });
   });
 }
-/**
- * Fetches the metadata file, parses it and returns a promise of the result.
- */
-export function fetchAndParseMetadata(
-  path: string,
-  tracker: ProgressTracker,
-): Promise<tf_graph_proto.StepStats | null> {
-  return tf_graph_util
-    .runTask(
-      'Reading metadata pbtxt',
-      40,
-      () => {
-        if (path == null) {
-          return Promise.resolve(null);
-        }
-        return fetchPbTxt(path);
-      },
-      tracker,
-      tb_debug.GraphDebugEventId.FETCH_METADATA_PBTXT_BYTES,
-    )
-    .then((arrayBuffer: ArrayBuffer | null) => {
-      return tf_graph_util.runAsyncPromiseTask(
-        'Parsing metadata.pbtxt',
-        60,
-        () => {
-          return arrayBuffer != null ? parseStatsPbTxt(arrayBuffer) : Promise.resolve(null);
-        },
-        tracker,
-        tb_debug.GraphDebugEventId.PARSE_METADATA_PBTXT_INTO_OBJECT,
-      );
-    });
-}
+
 /**
  * Fetches the graph file, parses it and returns a promise of the result. The
  * result will be undefined if the graph is empty.
@@ -215,26 +184,11 @@ const GRAPH_REPEATED_FIELDS: {
   'node.attr.value.tensor.string_val': true,
   'node.attr.value.tensor.tensor_shape.dim': true,
 };
-const METADATA_REPEATED_FIELDS: {
-  [attrPath: string]: boolean;
-} = {
-  'step_stats.dev_stats': true,
-  'step_stats.dev_stats.node_stats': true,
-  'step_stats.dev_stats.node_stats.output': true,
-  'step_stats.dev_stats.node_stats.memory': true,
-  'step_stats.dev_stats.node_stats.output.tensor_description.shape.dim': true,
-};
 /**
  * Parses an ArrayBuffer of a proto txt file into a raw Graph object.
  */
 export function parseGraphPbTxt(input: ArrayBuffer): Promise<tf_graph_proto.GraphDef> {
   return parsePbtxtFile(input, GRAPH_REPEATED_FIELDS);
-}
-/**
- * Parses an ArrayBuffer of a proto txt file into a StepStats object.
- */
-export function parseStatsPbTxt(input: ArrayBuffer): Promise<tf_graph_proto.StepStats> {
-  return parsePbtxtFile(input, METADATA_REPEATED_FIELDS).then((obj) => obj.step_stats);
 }
 /**
  * Parses a ArrayBuffer of a proto txt file into javascript object.

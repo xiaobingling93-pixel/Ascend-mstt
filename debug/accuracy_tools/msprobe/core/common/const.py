@@ -53,6 +53,7 @@ class Const:
     SEVEN_SEGMENT = 7
 
     MAX_DEPTH = 10
+    CPU_QUARTER = 4
     DUMP_MAX_DEPTH = 50
 
     # dump mode
@@ -706,3 +707,5 @@ class MonitorConst:
     CSV = "csv"
     API = "api"
     HEADER_NAME = 'name'
+
+    MAX_NDIGITS = 20

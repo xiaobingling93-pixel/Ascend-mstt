@@ -16,9 +16,8 @@ Copyright (c) 2025, Huawei Technologies.
 Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
 import * as d3 from 'd3';
-import * as PolymerDom from '../polymer/dom';
-import { Class as _Class, selectChild as _selectChild, SVG_NAMESPACE } from './common';
-import { NodeType, OpNode } from './graph';
+import { Class as _Class, selectChild as _selectChild } from './common';
+import { NodeType } from './graph';
 import * as layout from './layout';
 import * as render from './render';
 
@@ -30,66 +29,6 @@ export const Class = _Class;
  */
 const MINIMAP_BOX_WIDTH = 320;
 const MINIMAP_BOX_HEIGHT = 150;
-/**
- * A health pill encapsulates an overview of tensor element values. The value
- * field is a list of 12 numbers that shed light on the status of the tensor.
- * Visualized in health pills are the 3rd through 8th (inclusive) numbers of
- * health pill values. Those 6 numbers are counts of tensor elements that fall
- * under -Inf, negative, 0, positive, +Inf, NaN (in that order).
- *
- * Please keep this interface consistent with HealthPillDatum within
- * backend.ts.
- */
-export interface HealthPill {
-  device_name: string;
-  node_name: string;
-  output_slot: number;
-  dtype: string;
-  shape: number[];
-  value: number[];
-  wall_time: number;
-  step: number;
-}
-interface HealthPillNumericStats {
-  min: number;
-  max: number;
-  mean: number;
-  stddev: number;
-}
-/**
- * Encapsulates how to render a single entry in a health pill. Each entry
- * corresponds to a category of tensor element values.
- */
-export interface HealthPillEntry {
-  background_color: string;
-  label: string;
-}
-export const healthPillEntries: HealthPillEntry[] = [
-  {
-    background_color: '#CC2F2C',
-    label: 'NaN',
-  },
-  {
-    background_color: '#FF8D00',
-    label: '-∞',
-  },
-  {
-    background_color: '#EAEAEA',
-    label: '-',
-  },
-  {
-    background_color: '#A5A5A5',
-    label: '0',
-  },
-  {
-    background_color: '#262626',
-    label: '+',
-  },
-  {
-    background_color: '#003ED4',
-    label: '+∞',
-  },
-];
 /**
  * Helper method for fitting the graph in the svg view.
  *
@@ -201,7 +140,7 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   // expanded metanodes, the graphs are below the labels.  Do not shift them
   // down for series nodes as series nodes don't have labels inside of their
   // bounding boxes.
-  let yTranslate = renderNode.node.type === NodeType.SERIES ? 0 : layout.PARAMS.subscene.meta.labelHeight;
+  let yTranslate = layout.PARAMS.subscene.meta.labelHeight;
   // core
   translate(selectChild(sceneGroup, 'g', Class.Scene.CORE), 0, yTranslate);
   // in-extract
@@ -274,24 +213,7 @@ export function positionRect(rect, cx: number, cy: number, width: number, height
     .attr('width', width)
     .attr('height', height);
 }
-/**
- * Positions a triangle and sizes it.
- * @param polygon polygon to set position of.
- * @param cx Center x.
- * @param cy Center y.
- * @param width Width of bounding box for triangle.
- * @param height Height of bounding box for triangle.
- */
-export function positionTriangle(polygon, cx, cy, width, height): void {
-  const halfHeight = height / 2;
-  const halfWidth = width / 2;
-  const points = [
-    [cx, cy - halfHeight],
-    [cx + halfWidth, cy + halfHeight],
-    [cx - halfWidth, cy + halfHeight],
-  ];
-  polygon.transition().attr('points', points.map((point) => point.join(',')).join(' '));
-}
+
 /**
  * Helper for setting position of a svg expand/collapse button
  * @param button container group
@@ -306,13 +228,6 @@ export function positionButton(button, renderNode: render.RenderNodeInfo): void 
   let height = renderNode.expanded ? renderNode.height : renderNode.coreBox.height;
   let x = cx + (width / 2) - 6;
   let y = renderNode.y - (height / 2) + 6;
-
-  // For unexpanded series nodes, the button has special placement due
-  // to the unique visuals of this group node.
-  if (renderNode.node.type === NodeType.SERIES && !renderNode.expanded) {
-    x += 10;
-    y -= 2;
-  }
   let translateStr = `translate(${x},${y})`;
   button.selectAll('path').transition().attr('transform', translateStr);
   button.select('circle').transition().attr({ cx: x, cy: y, r: layout.PARAMS.nodeSize.meta.expandButtonRadius });
