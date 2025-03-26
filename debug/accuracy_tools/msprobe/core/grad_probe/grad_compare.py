@@ -112,7 +112,7 @@ class GradComparator:
             result.append([key] + value)
         result_csv_path = os.path.join(output_dir, "similarities.csv")
         if os.path.exists(result_csv_path):
-            logger.warning(f"{result_csv_path} will be recoverd")
+            logger.warning(f"{result_csv_path} will be deleted")
             remove_path(result_csv_path)
         write_csv(result, result_csv_path)
 
