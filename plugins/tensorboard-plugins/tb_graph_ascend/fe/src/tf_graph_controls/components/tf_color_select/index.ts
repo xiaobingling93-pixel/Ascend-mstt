@@ -440,7 +440,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor
   @observe('selection')
-  _clearAllToggleCheckbox(): void {
+  _clearAllToggleCheckboxAndInputField(): void {
     this.set('selectedSide', '0');
     const allCheckboxes = this.shadowRoot?.querySelectorAll('paper-checkbox');
     if (allCheckboxes) {
@@ -451,6 +451,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.selectColor = [];
     this.precisionmenu = [];
     this.overflowLevel = [];
+    // 清除精度筛选输入框
+    this.set('selectedPrecisionNode', '');
+    // 清除精度溢出输入框
+    this.set('selectedOverflowNode', '');
     this.set('selectedNode', '');
   }
 
