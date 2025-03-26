@@ -169,7 +169,7 @@ class APIExtractor:
                     value = self.load_real_data_path(value, real_data_path)
                 new_data[key] = value
         if not new_data:
-            logger.error(f"Error: The api '{self.api_name}' does not exist in the file.")
+            logger.warning(f"Warning: The api '{self.api_name}' does not exist in the file.")
         else:
             save_json(self.output_file, new_data, indent=4)
             logger.info(
