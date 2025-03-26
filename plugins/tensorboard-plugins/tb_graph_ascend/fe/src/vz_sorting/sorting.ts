@@ -52,21 +52,6 @@ export function compareTagNames(a: string, b: string): number {
       continue;
     }
 
-    // Treat underscore as regular character (not a break)
-    if (a[ai] === '_' && b[bi] === '_') {
-      ai++;
-      bi++;
-      continue;
-    }
-
-    // Simplified break character handling
-    if (isBreak(a[ai]) && !isBreak(b[bi])) {
-      return -1;
-    }
-    if (!isBreak(a[ai]) && isBreak(b[bi])) {
-      return 1;
-    }
-
     // Regular character comparison
     if (a[ai] < b[bi]) {
       return -1;
@@ -83,9 +68,4 @@ export function compareTagNames(a: string, b: string): number {
 // Simplified digit check
 function isDigit(c: string): boolean {
   return c >= '0' && c <= '9';
-}
-
-// Simplified break character check
-function isBreak(c: string): boolean {
-  return c === '/'; // Only treat slash as break character
 }
