@@ -35,19 +35,6 @@ class Parser:
                 subgraph_node.attrs.extend(attrs)
 
     @staticmethod
-    def parse_graph_attributes(text: str, graph_node: GraphNode) -> None:
-        attr_pattern = re.compile(r'# Attrs:\s*(.*)', re.DOTALL)
-        match = attr_pattern.search(text, graph_node.pos)
-        if match:
-            attrs = match.group(1).strip().split('\n')
-            for attr in attrs:
-                if not attr:
-                    break
-                key, value = attr.split(':')
-                if isinstance(graph_node.attrs, dict):
-                    graph_node.attrs[key.strip()] = value.strip()
-
-    @staticmethod
     def parse_code_info(text: str, start_pos: int, end_pos: int) -> List[str]:
         code_info = []
         code_info_pattern = re.compile(r'# .*', re.MULTILINE)
@@ -202,11 +189,6 @@ class Parser:
             self.parse_nodes(subgraph_text, subgraph_info)
             subgraph_info.end = end_pos
             logging.info('Parsed subgraph: %s', subgraph_name)
-
-    def count_nodes(self) -> Tuple[int, int]:
-        total_nodes = len(self.nodes)
-        total_cnodes = sum(1 for node in self.nodes.values() if node.name.startswith('CNode'))
-        return total_nodes, total_cnodes
 
     def create_backward_map(self):
         for node in self.nodes.values():

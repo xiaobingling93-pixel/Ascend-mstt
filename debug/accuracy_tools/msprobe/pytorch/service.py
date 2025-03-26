@@ -412,7 +412,7 @@ class Service:
         if self.config.nfs_path:
             self.attl.upload("end")
         elif self.attl.socket_manager is not None:
-            logger.info(f"pid: {os.getpid()} finished, start send STOP signal.")
+            logger.info(f"pid: {os.getpid()} finished, start sends STOP signal.")
             self.attl.socket_manager.send_stop_signal()
 
     def reset_status(self):
