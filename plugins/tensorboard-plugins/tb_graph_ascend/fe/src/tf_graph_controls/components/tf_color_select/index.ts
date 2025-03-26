@@ -190,26 +190,13 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   </template>
                 </div>
                 <div class="container-search">
-                  <vaadin-combo-box
+                  <tf-search-combox
                     label="符合精度误差节点([[precisionmenu.length]])"
                     items="[[precisionmenu]]"
-                    value="{{selectedPrecisionNode}}"
-                    on-change="_observePrecsionNode"
-                  ></vaadin-combo-box>
-                  <vaadin-icon
-                    data-action="previous"
-                    title="搜索上一项"
-                    icon="vaadin:arrow-up"
-                    class="search-arrow"
-                    on-click="_handlePrecisonSearch"
-                  ></vaadin-icon>
-                  <vaadin-icon
-                    data-action="next"
-                    title="搜索下一项"
-                    icon="vaadin:arrow-down"
-                    class="search-arrow"
-                    on-click="_handlePrecisonSearch"
-                  ></vaadin-icon>
+                    selected-value="{{selectedPrecisionNode}}"
+                    on-select-change="[[_observePrecsionNode]]"
+                  ></tf-search-combox>
+                <div>
               </template>
               <template is="dom-if" if="[[_filterSetting]]">
                 <template is="dom-if" if="{{overFlowSet.length}}">
@@ -228,26 +215,12 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   </div>
                 </template>
                 <div class="container-search">
-                  <vaadin-combo-box
+                  <tf-search-combox
                     label="溢出筛选节点([[overflowmenu.length]])"
                     items="[[overflowmenu]]"
-                    value="{{selectedPrecisionNode}}"
-                    on-change="_observePrecsionNode"
-                  ></vaadin-combo-box>
-                  <vaadin-icon
-                    data-action="previous"
-                    title="搜索上一项"
-                    icon="vaadin:arrow-up"
-                    class="search-arrow"
-                    on-click="_handleOverflowSearch"
-                  ></vaadin-icon>
-                  <vaadin-icon
-                    data-action="next"
-                    title="搜索下一项"
-                    icon="vaadin:arrow-down"
-                    class="search-arrow"
-                    on-click="_handleOverflowSearch"
-                  ></vaadin-icon>
+                    selected-value="{{selectedOverflowNode}}"
+                    on-select-change="[[_observeOverFlowNode]]"
+                  ></tf-search-combox>
                 </div>
               </template>
             </div>
@@ -346,8 +319,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @property({ type: Array })
   selectColor: any = [];
 
-  @property({ type: String })
+  @property({ type: String, notify: true })
   selectedPrecisionNode: string = '';
+
+  @property({ type: String, notify: true })
+  selectedOverflowNode: string = '';
 
   @property({ type: Object })
   precisionmenu: any = [];
@@ -547,6 +523,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const nodeGroup = d3.select(svgRoot).select(`.node[data-name="${renderInfo.node.name}"]`);
       tf_graph_node.stylize(nodeGroup, renderInfo, sceneElement);
     }
+    // 清除精度筛选输入框
+    this.set('selectedPrecisionNode', '');
     this.toggleVisibility();
   }
 
@@ -802,6 +780,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
+      // 清除精度筛选输入框
+      this.set('selectedPrecisionNode', '');
     } else {
       if (overflowCheckbox.checked) {
         this.overflowLevel.push(item[1]); // 添加选中的颜色
@@ -826,6 +806,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);
+      // 清除精度溢出输入框
+      this.set('selectedOverflowNode', '');
     }
   }
 
@@ -833,13 +815,21 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.set('_filterSetting', !this._filterSetting);
   }
 
-  _observePrecsionNode(): void {
+  _observePrecsionNode = () => {
+    let prefix = NPU_PREFIX;
+    const node = prefix + this.selectedPrecisionNode;
+    this.set('selectedNode', node);
+  }
+
+  _observeOverFlowNode = () => {
+    const isCompareGraph = this.renderHierarchy.bench?.renderedOpNames.some((name: string) =>
+      name.startsWith(BENCH_PREFIX),
+    );
     let prefix = '';
-    const hasBNode = this.renderHierarchy.bench?.renderedOpNames.some((name: string) => name.startsWith(BENCH_PREFIX));
-    if (hasBNode) {
+    if (isCompareGraph) {
       prefix = NPU_PREFIX;
     }
-    const node = prefix + this.selectedPrecisionNode;
+    const node = prefix + this.selectedOverflowNode;
     this.set('selectedNode', node);
   }
 
