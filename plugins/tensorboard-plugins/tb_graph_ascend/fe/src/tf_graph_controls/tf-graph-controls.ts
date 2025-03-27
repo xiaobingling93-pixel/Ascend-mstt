@@ -818,12 +818,8 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   _getDefaultSelectionType(): SelectionType {
     const { datasets: newDatasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
-    function shouldSkip(datasets: any, run: any, tag: any): boolean {
-      return (
-        !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph
-      );
-    }
-    if (shouldSkip(newDatasets, run, tag)) {
+    const shouldSkip =!newDatasets ||  !newDatasets[run] ||  !(newDatasets[run] as any).tags[tag] ||  (newDatasets[run] as any).tags[tag].opGraph;
+    if (shouldSkip) {
       return SelectionType.OP_GRAPH;
     }
     const datasetForRun = newDatasets[run] as any;
