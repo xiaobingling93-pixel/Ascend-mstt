@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
   auto server = setup_server(handler);
   server->run();
 
-  if (km_thread && km_thread.joinable()) {
+  if (km_thread.joinable()) {
     km_thread.join();
   }
 
