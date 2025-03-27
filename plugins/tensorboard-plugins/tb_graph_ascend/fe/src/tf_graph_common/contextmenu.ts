@@ -140,9 +140,8 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
       if (communicationsType) {
         const titleText = getTitleText(communicationsType);
         menuOptions.push({ text: titleText, action: 'rank' });
-      }
-      // 如果 decodedObj 中存在 communications_type，遍历处理
-      else if (decodedObj[0].communications_type) {
+      } else if (decodedObj[0].communications_type) {
+        // 如果 decodedObj 中存在 communications_type，遍历处理
         decodedObj.forEach((item) => {
           const titleText = getTitleText(item.communications_type);
           menuOptions.push({ text: titleText, action: 'rank' });

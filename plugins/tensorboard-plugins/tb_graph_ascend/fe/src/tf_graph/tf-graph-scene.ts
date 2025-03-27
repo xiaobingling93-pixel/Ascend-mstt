@@ -541,9 +541,9 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       this.$.svg,
       this.$.root,
       this._zoom,
-      function (): void {
+      (): void => {
         this._zoomed = false;
-      }.bind(this),
+      },
     );
   }
 

@@ -166,7 +166,7 @@ class Legend extends PolymerElement {
     this.set('isCompareGraph', isCompareGraphTemp);
   }
 
-  _onSelectedMenuNode = () => {
+  _onSelectedMenuNode = (): void => {
     let prefix = '';
     if (this.isCompareGraph) {
       if (this.selectedSide === '0') {

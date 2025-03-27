@@ -336,11 +336,10 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         pbTxtFile !== undefined ? pbTxtFile : null,
         this.hierarchyParams,
       )
-      .then(
-        function ({ graph, graphHierarchy }): void {
+      .then(({ graph, graphHierarchy }): void => {
           this._setOutGraph(graph);
           this._setOutGraphHierarchy(graphHierarchy);
-        }.bind(this),
+        },
       );
   }
 }
