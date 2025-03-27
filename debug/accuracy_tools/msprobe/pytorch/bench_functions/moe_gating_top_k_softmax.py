@@ -44,7 +44,7 @@ def npu_moe_gating_top_k_softmax(x, finished_optional, k):
         finished_optional = finished_optional.expand(-1, k)
         expert_idx = torch.where(finished_optional, num_expert, expert_idx)
     if y.dim() < 2:
-        raise ValueError("Y must have at least 2 dimensions.")
+        raise ValueError("Variable y must have at least 2 dimensions.")
     row_idx = torch.arange(y.shape[0] * y.shape[1]).reshape(y.shape[1], y.shape[0]).t()
 
     return y, expert_idx, row_idx
