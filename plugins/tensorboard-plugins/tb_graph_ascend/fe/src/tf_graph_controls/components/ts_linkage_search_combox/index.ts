@@ -141,6 +141,8 @@ class Legend extends PolymerElement {
 
   @property({ type: String })
   selectedSide = '0';
+
+  @property({ type: Array })
   menuSideItem = [
     { label: '调试侧', value: '0' },
     { label: '标杆侧', value: '1' },

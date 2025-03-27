@@ -112,7 +112,6 @@ class Legend extends PolymerElement {
 
   // 选择列表中的下一个节点
   _selectNext(): void {
-
     if (!this.isCompareGraph) {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',

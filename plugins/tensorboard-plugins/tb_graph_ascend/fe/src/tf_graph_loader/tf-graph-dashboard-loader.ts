@@ -100,6 +100,8 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   _graphRunTag: GraphRunTag;
+
+  @property({ type: Object })
   override _template = null;
 
   @property({

@@ -116,12 +116,6 @@ export class RenderGraphInfo {
   private index: {
     [nodeName: string]: RenderNodeInfo;
   };
-  private toRenderEdgeObjs: {
-    v: string;
-    w: string;
-    id: number;
-    edge: tf_graph.Metaedge;
-  }[];
   // Since the rendering information for each node is constructed lazily,
   // upon node's expansion by the user, we keep a map between the node's name
   // and whether the rendering information was already constructed for that
@@ -129,10 +123,10 @@ export class RenderGraphInfo {
   private hasSubhierarchy: {
     [nodeName: string]: boolean;
   };
+
   constructor(hierarchy: Hierarchy) {
     this.hierarchy = hierarchy;
     this.index = {};
-    this.toRenderEdgeObjs = [];
     this.renderedOpNames = [];
     // Maps node name to whether the rendering hierarchy was already
     // constructed.
@@ -438,10 +432,10 @@ export class Annotation {
    * node. Each point contains the point location, relative to
    * the host node's center.
    */
-  points: {
+  points: Array<{
     dx: number;
     dy: number;
-  }[];
+  }>;
 
   /**
    * Creates a new Annotation.

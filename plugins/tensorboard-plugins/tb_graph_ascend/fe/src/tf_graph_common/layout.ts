@@ -325,7 +325,7 @@ function layoutMetanode(renderNodeInfo: render.RenderGroupNodeInfo, rankSep: num
       let yOffset = i > 0 ? params.extractYOffset : 0;
       // use width/height here to avoid overlaps between extracts
       child.x = 0;
-      child.y = height + yOffset + child.height / 2;
+      child.y = height + yOffset + (child.height / 2);
       return height + yOffset + child.height;
     },
     0,
