@@ -40,7 +40,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
-    get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir
+    get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -404,6 +404,7 @@ class TrainerMon:
             start_iteration=0
     ):
         """External interface"""
+        grad_acc_steps, start_iteration = validate_set_monitor(grad_acc_steps, start_iteration)
         global start_step
         start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
