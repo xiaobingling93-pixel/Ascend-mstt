@@ -124,9 +124,7 @@ class Saver:
                 self.test_result_cnt['forward_or_backward_fail_num'] += 1
 
     def write_summary_csv(self, test_result):
-        test_rows = [[]]
-        if self.stack_info:
-            test_rows[0].append(self.COLUMN_STACK_INFO)
+        test_rows = []
 
         check_op_str_pattern_valid(test_result.api_name)
         df_row = [test_result.api_name, test_result.is_fwd_success, test_result.is_bwd_success]
