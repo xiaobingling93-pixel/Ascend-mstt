@@ -119,7 +119,7 @@ const useNodeInfo = (): UseNodeInfoType => {
     if (resArray.length === 0) {
       return [];
     }
-    //内部函数，将二维数组转换为对象
+    // 内部函数，将二维数组转换为对象
     const _covertIo = (arrayData: Array<any>): Record<string, unknown> | undefined => {
       if (isEmpty(arrayData)) {
         return undefined;

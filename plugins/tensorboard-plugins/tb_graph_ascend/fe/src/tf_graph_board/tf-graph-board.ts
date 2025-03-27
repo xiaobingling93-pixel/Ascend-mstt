@@ -98,7 +98,6 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
       }
 
       #tab-info {
-        /* height: 30%; */
         background-color: #ffffff;
         border-top: 2px solidrgb(153, 152, 152);
       }
@@ -204,10 +203,10 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   hierarchyParams: tf_graph_hierarchy.HierarchyParams = tf_graph_hierarchy.DefaultHierarchyParams;
 
   /**
- * A number between 0 and 100 denoting the % of progress
- * for the progress bar and the displayed message.
- * @type {{value: number, msg: string}}
- */
+   * A number between 0 and 100 denoting the % of progress
+   * for the progress bar and the displayed message.
+   * @type {{value: number, msg: string}}
+   */
   @property({ type: Object })
   progress: object;
 
