@@ -263,12 +263,12 @@ def validate_config(config):
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
 
-    config["start_step"] = validate_int_arg(config["start_step"], "start_step",
+    config["start_step"] = validate_int_arg(config.get("start_step"), "start_step",
                                             MonitorConst.DEFAULT_START_STEP, MonitorConst.DEFAULT_START_STEP)
-    config["collect_times"] = validate_int_arg(config["collect_times"], "collect_times",
+    config["collect_times"] = validate_int_arg(config.get("collect_times"), "collect_times",
                                                MonitorConst.DEFAULT_MIN_COLLECT_TIMES,
                                                MonitorConst.DEFAULT_MAX_COLLECT_TIMES)
-    config["step_interval"] = validate_int_arg(config["step_interval"], "step_interval",
+    config["step_interval"] = validate_int_arg(config.get("step_interval"), "step_interval",
                                                MonitorConst.DEFAULT_STEP_INTERVAL, MonitorConst.DEFAULT_STEP_INTERVAL)
 
     squash_name = config.get('squash_name', True)
