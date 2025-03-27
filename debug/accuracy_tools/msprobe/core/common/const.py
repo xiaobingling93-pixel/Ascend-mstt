@@ -662,6 +662,15 @@ class MonitorConst:
     """
     Class for monitor const
     """
+
+    # monitor config set default values
+    DEFAULT_GRAD_ACC_STEPS = 1
+    DEFAULT_START_ITERATION = 0
+    DEFAULT_START_STEP = 0
+    DEFAULT_MAX_COLLECT_TIMES = 100000000
+    DEFAULT_MIN_COLLECT_TIMES = 0
+    DEFAULT_STEP_INTERVAL = 1
+
     OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"

@@ -263,6 +263,10 @@ def validate_config(config):
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
 
+    config["start_step"] = validate_start_step(config.get("start_step"))
+    config["collect_times"] = validate_collect_times(config.get("collect_times"))
+    config["step_interval"] = validate_step_interval(config.get("step_interval"))
+
     squash_name = config.get('squash_name', True)
     validate_squash_name(squash_name)
 
@@ -277,6 +281,8 @@ def validate_config(config):
 
 def time_str2time_digit(time_str):
     time_format = '%b%d_%H-%M-%S'
+    if not isinstance(time_str, str):
+        raise TypeError(f"time_str:{time_str} should be a str")
     try:
         time_digit = datetime.strptime(time_str, time_format)
     except Exception as e:
@@ -314,3 +320,86 @@ def chmod_tensorboard_dir(path):
         recursive_chmod(path)
     except Exception as e:
         logger.warning(f"chmod tensorboard dir wrong because {e}, not updated, please check!!!")
+
+
+def validate_set_monitor(grad_acc_steps, start_iteration):
+    """
+    validate parameters of set_monitor.
+    """
+    grad_acc_steps = validate_grad_acc_steps(grad_acc_steps)
+    start_iteration = validate_start_iteration(start_iteration)
+    return grad_acc_steps, start_iteration
+
+
+def validate_grad_acc_steps(grad_acc_steps):
+    """Validate grad acc steps, if any exception occurs, use the default value."""
+    try:
+        if not is_int(grad_acc_steps):
+            raise TypeError(f'grad_acc_steps must be int')
+        if grad_acc_steps < MonitorConst.DEFAULT_GRAD_ACC_STEPS:
+            raise ValueError(f"grad_acc_steps must greater than {MonitorConst.DEFAULT_GRAD_ACC_STEPS}")
+    except Exception as e:
+        grad_acc_steps = MonitorConst.DEFAULT_GRAD_ACC_STEPS
+        logger.warning(f"Validate grad acc steps failed, {e}, replaced with default value {grad_acc_steps}.")
+    return grad_acc_steps
+
+
+def validate_start_iteration(start_iteration):
+    """Validate start iteration, if any exception occurs, use the default value."""
+    try:
+        if not is_int(start_iteration):
+            raise TypeError(f'start_iteration must be int')
+        if start_iteration < MonitorConst.DEFAULT_START_ITERATION:
+            raise ValueError(f"start_iteration must greater than or equal to {MonitorConst.DEFAULT_START_ITERATION}")
+    except Exception as e:
+        start_iteration = MonitorConst.DEFAULT_START_ITERATION
+        logger.warning(f"Validate start iteration failed, {e}, replaced with default value {start_iteration}.")
+    return start_iteration
+
+
+def validate_start_step(start_step):
+    """Validate start step, if any exception occurs, use the default value."""
+    if not start_step:
+        return MonitorConst.DEFAULT_START_STEP
+
+    try:
+        if not is_int(start_step):
+            raise TypeError(f'start_step must be int, actual is {start_step}')
+        if start_step < 0:
+            raise ValueError(f"start_step must greater than {MonitorConst.DEFAULT_START_STEP}")
+    except Exception as e:
+        start_step = MonitorConst.DEFAULT_START_STEP
+        logger.warning(f"Validate start step failed, {e}, replaced with default value {start_step}.")
+    return start_step
+
+
+def validate_collect_times(collect_times):
+    """Validate collect times, if any exception occurs, use the default value."""
+    if not collect_times:
+        return MonitorConst.DEFAULT_MAX_COLLECT_TIMES
+
+    try:
+        if not is_int(collect_times):
+            raise TypeError(f"collect_times must be int, actual is {collect_times}")
+        if collect_times < MonitorConst.DEFAULT_MIN_COLLECT_TIMES:
+            raise ValueError(f"collect_times must greater than or equal to {MonitorConst.DEFAULT_MIN_COLLECT_TIMES}")
+    except Exception as e:
+        collect_times = MonitorConst.DEFAULT_MAX_COLLECT_TIMES
+        logger.warning(f"Validate collect times failed, {e}, replaced with default value {collect_times}.")
+    return collect_times
+
+
+def validate_step_interval(step_interval):
+    """Validate step interval, if any exception occurs, use the default value."""
+    if not step_interval:
+        return MonitorConst.DEFAULT_STEP_INTERVAL
+
+    try:
+        if not is_int(step_interval):
+            raise TypeError(f"step_interval must be int")
+        if step_interval < MonitorConst.DEFAULT_STEP_INTERVAL:
+            raise ValueError(f"step_interval must greater than or equal to {MonitorConst.DEFAULT_STEP_INTERVAL}")
+    except Exception as e:
+        step_interval = MonitorConst.DEFAULT_STEP_INTERVAL
+        logger.warning(f"Validate step interval failed, {e}, replaced with default value {step_interval}.")
+    return step_interval
