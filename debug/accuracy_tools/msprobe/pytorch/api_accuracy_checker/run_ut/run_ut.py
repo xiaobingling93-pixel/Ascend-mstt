@@ -574,7 +574,11 @@ def run_ut_command(args):
     error_data_path = checker_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
-            time_info = result_csv_path.split('.')[0].split('_')[-1]
+            try:
+                time_info = result_csv_path.split('.')[0].split('_')[-1]
+            except IndexError:
+                logger.error(f"Invalid result_csv_path: {args.result_csv_path}")
+                raise Exception(f"Invalid result_csv_path: {args.result_csv_path}")
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)

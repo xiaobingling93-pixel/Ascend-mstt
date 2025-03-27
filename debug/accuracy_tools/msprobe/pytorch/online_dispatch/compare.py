@@ -124,7 +124,7 @@ class Saver:
                 self.test_result_cnt['forward_or_backward_fail_num'] += 1
 
     def write_summary_csv(self, test_result):
-        test_rows = []
+        test_rows = [[]]
         if self.stack_info:
             test_rows[0].append(self.COLUMN_STACK_INFO)
 
