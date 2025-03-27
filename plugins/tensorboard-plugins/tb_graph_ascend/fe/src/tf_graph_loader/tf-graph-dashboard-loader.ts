@@ -77,7 +77,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
   selectedFile: object;
 
   @property({ type: Object })
-  hierarchyParams = tf_graph_hierarchy.DefaultHierarchyParams;
+  hierarchyParams = tf_graph_hierarchy.defaultHierarchyParams;
 
   @property({
     type: Object,

@@ -310,7 +310,7 @@ export interface HierarchyParams {
   rankDirection: string;
 }
 
-export const DefaultHierarchyParams: HierarchyParams = {
+export const defaultHierarchyParams: HierarchyParams = {
   verifyTemplate: true,
   rankDirection: 'TB',
 };
