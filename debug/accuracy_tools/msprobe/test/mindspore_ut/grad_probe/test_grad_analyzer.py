@@ -1,6 +1,7 @@
 import os
 import shutil
 import json
+import time
 import numpy as np
 import mindspore as ms
 from unittest import TestCase, mock
@@ -15,7 +16,8 @@ class TestGradAnalyzer(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.output_path = "./test_output"
-        cls.dump_dir = f"{cls.output_path}/rank0/Dump"
+        cls.time_stamp = str(int(time.time()))
+        cls.dump_dir = f"{cls.output_path}/rank0/Dump{cls.time_stamp}"
         cls.save_dir = f"{cls.output_path}/rank0"
         os.makedirs(cls.dump_dir, exist_ok=True)
 
@@ -31,7 +33,8 @@ class TestGradAnalyzer(TestCase):
             'get_context.side_effect': lambda x: {
                 GradConst.OUTPUT_PATH: self.output_path,
                 GradConst.LEVEL: GradConst.LEVEL2,
-                GradConst.BOUNDS: [-0.1, 0.0, 0.1]
+                GradConst.BOUNDS: [-0.1, 0.0, 0.1],
+                GradConst.TIME_STAMP: self.time_stamp,
             }[x]
         }))
         # Clear dump directory before each test

@@ -368,7 +368,10 @@ class GraphsPlugin(base_plugin.TBPlugin):
         if 'Colors' in json_data:
             response_data['colors'] = json_data.get('Colors', {})
         if 'OverflowCheck' in json_data:
-            response_data['overflowCheck'] = json_data.get('OverflowCheck', {})
+            response_data['OverflowCheck'] = json_data.get('OverflowCheck')
+        else:
+            # 适配老精度溢出数据
+            response_data['OverflowCheck'] = True
         return http_util.Respond(request, response_data, "application/json")
 
     # 设置新的精度误差颜色

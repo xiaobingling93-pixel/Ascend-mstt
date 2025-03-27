@@ -16,6 +16,7 @@
 import os
 import threading
 from typing import Dict, Union, Tuple
+import time
 
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import create_directory, check_path_before_create
@@ -68,6 +69,8 @@ class GlobalContext:
             create_directory(self._setting.get(GradConst.OUTPUT_PATH))
         else:
             logger.warning("The output_path exists, the data will be covered.")
+
+        self._setting[GradConst.TIME_STAMP] = str(int(time.time()))
 
     def get_context(self, key: str):
         if key not in self._setting:

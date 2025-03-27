@@ -186,6 +186,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     });
   }
 
+
   getColors(): any {
     return this.colors;
   }

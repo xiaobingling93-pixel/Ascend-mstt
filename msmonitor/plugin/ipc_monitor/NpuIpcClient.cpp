@@ -28,6 +28,10 @@ std::string IpcClient::IpcClientNpuConfig()
 {
     auto size = pids_.size();
     auto *req = (NpuRequest *)malloc(sizeof(NpuRequest) + sizeof(int32_t) * size);
+    if (req == nullptr) {
+        LOG(ERROR) << " Malloc for NpuRequest failed !";
+        return "";
+    }
     req->type = DYNO_IPC_TYPE;
     req->pidSize = size;
     req->jobId = JOB_ID;
@@ -42,6 +46,7 @@ std::string IpcClient::IpcClientNpuConfig()
         return "";
     }
     free(req);
+    req = nullptr;
     message = PollRecvMessage(MAX_IPC_RETRIES, MAX_SLEEP_US);
     if (!message) {
         LOG(ERROR) << " Failed to receive on-demand config !";
