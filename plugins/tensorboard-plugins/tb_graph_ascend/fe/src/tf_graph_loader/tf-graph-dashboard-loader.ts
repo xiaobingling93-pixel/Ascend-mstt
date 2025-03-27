@@ -288,7 +288,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
       case tf_graph_common.SelectionType.OP_GRAPH:
       case tf_graph_common.SelectionType.CONCEPTUAL_GRAPH: {
         // Clear stats about the previous graph.
-        this.set('outStats', null)
+        this.set('outStats', null);
         const params = new URLSearchParams();
         params.set('run', run);
         params.set('conceptual', String(selectionType === tf_graph_common.SelectionType.CONCEPTUAL_GRAPH));
@@ -327,11 +327,10 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         pbTxtFile !== undefined ? pbTxtFile : null,
         this.hierarchyParams,
       )
-      .then(
-        function ({ graph, graphHierarchy }): void {
+      .then(({ graph, graphHierarchy }): void => {
           this._setOutGraph(graph);
           this._setOutGraphHierarchy(graphHierarchy);
-        }.bind(this),
+        },
       );
   }
 
