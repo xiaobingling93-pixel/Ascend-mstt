@@ -230,67 +230,6 @@ def convert_to_bnsd(_input, n, input_layout):
     return out.to(GTYPE)
 
 
-def convert_from_bsnd(_input, input_layout):
-    """
-    transform qkv from bsnd to input_layout.
-    B: batch_size
-    S: sequence_length
-    N: num_heads
-    D: head_dim
-    Args:
-       _input (torch.Tensor): tensor of shape (B,S,N,D)
-        input_layout (str): "BSH" or "SBH" or "BSND" or "BNSD" or "TND"
-    Returns:
-        tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
-    """
-    if input_layout == "BSH":
-        # (B,S,N,D)=>(B,S,N*D)
-        out = rearrange(_input, 'b s n d -> b s (n d)').contiguous()
-    elif input_layout == "SBH":
-        # (B,S,N,D)=>(S,B,N*D)
-        out = rearrange(_input, 'b s n d -> s b (n d)').contiguous()
-    elif input_layout == "BNSD":
-        # (B,S,N,D)=>(B,N,S,D)
-        out = rearrange(_input, 'b s n d -> b n s d').contiguous()
-    elif input_layout == "TND":
-        raise ValueError(f"input_layout {input_layout} does not supported for now.")
-    else:
-        out = _input
-    return out
-
-
-def convert_to_bsnd(_input, n, input_layout):
-    """
-    transform qkv from input_layout to bsnd.
-    B: batch_size
-    S: sequence_length
-    N: num_heads
-    D: head_dim
-    Args:
-        _input (torch.Tensor): tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
-        n (int): num_heads
-        input_layout (str):"BSH" or "SBH" or "BSND" or "BNSD" or "TND"
-    Returns:
-        tensor of shape (B,S,N,D)
-    """
-    if input_layout == "BSH":
-        # (B,S,N*D)=>(B,S,N,D)
-        out = rearrange(_input, 'b s (n d) -> b s n d', n=n)
-    elif input_layout == "SBH":
-        # (S,B,N*D)=>(B,S,N,D)
-        out = rearrange(_input, 's b (n d) -> b s n d', n=n)
-    elif input_layout == "BNSD":
-        # (B,N,S,D)=>(B,S,N,D)
-        out = rearrange(_input, 'b n s d -> b s n d', n=n)
-    elif input_layout == "TND":
-        raise ValueError(f"input_layout {input_layout} does not supported for now.")
-    else:
-        out = _input
-    if out.dim() != 4:
-        raise ValueError(f"convert qkv format failed with input_layout {input_layout}.")
-    return out
-
-
 def generate_attn_mask(*args):
     """
     # 当sparse_mode=2、3、4时小算子到融合算子会走这个优化，反过来看就要拆解回原来的基本实现

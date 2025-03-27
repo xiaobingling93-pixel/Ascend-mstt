@@ -338,7 +338,7 @@ export function build(
     .then(() => {
       return tf_graph_util.runAsyncTask(
         'Adding edges',
-        40,
+        70,
         () => {
           addEdgesInVis(h, graph, ROOT_NAME);
         },

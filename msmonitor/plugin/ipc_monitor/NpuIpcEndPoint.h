@@ -1,6 +1,7 @@
 #ifndef NPU_IPC_ENDPOINT_H
 #define NPU_IPC_ENDPOINT_H
 #include <cstdlib>
+#include <cerrno>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -47,16 +48,25 @@ public:
             throw std::runtime_error(std::strerror(errno) + IPC_ERROR(ErrCode::PARAM));
         }
         struct sockaddr_un address;
+        int ret;
         size_t addressLen = SetSocketAdress(addressName, address);
         if (address.sun_path[0] != STR_END_CHAR) {
-            unlink(address.sun_path);
+            ret = unlink(address.sun_path);
         }
-        int res = bind(socketFd, ReinterpretConvert<const struct sockaddr *>(&address), addressLen);
-        if (res == -1) {
+        if (ret == -1) {
+            throw std::runtime_error("Unlink failed, error is " + strerror(errno) + IPC_ERROR(ErrCode::PARAM));
+        }
+
+        ret = bind(socketFd, ReinterpretConvert<const struct sockaddr *>(&address), addressLen);
+        if (ret == -1) {
             throw std::runtime_error("Bind socket failed." + IPC_ERROR(ErrCode::PARAM));
         }
+
         if (address.sun_path[0] != STR_END_CHAR) {
-            chmod(address.sun_path, SOCKET_FD_CHMOD);
+            ret = chmod(address.sun_path, SOCKET_FD_CHMOD);
+        }
+        if (ret == -1) {
+            throw std::runtime_error("Chmod failed, error is " + strerror(errno) + IPC_ERROR(ErrCode::PARAM));
         }
     }
     ~NpuIpcEndPoint()
@@ -137,7 +147,7 @@ public:
         throw std::runtime_error("TryPeekMessage occur " + std::string(std::strerror(errno)));
     }
 
-    const char *GetName(Ctxt const & ctxt) const noexcept
+    const char *GetName(Ctxt const & ctxt) const
     {
         if (ctxt.messageName.sun_path[0] != STR_END_CHAR) {
             throw std::runtime_error("GetName() want to got abstract socket, but got " +

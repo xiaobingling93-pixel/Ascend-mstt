@@ -192,11 +192,14 @@ int main(int argc, char** argv) {
   auto server = setup_server(handler);
   server->run();
 
-  km_thread.join();
-  if (pm_thread) {
+  if (km_thread && km_thread.joinable()) {
+    km_thread.join();
+  }
+
+  if (pm_thread && pm_thread->joinable()) {
     pm_thread->join();
   }
-  if (gpumon_thread) {
+  if (gpumon_thread && gpumon_thread->joinable()) {
     gpumon_thread->join();
   }
 

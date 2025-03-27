@@ -31,6 +31,7 @@ class GradConst:
     STEP = "step"
     BOUNDS = "bounds"
     OUTPUT_PATH = "output_path"
+    TIME_STAMP = "time_stamp"
 
     # level const
     LEVEL = "level"

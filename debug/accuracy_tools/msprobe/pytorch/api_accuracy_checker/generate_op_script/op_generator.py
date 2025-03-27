@@ -28,9 +28,9 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_st
 ulp_standard_api, thousandth_standard_api
 from msprobe.core.common.file_utils import FileOpen, load_json, save_json
 from msprobe.core.common.utils import check_file_or_directory_path, check_op_str_pattern_valid, is_int
-from msprobe.core.common.const import Const, MonitorConst, MsgConst
+from msprobe.core.common.const import Const, MonitorConst, MsgConst, FileCheckConst
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import make_dir
+from msprobe.core.common.file_utils import make_dir, change_mode
 from msprobe.core.common.decorator import recursion_depth_decorator
 
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
@@ -169,7 +169,7 @@ class APIExtractor:
                     value = self.load_real_data_path(value, real_data_path)
                 new_data[key] = value
         if not new_data:
-            logger.error(f"Error: The api '{self.api_name}' does not exist in the file.")
+            logger.warning(f"Warning: The api '{self.api_name}' does not exist in the file.")
         else:
             save_json(self.output_file, new_data, indent=4)
             logger.info(
@@ -468,6 +468,7 @@ def _run_operator_generate_commond(cmd_args):
             fout.write(code_template.format(**internal_settings))
     except OSError:
         logger.error(f"Failed to open file. Please check file {template_path} or {operator_script_path}.")
+    change_mode(operator_script_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
     logger.info(f"Generate operator script successfully and the name is {operator_script_path}.")
 

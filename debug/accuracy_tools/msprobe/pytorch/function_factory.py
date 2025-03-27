@@ -70,7 +70,7 @@ class Register(dict):
 
         def add_register_item(key, value):
             if key in self._dict:
-                logger.warning(f"{value.__name__} has been registered before, so we will overriden it.")
+                logger.warning(f"{value.__name__} has been registered before, so we will override it.")
             self[key] = value
             return value
 
