@@ -31,127 +31,125 @@ import '../tf_search_combox/index';
 @customElement('tf-manual-match')
 class Legend extends PolymerElement {
   // 定义模板
-  static get template(): HTMLTemplateElement {
-    return html`
-      <style>
-        .matched-button {
-          display: flex;
-          justify-content: end;
-          margin-top: 10px;
-        }
-        .matched-button button {
-          border: 1px solid #ccc;
-          cursor: pointer;
-        }
-        .vaadin-details-selected {
-          display: flex;
-          padding-top: 0;
-        }
-        vaadin-combo-box::part(input-field) {
-          height: 30px;
-          border: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
-          background-color: white;
-          font-size: 14px;
-        }
-        vaadin-combo-box::part(toggle-button) {
-          font-size: 14px;
-        }
+  static readonly template = html`
+    <style>
+      .matched-button {
+        display: flex;
+        justify-content: end;
+        margin-top: 10px;
+      }
+      .matched-button button {
+        border: 1px solid #ccc;
+        cursor: pointer;
+      }
+      .vaadin-details-selected {
+        display: flex;
+        padding-top: 0;
+      }
+      vaadin-combo-box::part(input-field) {
+        height: 30px;
+        border: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
+        background-color: white;
+        font-size: 14px;
+      }
+      vaadin-combo-box::part(toggle-button) {
+        font-size: 14px;
+      }
 
-        tf-search-combox.matched-node::part(arraw-button) {
-          margin-top: 28px !important;
-        }
+      tf-search-combox.matched-node::part(arraw-button) {
+        margin-top: 28px !important;
+      }
 
-        .vaadin-details-title {
-          font-size: 14px;
-          color: #333333;
-          font-weight: 600;
-          margin-bottom: 0;
-        }
+      .vaadin-details-title {
+        font-size: 14px;
+        color: #333333;
+        font-weight: 600;
+        margin-bottom: 0;
+      }
 
-        .vaadin-details vaadin-details-summary {
-          font-size: 15px;
-          color: #333333;
-          font-weight: 600;
-        }
-        .match-button {
-          display: flex;
-          justify-content: center;
-        }
-        .match-button vaadin-button {
-          width: 100%;
-          font-weight: 600;
-        }
-        .warning {
-          border: 1px dashed #000000;
-          border-radius: 4px;
-          padding: 4px;
-          font-size: 14px;
-        }
-        .warning vaadin-button {
-          width: 100%;
-          font-weight: 600;
-        }
-        .warning span {
-          color: red;
-        }
-      </style>
-      <vaadin-details class="vaadin-details" summary="节点匹配" opened>
-        <div class="warning">
-          <p>注意：匹配结束后需要<span>点击保存按钮</span>，将操作后数据更新到文件中，<span>否则操作无效</span></p>
-          <vaadin-button
-            class="save-button"
-            theme="primary warning small"
-            on-click="_saveMatchedNodesLink"
-            disabled="[[saveLoading]]"
-            >保存</vaadin-button
-          >
-          <template is="dom-if" if="[[saveLoading]]">
-            <vaadin-progress-bar indeterminate></vaadin-progress-bar>
-          </template>
+      .vaadin-details vaadin-details-summary {
+        font-size: 15px;
+        color: #333333;
+        font-weight: 600;
+      }
+      .match-button {
+        display: flex;
+        justify-content: center;
+      }
+      .match-button vaadin-button {
+        width: 100%;
+        font-weight: 600;
+      }
+      .warning {
+        border: 1px dashed #000000;
+        border-radius: 4px;
+        padding: 4px;
+        font-size: 14px;
+      }
+      .warning vaadin-button {
+        width: 100%;
+        font-weight: 600;
+      }
+      .warning span {
+        color: red;
+      }
+    </style>
+    <vaadin-details class="vaadin-details" summary="节点匹配" opened>
+      <div class="warning">
+        <p>注意：匹配结束后需要<span>点击保存按钮</span>，将操作后数据更新到文件中，<span>否则操作无效</span></p>
+        <vaadin-button
+          class="save-button"
+          theme="primary warning small"
+          on-click="_saveMatchedNodesLink"
+          disabled="[[saveLoading]]"
+          >保存</vaadin-button
+        >
+        <template is="dom-if" if="[[saveLoading]]">
+          <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+        </template>
+      </div>
+      <div class="unmatched-node">
+        <p class="vaadin-details-title">未匹配节点</p>
+        <tf-search-combox
+          label="调试侧([[npuUnMatchedNodes.length]])"
+          items="[[npuUnMatchedNodes]]"
+          selected-value="{{selectedNpuUnMatchedNode}}"
+          on-select-change="[[_changeNpuUnMatchedNode]]"
+          is-compare-graph="[[isCompareGraph]]"
+        ></tf-search-combox>
+        <tf-search-combox
+          label="标杆侧([[benchUnMatchedNodes.length]])"
+          items="[[benchUnMatchedNodes]]"
+          selected-value="{{selectedBenchUnMatchedNode}}"
+          on-select-change="[[_changeBenchUnMatchedNode]]"
+          is-compare-graph="[[isCompareGraph]]"
+        ></tf-search-combox>
+        <div class="match-button">
+          <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">点击匹配</vaadin-button>
         </div>
-        <div class="unmatched-node">
-          <p class="vaadin-details-title">未匹配节点</p>
-          <tf-search-combox
-            label="调试侧([[npuUnMatchedNodes.length]])"
-            items="[[npuUnMatchedNodes]]"
-            selected-value="{{selectedNpuUnMatchedNode}}"
-            on-select-change="[[_changeNpuUnMatchedNode]]"
-            is-compare-graph="[[isCompareGraph]]"
-          ></tf-search-combox>
-          <tf-search-combox
-            label="标杆侧([[benchUnMatchedNodes.length]])"
-            items="[[benchUnMatchedNodes]]"
-            selected-value="{{selectedBenchUnMatchedNode}}"
-            on-select-change="[[_changeBenchUnMatchedNode]]"
-            is-compare-graph="[[isCompareGraph]]"
-          ></tf-search-combox>
-          <div class="match-button">
-            <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">点击匹配</vaadin-button>
-          </div>
+      </div>
+      <div class="matched-node">
+        <p class="vaadin-details-title">已匹配节点</p>
+        <tf-search-combox
+          class="matched-node"
+          label="调试侧([[npuMatchedNodes.length]])"
+          items="[[npuMatchedNodes]]"
+          selected-value="{{selectedNpuMatchedNode}}"
+          on-select-change="[[_changeNpuMatchedNode]]"
+        ></tf-search-combox>
+        <tf-search-combox
+          class="matched-node"
+          label="标杆侧([[benchMatchedNodes.length]])"
+          items="[[benchMatchedNodes]]"
+          selected-value="{{selectedBenchMatchedNode}}"
+          on-select-change="[[_changeBenchMatchedNode]]"
+        ></tf-search-combox>
+        <div class="match-button">
+          <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink">取消匹配</vaadin-button>
         </div>
-        <div class="matched-node">
-          <p class="vaadin-details-title">已匹配节点</p>
-          <tf-search-combox
-            class="matched-node"
-            label="调试侧([[npuMatchedNodes.length]])"
-            items="[[npuMatchedNodes]]"
-            selected-value="{{selectedNpuMatchedNode}}"
-            on-select-change="[[_changeNpuMatchedNode]]"
-          ></tf-search-combox>
-          <tf-search-combox
-            class="matched-node"
-            label="标杆侧([[benchMatchedNodes.length]])"
-            items="[[benchMatchedNodes]]"
-            selected-value="{{selectedBenchMatchedNode}}"
-            on-select-change="[[_changeBenchMatchedNode]]"
-          ></tf-search-combox>
-          <div class="match-button">
-            <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink">取消匹配</vaadin-button>
-          </div>
-        </div>
-      </vaadin-details>
-    `;
-  }
+      </div>
+    </vaadin-details>
+  `;
 
   @property({ type: Object })
   unmatched: any = [];

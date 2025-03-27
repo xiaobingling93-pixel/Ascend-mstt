@@ -186,11 +186,9 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     });
   }
 
-
   getColors(): any {
     return this.colors;
   }
-
   _setCompoments(componentsPath): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       this.set('progress', {

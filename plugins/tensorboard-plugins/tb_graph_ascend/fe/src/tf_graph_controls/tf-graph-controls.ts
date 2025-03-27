@@ -635,10 +635,14 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   // MicroStep 选择 和 Step选择
   @property({ type: Number })
   _selectedMicroStep: number = -1;
+
+  @property({ type: Number })
   _selectedStep: number = -1;
 
   @property({ type: Object })
   microsteps: any;
+
+  @property({ type: Object })
   steplist: any;
 
   // 目录，全量节点数据，支撑各种节点的搜索
@@ -816,7 +820,10 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     const { datasets: newDatasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
     function shouldSkip(datasets: any, run: any, tag: any): boolean {
       return (
-        !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph
+        !newDatasets ||
+        !newDatasets[run] ||
+        !(newDatasets[run] as any).tags[tag] ||
+        (newDatasets[run] as any).tags[tag].opGraph
       );
     }
     if (shouldSkip(newDatasets, run, tag)) {
