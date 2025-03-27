@@ -259,7 +259,6 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
           );
           return;
         }
-        console.log('components', components);
         // 后续处理逻辑...
         const entries = Object.entries(components.tooltips || {});
         const toolTipObject = Object.fromEntries(entries);
@@ -337,9 +336,9 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         this.hierarchyParams,
       )
       .then(({ graph, graphHierarchy }): void => {
-          this._setOutGraph(graph);
-          this._setOutGraphHierarchy(graphHierarchy);
-        },
+        this._setOutGraph(graph);
+        this._setOutGraphHierarchy(graphHierarchy);
+      },
       );
   }
 }
