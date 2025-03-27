@@ -27,7 +27,7 @@ class TfWbrString extends PolymerElement {
     -->
     <template is="dom-repeat" items="[[_parts]]" as="part">[[part]]<wbr /></template>
   `;
-
+  
   @property({ type: String })
   value: string = '';
 

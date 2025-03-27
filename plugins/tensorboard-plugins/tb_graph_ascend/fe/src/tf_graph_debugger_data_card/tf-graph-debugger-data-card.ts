@@ -301,6 +301,35 @@ class TfGraphDebuggerDataCard extends LegacyElementMixin(PolymerElement) {
   @property({ type: Boolean, notify: true })
   allStepsModeEnabled: any;
 
+  ready(): void {
+    super.ready();
+    let mainContainer = document.getElementById('mainContainer');
+    let scrollbarContainer = document.querySelector('tf-dashboard-layout .scrollbar') as HTMLElement | null;
+    if (mainContainer && scrollbarContainer) {
+      // If this component is being used inside of TensorBoard's dashboard layout, it may easily
+      // cause the dashboard layout element to overflow, giving the user 2 scroll bars. Prevent
+      // that by hiding whatever content overflows - the user will have to expand the viewport to
+      // use this debugging card.
+      mainContainer.style.overflow = 'hidden';
+      scrollbarContainer.style.overflow = 'hidden';
+    }
+  }
+
+  _healthPillsAvailable(debuggerDataEnabled: any, nodeNamesToHealthPills: any): any {
+    // So long as there is a mapping (even if empty) from node name to health pills, show the
+    // legend and slider. We do that because, even if no health pills exist at the current step,
+    // the user may desire to change steps, and the slider must show for the user to do that.
+    return debuggerDataEnabled && nodeNamesToHealthPills;
+  }
+
+  _computeTensorCountString(healthPillValuesForSelectedNode: any, valueIndex: any): any {
+    if (!healthPillValuesForSelectedNode) {
+      // No health pill data is available.
+      return '';
+    }
+    return healthPillValuesForSelectedNode[valueIndex].toFixed(0);
+  }
+
   @computed(
     'nodeNamesToHealthPills',
     'healthPillStepIndex',
@@ -404,6 +433,10 @@ class TfGraphDebuggerDataCard extends LegacyElementMixin(PolymerElement) {
     return 0;
   }
 
+  _hasDebuggerNumericAlerts(debuggerNumericAlerts: any): any {
+    return debuggerNumericAlerts?.length;
+  }
+
   @observe('debuggerNumericAlerts')
   _updateAlertsList(): void {
     let debuggerNumericAlerts = this.debuggerNumericAlerts;
@@ -460,39 +493,6 @@ class TfGraphDebuggerDataCard extends LegacyElementMixin(PolymerElement) {
       }
       (PolymerDom.dom(alertBody) as any).appendChild(tableRow);
     }
-  }
-
-  override ready(): void {
-    super.ready();
-    let mainContainer = document.getElementById('mainContainer');
-    let scrollbarContainer = document.querySelector('tf-dashboard-layout .scrollbar') as HTMLElement | null;
-    if (mainContainer && scrollbarContainer) {
-      // If this component is being used inside of TensorBoard's dashboard layout, it may easily
-      // cause the dashboard layout element to overflow, giving the user 2 scroll bars. Prevent
-      // that by hiding whatever content overflows - the user will have to expand the viewport to
-      // use this debugging card.
-      mainContainer.style.overflow = 'hidden';
-      scrollbarContainer.style.overflow = 'hidden';
-    }
-  }
-
-  _hasDebuggerNumericAlerts(debuggerNumericAlerts: any): any {
-    return debuggerNumericAlerts?.length;
-  }
-
-  _healthPillsAvailable(debuggerDataEnabled: any, nodeNamesToHealthPills: any): any {
-    // So long as there is a mapping (even if empty) from node name to health pills, show the
-    // legend and slider. We do that because, even if no health pills exist at the current step,
-    // the user may desire to change steps, and the slider must show for the user to do that.
-    return debuggerDataEnabled && nodeNamesToHealthPills;
-  }
-
-  _computeTensorCountString(healthPillValuesForSelectedNode: any, valueIndex: any): any {
-    if (!healthPillValuesForSelectedNode) {
-      // No health pill data is available.
-      return '';
-    }
-    return healthPillValuesForSelectedNode[valueIndex].toFixed(0);
   }
 
   // Adds a listener to an element, so that when that element is clicked, the tensor with

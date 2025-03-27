@@ -212,7 +212,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         while (timer <= DATA_LOAD_TIME && !shouldBreak) {
           if (timer < DATA_NOTICE_TIME) {
             const progress = Math.log(timer + 1) / Math.log(DATA_NOTICE_TIME);
-            const progressIncrement = progress * 100 - previousProgress;
+            const progressIncrement = (progress * 100) - previousProgress;
             dataTracker.updateProgress(progressIncrement);
             previousProgress = progress * 100;
           } else {

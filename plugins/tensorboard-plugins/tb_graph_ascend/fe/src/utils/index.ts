@@ -15,18 +15,18 @@
  */
 
 const removePrototypePollution = (obj: any): void => {
-  if (obj && typeof obj === 'object') {
+  if (obj &&  typeof obj === 'object') {
     for (let key in obj) {
       if (key === '__proto__' || key === 'constructor') {
         delete obj[key];
       } else if (typeof obj[key] === 'object') {
-        removePrototypePollution(obj[key]);
+        removePrototypePollution(obj[key])
       }
     }
   }
 };
 
-export const safeJSONParse = (str: any, defaultValue: any = null): any => {
+export const safeJSONParse = (str:any, defaultValue: any = null): any => {
   try {
     const res = JSON.parse(str);
     removePrototypePollution(res);

@@ -250,7 +250,9 @@ export const interpolate: d3.Line<{
   });
 
 function position(component: HTMLElement, edgeGroup: HTMLElement): void {
-  d3.select(edgeGroup).select(`path.${Class.Edge.LINE}`).transition();
+  d3.select(edgeGroup)
+    .select(`path.${Class.Edge.LINE}`)
+    .transition()
 }
 
 /**

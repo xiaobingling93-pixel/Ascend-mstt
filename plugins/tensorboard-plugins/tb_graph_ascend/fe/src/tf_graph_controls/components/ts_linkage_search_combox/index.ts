@@ -27,90 +27,96 @@ import * as tf_graph_render from '../../../tf_graph_common/render';
 import '../tf_search_combox/index';
 @customElement('tf-linkage-search-combox')
 class Legend extends PolymerElement {
+  static get shadowRootOptions(): { mode: string } {
+    return { mode: 'open' }; // 确保启用了 Shadow DOM
+  }
+
   // 定义模板
-  static readonly template = html`
-    <style>
-      :host {
-        --select-border-color: #3b5998;
-      }
-      .condition {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-      }
+  static get template(): HTMLTemplateElement {
+    return html`
+      <style>
+        :host {
+          --select-border-color: #3b5998;
+        }
+        .condition {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
 
-      vaadin-combo-box {
-        flex: 1;
-        font-size: small;
-        width: 100%;
-      }
+        vaadin-combo-box {
+          flex: 1;
+          font-size: small;
+          width: 100%;
+        }
 
-      vaadin-text-field input {
-        min-height: 0;
-      }
+        vaadin-text-field input {
+          min-height: 0;
+        }
 
-      .result vaadin-combo-box {
-        padding-top: 0;
-      }
-      .vaadin-field-container {
-        width: 100%;
-      }
-      vaadin-combo-box::part(input-field) {
-        background-color: white;
-        border: 1px solid #0d0d0d;
-        height: 30px;
-        border-radius: 0;
-      }
+        .result vaadin-combo-box {
+          padding-top: 0;
+        }
+        .vaadin-field-container {
+          width: 100%;
+        }
+        vaadin-combo-box::part(input-field) {
+          background-color: white;
+          border: 1px solid #0d0d0d;
+          height: 30px;
+          border-radius: 0;
+        }
 
-      vaadin-text-field::part(input-field) {
-        background-color: white;
-        border: 1px solid #0d0d0d;
-        height: 30px;
-        border-radius: 0;
-        font-size: 14px;
-      }
+        vaadin-text-field::part(input-field) {
+          background-color: white;
+          border: 1px solid #0d0d0d;
+          height: 30px;
+          border-radius: 0;
+          font-size: 14px;
+        }
 
-      vaadin-select {
-        width: 100px;
-      }
+        vaadin-select {
+          width: 100px;
+        }
 
-      vaadin-select::part(input-field) {
-        background-color: white;
-        border: 1px solid var(--select-border-color);
-        height: 30px;
-        border-radius: 0;
-      }
+        vaadin-select::part(input-field) {
+          background-color: white;
+          border: 1px solid var(--select-border-color);
+          height: 30px;
+          border-radius: 0;
+        }
 
-      vaadin-select-item {
-        font-size: smaller;
-      }
-    </style>
-    <div class="control-holder">
-      <div class="condition">
-        <vaadin-select
-          label="数据侧"
-          readonly="[[!isCompareGraph]]"
-          items="[[menuSideItem]]"
-          value="{{selectedSide}}"
-        ></vaadin-select>
-        <vaadin-text-field
-          label="节点搜索"
-          value="{{searchText}}"
-          on-change="_onChangeSearchText"
-          clear-button-visible
-        ></vaadin-text-field>
+        vaadin-select-item {
+          font-size: smaller;
+        }
+      </style>
+      <div class="control-holder">
+        <div class="condition">
+          <vaadin-select
+            label="数据侧"
+            readonly="[[!isCompareGraph]]"
+            items="[[menuSideItem]]"
+            value="{{selectedSide}}"
+          ></vaadin-select>
+          <vaadin-text-field
+            label="节点搜索"
+            value="{{searchText}}"
+            on-change="_onChangeSearchText"
+            clear-button-visible
+          ></vaadin-text-field>
+        </div>
+        <div class="result">
+          <tf-search-combox
+            label="节点列表([[menuItem.length]])"
+            items="[[menuItem]]"
+            selected-value="{{selectedMenuNode}}"
+            on-select-change="[[_onSelectedMenuNode]]"
+          ></tf-search-combox>
+        </div>
       </div>
-      <div class="result">
-        <tf-search-combox
-          label="节点列表([[menuItem.length]])"
-          items="[[menuItem]]"
-          selected-value="{{selectedMenuNode}}"
-          on-select-change="[[_onSelectedMenuNode]]"
-        ></tf-search-combox>
-      </div>
-    </div>
-  `;
+    `;
+  }
 
   @property({ type: Object })
   renderHierarchy: tf_graph_render.MergedRenderGraphInfo = {} as any;

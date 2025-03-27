@@ -118,7 +118,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
     const decodedStr = new TextDecoder().decode(sideStr);
     const decodedObj = safeJSONParse(decodedStr);
     if (decodedObj === null) {
-      console.error('Error: loading contextmenu failed please check data or getMenu function.');
+      console.error("Error: loading contextmenu failed please check data or getMenu function.");
       return;
     }
     // 构建菜单选项
@@ -157,7 +157,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
       .append('li')
       .on('click', (d, i) => {
         if (d.action === 'expand') {
-          sceneElement.fire('parent-node-toggle-expand', { nodeData });
+            sceneElement.fire('parent-node-toggle-expand', { nodeData });
         }
         maybeCloseMenu();
       })

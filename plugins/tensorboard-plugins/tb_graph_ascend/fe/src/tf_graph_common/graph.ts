@@ -955,7 +955,9 @@ export function hasSimilarDegreeSequence(graph1: graphlib.Graph, graph2: graphli
  * For example, if the name is 'a/b/c', the returned path is
  * ['a', 'a/b', 'a/b/c'].
  */
-export function getHierarchicalPath(name: string): string[] {
+export function getHierarchicalPath(
+  name: string,
+): string[] {
   let path: string[] = [];
   let i = name.indexOf(NAMESPACE_DELIM);
   // Push all parent portions of the path.

@@ -31,7 +31,8 @@ const UNMATCHED_NODE_NAME = '无匹配节点';
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
-  static readonly template = html`
+  static get template(): HTMLTemplateElement {
+    return html`
       <style>
         /* 定义 CSS 变量 */
         :root {
@@ -300,6 +301,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         </div>
       </template>
     `;
+  }
 
   // 核心part
   @property({ type: Array })

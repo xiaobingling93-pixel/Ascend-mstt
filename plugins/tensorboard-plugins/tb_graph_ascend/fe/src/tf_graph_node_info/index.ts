@@ -30,7 +30,8 @@ import { BENCH_PREFIX, NPU_PREFIX } from '../tf_graph_common/common';
 
 @customElement('tf-graph-vaadin-tab')
 class TfGraphNodeInfo extends PolymerElement {
-  static readonly template = html`
+  static get template(): HTMLTemplateElement {
+    return html`
     <style>
       :host {
         --selected-color: rgb(255, 255, 255); 
@@ -189,6 +190,7 @@ class TfGraphNodeInfo extends PolymerElement {
       </div>
     </vaadin-tabsheet>
   `;
+  }
 
   @property({
     type: Object,
