@@ -21,84 +21,82 @@ import '@vaadin/tooltip';
 import type { GridEventContext } from '@vaadin/grid';
 @customElement('tf-vaadin-table')
 class TfVaadinTable extends PolymerElement {
-  static get template(): HTMLTemplateElement {
-    return html`
-      <style>
-        :host {
-          display: block;
-        }
+  static readonly template = html`
+    <style>
+      :host {
+        display: block;
+      }
 
-        .vaadin-grid {
-          height: 100%;
-          font-size: 14px;
-        }
+      .vaadin-grid {
+        height: 100%;
+        font-size: 14px;
+      }
 
-        vaadin-grid-cell-content {
-          height: 100%;
-          display: flex;
-          align-items: center;
-        }
+      vaadin-grid-cell-content {
+        height: 100%;
+        display: flex;
+        align-items: center;
+      }
 
-        vaadin-grid::part(header-cell) {
-          border-bottom: 1px solid rgb(66, 66, 66);
-        }
+      vaadin-grid::part(header-cell) {
+        border-bottom: 1px solid rgb(66, 66, 66);
+      }
 
-        .highlight-cell {
-          border: 1px solid #005fdb;
-          border-radius: 4px;
-        }
-        .no-data {
-          font-size: 14px;
-          color: #999;
-        }
-        .avater-matched:before {
-          content: '';
-          display: inline-block;
-          width: 10px;
-          height: 8px;
-          background: #52c41a;
-          padding-top: 2px;
-          margin-right: 10px;
-          border-radius: 50%;
-        }
-        .avater-unmatched:before {
-          content: '';
-          display: inline-block;
-          width: 10px;
-          height: 8px;
-          background: #ff4d4f;
-          padding-top: 2px;
-          margin-right: 10px;
-          border-radius: 50%;
-        }
-        .splitter {
-          border-bottom: 1px solid rgb(66, 66, 66);
-        }
-      </style>
-      <template is="dom-if" if="[[!isEmptyGrid]]">
-        <vaadin-grid
-          id="grid"
-          on-click="handleGridClick"
-          items="[[ioDataset]]"
-          class="vaadin-grid"
-          theme="force-outline no-border"
-        >
-          <!-- 动态生成列 -->
-          <template is="dom-repeat" items="[[headers]]" as="header">
-            <vaadin-grid-column
-              path="[[header]]"
-              header="[[header]]"
-              resizable
-              renderer="[[renderDefaultValue]]"
-            ></vaadin-grid-column>
-          </template>
-        </vaadin-grid>
-      </template>
-      <template is="dom-if" if="[[isEmptyGrid]]">
-        <p class="no-data">当前节点暂无IO数据</p>
-      </template>
-    `;
-  }
+      .highlight-cell {
+        border: 1px solid #005fdb;
+        border-radius: 4px;
+      }
+      .no-data {
+        font-size: 14px;
+        color: #999;
+      }
+      .avater-matched:before {
+        content: '';
+        display: inline-block;
+        width: 10px;
+        height: 8px;
+        background: #52c41a;
+        padding-top: 2px;
+        margin-right: 10px;
+        border-radius: 50%;
+      }
+      .avater-unmatched:before {
+        content: '';
+        display: inline-block;
+        width: 10px;
+        height: 8px;
+        background: #ff4d4f;
+        padding-top: 2px;
+        margin-right: 10px;
+        border-radius: 50%;
+      }
+      .splitter {
+        border-bottom: 1px solid rgb(66, 66, 66);
+      }
+    </style>
+    <template is="dom-if" if="[[!isEmptyGrid]]">
+      <vaadin-grid
+        id="grid"
+        on-click="handleGridClick"
+        items="[[ioDataset]]"
+        class="vaadin-grid"
+        theme="force-outline no-border"
+      >
+        <!-- 动态生成列 -->
+        <template is="dom-repeat" items="[[headers]]" as="header">
+          <vaadin-grid-column
+            path="[[header]]"
+            header="[[header]]"
+            resizable
+            renderer="[[renderDefaultValue]]"
+          ></vaadin-grid-column>
+        </template>
+      </vaadin-grid>
+    </template>
+    <template is="dom-if" if="[[isEmptyGrid]]">
+      <p class="no-data">当前节点暂无IO数据</p>
+    </template>
+  `;
 
   @property({ type: Object })
   syncGrid?: HTMLElement; // 点击高亮需要同步的表格元素

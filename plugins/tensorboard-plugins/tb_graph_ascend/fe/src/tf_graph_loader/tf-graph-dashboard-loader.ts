@@ -33,13 +33,13 @@ interface GraphRunTag {
 }
 
 interface Components {
-  Menu: object;
-  ToolTip: '';
-  Colors: object;
-  OverflowCheck: boolean;
-  MicroSteps: number;
-  StepList: [];
-  UnMatchedNode: [];
+  menu: object;
+  tooltips: string;
+  colors: object;
+  overflowCheck: boolean;
+  microSteps: number;
+  stepList: [];
+  unMatchedNode: [];
   match: [];
 }
 /**
@@ -53,6 +53,8 @@ interface Components {
  */
 @customElement('tf-graph-dashboard-loader')
 class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
+  static readonly _template = null;
+
   @property({ type: Array })
   datasets: any[];
 
@@ -75,7 +77,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
   selectedFile: object;
 
   @property({ type: Object })
-  hierarchyParams = tf_graph_hierarchy.DefaultHierarchyParams;
+  hierarchyParams = tf_graph_hierarchy.defaultHierarchyParams;
 
   @property({
     type: Object,
@@ -100,32 +102,27 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   _graphRunTag: GraphRunTag;
-  override _template = null;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   menu: object;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   colorset: object;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   tooltips: object;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   colors: any;
@@ -138,34 +135,43 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   microsteps: any;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   steplist: any;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   unmatched: object;
 
   @property({
     type: Object,
-    readOnly: true, // readonly so outsider can't change this via binding
     notify: true,
   })
   matchedlist: object;
 
-  getColors(): any {
-    return this.colors;
+  @observe('selectedFile')
+  _selectedFileChanged(): void {
+    let e = this.selectedFile;
+    if (!e) {
+      return;
+    }
+    const target = (e as any).target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) {
+      return;
+    }
+    // Clear out the value of the file chooser. This ensures that if the user
+    // selects the same file, we'll re-read it.
+    target.value = '';
+    this._fetchAndConstructHierarchicalGraph(null, file);
   }
 
   @observe('selection')
@@ -180,6 +186,9 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     });
   }
 
+  getColors(): any {
+    return this.colors;
+  }
   _setCompoments(componentsPath): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       this.set('progress', {
@@ -212,7 +221,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         }
       }.bind(this);
 
-      const fetchTask = async function (): Promise<void> {
+      const fetchTask = async (): Promise<void> => {
         let componentsStr;
         try {
           componentsStr = await tf_graph_parser.fetchPbTxt(componentsPath);
@@ -225,13 +234,13 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         shouldBreak = true; // 正常流程也停止定时器
 
         let components: Components = {
-          Menu: [],
-          ToolTip: '',
-          Colors: {},
-          OverflowCheck: false,
-          MicroSteps: 0,
-          StepList: [],
-          UnMatchedNode: [],
+          menu: [],
+          tooltips: '',
+          colors: {},
+          overflowCheck: false,
+          microSteps: 0,
+          stepList: [],
+          unMatchedNode: [],
           match: [],
         };
 
@@ -250,32 +259,31 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
           );
           return;
         }
-
         // 后续处理逻辑...
-        const entries = Object.entries(components.ToolTip);
+        const entries = Object.entries(components.tooltips || {});
         const toolTipObject = Object.fromEntries(entries);
 
-        this._setMenu(components.Menu);
-        this._setTooltips(toolTipObject);
-        this._setColors(components.Colors);
-        this.set('overflowcheck', components.OverflowCheck);
-        this._setColorset(Object.entries(components.Colors));
-        this._setUnmatched(components.UnMatchedNode);
-        this._setMatchedlist(components.match);
+        this.set('menu', components.menu);
+        this.set('tooltips', toolTipObject);
+        this.set('colors', components.colors);
+        this.set('overflowcheck', components.overflowCheck);
+        this.set('colorset', Object.entries(components.colors || {}));
+        this.set('unmatched', components.unMatchedNode);
+        this.set('matchedlist', components.match);
 
-        tf_graph_node.getColors(components.Colors);
+        tf_graph_node.getColors(components.colors);
 
-        const microstepsCount = Number(components.MicroSteps);
+        const microstepsCount = Number(components.microSteps);
         if (microstepsCount) {
           const microstepsArray = ['ALL', ...Array.from({ length: microstepsCount }, (_, index) => index)];
-          this._setMicrosteps(microstepsArray);
+          this.set('microsteps', microstepsArray);
         } else {
-          this._setMicrosteps([]);
+          this.set('microsteps', []);
         }
-        const steplistCount = Number(components.MicroSteps);
-        this._setSteplist(steplistCount ? components.StepList : []);
+        const steplistCount = Number(components.microSteps);
+        this.set('steplist', steplistCount ? components.stepList : []);
         resolve();
-      }.bind(this);
+      }
 
       // 同时启动定时器和 fetch 任务
       await Promise.all([timerTask(), fetchTask()]);
@@ -328,26 +336,9 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
         this.hierarchyParams,
       )
       .then(({ graph, graphHierarchy }): void => {
-          this._setOutGraph(graph);
-          this._setOutGraphHierarchy(graphHierarchy);
-        },
+        this._setOutGraph(graph);
+        this._setOutGraphHierarchy(graphHierarchy);
+      },
       );
-  }
-
-  @observe('selectedFile')
-  _selectedFileChanged(): void {
-    let e = this.selectedFile;
-    if (!e) {
-      return;
-    }
-    const target = (e as any).target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (!file) {
-      return;
-    }
-    // Clear out the value of the file chooser. This ensures that if the user
-    // selects the same file, we'll re-read it.
-    target.value = '';
-    this._fetchAndConstructHierarchicalGraph(null, file);
   }
 }
