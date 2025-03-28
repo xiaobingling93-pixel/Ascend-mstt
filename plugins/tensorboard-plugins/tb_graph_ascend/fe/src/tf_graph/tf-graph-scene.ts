@@ -700,7 +700,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     if (linkedNode) {
       this._updateNodeState(linkedNode);
     }
-    this._build(this.renderHierarchy);
+    // this._build(this.renderHierarchy);
   }
 
   _onZoomChanged(): void {

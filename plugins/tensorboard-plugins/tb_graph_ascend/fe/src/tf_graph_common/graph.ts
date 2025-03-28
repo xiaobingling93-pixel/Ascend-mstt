@@ -672,29 +672,6 @@ export function build(
   params: BuildParams,
   tracker?: ProgressTracker,
 ): Promise<SlimGraph> {
-  /**
-   * A dictionary that maps each in-embedding node name to the node
-   * object.
-   */
-  let inEmbedding: {
-    [nodeName: string]: OpNode;
-  } = {};
-  /**
-   * A dictionary that maps each out-embedding node name to the node
-   * object.
-   */
-  let outEmbedding: {
-    [nodeName: string]: OpNode;
-  } = {};
-  /**
-   * A dictionary that maps each node name to an array of the node's
-   * out-embedding node label objects.
-   */
-  let outEmbeddings: {
-    [inputName: string]: OpNode[];
-  } = {};
-  let isInEmbeddedPred = getEmbedPredicate(params.inEmbeddingTypes);
-  let isOutEmbeddedPred = getEmbedPredicate(params.outEmbeddingTypes);
   let embeddingNodeNames: string[] = [];
   let rawNodes = graphDef.node;
   /**
@@ -742,23 +719,6 @@ export function build(
             if (rawNode.matched_node_link && rawNode.matched_node_link.length > 0) {
               opNode.nodeAttributes._linked_node = rawNode.matched_node_link;
             }
-            if (isInEmbeddedPred(opNode)) {
-              embeddingNodeNames.push(opNode.name);
-              inEmbedding[opNode.name] = opNode;
-              return opNode;
-            }
-            if (isOutEmbeddedPred(opNode)) {
-              embeddingNodeNames.push(opNode.name);
-              outEmbedding[opNode.name] = opNode;
-              _.each(opNode.inputs, (input) => {
-                let inputName = input.name;
-                outEmbeddings[inputName] = outEmbeddings[inputName] || [];
-                outEmbeddings[inputName].push(opNode);
-              });
-              return opNode;
-            }
-            // The node is not an embedding, so add it to the names and nodes
-            // lists.
             opNodes[index] = opNode;
             nodeNames[index] = opNode.name;
             index++;
@@ -786,15 +746,6 @@ export function build(
             if (opNode instanceof OpNodeImpl) {
               let normalizedName = normalizedNameDict[opNode.name] || opNode.name;
               graph.nodes[normalizedName] = opNode;
-              // Check if the node has out-embeddings. If yes, add them to the
-              // node.
-              if (opNode.name in outEmbeddings) {
-                opNode.outEmbeddings = outEmbeddings[opNode.name];
-                // Normalize the names of the out-embeddings.
-                _.each(opNode.outEmbeddings, (node) => {
-                  node.name = normalizedNameDict[node.name] || node.name;
-                });
-              }
               // Update the name of the node.
               opNode.name = normalizedName;
             } else {
@@ -813,10 +764,6 @@ export function build(
             });
             // Removes repeated edge info.
             opNode.attr = _.filter(opNode.attr, ({ key, value }) => key !== 'edge_info');
-          });
-          // Normalize the names of in-embeddings.
-          _.each(inEmbedding, (node, name) => {
-            node.name = normalizedNameDict[node.name] || node.name;
           });
           return graph;
         },
@@ -837,23 +784,6 @@ export function createGraph<N, E>(name: string, type, graphOptions: LabeledGraph
     type: type,
   } as any);
   return graph;
-}
-
-/**
- * Create a predicate for checking whether a node should be embedded based on
- * the specified types.
- */
-function getEmbedPredicate(types: string[]) {
-  return function (node: OpNode): boolean {
-    // check types
-    for (let i = 0; i < types.length; i++) {
-      let regExp = new RegExp(types[i]);
-      if (typeof node.op === 'string' && node.op.match(regExp)) {
-        return true;
-      }
-    }
-    return false;
-  };
 }
 
 /**

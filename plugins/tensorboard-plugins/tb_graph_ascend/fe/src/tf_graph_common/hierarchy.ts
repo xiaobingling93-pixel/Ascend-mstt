@@ -24,13 +24,10 @@ import * as tb_debug from '../tb_debug';
 import { ProgressTracker } from './common';
 import * as tf_graph from './graph';
 import {
-  createGraph,
   createMetaedge,
   createMetanode,
   Edges,
-  GraphType,
   GroupNode,
-  Metaedge,
   MetaedgeImpl,
   Metanode,
   Node,
@@ -248,26 +245,6 @@ export class Hierarchy extends tf_graph_util.Dispatcher<HierarchyEvent> {
       }
     }
     return ordering;
-  }
-
-  /**
-   * Utility function for determining the name of the immediate child under a
-   * node for a given descendant path. If the descendant corresponds to no
-   * immediate child, an error is thrown.
-   */
-  private getChildName(nodeName: string, descendantName: string): string {
-    // Walk up the hierarchy from the descendant to find the child.
-    let currentNode: Node | null = this.index[descendantName];
-    if (!currentNode) {
-      return '';
-    }
-    while (currentNode) {
-      if (currentNode.parentNode && currentNode.parentNode.name === nodeName) {
-        return currentNode.name;
-      }
-      currentNode = currentNode.parentNode;
-    }
-    throw Error(`Could not find immediate child for descendant: ${descendantName}`);
   }
 
   /** Helper method for getPredecessors and getSuccessors */
