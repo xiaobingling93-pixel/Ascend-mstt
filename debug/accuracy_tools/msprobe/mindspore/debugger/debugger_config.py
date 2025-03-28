@@ -53,11 +53,13 @@ class DebuggerConfig:
             self.stage = FreeBenchmarkConst.DEFAULT_STAGE if not task_config.fuzz_stage else task_config.fuzz_stage
             if self.handler_type == FreeBenchmarkConst.FIX and \
                     self.pert_type != FreeBenchmarkConst.DEFAULT_PERT_TYPE:
-                raise ValueError("pert_mode must be improve_precision or empty when handler_type is fix, "
-                                 f"but got {self.pert_type}.")
+                logger.error("pert_mode must be improve_precision or empty when handler_type is fix, "
+                             f"but got {self.pert_type}.")
+                raise ValueError
             if self.stage == Const.BACKWARD and self.handler_type == FreeBenchmarkConst.FIX:
-                raise ValueError("handler_type must be check or empty when fuzz_stage is backward, "
-                                 f"but got {self.handler_type}.")
+                logger.error("handler_type must be check or empty when fuzz_stage is backward, "
+                             f"but got {self.handler_type}.")
+                raise ValueError
             self.dump_level = FreeBenchmarkConst.DEFAULT_DUMP_LEVEL
 
     def check(self):

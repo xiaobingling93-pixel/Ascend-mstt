@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 from unittest import TestCase
 from unittest.mock import patch
 
+from msprobe.core.common.log import logger
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.const import Const as CoreConst
 from msprobe.mindspore.common.const import Const
@@ -24,8 +25,9 @@ from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
 
 
 class TestDumpToolFactory(TestCase):
+    @patch.object(logger, "error")
     @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
-    def test_create(self, _):
+    def test_create(self, _, mock_logger_error):
         json_config = {
             "task": "statistics",
             "dump_path": "/absolute_path",
@@ -55,15 +57,16 @@ class TestDumpToolFactory(TestCase):
         self.assertEqual(str(context.exception), "Valid level is needed.")
 
         config.level = Const.KERNEL
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError):
             DumpToolFactory.create(config)
-        self.assertEqual(str(context.exception), "Data dump is not supported in None mode when dump level is kernel.")
+        mock_logger_error.assert_called_with("Data dump is not supported in None mode when dump level is kernel.")
+        mock_logger_error.reset_mock()
 
         config.execution_mode = Const.GRAPH_GE_MODE
         config.level = Const.CELL
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError):
             DumpToolFactory.create(config)
-        self.assertEqual(str(context.exception), "Data dump is not supported in graph_ge mode when dump level is cell.")
+        mock_logger_error.assert_called_with("Data dump is not supported in graph_ge mode when dump level is cell.")
 
         config.execution_mode = Const.GRAPH_KBYK_MODE
         config.level = Const.KERNEL
