@@ -315,7 +315,7 @@ class MSComparator(Comparator):
         for mapping_dict in self.api_mapping_dict:
             keys_to_compare = [
                 ('ms_args', 'pt_args'),
-                ('ms_output', 'pt_output'),
+                ('ms_outputs', 'pt_outputs'),
                 ('ms_parameters', 'pt_parameters'),
                 ('ms_parameters_grad', 'pt_parameters_grad'),
             ]
