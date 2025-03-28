@@ -52,26 +52,31 @@ class GraphUtils:
     def get_jsondata(run, tag):
         json_data = None
         error_message = None
-        logdir = get_global_value('logdir')
         if run is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
             return json_data, error_message
-        run_dir = os.path.join(logdir, run)
-        run_dir = os.path.normpath(run_dir)  # 标准化路径
-        file_path = GraphUtils._load_json_file(run_dir, tag)
-        if not file_path:
-            error_message = f'vis file for tag "{tag}" not found in run "{run}"'
-            return json_data, error_message
-        json_data = GraphUtils._read_json_file(file_path)
+        file_path, error_message = GraphUtils._load_json_file(run, tag)
+        if error_message:
+            return None, error_message
+        json_data, error_message = GraphUtils._read_json_file(file_path)
+        if error_message:
+             return None, error_message
         set_global_value('current_file_data', json_data)
         set_global_value('current_tag', tag)
-        if json_data is None:
-            error_message = f'Error reading vis file for tag "{tag}" in run "{run}"'
         return json_data, error_message
+    
+    @staticmethod
+    def is_relative_to(path, base):
+        # 将路径转换为绝对路径
+        abs_path = os.path.abspath(path)
+        abs_base = os.path.abspath(base)
+        
+        # 检查基准路径是否是目标路径的前缀
+        return os.path.commonpath([abs_path]).startswith(os.path.commonpath([abs_base]))
 
     @staticmethod
     def save_data(data, run, tag):
-
+        SAFE_BASE_DIR = get_global_value('logdir')
         # 检查 tag 是否为合法文件名
         if not re.match(FILE_NAME_REGEX, tag):
             raise ValueError(f"Invalid tag: {tag}.")
@@ -80,15 +85,9 @@ class GraphUtils:
         if not os.path.exists(run):
             try:
                 os.makedirs(run, exist_ok=True)
-                os.chmod(run, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP)
+                os.chmod(run, 0o750)
             except OSError as e:
                 raise PermissionError(f"Failed to create directory: {run}. Error: {e}\n") from e
-
-        # 检查 data 是否为有效的 JSON 可序列化对象
-        try:
-            json.dumps(data, ensure_ascii=False, indent=4)
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"Invalid data: {e}") from e
 
         # 构建文件路径并标准化
         file_path = os.path.join(run, f"{tag}.vis")
@@ -97,19 +96,40 @@ class GraphUtils:
         # 检查文件路径是否合法，防止路径遍历攻击
         if not file_path.startswith(os.path.abspath(run)):
             raise ValueError(f"Invalid file path: {file_path}. Potential path traversal attack.\n")
+        # 基础路径校验
+        if not GraphUtils.is_relative_to(file_path, SAFE_BASE_DIR):
+            raise ValueError(f"Path out of bounds: {file_path}")
+        
+        if os.path.islink(file_path):
+            raise RuntimeError("The target file is a symbolic link")
+        
+        if os.path.islink(run):
+            raise RuntimeError(f"Parent directory contains a symbolic link")
+        
+        if not os.path.isfile(file_path):
+            raise RuntimeError("The target path is not a regular file")
 
         # 权限校验：检查目录是否有写权限
         if not os.access(run, os.W_OK):
             raise PermissionError(f"No write permission for directory: {run}\n")
 
+        # 检查 data 是否为有效的 JSON 可序列化对象
+        try:
+            json.dumps(data, ensure_ascii=False, indent=4)
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid data: {e}") from e
+        
         # 尝试写入文件
         try:
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
-            # 设置文件权限为仅所有者可读写 (0o600)
-            os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR)
+            os.chmod(file_path, 0o640)
         except IOError as e:
             raise IOError(f"Failed to write to file {file_path}: {e}\n") from e
+       
+       # 最终校验（防御TOCTOU攻击）
+        if os.path.islink(file_path):
+            raise RuntimeError("The file has been replaced with a symbolic link")
 
     @staticmethod
     def remove_prefix(node_data, prefix):
@@ -143,22 +163,37 @@ class GraphUtils:
     @staticmethod
     def _load_json_file(run_dir, tag):
         """Load a single .vis file from a given directory based on the tag."""
-        file_path = os.path.join(run_dir, f"{tag}.vis")
-        file_path = os.path.normpath(file_path)  # 标准化路径
-        if os.path.exists(file_path):
-            # 校验文件的读权限
-            if not os.access(file_path, os.R_OK):
-                logger.error(f'Error: No read permission for file "{file_path}"')
-                return None
-            # 校验文件大小
-            if os.path.getsize(file_path) > MAX_FILE_SIZE:
-                logger.error(f'Error: File "{file_path}" exceeds the size limit of {MAX_FILE_SIZE // (1024 * 1024)}MB')
-                return None
-            set_global_value('current_file_path', file_path)
-            return file_path
-        else:
-            logger.error(f'Error: File "{file_path}" does not exist.')
-        return None
+        try:
+            file_path = os.path.join(run_dir, f"{tag}.vis")
+            file_path = os.path.normpath(file_path)  # 标准化路径
+            # 解析真实路径（包含符号链接跟踪）
+            real_path = os.path.realpath(file_path)
+            SAFE_BASE_DIR = get_global_value('logdir')
+            # 安全验证1：路径归属检查（防止越界访问）
+            if not os.path.commonpath([SAFE_BASE_DIR, real_path]) == str(SAFE_BASE_DIR):
+                raise RuntimeError(f"Path out of bounds:")
+            # 安全验证2：禁止符号链接文件
+            if os.path.islink(file_path):
+                raise RuntimeError(f"Detected symbolic link file")
+            if os.path.islink(run_dir):
+                raise RuntimeError(f"Parent directory contains a symbolic link")
+            # 安全验证3：二次文件类型检查（防御TOCTOU攻击）
+            if not os.path.isfile(real_path):
+                raise RuntimeError(f"Path is not a regular file")
+            # 安全检查4：文件存在性验证
+            if not os.path.exists(real_path):
+                raise FileNotFoundError(f"File does not exist")
+            # 权限验证
+            if not os.stat(real_path).st_mode & stat.S_IRUSR:
+                raise PermissionError(f"File has no read permissions")
+            # 文件大小验证
+            if  os.path.getsize(real_path) > MAX_FILE_SIZE:
+                raise RuntimeError(f"File size exceeds limit ({os.path.getsize(real_path)} > {MAX_FILE_SIZE})")
+        except Exception as e:
+            logger.error(f'Error: File "{file_path}" is not accessible. Error: {e}')
+            return None, 'failed to load file'
+        set_global_value('current_file_path', file_path)
+        return file_path, None
 
     @staticmethod
     def _read_json_file(file_path):
@@ -167,11 +202,13 @@ class GraphUtils:
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     # 尝试解析 JSON 文件
-                    return json.load(f)
+                    return json.load(f), None
             except json.JSONDecodeError:
                 logger.error(f'Error: File "{file_path}" is not a valid JSON file!')
+                return None, "File is not a valid JSON file!"
             except Exception as e:
                 logger.error(f'Unexpected error while reading file "{file_path}": {e}')
+                return None, 'Unexpected error while reading file'
         else:
             logger.error(f'Error: File "{file_path}" is not accessible.')
-        return None
+            return None, 'File "{file_path}" is not accessible.'
