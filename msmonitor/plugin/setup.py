@@ -29,6 +29,8 @@ ext_modules = [
         sources=["bindings.cpp"] + list(glob("ipc_monitor/*.cpp")), # Source files
         include_dirs=[os.path.join(BASE_DIR, "ipc_monitor"), GLOG_INC_PATH, GLOG_LIB_PATH],  # Include Pybind11 headers
         library_dirs=[GLOG_LIB_PATH],
+        extra_compile_args=["-std=c++14", "-fPIC", "-fstack-protector-all", "-fno-strict-aliasing", "-fno-common",
+                    "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-Wfloat-equal", "-Wextra", "-O2"],
         libraries=["glog"],
         language="c++",  # Specify the language
     ),
