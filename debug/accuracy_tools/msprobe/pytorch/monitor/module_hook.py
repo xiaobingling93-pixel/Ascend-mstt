@@ -576,7 +576,7 @@ class TrainerMon:
                     self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index, optimizer)
                 mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
                 self.param2name = mv_result.grad
-            elif self.mv_distribution:
+            elif self.mv_distribution or self.ur_distribution or self.mg_direction:
                 mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name)
             if mv_result:
                 context.param_exp_avg = mv_result.exp_avg
