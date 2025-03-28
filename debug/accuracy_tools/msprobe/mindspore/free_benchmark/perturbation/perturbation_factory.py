@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from msprobe.mindspore.common.const import FreeBenchmarkConst
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.perturbation.add_noise import AddNoisePerturbation
 from msprobe.mindspore.free_benchmark.perturbation.bit_noise import BitNoisePerturbation
@@ -41,4 +42,5 @@ class PerturbationFactory:
         if perturbation:
             return perturbation(api_name_with_id)
         else:
-            raise Exception(f'{Config.pert_type} is a invalid perturbation type')
+            logger.error(f'{Config.pert_type} is a invalid perturbation type')
+            raise ValueError

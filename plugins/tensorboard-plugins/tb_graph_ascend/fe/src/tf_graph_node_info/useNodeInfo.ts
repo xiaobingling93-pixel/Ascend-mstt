@@ -16,7 +16,6 @@
 import { isEmpty, cloneDeep } from 'lodash';
 import useNodeInfoDomain from './domain/useNodeInfoDomain';
 import type { MatchNodeInfo } from './type';
-import type { MactchResult } from '../types/service';
 import { BENCH_PREFIX, NPU_PREFIX } from '../tf_graph_common/common';
 import { safeJSONParse } from '../utils';
 
@@ -38,7 +37,6 @@ export interface UseNodeInfoType {
     unMatchedBenchIoDataset: Array<Record<string, unknown>>;
   };
   getDetailDataSet: (npuNode: any, benchNode: any) => Array<Record<string, unknown>>;
-  converMatchArrayToObject: (resArray: Array<any>) => Array<MactchResult['result']>;
 }
 
 const useNodeInfo = (): UseNodeInfoType => {
@@ -77,76 +75,6 @@ const useNodeInfo = (): UseNodeInfoType => {
       subnodes: nodeInfo.subnodes,
       include: nodeInfo.subnodes?.length,
     };
-  };
-
-  /**
-   * 将匹配结果数组转换为对象
-   * @param resArray 
-   * @example
-   * [request.args.get("NPU"),
-   *  max_precision_index,
-   * [
-   *  [
-          ['npu_key', npu_key],
-          ['Max diff', NPU_max - Bench_max],
-          ['Min diff', NPU_min - Bench_min],
-          ['Mean diff', NPU_mean - Bench_mean],
-          ['L2norm diff', NPU_norm - Bench_norm],
-          ['MaxRelativeErr', max_relative_err],
-          ['MinRelativeErr', min_relative_err],
-          ['MeanRelativeErr', mean_relative_err],
-          ['NormRelativeErr', norm_relative_err]
-      ]
-        .....
-      ],
-   *   output(同上)]
-   * @returns
-   * {
-   *  NPU_node_name: string,
-   *  max_precision_error: number,
-   *  input: {inputargs:{
-   *    Max diff: number,
-   *    Min diff: number,
-   *    Mean diff: number,
-   * },{}}
-   * output: [{
-   *    Max diff: number,
-   *    Min diff: number,
-   *    Mean diff: number,
-   * }]
-   */
-  const converMatchArrayToObject = (resArray: Array<any>): Array<MactchResult['result']> => {
-    if (resArray.length === 0) {
-      return [];
-    }
-    // 内部函数，将二维数组转换为对象
-    const _covertIo = (arrayData: Array<any>): Record<string, unknown> | undefined => {
-      if (isEmpty(arrayData)) {
-        return undefined;
-      }
-      const inputItems = {};
-      arrayData.forEach((inputArray: any) => {
-        const inputKey = inputArray[0];
-        const inputValue = {};
-        inputArray.slice(1).map((item: any) => {
-          inputValue[item[0]] = item[1];
-        });
-        inputItems[inputKey] = inputValue;
-      });
-      return inputItems;
-    };
-
-    // 将数组转换为对象
-    const matchedeDataset = resArray.map((item) => {
-      return {
-        NPU_node_name: item?.[0],
-        max_precision_error: item?.[1],
-        inputData: _covertIo(item?.[2]),
-        outputData: _covertIo(item?.[3]),
-      };
-    });
-
-    return matchedeDataset as Array<MactchResult['result']>;
   };
 
   /**
@@ -269,7 +197,6 @@ const useNodeInfo = (): UseNodeInfoType => {
     getNodeInfo,
     getIoDataSet,
     getDetailDataSet,
-    converMatchArrayToObject,
   };
 };
 

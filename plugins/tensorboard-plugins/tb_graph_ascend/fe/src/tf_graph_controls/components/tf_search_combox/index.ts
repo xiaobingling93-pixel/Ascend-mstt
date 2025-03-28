@@ -25,75 +25,68 @@ import { customElement, property } from '@polymer/decorators';
 import '@vaadin/progress-bar';
 @customElement('tf-search-combox')
 class Legend extends PolymerElement {
-  static get shadowRootOptions(): { mode: string } {
-    return { mode: 'open' }; // 确保启用了 Shadow DOM
-  }
-  
   // 定义模板
-  static get template(): HTMLTemplateElement {
-    return html`
-      <style>
-        .search-arrow {
-          font-size: 10px;
-          margin-top: 27px;
-          cursor: pointer;
-          color: rgb(87, 86, 86);
-          background: rgb(238, 238, 238);
-          border: 0.5px solid var(--paper-input-container-color, var(--secondary-text-color));
-          padding: 2px 2px;
-          height: 30px;
-          width: 22px;
-        }
-        .search-arrow:hover {
-          background: rgb(201, 200, 199);
-        }
-        .container-search {
-          display: flex;
-          align-items: center;
-          padding-right: 8px;
-        }
-        vaadin-combo-box {
-          width: 100%;
-        }
-        vaadin-combo-box::part(input-field) {
-          height: 30px;
-          border: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
-          background-color: white;
-          font-size: 14px;
-          border-radius: 0;
-        }
-        vaadin-combo-box::part(toggle-button) {
-          font-size: 14px;
-        }
-        .search-combox {
-          display: flex;
-          align-items: center;
-          width: 100%;
-        }
-      </style>
-      <div class="search-combox">
-        <vaadin-combo-box
-          label="[[label]]"
-          items="[[items]]"
-          value="{{selectedValue}}"
-          on-change="_onChange"
-        ></vaadin-combo-box>
-        <vaadin-icon
-          title="搜索上一项"
-          icon="vaadin:arrow-up"
-          class="search-arrow"
-          on-click="_selectPrevious"
-        ></vaadin-icon>
-        <vaadin-icon
-          title="搜索下一项"
-          icon="vaadin:arrow-down"
-          class="search-arrow"
-          on-click="_selectNext"
-        ></vaadin-icon>
-      </div>
-    `;
-  }
-
+  static readonly template = html`
+    <style>
+      .search-arrow {
+        font-size: 10px;
+        margin-top: 27px;
+        cursor: pointer;
+        color: rgb(87, 86, 86);
+        background: rgb(238, 238, 238);
+        border: 0.5px solid var(--paper-input-container-color, var(--secondary-text-color));
+        padding: 2px 2px;
+        height: 30px;
+        width: 22px;
+      }
+      .search-arrow:hover {
+        background: rgb(201, 200, 199);
+      }
+      .container-search {
+        display: flex;
+        align-items: center;
+        padding-right: 8px;
+      }
+      vaadin-combo-box {
+        width: 100%;
+      }
+      vaadin-combo-box::part(input-field) {
+        height: 30px;
+        border: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
+        background-color: white;
+        font-size: 14px;
+        border-radius: 0;
+      }
+      vaadin-combo-box::part(toggle-button) {
+        font-size: 14px;
+      }
+      .search-combox {
+        display: flex;
+        align-items: center;
+        width: 100%;
+      }
+    </style>
+    <div class="search-combox">
+      <vaadin-combo-box
+        label="[[label]]"
+        items="[[items]]"
+        value="{{selectedValue}}"
+        on-change="_onChange"
+      ></vaadin-combo-box>
+      <vaadin-icon
+        title="搜索上一项"
+        icon="vaadin:arrow-up"
+        class="search-arrow"
+        on-click="_selectPrevious"
+      ></vaadin-icon>
+      <vaadin-icon
+        title="搜索下一项"
+        icon="vaadin:arrow-down"
+        class="search-arrow"
+        on-click="_selectNext"
+      ></vaadin-icon>
+    </div>
+  `;
   @property({ type: Object })
   onSelectChange!: () => void;
 

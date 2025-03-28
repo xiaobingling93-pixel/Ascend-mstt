@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,11 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 import unittest
+from unittest.mock import patch
 
+from msprobe.core.common.log import logger
 from msprobe.mindspore.free_benchmark.self_check_tool_factory import SelfCheckToolFactory
 from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelfCheck
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
@@ -28,7 +28,8 @@ from msprobe.core.common.const import Const
 
 class TestSelfCheckToolFactory(unittest.TestCase):
 
-    def test_create(self):
+    @patch.object(logger, "error")
+    def test_create(self, mock_logger_error):
         common_config = CommonConfig({})
         common_config.task = Const.FREE_BENCHMARK
         common_config.dump_path = os.path.dirname(os.path.realpath(__file__))
@@ -36,16 +37,16 @@ class TestSelfCheckToolFactory(unittest.TestCase):
         config = DebuggerConfig(common_config, task_config)
 
         config.level = "UNKNOWN"
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError):
             SelfCheckToolFactory.create(config)
-        self.assertEqual(str(context.exception), "UNKNOWN is not supported.")
+        mock_logger_error.assert_called_with("UNKNOWN is not supported.")
+        mock_logger_error.reset_mock()
 
         config.level = MsConst.API
         config.execution_mode = MsConst.GRAPH_KBYK_MODE
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError):
             SelfCheckToolFactory.create(config)
-        self.assertEqual(str(context.exception),
-                         f"Task free_benchmark is not supported in this mode: {MsConst.GRAPH_KBYK_MODE}.")
+        mock_logger_error.assert_called_with(f"Task free_benchmark is not supported in this mode: {MsConst.GRAPH_KBYK_MODE}.")
 
         config.execution_mode = MsConst.PYNATIVE_MODE
         tool = SelfCheckToolFactory.create(config)

@@ -122,6 +122,8 @@ class PtdbgDispatch(TorchDispatchMode):
                 if len(json_line_data) == 0:
                     break
                 msg = json.loads(json_line_data)
+                if len(msg) < 2:
+                    raise ValueError("JSON data does not contain enough elements. Expected at least 2 elements.")
                 self.all_summary[msg[0]] = msg[1]
             fp_handle.close()
 

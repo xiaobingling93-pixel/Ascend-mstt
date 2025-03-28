@@ -38,14 +38,14 @@ export function compareTagNames(a: string, b: string): number {
     if (isDigit(a[ai]) && isDigit(b[bi])) {
       const ais = ai;
       const bis = bi;
-      
+
       // Consume all consecutive digits (simplified from original)
       while (ai < a.length && isDigit(a[ai])) ai++;
       while (bi < b.length && isDigit(b[bi])) bi++;
-      
+
       const an = parseInt(a.slice(ais, ai), 10);
       const bn = parseInt(b.slice(bis, bi), 10);
-      
+
       if (an !== bn) {
         return an - bn;
       }

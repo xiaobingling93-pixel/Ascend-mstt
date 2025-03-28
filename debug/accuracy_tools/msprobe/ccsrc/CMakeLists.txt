@@ -26,6 +26,8 @@ compile_protobuf_file(
     ${PROTO_SRC}
 )
 
+set(CMAKE_SKIP_RPATH TRUE)
+
 add_library(_msprobe_c SHARED)
 
 target_compile_options(_msprobe_c PRIVATE "-Wall")
@@ -33,10 +35,13 @@ target_compile_options(_msprobe_c PRIVATE "-fPIC")
 target_compile_options(_msprobe_c PRIVATE "-fstack-protector-all")
 target_compile_options(_msprobe_c PRIVATE "-ftrapv")
 target_compile_options(_msprobe_c PRIVATE "-fstack-check")
+target_compile_options(_msprobe_c PRIVATE "-D_FORTIFY_SOURCE=2")
 
 target_link_options(_msprobe_c PRIVATE "-Wl,-z,relor")
 target_link_options(_msprobe_c PRIVATE "-Wl,-z,now")
 target_link_options(_msprobe_c PRIVATE "-Wl,-z,noexecstack")
+target_link_options(_msprobe_c PRIVATE "-Wl,--disable-new-dtags")
+target_link_options(_msprobe_c PRIVATE "-s")
 
 target_link_libraries(_msprobe_c PUBLIC dl)
 target_link_libraries(_msprobe_c PUBLIC pthread)
