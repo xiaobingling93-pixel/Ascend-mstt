@@ -33,9 +33,18 @@ public:
 
     std::string PollDyno()
     {
-         return monitor_->Poll();
+        return monitor_->Poll();
     };
 
+    void EnableMsptiMonitor(std::unordered_map<std::string, std::string>& config_map)
+    {
+        LOG(WARNING) << "EnableMsptiMonitor is not support now";
+    }
+
+    void FinalizeDyno()
+    {
+        LOG(WARNING) << "FinalizeDyno is not support now";
+    }
 private:
     MonitorBase *monitor_ = nullptr;
 };

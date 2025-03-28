@@ -54,7 +54,7 @@ public:
             ret = unlink(address.sun_path);
         }
         if (ret == -1) {
-            throw std::runtime_error("Unlink failed, error is " + strerror(errno) + IPC_ERROR(ErrCode::PARAM));
+            throw std::runtime_error("Unlink failed, error is " + std::string(strerror(errno)) + IPC_ERROR(ErrCode::PARAM));
         }
 
         ret = bind(socketFd, ReinterpretConvert<const struct sockaddr *>(&address), addressLen);
@@ -66,7 +66,7 @@ public:
             ret = chmod(address.sun_path, SOCKET_FD_CHMOD);
         }
         if (ret == -1) {
-            throw std::runtime_error("Chmod failed, error is " + strerror(errno) + IPC_ERROR(ErrCode::PARAM));
+            throw std::runtime_error("Chmod failed, error is " + std::string(strerror(errno)) + IPC_ERROR(ErrCode::PARAM));
         }
     }
     ~NpuIpcEndPoint()

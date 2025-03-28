@@ -18,10 +18,9 @@ Adapt to the model hierarchical visualization data collected by the msprobe tool
 import '@vaadin/icon';
 import '@vaadin/icons';
 import '@vaadin/details';
-import '@vaadin/vaadin-combo-box';
-import '@vaadin/vaadin-select';
+import '@vaadin/select';
 import './components/ts_linkage_search_combox/index';
-import { customElement, property, observe } from '@polymer/decorators';
+import { customElement, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import * as _ from 'lodash';
 import { DarkModeMixin } from '../polymer/dark_mode_mixin';
@@ -30,7 +29,7 @@ import './components/tf_manual_match/index';
 import './components/tf_color_select/index';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import '../tf_dashboard_common/tensorboard-color';
-import { SelectionType, NPU_PREFIX, BENCH_PREFIX } from '../tf_graph_common/common';
+import { SelectionType } from '../tf_graph_common/common';
 import * as tf_graph_proto from '../tf_graph_common/proto';
 import * as tf_graph_render from '../tf_graph_common/render';
 import '../tf_graph_common/tf-graph-icon';
@@ -818,15 +817,8 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   _getDefaultSelectionType(): SelectionType {
     const { datasets: newDatasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
-    function shouldSkip(datasets: any, run: any, tag: any): boolean {
-      return (
-        !newDatasets ||
-        !newDatasets[run] ||
-        !(newDatasets[run] as any).tags[tag] ||
-        (newDatasets[run] as any).tags[tag].opGraph
-      );
-    }
-    if (shouldSkip(newDatasets, run, tag)) {
+    const shouldSkip = !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph;
+    if (shouldSkip) {
       return SelectionType.OP_GRAPH;
     }
     const datasetForRun = newDatasets[run] as any;

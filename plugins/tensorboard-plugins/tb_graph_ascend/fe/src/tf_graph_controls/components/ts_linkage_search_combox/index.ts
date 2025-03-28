@@ -17,7 +17,7 @@
 import '@vaadin/button';
 import '@vaadin/details';
 import '@vaadin/combo-box';
-import '@vaadin/vaadin-select';
+import '@vaadin/select';
 import '@vaadin/text-field';
 import { NPU_PREFIX, BENCH_PREFIX } from '../../../tf_graph_common/common';
 import { PolymerElement, html } from '@polymer/polymer';
