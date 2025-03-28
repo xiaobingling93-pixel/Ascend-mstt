@@ -60,7 +60,7 @@ class GraphUtils:
             return None, error_message
         json_data, error_message = GraphUtils._read_json_file(file_path)
         if error_message:
-             return None, error_message
+            return None, error_message
         set_global_value('current_file_data', json_data)
         set_global_value('current_tag', tag)
         return json_data, error_message
@@ -76,7 +76,7 @@ class GraphUtils:
 
     @staticmethod
     def save_data(data, run, tag):
-        SAFE_BASE_DIR = get_global_value('logdir')
+        safe_base_dir = get_global_value('logdir')
         # 检查 tag 是否为合法文件名
         if not re.match(FILE_NAME_REGEX, tag):
             raise ValueError(f"Invalid tag: {tag}.")
@@ -97,7 +97,7 @@ class GraphUtils:
         if not file_path.startswith(os.path.abspath(run)):
             raise ValueError(f"Invalid file path: {file_path}. Potential path traversal attack.\n")
         # 基础路径校验
-        if not GraphUtils.is_relative_to(file_path, SAFE_BASE_DIR):
+        if not GraphUtils.is_relative_to(file_path, safe_base_dir):
             raise ValueError(f"Path out of bounds: {file_path}")
         
         if os.path.islink(file_path):
@@ -168,9 +168,9 @@ class GraphUtils:
             file_path = os.path.normpath(file_path)  # 标准化路径
             # 解析真实路径（包含符号链接跟踪）
             real_path = os.path.realpath(file_path)
-            SAFE_BASE_DIR = get_global_value('logdir')
+            safe_base_dir = get_global_value('logdir')
             # 安全验证1：路径归属检查（防止越界访问）
-            if not os.path.commonpath([SAFE_BASE_DIR, real_path]) == str(SAFE_BASE_DIR):
+            if not os.path.commonpath([safe_base_dir, real_path]) == str(safe_base_dir):
                 raise RuntimeError(f"Path out of bounds:")
             # 安全验证2：禁止符号链接文件
             if os.path.islink(file_path):
@@ -187,7 +187,7 @@ class GraphUtils:
             if not os.stat(real_path).st_mode & stat.S_IRUSR:
                 raise PermissionError(f"File has no read permissions")
             # 文件大小验证
-            if  os.path.getsize(real_path) > MAX_FILE_SIZE:
+            if os.path.getsize(real_path) > MAX_FILE_SIZE:
                 raise RuntimeError(f"File size exceeds limit ({os.path.getsize(real_path)} > {MAX_FILE_SIZE})")
         except Exception as e:
             logger.error(f'Error: File "{file_path}" is not accessible. Error: {e}')
