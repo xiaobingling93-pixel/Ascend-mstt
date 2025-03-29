@@ -35,8 +35,6 @@ class TfNodeIcon extends LegacyElementMixin(PolymerElement) {
       height="[[height]]"
       fill-override="[[_fillOverride]]"
       stroke-override="[[_getStrokeOverride(_fillOverride)]]"
-      faded="[[_getFaded(renderInfo)]]"
-      vertical="[[_isVertical(node, vertical)]]"
     ></tf-graph-icon>
   `;
 
@@ -152,22 +150,6 @@ class TfNodeIcon extends LegacyElementMixin(PolymerElement) {
       }
     }
     return inputType;
-  }
-
-  /**
-   * Test whether the specified node should be represented as a vertical
-   * series. Defaults to the value of the vertical property if node is
-   * not specified.
-   */
-  _isVertical(inputNode, inputVertical): boolean {
-    if (inputNode) {
-      return inputNode.hasNonControlEdges;
-    }
-    return !!inputVertical;
-  }
-
-  _getFaded(itemRenderInfo): any {
-    return itemRenderInfo?.isFadedOut;
   }
 
   _onFillOverrideChanged(newFill, oldFill): void {

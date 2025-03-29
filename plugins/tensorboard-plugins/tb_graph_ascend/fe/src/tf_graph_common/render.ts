@@ -29,14 +29,10 @@ import {
   GraphType,
   GroupNode,
   Metaedge,
-  Metanode,
   Node,
   NodeType,
-  OpNode,
-  OpNodeImpl,
 } from './graph';
 import { Hierarchy } from './hierarchy';
-import { NodeOpType } from './proto';
 
 const NODE_LINE_FEED_NUMBER = 5;
 export interface EdgeData {
@@ -217,31 +213,8 @@ export class RenderGraphInfo {
     // displayed.
     if (i === path.length - 2) {
       let nextName = path[i + 1];
-      if (renderNode?.inAnnotations.nodeNames[nextName]) {
-        return nextName;
-      }
-      if (renderNode?.outAnnotations.nodeNames[nextName]) {
-        return nextName;
-      }
     }
     return nodeName;
-  }
-
-  /**
-   * Returns true if the renderNode is an isolated node within its parent node.
-   */
-  isNodeAuxiliary(renderNode: RenderNodeInfo): boolean {
-    let parentNode = this.getRenderNodeByName(renderNode.node.parentNode.name) as RenderGroupNodeInfo;
-    let found = _.find(parentNode.isolatedInExtract, (node) => {
-      return node.node.name === renderNode.node.name;
-    });
-    if (found) {
-      return true;
-    }
-    found = _.find(parentNode.isolatedOutExtract, (node) => {
-      return node.node.name === renderNode.node.name;
-    });
-    return !!found;
   }
 
   buildSubhierarchy(nodeName: string, subGraph: tf_graph.SlimGraph | undefined = undefined): void {
@@ -272,39 +245,12 @@ export class RenderGraphInfo {
       if (!childRenderInfo) {
         return;
       }
-      let childNode = childRenderInfo.node;
       coreGraph.setNode(childName, childRenderInfo);
       // 可展开节点自成一行，模块间游离节点每NODE_LINE_FEED_NUMBER个换行
       if (index >= 1 && subGraph && Object.keys(subGraph.metaNodes).length > 0) {
         coreGraph.setEdge(metagraph.nodes()[index - 1], childName, {});
       } else if (index >= NODE_LINE_FEED_NUMBER && subGraph && Object.keys(subGraph.metaNodes).length === 0) {
         coreGraph.setEdge(metagraph.nodes()[index - NODE_LINE_FEED_NUMBER], childName, {});
-      }
-      if (!childNode.isGroupNode) {
-        _.each((<OpNode>childNode).inEmbeddings, (embedding) => {
-          let renderMetaedgeInfo = new RenderMetaedgeInfo(null);
-          let renderNodeData = new RenderNodeInfo(embedding);
-          addInAnnotation(
-            childRenderInfo as RenderNodeInfo,
-            embedding,
-            renderNodeData,
-            renderMetaedgeInfo,
-            AnnotationType.CONSTANT,
-          );
-          this.index[embedding.name] = renderNodeData;
-        });
-        _.each((<OpNode>childNode).outEmbeddings, (embedding) => {
-          let renderMetaedgeInfo = new RenderMetaedgeInfo(null);
-          let renderNodeData = new RenderNodeInfo(embedding);
-          addOutAnnotation(
-            childRenderInfo as RenderNodeInfo,
-            embedding,
-            renderNodeData,
-            renderMetaedgeInfo,
-            AnnotationType.SUMMARY,
-          );
-          this.index[embedding.name] = renderNodeData;
-        });
       }
     });
     // Look up the parent node's render information and short circuit if none.
@@ -326,68 +272,6 @@ export class RenderGraphInfo {
 
   checkSubhierarchy(nodeName: string): boolean {
     return nodeName in this.hasSubhierarchy;
-  }
-
-  /**
-   * Clones an op node and adds it to a metagraph. Does nothing if an op node
-   * with the same new name has already been created within the metagraph. This
-   * method is used when duplicating a library function to be injected within a
-   * metanode representing a function call.
-   * @param parentMetanode The parent metanode on which to add the new node.
-   * @param node The op node to clone.
-   * @param newPrefix The prefix string to use in lieu of the one that merely
-   *     indicates that the metanode represents a function defined in the
-   *     library. This prefix should reflect graph hierarchy.
-   * @return The newly created op node (the clone of the original).
-   */
-  private cloneAndAddFunctionOpNode(
-    parentMetanode: Metanode,
-    libraryFunctionNodeName: string,
-    node: OpNode,
-    newPrefix: string,
-  ): OpNode {
-    const newName = node.name.replace(libraryFunctionNodeName, newPrefix);
-    let newOpNode = parentMetanode.metagraph.node(newName) as any;
-    if (newOpNode) {
-      // This node had already been created and added to the graph.
-      return newOpNode;
-    }
-    // Create a new op node.
-    newOpNode = new OpNodeImpl({
-      name: newName,
-      input: [],
-      op: node.op,
-      input_data: _.cloneDeep(node.inputData),
-      output_data: _.cloneDeep(node.outputData),
-      stack_info: _.cloneDeep(node.stackData),
-      suggestions: _.cloneDeep(node.suggestions),
-      isLeaf: false,
-      attr: _.cloneDeep(node.attr),
-      node_type: NodeOpType.DEFAULT,
-      matched_node_link: _.cloneDeep(node.matchedNodeLink),
-    });
-    // Update various properties.
-    newOpNode.cardinality = node.cardinality;
-    newOpNode.include = node.include;
-    newOpNode.outputShapes = _.cloneDeep(node.outputShapes);
-    // Update the inputs of the new node to reflect the new path.
-    newOpNode.inputs = node.inputs.map((normalizedInput) => {
-      const newNormalizedInput = _.clone(normalizedInput);
-      newNormalizedInput.name = normalizedInput.name.replace(libraryFunctionNodeName, newPrefix);
-      return newNormalizedInput;
-    });
-    // Add the new op node to the hierarchy and metagraph. Also add it to its
-    // parent metanode.
-    newOpNode.parentNode = parentMetanode;
-    parentMetanode.metagraph.setNode(newOpNode.name, newOpNode);
-    this.hierarchy.setNode(newOpNode.name, newOpNode);
-    // Update embeddings.
-    const updateEmbeddingOpNode = (embeddingNode): OpNode => {
-      return this.cloneAndAddFunctionOpNode(parentMetanode, libraryFunctionNodeName, embeddingNode, newPrefix);
-    };
-    newOpNode.inEmbeddings = node.inEmbeddings.map(updateEmbeddingOpNode);
-    newOpNode.outEmbeddings = node.outEmbeddings.map(updateEmbeddingOpNode);
-    return newOpNode;
   }
 }
 /**
@@ -514,15 +398,6 @@ export class RenderNodeInfo {
   node: Node;
   /** Whether the node is expanded or not. */
   expanded: boolean;
-  /**
-   * List of rendering information about in-annotations like constants and
-   * shortcuts to high-degree nodes.
-   */
-  inAnnotations: AnnotationList;
-  /**
-   * List of rendering information about out-annotations (e.g. summary nodes)
-   */
-  outAnnotations: AnnotationList;
   // --- Params specified by layout --- //
   /** Center x position */
   x: number;
@@ -546,24 +421,6 @@ export class RenderNodeInfo {
     width: number;
     height: number;
   };
-  /** Width of the bounding box for all in-annotations. */
-  inboxWidth: number;
-  /** Width of the bounding box for all out-annotations. */
-  outboxWidth: number;
-  /**
-   * Whether the node should be excluded from the scene.
-   * This is only used when there are too many items in a series so we only
-   * want to include top N ones.
-   */
-  excluded: boolean;
-  // --- Params used in drawing the bridge paths --- //
-  /**
-   * All bridge nodes are meant to be invisible, but whereas most represent a
-   * relationship from the underlying graph hierarchy, some exist solely for
-   * layout reasons. Specifically, those bridge nodes which have only structural
-   * rendering metaedges.
-   */
-  structural: boolean;
   // --- Params for the size of the node box --- //
   /** Label vertical offset from the center of node shape */
   labelOffset: number;
@@ -578,28 +435,18 @@ export class RenderNodeInfo {
   paddingRight: number;
   paddingBottom: number;
   /**
-   * Whether this node is faded out. Used when displaying stats.
-   */
-  isFadedOut: boolean;
-  /**
    * The name string used to label the node in the graph.
    */
   displayName: string;
   constructor(node: Node) {
     this.node = node;
     this.expanded = false;
-    this.inAnnotations = new AnnotationList();
-    this.outAnnotations = new AnnotationList();
+
     // Params specified by layout
     this.x = 0;
     this.y = 0;
     this.width = 0;
     this.height = 0;
-    this.inboxWidth = 0;
-    this.outboxWidth = 0;
-    this.excluded = false;
-    // Params for bridge paths.
-    this.structural = false;
     // Params for node box.
     this.labelOffset = 0;
     this.radius = 0;
@@ -610,8 +457,6 @@ export class RenderNodeInfo {
     this.paddingRight = 0;
     this.paddingBottom = 0;
     this.coreBox = { width: 0, height: 0 };
-    // By default, we don't fade nodes out. Default to false for safety.
-    this.isFadedOut = false;
     // Only use the portion beyond the prefix as the display name.
     if (node.name.startsWith(BENCH_PREFIX) && node.parentNode.name === tf_graph.ROOT_NAME) {
       this.displayName = '标杆';
@@ -630,8 +475,7 @@ export class RenderNodeInfo {
     }
 
     if (
-      node.type === (NodeType.META || NodeType.MULTI_COLLECTION || NodeType.API_LIST) &&
-      (node as Metanode).associatedFunction
+      node.type === (NodeType.META || NodeType.MULTI_COLLECTION || NodeType.API_LIST)
     ) {
       // Function names are suffixed with a length-8 hexadecimal string
       // followed by an optional number. We remove that suffix because
@@ -675,15 +519,6 @@ export class RenderMetaedgeInfo {
    */
   adjoiningMetaedge: RenderMetaedgeInfo | null;
   /**
-   * Most of the time, a RenderMetaedgeInfo object represents a real
-   * edge between nodes in the underlying graph structure. But sometimes, an
-   * edge only exists for layout purposes. These structural edges are added
-   * during buildSubhierarchy() to force dagre.layout() to put bridge nodes
-   * at the ends of the flow.
-   * @see buildSubhierarchy()
-   */
-  structural: boolean;
-  /**
    * Weight of the edge, used by dagre when deciding how important an edge is.
    * Edges with higher weight are made shorter and straighter. The default
    * dagre uses is 1.
@@ -702,38 +537,12 @@ export class RenderMetaedgeInfo {
   startMarkerId: string;
   /** Id of the <marker> used as an end-marker for the edge path. */
   endMarkerId: string;
-  /**
-   * Whether this edge is faded out. Used for fading out unused edges when
-   * displaying run statistics.
-   */
-  isFadedOut: boolean;
+
   constructor(metaedge: Metaedge | null) {
     this.metaedge = metaedge;
     this.adjoiningMetaedge = null;
-    this.structural = false;
     this.weight = 1;
-    this.isFadedOut = false;
   }
-}
-function addInAnnotation(
-  node: RenderNodeInfo,
-  predecessor: Node,
-  predecessorRenderInfo: RenderNodeInfo,
-  edge: RenderMetaedgeInfo,
-  type: AnnotationType,
-): void {
-  let annotation = new Annotation(predecessor, predecessorRenderInfo, edge, type, true);
-  node.inAnnotations.push(annotation);
-}
-function addOutAnnotation(
-  node: RenderNodeInfo,
-  successor: Node,
-  successorRenderInfo: RenderNodeInfo,
-  edge: RenderMetaedgeInfo,
-  type: AnnotationType,
-): void {
-  let annotation = new Annotation(successor, successorRenderInfo, edge, type, false);
-  node.outAnnotations.push(annotation);
 }
 function setGraphDepth(graph: graphlib.Graph, depth: number): void {
   _.each(graph.nodes(), (nodeName) => {
@@ -759,40 +568,11 @@ export class RenderGroupNodeInfo extends RenderNodeInfo {
    * the extracted source-like and sink-like nodes.
    */
   coreGraph: graphlib.Graph;
-  /** Size of the bounding box for a metanode's isolated in-extract children. */
-  inExtractBox: {
-    width: number;
-    height: number;
-  };
-  /**
-   * Size of the bounding box for a metanode's isolated out-extract children.
-   */
-  outExtractBox: {
-    width: number;
-    height: number;
-  };
-  /** Size of the bounding box for the function library. */
-  libraryFunctionsBox: {
-    width: number;
-    height: number;
-  };
-  /** Array of isolated in-extract nodes. */
-  isolatedInExtract: RenderNodeInfo[];
-  /** Array of isolated out-extract nodes. */
-  isolatedOutExtract: RenderNodeInfo[];
-  /** Array of nodes to show in the function library scene group. */
-  libraryFunctionsExtract: RenderNodeInfo[];
   constructor(groupNode: GroupNode, graphOptions: tf_graph.LabeledGraphOptions) {
     super(groupNode);
     let metagraph = groupNode.metagraph;
     let gl = metagraph.graph() as any;
     this.coreGraph = createGraph<RenderNodeInfo, RenderMetaedgeInfo>(gl.name, GraphType.CORE, graphOptions);
-    this.inExtractBox = { width: 0, height: 0 };
-    this.outExtractBox = { width: 0, height: 0 };
-    this.libraryFunctionsBox = { width: 0, height: 0 };
-    this.isolatedInExtract = [];
-    this.isolatedOutExtract = [];
-    this.libraryFunctionsExtract = [];
   }
 }
 function setGroupNodeDepth(renderInfo: RenderGroupNodeInfo, depth: number): void {

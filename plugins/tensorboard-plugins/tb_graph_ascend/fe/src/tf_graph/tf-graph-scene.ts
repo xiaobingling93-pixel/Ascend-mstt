@@ -601,19 +601,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     if (nodeGroup) {
       tf_graph_scene_node.stylize(nodeGroup, node, this as any);
     }
-    if (
-      node.node.type === (tf_graph.NodeType.META || tf_graph.NodeType.API_LIST || tf_graph.NodeType.MULTI_COLLECTION) &&
-      (node.node as any).associatedFunction
-    ) {
-      // The node is that of a function call. Also link the node within the
-      // function library. This clarifies to the user that the library function
-      // is being used.
-      let libraryFunctionNodeName = tf_graph.FUNCTION_LIBRARY_NODE_PREFIX + (node.node as any).associatedFunction;
-      let functionGroup = d3.select(
-        `.${tf_graph_scene.Class.Scene.GROUP}>.${tf_graph_scene.Class.Scene.FUNCTION_LIBRARY} g[data-name="${libraryFunctionNodeName}"]`,
-      );
-      tf_graph_scene_node.stylize(functionGroup, node, this as any);
-    }
     let annotationGroupIndex = this.getAnnotationGroupsIndex(n);
     _.each(annotationGroupIndex, (aGroup, hostName) => {
       tf_graph_scene_node.stylize(aGroup, node, this as any, tf_graph_scene.Class.Annotation.NODE);
@@ -700,7 +687,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     if (linkedNode) {
       this._updateNodeState(linkedNode);
     }
-    // this._build(this.renderHierarchy);
   }
 
   _onZoomChanged(): void {

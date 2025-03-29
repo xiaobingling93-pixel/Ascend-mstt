@@ -177,8 +177,6 @@ export function layoutScene(renderNodeInfo: render.RenderGroupNodeInfo): void {
  * in and out annotations.
  */
 function updateTotalWidthOfNode(renderInfo: render.RenderNodeInfo): void {
-  renderInfo.inboxWidth = renderInfo.inAnnotations.list.length > 0 ? PARAMS.annotations.inboxWidth : 0;
-  renderInfo.outboxWidth = renderInfo.outAnnotations.list.length > 0 ? PARAMS.annotations.outboxWidth : 0;
   // Assign the width of the core box (the main shape of the node).
   renderInfo.coreBox.width = renderInfo.width;
   renderInfo.coreBox.height = renderInfo.height;
@@ -188,7 +186,7 @@ function updateTotalWidthOfNode(renderInfo: render.RenderNodeInfo): void {
     renderInfo.width = PARAMS.nodeSize.op.maxLabelWidth;
   } else {
     renderInfo.width = Math.max(
-      renderInfo.coreBox.width + renderInfo.inboxWidth + renderInfo.outboxWidth,
+      renderInfo.coreBox.width,
       Math.min(labelLength * CHARACTER_WIDTH, PARAMS.nodeSize.meta.maxLabelWidth),
     );
   }
@@ -202,11 +200,6 @@ function layoutChildren(renderNodeInfo: render.RenderGroupNodeInfo): void {
     .map((n) => {
       return renderNodeInfo.coreGraph.node(n);
     })
-    .concat(
-      renderNodeInfo.isolatedInExtract,
-      renderNodeInfo.isolatedOutExtract,
-      renderNodeInfo.libraryFunctionsExtract,
-    );
   _.each(children, (childNodeInfo) => {
     // Set size of each child
     switch (childNodeInfo.node.type) {
@@ -216,7 +209,7 @@ function layoutChildren(renderNodeInfo: render.RenderGroupNodeInfo): void {
       case NodeType.META:
       case NodeType.MULTI_COLLECTION:
       case NodeType.API_LIST:
-        if (!childNodeInfo.expanded) {
+        if (!childNodeInfo.expanded) {  
           // Set fixed width and scalable height based on cardinality
           _.extend(childNodeInfo, PARAMS.nodeSize.meta);
           childNodeInfo.height = PARAMS.nodeSize.meta.height(childNodeInfo.node.cardinality);
@@ -237,8 +230,6 @@ function layoutChildren(renderNodeInfo: render.RenderGroupNodeInfo): void {
     if (!childNodeInfo.expanded) {
       updateTotalWidthOfNode(childNodeInfo);
     }
-    // Layout each child's annotations
-    layoutAnnotation(childNodeInfo);
   });
 }
 /**
@@ -294,88 +285,16 @@ function layoutMetanode(renderNodeInfo: render.RenderGroupNodeInfo, rankSep: num
   // Invoke dagre.layout() on the core graph and record the bounding box
   // dimensions.
   _.extend(renderNodeInfo.coreBox, dagreLayout(renderNodeInfo.coreGraph, { ...PARAMS.graph.meta, rankSep }));
-  // Calculate the position of nodes in isolatedInExtract relative to the
-  // top-left corner of inExtractBox (the bounding box for all inExtract nodes)
-  // and calculate the size of the inExtractBox.
-  let maxInExtractWidth = renderNodeInfo.isolatedInExtract.length
-    ? _.maxBy(renderNodeInfo.isolatedInExtract, (renderNode) => renderNode.width)?.width
-    : null;
-  renderNodeInfo.inExtractBox.width = maxInExtractWidth != null ? maxInExtractWidth : 0;
-  renderNodeInfo.inExtractBox.height = _.reduce(
-    renderNodeInfo.isolatedInExtract,
-    (height, child, i) => {
-      let yOffset = i > 0 ? params.extractYOffset : 0;
-      // use width/height here to avoid overlaps between extracts
-      child.x = 0;
-      child.y = height + yOffset + (child.height / 2);
-      return height + yOffset + child.height;
-    },
-    0,
-  );
-  // Calculate the position of nodes in isolatedOutExtract relative to the
-  // top-left corner of outExtractBox (the bounding box for all outExtract
-  // nodes) and calculate the size of the outExtractBox.
-  let maxOutExtractWidth = renderNodeInfo.isolatedOutExtract.length
-    ? _.maxBy(renderNodeInfo.isolatedOutExtract, (renderNode) => renderNode.width)?.width
-    : null;
-  renderNodeInfo.outExtractBox.width = maxOutExtractWidth != null ? maxOutExtractWidth : 0;
-  renderNodeInfo.outExtractBox.height = _.reduce(
-    renderNodeInfo.isolatedOutExtract,
-    (height, child, i) => {
-      let yOffset = i > 0 ? params.extractYOffset : 0;
-      // use width/height here to avoid overlaps between extracts
-      child.x = 0;
-      child.y = height + yOffset + (child.height / 2);
-      return height + yOffset + child.height;
-    },
-    0,
-  );
-  // Calculate the position of nodes in libraryFunctionsExtract relative to the
-  // top-left corner of libraryFunctionsBox (the bounding box for all library
-  // function nodes) and calculate the size of the libraryFunctionsBox.
-  let maxLibraryFunctionsWidth = renderNodeInfo.libraryFunctionsExtract.length
-    ? _.maxBy(renderNodeInfo.libraryFunctionsExtract, (renderNode) => renderNode.width)?.width
-    : null;
-  renderNodeInfo.libraryFunctionsBox.width = maxLibraryFunctionsWidth != null ? maxLibraryFunctionsWidth : 0;
-  renderNodeInfo.libraryFunctionsBox.height = _.reduce(
-    renderNodeInfo.libraryFunctionsExtract,
-    (height, child, i) => {
-      let yOffset = i > 0 ? params.extractYOffset : 0;
-      // use width/height here to avoid overlaps between extracts
-      child.x = 0;
-      child.y = height + yOffset + child.height / 2;
-      return height + yOffset + child.height;
-    },
-    0,
-  );
   // Compute the total padding between the core graph, in-extract and
   // out-extract boxes.
   let numParts = 0;
-  if (renderNodeInfo.isolatedInExtract.length > 0) {
-    numParts++;
-  }
-  if (renderNodeInfo.isolatedOutExtract.length > 0) {
-    numParts++;
-  }
-  if (renderNodeInfo.libraryFunctionsExtract.length > 0) {
-    numParts++;
-  }
   if (renderNodeInfo.coreGraph.nodeCount() > 0) {
     numParts++;
   }
   let offset = PARAMS.subscene.meta.extractXOffset;
   let padding = numParts <= 1 ? 0 : numParts * offset;
-  // Add the in-extract and out-extract width to the core box width. Do not let
-  // the auxiliary width be too small, lest it be smaller than the title.
-  renderNodeInfo.coreBox.width += padding + renderNodeInfo.libraryFunctionsBox.width + padding;
-  renderNodeInfo.coreBox.height =
-    params.labelHeight +
-    Math.max(
-      renderNodeInfo.inExtractBox.height,
-      renderNodeInfo.coreBox.height,
-      renderNodeInfo.libraryFunctionsBox.height,
-      renderNodeInfo.outExtractBox.height,
-    );
+  renderNodeInfo.coreBox.width += padding + padding;
+  renderNodeInfo.coreBox.height = params.labelHeight + renderNodeInfo.coreBox.height,
   // Determine the whole metanode's width (from left to right).
   renderNodeInfo.width =
     Math.max(renderNodeInfo.displayName.length * CHARACTER_WIDTH, renderNodeInfo.coreBox.width) +
@@ -386,147 +305,6 @@ function layoutMetanode(renderNodeInfo: render.RenderGroupNodeInfo, rankSep: num
 }
 
 /**
- * Calculate layout for annotations of a given node.
- * This will modify positions of the given node and its annotations.
- *
- * @see tf.graph.render.Node and tf.graph.render.Annotation
- * for description of each property of each render node.
- *
- */
-function layoutAnnotation(renderNodeInfo: render.RenderNodeInfo): void {
-  // If the render node is an expanded metanode, then its annotations will not
-  // be visible and we should skip the annotation calculations.
-  if (renderNodeInfo.expanded) {
-    return;
-  }
-  let inAnnotations = renderNodeInfo.inAnnotations.list;
-  let outAnnotations = renderNodeInfo.outAnnotations.list;
-  // Calculate size for in-annotations
-  _.each(inAnnotations, (a) => sizeAnnotation(a));
-  // Calculate size for out-annotations
-  _.each(outAnnotations, (a) => sizeAnnotation(a));
-  let params = PARAMS.annotations;
-  // Calculate annotation node position (a.dx, a.dy)
-  // and total height for in-annotations
-  // After this chunk of code:
-  // inboxHeight = sum of annotation heights+ (annotation.length - 1 * yOffset)
-  let inboxHeight = _.reduce(
-    inAnnotations,
-    (height, a, i) => {
-      let yOffset = i > 0 ? params.yOffset : 0;
-      a.dx = -((renderNodeInfo.coreBox.width + a.width) / 2) - params.xOffset;
-      a.dy = height + yOffset + (a.height / 2);
-      return height + yOffset + a.height;
-    },
-    0,
-  );
-  _.each(inAnnotations, (a) => {
-    a.dy -= inboxHeight / 2;
-    a.labelOffset = params.labelOffset;
-  });
-  // Calculate annotation node position (a.dx, a.dy)
-  // and total height for out-annotations
-  // After this chunk of code:
-  // outboxHeight = sum of annotation heights +
-  //                (annotation.length - 1 * yOffset)
-  let outboxHeight = _.reduce(
-    outAnnotations,
-    (height, a, i) => {
-      let yOffset = i > 0 ? params.yOffset : 0;
-      a.dx = (renderNodeInfo.coreBox.width + a.width) / 2 + params.xOffset;
-      a.dy = height + yOffset + (a.height / 2);
-      return height + yOffset + a.height;
-    },
-    0,
-  );
-  _.each(outAnnotations, (a) => {
-    // adjust by (half of ) the total height
-    // so dy is relative to the host node's center.
-    a.dy -= outboxHeight / 2;
-    a.labelOffset = params.labelOffset;
-  });
-  // Creating scales for touch point between the in-annotation edges
-  // and their hosts.
-  let inTouchHeight = Math.min((renderNodeInfo.height / 2) - renderNodeInfo.radius, inboxHeight / 2);
-
-  inTouchHeight = inTouchHeight < 0 ? 0 : inTouchHeight;
-  let inY = d3
-    .scaleLinear()
-    .domain([0, inAnnotations.length - 1])
-    .range([-inTouchHeight, inTouchHeight]);
-  // Calculate annotation edge position
-  _.each(inAnnotations, (a, i) => {
-    a.points = [
-      // The annotation node end
-      {
-        dx: a.dx + (a.width / 2),
-        dy: a.dy,
-      },
-      // The host node end
-      {
-        dx: -renderNodeInfo.coreBox.width / 2,
-        // only use scale if there are more than one,
-        // otherwise center it vertically
-        dy: inAnnotations.length > 1 ? inY(i) : 0,
-      },
-    ];
-  });
-  // Creating scales for touch point between the out-annotation edges
-  // and their hosts.
-  let outTouchHeight = Math.min((renderNodeInfo.height / 2) - renderNodeInfo.radius, outboxHeight / 2);
-  outTouchHeight = outTouchHeight < 0 ? 0 : outTouchHeight;
-  let outY = d3
-    .scaleLinear()
-    .domain([0, outAnnotations.length - 1])
-    .range([-outTouchHeight, outTouchHeight]);
-  _.each(outAnnotations, (a, i) => {
-    // Add point from the border of the annotation node
-    a.points = [
-      // The host node end
-      {
-        dx: renderNodeInfo.coreBox.width / 2,
-        // only use scale if there are more than one,
-        // otherwise center it vertically
-        dy: outAnnotations.length > 1 ? outY(i) : 0,
-      },
-      // The annotation node end
-      {
-        dx: a.dx - (a.width / 2),
-        dy: a.dy,
-      },
-    ];
-  });
-  renderNodeInfo.height = Math.max(renderNodeInfo.height, inboxHeight, outboxHeight);
-}
-/**
- * Set size of an annotation node.
- */
-function sizeAnnotation(a: render.Annotation): void {
-  switch (a.annotationType) {
-    case render.AnnotationType.CONSTANT:
-      _.extend(a, PARAMS.constant.size);
-      break;
-    case render.AnnotationType.SHORTCUT:
-      if (a.node.type === NodeType.OP) {
-        _.extend(a, PARAMS.shortcutSize.op);
-      } else if (a.node.type === NodeType.META) {
-        _.extend(a, PARAMS.shortcutSize.meta);
-      } else if (a.node.type === NodeType.MULTI_COLLECTION) {
-        _.extend(a, PARAMS.shortcutSize.multi_collection);
-      } else if (a.node.type === NodeType.API_LIST) {
-        _.extend(a, PARAMS.shortcutSize.api_list);
-      } else {
-        throw Error(`Invalid node type: ${a.node.type}`);
-      }
-      break;
-    case render.AnnotationType.SUMMARY:
-      _.extend(a, PARAMS.constant.size);
-      break;
-    default:
-      break;
-  }
-}
-/**
  * Determines the center position of the node's shape. The position depends
  * on if the node has in and out-annotations.
  */
@@ -534,6 +312,5 @@ export function computeCXPositionOfNodeShape(renderInfo: render.RenderNodeInfo):
   if (renderInfo.expanded) {
     return renderInfo.x;
   }
-  let dx = renderInfo.inAnnotations.list.length ? renderInfo.inboxWidth : 0;
-  return renderInfo.x - (renderInfo.width / 2) + dx + (renderInfo.coreBox.width / 2);
+  return renderInfo.x - (renderInfo.width / 2) + (renderInfo.coreBox.width / 2);
 }

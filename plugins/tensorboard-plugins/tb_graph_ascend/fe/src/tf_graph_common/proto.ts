@@ -63,21 +63,10 @@ export interface NodeDef {
     value: Record<string, unknown>;
   }>;
 }
-export interface EdgeInfo {
-  input: string;
-  output: string;
-  shape: string;
-  attr: Array<{
-    key: string;
-    value: Record<string, unknown>;
-  }>;
-}
 /**
  * TensorFlow graph definition as defined in the graph.proto file.
  */
 export interface GraphDef {
   // A list of nodes in the graph.
   node: NodeDef[];
-  // The information of the list of edges.
-  edge?: EdgeInfo[];
 }

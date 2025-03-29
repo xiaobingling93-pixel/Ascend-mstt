@@ -18,7 +18,6 @@ Adapt to the model hierarchical visualization data collected by the msprobe tool
 
 import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
-import * as d3 from 'd3';
 import * as _ from 'lodash';
 import '../polymer/irons_and_papers';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
@@ -26,7 +25,6 @@ import * as tb_debug from '../tb_debug';
 import * as tf_graph from '../tf_graph_common/graph';
 import * as tf_graph_hierarchy from '../tf_graph_common/hierarchy';
 import * as tf_graph_render from '../tf_graph_common/render';
-import * as tf_graph_scene from '../tf_graph_common/scene';
 import * as tf_graph_util from '../tf_graph_common/util';
 import * as tf_graph_layout from '../tf_graph_common/layout';
 import './tf-graph-scene';
