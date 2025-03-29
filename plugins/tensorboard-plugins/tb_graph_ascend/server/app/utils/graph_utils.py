@@ -108,8 +108,6 @@ class GraphUtils:
             # 权限校验：检查目录是否有写权限
             if not os.access(run, os.W_OK):
                 raise PermissionError(f"No write permission for directory: {run}\n")
-            # 文件内容校验，检查 data 是否为有效的 JSON 可序列化对象
-            json.dumps(data, ensure_ascii=False, indent=4)
             # # 尝试写入文件
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
