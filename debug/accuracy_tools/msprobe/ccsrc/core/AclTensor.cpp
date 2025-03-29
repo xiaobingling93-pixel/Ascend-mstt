@@ -394,8 +394,9 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     auto coutOpt = AlignCeil(eMult * coutOri, kCubeSize);
     auto c1Dim = cinOpt / cubeK;
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
 
     for (int64_t g = 0; g < groups; ++g) {
         for (int64_t c = 0; c < cDim; ++c) {
@@ -411,8 +412,13 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
                                         (dstCi / cubeK) * hDim * wDim * coutOpt * cubeK + h * wDim * coutOpt * cubeK +
                                         w * coutOpt * cubeK + dstCo * cubeK + temporary;
                         int64_t hstIdx = srcCo * cDim * hDim * wDim + c * hDim * wDim + h * wDim + w;
-                        /* 此处由偏移计算逻辑保障不会越界读写 */
-                        std::memcpy(dst + hstIdx * dtypeSize, src + devIdx * dtypeSize, dtypeSize);
+                        int64_t devOffset = devIdx * dtypeSize;
+                        int64_t hstOffset = hstIdx * dtypeSize;
+                        if (hstOffset  + dtypeSize > dstSize) {
+                            return DebuggerErrno::ERROR_INVALID_VALUE;
+                        }
+                        std::copy(src + devOffset, src + devOffset + dtypeSize,
+                                  dst + hstOffset);
                     }
                 }
             }
@@ -450,8 +456,9 @@ static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
     }
 
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
     for (int64_t nIdx = 0; nIdx < n; nIdx++) {
         int64_t nHeadAddr = nIdx * chw;
         for (int64_t cIdx = 0; cIdx < c; cIdx++) {
@@ -464,8 +471,13 @@ static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
                     auto c0Idx = cIdx % c0;
                     auto ncIdx = nIdx;
                     auto srcIdx = c1Idx * hwncc0 + hIdx * wncc0 + wIdx * ncc0 + ncIdx * c0 + c0Idx;
-                    /* 此处由偏移计算逻辑保障不会越界读写 */
-                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                    auto dstOffset = dstIdx * dtypeSize;
+                    auto srcOffset = srcIdx * dtypeSize;
+                    if (dstOffset  + dtypeSize > dstSize) {
+                        return DebuggerErrno::ERROR_INVALID_VALUE;
+                    }
+                    std::copy(src + srcOffset, src + srcOffset + dtypeSize,
+                              dst + dstOffset);
                 }
             }
         }
@@ -518,8 +530,9 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
     auto numW1 = w / w0;
 
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
 
     for (int64_t timesIdx = 0; timesIdx < times; timesIdx++) {
         auto timesHead = timesIdx * w1h1h0w0;
@@ -531,8 +544,13 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
                 for (int64_t i = 0; i < w0; ++i) {
                     int64_t srcIdx = h1h0Head + w1Idx * h1h0w0 + i;
                     int64_t dstIdx = srcHHead + w1Idx * w0 + i;
-                    /* 此处由偏移计算逻辑保障不会越界读写 */
-                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                    int64_t dstOffset = dstIdx * dtypeSize;
+                    int64_t srcOffset = srcIdx * dtypeSize;
+                    if (dstOffset  + dtypeSize > dstSize) {
+                        return DebuggerErrno::ERROR_INVALID_VALUE;
+                    }
+                    std::copy(src + srcOffset, src + srcOffset + dtypeSize,
+                              dst + dstOffset);
                 }
             }
             auto w1Head = numW1 * w0;
@@ -540,8 +558,12 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
                 auto srcWIdx = w1Head + w0Idx;
                 int64_t srcIdx = h1h0Head + numW1 * h1h0w0 + w0Idx;
                 int64_t dstIdx = srcHHead + srcWIdx;
-                /* 此处由偏移计算逻辑保障不会越界读写 */
-                std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                int64_t dstOffset = dstIdx * dtypeSize;
+                int64_t srcOffset = srcIdx * dtypeSize;
+                if (dstOffset  + dtypeSize > dstSize) {
+                    return DebuggerErrno::ERROR_INVALID_VALUE;
+                }
+                std::copy(src + srcOffset, src + srcOffset + dtypeSize, dst + dstOffset);
             }
         }
     }
@@ -568,8 +590,9 @@ static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
     auto c1hwc0 = c1 * hwc0;
 
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
         int64_t nHeadAddr = nIndex * chw;
         for (int64_t cIndex = 0; cIndex < c; cIndex++) {
@@ -581,8 +604,13 @@ static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
                     int64_t c1Index = cIndex / c0;
                     int64_t c0Index = cIndex % c0;
                     int64_t srcIdx = nIndex * c1hwc0 + c1Index * hwc0 + hIndex * wc0 + wIndex * c0 + c0Index;
-                    /* 此处由偏移计算逻辑保障不会越界读写 */
-                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                    int64_t dstOffset = dstIdx * dtypeSize;
+                    int64_t srcOffset = srcIdx * dtypeSize;
+                    if (dstOffset  + dtypeSize > dstSize) {
+                        return DebuggerErrno::ERROR_INVALID_VALUE;
+                    }
+                    std::copy(src + srcOffset, src + srcOffset + dtypeSize,
+                              dst + dstOffset);
                 }
             }
         }
@@ -613,8 +641,9 @@ static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
     const int64_t wc0 = w * c0;
 
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
         int64_t nHead = nIndex * cdhw;
         for (int64_t cIndex = 0; cIndex < c; cIndex++) {
@@ -629,8 +658,13 @@ static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
                         int64_t c0Index = cIndex % c0;
                         auto srcIdx = nIndex * dc1hwc0 + dIndex * c1hwc0 + c1Index * hwc0 + hIndex * wc0 +
                                       wIndex * c0 + c0Index;
-                        /* 此处由偏移计算逻辑保障不会越界读写 */
-                        std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                        int64_t dstOffset = dstIdx * dtypeSize;
+                        int64_t srcOffset = srcIdx * dtypeSize;
+                        if (dstOffset  + dtypeSize > dstSize) {
+                            return DebuggerErrno::ERROR_INVALID_VALUE;
+                        }
+                        std::copy(src + srcOffset, src + srcOffset + dtypeSize,
+                                  dst + dstOffset);
                     }
                 }
             }
@@ -656,8 +690,9 @@ static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor)
     auto cubeK = GetCubeSizeByType(tensor.dtype);
 
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
         for (int64_t cIndex = 0; cIndex < c; cIndex++) {
             for (int64_t hIndex = 0; hIndex < h; hIndex++) {
@@ -668,8 +703,13 @@ static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor)
                     int64_t coIndex = c0Index;
                     int64_t srcIdx = c1Index * h * w * n * co * c0 + hIndex * w * n * co * c0 + wIndex * n * co * c0 +
                             nIndex * co * c0 + coIndex * c0 + c0Index;
-                    /* 此处由偏移计算逻辑保障不会越界读写 */
-                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                    int64_t dstOffset = dstIdx * dtypeSize;
+                    int64_t srcOffset = srcIdx * dtypeSize;
+                    if (dstOffset  + dtypeSize > dstSize) {
+                        return DebuggerErrno::ERROR_INVALID_VALUE;
+                    }
+                    std::copy(src + srcOffset, src + srcOffset + dtypeSize,
+                              dst + dstOffset);
                 }
             }
         }
@@ -708,8 +748,9 @@ static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
     auto cdhw = c * dhw;
 
     const uint8_t* src = tensor.aclData;
-    uint8_t* dst = tensor.transBuf.data();
+    auto dst = tensor.transBuf.begin();
     auto dtypeSize = SizeOfAclDType(tensor);
+    auto dstSize = tensor.transBuf.size();
     for (int64_t nIdx = 0; nIdx < n; nIdx++) {
         int64_t nHead = nIdx * cdhw;
         for (int64_t cIdx = 0; cIdx < c; cIdx++) {
@@ -725,8 +766,13 @@ static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
                         int64_t ncIdx = nIdx;
                         int64_t srcIdx = dIdx * c1hwn1n0c0 + c1I * c1hwn1n0c0 + hIdx * wn1n0c0 + wI * n1n0c0 +
                                            ncIdx * c0 + c0I;
-                        /* 此处由偏移计算逻辑保障不会越界读写 */
-                        std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                        int64_t dstOffset = dstIdx * dtypeSize;
+                        int64_t srcOffset = srcIdx * dtypeSize;
+                        if (dstOffset  + dtypeSize > dstSize) {
+                            return DebuggerErrno::ERROR_INVALID_VALUE;
+                        }
+                        std::copy(src + srcOffset, src + srcOffset + dtypeSize,
+                                  dst + dstOffset);
                     }
                 }
             }
