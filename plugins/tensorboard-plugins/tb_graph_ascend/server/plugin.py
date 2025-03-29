@@ -344,7 +344,6 @@ class GraphsPlugin(base_plugin.TBPlugin):
     @wrappers.Request.application
     def get_all_data(self, request):
         """Returns all data in json format."""
-        keys = []
         response_data = {}
         tag = request.args.get('tag')
         run = request.args.get('run')
@@ -354,18 +353,22 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 request, f"Failed to check file '{tag}', view the log for detail.", "text/plain", 400
             )
         self._current_file_data = json_data
-        if  'ALL' not in json_data.get('StepList', {}):
+        if 'ALL' not in json_data.get('StepList', {}):
             json_data['StepList'].insert(0, 'ALL')
         all_node_names = self.get_all_node_names(json_data, request)
-        # 读取全局信息
-        response_data['menu'] = all_node_names
-        response_data['unMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
-        response_data['microSteps'] = json_data.get('MicroSteps', {})
-        response_data['stepList'] = json_data.get('StepList', {})
-        response_data['ttooltips'] = json_data.get('Tooltips', {})
+
         # 读取第一个文件中的Colors和OverflowCheck
         first_run_tag = get_global_value("first_run_tag")
         first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
+        # 读取全局信息
+        response_data['menu'] = all_node_names
+        response_data['unMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
+        if json_data.get('MicroSteps', {}):
+            response_data['microSteps'] = json_data.get('MicroSteps')
+        if json_data.get('StepList', {}):
+            response_data['stepList'] = json_data.get('StepList')
+        if json_data.get('Tooltips', {}):
+            response_data['tooltips'] = json_data.get('Tooltips')
         if 'Colors' in first_file_data:
             response_data['colors'] = first_file_data.get('Colors')
         if 'OverflowCheck' in first_file_data:
