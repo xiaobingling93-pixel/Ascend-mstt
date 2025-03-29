@@ -86,13 +86,16 @@ class GraphUtils:
             # 构建文件路径并标准化
             file_path = os.path.join(run, f"{tag}.vis")
             file_path = os.path.normpath(file_path)
-            # 检查 tag 是否为合法文件名
-            if not re.match(FILE_NAME_REGEX, tag):
-                raise ValueError(f"Invalid tag: {tag}.")
+            # 权限校验：检查目录是否有写权限
+            if not os.access(run, os.W_OK):
+                raise PermissionError(f"No write permission for directory: {run}\n")
             # 检查 run 目录是否存在，如果不存在则创建
             if not os.path.exists(run):
                 os.makedirs(run, exist_ok=True)
                 os.chmod(run, 0o750)
+            # 检查 tag 是否为合法文件名
+            if not re.match(FILE_NAME_REGEX, tag):
+                raise ValueError(f"Invalid tag: {tag}.")
             # 检查文件路径是否合法，防止路径遍历攻击
             if not file_path.startswith(os.path.abspath(run)):
                 raise ValueError(f"Invalid file path: {file_path}. Potential path traversal attack.\n")
@@ -105,9 +108,6 @@ class GraphUtils:
                 raise RuntimeError(f"Parent directory contains a symbolic link")
             if not os.path.isfile(file_path):
                 raise RuntimeError("The target path is not a regular file")
-            # 权限校验：检查目录是否有写权限
-            if not os.access(run, os.W_OK):
-                raise PermissionError(f"No write permission for directory: {run}\n")
             # # 尝试写入文件
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
