@@ -128,7 +128,7 @@ class GraphUtils:
             return None, 'failed to save file'
 
     @staticmethod
-    def safe_load_data(run_dir, tag):
+    def safe_load_data(run_dir, tag, onlyCheck=False):
         """Load a single .vis file from a given directory based on the tag."""
         if run_dir is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
@@ -159,6 +159,9 @@ class GraphUtils:
             # 文件大小验证
             if os.path.getsize(real_path) > MAX_FILE_SIZE:
                 raise RuntimeError(f"File size exceeds limit ({os.path.getsize(real_path)} > {MAX_FILE_SIZE})")
+            # 读取文件比较耗时，支持onlyCheck参数，仅进行安全校验
+            if onlyCheck:
+                return True, None
             # 尝试解析 JSON 文件,校验文件内容是否合理
             with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f), None
