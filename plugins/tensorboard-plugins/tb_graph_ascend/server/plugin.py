@@ -355,9 +355,9 @@ class GraphsPlugin(base_plugin.TBPlugin):
             )
         self._current_file_data = json_data
         all_node_names = self.get_all_node_names(json_data, request)
-        response_data['Menu'] = all_node_names
-        response_data['UnMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
-        for field in ['MicroSteps', 'StepList', 'match', 'ToolTip']:
+        response_data['menu'] = all_node_names
+        response_data['unMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
+        for field in ['microSteps', 'stepList', 'match', 'tooltips']:
             if json_data.get(field, {}):
                 keys.append(field)
         for key in keys:

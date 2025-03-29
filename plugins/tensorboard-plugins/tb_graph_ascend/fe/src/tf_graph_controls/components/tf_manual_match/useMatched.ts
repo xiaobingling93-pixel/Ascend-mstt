@@ -115,7 +115,7 @@ const useMatched = (): UseMatchedType => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
         success: false,
-        error:'调试侧节点或标杆节点为空',
+        error: '调试侧节点或标杆节点为空',
       };
     }
     const metaData = {
@@ -162,7 +162,7 @@ const useMatched = (): UseMatchedType => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
         success: false,
-        error:'调试侧节点或标杆节点为空',
+        error: '调试侧节点或标杆节点为空',
       };
     }
     const metaData = {

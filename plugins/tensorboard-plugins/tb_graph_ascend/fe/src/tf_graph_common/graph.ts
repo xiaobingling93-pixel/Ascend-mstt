@@ -643,7 +643,7 @@ function addEdgeToGraphByAttr(graph: SlimGraph, node: OpNode | Metanode, edgeInf
   }
 }
 
-export const DefaultBuildParams: BuildParams = {
+export const defaultBuildParams: BuildParams = {
   enableEmbedding: true,
   inEmbeddingTypes: ['Const'],
   outEmbeddingTypes: ['^[a-zA-Z]+Summary$'],

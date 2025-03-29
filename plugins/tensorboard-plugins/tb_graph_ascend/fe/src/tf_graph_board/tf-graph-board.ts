@@ -200,7 +200,7 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   graph: tf_graph.MergedSlimGraph;
 
   @property({ type: Object })
-  hierarchyParams: tf_graph_hierarchy.HierarchyParams = tf_graph_hierarchy.DefaultHierarchyParams;
+  hierarchyParams: tf_graph_hierarchy.HierarchyParams = tf_graph_hierarchy.defaultHierarchyParams;
 
   /**
    * A number between 0 and 100 denoting the % of progress
@@ -260,7 +260,7 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   tooltips: object;
-  
+
   @property({ type: String })
   selectNodeCopy: string = '';
 

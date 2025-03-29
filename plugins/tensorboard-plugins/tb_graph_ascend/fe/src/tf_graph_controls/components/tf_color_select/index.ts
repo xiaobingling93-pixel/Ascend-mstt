@@ -31,8 +31,7 @@ const UNMATCHED_NODE_NAME = '无匹配节点';
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
-  static get template(): HTMLTemplateElement {
-    return html`
+  static readonly template = html`
       <style>
         /* 定义 CSS 变量 */
         :root {
@@ -301,7 +300,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         </div>
       </template>
     `;
-  }
 
   // 核心part
   @property({ type: Array })
@@ -373,10 +371,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   unmatched: any = [];
 
   @property({ type: Object })
-  NPU_unmatched: any = [];
+  npu_unmatched: any = [];
 
   @property({ type: Object })
-  Bench_unmatched: any = [];
+  bench_unmatched: any = [];
 
   // 溢出筛选
   @property({ type: Array })
@@ -399,8 +397,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   @observe('unmatched')
   _observeUnmatchedNode(): void {
-    this.set('NPU_unmatched', this.unmatched[0]);
-    this.set('Bench_unmatched', this.unmatched[1]);
+    this.set('npu_unmatched', this.unmatched[0]);
+    this.set('bench_unmatched', this.unmatched[1]);
   }
 
   @observe('colorset')
