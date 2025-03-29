@@ -159,7 +159,7 @@ class GraphUtils:
                 raise PermissionError(f"File has no read permissions")
             # 文件大小验证
             if os.path.getsize(real_path) > MAX_FILE_SIZE:
-                raise RuntimeError(f"File size exceeds limit ({os.path.getsize(real_path)} > {MAX_FILE_SIZE})")
+                raise RuntimeError(f"File size exceeds limit ({os.path.getsize(real_path)} > {MAX_FILE_SIZE/1024}MB)")
             # 读取文件比较耗时，支持onlyCheck参数，仅进行安全校验
             if only_check:
                 return True, None

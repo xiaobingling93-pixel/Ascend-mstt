@@ -607,7 +607,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
                     _, error = GraphUtils.safe_load_data(run, tag, True)
                     if(error):
-                        logger.error(f'Error: File "{run}/{tag}" is not accessible. Error: {error}')
+                        logger.error(f'Error: File run:"{run},tag:{tag}" is not accessible. Error: {error}')
                         continue
                     run_tag_pairs.append((run, tag))
         if(run_tag_pairs[0]):
