@@ -671,10 +671,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   @property({ type: Boolean })
   showUploadButton: boolean = false;
 
-  // trace input to off-state
-  @property({ type: Boolean, notify: true })
-  traceInputs: boolean = false;
-
   @property({ type: String, notify: true })
   selectedNode: string | null = null;
 
@@ -806,7 +802,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     }
     this._selectedTagIndex = 0;
     this._selectedGraphType = this._getDefaultSelectionType();
-    this.traceInputs = false; // Set trace input to off-state.
     this._setDownloadFilename(this.datasets[runIndex]?.name);
   }
 

@@ -66,24 +66,7 @@ export enum InclusionType {
   EXCLUDE = 1,
   UNSPECIFIED = 2,
 }
-/** Attribute key reserved for the shapes of the output tensors. */
-const OUTPUT_SHAPES_KEY = '_output_shapes';
-/**
- * A BaseEdge is the label object (in the graphlib sense) for an edge in the
- * original, full graph produced after parsing. Subsequent graphs, like those
- * which belong to Metanodes, should not use BaseEdge objects, but instead
- * contain Metaedges (which in turn may contain any number of BaseEdges).
- */
-export interface BaseEdge {
-  isReferenceEdge: boolean;
-  /** The index of the output tensor of the source node. */
-  outputTensorKey: string;
-  attr?: {
-    [key: string]: any;
-  };
-  v?: string;
-  w?: string;
-}
+
 // Including both the NPU and benchmark slimgraph.
 export interface MergedSlimGraph {
   npu: SlimGraph;
@@ -100,11 +83,9 @@ export class SlimGraph {
   metaNodes: {
     [nodeName: string]: Metanode;
   };
-  edges: BaseEdge[];
   constructor() {
     this.nodes = {};
     this.metaNodes = {};
-    this.edges = [];
   }
 }
 export interface NormalizedInput {
@@ -319,7 +300,7 @@ export class MetanodeImpl implements Metanode {
     /** graph contains metanodes, nodes, edges
      * and metaedges for main items within this metanode
      */
-    this.metagraph = createGraph<GroupNode | OpNode, Metaedge>(name, GraphType.META, opt);
+    this.metagraph = createGraph<GroupNode | OpNode>(name, GraphType.META, opt);
     /** Metanode which contains this node, if any */
     this.parentNode = null;
     this.include = InclusionType.UNSPECIFIED;
@@ -368,43 +349,6 @@ export class MetanodeImpl implements Metanode {
     }
     return leaves;
   }
-}
-
-export interface Metaedge {
-  /**
-   * Stores the original BaseEdges represented by this Metaedge.
-   */
-  baseEdgeList: BaseEdge[];
-  /**
-   * Whether this edge represents a relationship that is inbound (or outbound)
-   * to the object which contains this information. For example, in a Metanode's
-   * bridgegraph, each edge connects an immediate child to something outside
-   * the Metanode. If the destination of the edge is inside the Metanode, then
-   * its inbound property should be true. If the destination is outside the
-   * Metanode, then its inbound property should be false.
-   *
-   * The property is optional because not all edges can be described as
-   * inbound/outbound. For example, in a Metanode's metagraph, all of the edges
-   * connect immediate children of the Metanode. None should have an inbound
-   * property, or they should be null/undefined.
-   */
-  inbound?: boolean;
-  /**
-   * Number of regular edges (not control dependency edges).
-   */
-  numRegularEdges: number;
-  /**
-   * Number of reference edges, which is an edge to an operation
-   * that takes a reference to its input and changes its value.
-   */
-  numRefEdges: number;
-  /**
-   * Total size (number of units) of all the tensors flowing through this edge.
-   */
-  totalSize: number;
-  addBaseEdge: (edge: BaseEdge, h: Hierarchy) => void;
-  v?: string;
-  w?: string;
 }
 
 export const defaultBuildParams: BuildParams = {
@@ -527,7 +471,7 @@ export function build(
 /**
  * Create a new graphlib.Graph() instance with default parameters
  */
-export function createGraph<N, E>(name: string, type, graphOptions: LabeledGraphOptions = {}): graphlib.Graph {
+export function createGraph<N>(name: string, type, graphOptions: LabeledGraphOptions = {}): graphlib.Graph {
   const graph = new graphlib.Graph({ ...graphOptions, multigraph: true });
   graph.setGraph({
     name: name,
@@ -622,11 +566,6 @@ export function getHierarchicalPath(name: string): string[] {
   // Push the leaf of the path.
   path.push(name);
   return path;
-}
-
-export interface Edges {
-  control: Metaedge[];
-  regular: Metaedge[];
 }
 
 /**

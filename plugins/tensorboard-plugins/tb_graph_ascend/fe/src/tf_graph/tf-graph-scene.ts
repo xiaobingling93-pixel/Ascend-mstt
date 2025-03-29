@@ -61,9 +61,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   @property({ type: String })
   name: string;
 
-  @property({ type: Boolean })
-  traceInputs: boolean;
-
   // For each render hierarchy, we only fit it to the viewport once (when the scene is attached to
   // the DOM). We do not fit the hierarchy again (unless the user clicks the reset button). For
   // instance, if the user enters a certain view in the graph, switches to another dashboard, and
@@ -103,11 +100,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     observer: '_linkedNodeChanged',
   })
   linkedNode: string;
-
-  // An optional callback that implements the tf.graph.edge.EdgeSelectionCallback signature. If
-  // provided, edges are selectable, and this callback is run when an edge is selected.
-  @property({ type: Object })
-  handleEdgeSelected: object;
 
   /** Keeps track of if the graph has been zoomed/panned since loading */
   @property({

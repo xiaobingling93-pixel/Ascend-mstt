@@ -18,29 +18,21 @@ Adapt to the model hierarchical visualization data collected by the msprobe tool
 /**
  * Package for the Render Hierarchy for TensorFlow graph.
  */
-import * as d3 from 'd3';
 import { graphlib } from 'dagre';
 import * as _ from 'lodash';
-import { NPU_PREFIX, BENCH_PREFIX, EDGE_WIDTH_SIZE_BASED_SCALE } from './common';
+import { NPU_PREFIX, BENCH_PREFIX } from './common';
 import * as tf_graph from './graph';
 import {
   createGraph,
   getHierarchicalPath,
   GraphType,
   GroupNode,
-  Metaedge,
   Node,
   NodeType,
 } from './graph';
 import { Hierarchy } from './hierarchy';
 
 const NODE_LINE_FEED_NUMBER = 5;
-export interface EdgeData {
-  v: string;
-  w: string;
-  id: number;
-  label: RenderMetaedgeInfo;
-}
 
 export interface Point {
   x: number;
@@ -65,23 +57,7 @@ export const MetanodeColors = {
   DEFAULT_STROKE: '#a6a6a6',
   GRADIENT_OUTLINE: '#888',
 };
-/**
- * Function that computes edge label strings. This function accepts a Metaedge,
- * which could actually encapsulate several base edges. For instance, several
- * base edges may merge into a single metaedge.
- *
- * To determine whether a metaedge represents several edges, check the length of
- * its baseEdgeList property.
- */
-export interface EdgeLabelFunction {
-  (metaedge: Metaedge, renderInfo: RenderGraphInfo): string;
-}
-/**
- * Parameters that affect how the graph is rendered on the screen.
- */
-const PARAMS = {
-  maxAnnotations: 5,
-};
+
 /**
  * The regular expression to use when parsing for the string that is
  * used to label a function node in the graph. We strip away a prefix
@@ -105,10 +81,7 @@ export interface MergedRenderGraphInfo {
 export class RenderGraphInfo {
   hierarchy: Hierarchy;
   renderedOpNames: string[];
-  /** Scale for the thickness of edges when there is no shape information. */
-  edgeWidthSizedBasedScale: d3.ScaleLinear<number, number> | d3.ScalePower<number, number>;
   root: RenderGroupNodeInfo;
-  traceInputs: boolean;
   private index: {
     [nodeName: string]: RenderNodeInfo;
   };
@@ -132,8 +105,6 @@ export class RenderGraphInfo {
     this.renderedOpNames.push(hierarchy.root.name);
     this.buildSubhierarchy(hierarchy.root.name);
     this.root.expanded = true;
-    this.traceInputs = false;
-    this.edgeWidthSizedBasedScale = EDGE_WIDTH_SIZE_BASED_SCALE;
   }
 
   /**
@@ -285,7 +256,6 @@ export class RenderGraphInfo {
 export class Annotation {
   node: Node;
   renderNodeInfo: RenderNodeInfo;
-  renderMetaedgeInfo: RenderMetaedgeInfo | null;
   annotationType: AnnotationType;
   /**
    * Center position of annotation relative to the host
@@ -299,11 +269,6 @@ export class Annotation {
   dy: number;
   width: number;
   height: number;
-  /**
-   * The names of nodes on either side of this edge.
-   */
-  v: string;
-  w: string;
   /**
    * A flag whether it is an in-annotation (if true) or
    * out-annotation  (if false).
@@ -329,7 +294,6 @@ export class Annotation {
    *     this annotation points to. This can be null if the annotation
    *     denotes an embedding (constant, summary), in which case we
    *     use the node property.
-   * @param renderMetaedgeInfo The render information for the edge associated
    *     with the annotation.
    * @param type The type of the annotation.
    * @param isIn True if it is an in-annotation. False if it is an
@@ -338,25 +302,17 @@ export class Annotation {
   constructor(
     node: Node,
     renderNodeInfo: RenderNodeInfo,
-    renderMetaedgeInfo: RenderMetaedgeInfo | null,
     type: AnnotationType,
     isIn: boolean,
   ) {
     this.node = node;
     this.renderNodeInfo = renderNodeInfo;
-    this.renderMetaedgeInfo = renderMetaedgeInfo;
     this.annotationType = type;
     // Properties specified by layout
     this.dx = 0;
     this.dy = 0;
     this.width = 0;
     this.height = 0;
-    // Properties needed for generating an ID for the edge's path element if
-    // this annotation is associated with a metaedge.
-    if (renderMetaedgeInfo?.metaedge) {
-      this.v = renderMetaedgeInfo.metaedge.v ?? '';
-      this.w = renderMetaedgeInfo.metaedge.w ?? '';
-    }
     this.isIn = isIn;
     this.points = [];
   }
@@ -499,49 +455,7 @@ export class RenderNodeInfo {
     }
   }
 }
-/**
- * Contains rendering information about a Metaedge from the underlying
- * hierarchical graph. It may be from either a metagraph or a bridgegraph.
- */
-export class RenderMetaedgeInfo {
-  /**
-   * Reference to the original underlying Metaedge from the hierarchical graph,
-   * if any. This will be null for the edges which connect OpNodes to their
-   * embeddings, for example.
-   */
-  metaedge: Metaedge | null;
-  /**
-   * Reference to the adjoining RenderMetaedgeInfo from the parent's
-   * coreGraph. This is used during layout to determine the point at which this
-   * edge should touch the node's bounding box. This property will be null for
-   * edges which terminate at a node on both ends (all non-bridge edges).
-   */
-  adjoiningMetaedge: RenderMetaedgeInfo | null;
-  /**
-   * Weight of the edge, used by dagre when deciding how important an edge is.
-   * Edges with higher weight are made shorter and straighter. The default
-   * dagre uses is 1.
-   */
-  weight: number;
-  /**
-   * X and Y coordinate pairs of the points in the path of the edge.
-   * @see tf_graph.node.subsceneAdjustPaths
-   */
-  points: Point[];
-  /**
-   * D3 selection of the group containing the path that displays this edge.
-   */
-  edgeGroup: d3.Selection<RenderMetaedgeInfo & any, any, any, any>;
-  /** Id of the <marker> used as a start-marker for the edge path. */
-  startMarkerId: string;
-  /** Id of the <marker> used as an end-marker for the edge path. */
-  endMarkerId: string;
-  constructor(metaedge: Metaedge | null) {
-    this.metaedge = metaedge;
-    this.adjoiningMetaedge = null;
-    this.weight = 1;
-  }
-}
+
 function setGraphDepth(graph: graphlib.Graph, depth: number): void {
   _.each(graph.nodes(), (nodeName) => {
     let child = graph.node(nodeName);
@@ -570,7 +484,7 @@ export class RenderGroupNodeInfo extends RenderNodeInfo {
     super(groupNode);
     let metagraph = groupNode.metagraph;
     let gl = metagraph.graph() as any;
-    this.coreGraph = createGraph<RenderNodeInfo, RenderMetaedgeInfo>(gl.name, GraphType.CORE, graphOptions);
+    this.coreGraph = createGraph<RenderNodeInfo>(gl.name, GraphType.CORE, graphOptions);
   }
 }
 function setGroupNodeDepth(renderInfo: RenderGroupNodeInfo, depth: number): void {
