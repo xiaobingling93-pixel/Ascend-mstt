@@ -209,7 +209,7 @@ function layoutChildren(renderNodeInfo: render.RenderGroupNodeInfo): void {
       case NodeType.META:
       case NodeType.MULTI_COLLECTION:
       case NodeType.API_LIST:
-        if (!childNodeInfo.expanded) {  
+        if (!childNodeInfo.expanded) {
           // Set fixed width and scalable height based on cardinality
           _.extend(childNodeInfo, PARAMS.nodeSize.meta);
           childNodeInfo.height = PARAMS.nodeSize.meta.height(childNodeInfo.node.cardinality);

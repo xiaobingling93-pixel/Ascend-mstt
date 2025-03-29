@@ -79,7 +79,6 @@ import * as tf_graph_util from './util';
  */
 let colorStorage: { [key: string]: string } = {};
 export function buildGroup(sceneGroup, nodeData: render.RenderNodeInfo[], sceneElement): void {
-  // console.log('sceneGroup', sceneGroup)
   let container = tf_graph_common.selectOrCreateChild(sceneGroup, 'g', Class.Node.CONTAINER);
   // Select all children and join with data.
   // (Note that all children of g.nodes are g.node)
@@ -703,7 +702,6 @@ export function buildGroupForScene(
   sceneClass?: string,
 ): void {
   const newSceneClass = sceneClass ?? Class.Scene.GROUP;
-  // console.log('container', container)
   let isNewSceneGroup = selectChild(container, 'g', newSceneClass).empty();
   let sceneGroup = selectOrCreateChild(container, 'g', newSceneClass);
   // core

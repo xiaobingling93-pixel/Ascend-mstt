@@ -441,7 +441,6 @@ export class RenderNodeInfo {
   constructor(node: Node) {
     this.node = node;
     this.expanded = false;
-
     // Params specified by layout
     this.x = 0;
     this.y = 0;
@@ -537,7 +536,6 @@ export class RenderMetaedgeInfo {
   startMarkerId: string;
   /** Id of the <marker> used as an end-marker for the edge path. */
   endMarkerId: string;
-
   constructor(metaedge: Metaedge | null) {
     this.metaedge = metaedge;
     this.adjoiningMetaedge = null;

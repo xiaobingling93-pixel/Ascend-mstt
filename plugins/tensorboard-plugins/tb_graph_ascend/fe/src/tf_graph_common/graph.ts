@@ -407,7 +407,7 @@ export interface Metaedge {
   w?: string;
 }
 
-export const DefaultBuildParams: BuildParams = {
+export const defaultBuildParams: BuildParams = {
   enableEmbedding: true,
   inEmbeddingTypes: ['Const'],
   outEmbeddingTypes: ['^[a-zA-Z]+Summary$'],
