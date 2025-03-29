@@ -18,7 +18,7 @@ import torch
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import replace_last_occurrence
+from msprobe.pytorch.common.utils import replace_last_occurrence, is_torch_nn_module
 from msprobe.pytorch.dump.module_dump.hook_wrapper import wrap_setup_input_output_hook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -85,6 +85,12 @@ class ModuleProcesser:
             model = models if index == "-1" else models[int(index)]
             for name, module in modules_and_names:
                 if module == model:
+                    continue
+                if not is_torch_nn_module(module):
+                    logger.warning(
+                        f"The module dump does not support {type(module)} type. "
+                        f"The data dump for this module will be skipped."
+                    )
                     continue
                 if module.__class__.__name__ == "FullyShardedDataParallel":
                     continue

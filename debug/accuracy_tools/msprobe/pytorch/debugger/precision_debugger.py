@@ -15,19 +15,19 @@
 
 from collections import namedtuple
 
-import torch
+from torch.utils.data import dataloader
+
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import check_save_param
+from msprobe.pytorch.common.utils import check_save_param, is_torch_nn_module
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.pytorch.service import Service
-from torch.utils.data import dataloader
 
 ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task",
                                                    "dump_path", "level", "model"])
@@ -182,10 +182,11 @@ class PrecisionDebugger:
 
 
 def module_dump(module, dump_name):
-    if not isinstance(module, torch.nn.Module):
+    if not is_torch_nn_module(module):
         raise MsprobeException(
             MsprobeException.INVALID_PARAM_ERROR,
-            f"the module argument in module_dump must be a torch.nn.Module subclass"
+            f"the module argument in module_dump must be a torch.nn.Module type, "
+            f"but currently there is an unsupported {type(module)} type."
         )
     if not isinstance(dump_name, str):
         raise MsprobeException(
