@@ -395,7 +395,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   hiddenTabChanged = true;
 
   @property({ type: Object })
-  selection: object = {};
+  selection: any = {};
 
   @observe('unmatched')
   _observeUnmatchedNode(): void {
@@ -517,7 +517,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.set('colorSetChanged', newColorSetChanged);
     const params = new URLSearchParams();
     params.set('colors', JSON.stringify(newColorsList));
-    const colorsPath = `setNewColors?${String(params)}`;
+    params.set('run', JSON.stringify(this.selection.run));
+    const colorsPath = `updateColors?${String(params)}`;
     tf_graph_parser.fetchPbTxt(colorsPath);
     //  根据颜色列表重绘
     let nodeDataSet = Object.entries(this.renderHierarchy.npu.getIndex());

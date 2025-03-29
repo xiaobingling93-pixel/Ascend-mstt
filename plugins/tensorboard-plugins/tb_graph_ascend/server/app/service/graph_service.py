@@ -15,6 +15,7 @@
 # ==============================================================================
 
 from ..utils.graph_utils import GraphUtils
+from ..utils.global_state import  get_global_value
 from ..controllers.match_nodes_controller import MatchNodesController
 
 
@@ -82,6 +83,20 @@ class GraphService:
         }
 
     @staticmethod
+    def update_colors(run, colors):
+        """Set new colors in jsondata."""
+        try:
+            first_run_tag = get_global_value("first_run_tag")
+            first_file_data, error = GraphUtils.safe_load_data(run, first_run_tag)
+            if error:
+                return {'success': False, 'error': error}
+            first_file_data['Colors'] = colors
+            GraphUtils.safe_save_data(first_file_data, run, first_run_tag)
+            return {'success': True, 'error': None, 'data': {}}
+        except Exception as e:
+            return{'success': False, 'error': str(e), 'data': None}
+
+    @staticmethod
     def save_data(meta_data):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
@@ -90,7 +105,7 @@ class GraphService:
         run = meta_data.get('run')
         tag = meta_data.get('tag')
         try:
-            GraphUtils.save_data(graph_data, run, tag)
+            GraphUtils.safe_save_data(graph_data, run, tag)
         except (ValueError, IOError, PermissionError) as e:
             return {'success': False, 'error': f"Error: {e}"}
         return {'success': True}

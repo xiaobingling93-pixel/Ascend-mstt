@@ -76,7 +76,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
             '/deleteMatchNodes': GraphView.delete_match_nodes,
             '/getMatchedStateList': GraphView.get_matched_state_list,
             '/saveData': GraphView.save_data,
-            '/setNewColors': self.set_new_colors,
+            '/updateColors': GraphView.update_colors,
         }
 
     def is_active(self):
@@ -170,7 +170,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
         # 返回格式为 [[NPU节点ID列表], [Bench节点ID列表]]
         return [npu_ids, bench_ids]
 
-    def dfs_collect_nodes(self, json_data, request):   
+    def dfs_collect_nodes(self, json_data, request): 
         root_subnodes_set = []
         all_node_names = []
         try:
@@ -460,14 +460,11 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
     # 检查到底是读一般还是用之前存的
     def check_jsondata(self, request):
-        tag = request.args.get("tag")
-        run = request.args.get('run')
-        graph_data = GraphUtils.check_jsondata(tag)
-        if graph_data is None:
-            graph_data, error_message = GraphUtils.get_jsondata(run, tag)
-            if error_message is not None:
-                logger.error(f"Failed to get json data: {error_message}")
-                return None
+        metaData = {
+            "tag": request.args.get("tag"),
+            "run": request.args.get('run')
+        }
+        graph_data, _ = GraphUtils.get_graph_data(metaData)
         return graph_data
 
     # 处理xx.get
@@ -624,14 +621,13 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 if file.endswith('.vis'):  # check for .vis extension
                     run = os.path.abspath(root)
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
-                    file_path = os.path.join(root, file)
-                    file_size = os.path.getsize(file_path)
-                    if file_size > constants.MAX_FILE_SIZE:
-                        logger.error(
-                            f'Error: vis file "{file_path}" exceeds the maximum limit size of 1GB and will be skipped.'
-                        )
-                        continue
+                    _, error = GraphUtils.safe_load_data(run, tag)
+                    if(error):
+                       logger.error(f'Error: File "{run}/{tag}" is not accessible. Error: {error}')
+                       continue
                     run_tag_pairs.append((run, tag))
+        if(run_tag_pairs[0]):
+            set_global_value('first_run_tag', run_tag_pairs[0][1])
         return run_tag_pairs
 
     def _load_json_file(self, run_dir, tag):
