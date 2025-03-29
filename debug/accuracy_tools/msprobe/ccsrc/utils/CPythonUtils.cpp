@@ -108,7 +108,7 @@ int32_t PythonObject::To(uint32_t& output) const
     if (!PyLong_Check(ptr)) {
         return -1;
     }
-    output = static_cast<int32_t>(PyLong_AsUnsignedLong(ptr));
+    output = static_cast<uint32_t>(PyLong_AsUnsignedLong(ptr));
     return 0;
 }
 
