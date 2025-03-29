@@ -18,17 +18,17 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-    mode: 'development',  // 明确指定开发模式
+    mode: 'development', // 明确指定开发模式
     devtool: 'eval-cheap-source-map', // 开发环境推荐使用的 source map 类型
 
     entry: {
-        app: './src/index' // 保持与生产环境一致的入口
+        app: './src/index', // 保持与生产环境一致的入口
     },
 
     output: {
         filename: '[name].bundle.js', // 使用带 hash 的文件名
         path: path.resolve(__dirname, 'dist'),
-        publicPath: '/' // 确保 dev server 的静态资源路径正确
+        publicPath: '/', // 确保 dev server 的静态资源路径正确
     },
 
     devServer: {
@@ -44,7 +44,7 @@ module.exports = {
                 changeOrigin: true,
                 secure: false,
                 pathRewrite: {
-                    '^/(.*)': '/data/plugin/graph_ascend/$1' // 路径转换核心逻辑
+                    '^/(.*)': '/data/plugin/graph_ascend/$1', // 路径转换核心逻辑
                 },
                 on: {
                     error: (err, req, res) => {
@@ -60,20 +60,19 @@ module.exports = {
                         socket.on('error', (error) => {
                             console.error('[HPM] WebSocket 错误:', error.message);
                         });
-                    }
-                }
-            }
+                    },
+                },
+            },
         ],
         webSocketServer: {
             type: 'ws',
             options: {
                 path: '/ws',
-                noInfo: true
-            }
+                noInfo: true,
+            },
         },
-        http2: true,  // 推荐启用HTTP/2
-        https: false  // 根据实际需要配置
-        ,
+        http2: true, // 推荐启用HTTP/2
+        https: false, // 根据实际需要配置
         hot: true, // 启用热模块替换
         liveReload: true, // 启用实时重新加载
         port: 8080, // 自定义端口号
@@ -85,7 +84,7 @@ module.exports = {
             }, // 在浏览器中显示编译错误
         },
         headers: {
-            'X-Proxy-Source': 'webpack-dev-server'
+            'X-Proxy-Source': 'webpack-dev-server',
         },
     },
 
@@ -97,10 +96,10 @@ module.exports = {
                     {
                         loader: 'html-loader',
                         options: {
-                            sources: false // 开发环境不需要优化资源路径
-                        }
-                    }
-                ]
+                            sources: false, // 开发环境不需要优化资源路径
+                        },
+                    },
+                ],
             },
             {
                 test: /\.ts?$/,
@@ -108,10 +107,10 @@ module.exports = {
                     loader: 'ts-loader',
                     options: {
                         transpileOnly: true, // 保持快速编译
-                        experimentalWatchApi: true // 启用 TypeScript 的监听 API
-                    }
+                        experimentalWatchApi: true, // 启用 TypeScript 的监听 API
+                    },
                 },
-                exclude: /node_modules/
+                exclude: /node_modules/,
             },
             {
                 test: /\.css$/i,
@@ -120,29 +119,29 @@ module.exports = {
                     {
                         loader: 'css-loader',
                         options: {
-                            sourceMap: true // 启用 CSS source maps
-                        }
-                    }
-                ]
-            }
-        ]
+                            sourceMap: true, // 启用 CSS source maps
+                        },
+                    },
+                ],
+            },
+        ],
     },
 
     resolve: {
-        extensions: ['.ts', '.js', '.json'] // 添加 .json 扩展名解析
+        extensions: ['.ts', '.js', '.json'], // 添加 .json 扩展名解析
     },
 
     plugins: [
         new HtmlWebpackPlugin({
             inject: 'body',
             template: './index.html',
-            minify: false // 开发环境不压缩 HTML
-        })
+            minify: false, // 开发环境不压缩 HTML
+        }),
     ],
 
     optimization: {
         removeAvailableModules: false,
         removeEmptyChunks: false,
-        splitChunks: false // 禁用代码拆分加速编译
-    }
+        splitChunks: false, // 禁用代码拆分加速编译
+    },
 };

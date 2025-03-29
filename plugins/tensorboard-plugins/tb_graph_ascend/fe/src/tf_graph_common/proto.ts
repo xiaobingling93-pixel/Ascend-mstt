@@ -58,19 +58,19 @@ export interface NodeDef {
   subnodes?: string[];
   isLeaf: boolean;
   /** List of attributes that describe/modify the operation. */
-  attr: {
+  attr: Array<{
     key: string;
     value: Record<string, unknown>;
-  }[];
+  }>;
 }
 export interface EdgeInfo {
   input: string;
   output: string;
   shape: string;
-  attr: {
+  attr: Array<{
     key: string;
     value: Record<string, unknown>;
-  }[];
+  }>;
 }
 /**
  * TensorFlow graph definition as defined in the graph.proto file.

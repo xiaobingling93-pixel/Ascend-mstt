@@ -603,7 +603,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     notify: true,
     readOnly: true,
     computed:
-      '_computeSelection(datasets, _selectedRunIndex, _selectedTagIndex, _selectedGraphType, _selectedMicroStep, _selectedStep)',
+      '_computeSelection(datasets, _selectedRunIndex, _selectedTagIndex, _selectedGraphType, _selectedMicroStep)',
   })
   selection: object;
 
@@ -787,7 +787,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     _selectedTagIndex: number,
     _selectedGraphType: SelectionType,
     _selectedMicroStep: number,
-    _selectedStep: number,
   ): { run: string; tag: string | null; type: SelectionType; batch: number; step: number } | null {
     if (!datasets[_selectedRunIndex] || !datasets[_selectedRunIndex].tags[_selectedTagIndex]) {
       return null;
@@ -797,7 +796,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       tag: datasets[_selectedRunIndex].tags[_selectedTagIndex].tag,
       type: _selectedGraphType,
       batch: _selectedMicroStep,
-      step: _selectedStep,
+      step: this._selectedStep,
     };
   }
 

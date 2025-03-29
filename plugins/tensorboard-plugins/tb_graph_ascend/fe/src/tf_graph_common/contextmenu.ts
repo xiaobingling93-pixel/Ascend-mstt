@@ -176,7 +176,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
           } else {
             nodeInfo = decodedObj.nodes_info ?? {}; // 如果是 undefined，使用空对象
           }
-          const subMenuOptions: { text: string; action: string; color: string }[] = []; // 定义 subMenuOptions 数组的类型
+          const subMenuOptions: Array<{ text: string; action: string; color: string }> = []; // 定义 subMenuOptions 数组的类型
           for (const [key, value] of Object.entries(nodeInfo)) {
             const rank = `rank${key}`;
             const screen = getColorByPrecisionIndex(String(value[0]));
