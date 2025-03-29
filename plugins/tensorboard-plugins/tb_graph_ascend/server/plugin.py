@@ -368,12 +368,12 @@ class GraphsPlugin(base_plugin.TBPlugin):
         first_run_tag = get_global_value("first_run_tag")
         first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
         if 'Colors' in first_file_data:
-            response_data['Colors'] = first_file_data.get('Colors', {})
+            response_data['colors'] = first_file_data.get('Colors', {})
         if 'OverflowCheck' in first_file_data:
-            response_data['OverflowCheck'] = first_file_data.get('OverflowCheck')
+            response_data['overflowCheck'] = first_file_data.get('OverflowCheck')
         else:
             # 适配老精度溢出数据
-            response_data['OverflowCheck'] = True
+            response_data['overflowCheck'] = True
         return http_util.Respond(request, response_data, "application/json")
 
     @wrappers.Request.application
