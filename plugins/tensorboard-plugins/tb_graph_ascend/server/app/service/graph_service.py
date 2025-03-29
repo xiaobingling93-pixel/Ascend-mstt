@@ -15,7 +15,7 @@
 # ==============================================================================
 
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import  get_global_value
+from ..utils.global_state import get_global_value
 from ..controllers.match_nodes_controller import MatchNodesController
 
 

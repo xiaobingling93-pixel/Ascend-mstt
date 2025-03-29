@@ -354,21 +354,20 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 request, f"Failed to check file '{tag}', view the log for detail.", "text/plain", 400
             )
         self._current_file_data = json_data
+        if  'ALL' not in json_data.get('StepList', {}):
+            json_data['StepList'].insert(0, 'ALL')
         all_node_names = self.get_all_node_names(json_data, request)
+        # 读取全局信息
         response_data['menu'] = all_node_names
         response_data['unMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
-        for field in ['microSteps', 'stepList', 'match', 'tooltips']:
-            if json_data.get(field, {}):
-                keys.append(field)
-        for key in keys:
-            if key == 'StepList' and 'ALL' not in json_data.get('StepList', {}):
-                json_data[key].insert(0, 'ALL')
-            response_data[key] = json_data.get(key, {})
+        response_data['microSteps'] = json_data.get('MicroSteps', {})
+        response_data['stepList'] = json_data.get('StepList', {})
+        response_data['ttooltips'] = json_data.get('Tooltips', {})
         # 读取第一个文件中的Colors和OverflowCheck
         first_run_tag = get_global_value("first_run_tag")
         first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
         if 'Colors' in first_file_data:
-            response_data['colors'] = first_file_data.get('Colors', {})
+            response_data['colors'] = first_file_data.get('Colors')
         if 'OverflowCheck' in first_file_data:
             response_data['overflowCheck'] = first_file_data.get('OverflowCheck')
         else:
@@ -442,11 +441,11 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
     # 检查到底是读一般还是用之前存的
     def check_jsondata(self, request):
-        metaData = {
+        meta_data = {
             "tag": request.args.get("tag"),
             "run": request.args.get('run')
         }
-        graph_data, _ = GraphUtils.get_graph_data(metaData)
+        graph_data, _ = GraphUtils.get_graph_data(meta_data)
         return graph_data
 
     # 处理xx.get
@@ -605,8 +604,8 @@ class GraphsPlugin(base_plugin.TBPlugin):
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
                     _, error = GraphUtils.safe_load_data(run, tag, True)
                     if(error):
-                       logger.error(f'Error: File "{run}/{tag}" is not accessible. Error: {error}')
-                       continue
+                        logger.error(f'Error: File "{run}/{tag}" is not accessible. Error: {error}')
+                        continue
                     run_tag_pairs.append((run, tag))
         if(run_tag_pairs[0]):
             set_global_value('first_run_tag', run_tag_pairs[0][1])

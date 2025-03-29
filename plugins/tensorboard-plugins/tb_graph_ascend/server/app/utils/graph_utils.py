@@ -117,6 +117,7 @@ class GraphUtils:
             # 最终校验（防御TOCTOU攻击）
             if os.path.islink(file_path):
                 raise RuntimeError("The file has been replaced with a symbolic link")
+            return True, None
         except (TypeError, ValueError) as e:
             logger.error(f"Invalid data: {e}")
             return None, 'Invalid data'
@@ -128,7 +129,7 @@ class GraphUtils:
             return None, 'failed to save file'
 
     @staticmethod
-    def safe_load_data(run_dir, tag, onlyCheck=False):
+    def safe_load_data(run_dir, tag, only_check=False):
         """Load a single .vis file from a given directory based on the tag."""
         if run_dir is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
@@ -160,7 +161,7 @@ class GraphUtils:
             if os.path.getsize(real_path) > MAX_FILE_SIZE:
                 raise RuntimeError(f"File size exceeds limit ({os.path.getsize(real_path)} > {MAX_FILE_SIZE})")
             # 读取文件比较耗时，支持onlyCheck参数，仅进行安全校验
-            if onlyCheck:
+            if only_check:
                 return True, None
             # 尝试解析 JSON 文件,校验文件内容是否合理
             with open(file_path, 'r', encoding='utf-8') as f:
