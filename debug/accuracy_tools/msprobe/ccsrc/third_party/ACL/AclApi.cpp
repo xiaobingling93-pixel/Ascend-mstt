@@ -52,7 +52,7 @@ DebuggerErrno LoadAclApi()
         return DebuggerErrno::OK;
     }
 
-    hLibAscendcl = dlopen(kLibAscendclName, RTLD_LAZY);
+    hLibAscendcl = dlopen(kLibAscendclName, RTLD_LAZY | RTLD_NOLOAD);
     if (hLibAscendcl == nullptr) {
         LOG_ERROR(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND,
                   "Failed to search libascendcl.so." + std::string(dlerror()));
@@ -83,7 +83,7 @@ DebuggerErrno LoadAclApi()
     }
 
     /* 规避adump的bug，mindspore场景优先使用libmindspore_ascend.so中的符号 */
-    void* handler = dlopen(kLibMSAscendName, RTLD_LAZY);
+    void* handler = dlopen(kLibMSAscendName, RTLD_LAZY | RTLD_NOLOAD);
     std::string libName = kLibMSAscendName;
     if (handler == nullptr) {
         handler = hLibAscendcl;
