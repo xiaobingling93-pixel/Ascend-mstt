@@ -79,7 +79,7 @@ export const PARAMS = {
       /** The radius of the circle denoting the expand button. */
       expandButtonRadius: 3,
     },
-    multi_collection: {
+    multiCollection: {
       radius: 5,
       width: 60,
       maxLabelWidth: 200,
@@ -90,7 +90,7 @@ export const PARAMS = {
       /** The radius of the circle denoting the expand button. */
       expandButtonRadius: 3,
     },
-    api_list: {
+    apiList: {
       radius: 5,
       width: 60,
       maxLabelWidth: 200,
@@ -115,10 +115,10 @@ export const PARAMS = {
     op: { width: 10, height: 4 },
     /** Size of shortcuts for meta nodes */
     meta: { width: 12, height: 4, radius: 1 },
-    /** Size of shortcuts for multi_collection nodes */
-    multi_collection: { width: 12, height: 4, radius: 1 },
-    /** Size of shortcuts for api_list nodes */
-    api_list: { width: 12, height: 4, radius: 1 },
+    /** Size of shortcuts for multiCollection nodes */
+    multiCollection: { width: 12, height: 4, radius: 1 },
+    /** Size of shortcuts for apiList nodes */
+    apiList: { width: 12, height: 4, radius: 1 },
   },
   annotations: {
     /** Maximum possible width of the bounding box for in annotations */

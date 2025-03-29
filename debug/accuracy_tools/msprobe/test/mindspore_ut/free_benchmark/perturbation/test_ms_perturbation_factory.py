@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import patch
 
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import PerturbationFactory
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.common.const import FreeBenchmarkConst
@@ -27,14 +29,14 @@ from msprobe.mindspore.free_benchmark.perturbation.exchange_value import Exchang
 
 class TestPerturbationFactory(unittest.TestCase):
 
-    def test_create(self):
+    @patch.object(logger, "error")
+    def test_create(self, mock_logger_error):
         api_name = "Functional.add.0"
 
         Config.pert_type = "UNKNOWN"
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(ValueError):
             PerturbationFactory.create(api_name)
-        self.assertEqual(str(context.exception),
-                         "UNKNOWN is a invalid perturbation type")
+        mock_logger_error.assert_called_with("UNKNOWN is a invalid perturbation type")
 
         Config.pert_type = FreeBenchmarkConst.EXCHANGE_VALUE
         pert = PerturbationFactory.create(api_name)

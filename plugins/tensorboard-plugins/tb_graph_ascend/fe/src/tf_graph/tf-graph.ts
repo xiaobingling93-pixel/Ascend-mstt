@@ -478,9 +478,9 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
 
   async _parentNodeToggleExpand(event): Promise<void> {
     const nodeName = event.detail.nodeData.node.name;
-    const matched_node_link = event.detail.nodeData.node.matchedNodeLink;
-    if (matched_node_link) {
-      let matched = matched_node_link[matched_node_link.length - 1];
+    const matchedNodeLink = event.detail.nodeData.node.matchedNodeLink;
+    if (matchedNodeLink) {
+      let matched = matchedNodeLink[matchedNodeLink.length - 1];
       this.set('selectedNode', matched);
     } else {
       const params = new URLSearchParams();
@@ -523,7 +523,7 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
       const graphPath = `subgraph?${String(params)}`;
       const arrayBuffer = await fetchPbTxt(graphPath); // 等待 fetchPbTxt 完成
       const graphDef = await parseGraphPbTxt(arrayBuffer); // 等待 parseGraphPbTxt 完成
-      const slimGraph = await tf_graph.build(graphDef, tf_graph.DefaultBuildParams, undefined); // 等待 tf_graph.build 完成
+      const slimGraph = await tf_graph.build(graphDef, tf_graph.defaultBuildParams, undefined); // 等待 tf_graph.build 完成
       tf_hierarchy.update(tempHierarchy.hierarchy, slimGraph, nodeName);
       tempHierarchy.buildSubhierarchy(nodeName, slimGraph);
       renderNode.expanded = !renderNode.expanded;

@@ -43,15 +43,6 @@ const RUN_STORAGE_KEY = 'run';
  *   profile: boolean,
  * }}
  */
-const TagItem = {};
-/**
- * TODO(stephanwlee): Convert this to proper type when converting to TypeScript.
- * @typedef {{
- *   name: string,
- *   tags: !Array<!TagItem>,
- * }}
- */
-const RunItem = {};
 
 /**
  * tf-graph-dashboard displays a graph from a TensorFlow run.
@@ -181,9 +172,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     </style>
   `;
 
-  /**
-   * @type {!Array<!RunItem>}
-   */
+
   @property({ type: Array })
   _datasets: any[] = [];
 

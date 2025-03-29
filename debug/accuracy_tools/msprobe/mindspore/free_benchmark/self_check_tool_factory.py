@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from msprobe.mindspore.common.const import Const
+from msprobe.core.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelfCheck
 
@@ -41,8 +42,10 @@ class SelfCheckToolFactory:
     def create(config: DebuggerConfig):
         tool = SelfCheckToolFactory.tools.get(config.level)
         if not tool:
-            raise Exception(f"{config.level} is not supported.")
+            logger.error(f"{config.level} is not supported.")
+            raise ValueError
         tool = tool.get(config.execution_mode)
         if not tool:
-            raise Exception(f"Task free_benchmark is not supported in this mode: {config.execution_mode}.")
+            logger.error(f"Task free_benchmark is not supported in this mode: {config.execution_mode}.")
+            raise ValueError
         return tool(config)
