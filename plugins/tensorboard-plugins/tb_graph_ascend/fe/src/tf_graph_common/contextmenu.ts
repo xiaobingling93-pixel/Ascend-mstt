@@ -118,7 +118,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
     const decodedStr = new TextDecoder().decode(sideStr);
     const decodedObj = safeJSONParse(decodedStr);
     if (decodedObj === null) {
-      console.error("Error: loading contextmenu failed please check data or getMenu function.");
+      console.error('Error: loading contextmenu failed please check data or getMenu function.');
       return;
     }
     // 构建菜单选项
@@ -140,9 +140,8 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
       if (communicationsType) {
         const titleText = getTitleText(communicationsType);
         menuOptions.push({ text: titleText, action: 'rank' });
-      }
-      // 如果 decodedObj 中存在 communications_type，遍历处理
-      else if (decodedObj[0].communications_type) {
+      } else if (decodedObj[0].communications_type) {
+        // 如果 decodedObj 中存在 communications_type，遍历处理
         decodedObj.forEach((item) => {
           const titleText = getTitleText(item.communications_type);
           menuOptions.push({ text: titleText, action: 'rank' });
@@ -157,7 +156,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
       .append('li')
       .on('click', (d, i) => {
         if (d.action === 'expand') {
-            sceneElement.fire('parent-node-toggle-expand', { nodeData });
+          sceneElement.fire('parent-node-toggle-expand', { nodeData });
         }
         maybeCloseMenu();
       })
@@ -177,7 +176,7 @@ export function getMenu(sceneElement: TfGraphScene, nodeData): () => Promise<voi
           } else {
             nodeInfo = decodedObj.nodes_info ?? {}; // 如果是 undefined，使用空对象
           }
-          const subMenuOptions: { text: string; action: string; color: string }[] = []; // 定义 subMenuOptions 数组的类型
+          const subMenuOptions: Array<{ text: string; action: string; color: string }> = []; // 定义 subMenuOptions 数组的类型
           for (const [key, value] of Object.entries(nodeInfo)) {
             const rank = `rank${key}`;
             const screen = getColorByPrecisionIndex(String(value[0]));

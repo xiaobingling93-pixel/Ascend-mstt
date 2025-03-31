@@ -27,7 +27,7 @@ export function fetchAndConstructHierarchicalGraph(
   tracker: ProgressTracker,
   remotePath: string | null,
   pbTxtFile: Blob | null,
-  hierarchyParams: hierarchy.HierarchyParams = hierarchy.DefaultHierarchyParams,
+  hierarchyParams: hierarchy.HierarchyParams = hierarchy.defaultHierarchyParams,
 ): Promise<GraphAndHierarchy> {
   const dataTracker = tf_graph_util.getSubtaskTracker(tracker, 30, 'Data');
   const graphTracker = tf_graph_util.getSubtaskTracker(tracker, 20, 'Graph');
@@ -37,7 +37,7 @@ export function fetchAndConstructHierarchicalGraph(
     .then(
       (graph): any => {
         if (graph.node.length !== 2) {
-          return tf_graph.build(graph, tf_graph.DefaultBuildParams, graphTracker);
+          return tf_graph.build(graph, tf_graph.defaultBuildParams, graphTracker);
         }
         const npuGraph: GraphDef = { node: [] };
         const benchGraph: GraphDef = { node: [] };
@@ -50,14 +50,14 @@ export function fetchAndConstructHierarchicalGraph(
           benchGraph.node.push(graph.node[0]);
         }
         return Promise.all([
-          tf_graph.build(npuGraph, tf_graph.DefaultBuildParams, graphTracker),
-          tf_graph.build(benchGraph, tf_graph.DefaultBuildParams, graphTracker),
+          tf_graph.build(npuGraph, tf_graph.defaultBuildParams, graphTracker),
+          tf_graph.build(benchGraph, tf_graph.defaultBuildParams, graphTracker),
         ]);
       },
       () => {
         throw new Error(
           'Malformed GraphDef. This can sometimes be caused by ' +
-            'a bad network connection or invalid inputting files ',
+          'a bad network connection or invalid inputting files ',
         );
       },
     )

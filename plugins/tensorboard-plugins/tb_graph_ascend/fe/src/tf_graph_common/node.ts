@@ -643,7 +643,7 @@ export function stylize(
   sceneElement: TfGraphScene,
   nodeClassName?,
 ): void {
-  const resolvedNodeClassName  = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
+  const resolvedNodeClassName = nodeClassName || Class.Node.SHAPE || Class.Node.OUTER;
   const isHighlighted = sceneElement.isNodeHighlighted(renderInfo.node.name);
   const isSelected = sceneElement.isNodeSelected(renderInfo.node.name);
   const isExpanded = renderInfo.expanded && resolvedNodeClassName !== Class.Annotation.NODE;

@@ -29,6 +29,8 @@ def softmax_func(x, axis=None):
 
 def npu_moe_gating_top_k_softmax(x, finished_optional, k):
     input_dtype = x.dtype
+    if x.dim() < 1:
+        raise ValueError("Input x must have at least 1 dimensions.")
     num_expert = x.shape[-1]
     softmax = softmax_func(x, -1)
     softmax = softmax.to(input_dtype)
@@ -36,9 +38,13 @@ def npu_moe_gating_top_k_softmax(x, finished_optional, k):
     expert_idx = expert_idx[:, :k]
     y = torch.gather(softmax, index=expert_idx, dim=-1)
     if finished_optional is not None:
+        if finished_optional.dim() < 1:
+            raise ValueError("Finished_optional must have at least 1 dimensions.")
         finished_optional = finished_optional.view(finished_optional.shape[0], 1)
         finished_optional = finished_optional.expand(-1, k)
         expert_idx = torch.where(finished_optional, num_expert, expert_idx)
+    if y.dim() < 2:
+        raise ValueError("Variable y must have at least 2 dimensions.")
     row_idx = torch.arange(y.shape[0] * y.shape[1]).reshape(y.shape[1], y.shape[0]).t()
 
     return y, expert_idx, row_idx

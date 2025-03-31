@@ -25,28 +25,6 @@ class TestModuleProcesser(unittest.TestCase):
         processor = ModuleProcesser(scope)
         self.assertIsNone(processor.scope)
 
-    def test_clone_return_value_and_test_clone_if_tensor(self):
-        def func(x):
-            return x
-
-        input = torch.tensor([1])
-        input_tuple = (torch.tensor([1]), torch.tensor([2]))
-        input_list = [torch.tensor([1]), torch.tensor([2])]
-        input_dict = {"A": torch.tensor([1]), "B": torch.tensor([2])}
-
-        result = ModuleProcesser.clone_return_value(func)(input)
-        result[0] = 2
-        self.assertNotEqual(result, input)
-        result_tuple = ModuleProcesser.clone_return_value(func)(input_tuple)
-        result_tuple[0][0] = 2
-        self.assertNotEqual(result_tuple, input_tuple)
-        result_list = ModuleProcesser.clone_return_value(func)(input_list)
-        result_list[0][0] = 2
-        self.assertNotEqual(result_list, input_list)
-        result_dict = ModuleProcesser.clone_return_value(func)(input_dict)
-        result_dict["A"][0] = 2
-        self.assertNotEqual(result_dict, input_dict)
-
     def test_module_count_func(self):
         test = ModuleProcesser(None)
         self.assertEqual(test.module_count, {})

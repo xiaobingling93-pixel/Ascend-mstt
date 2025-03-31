@@ -22,77 +22,75 @@ import type { GridEventContext } from '@vaadin/grid';
 import { Notification } from '@vaadin/notification';
 @customElement('tf-vaadin-text-table')
 class TfVaadinTable extends PolymerElement {
-  static get template(): HTMLTemplateElement {
-    return html`
-      <style>
-        :host {
-          display: block;
-        }
+  static readonly template = html`
+    <style>
+      :host {
+        display: block;
+      }
 
-        .vaadin-grid {
-          height: 100%;
-          font-size: 14px;
-        }
-        .no-data {
-          font-size: 14px;
-          color: #999;
-        }
-        .copyable-input {
-          gap: 8px;
-          width: 100%;
-          height: 160px;
-          font-family: Roboto, sans-serif;
-          font-weight: 400;
-        }
+      .vaadin-grid {
+        height: 100%;
+        font-size: 14px;
+      }
+      .no-data {
+        font-size: 14px;
+        color: #999;
+      }
+      .copyable-input {
+        gap: 8px;
+        width: 100%;
+        height: 160px;
+        font-family: Roboto, sans-serif;
+        font-weight: 400;
+      }
 
-        .copyable-input textarea {
-          flex-grow: 1;
-          width: 100%;
-          height: 80%;
-          font-family: Roboto, sans-serif;
-          box-sizing: border-box;
-          resize: none;
-          padding: 8px;
-          font-size: 14px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          background: #f9f9f9;
-          overflow-wrap: break-word; /* 自动换行 */
-          white-space: pre-wrap; /* 保留换行符 */
-        }
+      .copyable-input textarea {
+        flex-grow: 1;
+        width: 100%;
+        height: 80%;
+        font-family: Roboto, sans-serif;
+        box-sizing: border-box;
+        resize: none;
+        padding: 8px;
+        font-size: 14px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #f9f9f9;
+        overflow-wrap: break-word; /* 自动换行 */
+        white-space: pre-wrap; /* 保留换行符 */
+      }
 
-        .copy-button {
-          padding: 4px 8px;
-          font-size: 12px;
-          background: rgb(117, 122, 128);
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          position: relative;
-          right: 58px;
-          bottom: 106px;
-        }
-        .copy-button:hover {
-          background: #0056b3;
-        }
-      </style>
-      <template is="dom-if" if="[[!isEmptyGrid]]">
-        <vaadin-grid id="grid" items="[[dataset]]" class="vaadin-grid" theme="force-outline">
-          <!-- 动态生成列 -->
-          <template is="dom-repeat" items="[[headers]]" as="header">
-            <vaadin-grid-column path="[[header]]" header="[[header]]" resizable renderer="[[renderDefaultValue]]">
-              <template> [[item[header]]] </template>
-            </vaadin-grid-column>
-          </template>
-          <vaadin-tooltip slot="tooltip" generator="[[tooltipGenerator]]"></vaadin-tooltip>
-        </vaadin-grid>
-      </template>
-      <template is="dom-if" if="[[isEmptyGrid]]">
-        <p class="no-data">当前节点暂无数据</p>
-      </template>
-    `;
-  }
+      .copy-button {
+        padding: 4px 8px;
+        font-size: 12px;
+        background: rgb(117, 122, 128);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        position: relative;
+        right: 58px;
+        bottom: 106px;
+      }
+      .copy-button:hover {
+        background: #0056b3;
+      }
+    </style>
+    <template is="dom-if" if="[[!isEmptyGrid]]">
+      <vaadin-grid id="grid" items="[[dataset]]" class="vaadin-grid" theme="force-outline">
+        <!-- 动态生成列 -->
+        <template is="dom-repeat" items="[[headers]]" as="header">
+          <vaadin-grid-column path="[[header]]" header="[[header]]" resizable renderer="[[renderDefaultValue]]">
+            <template> [[item[header]]] </template>
+          </vaadin-grid-column>
+        </template>
+        <vaadin-tooltip slot="tooltip" generator="[[tooltipGenerator]]"></vaadin-tooltip>
+      </vaadin-grid>
+    </template>
+    <template is="dom-if" if="[[isEmptyGrid]]">
+      <p class="no-data">当前节点暂无数据</p>
+    </template>
+  `;
 
   @property({ type: Object })
   syncGrid!: HTMLElement; // 点击高亮需要同步的表格元素

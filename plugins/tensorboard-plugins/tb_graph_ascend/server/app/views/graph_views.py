@@ -66,3 +66,12 @@ class GraphView:
         meta_data = json.loads(request.args.get("metaData"))
         save_result = GraphService.save_data(meta_data)
         return http_util.Respond(request, save_result, "application/json")
+    
+    # 更新颜色信息
+    @staticmethod
+    @wrappers.Request.application
+    def update_colors(request):
+        run = json.loads(request.args.get('run'))
+        colors = json.loads(request.args.get('colors'))
+        update_result = GraphService.update_colors(run, colors)
+        return http_util.Respond(request, update_result, "application/json")

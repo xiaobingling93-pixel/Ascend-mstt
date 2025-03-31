@@ -124,7 +124,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   @property({
     type: Object,
   })
-  _zoomStartCoords: {x: number, y: number} | null = null;
+  _zoomStartCoords: { x: number; y: number } | null = null;
 
   /**
    * Keeps track of the current coordinates of a graph zoom/pan
@@ -134,7 +134,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   @property({
     type: Object,
   })
-  _zoomTransform: {x: number, y: number} | null = null;
+  _zoomTransform: { x: number; y: number } | null = null;
 
   /** Maximum distance of a zoom event for it to be interpreted as a click */
   @property({
@@ -314,49 +314,47 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     this._zoom = d3
       .zoom()
       .on('end', () => {
-          if (this._zoomStartCoords && this._zoomTransform) {
-            // Calculate the total distance dragged during the zoom event.
-            // If it is sufficiently small, then fire an event indicating
-            // that zooming has ended. Otherwise wait to fire the zoom end
-            // event, so that a mouse click registered as part of this zooming
-            // is ignored (as this mouse click was part of a zooming, and should
-            // not be used to indicate an actual click on the graph).
-            let dragDistance = Math.sqrt(
-              Math.pow(this._zoomStartCoords.x - this._zoomTransform.x, 2) +
-                Math.pow(this._zoomStartCoords.y - this._zoomTransform.y, 2),
-            );
-            if (dragDistance < this._maxZoomDistanceForClick) {
-              this._fireEnableClick();
-            } else {
-              setTimeout(this._fireEnableClick.bind(this), 50);
-            }
+        if (this._zoomStartCoords && this._zoomTransform) {
+          // Calculate the total distance dragged during the zoom event.
+          // If it is sufficiently small, then fire an event indicating
+          // that zooming has ended. Otherwise wait to fire the zoom end
+          // event, so that a mouse click registered as part of this zooming
+          // is ignored (as this mouse click was part of a zooming, and should
+          // not be used to indicate an actual click on the graph).
+          let dragDistance = Math.sqrt(
+            Math.pow(this._zoomStartCoords.x - this._zoomTransform.x, 2) +
+            Math.pow(this._zoomStartCoords.y - this._zoomTransform.y, 2),
+          );
+          if (dragDistance < this._maxZoomDistanceForClick) {
+            this._fireEnableClick();
+          } else {
+            setTimeout(this._fireEnableClick.bind(this), 50);
           }
-          this._zoomStartCoords = null;
         }
+        this._zoomStartCoords = null;
+      }
       )
       .on('zoom', () => {
-          this._zoomTransform = d3.event.transform;
-          if (!this._zoomStartCoords) {
-            this._zoomStartCoords = this._zoomTransform;
-            this.fire('disable-click');
-          }
-          this._zoomed = true;
-          d3.select(this.$.root).attr('transform', d3.event.transform.toString());
-          this.x = d3.event.transform.x;
-          this.y = d3.event.transform.y;
-          // Notify the minimap.
-          this.minimap.zoom(d3.event.transform);
+        this._zoomTransform = d3.event.transform;
+        if (!this._zoomStartCoords) {
+          this._zoomStartCoords = this._zoomTransform;
+          this.fire('disable-click');
         }
-      );
+        this._zoomed = true;
+        d3.select(this.$.root).attr('transform', d3.event.transform.toString());
+        this.x = d3.event.transform.x;
+        this.y = d3.event.transform.y;
+        // Notify the minimap.
+        this.minimap.zoom(d3.event.transform);
+      });
 
     d3.select(this.$.svg).call(this._addEventListener.bind(this)).on('dblclick.zoom', null);
     d3.select(window).on('resize', () => {
-        // Notify the minimap that the user's window was resized.
-        // The minimap will figure out the new dimensions of the main svg
-        // and will use the existing translate and scale params.
-        this.minimap.zoom();
-      }
-    );
+      // Notify the minimap that the user's window was resized.
+      // The minimap will figure out the new dimensions of the main svg
+      // and will use the existing translate and scale params.
+      this.minimap.zoom();
+    });
     // Initialize the minimap.
     this.minimap = (this.$.minimap as any).init(
       this.$.svg,
@@ -543,9 +541,9 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       this.$.svg,
       this.$.root,
       this._zoom,
-      function (): void {
+      (): void => {
         this._zoomed = false;
-      }.bind(this),
+      },
     );
   }
 

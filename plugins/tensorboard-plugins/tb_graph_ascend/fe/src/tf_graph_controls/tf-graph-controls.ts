@@ -18,10 +18,9 @@ Adapt to the model hierarchical visualization data collected by the msprobe tool
 import '@vaadin/icon';
 import '@vaadin/icons';
 import '@vaadin/details';
-import '@vaadin/vaadin-combo-box';
-import '@vaadin/vaadin-select';
+import '@vaadin/select';
 import './components/ts_linkage_search_combox/index';
-import { customElement, property, observe } from '@polymer/decorators';
+import { customElement, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import * as _ from 'lodash';
 import { DarkModeMixin } from '../polymer/dark_mode_mixin';
@@ -30,7 +29,7 @@ import './components/tf_manual_match/index';
 import './components/tf_color_select/index';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import '../tf_dashboard_common/tensorboard-color';
-import { SelectionType, NPU_PREFIX, BENCH_PREFIX } from '../tf_graph_common/common';
+import { SelectionType } from '../tf_graph_common/common';
 import * as tf_graph_proto from '../tf_graph_common/proto';
 import * as tf_graph_render from '../tf_graph_common/render';
 import '../tf_graph_common/tf-graph-icon';
@@ -604,7 +603,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     notify: true,
     readOnly: true,
     computed:
-      '_computeSelection(datasets, _selectedRunIndex, _selectedTagIndex, _selectedGraphType, _selectedMicroStep, _selectedStep)',
+      '_computeSelection(datasets, _selectedRunIndex, _selectedTagIndex, _selectedGraphType, _selectedMicroStep)',
   })
   selection: object;
 
@@ -635,10 +634,14 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   // MicroStep 选择 和 Step选择
   @property({ type: Number })
   _selectedMicroStep: number = -1;
+
+  @property({ type: Number })
   _selectedStep: number = -1;
 
   @property({ type: Object })
   microsteps: any;
+
+  @property({ type: Object })
   steplist: any;
 
   // 目录，全量节点数据，支撑各种节点的搜索
@@ -784,7 +787,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     _selectedTagIndex: number,
     _selectedGraphType: SelectionType,
     _selectedMicroStep: number,
-    _selectedStep: number,
   ): { run: string; tag: string | null; type: SelectionType; batch: number; step: number } | null {
     if (!datasets[_selectedRunIndex] || !datasets[_selectedRunIndex].tags[_selectedTagIndex]) {
       return null;
@@ -794,7 +796,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       tag: datasets[_selectedRunIndex].tags[_selectedTagIndex].tag,
       type: _selectedGraphType,
       batch: _selectedMicroStep,
-      step: _selectedStep,
+      step: this._selectedStep,
     };
   }
 
@@ -814,12 +816,8 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   _getDefaultSelectionType(): SelectionType {
     const { datasets: newDatasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
-    function shouldSkip(datasets: any, run: any, tag: any): boolean {
-      return (
-        !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph
-      );
-    }
-    if (shouldSkip(newDatasets, run, tag)) {
+    const shouldSkip = !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph;
+    if (shouldSkip) {
       return SelectionType.OP_GRAPH;
     }
     const datasetForRun = newDatasets[run] as any;

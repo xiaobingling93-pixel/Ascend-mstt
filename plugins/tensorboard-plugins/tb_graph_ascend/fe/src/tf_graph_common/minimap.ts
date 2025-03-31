@@ -105,8 +105,8 @@ export class Minimap {
       let width = Number($viewpoint.attr('width'));
       let height = Number($viewpoint.attr('height'));
       let clickCoords = d3.mouse($minimapSvg.node() as any);
-      this.viewpointCoord.x = clickCoords[0] - width / 2;
-      this.viewpointCoord.y = clickCoords[1] - height / 2;
+      this.viewpointCoord.x = clickCoords[0] - (width / 2);
+      this.viewpointCoord.y = clickCoords[1] - (height / 2);
       this.updateViewpoint();
     });
     this.viewpoint = <SVGRectElement>$viewpoint.node();

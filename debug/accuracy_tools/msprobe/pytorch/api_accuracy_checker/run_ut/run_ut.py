@@ -574,7 +574,15 @@ def run_ut_command(args):
     error_data_path = checker_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
-            time_info = result_csv_path.split('.')[0].split('_')[-1]
+            parts_by_dot = result_csv_path.split(Const.SEP)
+            if len(parts_by_dot) < 2 or not parts_by_dot[0]:
+                raise ValueError("result_csv_path does not contain a valid file name with an extension.")
+            file_name_part = parts_by_dot[0]
+            parts_by_underscore = file_name_part.split(Const.REPLACEMENT_CHARACTER)
+            if len(parts_by_underscore) < 2:
+                raise ValueError("File name part does not contain enough '_' separated segments.")
+            time_info = parts_by_underscore[-1]
+
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)

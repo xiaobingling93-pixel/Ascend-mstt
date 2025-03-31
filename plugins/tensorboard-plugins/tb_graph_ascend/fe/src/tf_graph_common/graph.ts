@@ -177,10 +177,10 @@ export interface Node {
 export type TensorShape = number[];
 export interface OpNode extends Node {
   op: string;
-  attr: {
+  attr: Array<{
     key: string;
     value: any;
-  }[];
+  }>;
   inputs: NormalizedInput[];
   inEmbeddings: OpNode[];
   outEmbeddings: OpNode[];
@@ -233,10 +233,10 @@ export interface Metanode extends GroupNode {
   opHistogram: {
     [op: string]: number;
   };
-  attr: {
+  attr: Array<{
     key: string;
     value: any;
-  }[];
+  }>;
   // The name of the function this metanode is associated with if any.
   associatedFunction: string;
   inputData: {
@@ -263,10 +263,10 @@ export interface Metanode extends GroupNode {
 export class OpNodeImpl implements OpNode {
   name: string;
   op: string;
-  attr: {
+  attr: Array<{
     key: string;
     value: any;
-  }[];
+  }>;
   inputs: NormalizedInput[];
   type: NodeType;
   isGroupNode: boolean;
@@ -361,10 +361,10 @@ export class MetanodeImpl implements Metanode {
     [key: string]: any;
   };
   associatedFunction: string;
-  attr: {
+  attr: Array<{
     key: string;
     value: any;
-  }[];
+  }>;
 
   /** A label object for meta-nodes in the graph hierarchy */
   constructor(name: string, opt = {}) {
@@ -643,7 +643,7 @@ function addEdgeToGraphByAttr(graph: SlimGraph, node: OpNode | Metanode, edgeInf
   }
 }
 
-export const DefaultBuildParams: BuildParams = {
+export const defaultBuildParams: BuildParams = {
   enableEmbedding: true,
   inEmbeddingTypes: ['Const'],
   outEmbeddingTypes: ['^[a-zA-Z]+Summary$'],
@@ -955,9 +955,7 @@ export function hasSimilarDegreeSequence(graph1: graphlib.Graph, graph2: graphli
  * For example, if the name is 'a/b/c', the returned path is
  * ['a', 'a/b', 'a/b/c'].
  */
-export function getHierarchicalPath(
-  name: string,
-): string[] {
+export function getHierarchicalPath(name: string): string[] {
   let path: string[] = [];
   let i = name.indexOf(NAMESPACE_DELIM);
   // Push all parent portions of the path.

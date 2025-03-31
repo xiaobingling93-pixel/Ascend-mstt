@@ -1,4 +1,4 @@
-# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import unittest
 from unittest import TestCase
 
 import pandas as pd
@@ -23,14 +24,16 @@ from msprof_analyze.prof_common.db_manager import DBManager
 from msprof_analyze.test.st.utils import ST_DATA_PATH
 
 
-class TestClusterAnalysePytorchDbSimplification(TestCase):
+class TestClusterAnalyseMsprofDb(TestCase):
     """
-       Test cluster analyse pytorch db in data simplification
+       Test cluster analyse msprof db
     """
-    CLUSTER_PATH = os.path.join(ST_DATA_PATH, "cluster_data_2_db")
-    OUTPUT_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "TestClusterAnalysePytorchDbSimplification")
+    CLUSTER_PATH = os.path.join(ST_DATA_PATH, "cluster_data_msprof_db")
+    OUTPUT_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), "TestClusterAnalyseMsprofDb")
     COMMAND_SUCCESS = 0
+    RUN_TEST = os.path.exists(CLUSTER_PATH)
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def setup_class(self):
         # generate db data
         PathManager.make_dir_safety(self.OUTPUT_PATH)
@@ -41,54 +44,62 @@ class TestClusterAnalysePytorchDbSimplification(TestCase):
         self.db_path = os.path.join(self.OUTPUT_PATH, "cluster_analysis_output", "cluster_analysis.db")
         self.conn, self.cursor = DBManager.create_connect_db(self.db_path)
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def teardown_class(self):
         # Delete db Data
         DBManager.destroy_db_connect(self.conn, self.cursor)
         PathManager.remove_path_safety(self.OUTPUT_PATH)
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_host_info_data(self):
         query = "select hostName from HostInfo"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(data["hostName"].tolist(), ["n122-120-121"])
+        self.assertEqual(data["hostName"].tolist(), ["90-90-81-187"])
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_rank_device_map_data(self):
         query = "select * from RankDeviceMap"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(len(data), 16)
+        self.assertEqual(len(data), 8)
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_step_trace_time_data(self):
         query = "select * from ClusterStepTraceTime"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(len(data), 16)
-        flag = 14945901.524 in data["computing"].tolist()
+        self.assertEqual(len(data), 8)
+        flag = 470398.169 in data["computing"].tolist()
         self.assertTrue(flag)
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_comm_group_map_data(self):
         query = "select * from CommunicationGroupMapping"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(len(data), 33)
-        data = data[data["group_name"] == '7519234732706649132']
-        self.assertEqual(data["rank_set"].tolist(), ["(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)"])
+        self.assertEqual(len(data), 15)
+        data = data[data["group_name"] == '11959133092869241673']
+        self.assertEqual(data["rank_set"].tolist(), ["(0,1,2,3,4,5,6,7)"])
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_comm_matrix_data(self):
         query = "SELECT * FROM ClusterCommunicationMatrix WHERE hccl_op_name = 'Total Op Info' "
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(len(data), 232)
+        self.assertEqual(len(data), 71)
         query = "SELECT transport_type, transit_size, transit_time, bandwidth FROM ClusterCommunicationMatrix WHERE " \
-                "hccl_op_name='Total Op Info'  and group_name='1046397798680881114' and src_rank=12 and dst_rank=4"
+                "hccl_op_name='Total Op Info'  and group_name='11262865095472569221' and src_rank=5 and dst_rank=1"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(data.iloc[0].tolist(), ['RDMA', 59341.69862400028, 17684.277734, 3.3556190146182354])
+        self.assertEqual(data.iloc[0].tolist(), ['HCCS', 37.748736, 3.609372109375, 10.458532635621374])
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_comm_time_data(self):
         query = "select rank_id, count(0) cnt from ClusterCommunicationTime where hccl_op_name = " \
                 "'Total Op Info' group by rank_id"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(len(data), 16)
-        self.assertEqual(data["cnt"].tolist(), [4 for _ in range(16)])
+        self.assertEqual(len(data), 8)
+        self.assertEqual(data["cnt"].tolist(), [4 for _ in range(8)])
 
+    @unittest.skipIf(not RUN_TEST, "Skipping this test based on RUN_TEST environment variable")
     def test_comm_bandwidth_data(self):
         query = "select * from ClusterCommunicationBandwidth where hccl_op_name = 'Total Op Info' and " \
-                "group_name='12703750860003234865' order by count"
+                "group_name='739319275709983152' order by count"
         data = pd.read_sql(query, self.conn)
-        self.assertEqual(len(data), 2)
-        self.assertEqual(data["count"].tolist(), [2, 36])
+        self.assertEqual(len(data), 15)
+        self.assertEqual(data["count"].tolist(), [0, 0, 0, 0, 18, 24, 24, 24, 120, 120, 120, 387, 387, 387, 387])

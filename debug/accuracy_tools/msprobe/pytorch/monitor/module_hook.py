@@ -40,7 +40,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
-    get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir
+    get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -404,6 +404,7 @@ class TrainerMon:
             start_iteration=0
     ):
         """External interface"""
+        grad_acc_steps, start_iteration = validate_set_monitor(grad_acc_steps, start_iteration)
         global start_step
         start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
@@ -569,17 +570,19 @@ class TrainerMon:
             # skip generate metrics
             if context.step < self.start_step or (context.step - self.start_step) % self.step_interval != 0:
                 return
+            mv_result = None
             if MonitorConst.DEEPSPEED_ZERO_OPT_FILTER in self.optimizer_class:  # use deepspeed with zero1/2/3
                 if not self.name2indices:
                     self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index, optimizer)
                 mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
                 self.param2name = mv_result.grad
-            else:
+            elif self.mv_distribution or self.ur_distribution or self.mg_direction:
                 mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name)
-            context.param_exp_avg = mv_result.exp_avg
-            context.param_exp_avg_sq = mv_result.exp_avg_sq
-            context.param_adam_update = mv_result.update
-            context.param_adam_ratio = mv_result.ratio
+            if mv_result:
+                context.param_exp_avg = mv_result.exp_avg
+                context.param_exp_avg_sq = mv_result.exp_avg_sq
+                context.param_adam_update = mv_result.update
+                context.param_adam_ratio = mv_result.ratio
 
             self.generate_wgrad_metrics()
             self.generate_mv_metrics(context)

@@ -263,6 +263,14 @@ def validate_config(config):
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
 
+    config["start_step"] = validate_int_arg(config.get("start_step"), "start_step",
+                                            MonitorConst.DEFAULT_START_STEP, MonitorConst.DEFAULT_START_STEP)
+    config["collect_times"] = validate_int_arg(config.get("collect_times"), "collect_times",
+                                               MonitorConst.DEFAULT_MIN_COLLECT_TIMES,
+                                               MonitorConst.DEFAULT_MAX_COLLECT_TIMES)
+    config["step_interval"] = validate_int_arg(config.get("step_interval"), "step_interval",
+                                               MonitorConst.DEFAULT_STEP_INTERVAL, MonitorConst.DEFAULT_STEP_INTERVAL)
+
     squash_name = config.get('squash_name', True)
     validate_squash_name(squash_name)
 
@@ -277,6 +285,8 @@ def validate_config(config):
 
 def time_str2time_digit(time_str):
     time_format = '%b%d_%H-%M-%S'
+    if not isinstance(time_str, str):
+        raise TypeError(f"time_str:{time_str} should be a str")
     try:
         time_digit = datetime.strptime(time_str, time_format)
     except Exception as e:
@@ -314,3 +324,30 @@ def chmod_tensorboard_dir(path):
         recursive_chmod(path)
     except Exception as e:
         logger.warning(f"chmod tensorboard dir wrong because {e}, not updated, please check!!!")
+
+
+def validate_set_monitor(grad_acc_steps, start_iteration):
+    """
+    validate parameters of set_monitor.
+    """
+    grad_acc_steps = validate_int_arg(grad_acc_steps, "grad_acc_steps",
+                                      MonitorConst.DEFAULT_GRAD_ACC_STEPS, MonitorConst.DEFAULT_GRAD_ACC_STEPS)
+
+    start_iteration = validate_int_arg(start_iteration, "start_iteration",
+                                       MonitorConst.DEFAULT_START_ITERATION, MonitorConst.DEFAULT_START_ITERATION)
+    return grad_acc_steps, start_iteration
+
+
+def validate_int_arg(value, name, minimum, default_value):
+    """Validate int args, if any exception occurs, use the default value."""
+    if value is None:
+        return default_value
+    try:
+        if not is_int(value):
+            raise TypeError(f"{name} must be int")
+        if value < minimum:
+            raise ValueError(f"{name} must greater than {minimum}")
+    except Exception as e:
+        value = default_value
+        logger.warning(f"Validate {name} failed, {e}, replaced with default value {value}.")
+    return value

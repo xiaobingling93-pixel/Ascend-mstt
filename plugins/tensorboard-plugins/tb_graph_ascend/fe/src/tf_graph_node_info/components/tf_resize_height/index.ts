@@ -19,43 +19,41 @@ import { customElement, property, observe } from '@polymer/decorators';
 
 @customElement('tf-resize-height')
 class ResizableTabsheet extends PolymerElement {
-  static get template(): HTMLTemplateElement {
-    return html`
-      <style>
-        :host {
-          display: block;
-          font-family: Arial, sans-serif;
-        }
+  static readonly template = html`
+    <style>
+      :host {
+        display: block;
+        font-family: Arial, sans-serif;
+      }
 
-        .tabsheet {
-          width: 100%;
-          height: var(--tabsheet-height, 300px); /* 默认高度 */
-          background-color: rgb(255, 255, 255);
-          will-change: transform;
-        }
+      .tabsheet {
+        width: 100%;
+        height: var(--tabsheet-height, 300px); /* 默认高度 */
+        background-color: rgb(255, 255, 255);
+        will-change: transform;
+      }
 
-        .resize-handle {
-          height: 2px;
-          width: 100%;
-          cursor: ns-resize;
-          bottom: 2px;
-          z-index: 999;
-          position: relative;
-          background-color:rgb(141, 141, 141);
-        }
+      .resize-handle {
+        height: 2px;
+        width: 100%;
+        cursor: ns-resize;
+        bottom: 2px;
+        z-index: 999;
+        position: relative;
+        background-color: rgb(141, 141, 141);
+      }
 
-        .resize-handle:hover {
-          background-color: hsl(214, 100%, 43%);
-          height: 4px;
-        }
-      </style>
+      .resize-handle:hover {
+        background-color: hsl(214, 100%, 43%);
+        height: 4px;
+      }
+    </style>
 
-      <div class="resize-handle" id="resizeHandle"></div>
-      <div class="tabsheet" id="tabsheet">
-        <slot></slot>
-      </div>
-    `;
-  }
+    <div class="resize-handle" id="resizeHandle"></div>
+    <div class="tabsheet" id="tabsheet">
+      <slot></slot>
+    </div>
+  `;
 
   @property({
     type: Number,
@@ -63,8 +61,8 @@ class ResizableTabsheet extends PolymerElement {
   })
   height: number = 300;
 
-  _resize: (event: MouseEvent) => void = () => { };
-  _stopResize: (this: Document, ev: MouseEvent) => any = () => { };
+  _resize: (event: MouseEvent) => void = () => {};
+  _stopResize: (this: Document, ev: MouseEvent) => any = () => {};
 
   @observe('height')
   _updateHeight(newHeight): void {
