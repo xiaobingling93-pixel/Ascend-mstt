@@ -692,18 +692,13 @@ static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorStats& stat)
     }
 
     std::string dumpfile = stat.GetPath() + "/statistic.csv";
-
-    std::ofstream ofs;
-    DebuggerErrno check_ret = FileUtils::OpenFile(dumpfile, ofs, std::ios::out | std::ios::app, NORMAL_FILE_MODE_DEFAULT);
-    if (check_ret != DebuggerErrno::OK) {
-        // 如果文件打开失败，返回错误
-        LOG_ERROR(check_ret, "Failed to open file " + dumpfile + ".");
-        return check_ret;
-    }
-
     /* 此处防止多进程间竞争，使用文件锁，故使用C风格接口 */
     uint32_t retry = 100;
     uint32_t interval = 10;
+    if (FileUtils::IsPathExist(dumpfile) && !FileUtils::IsRegularFile(dumpfile)) {
+        LOG_ERROR(DebuggerErrno::ERROR_FILE_ALREADY_EXISTS, "File " + dumpfile + " exists and has invalid format.");
+        return DebuggerErrno::ERROR_FILE_ALREADY_EXISTS;
+    }
 
     int fd = open(dumpfile.c_str(), O_WRONLY | O_CREAT | O_APPEND, NORMAL_FILE_MODE_DEFAULT);
     if (fd < 0) {
