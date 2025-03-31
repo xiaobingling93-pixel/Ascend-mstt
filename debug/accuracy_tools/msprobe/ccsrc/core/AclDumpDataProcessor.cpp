@@ -531,7 +531,11 @@ static std::string MappingFilePath(const std::string& originPath)
     }
 
     DebuggerErrno ret;
-    FileUtils::CreateDir(dir);
+    ret = FileUtils::CreateDir(dir);
+    if (ret != DebuggerErrno::OK) {
+        LOG_ERROR(DebuggerErrno::ERROR, "Failed to create directory " + dir + ".");
+        return std::string();
+    }
     std::ofstream ofs;
     constexpr const char* mapFileName = "mapping.csv";
 
@@ -694,7 +698,7 @@ static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorStats& stat)
     /* 此处防止多进程间竞争，使用文件锁，故使用C风格接口 */
     uint32_t retry = 100;
     uint32_t interval = 10;
-    if (FileUtils::IsPathExist(dumpfile) && !FileUtils::IsRegularFile(dumpfile)) {
+    if (FileUtils::CheckFileBeforeCreateOrWrite(dumpfile, true) != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR_FILE_ALREADY_EXISTS, "File " + dumpfile + " exists and has invalid format.");
         return DebuggerErrno::ERROR_FILE_ALREADY_EXISTS;
     }
