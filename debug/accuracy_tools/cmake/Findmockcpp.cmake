@@ -1,7 +1,6 @@
 set(PACKAGE_VERSION 2.7)
 
 set(PKG_NAME mockcpp)
-set(URL "https://gitee.com/sinojelly/mockcpp/repository/archive/v2.7.zip")
 set(SHA256_VALUE "0dc7111c5be9785d0550ed3b68db7e12fd5d7802b7bc6548c52ac7b9e727fcc1")
 set(DOWNLOAD_PATH "$ENV{PROJECT_ROOT_PATH}/third_party")
 set(DIR_NAME "${DOWNLOAD_PATH}/mockcpp-v2.7")
@@ -9,7 +8,6 @@ set(DIR_NAME "${DOWNLOAD_PATH}/mockcpp-v2.7")
 if (NOT ${PKG_NAME}_FOUND)
 
 download_opensource_pkg(${PKG_NAME}
-    URL ${URL}
     SHA256 ${SHA256_VALUE}
     DOWNLOAD_PATH ${DOWNLOAD_PATH}
 )
