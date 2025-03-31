@@ -769,11 +769,11 @@ DebuggerErrno TransFormatD2H(AclTensorInfo& tensor)
     }
 }
 
-static void TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* output, size_t bufferSize)
+static DebuggerErrno TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* output, size_t bufferSize)
 {
     if (bufferSize < num * sizeof(float)) {
         LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, "Insufficient space for converting data from bf16 to fp32.");
-        return;
+        return DebuggerErrno::ERROR_BUFFER_OVERFLOW;
     }
     const DataUtils::BFloat16* in = reinterpret_cast<const DataUtils::BFloat16*>(input);
     float* out = reinterpret_cast<float*>(output);
@@ -781,13 +781,14 @@ static void TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* output, s
     for (size_t i = 0; i < num; i++) {
         out[i] = static_cast<float>(in[i]);
     }
+    return DebuggerErrno::OK;
 }
 
-static void TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint8_t* output, size_t bufferSize)
+static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint8_t* output, size_t bufferSize)
 {
     if (bufferSize < elemNums * sizeof(int8_t)) {
         LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, "Insufficient space for converting data from int4 to int8.");
-        return;
+        return DebuggerErrno::ERROR_BUFFER_OVERFLOW;
     }
     const int8_t *srcData = reinterpret_cast<const int8_t *>(input);
     int8_t *dstData = reinterpret_cast<int8_t *>(output);
@@ -827,7 +828,7 @@ static void TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint8_t* outp
         ++dstData;
         ++srcData;
     }
-    return;
+    return DebuggerErrno::OK;
 }
 
 DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to)
@@ -839,20 +840,30 @@ DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to)
 
     tensor.oriDtype = tensor.dtype;
     std::vector<uint8_t> buffer;
-    AssertConsis(tensor);
+    try {
+        AssertConsis(tensor);
+    } catch (const std::runtime_error& e) {
+        LOG_ERROR(DebuggerErrno::ERROR_INVALID_OPERATION, e.what());
+        return DebuggerErrno::ERROR_INVALID_OPERATION;
+    }
     size_t bufferSize = EleNumOfTensor(tensor) * SizeOfAclDType(to);
     buffer.resize(bufferSize);
     const uint8_t* input = tensor.transBuf.empty() ? tensor.aclData : tensor.transBuf.data();
     uint8_t* output = buffer.data();
+    DebuggerErrno ret;
 
     if (tensor.dtype == AclDtype::DT_BF16 && to == AclDtype::DT_FLOAT) {
-        TransBf16ToFp32(input, EleNumOfTensor(tensor), output, bufferSize);
+        ret = TransBf16ToFp32(input, EleNumOfTensor(tensor), output, bufferSize);
     } else if (tensor.dtype == AclDtype::DT_INT4 && to == AclDtype::DT_INT8) {
-        TransInt4ToInt8(input, EleNumOfTensor(tensor), output, bufferSize);
+        ret = TransInt4ToInt8(input, EleNumOfTensor(tensor), output, bufferSize);
     } else {
         LOG_ERROR(DebuggerErrno::ERROR_UNKNOWN_TRANS, tensor + ": Trans " + DataUtils::GetDTypeString(tensor.dtype)
                   + " to " + DataUtils::GetDTypeString(to) + " is not supported.");
         return DebuggerErrno::ERROR_UNKNOWN_TRANS;
+    }
+
+    if (ret != DebuggerErrno::OK) {
+        return ret;
     }
 
     tensor.transBuf = std::move(buffer);
