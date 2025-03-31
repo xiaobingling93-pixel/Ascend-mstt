@@ -19,10 +19,8 @@ import { graphlib } from 'dagre';
 import * as _ from 'lodash';
 import * as tb_debug from '../tb_debug';
 import { ProgressTracker } from './common';
-import { Hierarchy } from './hierarchy';
 import * as tf_graph_proto from './proto';
 import * as tf_graph_util from './util';
-import { safeJSONParse } from '../utils';
 
 export const NAMESPACE_DELIM = '/';
 export const ROOT_NAME = '__root__';
