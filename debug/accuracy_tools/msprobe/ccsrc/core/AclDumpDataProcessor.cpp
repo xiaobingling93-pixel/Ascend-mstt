@@ -174,7 +174,6 @@ AclTensorStats AclTensorStats::CalTensorSummary(const AclTensorInfo& tensor, con
 static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(const std::vector<std::string>& segs)
 {
     std::map<uint32_t, DebuggerSummaryOption> ret;
-    //  把178行 uint32_t 改为size_t
     for (size_t pos = 0; pos < segs.size(); ++pos) {
         const std::string& opt = segs[pos];
         for (auto it = summaryOptionHeaderStrMap.begin(); it != summaryOptionHeaderStrMap.end(); ++it) {
