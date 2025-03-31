@@ -179,6 +179,7 @@ class PrecisionDebugger:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         check_init_step(step)
         instance.service.init_step = step
+        instance.service.loop = 0
 
 
 def module_dump(module, dump_name):

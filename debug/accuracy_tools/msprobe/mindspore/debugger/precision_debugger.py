@@ -236,6 +236,7 @@ class PrecisionDebugger:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         check_init_step(step)
         instance.service.init_step = step
+        instance.service.loop = 0
 
     @classmethod
     def _need_service(cls):
