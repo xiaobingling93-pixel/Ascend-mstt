@@ -28,7 +28,6 @@
 namespace MindStudioDebugger {
 
 static std::mutex errInfoMtx;
-static std::ofstream logOfs;
 DebuggerErrLevel ErrorInfosManager::topLevel = DebuggerErrLevel::LEVEL_NONE;
 DebuggerErrLevel ErrorInfosManager::threshold = DebuggerErrLevel::LEVEL_INFO;
 
@@ -85,7 +84,7 @@ void ErrorInfosManager::LogErrorInfo(DebuggerErrLevel level, DebuggerErrno errId
     }
 
     std::lock_guard<std::mutex> lk(errInfoMtx);
-    std::ostream& output = logOfs.is_open() ? logOfs : std::cout;
+    std::ostream& output = std::cout;
     output << "[" << ErrorLevelString[level] << "]";
     if (errId != DebuggerErrno::NONE) {
         output << "[" << ErrnoString[errId] << "]";
@@ -105,20 +104,6 @@ DebuggerErrLevel ErrorInfosManager::GetTopErrLevelInDuration()
     DebuggerErrLevel ret = topLevel;
     topLevel = DebuggerErrLevel::LEVEL_NONE;
     return ret;
-}
-
-void ErrorInfosManager::SetLogPath(const std::string& path)
-{
-    std::lock_guard<std::mutex> lk(errInfoMtx);
-    if (logOfs.is_open()) {
-        logOfs.close();
-    }
-
-    if (path.empty()) {
-        return;
-    }
-
-    FileUtils::OpenFile(path, logOfs);
 }
 
 __attribute__((constructor)) void InitDebuggerThreshold()
