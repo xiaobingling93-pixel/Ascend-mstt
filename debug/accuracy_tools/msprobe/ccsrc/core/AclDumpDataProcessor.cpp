@@ -297,8 +297,15 @@ DebuggerErrno AclDumpDataProcessor::PushData(const acldumpChunk *chunk)
     }
 
     size_t len = chunk->bufLen;
+    if (len == 0) {
+        LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, ToString() + ": invalid value(cached size " +
+                  std::to_string(totalLen) + ", receiving size " + std::to_string(len) + ").");
+        errorOccurred = true;
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
+
     /* 防止正负翻转 */
-    if (SIZE_MAX - len < totalLen || totalLen + len > kMaxDataLen || len == 0) {
+    if (SIZE_MAX - len < totalLen || totalLen + len > kMaxDataLen) {
         LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, ToString() + ": buffer overflow(cached size " +
                   std::to_string(totalLen) + ", receiving size " + std::to_string(len) + ").");
         errorOccurred = true;
