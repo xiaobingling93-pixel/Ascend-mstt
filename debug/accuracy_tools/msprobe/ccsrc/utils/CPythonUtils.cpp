@@ -155,7 +155,7 @@ PythonObject PythonObject::Get(const std::string& name, bool ignore) const
     return ret;
 }
 
-PythonObject PythonObject::Call(bool ignore)
+PythonObject PythonObject::Call(bool ignore) noexcept
 {
     if (!PyCallable_Check(ptr)) {
         if (!ignore) {
@@ -173,7 +173,7 @@ PythonObject PythonObject::Call(bool ignore)
     return ret;
 }
 
-PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore)
+PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore) noexcept
 {
     if (!PyCallable_Check(ptr)) {
         if (!ignore) {
@@ -191,7 +191,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore)
     return ret;
 }
 
-PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore)
+PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore) noexcept
 {
     if (!PyCallable_Check(ptr)) {
         if (!ignore) {
@@ -230,7 +230,7 @@ PythonObject PythonObject::GetGlobal(const std::string& name, bool ignore)
     
 }
 
-PythonObject PythonObject::Import(const std::string& name, bool ignore)
+PythonObject PythonObject::Import(const std::string& name, bool ignore) noexcept
 {
     PyObject* m = PyImport_ImportModule(name.c_str());
     if (m == nullptr) {

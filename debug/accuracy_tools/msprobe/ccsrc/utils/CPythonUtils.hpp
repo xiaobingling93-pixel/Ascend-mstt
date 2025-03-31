@@ -103,7 +103,7 @@ public:
     /* 获取全局对象 */
     static PythonObject GetGlobal(const std::string& name, bool ignore=true);
     /* 获取模块对象；若其还未加载至缓存，则加载一遍 */
-    static PythonObject Import(const std::string& name, bool ignore=true);
+    static PythonObject Import (const std::string& name, bool ignore=true) noexcept;
 
     /* From/To转换，统一放一份在基类，用于遍历迭代器等场景 */
     static PythonObject From(const PythonObject& input);
@@ -136,9 +136,9 @@ public:
     bool IsCallable() const {return PyCallable_Check(ptr);}
 
     /* 用于调用可调用对象，相当于python代码中的obj()，为了简单只实现了args+kwargs参数形式 */
-    PythonObject Call(bool ignore=true);
-    PythonObject Call(PythonTupleObject& args, bool ignore=true);
-    PythonObject Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore=true);
+    PythonObject Call(bool ignore=true) noexcept;
+    PythonObject Call(PythonTupleObject& args, bool ignore=true) noexcept;
+    PythonObject Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore=true) noexcept;
 
     /* 用于获取对象属性，相当于python代码中的obj.xx */
     PythonObject Get(const std::string& name, bool ignore=true) const;
