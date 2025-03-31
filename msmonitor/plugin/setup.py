@@ -13,35 +13,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from glob import glob
-from setuptools import setup
-from pybind11.setup_helpers import Pybind11Extension
+import sys
+
+import shutil
+import subprocess
+import pybind11
+
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
+
+
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=""):
+        super().__init__(name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
+
+
+class CMakeBuild(build_ext):
+    def run(self):
+        for ext in self.extensions:
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        cfg = 'Debug' if self.debug else 'Release'
+        build_args = ['--config', cfg]
+
+        ext_dir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        cmake_args = [
+            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + ext_dir,
+            '-DPYTHON_EXECUTABLE=' + sys.executable,
+            '-DCMAKE_PREFIX_PATH=' + pybind11.get_cmake_dir(),
+            '-DCMAKE_INSTALL_PREFIX=' + ext_dir,
+            '-DDYNOLOG_PATH=' + os.path.join(os.path.dirname(BASE_DIR), "third_party", "dynolog"),
+            '-DCMAKE_BUILD_TYPE=' + cfg
+        ]
+
+        env = os.environ.copy()
+        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
+                                                             self.distribution.get_version())
+
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', '--build', '.', '--target', 'install'] + build_args, cwd=self.build_temp)
+        shutil.rmtree(self.build_temp)
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-DYNOLOG_PATH = os.path.join(os.path.dirname(BASE_DIR), "third_party", "dynolog")
-GLOG_INC_PATH = os.path.join(DYNOLOG_PATH, "third_party", "glog", "src")
-GLOG_LIB_PATH = os.path.join(DYNOLOG_PATH, "build", "third_party", "glog")
 
-# Define the extension module
-ext_modules = [
-    Pybind11Extension(
-        "IPCMonitor",  # Name of the Python module
-        sources=["bindings.cpp"] + list(glob("ipc_monitor/*.cpp")), # Source files
-        include_dirs=[os.path.join(BASE_DIR, "ipc_monitor"), GLOG_INC_PATH, GLOG_LIB_PATH],  # Include Pybind11 headers
-        library_dirs=[GLOG_LIB_PATH],
-        extra_compile_args=["-std=c++14", "-fPIC", "-fstack-protector-all", "-fno-strict-aliasing", "-fno-common",
-                    "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-Wfloat-equal", "-Wextra", "-O2"],
-        libraries=["glog"],
-        language="c++",  # Specify the language
-    ),
-]
-
-
-# Set up the package
 setup(
     name="msmonitor_plugin",
     version="0.1",
     description="msMonitor plugins",
-    ext_modules=ext_modules,
+    ext_modules=[CMakeExtension('IPCMonitor')],
+    cmdclass=dict(build_ext=CMakeBuild),
     install_requires=["pybind11"],
 )
