@@ -515,6 +515,10 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
     auto w0 = tensor.deviceShape[shapeSize - fnzW0];
     auto h1h0w0 = h1 * h0 * w0;
     auto w1h1h0w0 = w1 * h1h0w0;
+    if (w0 == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
     auto numW1 = w / w0;
 
     const uint8_t* src = tensor.aclData;
@@ -560,6 +564,10 @@ static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
     auto w = tensor.hostShape[kW];
     auto c1 = tensor.deviceShape[kDim1];
     auto c0 = tensor.deviceShape[kDim4];
+    if (c0 == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
 
     auto hw = h * w;
     auto chw = c * hw;
@@ -603,6 +611,10 @@ static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
     auto w = tensor.hostShape[W_ncdhw];
     auto c1 = tensor.deviceShape[C1_ndc1hwc0];
     auto c0 = tensor.deviceShape[C0_ndc1hwc0];
+    if (c0 == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
 
     const int64_t cdhw = c * d * h * w;
     const int64_t dhw = d * h * w;
@@ -695,6 +707,10 @@ static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
     auto w = tensor.hostShape[W_ncdhw];
     constexpr int kFZ3D_C0 = 3;
     auto c0 = tensor.deviceShape[kFZ3D_C0];
+    if (c0 == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
     auto cube_k = GetCubeSizeByType(tensor.dtype);
     auto c1 = DivCeil(c, cube_k);
     constexpr int64_t kNiSize = 16;

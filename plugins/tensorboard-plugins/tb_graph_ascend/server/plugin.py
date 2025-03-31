@@ -28,7 +28,7 @@ from tensorboard.util import tb_logging
 from . import constants
 from .app.views.graph_views import GraphView
 from .app.utils.graph_utils import GraphUtils
-from .app.utils.global_state import set_global_value
+from .app.utils.global_state import set_global_value, get_global_value
 
 logger = tb_logging.get_logger()
 
@@ -76,7 +76,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
             '/deleteMatchNodes': GraphView.delete_match_nodes,
             '/getMatchedStateList': GraphView.get_matched_state_list,
             '/saveData': GraphView.save_data,
-            '/setNewColors': self.set_new_colors,
+            '/updateColors': GraphView.update_colors,
         }
 
     def is_active(self):
@@ -344,55 +344,39 @@ class GraphsPlugin(base_plugin.TBPlugin):
     @wrappers.Request.application
     def get_all_data(self, request):
         """Returns all data in json format."""
-        keys = []
         response_data = {}
         tag = request.args.get('tag')
+        run = request.args.get('run')
         json_data = self.check_jsondata(request)
         if not json_data:
             return http_util.Respond(
                 request, f"Failed to check file '{tag}', view the log for detail.", "text/plain", 400
             )
         self._current_file_data = json_data
+        if 'ALL' not in json_data.get('StepList', {}):
+            json_data['StepList'].insert(0, 'ALL')
         all_node_names = self.get_all_node_names(json_data, request)
+
+        # 读取第一个文件中的Colors和OverflowCheck
+        first_run_tag = get_global_value("first_run_tag")
+        first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
+        # 读取全局信息
         response_data['menu'] = all_node_names
         response_data['unMatchedNode'] = self.get_all_unmatched_nodes(all_node_names, json_data)
-        for field in ['microSteps', 'stepList', 'match', 'tooltips']:
-            if json_data.get(field, {}):
-                keys.append(field)
-        for key in keys:
-            if key == 'StepList' and 'ALL' not in json_data.get('StepList', {}):
-                json_data[key].insert(0, 'ALL')
-            response_data[key] = json_data.get(key, {})
-        file_path = self._get_first_vis_file_path()
-        json_data = self._read_json_file(file_path)
-        if 'Colors' in json_data:
-            response_data['colors'] = json_data.get('Colors', {})
-        if 'OverflowCheck' in json_data:
-            response_data['OverflowCheck'] = json_data.get('OverflowCheck')
+        if json_data.get('MicroSteps', {}):
+            response_data['microSteps'] = json_data.get('MicroSteps')
+        if json_data.get('StepList', {}):
+            response_data['stepList'] = json_data.get('StepList')
+        if json_data.get('Tooltips', {}):
+            response_data['tooltips'] = json_data.get('Tooltips')
+        if 'Colors' in first_file_data:
+            response_data['colors'] = first_file_data.get('Colors')
+        if 'OverflowCheck' in first_file_data:
+            response_data['overflowCheck'] = first_file_data.get('OverflowCheck')
         else:
             # 适配老精度溢出数据
-            response_data['OverflowCheck'] = True
+            response_data['overflowCheck'] = True
         return http_util.Respond(request, response_data, "application/json")
-
-    # 设置新的精度误差颜色
-    @wrappers.Request.application
-    def set_new_colors(self, request):
-        """Set new colors in jsondata."""
-        try:
-            colors = json.loads(request.args.get('colors'))
-            file_path = self._get_first_vis_file_path()
-            json_data = self._read_json_file(file_path)
-            json_data['Colors'] = colors
-            with open(file_path, "w", encoding="utf-8") as file:
-                json.dump(json_data, file, ensure_ascii=False, indent=4)
-            # 返回成功响应
-            response = {'success': True, 'error': None, 'data': {}}
-            return http_util.Respond(request, response, "application/json")
-
-        except Exception as e:
-            # 返回错误响应
-            response = {'success': False, 'error': str(e), 'data': None}
-            return http_util.Respond(request, response, "application/json")
 
     @wrappers.Request.application
     def static_file_route(self, request):
@@ -460,14 +444,11 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
     # 检查到底是读一般还是用之前存的
     def check_jsondata(self, request):
-        tag = request.args.get("tag")
-        run = request.args.get('run')
-        graph_data = GraphUtils.check_jsondata(tag)
-        if graph_data is None:
-            graph_data, error_message = GraphUtils.get_jsondata(run, tag)
-            if error_message is not None:
-                logger.error(f"Failed to get json data: {error_message}")
-                return None
+        meta_data = {
+            "tag": request.args.get("tag"),
+            "run": request.args.get('run')
+        }
+        graph_data, _ = GraphUtils.get_graph_data(meta_data)
         return graph_data
 
     # 处理xx.get
@@ -624,42 +605,12 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 if file.endswith('.vis'):  # check for .vis extension
                     run = os.path.abspath(root)
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
-                    file_path = os.path.join(root, file)
-                    file_size = os.path.getsize(file_path)
-                    if file_size > constants.MAX_FILE_SIZE:
-                        logger.error(
-                            f'Error: vis file "{file_path}" exceeds the maximum limit size of 1GB and will be skipped.'
-                        )
+                    _, error = GraphUtils.safe_load_data(run, tag, True)
+                    if(error):
+                        logger.error(f'Error: File run:"{run},tag:{tag}" is not accessible. Error: {error}')
                         continue
                     run_tag_pairs.append((run, tag))
+        if(run_tag_pairs[0]):
+            set_global_value('first_run_tag', run_tag_pairs[0][1])
         return run_tag_pairs
 
-    def _load_json_file(self, run_dir, tag):
-        """Load a single .vis file from a given directory based on the tag."""
-        file_path = os.path.join(run_dir, f"{tag}.vis")
-        if os.path.exists(file_path):
-            # Store the path of the current file instead of loading it into memory
-            self._current_file_path = file_path
-            return file_path
-        return None
-
-    def _read_json_file(self, file_path):
-        """Read and parse a JSON file from disk."""
-        if file_path and os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                try:
-                    return json.load(f)
-                except Exception as e:
-                    logger.error(f'Error: the vis file "{file_path}" is not a legal JSON file!')
-        else:
-            logger.error(f'Error: the vis file "{file_path}" is not a legal JSON file!')
-        return None
-
-    def _get_first_vis_file_path(self):
-        for _, _, files in os.walk(self.logdir):
-            for file in files:
-                if file.endswith('.vis'):
-                    tag = file.replace('.vis', '')
-                    break
-        file_path = self._load_json_file(self.logdir, tag)
-        return file_path
