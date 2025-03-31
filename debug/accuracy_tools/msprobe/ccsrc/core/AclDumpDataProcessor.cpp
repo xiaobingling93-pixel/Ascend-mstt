@@ -120,7 +120,7 @@ private:
 void AclTensorStats::ParseInfoFromDumpPath(const std::string& dumpPath)
 {
     std::string filename;
-    if (FileUtils::GetFileSuffix(filename) == "csv") {
+    if (FileUtils::GetFileSuffix(dumpPath) == "csv") {
         filename = FileUtils::GetFileBaseName(dumpPath);
     } else {
         filename = FileUtils::GetFileName(dumpPath);
@@ -174,7 +174,7 @@ AclTensorStats AclTensorStats::CalTensorSummary(const AclTensorInfo& tensor, con
 static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(const std::vector<std::string>& segs)
 {
     std::map<uint32_t, DebuggerSummaryOption> ret;
-    for (uint32_t pos = 0; pos < segs.size(); ++pos) {
+    for (size_t pos = 0; pos < segs.size(); ++pos) {
         const std::string& opt = segs[pos];
         for (auto it = summaryOptionHeaderStrMap.begin(); it != summaryOptionHeaderStrMap.end(); ++it) {
             if (opt == it->second.first) {
@@ -188,7 +188,7 @@ static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(c
 
 AclTensorStats AclTensorStats::ParseTensorSummary(const std::string& dumpPath, const std::string& input)
 {
-    constexpr const uint32_t optPosBase = 7;
+    constexpr const size_t optPosBase = 7;
     static std::map<uint32_t, DebuggerSummaryOption> order;
     static uint32_t headerLen = 0;
 
