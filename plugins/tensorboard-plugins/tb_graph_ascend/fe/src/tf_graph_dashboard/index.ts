@@ -77,8 +77,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         selected-file="{{_selectedFile}}"
         selected-node="{{_selectedNode}}"
         on-fit-tap="_fit"
-        trace-inputs="{{_traceInputs}}"
-        auto-extract-nodes="{{_autoExtractNodes}}"
         on-download-image-requested="_onDownloadImageRequested"
       ></tf-graph-controls>
       <div class$="center [[_getGraphDisplayClassName(_selectedFile, _datasets)]]" slot="center">
@@ -113,14 +111,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             graph="[[_graph]]"
             hierarchy-params="[[_hierarchyParams]]"
             progress="[[_progress]]"
-            debugger-data-enabled="[[_debuggerDataEnabled]]"
-            debugger-numeric-alerts="[[_debuggerNumericAlerts]]"
-            all-steps-mode-enabled="{{allStepsModeEnabled}}"
             render-hierarchy="{{_renderHierarchy}}"
             selected-node="{{_selectedNode}}"
             stats="[[_stats]]"
-            trace-inputs="[[_traceInputs]]"
-            auto-extract-nodes="[[_autoExtractNodes]]"
             tooltips="[[_tooltips]]"
           ></tf-graph-board>
         </div>
@@ -188,12 +181,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
   @property({ type: Object })
   _requestManager: RequestManager = new RequestManager();
 
-  @property({ type: Boolean })
-  _debuggerDataEnabled: boolean;
-
-  @property({ type: Boolean })
-  allStepsModeEnabled: boolean;
-
   @property({ type: String, notify: true })
   selectedNode: string;
 
@@ -203,11 +190,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
   // Whether this dashboard is initialized. This dashboard should only be initialized once.
   @property({ type: Boolean })
   _initialized: boolean;
-
-  // An array of alerts (in chronological order) provided by debugging libraries on when bad
-  // values (NaN, +/- Inf) appear.
-  @property({ type: Array, notify: true })
-  _debuggerNumericAlerts: unknown[] = [];
 
   @property({ type: Array })
   runs: unknown[];
@@ -226,12 +208,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   _selection: object;
-
-  @property({ type: Boolean })
-  _traceInputs: boolean;
-
-  @property({ type: Boolean })
-  _autoExtractNodes: boolean;
 
   @property({ type: Object })
   _selectedFile: any;

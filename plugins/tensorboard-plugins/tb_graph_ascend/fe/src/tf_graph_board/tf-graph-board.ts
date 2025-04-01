@@ -167,17 +167,11 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
           hierarchy-params="[[hierarchyParams]]"
           render-hierarchy="{{renderHierarchy}}"
           selected-node="{{selectedNode}}"
-          selected-edge="{{selectedEdge}}"
           highlighted-node="{{_highlightedNode}}"
           progress="{{progress}}"
-          edge-label-function="[[edgeLabelFunction]]"
-          edge-width-function="[[edgeWidthFunction]]"
           handle-node-selected="[[handleNodeSelected]]"
-          handle-edge-selected="[[handleEdgeSelected]]"
-          trace-inputs="[[traceInputs]]"
           menu="[[menu]]"
           colorset="[[colorset]]"
-          auto-extract-nodes="[[autoExtractNodes]]"
         ></tf-graph>
       </div>
       <div id="tab-info">
@@ -210,12 +204,6 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   @property({ type: Object })
   progress: object;
 
-  @property({ type: Boolean })
-  traceInputs: boolean;
-
-  @property({ type: Boolean })
-  autoExtractNodes: boolean;
-
   @property({ type: Object, notify: true })
   renderHierarchy: tf_graph_render.MergedRenderGraphInfo;
 
@@ -228,14 +216,6 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   @property({ type: String, notify: true })
   selectedNode: string;
 
-  @property({ type: Object, notify: true })
-  selectedEdge: tf_graph_render.EdgeData;
-
-  // A function with signature EdgeThicknessFunction that computes the
-  // thickness of a given edge.
-  @property({ type: Object })
-  edgeWidthFunction: object;
-
   @property({ type: String })
   _highlightedNode: string;
 
@@ -244,16 +224,6 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   // deselected). Called whenever a node is selected or deselected.
   @property({ type: Object })
   handleNodeSelected: object;
-
-  // An optional function that computes the label for an edge. Should
-  // implement the EdgeLabelFunction signature.
-  @property({ type: Object })
-  edgeLabelFunction: object;
-
-  // An optional callback that implements the tf.graph.edge.EdgeSelectionCallback signature. If
-  // provided, edges are selectable, and this callback is run when an edge is selected.
-  @property({ type: Object })
-  handleEdgeSelected: object;
 
   @property({ type: Object })
   selection: object;
