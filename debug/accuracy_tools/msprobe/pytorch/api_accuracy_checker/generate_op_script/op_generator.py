@@ -50,6 +50,7 @@ DATA_NAME = "data_name"
 API_MAX_LENGTH = 30
 PROPAGATION_LIST = [Const.FORWARD, Const.BACKWARD]
 DATAMODE_LIST = ["random_data", "real_data"]
+ITER_MAX_TIMES = 1000
 
 
 class APIInfo:
@@ -97,6 +98,8 @@ class CommonConfig:
         iter_t = self.iter_times
         if iter_t <= 0:
             raise ValueError("iter_times should be an integer bigger than zero!")
+        if iter_t > ITER_MAX_TIMES:
+            raise ValueError("iter_times should not be greater than 1000!")
 
         json_file = self.extract_api_path
         propagation = self.propagation
