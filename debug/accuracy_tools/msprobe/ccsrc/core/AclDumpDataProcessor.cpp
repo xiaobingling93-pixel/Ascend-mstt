@@ -320,7 +320,10 @@ DebuggerErrno AclDumpDataProcessor::PushData(const acldumpChunk *chunk)
         return DebuggerErrno::ERROR_NO_MEMORY;
     }
 
-    if (memcpy(p->data(), chunk->dataBuf, len) == nullptr) {
+    /* vector p根据chunk->dataBuf的长度，即len，申请创建，所以无需校验空间大小 */
+    try {
+        std::copy(chunk->dataBuf, chunk->dataBuf + len, p->begin());
+    } catch (const std::exception& e) {
         LOG_ERROR(DebuggerErrno::ERROR_SYSCALL_FAILED, ToString() + ": Failed to copy data;");
         delete p;
         errorOccurred = true;
@@ -368,9 +371,11 @@ DebuggerErrno AclDumpDataProcessor::ConcatenateData()
         }
 
         size_t offset = 0;
-        uint8_t* msg = p->data();
         while (!buffer.empty()) {
-            if (memcpy(msg + offset, buffer.front()->data(), buffer.front()->size()) == nullptr) {
+            /* vector p根据buffer里所有vector的总长度，即totalLen，申请创建，所以无需校验空间大小 */
+            try {
+                std::copy(buffer.front()->begin(), buffer.front()->end(), p->begin() + offset);
+            } catch (const std::exception& e) {
                 delete p;
                 LOG_ERROR(DebuggerErrno::ERROR_SYSCALL_FAILED, "Data processor(" +  dumpPath + "): Failed to copy.");
                 return DebuggerErrno::ERROR_SYSCALL_FAILED;
