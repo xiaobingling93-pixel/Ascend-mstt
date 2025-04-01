@@ -30,6 +30,7 @@ import * as tf_graph_scene from '../tf_graph_common/scene';
 import * as tf_graph_util from '../tf_graph_common/util';
 import * as tf_graph_layout from '../tf_graph_common/layout';
 import './tf-graph-scene';
+import '../main_graph/index'
 import './components/legend/index';
 import { Selection } from '../tf_graph_controls/tf-graph-controls';
 import { fetchPbTxt, parseGraphPbTxt } from '../tf_graph_common/parser';
@@ -105,20 +106,7 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
       </div>
       <template is="dom-if" if="[[graphHierarchy.bench]]">
         <div class="bench">
-          <tf-graph-scene
-            id="bench"
-            class="auto"
-            render-hierarchy="[[renderHierarchy.bench]]"
-            linked-hierarchy="[[renderHierarchy.npu]]"
-            highlighted-node="[[_getVisible(highlightedNode)]]"
-            selected-node="{{selectedNode}}"
-            linked-node="{{linkedNode}}"
-            selected-edge="{{selectedEdge}}"
-            progress="[[progress]]"
-            node-context-menu-items="[[nodeContextMenuItems]]"
-            handle-edge-selected="[[handleEdgeSelected]]"
-            trace-inputs="[[traceInputs]]"
-          ></tf-graph-scene>
+          <main-graph></main-graph>
         </div>
       </template>
     </div>

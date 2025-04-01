@@ -303,6 +303,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       },
       tb_debug.GraphDebugEventId.RENDER_SCENE_BUILD_SCENE,
     );
+    console.log('tf-graph-scene: built scene====', renderHierarchy);
     // Update the minimap again when the graph is done animating.
     setTimeout((): void => {
       this.minimap.update();

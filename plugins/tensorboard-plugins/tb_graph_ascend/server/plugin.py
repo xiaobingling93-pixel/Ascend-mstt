@@ -353,10 +353,9 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 request, f"Failed to check file '{tag}', view the log for detail.", "text/plain", 400
             )
         self._current_file_data = json_data
-        if 'ALL' not in json_data.get('StepList', {}):
+        if json_data.get('StepList', {}) and 'ALL' not in json_data.get('StepList', {}):
             json_data['StepList'].insert(0, 'ALL')
         all_node_names = self.get_all_node_names(json_data, request)
-
         # 读取第一个文件中的Colors和OverflowCheck
         first_run_tag = get_global_value("first_run_tag")
         first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
