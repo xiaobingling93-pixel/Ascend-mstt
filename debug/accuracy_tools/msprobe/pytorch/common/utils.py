@@ -483,6 +483,10 @@ def replace_last_occurrence(text, old, new):
     return text
 
 
+def is_torch_nn_module(variable):
+    return isinstance(variable, torch.nn.Module) and not isinstance(variable, torch.jit.ScriptModule)
+
+
 def is_hifloat8_tensor(tensor):
     if not is_gpu and hasattr(torch_npu, "HiFloat8Tensor") and isinstance(tensor, torch_npu.HiFloat8Tensor):
         return True
