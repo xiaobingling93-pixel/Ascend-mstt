@@ -110,7 +110,7 @@ class DebuggerConfig:
         error_model = None
         if isinstance(instance.model, (list, tuple)):
             for model in instance.model:
-                if not is_torch_nn_module(instance.model):
+                if not is_torch_nn_module(model):
                     error_model = model
                     break
         else:
