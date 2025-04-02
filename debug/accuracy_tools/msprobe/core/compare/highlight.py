@@ -30,6 +30,7 @@ from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import get_header_index, safe_get_value
 from msprobe.core.compare.utils import table_value_is_valid, get_name_and_state, CompareException
+from msprobe.core.compare.config import ModeConfig
 
 
 class HighlightCheck(abc.ABC):
@@ -415,3 +416,227 @@ def update_highlight_err_msg(result_df, highlight_dict):
                 red_lines_num_set.add(line_index)
 
     result_df[CompareConst.ERROR_MESSAGE] = err_msg
+
+
+class HighLight:
+    def __init__(self, mode_config: ModeConfig):
+        self.mode_config = mode_config
+
+    @staticmethod
+    def api_batches_update(api_batches, api_name, state, index):
+        """
+        当一个api的所有item更新完后，input, output的索引范围：
+        input: [start: start+input_len]
+        output: [start+input_len: output_end_index]
+        params: [output_end_index: params_end_index]
+        """
+        if not api_batches:
+            api_batches.append(ApiBatch(api_name, index))
+        else:
+            api_batch = api_batches[-1]
+            if api_batch.api_name == api_name or (
+                    not re.search(Const.REGEX_FORWARD_BACKWARD, api_name) and api_name in api_batch.api_name):
+                try:
+                    api_batch.increment(state)
+                except ValueError as e:
+                    logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
+                    raise CompareException(CompareException.INVALID_STATE_ERROR) from e
+            else:
+                api_batches.append(ApiBatch(api_name, index))
+
+    @staticmethod
+    def check_indices_numeric(api_items, indices: list):
+        """检查指定索引处的值是否都为数字类型（int 或 float）"""
+        return all(isinstance(api_items[i], (float, int)) for i in indices)
+
+    @staticmethod
+    def update_highlight_err_msg(result_df, highlight_dict):
+        if result_df.shape[1] <= 1:
+            return
+
+        if CompareConst.NPU_MD5 in result_df.columns:
+            return
+
+        err_msg = result_df.get(CompareConst.ERROR_MESSAGE)
+        red_lines_num_set = highlight_dict.get('red_rows')
+
+        for color in ['red', 'yellow']:
+            line_key = f'{color}_lines'
+            lines = highlight_dict.get(line_key, [])
+            for line_index, messages in lines:
+                if color == 'yellow' and line_index in red_lines_num_set:
+                    continue  # 如果是 yellow 行，且已被 red 行覆盖，跳过
+
+                for msg in messages:
+                    if err_msg[line_index] == '':
+                        err_msg[line_index] = msg
+                    else:
+                        err_msg[line_index] += '\n' + msg
+
+                if color == 'red':
+                    red_lines_num_set.add(line_index)
+
+        result_df[CompareConst.ERROR_MESSAGE] = err_msg
+
+    @staticmethod
+    def compare_result_df_convert(value):
+        if not isinstance(value, (float, int)) or isinstance(value, bool):  # bool类型或者非数字类型转str
+            value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else str(value)
+        if isinstance(value, float):
+            value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else value
+        return value
+
+    @staticmethod
+    def value_check(value, api_name=None, i=None, result_df_columns=None):
+        if not table_value_is_valid(value):
+            if result_df_columns:
+                logger.error(f"Malicious value [{value}] at api_name [{api_name}], column [{result_df_columns[i]}], "
+                             f"is not allowed to be written into the compare result xlsx.")
+            else:
+                logger.error(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
+
+    def find_compare_result_error_rows(self, result_df, highlight_dict):
+        """将dataframe根据API分组，并找到有误差的算子用于高亮"""
+        result = result_df.values
+        api_batches = []
+        for i, res_i in enumerate(result):
+            api_full_name = safe_get_value(res_i, 0, "res_i")
+            api_name, state = get_name_and_state(api_full_name)
+            self.api_batches_update(api_batches, api_name, state, i)
+        with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
+            for api_batch in api_batches:
+                self.find_error_rows(result[api_batch.start: api_batch.params_grad_end_index], api_batch,
+                                     highlight_dict)
+                progress_bar.update(1)
+
+    def find_error_rows(self, result, api_batch, highlight_dict):
+        """找到单个API中需要高亮的行"""
+        if self.mode_config.dump_mode == Const.MD5:
+            return
+        npu_max_index = get_header_index(CompareConst.NPU_MAX, self.mode_config.dump_mode)
+        bench_max_index = get_header_index(CompareConst.BENCH_MAX, self.mode_config.dump_mode)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF if self.mode_config.dump_mode == Const.SUMMARY
+                                          else CompareConst.MAX_ABS_ERR, self.mode_config.dump_mode)
+
+        red_lines, yellow_lines = [], []
+        LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
+        ApiInfo = namedtuple('ApiInfo', ['api_input', 'api_output', 'num_pointer'])
+        ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+
+        api_batch_start = api_batch.start  # result_df的input起始全局索引
+        api_batch_params_end_index = api_batch.params_end_index  # result_df的params结束全局索引 + 1
+        api_batch_output_end_index = api_batch.output_end_index  # result_df的output结束全局索引 + 1
+        api_batch_params_slice_index_local = api_batch_params_end_index - api_batch_start  # result的params结束局部切片索引
+        api_batch_output_slice_index_local = api_batch_output_end_index - api_batch_start  # result的output结束局部切片索引
+
+        # 对单行API的输入或输出进行误差判断
+        for i, line in enumerate(result):
+            index = api_batch_start + i
+            line_info = LineInfo(line_data=line, num_pointer=index)
+            for rule in HighlightRules.basic_rules.values():
+                rule.apply(line_info, color_columns, self.mode_config.dump_mode)
+
+        # 对API的输出与输入比较，进行误差判断
+        for n, api_out in enumerate(result[api_batch_params_slice_index_local: api_batch_output_slice_index_local]):
+            index = api_batch_start + api_batch_params_slice_index_local + n
+            # 单行检查只有溢出检查（红色），如果已经溢出，不进一步检查
+            if index in red_lines:
+                continue
+            if not self.check_indices_numeric(api_out, [npu_max_index, bench_max_index, max_diff_index]):
+                continue
+
+            # input/parameters的比较检查, 这里api_in包括input、parameters
+            for api_in in result[0: api_batch_params_slice_index_local]:
+                if not self.check_indices_numeric(api_in, [npu_max_index, bench_max_index, max_diff_index]):
+                    continue
+                api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=index)
+                self.apply_comparison_rules(api_info, color_columns)
+
+        red_lines_num_set = {x[0] for x in red_lines}
+        yellow_lines_num_set = {x[0] for x in yellow_lines}
+        highlight_dict.get('red_rows', set()).update(red_lines_num_set)
+        highlight_dict.get('yellow_rows', set()).update(yellow_lines_num_set - red_lines_num_set)
+        highlight_dict.get('red_lines', []).extend(red_lines)
+        highlight_dict.get('yellow_lines', []).extend(yellow_lines)
+
+    def apply_comparison_rules(self, api_info, color_columns):
+        """output与input/params的比较"""
+        if self.mode_config.dump_mode == Const.SUMMARY:
+            for rule in HighlightRules.summary_compare_rules.values():
+                rule.apply(api_info, color_columns, self.mode_config.dump_mode)
+        else:
+            for rule in HighlightRules.compare_rules.values():
+                rule.apply(api_info, color_columns, self.mode_config.dump_mode)
+
+    def highlight_rows_xlsx(self, result_df, highlight_dict, file_path):
+        """Write and highlight results in Excel"""
+
+        self.update_highlight_err_msg(result_df, highlight_dict)  # add highlight err_msg
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+
+        # write header
+        logger.info('Initializing Excel file.')
+
+        self.handle_multi_process_malicious_value_check(self.df_malicious_value_check, result_df)
+
+        result_df_convert = result_df.applymap(self.compare_result_df_convert)
+
+        for row in dataframe_to_rows(result_df_convert, index=False, header=True):
+            ws.append(row)
+
+        # 对可疑数据标色
+        logger.info('Coloring Excel in progress.')
+        col_len = len(result_df.columns)
+        red_fill = PatternFill(
+            start_color=CompareConst.RED, end_color=CompareConst.RED, fill_type="solid"
+        )
+        yellow_fill = PatternFill(
+            start_color=CompareConst.YELLOW, end_color=CompareConst.YELLOW, fill_type="solid",
+        )
+        for i in highlight_dict.get("red_rows", []):
+            for j in range(1, col_len + 1):
+                ws.cell(row=i + 2, column=j).fill = red_fill  # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
+        for i in highlight_dict.get("yellow_rows", []):
+            for j in range(1, col_len + 1):
+                ws.cell(row=i + 2, column=j).fill = yellow_fill
+
+        logger.info('Saving Excel file to disk: %s' % file_path)
+        save_workbook(wb, file_path)
+
+    def handle_multi_process_malicious_value_check(self, func, result_df):
+        result_total_nums = len(result_df)
+        process_num = int((multiprocessing.cpu_count() + 1) / 2)
+
+        if result_total_nums <= process_num:
+            process_num = 1
+            chunks = [result_df]
+        else:
+            chunk_size = result_total_nums // process_num
+            chunks = [result_df.iloc[i: i + chunk_size] for i in range(0, result_total_nums, chunk_size)]
+
+        pool = multiprocessing.Pool(process_num)
+
+        def err_call(args):
+            logger.error("Multiprocessing malicious value check failed! Reason: {}".format(args))
+            try:
+                pool.terminate()
+            except OSError:
+                logger.error("Pool terminate failed")
+
+        result_df_columns = result_df.columns.tolist()
+        for column in result_df_columns:
+            self.value_check(column)
+        for df_chunk in chunks:
+            pool.apply_async(func, args=(df_chunk, result_df_columns,), error_callback=err_call)
+
+        pool.close()
+        pool.join()
+
+    def df_malicious_value_check(self, df_chunk, result_df_columns):
+        for row in df_chunk.itertuples(index=False):
+            api_name = row[0]
+            for i, value in enumerate(row):
+                self.value_check(value, api_name, i, result_df_columns)
