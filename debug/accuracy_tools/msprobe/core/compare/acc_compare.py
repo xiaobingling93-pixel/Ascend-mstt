@@ -29,8 +29,8 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, safe_get_value, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param
+from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
+    safe_get_value, set_dump_path, get_dump_mode, check_compare_param, check_configuration_param
 from msprobe.core.compare.check import check_dump_json_str, check_graph_mode, check_stack_json_str, \
     check_struct_match, fuzzy_check_op, cross_dtype_mapping_2
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
