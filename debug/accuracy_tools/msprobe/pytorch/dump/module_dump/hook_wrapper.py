@@ -43,7 +43,11 @@ def wrap_setup_backward_hook(func):
     @recursion_depth_decorator("Dump: wrap_setup_backward_hook.rebuild_args", max_depth=Const.DUMP_MAX_DEPTH)
     def rebuild_args(item, tensor_iter):
         if requires_clone(item):
-            return next(tensor_iter).clone()
+            result = next(tensor_iter)
+            if hasattr(result, "_base") and result._base is not None:
+                if torch._C._autograd._get_creation_meta(result) != torch._C._autograd.CreationMeta(0):
+                    torch._C._autograd._set_creation_meta(result, torch._C._autograd.CreationMeta(0))
+            return result    
         if isinstance(item, list):
             for index, value in enumerate(item):
                 item[index] = rebuild_args(value, tensor_iter)
@@ -63,9 +67,7 @@ def wrap_setup_backward_hook(func):
         if len(args) < 2:
             return func(*args, **kwargs)
 
-        self_, actual_args = args[0], args[1]
-        if hasattr(self_.module, "inplace") and self_.module.inplace:
-            return actual_args
+        actual_args = args[1]
 
         tensor_list = []
 
