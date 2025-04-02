@@ -196,6 +196,9 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   @property({ type: Array })
   nodeContextMenuItems: unknown[];
 
+  @property({ type: Boolean })
+  showMinimap: boolean = true;
+
   /**
    * A minimap object to notify for zoom events.
    */
@@ -207,6 +210,12 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     this._hasRenderHierarchyBeenFitOnce = false;
     this._resetState();
     this._build(renderHierarchy);
+  }
+
+  @observe('showMinimap')
+  _minimapVisChanged(): void {
+    const minimap = this.$.minimap as HTMLElement;
+    minimap.style.display = this.showMinimap ? 'block' : 'none';
   }
 
   // Animation and fitting must come after the observer for the hierarchy changing because we must
@@ -537,10 +546,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
         this._zoomed = false;
       },
     );
-  }
-
-  getImageBlob(): Promise<Blob> {
-    return this.minimap.getImageBlob();
   }
 
   isNodeSelected(n): boolean {

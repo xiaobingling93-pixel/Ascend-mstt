@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-import { customElement, observe, property } from '@polymer/decorators';
+import { customElement, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import '../polymer/irons_and_papers';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
@@ -22,7 +22,7 @@ import * as tf_graph_hierarchy from '../tf_graph_common/hierarchy';
 import * as tf_graph_render from '../tf_graph_common/render';
 import '../tf_graph_node_info/index';
 import * as _ from 'lodash';
-import { BENCH_PREFIX } from '../tf_graph_common/common';
+import type { MinimapVis } from '../tf_graph_controls/tf-graph-controls';
 
 /**
  * Element for putting tf-graph and tf-graph-info side by side.
@@ -172,6 +172,7 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
           handle-node-selected="[[handleNodeSelected]]"
           menu="[[menu]]"
           colorset="[[colorset]]"
+          minimap-vis="[[minimapVis]]"
         ></tf-graph>
       </div>
       <div id="tab-info">
@@ -234,21 +235,15 @@ class TfGraphBoard extends LegacyElementMixin(PolymerElement) {
   @property({ type: String })
   selectNodeCopy: string = '';
 
+  @property({ type: Object })
+  minimapVis: MinimapVis = { npu: true, bench: true };
+
   ready(): void {
     super.ready();
   }
 
   fit(): void {
     (this.$.graph as any).fit();
-  }
-
-  async downloadAsImage(filename: string): Promise<void> {
-    const blob = await (this.$.graph as any).getImageBlob();
-    const element = document.createElement('a');
-    (element as any).href = (URL as any).createObjectURL(blob);
-    element.download = filename;
-    element.click();
-    URL.revokeObjectURL(element.href);
   }
 
   /** True if the progress is not complete yet (< 100 %). */

@@ -140,6 +140,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           background: var(--hover-background-color);
         }
 
+        .toggle-legend-text {
+          font-size: 15px;
+        }
+
         /* Vaadin 组合框样式 */
         vaadin-combo-box {
           flex: 1;
@@ -153,7 +157,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           border-radius: 0;
         }
       </style>
-      <template is="dom-if" if="[[hiddenAll]]">
+      <template is="dom-if" if="[[enableConfig]]">
         <div class='container-wrapper'>
           <template is="dom-if" if="[[_colorSetting]]">
             <div>
@@ -162,7 +166,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   <div style="font-size: 15px">精度误差</div>
                   <div style="margin-left: auto; display: flex; gap: 8px;">
                     <vaadin-icon icon="vaadin:cog-o" on-click="_clickSetting"></vaadin-icon>
-                    <template is="dom-if" if="[[hiddenTabChanged]]">
+                    <template is="dom-if" if="[[showSwitchIcon]]">
                       <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
                     </template>
                   </div>
@@ -171,7 +175,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               <template is="dom-if" if="[[_filterSetting]]">
                 <div class="toolbar">
                   <div style="font-size: 15px">精度溢出</div>
-                  <template is="dom-if" if="[[hiddenTabChanged]]">
+                  <template is="dom-if" if="[[showSwitchIcon]]">
                     <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
                   </template>
                 </div>
@@ -387,10 +391,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   overflowcheck;
 
   @property({ type: Boolean })
-  hiddenAll = true;
+  enableConfig = true;
 
   @property({ type: Boolean })
-  hiddenTabChanged = true;
+  showSwitchIcon = true;
 
   @property({ type: Object })
   selection: any = {};
@@ -422,20 +426,18 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       return;
     }
     if (this.renderHierarchy.bench) {
-      this.set('hiddenAll', true);
-      if (!this.overflowcheck) {
-        this.set('hiddenTabChanged', false);
-      }
+      this.set('enableConfig', true);
+      this.set('showSwitchIcon', !!this.overflowcheck);
     } else {
       if (this.overflowcheck) {
         this._selectedTabChanged();
-        this.set('hiddenAll', true);
+        this.set('enableConfig', true);
         // 隐藏切换按钮
-        this.set('hiddenTabChanged', false);
+        this.set('showSwitchIcon', false);
         // 切换至精度溢出，隐藏精度筛选
         this.set('_filterSetting', true);
       } else {
-        this.set('hiddenAll', false);
+        this.set('enableConfig', false);
       }
     }
   }
