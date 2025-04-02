@@ -38,7 +38,7 @@ from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _hand
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
     print_compare_ends_info, read_op, get_name_and_state, reorder_op_x_list, set_stack_json_path
-from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
+from msprobe.core.compare.config import MappingConfig, MappingDict
 
 
 @dataclass
