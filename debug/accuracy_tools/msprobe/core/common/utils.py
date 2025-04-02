@@ -284,8 +284,8 @@ def set_dump_path(input_param):
     if not npu_path_valid or not bench_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.BENCH_DUMP_DATA_DIR] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
 
 
 def get_dump_mode(input_param):

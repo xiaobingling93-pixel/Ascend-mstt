@@ -12,9 +12,8 @@ import numpy as np
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
-    count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
-    table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list, gen_op_item
+    count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
+    stack_column_process, table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list, gen_op_item
 
 # test_read_op_1
 op_data = {
@@ -350,18 +349,6 @@ class TestUtilsMethods(unittest.TestCase):
         result = check_and_return_dir_contents(base_dir2, 'rank')
         self.assertEqual(set(result), set(['rank0', 'rank1']))
 
-    def test_rename_api_1(self):
-        test_name_1 = "Distributed.broadcast.0.forward.input.0"
-        expect_name_1 = "Distributed.broadcast.input.0"
-        actual_name_1 = rename_api(test_name_1, "forward")
-        self.assertEqual(actual_name_1, expect_name_1)
-
-    def test_rename_api_2(self):
-        test_name_2 = "Torch.sum.0.backward.output.0"
-        expect_name_2 = "Torch.sum.output.0"
-        actual_name_2 = rename_api(test_name_2, "backward")
-        self.assertEqual(actual_name_2, expect_name_2)
-
     def test_read_op(self):
         result = read_op(op_data, op_name)
         self.assertEqual(result, op_result)
@@ -378,11 +365,6 @@ class TestUtilsMethods(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             op_item_parse(parse_item, parse_op_name, depth=11)
         self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
-
-    def test_resolve_api_special_parameters(self):
-        item_list = []
-        resolve_api_special_parameters(data_dict, full_op_name, item_list)
-        self.assertEqual(item_list, o_result_api_special)
 
     def test_get_rela_diff_summary_mode_float_or_int(self):
         result_item = [0] * 14
@@ -448,57 +430,6 @@ class TestUtilsMethods(unittest.TestCase):
         result = []
         get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
-
-    def test_append_stack_info_stack_exist_index_0(self):
-        result_item = ['item1']
-        npu_stack_info = ['stack_info1']
-        index = 0
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', 'stack_info1'])
-
-    def test_append_stack_info_stack_exist_index_not_0(self):
-        result_item = ['item1']
-        npu_stack_info = ['stack_info1']
-        index = 1
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', CompareConst.NONE])
-
-    def test_append_stack_info_stack_empty_index_0(self):
-        result_item = ['item1']
-        npu_stack_info = []
-        index = 0
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', CompareConst.NONE])
-
-    def test_append_stack_info_stack_empty_index_not_0(self):
-        result_item = ['item1']
-        npu_stack_info = []
-        index = 1
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', CompareConst.NONE])
-
-    def test_get_un_match_accuracy_md5(self):
-        result = []
-        get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
-        self.assertEqual(result, o_result_unmatch_1)
-
-    def test_get_un_match_accuracy_summary(self):
-        result = []
-        get_un_match_accuracy(result, npu_dict, dump_mode=Const.SUMMARY)
-        self.assertEqual(result, o_result_unmatch_2)
-
-    def test_get_un_match_accuracy_all(self):
-        result = []
-        get_un_match_accuracy(result, npu_dict, dump_mode=Const.ALL)
-        self.assertEqual(result, o_result_unmatch_3)
 
     def test_merge_tensor_summary(self):
         op_dict = merge_tensor(tensor_list, dump_mode=Const.SUMMARY)
