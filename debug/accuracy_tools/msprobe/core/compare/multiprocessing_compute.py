@@ -170,7 +170,7 @@ class CompareRealData:
             error_file = 'no_bench_data'
         elif str(bench_data_name) == CompareConst.N_A:  # bench没匹配
             n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
-            error_file = 'unmatched'
+            error_file = None
         else:
             npu_dir = input_param.get(CompareConst.NPU_DUMP_DATA_DIR)
             bench_dir = input_param.get(CompareConst.BENCH_DUMP_DATA_DIR)
