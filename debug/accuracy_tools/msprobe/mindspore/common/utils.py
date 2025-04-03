@@ -25,7 +25,7 @@ from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import CompareException, check_seed_all
+from msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
 
 
 class MsprobeStep(ms.train.Callback):
@@ -192,9 +192,11 @@ def set_register_backward_hook_functions():
 
 def check_save_param(variable, name, save_backward):
     # try catch this api to skip invalid call
-    if not isinstance(variable, (list, dict, tuple, ms.Tensor, int, float, str)):
+    valid_data_types = (ms.Tensor, int, float, str)
+    if not is_save_variable_valid(variable, valid_data_types):
+        valid_data_types_with_nested_types = valid_data_types + (dict, tuple, list)
         logger.warning("PrecisionDebugger.save variable type not valid, "
-                       "should be one of list, dict, tuple, ms.Tensor, int, float or string. "
+                       f"should be one of {valid_data_types_with_nested_types}"
                        "Skip current save process.")
         raise ValueError
     if not isinstance(name, str):

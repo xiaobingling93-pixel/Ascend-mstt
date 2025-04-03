@@ -47,15 +47,16 @@ from msprobe.core.common.utils import (CompareException,
                                        check_regex_prefix_format_valid,
                                        set_dump_path,
                                        get_dump_mode,
-                                       get_real_step_or_rank, 
-                                       get_step_or_rank_from_string, 
+                                       get_real_step_or_rank,
+                                       get_step_or_rank_from_string,
                                        get_stack_construct_by_dump_json_path,
                                        check_seed_all,
                                        safe_get_value,
                                        MsprobeBaseException,
                                        check_str_param,
                                        is_json_file,
-                                       detect_framework_by_dump_json)
+                                       detect_framework_by_dump_json,
+                                       is_save_variable_valid)
 from msprobe.core.common.decorator import recursion_depth_decorator
 
 
@@ -337,7 +338,7 @@ class TestUtils(TestCase):
     def test_recursion_depth_decorator(self, mock_error):
         # 测试递归深度限制函数
         recursion_list = [[]]
-        temp_list = recursion_list[0] 
+        temp_list = recursion_list[0]
         for _ in range(Const.MAX_DEPTH):
             temp_list.append([])
             temp_list = temp_list[0]
@@ -530,3 +531,43 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
             result = detect_framework_by_dump_json(file_path)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_logger.error.assert_called_once_with(f"{file_path} must be based on the MindSpore or PyTorch framework.")
+
+
+class TestIsSaveVariableValid(unittest.TestCase):
+    def setUp(self):
+        self.valid_special_types = (int, float, str, bool)
+
+    def test_is_save_variable_valid_DepthExceeded_ReturnsFalse(self):
+        # 创建一个深度超过 Const.DUMP_MAX_DEPTH 的嵌套结构
+        nested_structure = [0] * Const.DUMP_MAX_DEPTH
+        for _ in range(Const.DUMP_MAX_DEPTH):
+            nested_structure = [nested_structure]
+        self.assertFalse(is_save_variable_valid(nested_structure, self.valid_special_types))
+
+    def test_is_save_variable_valid_ValidSpecialTypes_ReturnsTrue(self):
+        for valid_type in self.valid_special_types:
+            self.assertTrue(is_save_variable_valid(valid_type(0), self.valid_special_types))
+
+    def test_is_save_variable_valid_ListWithValidElements_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid([1, 2, 3], self.valid_special_types))
+
+    def test_is_save_variable_valid_ListWithInvalidElement_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid([1, "test", [1, slice(1)]], self.valid_special_types))
+
+    def test_is_save_variable_valid_TupleWithValidElements_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid((1, 2, 3), self.valid_special_types))
+
+    def test_is_save_variable_valid_TupleWithInvalidElement_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid((1, "test", [1, slice(1)]), self.valid_special_types))
+
+    def test_is_save_variable_valid_DictWithValidElements_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid({"a": 1, "b": "test"}, self.valid_special_types))
+
+    def test_is_save_variable_valid_DictWithInvalidKey_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid({1: "test"}, self.valid_special_types))
+
+    def test_is_save_variable_valid_DictWithInvalidValue_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid({"a": [1, slice(1)]}, self.valid_special_types))
+
+    def test_is_save_variable_valid_None_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid(None, self.valid_special_types))
