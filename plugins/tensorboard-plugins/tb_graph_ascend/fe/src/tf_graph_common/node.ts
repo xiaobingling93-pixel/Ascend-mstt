@@ -21,14 +21,11 @@ import * as _ from 'lodash';
 import * as tf_graph_common from './common';
 import { Class, FontSizeInPx, selectChild, selectOrCreateChild } from './common';
 import * as contextmenu from './contextmenu';
-import * as edge from './edge';
 import * as tf_graph from './graph';
-import { MetanodeImpl, Node, NodeType, OpNode, OpNodeImpl } from './graph';
+import { MetanodeImpl, NodeType, OpNodeImpl } from './graph';
 import * as layout from './layout';
 import * as render from './render';
-import { RenderNodeInfo } from './render';
 import * as tf_graph_scene from './scene';
-import { positionEllipse, positionRect } from './scene';
 import { TfGraphScene } from './tf-graph-scene';
 import * as tf_graph_util from './util';
 
@@ -260,6 +257,7 @@ function addInteraction(
       }
       timeOut = setTimeout(() => {
         sceneElement.fire('node-select', { name: dClick.node.name });
+        sceneElement.fire('no-pan-to-node', {});
       }, time);
     })
 
