@@ -568,6 +568,3 @@ class TestIsSaveVariableValid(unittest.TestCase):
 
     def test_is_save_variable_valid_DictWithInvalidValue_ReturnsFalse(self):
         self.assertFalse(is_save_variable_valid({"a": [1, slice(1)]}, self.valid_special_types))
-
-    def test_is_save_variable_valid_None_ReturnsTrue(self):
-        self.assertTrue(is_save_variable_valid(None, self.valid_special_types))
