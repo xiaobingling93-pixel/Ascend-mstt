@@ -28,7 +28,7 @@ from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import (FileCheckConst, change_mode,
                                             check_file_or_directory_path, check_path_before_create, FileOpen)
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import check_seed_all
+from msprobe.core.common.utils import check_seed_all, is_save_variable_valid
 from packaging import version
 
 try:
@@ -457,9 +457,11 @@ def is_recomputation():
 
 def check_save_param(variable, name, save_backward):
     # try catch this api to skip invalid call
-    if not isinstance(variable, (list, dict, tuple, torch.Tensor, int, float, str)):
+    valid_data_types = (torch.Tensor, int, float, str)
+    if not is_save_variable_valid(variable, valid_data_types):
+        valid_data_types_with_nested_types = valid_data_types + (dict, tuple, list)
         logger.warning("PrecisionDebugger.save variable type not valid, "
-                       "should be one of list, dict, tuple, torch.Tensor, int, float or string. "
+                       f"should be one of {valid_data_types_with_nested_types}"
                        "Skip current save process.")
         raise ValueError
     if not isinstance(name, str):
