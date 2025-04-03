@@ -1,7 +1,6 @@
 # coding=utf-8
 import unittest
-from msprobe.core.compare.check import check_struct_match, check_type_shape_match, check_graph_mode, fuzzy_check_op, \
-    fuzzy_check_name, check_dump_json_str, check_json_key_value, valid_key_value, check_stack_json_str
+from msprobe.core.compare.check import check_dump_json_str, check_json_key_value, valid_key_value, check_stack_json_str
 from msprobe.core.common.utils import CompareException
 
 
@@ -65,87 +64,6 @@ op_name = 'Functional.conv2d.0.backward.input.0'
 
 
 class TestUtilsMethods(unittest.TestCase):
-
-    def test_check_struct_match_success(self):
-        result = check_struct_match(npu_dict, bench_dict)
-        self.assertTrue(result)
-
-    def test_check_struct_match_fail(self):
-        npu_dict2 = {'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
-                                      ('torch.float32', [16])],
-                     'output_struct': [('torch.float32', [1, 16, 28, 28])]
-                     }
-
-        bench_dict2 = {'input_struct': [('torch.float32', [2, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
-                                        ('torch.float32', [16])],
-                       'output_struct': [('torch.float32', [1, 16, 28, 28])]
-                       }
-        result = check_struct_match(npu_dict2, bench_dict2)
-        self.assertFalse(result)
-
-    def test_check_struct_index_error(self):
-        npu_dict3 = {'input_struct': [('a'), ('torch.float32'),
-                                      ('torch.float32')],
-                     'output_struct': [('torch.float32')]
-                     }
-
-        bench_dict3 = {'input_struct': [('torch.float32'), ('torch.float32'),
-                                        ('torch.float32')],
-                       'output_struct': [('torch.float32')]
-                       }
-        with self.assertRaises(CompareException) as context:
-            result = check_struct_match(npu_dict3, bench_dict3)
-        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
-
-    def test_check_type_shape_match_success(self):
-        result = check_type_shape_match(npu_struct, bench_struct)
-        self.assertTrue(result)
-
-    def test_check_type_shape_match_index_error(self):
-        npu_struct2 = [('a'), ('torch.float32'), ('torch.float32')]
-        bench_struct2 = [('torch.float32'), ('torch.float32'), ('torch.float32')]
-        with self.assertRaises(CompareException) as context:
-            result = check_type_shape_match(npu_struct2, bench_struct2)
-        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
-
-    def test_check_graph_mode(self):
-        op1 = "Aten"
-        op2 = "torch"
-        self.assertTrue(check_graph_mode(op1, op2))
-        self.assertTrue(check_graph_mode(op2, op1))
-        self.assertFalse(check_graph_mode(op1, op1))
-        self.assertFalse(check_graph_mode(op2, op2))
-
-    def test_fuzzy_check_op_1(self):
-        npu_name_list = []
-        bench_name_list = []
-        result = fuzzy_check_op(npu_name_list, bench_name_list)
-        self.assertFalse(result)
-
-    def test_fuzzy_check_op_2(self):
-        npu_name_list = []
-        bench_name_list = ['Functional.conv2d.0.forward.input.0']
-        result = fuzzy_check_op(npu_name_list, bench_name_list)
-        self.assertFalse(result)
-
-    def test_fuzzy_check_op_3(self):
-        npu_name_list = ['Functional.conv2d.0.forward.input.0']
-        bench_name_list = ['Functional.conv2d.1.forward.input.0']
-        result = fuzzy_check_op(npu_name_list, bench_name_list)
-        self.assertTrue(result)
-
-    def test_fuzzy_check_name_1(self):
-        npu_name = 'Functional.conv2d.0.backward.input.0'
-        bench_name = 'Functional.conv2d.1.backward.input.0'
-        result = fuzzy_check_name(npu_name, bench_name)
-        self.assertTrue(result)
-
-    def test_fuzzy_check_name_2(self):
-        npu_name = 'Functional.conv2d.0.backward.input.0'
-        bench_name = 'Functional.conv2d.1.backward.input.1'
-        result = fuzzy_check_name(npu_name, bench_name)
-        self.assertFalse(result)
-
     def test_check_dump_json_str(self):
         with self.assertRaises(CompareException) as context:
             check_dump_json_str(op_data, op_name)
