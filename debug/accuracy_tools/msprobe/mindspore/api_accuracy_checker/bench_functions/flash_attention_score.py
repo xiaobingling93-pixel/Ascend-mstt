@@ -95,6 +95,10 @@ def fusion_attention_forward(forward_params):
     scalar_value = forward_params.scalar_value
     keep_prob = forward_params.keep_prob
 
+    # 拦截 keep_prob 为 0 的情况，防止除零
+    if keep_prob == 0:
+        raise ValueError("fusion_attention_forward: keep_prob 不能为 0，避免除零错误。")
+
     qk = calculate_qk(q, k, attn_mask, pse, scalar_value)
     softmax_res, softmax_max, softmax_sum = softmax_forward(qk)
     if drop_mask is None or len(drop_mask.shape) == 0:
@@ -115,6 +119,11 @@ def fusion_attention_backward(backward_params):
     pse = backward_params.pse
     scalar_value = backward_params.scalar_value
     keep_prob = backward_params.keep_prob
+
+    # 拦截 keep_prob 为 0 的情况，防止除零
+    if keep_prob == 0:
+        raise ValueError("fusion_attention_backward: keep_prob 不能为 0，避免除零错误。")
+
     dp = torch.matmul(dx, v.permute(0, 1, 3, 2))
     if drop_mask is None or len(drop_mask.shape) == 0:
         drop_res = softmax_res.permute(0, 1, 3, 2)
@@ -138,34 +147,45 @@ def parse_bsnd_args(query, key, head_num, input_layout):
 
     if input_layout == "TND":
         raise ValueError(f"input_layout {input_layout} does not supported for now.")
+
+    # 防止 head_num 为 0
+    if n1 == 0:
+        raise ValueError("parse_bsnd_args: head_num (n1) 不能为 0，避免除零错误。")
+
     try:
         if input_layout == "BSH":
             b, s1, h1 = query.shape
             _, s2, h2 = key.shape
             d = h1 // n1
+            # 拦截 d 为 0 的情况
+            if d == 0:
+                raise ValueError("parse_bsnd_args: 计算得到的 head_dim d 不能为 0。")
             n2 = h2 // d
         elif input_layout == "SBH":
             s1, b, h1 = query.shape
             s2, _, h2 = key.shape
             d = h1 // n1
+            if d == 0:
+                raise ValueError("parse_bsnd_args: 计算得到的 head_dim d 不能为 0。")
             n2 = h2 // d
         elif input_layout == "BSND":
             b, s1, n1, d = query.shape
             _, s2, n2, _ = key.shape
+            if d == 0:
+                raise ValueError("parse_bsnd_args: head_dim d 不能为 0。")
             h1 = n1 * d
             h2 = n2 * d
         elif input_layout == "BNSD":
             b, n1, s1, d = query.shape
             _, n2, s2, _ = key.shape
+            if d == 0:
+                raise ValueError("parse_bsnd_args: head_dim d 不能为 0。")
             h1 = n1 * d
             h2 = n2 * d
     except Exception as e:
         raise ValueError(f"query.shape: {query.shape}, key.shape: {key.shape}, parse_bsnd_args error: {e}") from e
 
-    if d == 0:
-        raise ValueError(f"Value d must be non-zero.")
-    _dtype = query.dtype
-    ret = (b, s1, s2, n1, n2, d, h1, h2, _dtype)
+    ret = (b, s1, s2, n1, n2, d, h1, h2, query.dtype)
     return ret
 
 
@@ -356,13 +376,14 @@ def get_input_layout(*args, **kwargs):
 
 def npu_fusion_attention_forward_patch(*args, **kwargs):
     if len(args) < 2:
-        raise RuntimeError("npu_fusion_attention_forward_patch: length of args should greater than or equal to 2.")
+        raise RuntimeError("npu_fusion_attention_forward_patch: length of args should be greater than or equal to 2.")
 
     # query, key, value, head_num, input_layout
     head_num = get_head_num(*args, **kwargs)
     input_layout = get_input_layout(*args, **kwargs)
 
     b, s1, s2, n1, n2, d, h1, h2, dtype = parse_bsnd_args(args[0], args[1], head_num, input_layout)
+    # 此处 d 已在 parse_bsnd_args 中检查为非零
     if n1 == n2 and s1 == s2:
         logger.debug(f"running case : BNSD = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
@@ -375,7 +396,7 @@ def npu_fusion_attention_forward_patch(*args, **kwargs):
         "d": d, "h1": h1, "h2": h2, "dtype": dtype
     }
     new_kwargs = {
-        "keep_prob": 1,
+        "keep_prob": 1,  # 注意：如果外部传入 keep_prob 为 0，也会在 fusion_attention_forward 中捕获
         "scalar_value": kwargs.get("scalar_value", 1 / (d ** 0.5)),
         "sparse_mode": kwargs.get("sparse_mode", 0),
         "prefix": kwargs.get("prefix"),
@@ -394,6 +415,7 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
         raise ValueError(f"Unsupported npu_fusion_attention_grad args {args}.")
 
     b, s1, s2, n1, n2, d, h1, h2, dtype = parse_bsnd_args(args[0], args[1], args[4], args[5])
+    # 此处 d 已在 parse_bsnd_args 中检查为非零
     if n1 == n2 and s1 == s2:
         logger.info(f"running case : bnsd = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
@@ -407,7 +429,7 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
     }
 
     new_kwargs = {
-        "keep_prob": 1,
+        "keep_prob": 1,  # 同上，fusion_attention_backward 内会拦截 keep_prob 为 0 的情况
         "scalar_value_value": kwargs.get("scalar_value_value", 1 / (d ** 0.5)),
         "sparse_mode": kwargs.get("sparse_mode", 0),
         "prefix": kwargs.get("prefix"),
