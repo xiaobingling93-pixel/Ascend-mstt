@@ -388,6 +388,8 @@ def npu_fusion_attention_forward_patch(*args, **kwargs):
         logger.debug(f"running case : BNSD = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
         logger.debug(f"running case: BNSD = {b}_{n1}({n2})_{s1}({s2})_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
+    if n2 == 0:
+        raise ValueError("n2 不能为 0，避免除零错误。")
     if not (n1 % n2 == 0 and n1 >= n2):
         raise ValueError(f"N1与N2不匹配,请检查: n1 = {n1}, n2 = {n2}.")
 
@@ -420,6 +422,8 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
         logger.info(f"running case : bnsd = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
         logger.info(f"running case: bnsd = {b}_{n1}({n2})_{s1}({s2})_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
+    if n2 == 0:
+        raise ValueError("n2 不能为 0，避免除零错误。")
     if not (n1 % n2 == 0 and n1 >= n2):
         raise ValueError(f"N1与N2不匹配,请检查: n1 = {n1}, n2 = {n2}.")
 
