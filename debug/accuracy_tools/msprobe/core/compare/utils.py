@@ -525,7 +525,7 @@ def table_value_is_valid(value: str) -> bool:
     if not isinstance(value, str):
         return True
     try:
-        # -1.00 or +1.00 should be consdiered as digit numbers
+        # -1.00 or +1.00 should be considered as digit numbers
         float(value)
     except ValueError:
         # otherwise, they will be considered as formular injections

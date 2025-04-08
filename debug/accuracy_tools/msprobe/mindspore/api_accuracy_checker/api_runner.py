@@ -148,13 +148,13 @@ class ApiRunner:
         Args:
             api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Functional"]
             api_sub_name: str, e.g. "relu"
-            api_platform: str: Union["mindpore", "pytorch"]
+            api_platform: str: Union["mindspore", "pytorch"]
 
         Return:
             api_instance: function object
 
         Description:
-            get mindspore.mint/torch api fucntion
+            get mindspore.mint/torch api function
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         """
