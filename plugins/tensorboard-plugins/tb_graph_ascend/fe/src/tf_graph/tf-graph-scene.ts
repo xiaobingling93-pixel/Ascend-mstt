@@ -201,7 +201,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
    */
   private minimap: tf_graph_minimap.Minimap;
 
-  private noPanSignal: Boolean = true;
+  private enablePanSignal: Boolean = true;
 
   @observe('renderHierarchy')
   _renderHierarchyChanged(): void {
@@ -659,10 +659,10 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     // Otherwise, the pan will be computed from incorrect measurements.
     setTimeout(() => {
       // 鼠标点击不自动移动居中
-      if (this.noPanSignal) {
+      if (this.enablePanSignal) {
         this.panToNode(selectedNode);
       }
-      this.noPanSignal = true;
+      this.enablePanSignal = true;
     }, tf_graph_layout.PARAMS.animation.duration);
   }
 
@@ -700,6 +700,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   
   // 取消鼠标点击自动居中
   _noPanToNode(): void {
-    this.noPanSignal = false
+    this.enablePanSignal = false
   }
 }

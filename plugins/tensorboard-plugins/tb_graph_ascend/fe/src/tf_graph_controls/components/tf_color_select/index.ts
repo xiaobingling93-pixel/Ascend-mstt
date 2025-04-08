@@ -475,10 +475,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   _defaultSetting(): void {
     // 配置预设
-    this.set('colorSelects', defaultColorSetting);
+    this.colorSelects = defaultColorSetting;
     this._confirmAction();
-    // 清空临时配置结构
-    this.set('colorSelects', defaultColorSelects);
+    // 清空并且还原至临时配置结构
+    this.colorSelects = defaultColorSelects;
   }
 
   _cancelAction(): void {
