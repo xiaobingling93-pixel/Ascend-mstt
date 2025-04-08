@@ -20,7 +20,7 @@ import * as d3 from 'd3';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
 import * as tf_graph_parser from '../../../tf_graph_common/parser';
-import { BENCH_PREFIX, NPU_PREFIX, UNMATCHED_COLOR } from '../../../tf_graph_common/common';
+import { BENCH_PREFIX, NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects} from '../../../tf_graph_common/common';
 import * as tf_graph_node from '../../../tf_graph_common/node';
 import { getElementBySelectors } from './../../utils';
 import * as tf_graph_render from '../../../tf_graph_common/render';
@@ -240,6 +240,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                 </div>
               </span>
               <div style="display: flex; margin-left: auto;">
+              <button on-click="_defaultSetting" style="margin-right: 7px;">
+                  <span>预设配置</span>
+                </button>
                 <button on-click="_confirmAction" style="margin-right: 7px;">
                   <span>确认</span>
                 </button>
@@ -256,7 +259,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                 <button style="margin-left: 40px" on-click="_addOption">添加区间</button>
               </div>
               <!-- 动态生成的隐藏选项 -->
-              <template is="dom-repeat" items="[[hiddenSelects]]" as="item">
+              <template is="dom-repeat" items="[[colorSelects]]" as="item">
                 <div style="display: flex; align-items: center; margin-top: 2px;">
                   <!-- 自定义颜色选择框 -->
                   <div class="custom-select">
@@ -349,7 +352,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   colorList = _.cloneDeep(this.standardColorList);
 
   @property({ type: Array })
-  hiddenSelects = [{ key: 'NaN', values: [NaN, NaN] }];
+  colorSelects = defaultColorSelects;
 
   @property({ type: Number, notify: true })
   dropdownIndex;
@@ -470,13 +473,21 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.toggleVisibility();
   }
 
+  _defaultSetting(): void {
+    // 配置预设
+    this.set('colorSelects', defaultColorSetting);
+    this._confirmAction();
+    // 清空临时配置结构
+    this.set('colorSelects', defaultColorSelects);
+  }
+
   _cancelAction(): void {
     this.toggleVisibility();
   }
 
   _confirmAction(): void {
     const newColorsList = {};
-    const len = this.hiddenSelects.length;
+    const len = this.colorSelects.length;
     if (len === 0) {
       this.showDynamicDialog('配置失败，请添加配置项。');
       return;
@@ -484,9 +495,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
     // 遍历每一项，动态生成 newColorsList 对象
     for (let i = 0; i < len; i++) {
-      const color = this.hiddenSelects[i].key;
-      const leftValue = this.hiddenSelects[i].values[0];
-      const rightValue = this.hiddenSelects[i].values[1];
+      const color = this.colorSelects[i].key;
+      const leftValue = this.colorSelects[i].values[0];
+      const rightValue = this.colorSelects[i].values[1];
       // 检查每个组中的所有输入框是否都有值
       if (isNaN(leftValue) || isNaN(rightValue) || color === 'NaN') {
         this.showDynamicDialog('配置失败，存在未配置项。');
@@ -568,8 +579,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     dropdown.hidden = true;
     const selectedColor = event.target.value;
     select.style.backgroundColor = selectedColor;
-    this.set(`hiddenSelects.${this.dropdownIndex}.key`, selectedColor);
-    this.notifyPath('hiddenSelects');
+    this.set(`colorSelects.${this.dropdownIndex}.key`, selectedColor);
+    this.notifyPath('colorSelects');
     this._setColorList();
   }
 
@@ -580,10 +591,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   _validateInputs(event: any): void {
     const index = event.model.index;
-    const { values } = this.hiddenSelects[index];
+    const { values } = this.colorSelects[index];
 
     // 显式定义 leftInputSet 和 rightInputSet 的类型为 number[]
-    const [leftInputSet, rightInputSet] = this.hiddenSelects.reduce<[number[], number[]]>(
+    const [leftInputSet, rightInputSet] = this.colorSelects.reduce<[number[], number[]]>(
       (acc, item) => {
         acc[0].push(item.values[0]);
         acc[1].push(item.values[1]);
@@ -624,7 +635,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     }
 
     // 检查输入值是否与其他区间冲突
-    const isConflict = this.hiddenSelects.some((item, i) => {
+    const isConflict = this.colorSelects.some((item, i) => {
       // 排除当前输入框
       if (i === index) {
         return false;
@@ -647,21 +658,21 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     // 0！@#￥ 也可以被float转换为0，阻止这种情况发生
     event.target.value = value;
     // 更新值
-    this.set(`hiddenSelects.${index}.values.${isLeftInput ? 0 : 1}`, value);
+    this.set(`colorSelects.${index}.values.${isLeftInput ? 0 : 1}`, value);
   }
 
   _clearInput(event: any, index: number): void {
     event.target.value = ''; // 清空输入框
-    this.set(`hiddenSelects.${index}.values.${event.target.id === 'input-left' ? 0 : 1}`, NaN); // 更新 hiddenSelects
+    this.set(`colorSelects.${index}.values.${event.target.id === 'input-left' ? 0 : 1}`, NaN); // 更新 colorSelects
   }
 
   _addOption(): void {
-    if (this.hiddenSelects.length < 5) {
+    if (this.colorSelects.length < 5) {
       const obj = {
         key: 'NaN',
         values: [NaN, NaN],
       };
-      this.push('hiddenSelects', obj);
+      this.push('colorSelects', obj);
     }
     // 确保它在当前同步操作this.push()之后才执行.
     this.async(() => {
@@ -673,12 +684,12 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const index = event.model.index;
 
     // 删除项
-    this.splice('hiddenSelects', index, 1);
+    this.splice('colorSelects', index, 1);
 
     // 恢复其他输入框的值
-    this.hiddenSelects.forEach((item, i) => {
+    this.colorSelects.forEach((item, i) => {
       if (i >= index) {
-        this.set(`hiddenSelects.${i}.values`, item.values);
+        this.set(`colorSelects.${i}.values`, item.values);
       }
     });
     this._setColorList();
@@ -687,7 +698,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   _setColorList(): void {
     let colorSelectElements = this.shadowRoot?.querySelectorAll('[id^="color-select"]');
     let backgroundColors: string[] = [];
-    this.hiddenSelects.forEach((item) => {
+    this.colorSelects.forEach((item) => {
       // 获取计算后的背景色
       const backgroundColor = item.key;
       backgroundColors.push(backgroundColor);

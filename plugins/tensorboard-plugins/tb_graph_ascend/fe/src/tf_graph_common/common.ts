@@ -223,3 +223,13 @@ export const DATA_SEND_RECEIVE = '数据发送接收';
 export const DATA_LOAD_TIME = 3000;
 // 数据过大提示时间
 export const DATA_NOTICE_TIME = 600;
+// 预设颜色
+export const defaultColorSetting = [
+  { key: '#FFFCF3', values: [0, 0.2] },
+  { key: '#FFEDBE', values: [0.2, 0.4] },
+  { key: '#FFDC7F', values: [0.4, 0.6] },
+  { key: '#FFC62E', values: [0.6, 0.8] },
+  { key: '#ff704d', values: [0.8, 1] }
+];
+// 预设颜色设置项
+export const defaultColorSelects = [{ key: 'NaN', values: [NaN, NaN] }];
