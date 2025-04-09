@@ -538,9 +538,8 @@ export function getColorByPrecisionIndex(precisionStr: string): string {
         if (precision === start) {
           return color;
         }
-      }
-      // 其他区间模式, 最后一个区间的右侧一定为1，所以特化precision == 1的情况
-      else if (isPrecisionInRange || isPrecisionAtEnd) {
+      } else if (isPrecisionInRange || isPrecisionAtEnd) {
+        // 其他区间模式, 最后一个区间的右侧一定为1，所以特化precision == 1的情况
         return color;
       }
     }

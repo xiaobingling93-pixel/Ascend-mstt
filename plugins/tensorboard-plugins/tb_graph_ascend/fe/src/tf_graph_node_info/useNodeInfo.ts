@@ -52,13 +52,8 @@ const useNodeInfo = (): UseNodeInfoType => {
     nodeInfo: { nodeName: string; nodeType: string },
     metaData: any,
   ): Promise<MatchNodeInfo> => {
-    if (sessionStorage.getItem(JSON.stringify(nodeInfo))) {
-      // 缓存中存在
-      return JSON.parse(sessionStorage.getItem(JSON.stringify(nodeInfo)) || '') as MatchNodeInfo;
-    }
     const mactchResult = await useNodeInfoService.getMatchNodeInfo(nodeInfo, metaData);
     mactchResult.data = convertNodeInfo(mactchResult.data); // 提取有效数据，统一命名
-    sessionStorage.setItem(JSON.stringify(nodeInfo), JSON.stringify(mactchResult)); // 缓存
     return mactchResult;
   };
 
