@@ -529,7 +529,7 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
         if not isinstance(value, str):
             return True
         try:
-            # -1.00 or +1.00 should be consdiered as digit numbers
+            # -1.00 or +1.00 should be considered as digit numbers
             float(value)
         except ValueError:
             # otherwise, they will be considered as formular injections
@@ -575,7 +575,7 @@ def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False
         if not isinstance(value, str):
             return True
         try:
-            # -1.00 or +1.00 should be consdiered as digit numbers
+            # -1.00 or +1.00 should be considered as digit numbers
             float(value)
         except ValueError:
             # otherwise, they will be considered as formular injections
