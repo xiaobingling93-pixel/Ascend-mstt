@@ -120,7 +120,7 @@ private:
 void AclTensorStats::ParseInfoFromDumpPath(const std::string& dumpPath)
 {
     std::string filename;
-    if (FileUtils::GetFileSuffix(filename) == "csv") {
+    if (FileUtils::GetFileSuffix(dumpPath) == "csv") {
         filename = FileUtils::GetFileBaseName(dumpPath);
     } else {
         filename = FileUtils::GetFileName(dumpPath);
@@ -174,7 +174,7 @@ AclTensorStats AclTensorStats::CalTensorSummary(const AclTensorInfo& tensor, con
 static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(const std::vector<std::string>& segs)
 {
     std::map<uint32_t, DebuggerSummaryOption> ret;
-    for (uint32_t pos = 0; pos < segs.size(); ++pos) {
+    for (size_t pos = 0; pos < segs.size(); ++pos) {
         const std::string& opt = segs[pos];
         for (auto it = summaryOptionHeaderStrMap.begin(); it != summaryOptionHeaderStrMap.end(); ++it) {
             if (opt == it->second.first) {
@@ -188,7 +188,7 @@ static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(c
 
 AclTensorStats AclTensorStats::ParseTensorSummary(const std::string& dumpPath, const std::string& input)
 {
-    constexpr const uint32_t optPosBase = 7;
+    constexpr const size_t optPosBase = 7;
     static std::map<uint32_t, DebuggerSummaryOption> order;
     static uint32_t headerLen = 0;
 
@@ -297,8 +297,15 @@ DebuggerErrno AclDumpDataProcessor::PushData(const acldumpChunk *chunk)
     }
 
     size_t len = chunk->bufLen;
+    if (len == 0) {
+        LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, ToString() + ": invalid value(cached size " +
+                  std::to_string(totalLen) + ", receiving size " + std::to_string(len) + ").");
+        errorOccurred = true;
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
+
     /* 防止正负翻转 */
-    if (SIZE_MAX - len < totalLen || totalLen + len > kMaxDataLen || len == 0) {
+    if (SIZE_MAX - len < totalLen || totalLen + len > kMaxDataLen) {
         LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, ToString() + ": buffer overflow(cached size " +
                   std::to_string(totalLen) + ", receiving size " + std::to_string(len) + ").");
         errorOccurred = true;
@@ -313,7 +320,10 @@ DebuggerErrno AclDumpDataProcessor::PushData(const acldumpChunk *chunk)
         return DebuggerErrno::ERROR_NO_MEMORY;
     }
 
-    if (memcpy(p->data(), chunk->dataBuf, len) == nullptr) {
+    /* vector p根据chunk->dataBuf的长度，即len，申请创建，所以无需校验空间大小 */
+    try {
+        std::copy(chunk->dataBuf, chunk->dataBuf + len, p->begin());
+    } catch (const std::exception& e) {
         LOG_ERROR(DebuggerErrno::ERROR_SYSCALL_FAILED, ToString() + ": Failed to copy data;");
         delete p;
         errorOccurred = true;
@@ -361,9 +371,11 @@ DebuggerErrno AclDumpDataProcessor::ConcatenateData()
         }
 
         size_t offset = 0;
-        uint8_t* msg = p->data();
         while (!buffer.empty()) {
-            if (memcpy(msg + offset, buffer.front()->data(), buffer.front()->size()) == nullptr) {
+            /* vector p根据buffer里所有vector的总长度，即totalLen，申请创建，所以无需校验空间大小 */
+            try {
+                std::copy(buffer.front()->begin(), buffer.front()->end(), p->begin() + offset);
+            } catch (const std::exception& e) {
                 delete p;
                 LOG_ERROR(DebuggerErrno::ERROR_SYSCALL_FAILED, "Data processor(" +  dumpPath + "): Failed to copy.");
                 return DebuggerErrno::ERROR_SYSCALL_FAILED;
@@ -531,7 +543,11 @@ static std::string MappingFilePath(const std::string& originPath)
     }
 
     DebuggerErrno ret;
-    FileUtils::CreateDir(dir);
+    ret = FileUtils::CreateDir(dir);
+    if (ret != DebuggerErrno::OK) {
+        LOG_ERROR(DebuggerErrno::ERROR, "Failed to create directory " + dir + ".");
+        return std::string();
+    }
     std::ofstream ofs;
     constexpr const char* mapFileName = "mapping.csv";
 
@@ -694,7 +710,7 @@ static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorStats& stat)
     /* 此处防止多进程间竞争，使用文件锁，故使用C风格接口 */
     uint32_t retry = 100;
     uint32_t interval = 10;
-    if (FileUtils::IsPathExist(dumpfile) && !FileUtils::IsRegularFile(dumpfile)) {
+    if (FileUtils::CheckFileBeforeCreateOrWrite(dumpfile, true) != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR_FILE_ALREADY_EXISTS, "File " + dumpfile + " exists and has invalid format.");
         return DebuggerErrno::ERROR_FILE_ALREADY_EXISTS;
     }

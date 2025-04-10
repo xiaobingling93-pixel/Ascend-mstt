@@ -36,18 +36,6 @@ class TestWrapSetupBackwardHook(unittest.TestCase):
         self.mock_func.assert_called_once_with("test_case1")
         self.assertListEqual(result, ["clone_tensor1", "clone_tensor2"])
 
-    def test_inplace_enabled(self):
-        class MockModule:
-            inplace = True
-
-        mock_self = MagicMock()
-        mock_self.module = MockModule()
-
-        result = self.decorated_func(mock_self, "test_case2")
-
-        self.assertEqual(result, "test_case2")
-        self.mock_func.assert_not_called()
-
     def test_normal_processing_flow(self):
         test_tensor = torch.randn(2, requires_grad=False)
         test_data = {

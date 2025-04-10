@@ -114,6 +114,7 @@ class ApiRegistry:
         self.inner_used_api = inner_used_api
         self.supported_api_list_path = supported_api_list_path
         self.api_templates = api_templates
+        self.all_api_registered = False
 
     @staticmethod
     def store_ori_attr(ori_api_group, api_list, api_ori_attr):
@@ -132,6 +133,7 @@ class ApiRegistry:
                 setattr(api_group, api, api_attr)
 
     def register_all_api(self):
+        self.all_api_registered = True
         for framework, api_types in self.api_types.items():
             for api_type, api_modules in api_types.items():
                 api_type_with_framework = framework + Const.SEP + api_type
@@ -143,6 +145,7 @@ class ApiRegistry:
             self.set_api_attr(self.inner_used_api.get(api_type)[0], self.inner_used_wrapped_attr.get(api_type, {}))
 
     def restore_all_api(self):
+        self.all_api_registered = False
         for framework, api_types in self.api_types.items():
             for api_type, api_modules in api_types.items():
                 api_type_with_framework = framework + Const.SEP + api_type

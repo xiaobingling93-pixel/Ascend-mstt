@@ -22,7 +22,6 @@ export class Minimap {
   private canvas: HTMLCanvasElement;
   /** A buffer canvas used for temporary drawing to avoid flickering. */
   private canvasBuffer: HTMLCanvasElement;
-  private downloadCanvas: HTMLCanvasElement;
   /** The minimap svg used for holding the viewpoint rectangle. */
   private minimapSvg: SVGSVGElement;
   /** The rectangle showing the current viewpoint. */
@@ -114,20 +113,7 @@ export class Minimap {
     this.minimap = minimap;
     this.canvas = <HTMLCanvasElement>$shadowRoot.select('canvas.first').node();
     this.canvasBuffer = <HTMLCanvasElement>$shadowRoot.select('canvas.second').node();
-    this.downloadCanvas = <HTMLCanvasElement>$shadowRoot.select('canvas.download').node();
-    d3.select(this.downloadCanvas).style('display', 'none');
     this.update();
-  }
-
-  /**
-   * Takes a snapshot of the graph's image as a Blob.
-   */
-  getImageBlob(): Promise<Blob> {
-    return new Promise<Blob>((resolve) => {
-      this.downloadCanvas.toBlob((blob) => {
-        resolve(blob as Blob);
-      }, 'image/png');
-    });
   }
 
   /**
@@ -202,21 +188,15 @@ export class Minimap {
     // factor of the minimap. The scale factor is determined such that both
     // the width and height of the minimap are <= maximum specified w/h.
     this.scaleMinimap = this.maxWandH / Math.max(sceneSize.width, sceneSize.height);
+    // canvas宽度缩小一半，图像填充满需要乘2
     this.minimapSize = {
-      width: sceneSize.width * this.scaleMinimap,
+      width: sceneSize.width * this.scaleMinimap * 2,
       height: sceneSize.height * this.scaleMinimap,
     };
     // Update the size of the minimap's svg, the buffer canvas and the
     // viewpoint rect.
     d3.select(this.minimapSvg).attr(this.minimapSize as any);
     d3.select(this.canvasBuffer).attr(this.minimapSize as any);
-    // Download canvas width and height are multiples of the style width and
-    // height in order to increase pixel density of the PNG for clarity.
-    const downloadCanvasSelection = d3.select(this.downloadCanvas);
-    downloadCanvasSelection.style('width', sceneSize.width);
-    downloadCanvasSelection.style('height', sceneSize.height);
-    downloadCanvasSelection.attr('width', 3 * sceneSize.width);
-    downloadCanvasSelection.attr('height', 3 * sceneSize.height);
     if (this.translate != null && this.zoom != null) {
       // Update the viewpoint rectangle shape since the aspect ratio of the
       // map has changed.
@@ -242,9 +222,6 @@ export class Minimap {
         // Swap the two canvases.
         [this.canvas, this.canvasBuffer] = [this.canvasBuffer, this.canvas];
       });
-      let downloadContext = this.downloadCanvas.getContext('2d');
-      downloadContext?.clearRect(0, 0, this.downloadCanvas.width, this.downloadCanvas.height);
-      downloadContext?.drawImage(image, 0, 0, this.downloadCanvas.width, this.downloadCanvas.height);
     };
     image.onerror = (): void => {
       let blob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
@@ -285,7 +262,7 @@ export class Minimap {
       .attr('height', viewpointHeight);
     // Show/hide the minimap depending on the viewpoint area as fraction of the
     // whole minimap.
-    let mapWidth = this.minimapSize.width;
+    let mapWidth = this.minimapSize.width / 2; // 前面乘了这里要除回来
     let mapHeight = this.minimapSize.height;
     let x = this.viewpointCoord.x;
     let y = this.viewpointCoord.y;

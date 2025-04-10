@@ -1,7 +1,6 @@
 set(PACKAGE_VERSION 1.12.1)
 
 set(PKG_NAME gtest)
-set(URL "https://gitee.com/mirrors/googletest/repository/archive/release-1.12.1.tar.gz")
 set(SHA256_VALUE "81964fe578e9bd7c94dfdb09c8e4d6e6759e19967e397dbea48d1c10e45d0df2")
 set(DOWNLOAD_PATH "$ENV{PROJECT_ROOT_PATH}/third_party")
 set(DIR_NAME "${DOWNLOAD_PATH}/googletest-release-1.12.1")
@@ -9,7 +8,6 @@ set(DIR_NAME "${DOWNLOAD_PATH}/googletest-release-1.12.1")
 if (NOT ${PKG_NAME}_FOUND)
 
 download_opensource_pkg(${PKG_NAME}
-    URL ${URL}
     SHA256 ${SHA256_VALUE}
     DOWNLOAD_PATH ${DOWNLOAD_PATH}
 )

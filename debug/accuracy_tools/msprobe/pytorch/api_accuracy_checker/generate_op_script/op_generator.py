@@ -50,6 +50,7 @@ DATA_NAME = "data_name"
 API_MAX_LENGTH = 30
 PROPAGATION_LIST = [Const.FORWARD, Const.BACKWARD]
 DATAMODE_LIST = ["random_data", "real_data"]
+ITER_MAX_TIMES = 1000
 
 
 class APIInfo:
@@ -97,6 +98,8 @@ class CommonConfig:
         iter_t = self.iter_times
         if iter_t <= 0:
             raise ValueError("iter_times should be an integer bigger than zero!")
+        if iter_t > ITER_MAX_TIMES:
+            raise ValueError("iter_times should not be greater than 1000!")
 
         json_file = self.extract_api_path
         propagation = self.propagation
@@ -117,7 +120,7 @@ class CommonConfig:
 
         # Retrieve the first API name and dictionary
         forward_item = next(iter(json_content.items()), None)
-        if not forward_item or not isinstance(forward_item[1], dict):
+        if not forward_item or not isinstance(forward_item[1], dict) or not forward_item[1]:
             raise ValueError(f'Invalid forward API data in json_content!')
 
         # if propagation is backward, ensure json file contains forward and backward info
@@ -127,7 +130,7 @@ class CommonConfig:
         # if propagation is backward, ensure it has valid data
         if propagation == Const.BACKWARD:
             backward_item = list(json_content.items())[1]
-            if not isinstance(backward_item[1], dict):
+            if not isinstance(backward_item[1], dict) or not backward_item[1]:
                 raise ValueError(f'Invalid backward API data in json_content!')
 
         return json_content

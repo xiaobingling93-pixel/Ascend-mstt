@@ -17,7 +17,6 @@ Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
 import * as d3 from 'd3';
 import { Class as _Class, selectChild as _selectChild } from './common';
-import { NodeType } from './graph';
 import * as layout from './layout';
 import * as render from './render';
 
@@ -143,45 +142,8 @@ export function position(sceneGroup, renderNode: render.RenderGroupNodeInfo): vo
   let yTranslate = layout.PARAMS.subscene.meta.labelHeight;
   // core
   translate(selectChild(sceneGroup, 'g', Class.Scene.CORE), 0, yTranslate);
-  // in-extract
-  let hasInExtract = renderNode.isolatedInExtract.length > 0;
-  let hasOutExtract = renderNode.isolatedOutExtract.length > 0;
-  let hasLibraryFunctions = renderNode.libraryFunctionsExtract.length > 0;
-  let offset = layout.PARAMS.subscene.meta.extractXOffset;
-  let auxWidth = 0;
-  if (hasInExtract) {
-    auxWidth += renderNode.outExtractBox.width;
-  }
-  if (hasOutExtract) {
-    auxWidth += renderNode.outExtractBox.width;
-  }
-  if (hasInExtract) {
-    let inExtractX = renderNode.coreBox.width;
-    if (auxWidth < layout.MIN_AUX_WIDTH) {
-      inExtractX = inExtractX - layout.MIN_AUX_WIDTH + (renderNode.inExtractBox.width / 2);
-    } else {
-      inExtractX =
-        inExtractX - (renderNode.inExtractBox.width / 2) - renderNode.outExtractBox.width - (hasOutExtract ? offset : 0);
-    }
-    inExtractX = inExtractX - renderNode.libraryFunctionsBox.width - (hasLibraryFunctions ? offset : 0);
-    translate(selectChild(sceneGroup, 'g', Class.Scene.INEXTRACT), inExtractX, yTranslate);
-  }
-  // out-extract
-  if (hasOutExtract) {
-    let outExtractX = renderNode.coreBox.width;
-    if (auxWidth < layout.MIN_AUX_WIDTH) {
-      outExtractX = outExtractX - layout.MIN_AUX_WIDTH + (renderNode.outExtractBox.width / 2);
-    } else {
-      outExtractX -= renderNode.outExtractBox.width / 2;
-    }
-    outExtractX = outExtractX - renderNode.libraryFunctionsBox.width - (hasLibraryFunctions ? offset : 0);
-    translate(selectChild(sceneGroup, 'g', Class.Scene.OUTEXTRACT), outExtractX, yTranslate);
-  }
-  if (hasLibraryFunctions) {
-    let libraryFunctionsExtractX = renderNode.coreBox.width - (renderNode.libraryFunctionsBox.width / 2);
-    translate(selectChild(sceneGroup, 'g', Class.Scene.FUNCTION_LIBRARY), libraryFunctionsExtractX, yTranslate);
-  }
 }
+
 /** Adds a click listener to a group that fires a graph-select event */
 export function addGraphClickListener(graphGroup, sceneElement): void {
   d3.select(graphGroup).on('click', () => {

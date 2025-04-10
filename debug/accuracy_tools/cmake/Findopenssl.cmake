@@ -1,7 +1,6 @@
 set(PACKAGE_VERSION 1.1.1)
 
 set(PKG_NAME openssl)
-set(URL "https://gitee.com/mirrors/openssl/repository/archive/OpenSSL_1_1_1k.tar.gz")
 set(SHA256_VALUE "b92f9d3d12043c02860e5e602e50a73ed21a69947bcc74d391f41148e9f6aa95")
 set(DOWNLOAD_PATH "$ENV{PROJECT_ROOT_PATH}/third_party")
 set(DIR_NAME "${DOWNLOAD_PATH}/openssl-OpenSSL_1_1_1k")
@@ -23,7 +22,6 @@ endif()
 endif()
 
 download_opensource_pkg(${PKG_NAME}
-    URL ${URL}
     SHA256 ${SHA256_VALUE}
     DOWNLOAD_PATH ${DOWNLOAD_PATH}
 )

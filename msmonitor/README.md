@@ -26,7 +26,7 @@ dynolog的编译依赖，确保安装了以下依赖：
   <tr>
    <td>Rust
    </td>
-   <td>Rust 1.58.1 (1.56+ required for clap dependency)
+   <td>Rust >= 1.81
    </td>
   </tr>
 </table>
@@ -66,9 +66,9 @@ bash scripts/build.sh -t deb
 bash scripts/build.sh -t rpm
 ```
 
-- dynolog_npu_plugin wheel包编译
+- msmonitor_plugin wheel包编译
 
-dynolog_npu_plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npu-monitor功能前必须安装该wheel包，具体编译安装指导可参考dynolog_npu\plugin\README.md。
+msmonitor_plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npu-monitor功能前必须安装该wheel包，具体编译安装指导可参考msmonitor\plugin\README.md。
 
 ## 使用方式
 

@@ -82,7 +82,7 @@ class ListCache(list):
         if len(self) == 0:
             return
         if not self._output_file:
-            logger.warning("dumpfile path is not setted")
+            logger.warning("dumpfile path is not set.")
         write_csv(self, self._output_file)
         logger.info(f"write {len(self)} items to {self._output_file}.")
         self.clear()
