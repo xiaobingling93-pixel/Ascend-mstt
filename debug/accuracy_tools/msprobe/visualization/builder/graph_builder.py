@@ -285,3 +285,20 @@ class GraphExportConfig:
         self.micro_steps = micro_steps
         self.task = task
         self.overflow_check = overflow_check
+
+
+class GraphInfo:
+    def __init__(self, graph:Graph, construct_path:str, data_path:str, stack_path:str):
+        self.graph = graph
+        self.construct_path = construct_path
+        self.data_path = data_path
+        self.stack_path = stack_path
+
+
+class BuildGraphTaskInfo:
+    def __init__(self, graph_info_n:GraphInfo, graph_info_b:GraphInfo, npu_rank, bench_rank, time_str):
+        self.graph_info_n = graph_info_n
+        self.graph_info_b = graph_info_b
+        self.npu_rank = npu_rank
+        self.bench_rank = bench_rank
+        self.time_str = time_str
