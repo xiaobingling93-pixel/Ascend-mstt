@@ -1,5 +1,7 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 
+set(CMAKE_SKIP_RPATH TRUE)
+
 cmake_minimum_required(VERSION 3.16)
 add_definitions(-DDYNOLOG_VERSION=${DYNOLOG_VERSION} -DDYNOLOG_GIT_REV=${DYNOLOG_GIT_REV})
 
