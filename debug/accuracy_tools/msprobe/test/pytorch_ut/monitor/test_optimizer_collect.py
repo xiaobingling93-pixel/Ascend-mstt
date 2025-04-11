@@ -48,7 +48,6 @@ def setup_mock_monitor():
 
 class TestOptimizerMon(unittest.TestCase):
     def setUp(self) -> None:
-        # 初始化需要的monitor, torch_opt, params2name等对象
         self.monitor = Mock()
         self.monitor.mv_distribution = True
         self.monitor.mg_direction = True
@@ -241,11 +240,12 @@ class TestDeepSpeedZeroOptimizerStage3Mon(unittest.TestCase):
         mock_opt = MagicMock()
         mock_opt.param_names = param_names
         mock_opt.fp16_groups = bit16_groups
-        mock_opt.fp32_partitioned_groups_flat = [torch.stack(group,dim=0).flatten().float() \
+        mock_opt.fp32_partitioned_groups_flat = [torch.stack(group,dim=0).flatten().float()
                                                  for group in bit16_groups]
-        mock_opt.fp16_partitioned_groups = [[p.ds_tensor for p in group] for  group in bit16_groups]        
+        mock_opt.fp16_partitioned_groups = [[p.ds_tensor for p in group] for group in bit16_groups]        
         mock_opt.flatten = _flatten_dense_tensors
-        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param.ds_tensor) for param in group] for group_idx, group in enumerate(bit16_groups)}
+        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(p.ds_tensor) for p in group]
+                                       for group_idx, group in enumerate(bit16_groups)}
         mock_opt.state = {
             flat_group: {
                 'exp_avg': torch.ones_like(flat_group),
@@ -295,7 +295,7 @@ class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
         mock_opt.partition_size = [p.numel() for p in mock_opt.single_partition_of_fp32_groups]
         mock_opt.param_names = param_names
         mock_opt.bit16_groups = bit16_groups
-        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group] \
+        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group]
                                        for group_idx, group in enumerate(mock_opt.single_partition_of_fp32_groups)}
 
         mock_opt.flatten = _flatten_dense_tensors
