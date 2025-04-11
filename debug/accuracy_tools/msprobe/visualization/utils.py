@@ -202,7 +202,7 @@ def is_serializable(obj):
     try:
         pickle.dumps(obj)
         return True
-    except (pickle.PicklingError, TypeError):
+    except Exception:
         return False
 
 

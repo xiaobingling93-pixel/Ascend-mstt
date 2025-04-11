@@ -43,12 +43,13 @@ class FileChecker:
         file_type(str): The correct file type for file
     """
 
-    def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
+    def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True, printed_file_dict={}):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
         self.ability = ability
         self.file_type = file_type
         self.is_script = is_script
+        self.printed_file_dict = printed_file_dict
 
     @staticmethod
     def _check_path_type(path_type):
@@ -74,7 +75,7 @@ class FileChecker:
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
         if self.path_type == FileCheckConst.FILE:
-            check_dirpath_before_read(self.file_path)
+            check_dirpath_before_read(self.file_path, self.printed_file_dict)
         return self.file_path
 
     def check_path_ability(self):
@@ -99,11 +100,12 @@ class FileOpen:
     SUPPORT_WRITE_MODE = ["w", "wb", "a", "ab"]
     SUPPORT_READ_WRITE_MODE = ["r+", "rb+", "w+", "wb+", "a+", "ab+"]
 
-    def __init__(self, file_path, mode, encoding='utf-8'):
+    def __init__(self, file_path, mode, encoding='utf-8', printed_file_dict={}):
         self.file_path = file_path
         self.mode = mode
         self.encoding = encoding
         self._handle = None
+        self.printed_file_dict = printed_file_dict
 
     def __enter__(self):
         self.check_file_path()
@@ -130,7 +132,7 @@ class FileOpen:
         check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
-            check_dirpath_before_read(self.file_path)
+            check_dirpath_before_read(self.file_path, self.printed_file_dict)
 
     def check_ability_and_owner(self):
         if self.mode in self.SUPPORT_READ_MODE:
@@ -295,11 +297,15 @@ def check_path_before_create(path):
                                  'The file path {} contains special characters.'.format(path))
 
 
-def check_dirpath_before_read(path):
+def check_dirpath_before_read(path, printed_dict):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
     if check_others_writable(dirpath):
-        logger.warning(f"The directory is writable by others: {dirpath}.")
+        printed_set = printed_dict.get('check_dirpath_before_read', set())
+        if dirpath not in printed_set:
+            logger.warning(f"The directory is writable by others: {dirpath}.")
+        printed_set.add(dirpath)
+        printed_dict['check_dirpath_before_read'] = printed_set
     try:
         check_path_owner_consistent(dirpath)
     except FileCheckException:
