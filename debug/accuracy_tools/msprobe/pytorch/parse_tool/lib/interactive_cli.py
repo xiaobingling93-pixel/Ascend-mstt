@@ -45,12 +45,7 @@ class InteractiveCli(cmd.Cmd):
 
     @catch_exception
     def default(self, line=""):
-        self.util.execute_command(line)
-        return False
-
-    @catch_exception
-    def do_run(self, line=""):
-        self.util.execute_command(line)
+        self.stdout.write("Command invalid, Only support command start with cad/vc/dc/pk/cn/pt\n")
 
     @catch_exception
     def do_vc(self, line=""):
