@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -15,12 +15,10 @@
 
 import os
 import time
-import json
 from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
                                             check_file_or_directory_path, load_json)
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
-from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
@@ -28,6 +26,7 @@ from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
+from msprobe.core.common.utils import detect_framework_by_dump_json
 from msprobe.visualization.graph.distributed_analyzer import DistributedAnalyzer
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -61,12 +60,17 @@ def _compare_graph(input_param, args):
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
     mapping_dict = None
-    if args.layer_mapping:
-        yaml_path = FileChecker(args.layer_mapping, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
-        try:
-            mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, yaml_path)
-        except Exception:
-            logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
+    try:
+        mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, args.layer_mapping)
+    except Exception:
+        logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
+
+    is_cross_framework = detect_framework_by_dump_json(data_path_n) == detect_framework_by_dump_json(data_path_b)
+    if is_cross_framework and not mapping_dict:
+        logger.error(
+            'The cross_frame comparison failed. Please specify layer_mapping when performing cross_frame comparison.')
+        raise CompareException(CompareException.CROSS_FRAME_ERROR)
+
     graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args, mapping_dict=mapping_dict)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
@@ -209,8 +213,8 @@ def _graph_service_parser(parser):
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
-    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
-                        help="<Optional> The layer mapping file path.", required=False)
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
+                        help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
                         help="<Optional> whether open overflow_check for graph.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
