@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import sys
 
 from unittest import TestCase
 from unittest.mock import patch
@@ -44,9 +45,25 @@ class TestKernelGraphDump(TestCase):
         self.assertEqual(dumper.dump_json["common_dump_settings"]["file_format"], "bin")
         self.assertEqual(dumper.dump_json["common_dump_settings"]["input_output"], 2)
 
+        _msprobe_c_existed = True
+        try:
+            from msprobe.lib import _msprobe_c
+        except ImportError:
+            _msprobe_c_existed = False
+
         with patch("msprobe.mindspore.dump.kernel_graph_dump.create_directory"), \
              patch("msprobe.mindspore.dump.kernel_graph_dump.logger.info"), \
              patch("msprobe.mindspore.dump.kernel_graph_dump.save_json") as mock_save_json:
+
+            if _msprobe_c_existed:
+                dumper.handle()
+                mock_save_json.assert_not_called()
+
+                _msprobe_c_path = _msprobe_c.__file__
+                _msprobe_c_test_path = _msprobe_c_path.replace('_msprobe_c.so', '_msprobe_c_test.so')
+                os.rename(_msprobe_c_path, _msprobe_c_test_path)
+                sys.modules.pop('msprobe.lib')
+                sys.modules.pop('msprobe.lib._msprobe_c')
 
             os.environ["GRAPH_OP_RUN"] = "1"
             with self.assertRaises(Exception) as context:
@@ -63,3 +80,5 @@ class TestKernelGraphDump(TestCase):
             del os.environ["MINDSPORE_DUMP_CONFIG"]
         if "MS_ACL_DUMP_CFG_PATH" in os.environ:
             del os.environ["MS_ACL_DUMP_CFG_PATH"]
+        if _msprobe_c_existed:
+            os.rename(_msprobe_c_test_path, _msprobe_c_path)

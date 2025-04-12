@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,132 +16,258 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+import mindspore as ms
+from mindspore import Tensor
+from mindspore.ops.operations import _inner_ops
+
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.data_dump.scope import ModuleRangeScope
-from msprobe.mindspore.cell_processor import CellProcessor
-
-
-class MockCell:
-    def __init__(self):
-        self.mindstudio_reserved_name = None
+from msprobe.mindspore.cell_processor import CellProcessor, get_cell_construct
+from msprobe.mindspore.common.log import logger
 
 
 class TestCellProcessor(unittest.TestCase):
-
-    def setUp(self):
-        # 重置静态变量
+    @classmethod
+    def setUpClass(cls):
         CellProcessor.reset_cell_stats()
-        self.scope = MagicMock(spec=ModuleRangeScope)
-        self.processor = CellProcessor(self.scope)
+        cls.scope = MagicMock(spec=ModuleRangeScope)
+        cls.processor = CellProcessor(cls.scope)
 
-    def test_init_with_module_range_scope(self):
+    @classmethod
+    def tearDownClass(cls):
+        CellProcessor.reset_cell_stats()
+
+    def test_class_attribute(self):
+        self.assertTrue(hasattr(CellProcessor, 'cell_count'))
+        self.assertTrue(hasattr(CellProcessor, 'cell_stack'))
+        self.assertTrue(hasattr(CellProcessor, 'api_parent_node'))
+        self.assertTrue(hasattr(CellProcessor, 'module_node'))
+        self.assertTrue(hasattr(CellProcessor, 'cell_bw_hook_kernels'))
+        self.assertTrue(hasattr(CellProcessor, 'cell_backward_pre_hook'))
+        self.assertTrue(hasattr(CellProcessor, 'cell_backward_hook'))
+
+    def test__init(self):
         self.assertIsInstance(self.processor.scope, ModuleRangeScope)
-
-    def test_init_with_none_scope(self):
         processor = CellProcessor(None)
         self.assertIsNone(processor.scope)
 
-    def test_set_cell_count_new_cell(self):
-        count = self.processor.set_cell_count("cell1")
-        self.assertEqual(count, 0)
-        self.assertEqual(CellProcessor.cell_count["cell1"], 0)
+    def test_get_cell_construct(self):
+        def construct(self, *args, **kwargs):
+            return len(args)
 
-    def test_set_cell_count_existing_cell(self):
-        self.processor.set_cell_count("cell1")
-        count = self.processor.set_cell_count("cell1")
+        _constrct = get_cell_construct(construct)
+        ret = _constrct(self, 'argument')
+        self.assertFalse(hasattr(self, 'msprobe_input_kwargs'))
+        self.assertEqual(ret, 1)
+
+        setattr(self, 'msprobe_hook', True)
+        _constrct = get_cell_construct(construct)
+        ret = _constrct(self, 'argument')
+        self.assertEqual(self.msprobe_input_kwargs, {})
+        self.assertEqual(ret, 1)
+
+        del self.msprobe_hook
+        del self.msprobe_input_kwargs
+
+    def test_set_and_get_calls_number(self):
+        CellProcessor.cell_count = {}
+        count = self.processor.set_and_get_calls_number("cell")
+        self.assertEqual(count, 0)
+        self.assertEqual(CellProcessor.cell_count["cell"], 0)
+
+        count = self.processor.set_and_get_calls_number("cell")
         self.assertEqual(count, 1)
-        self.assertEqual(CellProcessor.cell_count["cell1"], 1)
+        self.assertEqual(CellProcessor.cell_count["cell"], 1)
+
+        CellProcessor.cell_count = {}
 
     def test_reset_cell_stats(self):
-        self.processor.set_cell_count("cell1")
+        CellProcessor.cell_count['cell'] = 0
+        CellProcessor.cell_stack.append('cell')
+        CellProcessor.api_parent_node = 'cell'
+        CellProcessor.module_node['cell'] = 'null'
+        CellProcessor.cell_bw_hook_kernels['cell'] = 'bw'
+        CellProcessor.cell_backward_pre_hook.append('backward_pre_hook')
+        CellProcessor.cell_backward_hook.append('backward_hook')
+
         CellProcessor.reset_cell_stats()
         self.assertEqual(CellProcessor.cell_count, {})
         self.assertEqual(CellProcessor.cell_stack, [])
-        self.assertEqual(CellProcessor.api_parent_node, "")
+        self.assertIsNone(CellProcessor.api_parent_node)
         self.assertEqual(CellProcessor.module_node, {})
+        self.assertEqual(CellProcessor.cell_bw_hook_kernels, {})
+        self.assertEqual(CellProcessor.cell_backward_pre_hook, [])
+        self.assertEqual(CellProcessor.cell_backward_hook, [])
 
-    @patch('msprobe.core.common.const.Const')
-    def test_node_hook_begin(self, mock_const):
-        mock_const.SEP = "."  # 确保 SEPARATOR 设置为字符串
-        mock_const.START = "start"
-        cell = MockCell()
-        self.processor.node_hook("prefix", "start")(cell, "input")
+    def test_register_cell_hook(self):
+        with self.assertRaises(MsprobeException) as context:
+            self.processor.register_cell_hook([], None)
+        self.assertEqual(str(context.exception), '[msprobe] 无效参数：The model cannot be None, when level is "L0" or "mix"')
 
-        expected_name = "prefix" + mock_const.SEP + "0"
-        self.assertEqual(cell.mindstudio_reserved_name, expected_name)
-        self.assertIn(expected_name, CellProcessor.cell_stack)
-        self.assertEqual(CellProcessor.api_parent_node, expected_name)
-        self.scope.begin_module.assert_called_once_with(expected_name)
+        with patch('msprobe.mindspore.cell_processor.is_mindtorch') as mock_is_mindtorch, \
+             patch('msprobe.mindspore.cell_processor.get_cells_and_names') as mock_get_cells_and_names, \
+             patch('msprobe.mindspore.cell_processor.CellProcessor.build_cell_hook') as mock_build_cell_hook, \
+             patch('msprobe.mindspore.cell_processor.get_cell_construct') as mock_get_cell_construct, \
+             patch.object(logger, 'info') as mock_logger_info:
+            mock_cell = MagicMock()
+            mock_sub_cell = MagicMock()
+            mock_get_cells_and_names.return_value = {'-1': [('cell', mock_cell), ('sub_cell', mock_sub_cell)]}
+            mock_build_cell_hook.return_value = ('forward_pre_hook', 'forward_hook')
+            mock_get_cell_construct.return_value = '_construct'
 
-    @patch('msprobe.core.common.const.Const')
-    def test_node_hook_end(self, mock_const):
-        mock_const.START = "start"
-        cell = MockCell()
-        self.processor.node_hook("prefix", "start")(cell, "input")
-        self.processor.node_hook("prefix", "stop")(cell, "input", "output")
+            mock_is_mindtorch.return_value = False
+            setattr(MagicMock, 'construct', 'construct')
+            self.processor.register_cell_hook(mock_cell, None)
+            self.assertTrue(mock_sub_cell.__class__.msprobe_construct)
+            mock_get_cell_construct.assert_called_with('construct')
+            self.assertEqual(mock_sub_cell.__class__.construct, '_construct')
+            self.assertTrue(mock_sub_cell.msprobe_hook)
+            mock_build_cell_hook.assert_called_with('Cell.sub_cell.MagicMock.', None)
+            mock_cell.assert_not_called()
+            mock_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
+            mock_sub_cell.register_forward_hook.assert_called_with('forward_hook')
+            mock_logger_info.assert_called_with('The cell hook function is successfully mounted to the model.')
 
-        self.assertEqual(len(CellProcessor.cell_stack), 0)
-        self.assertIsNone(CellProcessor.api_parent_node)
-        self.scope.end_module.assert_called_once_with(cell.mindstudio_reserved_name)
+            del MagicMock.construct
+            del mock_sub_cell.__class__.construct
+            del mock_sub_cell.__class__.msprobe_construct
 
-    @patch('msprobe.core.common.const.Const')
-    def test_multiple_node_hook_calls(self, mock_const):
-        mock_const.SEP = "."  # 确保 SEPARATOR 设置为字符串
-        mock_const.START = "start"
-        cell = MockCell()
+            mock_get_cell_construct.reset_mock()
+            mock_another_sub_cell = MagicMock()
+            setattr(mock_another_sub_cell.__class__, 'msprobe_construct', True)
+            mock_get_cells_and_names.return_value = {'-1': [('cell', mock_cell),
+                                                            ('another_sub_cell', mock_another_sub_cell)]}
+            self.processor.register_cell_hook(mock_cell, None)
+            mock_get_cell_construct.assert_not_called()
+            mock_another_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
+            mock_another_sub_cell.register_forward_hook.assert_called_with('forward_hook')
 
-        # First call
-        self.processor.node_hook("prefix", "start")(cell, "input")
-        expected_name1 = "prefix" + mock_const.SEP + "0"
+            del mock_another_sub_cell.__class__.msprobe_construct
 
-        # Second call
-        self.processor.node_hook("prefix", "start")(cell, "input")
-        expected_name2 = "prefix" + mock_const.SEP + "1"
+            mock_build_cell_hook.reset_mock()
+            mock_get_cell_construct.reset_mock()
+            mock_another_sub_cell.reset_mock()
+            setattr(MagicMock, 'forward', 'forward')
+            mock_is_mindtorch.return_value = True
+            self.processor.register_cell_hook(mock_cell, None)
+            self.assertTrue(mock_another_sub_cell.__class__.msprobe_construct)
+            mock_get_cell_construct.assert_called_with('forward')
+            mock_build_cell_hook.assert_called_with('Module.another_sub_cell.MagicMock.', None)
+            mock_cell.assert_not_called()
+            mock_another_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
+            mock_another_sub_cell.register_forward_hook.assert_called_with('forward_hook')
 
-        self.assertEqual(cell.mindstudio_reserved_name, expected_name2)
-        self.assertEqual(CellProcessor.api_parent_node, expected_name2)
+            del MagicMock.forward
+            del mock_another_sub_cell.__class__.forward
+            del mock_another_sub_cell.__class__.msprobe_construct
 
-        # End first call
-        self.processor.node_hook("prefix", "stop")(cell, "input", "output")
-        self.assertEqual(len(CellProcessor.cell_stack), 1)  # Still one item in stack
-        self.assertEqual(CellProcessor.api_parent_node, expected_name1)
-
-        # End second call
-        self.processor.node_hook("prefix", "stop")(cell, "input", "output")
-        self.assertEqual(len(CellProcessor.cell_stack), 0)  # Stack should be empty now
-        self.assertIsNone(CellProcessor.api_parent_node)
-
-    def test_set_and_get_reserved_name(self):
-        cell = MockCell()
-        cell.mindstudio_reserved_name = "mindstudio_reserved_name"
+    def test_build_cell_hook(self):
         CellProcessor.reset_cell_stats()
 
-        cell_name = "Cell.net.Net.forward"
-        ret = self.processor.set_and_get_reserved_name(cell, cell_name)
-        self.assertEqual(ret, cell_name + Const.SEP + "0")
-        self.assertEqual(cell.mindstudio_reserved_name, ret)
-        self.assertEqual(CellProcessor.cell_count[cell_name], 0)
-        self.assertFalse(hasattr(cell, "has_pre_hook_called"))
+        cell_name = 'Cell.cell.Cell.'
+        mock_build_data_hook = MagicMock()
+        mock_backward_data_hook = MagicMock()
+        target_grad_output = (Tensor([0.5]),)
+        mock_backward_data_hook.return_value = target_grad_output
+        mock_build_data_hook.return_value = (None, None, mock_backward_data_hook, None)
+        mock_cell = MagicMock()
 
-        cell.has_pre_hook_called = False
-        ret = self.processor.set_and_get_reserved_name(cell, cell_name)
-        self.assertEqual(ret, cell_name + Const.SEP + "1")
-        self.assertEqual(cell.mindstudio_reserved_name, ret)
-        self.assertEqual(CellProcessor.cell_count[cell_name], 1)
-        self.assertFalse(cell.has_pre_hook_called)
+        with patch.object(_inner_ops, 'CellBackwardHook') as mock_CellBackwardHook:
+            forward_pre_hook, forward_hook = self.processor.build_cell_hook(cell_name, mock_build_data_hook)
 
-        cell.has_pre_hook_called = True
-        cell.mindstudio_reserved_name = "mindstudio_reserved_name"
+            mock_bw = mock_CellBackwardHook.return_value
+            mock_bw.return_value = (Tensor([0.0]),)
+            args = (Tensor([1.0]),)
+            target_args = (Tensor([0.0]),)
+            full_forward_name = f'{cell_name}{Const.FORWARD}.0'
+            full_backward_name = f'{cell_name}{Const.BACKWARD}.0'
+
+            ret = forward_pre_hook(mock_cell, args)
+            self.assertIsNone(CellProcessor.module_node[full_forward_name])
+            self.assertEqual(CellProcessor.cell_stack, [full_forward_name])
+            self.assertEqual(CellProcessor.api_parent_node, full_forward_name)
+            self.scope.begin_module.assert_called_with(full_forward_name)
+            mock_build_data_hook.assert_called_with('Module', full_forward_name)
+            self.assertEqual(len(CellProcessor.cell_backward_hook), 1)
+            mock_CellBackwardHook.assert_called_with(full_backward_name, mock_cell, CellProcessor.cell_backward_hook[-1])
+            mock_bw.register_backward_hook.assert_called_once()
+            self.assertTrue((ret[0] == target_args[0]).all())
+
+            backward_hook = CellProcessor.cell_backward_hook[-1][full_backward_name]
+            grad_input = (Tensor([1.0]),)
+            grad_output = (Tensor([2.0]),)
+            ret = backward_hook(mock_cell, grad_input, grad_output)
+            mock_backward_data_hook.assert_called_with(mock_cell, grad_input, grad_output)
+            self.assertFalse(mock_cell.has_pre_hook_called)
+            self.assertEqual(CellProcessor.cell_stack, [])
+            self.assertIsNone(CellProcessor.api_parent_node)
+            self.scope.end_module.assert_called_with(full_backward_name)
+            self.assertTrue((ret[0] == target_grad_output[0]).all())
+
+            mock_build_data_hook.reset_mock()
+            args = (Tensor([1], dtype=ms.int32),)
+            full_forward_name = f'{cell_name}{Const.FORWARD}.1'
+            ret = forward_pre_hook(mock_cell, args)
+            self.assertIsNone(CellProcessor.module_node[full_forward_name])
+            self.assertEqual(CellProcessor.cell_stack, [full_forward_name])
+            self.assertEqual(CellProcessor.api_parent_node, full_forward_name)
+            self.scope.begin_module.assert_called_with(full_forward_name)
+            self.assertEqual(len(CellProcessor.cell_backward_hook), 1)
+            mock_build_data_hook.assert_not_called()
+
+            full_forward_name = f'{cell_name}{Const.FORWARD}.0'
+            CellProcessor.cell_count = {cell_name: 0}
+            CellProcessor.cell_stack = [full_forward_name]
+            CellProcessor.api_parent_node = full_forward_name
+            CellProcessor.module_node = {full_forward_name: None}
+            mock_CellBackwardHook.reset_mock()
+            mock_bw.reset_mock()
+            mock_backward_data_hook.reset_mock()
+            mock_forward_data_hook_hook = MagicMock()
+            target_output = Tensor([0.5])
+            mock_forward_data_hook_hook.return_value = target_output
+            mock_build_data_hook.return_value = (None, mock_forward_data_hook_hook, mock_backward_data_hook, None)
+            args = (Tensor([1.0]),)
+            output = Tensor([2.0])
+            ret = forward_hook(mock_cell, args, output)
+            self.assertTrue((ret == target_output).all())
+
+    def test_set_construct_info_in_pre_hook(self):
         CellProcessor.reset_cell_stats()
-        ret = self.processor.set_and_get_reserved_name(cell, cell_name)
-        self.assertEqual(ret, "mindstudio_reserved_name")
-        self.assertEqual(cell.mindstudio_reserved_name, ret)
-        self.assertEqual(CellProcessor.cell_count, {})
-        self.assertFalse(cell.has_pre_hook_called)
+        self.processor.set_construct_info_in_pre_hook('full_name')
+        self.assertEqual(CellProcessor.module_node['full_name'], None)
+        self.assertEqual(CellProcessor.cell_stack, ['full_name'])
+        self.assertEqual(CellProcessor.api_parent_node, 'full_name')
+        self.scope.begin_module.assert_called_with('full_name')
 
-        ret = self.processor.set_and_get_reserved_name(cell, cell_name, is_called_by_pre_hook=True)
-        self.assertEqual(ret, cell_name + Const.SEP + "0")
-        self.assertEqual(cell.mindstudio_reserved_name, ret)
-        self.assertEqual(CellProcessor.cell_count[cell_name], 0)
-        self.assertTrue(cell.has_pre_hook_called)
+        self.scope.begin_module.reset_mock()
+        self.processor.set_construct_info_in_pre_hook('sub_cell_name')
+        self.assertEqual(CellProcessor.module_node, {'full_name': None, 'sub_cell_name': 'full_name'})
+        self.assertEqual(CellProcessor.cell_stack, ['full_name', 'sub_cell_name'])
+        self.assertEqual(CellProcessor.api_parent_node, 'sub_cell_name')
+        self.scope.begin_module.assert_called_with('sub_cell_name')
+
+        CellProcessor.reset_cell_stats()
+
+    def test_set_construct_info_in_hook(self):
+        CellProcessor.reset_cell_stats()
+        self.processor.set_construct_info_in_hook('full_name')
+        self.assertIsNone(CellProcessor.api_parent_node)
+        self.scope.end_module.assert_called_with('full_name')
+
+        self.scope.end_module.reset_mock()
+        CellProcessor.cell_stack = ['full_name']
+        self.processor.set_construct_info_in_hook('full_name')
+        self.assertEqual(CellProcessor.cell_stack, [])
+        self.assertIsNone(CellProcessor.api_parent_node)
+        self.scope.end_module.assert_called_with('full_name')
+
+        self.scope.end_module.reset_mock()
+        CellProcessor.cell_stack = ['Cell.0', 'Cell.1']
+        self.processor.set_construct_info_in_hook('full_name')
+        self.assertEqual(CellProcessor.cell_stack, ['Cell.0'])
+        self.assertEqual(CellProcessor.api_parent_node, 'Cell.0')
+        self.scope.end_module.assert_called_with('full_name')
+
         CellProcessor.reset_cell_stats()

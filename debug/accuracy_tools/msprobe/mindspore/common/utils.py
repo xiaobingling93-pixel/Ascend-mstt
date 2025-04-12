@@ -209,3 +209,17 @@ def check_save_param(variable, name, save_backward):
                        "should be bool. "
                        "Skip current save process.")
         raise ValueError
+
+
+def get_cells_and_names(models):
+    cells_and_names_with_index = {}
+
+    def get_cell_or_module(model):
+        return model.named_modules() if is_mindtorch() else model.cells_and_names()
+
+    if isinstance(models, (list, tuple)):
+        for index, model in enumerate(models):
+            cells_and_names_with_index[str(index)] = get_cell_or_module(model)
+    else:
+        cells_and_names_with_index["-1"] = get_cell_or_module(models)
+    return cells_and_names_with_index

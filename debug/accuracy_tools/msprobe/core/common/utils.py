@@ -506,3 +506,12 @@ def is_save_variable_valid(variable, valid_special_types, depth=0):
                    for key, value in variable.items())
     else:
         return False
+
+
+def replace_last_occurrence(text, old, new):
+    if text is None:
+        return text
+    index = text.rfind(old)
+    if index != -1:
+        return text[:index] + text[index:].replace(old, new, 1)
+    return text

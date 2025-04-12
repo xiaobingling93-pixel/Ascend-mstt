@@ -180,7 +180,10 @@ class DataCollector:
                     self.optimizer_status_first_start[self.optimizer_status] = False
                 self.data_writer.update_construct({name: self.optimizer_status})
             else:
-                self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+                if self.config.level == Const.LEVEL_MIX and \
+                  not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
+                    self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, flush=False):

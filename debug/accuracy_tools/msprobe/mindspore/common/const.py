@@ -15,6 +15,7 @@
 
 import numpy as np
 import mindspore as ms
+from mindspore import dtype as mstype
 
 from msprobe.core.common.const import Const as CoreConst
 
@@ -69,6 +70,13 @@ class Const:
         MINT_NN_FUNC_DATA_PREFIX: MINT_NN_FUNC_PREFIX
     }
 
+    NonDifferentiableType = (
+        mstype.int8, mstype.byte, mstype.uint8, mstype.ubyte,
+        mstype.int16, mstype.short, mstype.uint16, mstype.ushort,
+        mstype.int32, mstype.intc, mstype.uint32, mstype.uintc,
+        mstype.int64, mstype.intp, mstype.uint64, mstype.uintp
+    )
+
 
 class MsCompareConst:
     # api_info field
@@ -88,13 +96,10 @@ class MsCompareConst:
     MINDTORCH_NPU = "NPU"
     MINDTORCH_DIST = "Distributed"
 
-
-
     MT_VALID_API_TYPES = [
         MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
     ]
     SUPPORTED_FUSION_LIST = ["flash_attention_score"]
-
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
@@ -127,8 +132,6 @@ class MsCompareConst:
         SUCCESS = "success"
         API_NOT_FOUND = "api_not_found"
         EXCEPTION_SKIP = "exception_skip"
-
-
 
 
 class FreeBenchmarkConst:
