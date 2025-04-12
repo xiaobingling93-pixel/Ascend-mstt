@@ -49,7 +49,7 @@ def __init__(self, hook_build_func) -> None:
 # 重载call，加全局标志。
 def __call__(self, *args, **kwargs):
     try:
-        self.input_kwargs = kwargs
+        setattr(self, 'msprobe_input_kwargs', kwargs)
         out = super(HOOKCell, self).__call__(*args, **kwargs)
     except Exception as e:
         raise e

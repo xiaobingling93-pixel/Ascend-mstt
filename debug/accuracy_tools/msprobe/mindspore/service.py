@@ -37,7 +37,7 @@ from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs,
                                                         ModuleBackwardInputs)
 from msprobe.core.data_dump.scope import BaseScope
-from msprobe.mindspore.cell_processor import CellProcessor
+from msprobe.mindspore.cell_processor import CellProcessor, get_cell_construct
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (get_rank_if_initialized, clean_input_kwargs,
                                             is_mindtorch, register_backward_hook_functions)
@@ -98,18 +98,9 @@ class Service:
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
         return models
 
-    @staticmethod
-    def prepare_module_input_output(target_type, cell, input_data, output):
-        if target_type == BaseScope.Module_Type_Module:
-            module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
-        else:
-            module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs, output=output)
-        return module_input_output
-
     def build_hook(self, target_type, name):
         def pre_hook(api_or_cell_name, cell, input_data):
             if not self.should_execute_hook(target_type, cell, True):
-                clean_input_kwargs(cell)
                 return None
 
             with _no_grad():
@@ -119,7 +110,8 @@ class Service:
                 else:
                     cell.forward_data_collected = True
                     HOOKCell.add_cell_count(name)
-                module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.msprobe_input_kwargs,
+                                                                 output=None)
                 self.data_collector.update_api_or_module_name(api_or_cell_name)
                 self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
                 self.inner_switch = False
@@ -176,7 +168,8 @@ class Service:
                 return None
             with _no_grad():
                 self.inner_switch = True
-                module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.msprobe_input_kwargs,
+                                                                 output=output)
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                     params_dict = {}
@@ -200,11 +193,11 @@ class Service:
                     self.data_collector.update_api_or_module_name(api_or_cell_name)
                     self.data_collector.forward_output_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
+                clean_input_kwargs(cell)
                 if self.data_collector.if_return_forward_new_output():
                     forward_new_output = self.data_collector.get_forward_new_output()
                     self.inner_switch = False
                     return forward_new_output
-                clean_input_kwargs(cell)
                 self.inner_switch = False
                 return output
 
@@ -468,6 +461,13 @@ class Service:
                 for name, cell in cells_and_names:
                     if cell == model:
                         continue
+                    if not hasattr(cell.__class__, 'msprobe_construct'):
+                        setattr(cell.__class__, 'msprobe_construct', True)
+                        if is_mindtorch():
+                            setattr(cell.__class__, 'forward', get_cell_construct(cell.__class__.forward))
+                        else:
+                            setattr(cell.__class__, 'construct', get_cell_construct(cell.__class__.construct))
+                    setattr(cell, 'msprobe_hook', True)
                     cell_index = (index + Const.SEP) if index != "-1" else ""
                     prefix = (model_type + Const.SEP + cell_index + name +
                               Const.SEP + cell.__class__.__name__ + Const.SEP)

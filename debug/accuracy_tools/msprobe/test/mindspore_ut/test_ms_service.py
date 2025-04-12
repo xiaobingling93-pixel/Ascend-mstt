@@ -285,6 +285,7 @@ class TestService(unittest.TestCase):
         global register_backward_hook_functions
         self.service.config.level = Const.LEVEL_L0
         cell_mock = MagicMock()
+        setattr(MagicMock, 'construct', None)
         self.service.model.cells_and_names.return_value = [("cell_name", cell_mock)]
         register_backward_hook_functions["pre"] = cell_mock.register_backward_pre_hook
         register_backward_hook_functions["full"] = cell_mock.register_backward_hook
@@ -293,6 +294,7 @@ class TestService(unittest.TestCase):
         cell_mock.register_backward_hook.assert_called()
         mock_node_hook.assert_called()
         register_backward_hook_functions = {}
+        del MagicMock.construct
 
     def test_register_hook_new_without_model_raises_exception(self):
         self.service.config.level = Const.LEVEL_L0
