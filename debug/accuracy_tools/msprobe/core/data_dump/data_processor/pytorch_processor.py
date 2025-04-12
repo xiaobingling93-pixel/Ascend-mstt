@@ -232,25 +232,22 @@ class PytorchDataProcessor(BaseDataProcessor):
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
-        if isinstance(element, torch.Size):
-            return self._analyze_torch_size(element)
-        if isinstance(element, torch.memory_format):
-            return self._analyze_memory_format(element)
-        if isinstance(element, dist.ProcessGroup):
-            return self._analyze_process_group(element)
-        if isinstance(element, dist.P2POp):
-            return self._analyze_p2pop(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, dist.ReduceOp):
-            return self._analyze_reduce_op(element)
-        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
-        if converted_numpy is not element:
-            return {"type": numpy_type, "value": converted_numpy}
-        if isinstance(element, torch.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, np.ndarray):
-            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
-            return self._analyze_builtin(element)
+
+        suffix_str = Const.SEP.join(str(s) for s in suffix_stack)
+        type_analyzer = [
+            (PytorchDataProcessor.builtin_type, self._analyze_builtin),
+            (torch.Size, self._analyze_torch_size),
+            (torch.Tensor, lambda e: self._analyze_tensor(e, suffix_str)),
+            (torch.memory_format, self._analyze_memory_format),
+            (dist.ProcessGroup, self._analyze_process_group),
+            (dist.P2POp, lambda e: self._analyze_p2pop(e, suffix_str)),
+            (dist.ReduceOp, self._analyze_reduce_op),
+            (PytorchDataProcessor.np_type[:-1], self._analyze_numpy),
+            (np.ndarray, lambda e: self._analyze_ndarray(e, suffix_str)),
+        ]
+        for type_key, analyze_fn in type_analyzer:
+            if isinstance(element, type_key):
+                return analyze_fn(element)
         return {}
 
     def _analyze_p2pop(self, arg, suffix):
@@ -320,10 +317,10 @@ class TensorDataProcessor(PytorchDataProcessor):
             save_pt(saved_tensor, file_path)
         return single_arg
 
-    def _analyze_numpy(self, ndarray, suffix):
+    def _analyze_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_pt(torch.tensor(ndarray), file_path)
-        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json = super()._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
 
