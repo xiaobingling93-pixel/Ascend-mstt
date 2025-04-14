@@ -60,15 +60,17 @@ def _compare_graph(input_param, args):
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
     mapping_dict = None
-    try:
-        mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, args.layer_mapping)
-    except Exception:
-        logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
+    if args.layer_mapping:
+        yaml_path = FileChecker(args.layer_mapping, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
+        try:
+            mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, yaml_path)
+        except Exception:
+            logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
 
     is_cross_framework = detect_framework_by_dump_json(data_path_n) != detect_framework_by_dump_json(data_path_b)
-    if is_cross_framework and not mapping_dict:
-        logger.error(
-            'The cross_frame comparison failed. Please specify layer_mapping when performing cross_frame comparison.')
+    if is_cross_framework and not args.layer_mapping:
+        logger.error('The cross_frame graph comparison failed. '
+                     'Please specify -lm or --layer_mapping when performing cross_frame graph comparison.')
         raise CompareException(CompareException.CROSS_FRAME_ERROR)
 
     graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args, is_cross_framework,
@@ -215,7 +217,7 @@ def _graph_service_parser(parser):
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
-                        help="<optional> The layer mapping file path.", required=False)
+                        help="<Optional> The layer mapping file path.", required=False)
     parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
                         help="<Optional> whether open overflow_check for graph.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
