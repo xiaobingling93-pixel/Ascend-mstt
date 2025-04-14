@@ -25,7 +25,7 @@ from msprobe.core.common.decorator import recursion_depth_decorator
 class GraphComparator:
     MAX_DEPTH = 1000
 
-    def __init__(self, graphs, dump_path_param, args, is_cross_frame, mapping_dict=None):
+    def __init__(self, graphs, dump_path_param, args, is_cross_framework, mapping_dict=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
         self._parse_param(dump_path_param, args.output_path)
@@ -33,7 +33,7 @@ class GraphComparator:
         self.mapping_dict = mapping_dict
         self.fuzzy_match = args.fuzzy_match
         self.pattern = re.compile(r'\.\d+\.')
-        self.is_cross_frame = is_cross_frame
+        self.is_cross_framework = is_cross_framework
 
     def compare(self):
         """
@@ -129,7 +129,7 @@ class GraphComparator:
         if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df, self.framework, self.is_cross_frame)
+        df = run_real_data(self.dump_path_param, df, self.framework, self.is_cross_framework)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
