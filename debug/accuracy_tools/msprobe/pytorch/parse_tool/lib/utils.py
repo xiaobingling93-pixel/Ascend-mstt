@@ -119,6 +119,7 @@ class Util:
 
     @staticmethod
     def deal_with_dir_or_file_inconsistency(output_path):
+        logger.warning(f"Warning: Trying to delete {output_path}")
         remove_path(output_path)
         raise ParseException("Inconsistent directory structure or file.")
 
