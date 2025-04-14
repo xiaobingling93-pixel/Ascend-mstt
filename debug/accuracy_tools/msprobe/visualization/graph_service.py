@@ -65,7 +65,7 @@ def _compare_graph(input_param, args):
     except Exception:
         logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
 
-    is_cross_framework = detect_framework_by_dump_json(data_path_n) == detect_framework_by_dump_json(data_path_b)
+    is_cross_framework = detect_framework_by_dump_json(data_path_n) != detect_framework_by_dump_json(data_path_b)
     if is_cross_framework and not mapping_dict:
         logger.error(
             'The cross_frame comparison failed. Please specify layer_mapping when performing cross_frame comparison.')
