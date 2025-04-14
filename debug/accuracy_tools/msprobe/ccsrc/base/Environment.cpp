@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include <unistd.h>
 #include "utils/CPythonUtils.hpp"
 #include "DebuggerConfig.hpp"
 #include "Environment.hpp"
@@ -22,42 +21,11 @@
 namespace MindStudioDebugger {
 namespace Environment {
 
-static bool IsOthersWritable(const char* module_name)
-{
-    Py_Initialize();
-    PyObject* pName = PyUnicode_DecodeFSDefault(module_name);
-    PyObject* pModule = PyImport_Import(pName);
-    Py_DECREF(pName);
-    if (pModule == nullptr) {
-        Py_Finalize();
-        return true;
-    } 
-    PyObject* pFile = PyObject_GetAttrString(pModule, "__file__");
-    if (pFile == nullptr) {
-        Py_DECREF(pModule);
-        Py_Finalize();
-        return true;
-    }
-    const char* filepath = PyUnicode_AsUTF8(pFile);
-    Py_DECREF(pFile);
-    Py_DECREF(pModule);
-    Py_Finalize();
-    
-    struct stat fileStat;
-    if (stat(filepath, &fileStat) < 0) {
-        return true;
-    }
-    return (fileStat.st_mode & S_IWOTH) != 0;
-}
-
 static int32_t GetRankID_PT()
 {
     /*  if torch.distributed.is_initialized():
      *     return torch.distributed.get_rank()
      */
-    if (IsOthersWritable("torch.distributed")) {
-        return -1;
-    }
     CPythonUtils::PythonObject torch = CPythonUtils::PythonObject::Import("torch");
     if (!torch.IsModule()) {
         return -1;
