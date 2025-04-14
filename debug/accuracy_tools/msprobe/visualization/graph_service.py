@@ -71,7 +71,8 @@ def _compare_graph(input_param, args):
             'The cross_frame comparison failed. Please specify layer_mapping when performing cross_frame comparison.')
         raise CompareException(CompareException.CROSS_FRAME_ERROR)
 
-    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args, mapping_dict=mapping_dict)
+    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args, is_cross_framework,
+                                       mapping_dict=mapping_dict)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
     # 开启溢出检测
