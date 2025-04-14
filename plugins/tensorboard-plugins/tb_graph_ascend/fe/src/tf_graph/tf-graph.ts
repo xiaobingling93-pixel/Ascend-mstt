@@ -29,7 +29,7 @@ import * as tf_graph_util from '../tf_graph_common/util';
 import * as tf_graph_layout from '../tf_graph_common/layout';
 import './tf-graph-scene';
 import './components/legend/index';
-import { Selection } from '../tf_graph_controls/tf-graph-controls';
+import type { MinimapVis, Selection } from '../tf_graph_controls/tf-graph-controls';
 import { fetchPbTxt, parseGraphPbTxt } from '../tf_graph_common/parser';
 import * as tf_hierarchy from '../tf_graph_common/hierarchy';
 import * as tf_graph_parser from '../tf_graph_common/parser';
@@ -96,6 +96,7 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
           linked-node="{{linkedNode}}"
           progress="[[progress]]"
           node-context-menu-items="[[nodeContextMenuItems]]"
+          show-minimap="[[minimapVis.npu]]"
         ></tf-graph-scene>
       </div>
       <template is="dom-if" if="[[graphHierarchy.bench]]">
@@ -110,6 +111,7 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
             linked-node="{{linkedNode}}"
             progress="[[progress]]"
             node-context-menu-items="[[nodeContextMenuItems]]"
+            show-minimap="[[minimapVis.bench]]"
           ></tf-graph-scene>
         </div>
       </template>
@@ -171,6 +173,9 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
 
   @property({ type: Object })
   selection: Selection;
+
+  @property({ type: Object })
+  minimapVis: MinimapVis = { npu: true, bench: true };
 
   @observe('graphHierarchy', 'handleNodeSelected')
   _buildNewRenderHierarchy(): void {
@@ -374,10 +379,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   fit(): void {
     (this.$.scene as any).fit();
     (this.$$('#bench') as any).fit();
-  }
-
-  getImageBlob(): Promise<Blob> {
-    return (this.$.scene as any).getImageBlob();
   }
 
   _graphChanged(): void {

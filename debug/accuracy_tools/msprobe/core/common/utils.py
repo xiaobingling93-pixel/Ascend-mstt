@@ -492,3 +492,17 @@ class DumpPathAggregation:
     dump_tensor_data_dir = None
     free_benchmark_file_path = None
     debug_file_path = None
+
+
+def is_save_variable_valid(variable, valid_special_types, depth=0):
+    if depth > Const.DUMP_MAX_DEPTH:
+        return False
+    if isinstance(variable, valid_special_types):
+        return True
+    elif isinstance(variable, (list, tuple)):
+        return all(is_save_variable_valid(item, valid_special_types, depth + 1) for item in variable)
+    elif isinstance(variable, dict):
+        return all(isinstance(key, str) and is_save_variable_valid(value, valid_special_types, depth + 1)
+                   for key, value in variable.items())
+    else:
+        return False

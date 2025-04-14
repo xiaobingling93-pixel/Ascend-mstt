@@ -3,6 +3,7 @@ from collections import defaultdict
 from unittest.mock import Mock, patch, MagicMock
 
 import torch
+from torch._utils import _flatten_dense_tensors
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMon, \
     OptimizerMonFactory, DummyOptimizerMon, \
     MixPrecisionOptimizerMon, MegatronDistributedOptimizerMon, MegatronFP32OptimizerMon, \
@@ -12,9 +13,41 @@ from msprobe.pytorch.monitor.optimizer_collect import OptimizerMon, \
 from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
 
 
+def setup_param_groups(num_groups=2, params_per_group=5):
+    bit16_groups = []
+    param_names = {}
+    name2index = {}
+    param_slice_mappings = []
+    count = 0
+    for group_idx in range(num_groups):
+        group = []
+        param_slice_mapping = {}
+        offset = 0
+        for i in range(params_per_group):
+            name = f'param{group_idx}_{i}'
+            p = torch.nn.Parameter(torch.randn(2,3, dtype=torch.bfloat16))
+            p.ds_tensor = torch.nn.Parameter(torch.randn(1,3, dtype=torch.bfloat16))
+            param_slice_mapping[name] = MagicMock(start=offset, numel=p.numel())
+            name2index[name] = count
+            group.append(p)
+            param_names[p] = name
+            offset += p.numel()
+            count += 1
+        bit16_groups.append(group)
+        param_slice_mappings.append(param_slice_mapping)
+    
+    return  bit16_groups, param_names, name2index, param_slice_mappings
+
+def setup_mock_monitor():
+    mock_monitor = MagicMock()
+    mock_monitor.mv_distribution = True
+    mock_monitor.mg_direction = False
+    mock_monitor.ur_distribution = False
+
+    return mock_monitor
+
 class TestOptimizerMon(unittest.TestCase):
     def setUp(self) -> None:
-        # 初始化需要的monitor, torch_opt, params2name等对象
         self.monitor = Mock()
         self.monitor.mv_distribution = True
         self.monitor.mg_direction = True
@@ -201,86 +234,143 @@ class TestCommonFetchMv(unittest.TestCase):
 
 
 class TestDeepSpeedZeroOptimizerStage3Mon(unittest.TestCase):
+    def setUp(self):
+        bit16_groups, param_names, name2index, _ = setup_param_groups()
+
+        mock_opt = MagicMock()
+        mock_opt.param_names = param_names
+        mock_opt.fp16_groups = bit16_groups
+        mock_opt.fp32_partitioned_groups_flat = [torch.stack(group,dim=0).flatten().float()
+                                                 for group in bit16_groups]
+        mock_opt.fp16_partitioned_groups = [[p.ds_tensor for p in group] for group in bit16_groups]        
+        mock_opt.flatten = _flatten_dense_tensors
+        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(p.ds_tensor) for p in group]
+                                       for group_idx, group in enumerate(bit16_groups)}
+        mock_opt.state = {
+            flat_group: {
+                'exp_avg': torch.ones_like(flat_group),
+                'exp_avg_sq': torch.ones_like(flat_group)
+            } for flat_group in mock_opt.fp32_partitioned_groups_flat
+        } 
+
+        self.torch_opt = mock_opt
+        self.optimizer_mon = DeepSpeedZeroOptimizerStage3Mon()
+        self.mock_monitor = setup_mock_monitor()
+        self.name2index = name2index
+        self.params2name = param_names
+        
     def test_get_param_index(self):
-        self.torch_opt = Mock()
-        self.torch_opt.fp16_partitioned_groups = [
-            [Mock(flatten=lambda: [1, 2, 3]),
-             Mock(flatten=lambda: [4, 5])],
-            [Mock(flatten=lambda: [6, 7, 8, 9])]
-        ]
-        self.params2name = {'param1': 'weight1', 'param2': 'weight2'}
-        self.name2index = {'weight1': 0, 'weight2': 2}
-
-        optimizer_stage3_mon = DeepSpeedZeroOptimizerStage3Mon()
-        name2indices = optimizer_stage3_mon.get_param_index(self.params2name, self.name2index, self.torch_opt)
-
-        expected_name2indices = {'weight1': (0, 3, 0, None), 'weight2': (5, 9, 1, None)}
-        self.assertDictEqual(dict(name2indices), expected_name2indices)
+        name2indices = self.optimizer_mon.get_param_index(self.params2name, self.name2index, self.torch_opt)
+        expected_name2indices = {
+            'param0_0': (0, 3, 0, None),
+            'param0_1': (3, 6, 0, None),
+            'param0_2': (6, 9, 0, None),
+            'param0_3': (9, 12, 0, None),
+            'param0_4': (12, 15, 0, None),
+            'param1_0': (0, 3, 1, None),
+            'param1_1': (3, 6, 1, None),
+            'param1_2': (6, 9, 1, None),
+            'param1_3': (9, 12, 1, None),
+            'param1_4': (12, 15, 1, None)
+        }
+        self.assertDictEqual(name2indices, expected_name2indices)
 
     def test_fetch_mv(self):
-        self.monitor = MagicMock()
-        self.torch_opt = MagicMock()
-        self.params2name = MagicMock()
-        self.torch_opt.fp16_partitioned_groups = MagicMock()
-        self.optimizer = DeepSpeedZeroOptimizerStage3Mon()
+        name2indices = self.optimizer_mon.get_param_index(self.params2name, self.name2index, self.torch_opt)
+        result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt, self.params2name, name2indices)
 
-        # mock _fetch_mv_grad_in_adam
-        mv_result = MVGradResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={}, grad={})
-        self.mock_fetch_mv_grad_in_adam = MagicMock(return_value=mv_result)
-        self.optimizer._fetch_mv_grad_in_adam = self.mock_fetch_mv_grad_in_adam
-
-        res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
-        self.assertIsInstance(res, MVGradResult)
+        for param, name in self.torch_opt.param_names.items():  
+            self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param.ds_tensor).flatten()))
+            self.assertTrue(torch.equal(result.exp_avg_sq[name], torch.ones_like(param.ds_tensor).flatten()))
 
 
 class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
+    def setUp(self):
+        """Mock zero1/2 partitions
+        """
+        bit16_groups, param_names, name2index, _ = setup_param_groups()
+        mock_opt = MagicMock()
+        mock_opt.groups_padding = [0, 0]
+        mock_opt.single_partition_of_fp32_groups = [torch.stack(group,dim=0).flatten() for group in bit16_groups]
+        mock_opt.partition_size = [p.numel() for p in mock_opt.single_partition_of_fp32_groups]
+        mock_opt.param_names = param_names
+        mock_opt.bit16_groups = bit16_groups
+        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group]
+                                       for group_idx, group in enumerate(mock_opt.single_partition_of_fp32_groups)}
+
+        mock_opt.flatten = _flatten_dense_tensors
+        def flatten_dense_tensors_aligned(tensor_list, alignment):
+            return _flatten_dense_tensors(tensor_list)
+        mock_opt.flatten_dense_tensors_aligned = flatten_dense_tensors_aligned
+
+        mock_opt.state = {
+            flat_group: {
+                'exp_avg': torch.ones_like(flat_group),
+                'exp_avg_sq': torch.ones_like(flat_group)
+            } for flat_group in mock_opt.single_partition_of_fp32_groups
+        } 
+
+        self.torch_opt = mock_opt
+        self.optimizer_mon = DeepSpeedZeroOptimizerStage1or2Mon()
+        self.mock_monitor = setup_mock_monitor()
+        self.name2index = name2index
+        self.params2name = param_names
+
     def test_get_group_index(self):
         self.fp32_length = [10, 20, 30, 40]
         self.world_size = 4
         self.indexes = [5, 7, 12, 25, 35, 45]
         self.expected_results = [(40, 0), (40, 0), (12, 1), (24, 2), (34, 2), (40, 0)]
 
-        optimizer = DeepSpeedZeroOptimizerStage1or2Mon()
-        results = [optimizer.get_group_index(self.fp32_length, self.world_size, index) for index in self.indexes]
+        results = [self.optimizer_mon.get_group_index(self.fp32_length, self.world_size, index) for index in self.indexes]
         self.assertEqual(results, self.expected_results)
 
-    @patch('msprobe.pytorch.monitor.optimizer_collect.dist')
-    def test_get_param_index(self, mock_dist):
-        mock_dist.get_world_size.return_value = 4
-
-        self.params2name = {'param1': 'weight', 'param2': 'bias'}
-        self.name2index = {'weight': 0, 'bias': 1}
-
-        self.optimizer_monitor = DeepSpeedZeroOptimizerStage1or2Mon()
-
-        self.torch_opt = MagicMock()
-        self.torch_opt.groups_padding = [1, 2, 3]
-        self.torch_opt.single_partition_of_fp32_groups = [torch.tensor([1, 2]), torch.tensor([3, 4, 5])]
-        self.torch_opt.bit16_groups = [
-            [torch.tensor([6, 7]), torch.tensor([8])],
-            [torch.tensor([9, 10, 11])]
-        ]
-
-        name2indices = self.optimizer_monitor.get_param_index(self.params2name, self.name2index, self.torch_opt)
+    def test_get_param_index(self):
+        name2indices = self.optimizer_mon.get_param_index(self.params2name, self.name2index, self.torch_opt)
         for name, indices in name2indices.items():
             self.assertIn(name, self.params2name.values())
             self.assertIsInstance(indices, tuple)
             self.assertEqual(len(indices), 4)
 
     def test_fetch_mv(self):
-        self.monitor = MagicMock()
-        self.torch_opt = MagicMock()
-        self.params2name = MagicMock()
-        self.torch_opt.fp16_partitioned_groups = MagicMock()
-        self.optimizer = DeepSpeedZeroOptimizerStage1or2Mon()
-
         # mock _fetch_mv_grad_in_adam
-        mv_result = MVGradResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={}, grad={})
-        self.mock_fetch_mv_grad_in_adam = MagicMock(return_value=mv_result)
-        self.optimizer._fetch_mv_grad_in_adam = self.mock_fetch_mv_grad_in_adam
+        name2indices = self.optimizer_mon.get_param_index(self.params2name, self.name2index, self.torch_opt)
+        result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt, self.params2name, name2indices)
 
-        res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
-        self.assertIsInstance(res, MVGradResult)
+        for param, name in self.torch_opt.param_names.items():  
+            self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
+            self.assertTrue(torch.equal(result.exp_avg_sq[name], torch.ones_like(param).flatten()))
+
+
+class TestDeepSpeedZeroOptimizerStage0Mon(unittest.TestCase):
+    def setUp(self):
+        bit16_groups, param_names, name2index, param_slice_mapping = setup_param_groups()
+        mock_opt = MagicMock()
+
+        mock_opt.bf16_groups = bit16_groups
+        mock_opt.fp32_groups_flat_partition = [torch.stack(group,dim=0).flatten() for group in bit16_groups]
+        mock_opt.optimizer.state = {
+            flat_group: {
+                'exp_avg': torch.ones_like(flat_group),
+                'exp_avg_sq': torch.ones_like(flat_group)
+            } for flat_group in mock_opt.fp32_groups_flat_partition
+        } 
+
+        mock_opt.state_dict.return_value = {'param_slice_mappings':param_slice_mapping}
+        mock_opt.param_names = param_names
+
+        self.torch_opt = mock_opt
+        self.optimizer_mon = DeepSpeedZeroOptimizerStage0Mon()
+        self.mock_monitor = setup_mock_monitor()
+        self.name2index = name2index
+        self.params2name = param_names
+
+    def test_fetch_mv(self):
+        result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt, self.params2name)
+
+        for param, name in self.torch_opt.param_names.items():  
+            self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
+            self.assertTrue(torch.equal(result.exp_avg_sq[name], torch.ones_like(param).flatten()))
 
 
 class TestOptimizerMonFactory(unittest.TestCase):

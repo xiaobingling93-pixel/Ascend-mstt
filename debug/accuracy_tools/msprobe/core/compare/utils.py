@@ -184,15 +184,17 @@ class ApiItemInfo:
 
 
 def merge_tensor(tensor_list, dump_mode):
-    op_dict = {}
-    op_dict[CompareConst.OP_NAME] = []
-    op_dict[CompareConst.INPUT_STRUCT] = []
-    op_dict[CompareConst.KWARGS_STRUCT] = []
-    op_dict[CompareConst.OUTPUT_STRUCT] = []
-    op_dict[CompareConst.PARAMS_STRUCT] = []
-    op_dict[CompareConst.PARAMS_GRAD_STRUCT] = []
-    op_dict[Const.SUMMARY] = []
-    op_dict[Const.STACK_INFO] = []
+    keys = [
+        CompareConst.OP_NAME,
+        CompareConst.INPUT_STRUCT,
+        CompareConst.KWARGS_STRUCT,
+        CompareConst.OUTPUT_STRUCT,
+        CompareConst.PARAMS_STRUCT,
+        CompareConst.PARAMS_GRAD_STRUCT,
+        Const.SUMMARY,
+        Const.STACK_INFO
+    ]
+    op_dict = {key: [] for key in keys}
 
     if dump_mode == Const.ALL:
         op_dict["data_name"] = []
@@ -234,7 +236,7 @@ def table_value_is_valid(value: str) -> bool:
     if not isinstance(value, str):
         return True
     try:
-        # -1.00 or +1.00 should be consdiered as digit numbers
+        # -1.00 or +1.00 should be considered as digit numbers
         float(value)
     except ValueError:
         # otherwise, they will be considered as formular injections

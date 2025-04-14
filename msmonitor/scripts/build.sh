@@ -30,8 +30,8 @@ check_rust_version() {
     local RUST_MAJOR=$(echo $RUST_VERSION | cut -d. -f1)
     local RUST_MINOR=$(echo $RUST_VERSION | cut -d. -f2)
 
-    if [ "$RUST_MAJOR" -lt 1 ] || ([ "$RUST_MAJOR" -eq 1 ] && [ "$RUST_MINOR" -lt 56 ]); then
-        echo "ERROR: Rust version must be greater than or equal to 1.56.0"
+    if [ "$RUST_MAJOR" -lt 1 ] || ([ "$RUST_MAJOR" -eq 1 ] && [ "$RUST_MINOR" -lt 81 ]); then
+        echo "ERROR: Rust version must be greater than or equal to 1.81"
         echo "Current Rust version: $RUST_VERSION"
         return 1
     fi

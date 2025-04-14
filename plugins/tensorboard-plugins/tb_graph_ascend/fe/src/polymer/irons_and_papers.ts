@@ -50,3 +50,4 @@ import '@polymer/paper-toast';
 import '@polymer/paper-toggle-button';
 import '@polymer/paper-toolbar';
 import '@polymer/paper-tooltip/paper-tooltip';
+export { PaperCheckboxElement } from '@polymer/paper-checkbox';
