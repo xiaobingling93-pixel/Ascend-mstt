@@ -76,11 +76,12 @@ class OptimizerMon(object):
         ratio_dict = defaultdict()
         param2name = defaultdict()
         fp32_partitioned_groups_flat_grad = defaultdict()
-        partition_id = dist.get_rank()
+        partition_id = dist.get_rank() if dist.is_initialized() else 0
+        world_size = dist.get_world_size() if dist.is_initialized() else 1
 
         def get_flatten_grad(self, optimizer, group_idx):
             if fp32_partitioned_groups_flat[group_idx].grad is None:
-                if partition_id == dist.get_world_size() - 1 and not self.is_stage3:
+                if partition_id == world_size - 1 and not self.is_stage3:
                     fp32_partitioned_groups_flat_grad = optimizer.flatten_dense_tensors_aligned(
                         optimizer.averaged_gradients[group_idx],
                         int(optimizer.partition_size[group_idx])
@@ -266,9 +267,9 @@ class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
         fp16_groups = torch_opt.fp16_partitioned_groups
         name2indices = defaultdict()
         index_length = defaultdict()
-        index = 0
         idx = 0
         for group_idx, fp16_group in enumerate(fp16_groups):
+            index = 0
             for param in fp16_group:
                 param_length = len(param.flatten())
                 index_length[idx] = (index, index + param_length, group_idx)
@@ -301,7 +302,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
 
     def get_param_index(self, params2name, name2index, torch_opt):
         padding = torch_opt.groups_padding
-        world_size = dist.get_world_size()
+        world_size = dist.get_world_size() if dist.is_initialized() else 1
         fp32_length = [0]
         for fp32_group_index, single_partition_of_fp32_group in enumerate(torch_opt.single_partition_of_fp32_groups):
             fp32_length.append(len(single_partition_of_fp32_group) * world_size + fp32_length[fp32_group_index])

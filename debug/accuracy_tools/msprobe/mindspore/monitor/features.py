@@ -46,6 +46,8 @@ def get_max(x: Tensor):
 
 @_no_grad()
 def get_zeros(x: Tensor, eps: float):
+    if x.numel() == 0:
+        return Tensor(float('nan'))
     return mint.sum(mint.abs(x) < eps) / x.numel()
 
 

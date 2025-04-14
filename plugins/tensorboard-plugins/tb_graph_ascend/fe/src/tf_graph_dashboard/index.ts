@@ -77,7 +77,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         selected-file="{{_selectedFile}}"
         selected-node="{{_selectedNode}}"
         on-fit-tap="_fit"
-        on-download-image-requested="_onDownloadImageRequested"
+        minimap-vis="{{_minimapVis}}"
       ></tf-graph-controls>
       <div class$="center [[_getGraphDisplayClassName(_selectedFile, _datasets)]]" slot="center">
         <tf-graph-dashboard-loader
@@ -115,6 +115,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             selected-node="{{_selectedNode}}"
             stats="[[_stats]]"
             tooltips="[[_tooltips]]"
+            minimap-vis="[[_minimapVis]]"
           ></tf-graph-board>
         </div>
       </div>
@@ -303,10 +304,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
   _fit(): void {
     (this.$$('#graphboard') as any).fit();
-  }
-
-  _onDownloadImageRequested(event: CustomEvent): void {
-    (this.$$('#graphboard') as any).downloadAsImage(event.detail as string);
   }
 
   _getGraphDisplayClassName(_selectedFile: any, _datasets: any[]): string {

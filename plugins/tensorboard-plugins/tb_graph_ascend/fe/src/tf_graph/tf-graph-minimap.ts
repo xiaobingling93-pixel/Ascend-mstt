@@ -34,6 +34,8 @@ export class TfGraphMinimap extends PolymerElement {
 
       canvas {
         border: 1px solid #999;
+        width: 150px;
+        height: 150px;
       }
 
       rect {
@@ -47,6 +49,7 @@ export class TfGraphMinimap extends PolymerElement {
 
       svg {
         position: absolute;
+        width: 150px;
       }
     </style>
     <svg>
@@ -68,7 +71,6 @@ export class TfGraphMinimap extends PolymerElement {
     <canvas class="first"></canvas>
     <!-- Additional canvas to use as buffer to avoid flickering between updates -->
     <canvas class="second"></canvas>
-    <canvas class="download"></canvas>
   `;
 
   /**

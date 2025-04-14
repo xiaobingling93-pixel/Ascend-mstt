@@ -82,6 +82,22 @@ def check_and_return_dir_contents(dump_dir, prefix):
     return contents
 
 
+def rename_api(npu_name, process):
+    """
+    原api： {api_type}.{api_name}.{API调用次数}.{前向反向}.{input/output}.{参数序号}
+    rename后： {api_type}.{api_name}.{input/output}.{参数序号}
+    """
+    npu_split = npu_name.split(process)
+    try:
+        torch_func_index, in_out = npu_split[0], npu_split[1]
+    except IndexError as error:
+        logger.error(f'{npu_name} can not be split with {process}, please check!')
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
+    torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
+    torch_func = str(torch_func_split[0]) + str(in_out)
+    return torch_func
+
+
 def read_op(op_data, op_name):
     if Const.PARAMS_GRAD in op_name.split(Const.SEP):
         op_parsed_list = op_item_parse(op_data, op_name)
@@ -184,15 +200,17 @@ class ApiItemInfo:
 
 
 def merge_tensor(tensor_list, dump_mode):
-    op_dict = {}
-    op_dict[CompareConst.OP_NAME] = []
-    op_dict[CompareConst.INPUT_STRUCT] = []
-    op_dict[CompareConst.KWARGS_STRUCT] = []
-    op_dict[CompareConst.OUTPUT_STRUCT] = []
-    op_dict[CompareConst.PARAMS_STRUCT] = []
-    op_dict[CompareConst.PARAMS_GRAD_STRUCT] = []
-    op_dict[Const.SUMMARY] = []
-    op_dict[Const.STACK_INFO] = []
+    keys = [
+        CompareConst.OP_NAME,
+        CompareConst.INPUT_STRUCT,
+        CompareConst.KWARGS_STRUCT,
+        CompareConst.OUTPUT_STRUCT,
+        CompareConst.PARAMS_STRUCT,
+        CompareConst.PARAMS_GRAD_STRUCT,
+        Const.SUMMARY,
+        Const.STACK_INFO
+    ]
+    op_dict = {key: [] for key in keys}
 
     if dump_mode == Const.ALL:
         op_dict["data_name"] = []
@@ -234,7 +252,7 @@ def table_value_is_valid(value: str) -> bool:
     if not isinstance(value, str):
         return True
     try:
-        # -1.00 or +1.00 should be consdiered as digit numbers
+        # -1.00 or +1.00 should be considered as digit numbers
         float(value)
     except ValueError:
         # otherwise, they will be considered as formular injections
