@@ -558,11 +558,11 @@ class CompareConst:
     }
 
     API_MAPPING_KEYS_TO_COMPARE = [
-                ('ms_args', 'pt_args'),
-                ('ms_outputs', 'pt_outputs'),
-                ('ms_parameters', 'pt_parameters'),
-                ('ms_parameters_grad', 'pt_parameters_grad'),
-            ]
+        ('ms_args', 'pt_args'),
+        ('ms_outputs', 'pt_outputs'),
+        ('ms_parameters', 'pt_parameters'),
+        ('ms_parameters_grad', 'pt_parameters_grad')
+    ]
 
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
