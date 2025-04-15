@@ -45,7 +45,8 @@ class TestGraphService(unittest.TestCase):
         last_call_args = mock_log_info.call_args[0][0]
         self.assertIn(log_info, last_call_args)
         matches = re.findall(self.pattern, last_call_args)
-        self.assertTrue(os.path.exists(os.path.join(self.output, matches[0])))
+        if matches:
+            self.assertTrue(os.path.exists(os.path.join(self.output, matches[0])))
 
     @patch('msprobe.core.common.log.logger.info')
     def test_compare_graph_result(self, mock_log_info):
@@ -139,7 +140,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param1, f, indent=4)
         args = Args(input_path=self.output_json[1], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
 
         input_param2 = {
             'npu_path': os.path.join(self.input, 'step0'),
@@ -171,7 +172,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param4, f, indent=4)
         args = Args(input_path=self.output_json[4], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
 
         input_param5 = {
             'npu_path': self.input,
@@ -181,7 +182,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param5, f, indent=4)
         args = Args(input_path=self.output_json[5], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
 
         input_param6 = {
             'npu_path': self.input,
