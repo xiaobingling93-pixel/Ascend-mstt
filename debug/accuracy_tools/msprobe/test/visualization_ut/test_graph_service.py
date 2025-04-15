@@ -172,7 +172,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param4, f, indent=4)
         args = Args(input_path=self.output_json[4], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
         input_param5 = {
             'npu_path': self.input,
@@ -182,7 +182,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param5, f, indent=4)
         args = Args(input_path=self.output_json[5], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
         input_param6 = {
             'npu_path': self.input,
