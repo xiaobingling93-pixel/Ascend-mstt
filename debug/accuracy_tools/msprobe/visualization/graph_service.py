@@ -105,6 +105,7 @@ def _build_graph_info(dump_path, args):
 
 
 def _build_graph_result(dump_path, args):
+    logger.info('Start building model graphs...')
     graph = _build_graph_info(dump_path, args).graph
     # 增加micro step标记
     micro_steps = graph.paging_by_micro_step()
