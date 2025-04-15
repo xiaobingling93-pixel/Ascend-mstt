@@ -25,7 +25,7 @@ from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
-from msprobe.core.common.log import logger, LogService
+from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
@@ -191,8 +191,7 @@ def _compare_graph_ranks(input_param, args, step=None):
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     mp_res_dict = {}
     compare_graph_results = []
-    with Pool(processes=max(int((cpu_count() + 1) // 4), 1), initializer=LogService.set_queue,
-              initargs=(LogService.queue,)) as pool:
+    with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
@@ -257,8 +256,7 @@ def _compare_graph_steps(input_param, args):
 def _build_graph_ranks(dump_ranks_path, args, step=None):
     ranks = sorted(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     serializable_args = SerializableArgs(args)
-    with Pool(processes=max(int((cpu_count() + 1) // 4), 1), initializer=LogService.set_queue,
-              initargs=(LogService.queue,)) as pool:
+    with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
