@@ -25,7 +25,7 @@ from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
-from msprobe.core.common.log import logger
+from msprobe.core.common.log import logger, LogService
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
@@ -34,7 +34,7 @@ from msprobe.visualization.graph.distributed_analyzer import DistributedAnalyzer
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def _compare_graph(graph_n:GraphInfo, graph_b:GraphInfo, input_param, args):
+def _compare_graph(graph_n: GraphInfo, graph_b: GraphInfo, input_param, args):
     dump_path_param = {
         'npu_json_path': graph_n.data_path,
         'bench_json_path': graph_b.data_path,
@@ -168,11 +168,12 @@ def _export_build_graph_result(args, result):
     overflow_check = args.overflow_check
     output_file_name = result.output_file_name
     if not output_file_name:
-        output_file_name=f'build_{current_time}.vis'
+        output_file_name = f'build_{current_time}.vis'
     logger.info(f'Start exporting graph for {output_file_name}...')
     output_path = os.path.join(out_path, output_file_name)
     try:
-        GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps, overflow_check=overflow_check))
+        GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps,
+                                                            overflow_check=overflow_check))
         logger.info(f'Model graph exported successfully, the result file is saved in {output_path}')
         return None
     except RuntimeError as e:
@@ -190,7 +191,8 @@ def _compare_graph_ranks(input_param, args, step=None):
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     mp_res_dict = {}
     compare_graph_results = []
-    with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
+    with Pool(processes=max(int((cpu_count() + 1) // 4), 1), initializer=LogService.set_queue,
+              initargs=(LogService.queue,)) as pool:
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
@@ -209,7 +211,8 @@ def _compare_graph_ranks(input_param, args, step=None):
         
         for output_file_name, mp_res in mp_res_dict.items():
             # 暂存所有rank的graph，用于匹配rank间的分布式节点
-            compare_graph_results.append(_run_graph_compare(mp_res.get(), input_param, serializable_args, output_file_name))
+            compare_graph_results.append(_run_graph_compare(mp_res.get(), input_param, serializable_args,
+                                                            output_file_name))
     
         # 匹配rank间的分布式节点
         if len(compare_graph_results) > 1:
@@ -254,7 +257,8 @@ def _compare_graph_steps(input_param, args):
 def _build_graph_ranks(dump_ranks_path, args, step=None):
     ranks = sorted(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     serializable_args = SerializableArgs(args)
-    with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
+    with Pool(processes=max(int((cpu_count() + 1) // 4), 1), initializer=LogService.set_queue,
+              initargs=(LogService.queue,)) as pool:
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
@@ -265,8 +269,8 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
         build_graph_tasks = []
         for rank in ranks:
             build_graph_tasks.append(pool.apply_async(_run_build_graph_single, 
-                                                      args=(dump_ranks_path, rank, step, serializable_args)),
-                                                      error_callback=err_call)
+                                                      args=(dump_ranks_path, rank, step, serializable_args),
+                                                      error_callback=err_call))
         build_graph_results = [task.get() for task in build_graph_tasks]
 
         if len(build_graph_results) > 1:
@@ -327,7 +331,9 @@ def _graph_service_command(args):
         else:
             result = _build_graph_result(npu_path, args)
             create_directory(args.output_path)
-            _export_build_graph_result(args, result)
+            file_name = _export_build_graph_result(args, result)
+            if file_name:
+                logger.error('Failed to export model build graph.')
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         content_n = check_directory_content(npu_path)
         content_b = check_directory_content(bench_path)
@@ -340,7 +346,9 @@ def _graph_service_command(args):
         else:
             result = _compare_graph_result(input_param, args)
             create_directory(args.output_path)
-            _export_compare_graph_result(args, result)
+            file_name = _export_compare_graph_result(args, result)
+            if file_name:
+                logger.error('Failed to export model compare graph.')
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)

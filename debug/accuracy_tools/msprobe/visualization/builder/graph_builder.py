@@ -288,7 +288,7 @@ class GraphExportConfig:
 
 
 class GraphInfo:
-    def __init__(self, graph:Graph, construct_path:str, data_path:str, stack_path:str):
+    def __init__(self, graph: Graph, construct_path: str, data_path: str, stack_path: str):
         self.graph = graph
         self.construct_path = construct_path
         self.data_path = data_path
@@ -296,7 +296,7 @@ class GraphInfo:
 
 
 class BuildGraphTaskInfo:
-    def __init__(self, graph_info_n:GraphInfo, graph_info_b:GraphInfo, npu_rank, bench_rank, time_str):
+    def __init__(self, graph_info_n: GraphInfo, graph_info_b: GraphInfo, npu_rank, bench_rank, time_str):
         self.graph_info_n = graph_info_n
         self.graph_info_b = graph_info_b
         self.npu_rank = npu_rank
