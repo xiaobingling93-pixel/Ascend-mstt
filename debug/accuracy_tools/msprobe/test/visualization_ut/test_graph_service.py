@@ -7,7 +7,7 @@ import argparse
 from dataclasses import dataclass
 
 from unittest.mock import patch
-from msprobe.visualization.graph_service import _compare_graph, _build_graph, _compare_graph_ranks, \
+from msprobe.visualization.graph_service import _compare_graph_result, _build_graph_result, _compare_graph_ranks, \
     _compare_graph_steps, _build_graph_ranks, _build_graph_steps, _graph_service_command, _graph_service_parser
 from msprobe.core.common.utils import CompareException
 
@@ -48,27 +48,27 @@ class TestGraphService(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.output, matches[0])))
 
     @patch('msprobe.core.common.log.logger.info')
-    def test_compare_graph(self, mock_log_info):
+    def test_compare_graph_result(self, mock_log_info):
         args = Args(output_path=self.output, framework='pytorch')
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertEqual(mock_log_info.call_count, 2)
         self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='mindspore')
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='pytorch', layer_mapping=self.layer_mapping)
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='pytorch', overflow_check=True)
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
     @patch('msprobe.core.common.log.logger.info')
-    def test_build_graph(self, mock_log_info):
-        result = _build_graph(os.path.join(self.input, 'step0', 'rank0'), Args(overflow_check=True))
+    def test_build_graph_result(self, mock_log_info):
+        result = _build_graph_result(os.path.join(self.input, 'step0', 'rank0'), Args(overflow_check=True))
         self.assertEqual(mock_log_info.call_count, 1)
         self.assertIsNotNone(result)
 
