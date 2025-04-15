@@ -151,7 +151,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param2, f, indent=4)
         args = Args(input_path=self.output_json[2], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Exporting compare graph result successfully, the result file is saved in')
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
         input_param3 = {
             'npu_path': self.input,
@@ -162,7 +162,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param3, f, indent=4)
         args = Args(input_path=self.output_json[3], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Exporting compare graph result successfully, the result file is saved in')
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
         input_param4 = {
             'npu_path': os.path.join(self.input, 'step0'),
