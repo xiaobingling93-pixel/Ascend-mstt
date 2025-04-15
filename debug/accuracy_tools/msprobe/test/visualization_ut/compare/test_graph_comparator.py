@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import Any
 from dataclasses import dataclass
 from unittest.mock import patch
 from unittest.mock import MagicMock
@@ -12,7 +13,7 @@ from msprobe.visualization.utils import GraphConst
 class Args:
     input_path: str = None
     output_path: str = None
-    layer_mapping: str = None
+    layer_mapping: Any = None
     framework: str = None
     overflow_check: bool = False
     fuzzy_match: bool = False
@@ -145,7 +146,7 @@ class TestGraphComparator(unittest.TestCase):
         mock_get_compare_mode.return_value = GraphConst.SUMMARY_COMPARE
         mock_mapping_match.return_value = (node_b, [], [])
         mock_compare_node.return_value = ['result']
-        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), True)
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path, layer_mapping=True), True)
         comparator.mapping_dict = True
         comparator._compare_nodes(node_n)
         self.assertEqual(node_n.matched_node_link, ['Tensor.b.0'])

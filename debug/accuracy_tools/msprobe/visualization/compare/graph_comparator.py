@@ -30,6 +30,7 @@ class GraphComparator:
         self.graph_b = graphs[1]
         self._parse_param(dump_path_param, args.output_path)
         self.framework = args.framework
+        self.layer_mapping = args.layer_mapping
         self.mapping_dict = mapping_dict
         self.fuzzy_match = args.fuzzy_match
         self.pattern = re.compile(r'\.\d+\.')
@@ -76,7 +77,7 @@ class GraphComparator:
         递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
         这里采用先序遍历，好处在于当这个节点被比较时，他的先序已经被匹配，这可以为后续的模糊匹配提供重要信息
         """
-        if self.mapping_dict:
+        if self.layer_mapping:
             node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_dict)
             if node_b:
                 ancestors_n.append(node_n.id)

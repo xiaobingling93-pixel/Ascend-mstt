@@ -59,11 +59,10 @@ def _compare_graph(input_param, args):
         'stack_json_path': stack_path_n,
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
-    mapping_dict = None
+    mapping_dict = {}
     if args.layer_mapping:
-        yaml_path = FileChecker(args.layer_mapping, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
         try:
-            mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, yaml_path)
+            mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, args.layer_mapping)
         except Exception:
             logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
 
