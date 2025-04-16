@@ -35,7 +35,6 @@ from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
-from numpy.core.multiarray import shares_memory
 
 
 class FileChecker:
@@ -305,7 +304,7 @@ def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
     print_log = False
-    with open(os.path.join(dirpath, 'msprobe_lockfile'), 'w') as f:
+    with open(os.path.join('/tmp', 'msprobe_lockfile'), 'w') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         shm = SharedMemory(name='msprobe_common_file_util_shared_memory')
         new_data = pickle.loads(shm.buf[:])
@@ -723,11 +722,9 @@ if mp.current_process().name == 'MainProcess':
 
 def cleanup():
     if mp.current_process().name == 'MainProcess':
-        dirpaths = pickle.loads(_shm.buf[:]).get('others_writable_file_names', set())
-        for dirpath in dirpaths:
-            lock_file_path = os.path.join(dirpath, 'msprobe_lockfile')
-            if os.path.exists(lock_file_path):
-                os.remove(lock_file_path)
+        lock_file_path = os.path.join('/tmp', 'msprobe_lockfile')
+        if os.path.exists(lock_file_path):
+            os.remove(lock_file_path)
         _shm.close()
         _shm.unlink()
 
