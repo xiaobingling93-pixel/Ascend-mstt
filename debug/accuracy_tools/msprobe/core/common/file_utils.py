@@ -25,11 +25,17 @@ from dateutil import parser
 import yaml
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
+import atexit
+import pickle
+
+from multiprocessing.shared_memory import SharedMemory
 
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
+from numpy.core.multiarray import shares_memory
 
 
 class FileChecker:
@@ -298,12 +304,26 @@ def check_path_before_create(path):
 def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    if check_others_writable(dirpath):
-        logger.warning(f"The directory is writable by others: {dirpath}.")
-    try:
-        check_path_owner_consistent(dirpath)
-    except FileCheckException:
-        logger.warning(f"The directory {dirpath} is not yours.")
+    print_log = False
+    with open(os.path.join(dirpath, 'msprobe_lockfile'), 'w') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        shm = SharedMemory(name='msprobe_common_file_util_shared_memory')
+        new_data = pickle.loads(shm.buf[:])
+        exist_dirpaths = new_data.get('others_writable_file_names', set())
+        if dirpath not in exist_dirpaths:
+            print_log = True
+            exist_dirpaths.add(dirpath)
+            new_data['others_writable_file_names'] = exist_dirpaths
+            new_data_bytes = pickle.dumps(new_data)
+            shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
+        fcntl.flock(f, fcntl.LOCK_UN)
+    if print_log:
+        if check_others_writable(dirpath):
+            logger.warning(f"The directory is writable by others: {dirpath}.")
+        try:
+            check_path_owner_consistent(dirpath)
+        except FileCheckException:
+            logger.warning(f"The directory {dirpath} is not yours.")
     
 
 def check_file_or_directory_path(path, isdir=False):
@@ -693,3 +713,23 @@ def read_xlsx(file_path):
         logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
         raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
     return result_df
+
+
+if mp.current_process().name == 'MainProcess':
+    _shm = SharedMemory(create=True, size=1024*1024, name='msprobe_common_file_util_shared_memory')
+    _data = pickle.dumps({'others_writable_file_names': set()})
+    _shm.buf[0:len(_data)] = bytearray(_data)
+
+
+def cleanup():
+    if mp.current_process().name == 'MainProcess':
+        dirpaths = pickle.loads(_shm.buf[:]).get('others_writable_file_names', set())
+        for dirpath in dirpaths:
+            lock_file_path = os.path.join(dirpath, 'msprobe_lockfile')
+            if os.path.exists(lock_file_path):
+                os.remove(lock_file_path)
+        _shm.close()
+        _shm.unlink()
+
+
+atexit.register(cleanup)
