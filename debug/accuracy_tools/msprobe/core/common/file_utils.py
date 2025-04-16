@@ -20,15 +20,14 @@ import stat
 import json
 import re
 import shutil
+import atexit
+import pickle
+import multiprocessing as mp
 from datetime import datetime, timezone
 from dateutil import parser
 import yaml
 import numpy as np
 import pandas as pd
-import multiprocessing as mp
-import atexit
-import pickle
-
 from multiprocessing.shared_memory import SharedMemory
 
 from msprobe.core.common.decorator import recursion_depth_decorator
@@ -715,7 +714,7 @@ def read_xlsx(file_path):
 
 
 if mp.current_process().name == 'MainProcess':
-    _shm = SharedMemory(create=True, size=1024*1024, name='msprobe_common_file_util_shared_memory')
+    _shm = SharedMemory(create=True, size=1024 * 1024, name='msprobe_common_file_util_shared_memory')
     _data = pickle.dumps({'others_writable_file_names': set()})
     _shm.buf[0:len(_data)] = bytearray(_data)
 
