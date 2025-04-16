@@ -176,6 +176,10 @@ class BaseDataProcessor:
             else:
                 raise ValueError("set_value_into_nested_structure failed: "
                                  "invalid data_structure type or invalid index")
+            
+    @staticmethod
+    def is_distributed_op(module):
+        return getattr(module, "op_is_distributed", False)
 
     @staticmethod
     def _convert_numpy_to_builtin(arg):
@@ -350,6 +354,8 @@ class BaseDataProcessor:
         return api_info_struct
 
     def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        if self.is_distributed_op(module):
+            module_input_output.update_output_with_args_and_kwargs()
         api_info_struct = {}
         # check whether data_mode contains forward or input
         if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):

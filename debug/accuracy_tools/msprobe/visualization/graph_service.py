@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -15,13 +15,11 @@
 
 import os
 import time
-import json
 from multiprocessing import cpu_count, Pool
 from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
                                             check_file_or_directory_path, load_json)
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
-from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
@@ -29,6 +27,7 @@ from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
+from msprobe.core.common.utils import detect_framework_by_dump_json
 from msprobe.visualization.graph.distributed_analyzer import DistributedAnalyzer
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -41,14 +40,22 @@ def _compare_graph(graph_n: GraphInfo, graph_b: GraphInfo, input_param, args):
         'stack_json_path': graph_n.stack_path,
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
-    mapping_dict = None
+    mapping_dict = {}
     if args.layer_mapping:
-        yaml_path = FileChecker(args.layer_mapping, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
         try:
-            mapping_dict = generate_api_mapping_by_layer_mapping(graph_n.data_path, graph_b.data_path, yaml_path)
+            mapping_dict = generate_api_mapping_by_layer_mapping(graph_n.data_path, graph_b.data_path,
+                                                                 args.layer_mapping)
         except Exception:
             logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
-    graph_comparator = GraphComparator([graph_n.graph, graph_b.graph], dump_path_param, args, mapping_dict=mapping_dict)
+    is_cross_framework = detect_framework_by_dump_json(graph_n.data_path) != \
+                         detect_framework_by_dump_json(graph_b.data_path)
+    if is_cross_framework and not args.layer_mapping:
+        logger.error('The cross_frame graph comparison failed. '
+                     'Please specify -lm or --layer_mapping when performing cross_frame graph comparison.')
+        raise CompareException(CompareException.CROSS_FRAME_ERROR)
+
+    graph_comparator = GraphComparator([graph_n.graph, graph_b.graph], dump_path_param, args, is_cross_framework,
+                                       mapping_dict=mapping_dict)
     graph_comparator.compare()
     return graph_comparator
 
@@ -205,15 +212,15 @@ def _compare_graph_ranks(input_param, args, step=None):
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
             output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
-            mp_res_dict[output_file_name] = pool.apply_async(_run_build_graph_compare, 
-                                                             args=(input_param, serializable_args, nr, br), 
+            mp_res_dict[output_file_name] = pool.apply_async(_run_build_graph_compare,
+                                                             args=(input_param, serializable_args, nr, br),
                                                              error_callback=err_call)
-        
+
         for output_file_name, mp_res in mp_res_dict.items():
             # 暂存所有rank的graph，用于匹配rank间的分布式节点
             compare_graph_results.append(_run_graph_compare(mp_res.get(), input_param, serializable_args,
                                                             output_file_name))
-    
+
         # 匹配rank间的分布式节点
         if len(compare_graph_results) > 1:
             DistributedAnalyzer({obj.rank: obj.graph_n for obj in compare_graph_results},
@@ -224,8 +231,8 @@ def _compare_graph_ranks(input_param, args, step=None):
         export_res_task_list = []
         create_directory(args.output_path)
         for result in compare_graph_results:
-            export_res_task_list.append(pool.apply_async(_export_compare_graph_result, 
-                                                    args=(serializable_args, result), 
+            export_res_task_list.append(pool.apply_async(_export_compare_graph_result,
+                                                    args=(serializable_args, result),
                                                     error_callback=err_call))
         export_res_list = [res.get() for res in export_res_task_list]
         if any(export_res_list):
@@ -267,7 +274,7 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
 
         build_graph_tasks = []
         for rank in ranks:
-            build_graph_tasks.append(pool.apply_async(_run_build_graph_single, 
+            build_graph_tasks.append(pool.apply_async(_run_build_graph_single,
                                                       args=(dump_ranks_path, rank, step, serializable_args),
                                                       error_callback=err_call))
         build_graph_results = [task.get() for task in build_graph_tasks]
