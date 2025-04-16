@@ -422,8 +422,8 @@ def _op_generator_parser(parser):
 
 def parse_json_config(json_file_path):
     if not json_file_path:
-        config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        json_file_path = os.path.join(config_dir, "config.json")
+        config_dir = os.path.dirname(os.path.realpath(__file__))
+        json_file_path = os.path.join(config_dir, "config_op.json")
     json_config = load_json(json_file_path)
     common_config = CommonConfig(json_config)
     return common_config
