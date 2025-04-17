@@ -725,7 +725,7 @@ def is_shm_exists(name):
         return False
 
 
-if mp.current_process().name == Const.MAIN_PROCESS_NAME and is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
+if mp.current_process().name == Const.MAIN_PROCESS_NAME and not is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
     _shm = SharedMemory(create=True, size=1024 * 1024, name=FileCheckConst.DEDUP_LOG_SHM_NAME)
     _data = pickle.dumps({'others_writable_file_names': set()})
     _shm.buf[0:len(_data)] = bytearray(_data)
