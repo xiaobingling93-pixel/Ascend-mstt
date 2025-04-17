@@ -15,6 +15,7 @@
 
 import csv
 import fcntl
+import io
 import os
 import stat
 import json
@@ -23,17 +24,17 @@ import shutil
 import atexit
 import pickle
 import multiprocessing as mp
+from multiprocessing.shared_memory import SharedMemory
 from datetime import datetime, timezone
 from dateutil import parser
 import yaml
 import numpy as np
 import pandas as pd
-from multiprocessing.shared_memory import SharedMemory
 
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, Const
 
 
 class FileChecker:
@@ -303,18 +304,20 @@ def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
     print_log = False
-    with open(os.path.join('/tmp', 'msprobe_lockfile'), 'w') as f:
+    with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
-        shm = SharedMemory(name='msprobe_common_file_util_shared_memory')
-        new_data = pickle.loads(shm.buf[:])
-        exist_dirpaths = new_data.get('others_writable_file_names', set())
-        if dirpath not in exist_dirpaths:
-            print_log = True
-            exist_dirpaths.add(dirpath)
-            new_data['others_writable_file_names'] = exist_dirpaths
-            new_data_bytes = pickle.dumps(new_data)
-            shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
-        fcntl.flock(f, fcntl.LOCK_UN)
+        try:
+            shm = SharedMemory(name='msprobe_common_file_util_shared_memory')
+            new_data = safe_loads(shm.buf[:])
+            exist_dirpaths = new_data.get('others_writable_file_names', set())
+            if dirpath not in exist_dirpaths:
+                print_log = True
+                exist_dirpaths.add(dirpath)
+                new_data['others_writable_file_names'] = exist_dirpaths
+                new_data_bytes = pickle.dumps(new_data)
+                shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
     if print_log:
         if check_others_writable(dirpath):
             logger.warning(f"The directory is writable by others: {dirpath}.")
@@ -713,19 +716,30 @@ def read_xlsx(file_path):
     return result_df
 
 
-if mp.current_process().name == 'MainProcess':
+if mp.current_process().name == Const.MAIN_PROCESS_NAME:
     _shm = SharedMemory(create=True, size=1024 * 1024, name='msprobe_common_file_util_shared_memory')
     _data = pickle.dumps({'others_writable_file_names': set()})
     _shm.buf[0:len(_data)] = bytearray(_data)
 
 
 def cleanup():
-    if mp.current_process().name == 'MainProcess':
-        lock_file_path = os.path.join('/tmp', 'msprobe_lockfile')
-        if os.path.exists(lock_file_path):
-            os.remove(lock_file_path)
+    if mp.current_process().name == Const.MAIN_PROCESS_NAME:
+        if os.path.exists(FileCheckConst.MSPROBE_LOCKFILE_PATH):
+            os.remove(FileCheckConst.MSPROBE_LOCKFILE_PATH)
         _shm.close()
         _shm.unlink()
 
 
 atexit.register(cleanup)
+
+
+class SafeUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module in FileCheckConst.UNPICKLE_WHITELIST and name in FileCheckConst.UNPICKLE_WHITELIST[module]:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(f'Unpickling {module}.{name} object is illegal!')
+
+
+def safe_loads(data):
+    with io.BytesIO(data) as buff:
+        return SafeUnpickler(buff).load()

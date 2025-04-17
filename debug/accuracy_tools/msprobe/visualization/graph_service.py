@@ -142,7 +142,7 @@ def _run_build_graph_single(dump_ranks_path, rank, step, args):
         except Exception as e:
             logger.error('The folder name format is incorrect, expected rank+number.')
             raise CompareException(CompareException.INVALID_PATH_ERROR) from e
-    logger.info(f'Building graph for {rank} finished.')
+    logger.info(f'Building graph for step: {step}, rank: {rank} finished.')
     return result
 
 
