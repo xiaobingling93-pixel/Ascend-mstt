@@ -411,19 +411,14 @@ class OperatorScriptGenerator:
         return kwargs_dict_generator
 
 
-
 def _op_generator_parser(parser):
-    parser.add_argument("-i", "--config_input", dest="config_input", default='', type=str,
-                        help="<Optional> Path of config json file", required=True)
+    parser.add_argument("-i", "--config_input", dest="config_input", type=str,
+                        help="<Required> Path of config json file", required=True)
     parser.add_argument("-o", "--api_output_path", dest="api_output_path", type=str,
-                        help="<Required> Path of extract api_name.json.",
-                        required=True)
+                        help="<Required> Path of extract api_name.json.", required=True)
 
 
 def parse_json_config(json_file_path):
-    if not json_file_path:
-        config_dir = os.path.dirname(os.path.realpath(__file__))
-        json_file_path = os.path.join(config_dir, "config_op.json")
     json_config = load_json(json_file_path)
     common_config = CommonConfig(json_config)
     return common_config
