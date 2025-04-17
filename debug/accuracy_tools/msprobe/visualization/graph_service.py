@@ -227,7 +227,7 @@ def _compare_graph_ranks(input_param, args, step=None):
                                                               args=(input_param, serializable_args, nr, br),
                                                               error_callback=err_call)
 
-        mp_res_dict = {k: v.get() for k, v in mp_task_dict}
+        mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
         # 暂存所有rank的graph，用于匹配rank间的分布式节点
         # 包含真实数据时串行，不包含时并行
         if is_real_data_compare(mp_res_dict.values()):
