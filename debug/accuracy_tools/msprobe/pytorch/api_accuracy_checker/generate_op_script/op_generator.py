@@ -419,6 +419,8 @@ def _op_generator_parser(parser):
 
 
 def parse_json_config(json_file_path):
+    if not json_file_path:
+        raise Exception("config_input path can not be empty, please check.")
     json_config = load_json(json_file_path)
     common_config = CommonConfig(json_config)
     return common_config
