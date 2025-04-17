@@ -463,7 +463,7 @@ class TestCheckCrtValid(TestCase):
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
     @patch('fcntl.flock', new=none_flock)
-    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime, mock_flock):
+    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
         mock_cert.get_notAfter.return_value = b'20230101'
@@ -478,7 +478,7 @@ class TestCheckCrtValid(TestCase):
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
     @patch('fcntl.flock', new=none_flock)
-    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime, mock_flock):
+    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
         mock_cert.get_notAfter.return_value = b'20230101'
