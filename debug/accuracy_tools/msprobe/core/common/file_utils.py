@@ -728,22 +728,20 @@ def is_shm_exists(name):
     except FileNotFoundError:
         return False
 
-
+_shm = None
 if mp.current_process().name == Const.MAIN_PROCESS_NAME and not is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
     _shm = SharedMemory(create=True, size=1024 * 1024, name=FileCheckConst.DEDUP_LOG_SHM_NAME)
     _data = pickle.dumps({})
     _shm.buf[0:len(_data)] = bytearray(_data)
-    _shm.close()
 
 
 def cleanup():
     if mp.current_process().name == Const.MAIN_PROCESS_NAME:
         if os.path.exists(FileCheckConst.MSPROBE_LOCKFILE_PATH):
             os.remove(FileCheckConst.MSPROBE_LOCKFILE_PATH)
-        if is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
-            shm = SharedMemory(name=FileCheckConst.DEDUP_LOG_SHM_NAME)
-            shm.close()
-            shm.unlink()
+        if _shm:
+            _shm.close()
+            _shm.unlink()
 
 
 atexit.register(cleanup)
