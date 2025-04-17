@@ -307,7 +307,7 @@ def check_dirpath_before_read(path):
     with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         try:
-            shm = SharedMemory(name='msprobe_common_file_util_shared_memory')
+            shm = SharedMemory(name=FileCheckConst.DEDUP_LOG_SHM_NAME)
             new_data = safe_loads(shm.buf[:])
             exist_dirpaths = new_data.get('others_writable_file_names', set())
             if dirpath not in exist_dirpaths:
@@ -317,6 +317,7 @@ def check_dirpath_before_read(path):
                 new_data_bytes = pickle.dumps(new_data)
                 shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
         finally:
+            shm.close()
             fcntl.flock(f, fcntl.LOCK_UN)
     if print_log:
         if check_others_writable(dirpath):
@@ -716,8 +717,16 @@ def read_xlsx(file_path):
     return result_df
 
 
-if mp.current_process().name == Const.MAIN_PROCESS_NAME:
-    _shm = SharedMemory(create=True, size=1024 * 1024, name='msprobe_common_file_util_shared_memory')
+def is_shm_exists(name):
+    try:
+        SharedMemory(create=False, name=name).close()
+        return True
+    except FileNotFoundError:
+        return False
+
+
+if mp.current_process().name == Const.MAIN_PROCESS_NAME and is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
+    _shm = SharedMemory(create=True, size=1024 * 1024, name=FileCheckConst.DEDUP_LOG_SHM_NAME)
     _data = pickle.dumps({'others_writable_file_names': set()})
     _shm.buf[0:len(_data)] = bytearray(_data)
 

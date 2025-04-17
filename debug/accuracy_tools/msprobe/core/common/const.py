@@ -623,6 +623,7 @@ class FileCheckConst:
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
     UNPICKLE_WHITELIST = {'builtins': ['int', 'str', 'list', 'dict', 'set']}
     MSPROBE_LOCKFILE_PATH = os.path.join('/tmp', 'msprobe_lockfile')
+    DEDUP_LOG_SHM_NAME = 'msprobe_common_file_util_shared_memory'
 
 
 class OverflowConst:
