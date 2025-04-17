@@ -440,6 +440,10 @@ class TestUtils(TestCase):
         self.assertFalse(is_json_file(file_path_false))
 
 
+def none_flock(*args, **kwargs):
+    pass
+
+
 class TestCheckCrtValid(TestCase):
     """
     Test the check_crt_valid function.
@@ -458,7 +462,7 @@ class TestCheckCrtValid(TestCase):
     @patch('msprobe.core.common.file_utils.datetime')
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    @patch('fcntl.flock')
+    @patch('fcntl.flock', new=none_flock)
     def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime, mock_flock):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
@@ -466,7 +470,6 @@ class TestCheckCrtValid(TestCase):
         mock_cert.has_expired.return_value = False
         mock_load_certificate.return_value = mock_cert
         mock_datetime.now.return_value = datetime(2022, 10, 1)
-        mock_flock.side_effect = lambda fd, operation: None
 
         check_crt_valid(self.cert_file_path)
         mock_load_certificate.assert_called_once_with(OpenSSL.crypto.FILETYPE_PEM, 'cert_data')
@@ -474,7 +477,7 @@ class TestCheckCrtValid(TestCase):
     @patch('datetime.datetime')
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    @patch('fcntl.flock')
+    @patch('fcntl.flock', new=none_flock)
     def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime, mock_flock):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
@@ -482,7 +485,6 @@ class TestCheckCrtValid(TestCase):
         mock_cert.has_expired.return_value = True
         mock_load_certificate.return_value = mock_cert
         mock_datetime.now.return_value = datetime(2022, 10, 1, tzinfo=timezone.utc)
-        mock_flock.side_effect = lambda fd, operation: None
 
         with self.assertRaises(RuntimeError) as context:
             check_crt_valid(self.cert_file_path)
@@ -490,6 +492,7 @@ class TestCheckCrtValid(TestCase):
 
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
+    @patch('fcntl.flock', new=none_flock)
     def test_check_crt_valid_exception(self, mock_open_, mock_load_certificate):
         mock_load_certificate.side_effect = Exception('Test Exception')
 
