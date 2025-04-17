@@ -303,23 +303,7 @@ def check_path_before_create(path):
 def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    print_log = False
-    with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        try:
-            shm = SharedMemory(name=FileCheckConst.DEDUP_LOG_SHM_NAME)
-            new_data = safe_loads(shm.buf[:])
-            exist_dirpaths = new_data.get('others_writable_file_names', set())
-            if dirpath not in exist_dirpaths:
-                print_log = True
-                exist_dirpaths.add(dirpath)
-                new_data['others_writable_file_names'] = exist_dirpaths
-                new_data_bytes = pickle.dumps(new_data)
-                shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
-        finally:
-            shm.close()
-            fcntl.flock(f, fcntl.LOCK_UN)
-    if print_log:
+    if dedup_log('check_dirpath_before_read', dirpath):
         if check_others_writable(dirpath):
             logger.warning(f"The directory is writable by others: {dirpath}.")
         try:
@@ -717,6 +701,26 @@ def read_xlsx(file_path):
     return result_df
 
 
+def dedup_log(func_name, dedup_name):
+    print_log = False
+    with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            shm = SharedMemory(name=FileCheckConst.DEDUP_LOG_SHM_NAME)
+            new_data = safe_loads(shm.buf[:])
+            exist_names = new_data.get(func_name, set())
+            if dedup_name not in exist_names:
+                print_log = True
+                exist_names.add(dedup_name)
+                new_data[func_name] = exist_names
+                new_data_bytes = pickle.dumps(new_data)
+                shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
+        finally:
+            shm.close()
+            fcntl.flock(f, fcntl.LOCK_UN)
+    return print_log
+
+
 def is_shm_exists(name):
     try:
         SharedMemory(create=False, name=name).close()
@@ -727,16 +731,19 @@ def is_shm_exists(name):
 
 if mp.current_process().name == Const.MAIN_PROCESS_NAME and not is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
     _shm = SharedMemory(create=True, size=1024 * 1024, name=FileCheckConst.DEDUP_LOG_SHM_NAME)
-    _data = pickle.dumps({'others_writable_file_names': set()})
+    _data = pickle.dumps({})
     _shm.buf[0:len(_data)] = bytearray(_data)
+    _shm.close()
 
 
 def cleanup():
     if mp.current_process().name == Const.MAIN_PROCESS_NAME:
         if os.path.exists(FileCheckConst.MSPROBE_LOCKFILE_PATH):
             os.remove(FileCheckConst.MSPROBE_LOCKFILE_PATH)
-        _shm.close()
-        _shm.unlink()
+        if is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
+            shm = SharedMemory(name=FileCheckConst.DEDUP_LOG_SHM_NAME)
+            shm.close()
+            shm.unlink()
 
 
 atexit.register(cleanup)

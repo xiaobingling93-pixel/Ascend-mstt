@@ -458,13 +458,15 @@ class TestCheckCrtValid(TestCase):
     @patch('msprobe.core.common.file_utils.datetime')
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime):
+    @patch('fcntl.flock')
+    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime, mock_flock):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
         mock_cert.get_notAfter.return_value = b'20230101'
         mock_cert.has_expired.return_value = False
         mock_load_certificate.return_value = mock_cert
         mock_datetime.now.return_value = datetime(2022, 10, 1)
+        mock_flock.side_effect = lambda fd, operation: None
 
         check_crt_valid(self.cert_file_path)
         mock_load_certificate.assert_called_once_with(OpenSSL.crypto.FILETYPE_PEM, 'cert_data')
@@ -472,13 +474,15 @@ class TestCheckCrtValid(TestCase):
     @patch('datetime.datetime')
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime):
+    @patch('fcntl.flock')
+    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime, mock_flock):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
         mock_cert.get_notAfter.return_value = b'20230101'
         mock_cert.has_expired.return_value = True
         mock_load_certificate.return_value = mock_cert
         mock_datetime.now.return_value = datetime(2022, 10, 1, tzinfo=timezone.utc)
+        mock_flock.side_effect = lambda fd, operation: None
 
         with self.assertRaises(RuntimeError) as context:
             check_crt_valid(self.cert_file_path)
