@@ -19,7 +19,7 @@ from multiprocessing import cpu_count, Pool
 from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
                                             check_file_or_directory_path, load_json)
 from msprobe.core.common.const import FileCheckConst, Const
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, get_dump_mode
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
@@ -189,6 +189,17 @@ def _export_build_graph_result(args, result):
         return output_file_name
 
 
+def is_real_data_compare(graph_task_infos):
+    has_real_data = False
+    for graph_task_info in graph_task_infos:
+        dump_path_param = {
+            'npu_json_path': graph_task_info.graph_info_n.data_path,
+            'bench_json_path': graph_task_info.graph_info_b.data_path
+        }
+        has_real_data |= get_dump_mode(dump_path_param) == Const.ALL
+    return has_real_data
+
+
 def _compare_graph_ranks(input_param, args, step=None):
     dump_rank_n = input_param.get('npu_path')
     dump_rank_b = input_param.get('bench_path')
@@ -197,7 +208,7 @@ def _compare_graph_ranks(input_param, args, step=None):
     if npu_ranks != bench_ranks:
         logger.error('The number of ranks in the two runs are different. Unable to match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    mp_res_dict = {}
+    mp_task_dict = {}
     compare_graph_results = []
     with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
         def err_call(err):
@@ -212,14 +223,25 @@ def _compare_graph_ranks(input_param, args, step=None):
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
             output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
-            mp_res_dict[output_file_name] = pool.apply_async(_run_build_graph_compare,
-                                                             args=(input_param, serializable_args, nr, br),
-                                                             error_callback=err_call)
+            mp_task_dict[output_file_name] = pool.apply_async(_run_build_graph_compare,
+                                                              args=(input_param, serializable_args, nr, br),
+                                                              error_callback=err_call)
 
-        for output_file_name, mp_res in mp_res_dict.items():
-            # 暂存所有rank的graph，用于匹配rank间的分布式节点
-            compare_graph_results.append(_run_graph_compare(mp_res.get(), input_param, serializable_args,
-                                                            output_file_name))
+        mp_res_dict = {k: v.get() for k, v in mp_task_dict}
+        # 暂存所有rank的graph，用于匹配rank间的分布式节点
+        # 包含真实数据时串行，不包含时并行
+        if is_real_data_compare(mp_res_dict.values()):
+            for output_file_name, mp_res in mp_res_dict.items():
+                compare_graph_results.append(_run_graph_compare(mp_res, input_param, serializable_args,
+                                                                output_file_name))
+        else:
+            compare_graph_tasks = []
+            for output_file_name, mp_res in mp_res_dict.items():
+                compare_graph_tasks.append(pool.apply_async(_run_graph_compare,
+                                                            args=(mp_res, input_param, serializable_args,
+                                                                  output_file_name,),
+                                                            error_callback=err_call))
+            compare_graph_results = [compare_graph_task.get() for compare_graph_task in compare_graph_tasks]
 
         # 匹配rank间的分布式节点
         if len(compare_graph_results) > 1:
@@ -232,8 +254,8 @@ def _compare_graph_ranks(input_param, args, step=None):
         create_directory(args.output_path)
         for result in compare_graph_results:
             export_res_task_list.append(pool.apply_async(_export_compare_graph_result,
-                                                    args=(serializable_args, result),
-                                                    error_callback=err_call))
+                                                         args=(serializable_args, result),
+                                                         error_callback=err_call))
         export_res_list = [res.get() for res in export_res_task_list]
         if any(export_res_list):
             failed_names = list(filter(lambda x: x, export_res_list))
