@@ -311,7 +311,7 @@ def _graph_service_parser(parser):
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
-    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<Optional> The layer mapping file path.", required=False)
     parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
                         help="<Optional> whether open overflow_check for graph.", required=False)
