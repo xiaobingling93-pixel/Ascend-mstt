@@ -102,19 +102,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             logger.warning("Async dump do not support complex data!")
             return tensor_stat
         elif data.dtype == torch.bool:
-            tensor_stat.stack_tensor_stat = (["Max", "Min"], torch.stack(
-                [torch.any(data), torch.all(data)]))
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([data, data, data, data]))
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         else:
-            if not data.is_floating_point() or data.dtype == torch.float64:
+            if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([
-                torch.max(data),
-                torch.min(data),
-                torch.mean(data),
-                torch.norm(data)
-            ]))
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
         return tensor_stat
 
     @staticmethod
@@ -127,17 +125,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.min = np.min(data_abs).item()
             tensor_stat.mean = np.mean(data_abs).item()
         elif data.dtype == torch.bool:
-            tensor_stat.max = torch.any(data).item()
-            tensor_stat.min = torch.all(data).item()
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         else:
-            if not data.is_floating_point() or data.dtype == torch.float64:
+            if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
-            tensor_stat.max = torch.max(data).item()
-            tensor_stat.min = torch.min(data).item()
-            tensor_stat.mean = torch.mean(data).item()
-            tensor_stat.norm = torch.norm(data).item()
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
         return tensor_stat
 
     @staticmethod
@@ -272,22 +270,17 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_json.update({'type': 'torch.Tensor'})
         tensor_json.update({'dtype': dtype})
         tensor_json.update({"shape": tensor.shape})
-        if tensor_stat.stack_tensor_stat is None:
-            tensor_json.update({"Max": tensor_stat.max})
-            tensor_json.update({"Min": tensor_stat.min})
-            tensor_json.update({"Mean": tensor_stat.mean})
-            tensor_json.update({"Norm": tensor_stat.norm})
-            tensor_json.update({"requires_grad": tensor.requires_grad})
-            if tensor_stat.max is not None:
-                if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
-                    tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
-            if tensor_stat.min is not None:
-                if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
-                    tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
 
-        else:
-            tensor_json.update({"requires_grad": tensor.requires_grad})
-            tensor_json.update({"tensor_stat": tensor_stat.stack_tensor_stat})
+        stat_values = [
+            tensor_stat.max,
+            tensor_stat.min,
+            tensor_stat.mean,
+            tensor_stat.norm
+        ]
+        placeholder_index = self.data_writer.append_stat_to_buffer(stat_values)
+
+        tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
+        tensor_json.update({"requires_grad": tensor.requires_grad})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
@@ -415,10 +408,22 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             raise RuntimeError(f"overflow check failed") from e
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if tensor_json['Max'] is None or tensor_json['Min'] is None:
+        tensor_stat_index = tensor_json.get(Const.TENSOR_STAT_INDEX)
+        if tensor_stat_index is None:
+            logger.warning("tensor_stat_index does not exist in tensor_json.")
             return
-        self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
-                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
+        max_tensor = self.data_writer.get_buffer_values_max(tensor_stat_index)
+        min_tensor = self.data_writer.get_buffer_values_min(tensor_stat_index)
+
+        if max_tensor is None or min_tensor is None:
+            return
+
+        if torch.isinf(max_tensor) or torch.isnan(max_tensor):
+            self.has_overflow = True
+            return
+
+        if torch.isinf(min_tensor) or torch.isnan(min_tensor):
+            self.has_overflow = True
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)

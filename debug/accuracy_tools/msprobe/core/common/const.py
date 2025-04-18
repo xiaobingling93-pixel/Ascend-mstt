@@ -216,6 +216,7 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    TENSOR_STAT_INDEX = 'tensor_stat_index'
 
     CODE_STACK = 'Code Stack'
     OP_NAME = 'Op Name'
