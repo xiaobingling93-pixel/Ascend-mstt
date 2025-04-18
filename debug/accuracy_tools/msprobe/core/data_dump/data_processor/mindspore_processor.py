@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+import hashlib
 import zlib
 
 import mindspore as ms
 from mindspore import mint, ops, hal
+from mindspore.mint import distributed
 from mindspore._c_expression.typing import Number
 import numpy as np
 
@@ -36,7 +37,7 @@ except ImportError:
 
 
 class MindsporeDataProcessor(BaseDataProcessor):
-    mindspore_special_type = tuple([ms.Tensor, Number])
+    mindspore_special_type = tuple([ms.Tensor, Number, distributed.P2POp])
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -104,6 +105,12 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def is_hookable_element(element):
         return hasattr(element, "register_hook") and callable(element.register_hook)
 
+    @staticmethod
+    def process_group_hash(arg):
+        group_ranks = distributed.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
+
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.mindspore_special_type
@@ -125,18 +132,33 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if suffix_stack and suffix_stack[-1] in self.mindspore_object_key:
             return self.mindspore_object_key[suffix_stack[-1]](element)
 
-        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
-        if converted_numpy is not element:
-            return {"type": numpy_type, "value": converted_numpy}
-        if isinstance(element, Number):
-            return self.analyze_dtype_in_kwargs(element)
-        if isinstance(element, ms.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, np.ndarray):
-            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
-            return self._analyze_builtin(element)
+        suffix_str = Const.SEP.join(str(s) for s in suffix_stack)
+        type_analyzer = [
+            (MindsporeDataProcessor.builtin_type, self._analyze_builtin),
+            (ms.Tensor, lambda e: self._analyze_tensor(e, suffix_str)),
+            (Number, self.analyze_dtype_in_kwargs),
+            (MindsporeDataProcessor.np_type[:-1], self._analyze_numpy),
+            (np.ndarray, lambda e: self._analyze_ndarray(e, suffix_str)),
+            (distributed.P2POp, lambda e: self._analyze_p2pop(e, suffix_str))
+        ]
+        for type_key, analyze_fn in type_analyzer:
+            if isinstance(element, type_key):
+                return analyze_fn(element)
         return {}
+
+    def _analyze_p2pop(self, arg, suffix):
+        p2pop_info = {"class_type": "mindspore.mint.distributed.P2POp"}
+        try:
+            tensor_info = self._analyze_tensor(arg.tensor, suffix)
+            p2pop_info.update({"tensor": tensor_info})
+            p2pop_info.update({"op": arg.op})
+            p2pop_info.update({"peer": arg.peer})
+            p2pop_info.update({"tag": arg.tag})
+            group_id = self.process_group_hash(arg.group) if arg.group else None
+            p2pop_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to parse the P2POp content with error info: {e}.")
+        return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
@@ -179,10 +201,10 @@ class TensorDataProcessor(MindsporeDataProcessor):
             save_tensor_as_npy(tensor, file_path)
         return single_arg
 
-    def _analyze_numpy(self, ndarray, suffix):
+    def _analyze_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_npy(ndarray, file_path)
-        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json = super()._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
 
