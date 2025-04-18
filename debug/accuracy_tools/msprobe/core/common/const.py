@@ -573,14 +573,6 @@ class CompareConst:
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
-    CMP_KEY = 'compare_key'
-    CMP_SHAPE = 'compare_shape'
-
-    MATCH_RESULT_COLUMNS = [
-        'op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
-        CMP_KEY, CMP_SHAPE,
-        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
-    ]
 
     CMP_KEY = 'compare_key'
     CMP_SHAPE = 'compare_shape'
