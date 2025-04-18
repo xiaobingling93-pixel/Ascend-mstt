@@ -53,42 +53,6 @@ cross_dtype_mapping = {
     "torch.complex128": "complex",
 }
 
-cross_dtype_mapping_2 = {
-    "Int8": "int",
-    "torch.int8": "int",
-    "UInt8": "int",
-    "torch.uint8": "int",
-    "Int16": "int",
-    "torch.int16": "int",
-    "UInt16": "int",
-    "torch.uint16": "int",
-    "Int32": "int",
-    "torch.int32": "int",
-    "UInt32": "int",
-    "torch.uint32": "int",
-    "Int64": "int",
-    "torch.int64": "int",
-    "UInt64": "int",
-    "torch.uint64": "int",
-
-    "Float16": "float",
-    "torch.float16": "float",
-    "Float32": "float",
-    "torch.float32": "float",
-    "Float64": "float",
-    "torch.float64": "float",
-    "BFloat16": "float",
-    "torch.bfloat16": "float",
-
-    "Bool": "bool",
-    "torch.bool": "bool",
-
-    "Complex64": "complex",
-    "torch.complex64": "complex",
-    "Complex128": "complex",
-    "torch.complex128": "complex",
-}
-
 
 def check_dump_json_str(op_data, op_name):
     input_list = op_data.get(Const.INPUT_ARGS, None) if op_data.get(Const.INPUT_ARGS, None) else op_data.get(
