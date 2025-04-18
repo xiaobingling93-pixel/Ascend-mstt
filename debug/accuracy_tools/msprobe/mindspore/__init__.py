@@ -25,5 +25,3 @@ except ImportError:
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
 from msprobe.mindspore.common.utils import seed_all, MsprobeStep, MsprobeInitStep
 from msprobe.mindspore.monitor.module_hook import TrainerMon
-
-os.environ["MS_HOOK_ENABLE"] = "on"

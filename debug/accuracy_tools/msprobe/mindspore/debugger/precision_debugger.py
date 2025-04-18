@@ -85,6 +85,7 @@ class PrecisionDebugger:
         self.config = DebuggerConfig(common_config, task_config)
 
         if self._need_msprobe_c() and _msprobe_c:
+            os.environ["MS_HOOK_ENABLE"] = "on"
             _msprobe_c._PrecisionDebugger(framework="MindSpore", config_path=config_path)
 
         self.config.execution_mode = self._get_execution_mode()
