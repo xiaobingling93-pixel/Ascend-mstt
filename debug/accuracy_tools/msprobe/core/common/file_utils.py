@@ -267,6 +267,7 @@ def make_dir(dir_path):
     file_check.common_check()
 
 
+@recursion_depth_decorator('msprobe.core.common.file_utils.create_directory', max_depth=16)
 def create_directory(dir_path):
     """
     Function Description:

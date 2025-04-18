@@ -251,6 +251,7 @@ class Const:
     MS_API_TYPE_MINT = "mint.ops"
     MS_API_TYPE_MINT_FUNC = "mint.nn.functional"
     MS_API_TYPE_COM = "communication.comm_func"
+    MS_API_TYPE_MINT_DIST = "mint.distributed"
 
     FUNCTIONAL_API_TYPE_PREFIX = "Functional"
     TENSOR_API_TYPE_PREFIX = "Tensor"
@@ -263,6 +264,7 @@ class Const:
 
     MINT_API_TYPE_PREFIX = "Mint"
     MINT_FUNC_API_TYPE_PREFIX = "MintFunctional"
+    MINT_DIST_API_TYPE_PREFIX = "MintDistributed"
 
     SUPPORT_API_DICT_KEY_MAP = {
         PT_FRAMEWORK: {
@@ -281,7 +283,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: MS_API_TYPE_TENSOR,
             MS_API_TYPE_MINT: MS_API_TYPE_MINT,
             MS_API_TYPE_MINT_FUNC: MS_API_TYPE_MINT_FUNC,
-            MS_API_TYPE_COM: MS_API_TYPE_COM
+            MS_API_TYPE_COM: MS_API_TYPE_COM,
+            MS_API_TYPE_MINT_DIST: MS_API_TYPE_MINT_DIST
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: PT_API_TYPE_FUNCTIONAL,
@@ -309,7 +312,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: TENSOR_API_TYPE_PREFIX,
             MS_API_TYPE_MINT: MINT_API_TYPE_PREFIX,
             MS_API_TYPE_MINT_FUNC: MINT_FUNC_API_TYPE_PREFIX,
-            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX
+            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX,
+            MS_API_TYPE_MINT_DIST: MINT_DIST_API_TYPE_PREFIX
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: FUNCTIONAL_API_TYPE_PREFIX,
@@ -569,6 +573,15 @@ class CompareConst:
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
+    CMP_KEY = 'compare_key'
+    CMP_SHAPE = 'compare_shape'
+
+    MATCH_RESULT_COLUMNS = [
+        'op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        CMP_KEY, CMP_SHAPE,
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+    ]
+
     CMP_KEY = 'compare_key'
     CMP_SHAPE = 'compare_shape'
 
