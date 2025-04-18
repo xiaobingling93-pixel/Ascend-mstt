@@ -482,13 +482,6 @@ class CompareConst:
         Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
     }
 
-    STRUCT_COMPARE_KEY = [
-        INPUT_STRUCT,
-        OUTPUT_STRUCT,
-        PARAMS_STRUCT,
-        PARAMS_GRAD_STRUCT
-    ]
-
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
     THOUSAND_RATIO_THRESHOLD = 0.001
@@ -569,19 +562,18 @@ class CompareConst:
     }
 
     API_MAPPING_KEYS_TO_COMPARE = [
-                ('ms_args', 'pt_args'),
-                ('ms_outputs', 'pt_outputs'),
-                ('ms_parameters', 'pt_parameters'),
-                ('ms_parameters_grad', 'pt_parameters_grad'),
-            ]
+        ('ms_args', 'pt_args'),
+        ('ms_outputs', 'pt_outputs'),
+        ('ms_parameters', 'pt_parameters'),
+        ('ms_parameters_grad', 'pt_parameters_grad')
+    ]
 
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
-    COMPARE_KEY = 'compare_key'
-    COMPARE_SHAPE = 'compare_shape'
+
     CMP_KEY = 'compare_key'
     CMP_SHAPE = 'compare_shape'
 

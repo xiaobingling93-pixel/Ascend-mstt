@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import multiprocessing
 import os
 import re
-from copy import deepcopy
 from dataclasses import dataclass
 from collections import defaultdict
 
@@ -30,15 +28,13 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    safe_get_value, set_dump_path, get_dump_mode, check_compare_param, check_configuration_param
-from msprobe.core.compare.check import check_dump_json_str, check_graph_mode, check_stack_json_str, \
-    check_struct_match, fuzzy_check_op, cross_dtype_mapping_2
-from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
-from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
-from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
-from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    print_compare_ends_info, read_op, get_name_and_state, reorder_op_x_list, set_stack_json_path
-from msprobe.core.compare.config import MappingConfig, MappingDict
+    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param
+from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
+from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
+    reorder_op_x_list, set_stack_json_path
+from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
+from msprobe.core.compare.multiprocessing_compute import CompareRealData
+from msprobe.core.compare.highlight import HighLight
 
 
 @dataclass
@@ -54,379 +50,28 @@ class ComparisonConfig:
     layer_mapping: dict
 
 
-class ModeConfig:
-    def __init__(self, stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=None):
-        self.stack_mode = stack_mode
-        self.auto_analyze = auto_analyze
-        self.fuzzy_match = fuzzy_match
-        self.dump_mode = dump_mode
-
-
 class Comparator:
-    def __init__(self, mode_config: ModeConfig):
-        self.stack_mode = mode_config.stack_mode
-        self.auto_analyze = mode_config.auto_analyze
-        self.fuzzy_match = mode_config.fuzzy_match
-        self.dump_mode = mode_config.dump_mode
+    def __init__(self, file_reader, mode_config: ModeConfig, mapping_config: MappingConfig, is_cross_framework=False):
+        self.file_reader = file_reader
+        self.mode_config = mode_config
+        self.mapping_config = mapping_config
+
+        if self.mapping_config.data_mapping:
+            self.cross_frame = is_cross_framework
+        else:
+            self.cross_frame = (self.mapping_config.cell_mapping is not None or
+                                self.mapping_config.api_mapping is not None)
+
+        self.mapping_dict = MappingDict(mapping_config)
 
     @staticmethod
-    def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
-        npu_struct = npu_ops_all.get(ms_op_name).get('struct', [])
-        bench_struct = bench_ops_all.get(bench_op_name).get('struct', [])
-
-        if len(npu_struct) < 3 or len(bench_struct) < 3:
-            logger.error(f"The length of npu_struct and bench_struct must be >= 3, "
-                         f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. Please check!")
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
-
-        result_item = [ms_op_name, bench_op_name, npu_struct[0], bench_struct[0],
-                       npu_struct[1], bench_struct[1], npu_struct[2], bench_struct[2],
-                       CompareConst.PASS if npu_struct[2] == bench_struct[2] else CompareConst.DIFF]
-
-        if len(args) >= 2 and args[0]:
-            result_item.extend(args[1])
-        else:
-            result_item.append(CompareConst.NONE)
-        return result_item
-
-    @staticmethod
-    def calculate_summary_data(npu_summary_data, bench_summary_data, result_item):
-        err_msg = ""
-        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
-                                                                          bench_summary_data, err_msg)
-        result_item.append(accuracy_check)
-        result_item.append(err_msg)
-
-    @staticmethod
-    def _generate_na_data(ops_all):
-        if not ops_all:
-            return {}
-        key = next(iter(ops_all))
-        value = deepcopy(ops_all[key])
-        for k, v in value.items():
-            if isinstance(v, tuple):
-                value[k] = tuple(CompareConst.N_A for _ in range(len(v)))
-            elif isinstance(v, list):
-                value[k] = [CompareConst.N_A] * len(v)
-            else:
-                value[k] = CompareConst.N_A
-        return value
-
-    def make_result_table(self, result):
-        header = CompareConst.HEAD_OF_COMPARE_MODE[self.dump_mode][:]
-
-        if self.stack_mode:
-            header.append(CompareConst.STACK)
-            if self.dump_mode == Const.ALL:
-                header.append(CompareConst.DATA_NAME)
-        else:
-            if self.dump_mode == Const.ALL:
-                for row in result:
-                    del row[-2]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，真实数据时为倒数第2列
-                header.append(CompareConst.DATA_NAME)
-            else:
-                for row in result:
-                    del row[-1]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，非真实数据时为倒数第1列
-        result_df = pd.DataFrame(result, columns=header, dtype='object')
-        return result_df
-
-    def gen_merge_list(self, json_data, op_name, stack_json_data):
-        op_data = json_data['data'][op_name]
-        check_dump_json_str(op_data, op_name)
-        op_parsed_list = read_op(op_data, op_name)
-
-        if self.stack_mode:
-            stack_info = stack_json_data.get(op_name)
-            if stack_info is not None:
-                check_stack_json_str(stack_info, op_name)
-            # append only when stack_mode is True,
-            op_parsed_list.append({
-                'full_op_name': op_name,
-                'full_info': stack_info
-            })
-
-        merge_list = merge_tensor(op_parsed_list, self.dump_mode)
-        return merge_list
-
-    def check_op(self, npu_dict, bench_dict):
-        npu_op_name = npu_dict[CompareConst.OP_NAME]
-        bench_op_name = bench_dict[CompareConst.OP_NAME]
-        graph_mode = check_graph_mode(safe_get_value(npu_op_name, 0, "npu_op_name"),
-                                      safe_get_value(bench_op_name, 0, "bench_op_name"))
-
-        frame_name = getattr(self, "frame_name")
-        if frame_name == "PTComparator":
-            from msprobe.pytorch.compare.match import graph_mapping
-            if graph_mode:
-                return graph_mapping.match(npu_op_name[0], bench_op_name[0])
-        struct_match = check_struct_match(npu_dict, bench_dict)
-        if not self.fuzzy_match:
-            name_match = npu_op_name == bench_op_name
-            return name_match and struct_match
-        try:
-            name_match = fuzzy_check_op(npu_op_name, bench_op_name)
-        except Exception as err:
-            logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
-            name_match = False
-        return name_match and struct_match
-
-    def match_op(self, npu_queue, bench_queue):
-        for b_index, b_op in enumerate(bench_queue[0: -1]):
-            if self.check_op(npu_queue[-1], b_op):
-                return len(npu_queue) - 1, b_index
-        if self.check_op(npu_queue[-1], bench_queue[-1]):
-            return len(npu_queue) - 1, len(bench_queue) - 1
-        for n_index, n_op in enumerate(npu_queue[0: -1]):
-            if self.check_op(n_op, bench_queue[-1]):
-                return n_index, len(bench_queue) - 1
-        return -1, -1
-
-    def compare_process(self, file_lists):
-        npu_json_path, bench_json_path, stack_json_path = file_lists
-        npu_json_data = load_json(npu_json_path)
-        bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path) if self.stack_mode else None
-
-        if self.fuzzy_match:
-            logger.warning("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
-
-        npu_ops_queue = []
-        bench_ops_queue = []
-        result = []
-
-        ops_npu_iter = iter(npu_json_data['data'])
-        ops_bench_iter = iter(bench_json_data['data'])
-        read_err_npu = True
-        read_err_bench = True
-        last_npu_ops_len = 0
-        last_bench_ops_len = 0
-
-        npu_api_nums = len(npu_json_data['data'])
-        progress_bar = tqdm(total=npu_api_nums, desc="API/Module Read Progress", unit="item", ncols=100)
-
-        while True:
-            if not read_err_npu and not read_err_bench:
-                break
-            try:
-                last_npu_ops_len = len(npu_ops_queue)
-                op_name_npu = next(ops_npu_iter)
-                check_op_str_pattern_valid(op_name_npu)
-                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
-                if npu_merge_list:
-                    npu_ops_queue.append(npu_merge_list)
-            except StopIteration:
-                read_err_npu = False
-            try:
-                last_bench_ops_len = len(bench_ops_queue)
-                op_name_bench = next(ops_bench_iter)
-                check_op_str_pattern_valid(op_name_bench)
-                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
-                if bench_merge_list:
-                    bench_ops_queue.append(bench_merge_list)
-            except StopIteration:
-                read_err_bench = False
-
-            progress_bar.update(1)
-
-            # merge all boolean expressions
-            both_empty = not npu_ops_queue and not bench_ops_queue
-            no_change = (len(npu_ops_queue) == last_npu_ops_len) and (len(bench_ops_queue) == last_bench_ops_len)
-            if both_empty or no_change:
-                continue
-
-            # APIs in NPU and Bench models unconsistent judgment
-            if bool(npu_ops_queue) ^ bool(bench_ops_queue):
-                logger.info("Please check whether the number and calls of APIs in NPU and Bench models are consistent.")
-                break
-
-            n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue)
-
-            # 如果没有匹配到，数据放到队列中，跳过，直到后面匹配到，把匹配之前的api放到不匹配中
-            if n_match_point == -1 and b_match_point == -1:
-                continue
-
-            n_match_data = npu_ops_queue[n_match_point]
-            b_match_data = bench_ops_queue[b_match_point]
-            un_match_data = npu_ops_queue[0: n_match_point]
-            for npu_data in un_match_data:
-                get_un_match_accuracy(result, npu_data, self.dump_mode)
-            get_accuracy(result, n_match_data, b_match_data, self.dump_mode)
-            del npu_ops_queue[0: n_match_point + 1]
-            del bench_ops_queue[0: b_match_point + 1]
-        progress_bar.close()
-        if npu_ops_queue:
-            for npu_data in npu_ops_queue:
-                get_un_match_accuracy(result, npu_data, self.dump_mode)
-
-        result_df = self.make_result_table(result)
-        return result_df
-
-    def merge_data(self, json_data, stack_json_data):
-        ops_all = {}
-        for op_name in json_data.get('data', {}):
-            merge_list = self.gen_merge_list(json_data, op_name, stack_json_data)
-            if merge_list:
-                struct_to_index_mapping = {
-                    CompareConst.INPUT_STRUCT: 0,
-                    CompareConst.OUTPUT_STRUCT: 0,
-                    CompareConst.PARAMS_STRUCT: 0,
-                    CompareConst.PARAMS_GRAD_STRUCT: 0
-                }
-
-                op_name_list = merge_list.get(CompareConst.OP_NAME)
-                summary_list = merge_list.get(Const.SUMMARY)
-                data_name_list = merge_list.get('data_name')
-                op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
-                                                                                        summary_list,
-                                                                                        data_name_list)
-                for index, op_full_name in enumerate(op_name_reorder):
-                    data_name = data_name_reorder[index] if data_name_reorder else None
-
-                    _, state = get_name_and_state(op_full_name)
-                    struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
-                    if not struct_key:
-                        continue
-                    ops_all[op_full_name] = {
-                        CompareConst.STRUCT: safe_get_value(merge_list, struct_to_index_mapping.get(struct_key),
-                                                            "merge_list", key=struct_key),
-                        CompareConst.SUMMARY: safe_get_value(summary_reorder, index, "summary_reorder"),
-                        'data_name': data_name,
-                        'stack_info': merge_list.get('stack_info')
-                    }
-                    struct_to_index_mapping[struct_key] += 1
-        return ops_all
-
-    def get_accuracy(self, npu_ops_all, bench_ops_all):
-        result = []
-        bench_ops_all[CompareConst.N_A] = self._generate_na_data(bench_ops_all)
-        for ms_op_name, bench_op_name in self.data_mapping_dict.items():
-            check_op_str_pattern_valid(ms_op_name)
-            check_op_str_pattern_valid(bench_op_name)
-            if ms_op_name in npu_ops_all and bench_op_name in bench_ops_all:
-                npu_stack_info = npu_ops_all.get(ms_op_name).get("stack_info", None)
-                bench_stack_info = bench_ops_all.get(bench_op_name).get("stack_info", None)
-                has_stack = npu_stack_info and bench_stack_info
-                if self.dump_mode == Const.MD5:
-                    result.append(self.get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all,
-                                                              bench_ops_all, has_stack, npu_stack_info))
-                    continue
-
-                npu_struct = npu_ops_all.get(ms_op_name).get('struct', [])
-                bench_struct = bench_ops_all.get(bench_op_name).get('struct', [])
-
-                if len(npu_struct) < 2 or len(bench_struct) < 2:
-                    logger.error(
-                        f"The length of npu_struct and bench_struct must be >= 2, "
-                        f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. "
-                        f"Please check!"
-                    )
-                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
-
-                base_result_item = [
-                    ms_op_name, bench_op_name,
-                    npu_struct[0],
-                    bench_struct[0],
-                    npu_struct[1],
-                    bench_struct[1]
-                ]
-
-                if self.dump_mode == Const.SUMMARY:
-                    result_item = base_result_item + [" "] * 8  # 8个统计量数据情况的比对指标
-                else:
-                    result_item = base_result_item + [" "] * 6  # 6个真实数据情况的比对指标
-
-                npu_summary_data = npu_ops_all.get(ms_op_name).get("summary")
-                result_item.extend(npu_summary_data)
-                bench_summary_data = bench_ops_all.get(bench_op_name).get("summary")
-                result_item.extend(bench_summary_data)
-                if self.dump_mode == Const.SUMMARY:
-                    self.calculate_summary_data(npu_summary_data, bench_summary_data, result_item)
-                else:
-                    result_item.append(CompareConst.ACCURACY_CHECK_YES)
-                    result_item.append("")
-                if has_stack:
-                    result_item.extend(npu_stack_info)
-                else:
-                    result_item.append(CompareConst.NONE)
-                if self.dump_mode == Const.ALL:
-                    ms_data_name = npu_ops_all.get(ms_op_name).get("data_name", None)
-                    pt_data_name = bench_ops_all.get(bench_op_name).get("data_name", None)
-                    result_item.append([ms_data_name, pt_data_name])
-                result.append(result_item)
-                logger.info(f"{ms_op_name}, {bench_op_name} compared.")
-            elif ms_op_name not in npu_ops_all:
-                logger.warning(f'Can not find npu op name : `{ms_op_name}` in npu dump json file.')
-            elif bench_op_name not in npu_ops_all:
-                logger.warning(f'Can not find bench op name : `{bench_op_name}` in bench dump json file.')
-        return result
-
-    def compare_process_custom(self, file_lists):
-        npu_json_path, bench_json_path, stack_json_path = file_lists
-        npu_json_data = load_json(npu_json_path)
-        bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path) if self.stack_mode else None
-        npu_ops_all = self.merge_data(npu_json_data, stack_json_data)
-        bench_ops_all = self.merge_data(bench_json_data, stack_json_data)
-
-        result = self.get_accuracy(npu_ops_all, bench_ops_all)
-        result_df = self.make_result_table(result)
-        return result_df
-
-    def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
-        """
-        :param npu_op_name: excel中的NPU_Name，例如：MintFunctional.conv2d.0.forward.input.3.0
-        :param bench_op_name: excel中的Bench_Name，例如：Functional.conv2d.0.forward.input.3.0
-        :param op_name_mapping_dict: op_name和npy或pt文件的映射关系
-        :param input_param: npu_json_path/bench_json_path/stack_json_path等参数
-        :return: result_list，包含余弦相似度、最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率和错误信息
-        用于读取excel中的NPU_Name和Bench_Name，根据映射关系找到npy或pt文件，然后读取文件中的数据进行比较，计算余弦相似度、欧式距离
-        最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率并生成错误信息
-        """
-        error_file, relative_err, error_flag = None, None, False
-
-        data_name_pair = op_name_mapping_dict.get(npu_op_name)
-        npu_data_name = data_name_pair[0]
-        bench_data_name = data_name_pair[1]
-
-        if str(npu_data_name) == '-1':  # 没有npu真实数据
-            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
-        elif str(bench_data_name) == '-1':  # 没有bench真实数据
-            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
-            error_file = 'no_bench_data'
-        else:
-            npu_dir = input_param.get("npu_dump_data_dir")
-            bench_dir = input_param.get("bench_dump_data_dir")
-            try:
-                frame_name = getattr(self, "frame_name")
-                read_npy_data = getattr(self, "read_npy_data")
-                if frame_name == "MSComparator":
-                    n_value = read_npy_data(npu_dir, npu_data_name)
-                    if self.cross_frame:
-                        b_value = read_npy_data(bench_dir, bench_data_name, load_pt_file=True)
-                    else:
-                        b_value = read_npy_data(bench_dir, bench_data_name)
-                else:
-                    n_value = read_npy_data(npu_dir, npu_data_name)
-                    b_value = read_npy_data(bench_dir, bench_data_name)
-            except IOError as error:
-                error_file = error.filename
-                n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
-                error_flag = True
-            except (FileCheckException, CompareException):
-                error_file = npu_data_name
-                n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
-                error_flag = True
-
-        # 通过n_value, b_value同时得到错误标志和错误信息
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value,
-                                                                       error_flag=error_flag, error_file=error_file)
-
-        result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg)
-
-        if self.fuzzy_match and npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
-            err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
-        result_list.append(err_msg)
-        return result_list
+    def process_output_file(output_path, suffix):
+        file_name = add_time_with_xlsx("compare_result" + suffix)
+        file_path = os.path.join(os.path.realpath(output_path), file_name)
+        if os.path.exists(file_path):
+            logger.warning(f"{file_path} will be deleted.")
+            remove_path(file_path)
+        return file_path
 
     def compare_core(self, input_param, output_path, **kwargs):
         """
@@ -445,95 +90,69 @@ class Comparator:
 
         Returns:
         """
+        logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
+
         # get kwargs or set default value
         suffix = kwargs.get('suffix', '')
 
-        logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
-        file_name = add_time_with_xlsx("compare_result" + suffix)
-        file_path = os.path.join(os.path.realpath(output_path), file_name)
-        if os.path.exists(file_path):
-            logger.warning(f"{file_path} will be deleted.")
-            remove_path(file_path)
-        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        # process output file
+        file_path = self.process_output_file(output_path, suffix)
 
+        # initialize the compare result table and compare general data(name, dtype, shape, statistics/md5, etc.)
         npu_json = input_param.get("npu_json_path")
         bench_json = input_param.get("bench_json_path")
         stack_json = input_param.get("stack_json_path")
-        if self.data_mapping:
-            result_df = self.compare_process_custom([npu_json, bench_json, stack_json])
-        else:
-            result_df = self.compare_process([npu_json, bench_json, stack_json])
-
+        result_df = self.compare_statistics([npu_json, bench_json, stack_json])
         if not result_df.values.tolist():
             logger.warning("Can`t match any op.")
             return
 
-        if self.dump_mode == Const.ALL:
-            result_df = self.do_multi_process(input_param, result_df)
+        # compare real data
+        if self.mode_config.dump_mode == Const.ALL:
+            compare_real_data = CompareRealData(self.file_reader, self.mode_config, self.cross_frame)
+            result_df = compare_real_data.do_multi_process(input_param, result_df)
 
-        find_compare_result_error_rows(result_df, highlight_dict, self.dump_mode)
-        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        # highlight suspicious API
+        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        highlight = HighLight(self.mode_config)
+        highlight.find_compare_result_error_rows(result_df, highlight_dict)
+        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
-        if self.auto_analyze:
+        # output compare analysis suggestions
+        if self.mode_config.auto_analyze:
             advisor = Advisor(result_df, output_path, suffix)
             advisor.analysis()
 
         print_compare_ends_info()
 
-    def compare_ops(self, idx, dump_path_dict, result_df, lock, input_param):
-        cos_result = []
-        euc_dist_result = []
-        max_err_result = []
-        max_relative_err_result = []
-        one_thousand_err_ratio_result = []
-        five_thousand_err_ratio_result = []
-        err_mess = []
+    def compare_statistics(self, file_list):
+        # load and parse json data
+        parse_data = ParseData(self.mode_config)
+        npu_df, bench_df = parse_data.parse(file_list)
 
-        is_print_compare_log = input_param.get("is_print_compare_log")
+        npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
+        bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
 
-        for i in range(len(result_df)):
-            npu_op_name = result_df.iloc[i, 0]
-            bench_op_name = result_df.iloc[i, 1]
-            if is_print_compare_log:
-                logger.info("start compare: {}".format(npu_op_name))
+        # create new columns for compare op_name and shape
+        # process npu_df's COMPARE_KEY whether same or different framework
+        process_df = ProcessDf(self.mode_config, self.mapping_config, self.mapping_dict)
+        npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df, bench_df)
 
-            cos_sim, euc_dist, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg \
-                = self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
+        # match npu and bench, match_result contains both npu_info and bench_info
+        match = Match(self.mode_config, self.mapping_config, self.cross_frame)
+        match_result = match.match_api_infos(npu_df, bench_df)
+        # 筛选出npu_name存在的行并填充筛选出行中的缺失值为N/A
+        match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
+        bench_columns = [i + '_y' for i in bench_df.columns]
+        match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
 
-            if is_print_compare_log:
-                logger.info(
-                    "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
-                    one_thousand_err_ratio {}, "
-                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
-                                                        err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
-            cos_result.append(cos_sim)
-            euc_dist_result.append(euc_dist)
-            max_err_result.append(max_abs_err)
-            max_relative_err_result.append(max_relative_err)
-            one_thousand_err_ratio_result.append(one_thousand_err_ratio)
-            five_thousand_err_ratio_result.append(five_thousand_err_ratio)
-            err_mess.append(err_msg)
+        # organize compare result table by renaming columns
+        create_table = CreateTable(self.mode_config)
+        result_df, header = create_table.make_result_df(match_result)
 
-        cr = ComparisonResult(
-            cos_result=cos_result,
-            euc_dist_result=euc_dist_result,
-            max_err_result=max_err_result,
-            max_relative_err_result=max_relative_err_result,
-            one_thousand_err_ratio_result=one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result=five_thousand_err_ratio_result,
-            err_msgs=err_mess
-        )
-
-        return _save_cmp_result(idx, cr, result_df, lock)
-
-    def do_multi_process(self, input_param, result_df):
-        try:
-            result_df = _handle_multi_process(self.compare_ops, input_param, result_df,
-                                              multiprocessing.Manager().RLock())
-            return result_df
-        except ValueError as e:
-            logger.error('result dataframe is not found.')
-            raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+        # calculate statistics diff
+        calc_stats_diff = CalcStatsDiff(self.mode_config)
+        return calc_stats_diff.calc_accuracy(result_df, header)
 
 
 class ParseData:
@@ -916,7 +535,7 @@ class Match:
 
     def process_cross_frame_dtype(self, dtype):
         if self.cross_frame:
-            dtype = dtype.map(cross_dtype_mapping_2).fillna(dtype)
+            dtype = dtype.map(cross_dtype_mapping).fillna(dtype)
         return dtype
 
 
