@@ -17,10 +17,8 @@
 # ==============================================================================
 """The TensorBoard Graphs plugin."""
 
-import json
 import os
 from werkzeug import wrappers, Response, exceptions
-from tensorboard import errors
 from tensorboard.backend import http_util
 from tensorboard.plugins import base_plugin
 from tensorboard.util import tb_logging
@@ -605,11 +603,11 @@ class GraphsPlugin(base_plugin.TBPlugin):
                     run = os.path.abspath(root)
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
                     _, error = GraphUtils.safe_load_data(run, tag, True)
-                    if(error):
+                    if error:
                         logger.error(f'Error: File run:"{run},tag:{tag}" is not accessible. Error: {error}')
                         continue
                     run_tag_pairs.append((run, tag))
-        if(run_tag_pairs[0]):
+        if len(run_tag_pairs) > 0:
             set_global_value('first_run_tag', run_tag_pairs[0][1])
         return run_tag_pairs
 

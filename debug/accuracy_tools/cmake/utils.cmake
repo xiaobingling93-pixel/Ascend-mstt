@@ -2,13 +2,10 @@
 function(download_opensource_pkg pkg_name)
     message("start to download ${pkg_name}...")
     set(options)
-    set(oneValueArgs URL SHA256 GIT_TAG DOWNLOAD_PATH DIR_NAME BUILD_CMD)
+    set(oneValueArgs SHA256 GIT_TAG DOWNLOAD_PATH DIR_NAME BUILD_CMD)
     set(multiValueArgs PATCHES)
     cmake_parse_arguments(PKG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     
-    if (NOT PKG_URL)
-        message(FATAL_ERROR "${pkg_name} need URL.")
-    endif()
     if (NOT PKG_DOWNLOAD_PATH)
         set(PKG_DOWNLOAD_PATH "${CMAKE_SOURCE_DIR}/../third_party")
     endif()
@@ -16,7 +13,7 @@ function(download_opensource_pkg pkg_name)
 
     execute_process(
         WORKING_DIRECTORY $ENV{PROJECT_ROOT_PATH}/cmake
-        COMMAND bash download_opensource.sh ${PKG_URL} ${PKG_DOWNLOAD_PATH} ${PKG_SHA256} ${PKG_GIT_TAG}
+        COMMAND bash download_opensource.sh ${pkg_name} ${PKG_DOWNLOAD_PATH} ${PKG_SHA256} ${PKG_GIT_TAG}
         RESULT_VARIABLE RESULT
     )
     if (NOT RESULT EQUAL 0)

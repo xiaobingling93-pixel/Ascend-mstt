@@ -18,7 +18,6 @@ Adapt to the model hierarchical visualization data collected by the msprobe tool
 
 import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
-import * as d3 from 'd3';
 import * as _ from 'lodash';
 import '../polymer/irons_and_papers';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
@@ -26,13 +25,12 @@ import * as tb_debug from '../tb_debug';
 import * as tf_graph from '../tf_graph_common/graph';
 import * as tf_graph_hierarchy from '../tf_graph_common/hierarchy';
 import * as tf_graph_render from '../tf_graph_common/render';
-import * as tf_graph_scene from '../tf_graph_common/scene';
 import * as tf_graph_util from '../tf_graph_common/util';
 import * as tf_graph_layout from '../tf_graph_common/layout';
 import './tf-graph-scene';
 import '../main_graph/index'
 import './components/legend/index';
-import { Selection } from '../tf_graph_controls/tf-graph-controls';
+import type { MinimapVis, Selection } from '../tf_graph_controls/tf-graph-controls';
 import { fetchPbTxt, parseGraphPbTxt } from '../tf_graph_common/parser';
 import * as tf_hierarchy from '../tf_graph_common/hierarchy';
 import * as tf_graph_parser from '../tf_graph_common/parser';
@@ -97,16 +95,25 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
           highlighted-node="[[_getVisible(highlightedNode)]]"
           selected-node="{{selectedNode}}"
           linked-node="{{linkedNode}}"
-          selected-edge="{{selectedEdge}}"
           progress="[[progress]]"
           node-context-menu-items="[[nodeContextMenuItems]]"
-          handle-edge-selected="[[handleEdgeSelected]]"
-          trace-inputs="[[traceInputs]]"
+          show-minimap="[[minimapVis.npu]]"
         ></tf-graph-scene>
       </div>
       <template is="dom-if" if="[[graphHierarchy.bench]]">
         <div class="bench">
-          <main-graph></main-graph>
+          <tf-graph-scene
+            id="bench"
+            class="auto"
+            render-hierarchy="[[renderHierarchy.bench]]"
+            linked-hierarchy="[[renderHierarchy.npu]]"
+            highlighted-node="[[_getVisible(highlightedNode)]]"
+            selected-node="{{selectedNode}}"
+            linked-node="{{linkedNode}}"
+            progress="[[progress]]"
+            node-context-menu-items="[[nodeContextMenuItems]]"
+            show-minimap="[[minimapVis.bench]]"
+          ></tf-graph-scene>
         </div>
       </template>
     </div>
@@ -134,9 +141,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   @property({ type: String, notify: true })
   linkedNode: string;
 
-  @property({ type: Object, notify: true })
-  selectedEdge: object;
-
   @property({ type: Object })
   _lastSelectedEdgeGroup: any;
 
@@ -156,9 +160,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   })
   renderHierarchy: tf_graph_render.MergedRenderGraphInfo;
 
-  @property({ type: Boolean })
-  traceInputs: boolean;
-
   @property({ type: Array })
   nodeContextMenuItems: unknown[];
 
@@ -169,21 +170,15 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   _allowGraphSelect: boolean = true;
 
   @property({ type: Object })
-  edgeWidthFunction: any = '';
-
-  @property({ type: Object })
   handleNodeSelected: any = '';
-
-  @property({ type: Object })
-  edgeLabelFunction: any = '';
-
-  @property({ type: Object })
-  handleEdgeSelected: any = '';
 
   @property({ type: Object })
   selection: Selection;
 
-  @observe('graphHierarchy', 'edgeWidthFunction', 'handleNodeSelected', 'edgeLabelFunction', 'handleEdgeSelected')
+  @property({ type: Object })
+  minimapVis: MinimapVis = { npu: true, bench: true };
+
+  @observe('graphHierarchy', 'handleNodeSelected')
   _buildNewRenderHierarchy(): void {
     let graphHierarchy = this.graphHierarchy;
     if (!graphHierarchy) {
@@ -322,10 +317,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
     this.addEventListener('node-highlight', this._nodeHighlighted.bind(this));
     this.addEventListener('node-unhighlight', this._nodeUnhighlighted.bind(this));
     this.addEventListener('node-toggle-extract', this._nodeToggleExtract.bind(this));
-    // Edges
-    this.addEventListener('edge-select', this._edgeSelected.bind(this));
-    this.addEventListener('edge-highlight', this._edgeHighlighted.bind(this));
-    this.addEventListener('edge-unhighlight', this._edgeUnhighlighted.bind(this));
 
     // Annotations
 
@@ -391,10 +382,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
     (this.$$('#bench') as any).fit();
   }
 
-  getImageBlob(): Promise<Blob> {
-    return (this.$.scene as any).getImageBlob();
-  }
-
   _graphChanged(): void {
     if (!this.graphHierarchy) {
       return;
@@ -406,12 +393,6 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   }
 
   _graphSelected(event): void {
-    // Graph selection is not allowed during an active zoom event, as the
-    // click seen during a zoom/pan is part of the zooming and does not
-    // indicate a user desire to click on a specific section of the graph.
-    if (this._allowGraphSelect) {
-      this.set('selectedEdge', null);
-    }
     // Reset this variable as a bug in d3 zoom behavior can cause zoomend
     // callback not to be called if a right-click happens during a zoom event.
     this._allowGraphSelect = true;
@@ -428,42 +409,14 @@ class TfGraph extends LegacyElementMixin(PolymerElement) {
   // Called only when a new (non-null) node is selected.
   _nodeSelected(event): void {
     this.set('selectedNode', event.detail.name);
-    this.set('selectedEdge', null);
-  }
-
-  _edgeSelected(event): void {
-    if (this._allowGraphSelect) {
-      this.set('_lastSelectedEdgeGroup', event.detail.edgeGroup);
-      this.set('selectedEdge', event.detail.edgeData);
-      this.set('selectedNode', null);
-    }
-    // Reset this variable as a bug in d3 zoom behavior can cause zoomend
-    // callback not to be called if a right-click happens during a zoom event.
-    this._allowGraphSelect = true;
   }
 
   _nodeHighlighted(event): void {
     this.set('highlightedNode', event.detail.name);
   }
 
-  _edgeHighlighted(event): void {
-    if (
-      event.detail.edgeData?.v === (this.selectedEdge as any)?.v &&
-      event.detail.edgeData?.w === (this.selectedEdge as any)?.w &&
-      event.detail.edgeData?.id === (this.selectedEdge as any)?.id
-    ) {
-      return;
-    }
-    this.set('_lastHighlightedEdgeGroup', event.detail.edgeGroup);
-    this.set('highlightedEdge', event.detail.edgeData);
-  }
-
   _nodeUnhighlighted(event): void {
     this.set('highlightedNode', null);
-  }
-
-  _edgeUnhighlighted(event): void {
-    this.set('highlightedEdge', null);
   }
 
   async _parentNodeToggleExpand(event): Promise<void> {

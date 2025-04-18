@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_torch_nn_module
 
 
 class DebuggerConfig:
@@ -105,13 +104,13 @@ class DebuggerConfig:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
 
         instance.model = start_model if start_model is not None else instance.model
-        if isinstance(instance.model, torch.nn.Module):
+        if is_torch_nn_module(instance.model):
             return
 
         error_model = None
         if isinstance(instance.model, (list, tuple)):
             for model in instance.model:
-                if not isinstance(model, torch.nn.Module):
+                if not is_torch_nn_module(model):
                     error_model = model
                     break
         else:
@@ -119,7 +118,7 @@ class DebuggerConfig:
 
         if error_model is not None:
             error_info = (f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] "
-                          f"type, currently there is a {type(error_model)} type.")
+                          f"type, currently there is an unsupported {type(error_model)} type.")
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
 

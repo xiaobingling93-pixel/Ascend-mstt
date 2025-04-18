@@ -30,10 +30,10 @@ import './components/tf_color_select/index';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import '../tf_dashboard_common/tensorboard-color';
 import { SelectionType } from '../tf_graph_common/common';
-import * as tf_graph_proto from '../tf_graph_common/proto';
 import * as tf_graph_render from '../tf_graph_common/render';
 import '../tf_graph_common/tf-graph-icon';
 import '../tf_graph_loader/tf-graph-dashboard-loader';
+import { PaperCheckboxElement } from '../polymer/irons_and_papers';
 
 export interface Selection {
   run: string;
@@ -52,6 +52,10 @@ export interface TagItem {
 export interface RunItem {
   name: string;
   tags: TagItem[];
+}
+export interface MinimapVis {
+  npu: boolean;
+  bench: boolean;
 }
 export type Dataset = Array<RunItem>;
 @customElement('tf-graph-controls')
@@ -207,12 +211,20 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       .title small {
         font-weight: normal;
       }
-      .container-wrapper{
+      .container-wrapper {
         margin: 20px 0;
         border-top: 1px #bfbfbf dashed;
       }
       #file {
         padding: 8px 0;
+      }
+      .minimap-control {
+        font-size: var(--tb-graph-controls-title-font-size);
+        height: 36px;
+        line-height: 36px;
+      }
+      .right-checkbox {
+        margin-left: 8px;
       }
 
       .color-legend-row {
@@ -240,7 +252,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       }
 
       .button-text {
-        padding-left: 20px;
+        padding-left: 12px;
         text-transform: none;
       }
 
@@ -257,10 +269,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         color: var(--paper-orange-500);
       }
 
-      .hidden-input {
-        display: none;
-      }
-
       .allcontrols .control-holder {
         clear: both;
         display: flex;
@@ -270,10 +278,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       .allcontrols .control-holder.control-options {
         padding: 0 0 15px 15px;
         flex-direction: column;
-      }
-
-      .allcontrols .control-holder paper-toggle-button {
-        margin-bottom: 5px;
       }
 
       span.counter {
@@ -468,6 +472,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
       paper-checkbox {
         --paper-checkbox-unchecked-color: gray; /* 选中时的颜色 */
+        user-select: none;
       }
     </style>
 
@@ -478,36 +483,17 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     <div id="nodes-content" class="tab-content">
       <div class="allcontrols">
         <div class="control-holder">
-          <paper-button class="icon-button" on-tap="_fit" alt="Fit to screen">
+          <paper-button class="icon-button" on-tap="_fit" alt="自适应屏幕">
             <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
-            <span class="button-text">Fit to screen</span>
+            <span class="button-text">自适应屏幕</span>
           </paper-button>
         </div>
-        <div class="control-holder">
-          <paper-button class="icon-button" on-click="download" alt="Download PNG">
-            <iron-icon icon="file-download" class="button-icon"></iron-icon>
-            <span class="button-text">Download PNG</span>
-          </paper-button>
+        <div class="minimap-control">
+          <paper-checkbox checked on-change="_toggleNpuMinimap">调试侧缩略图</paper-checkbox>
+          <paper-checkbox class="right-checkbox" checked on-click="_toggleBenchMinimap">标杆侧缩略图</paper-checkbox>
         </div>
-        <template is="dom-if" if="[[showUploadButton]]">
-          <div class="control-holder">
-            <paper-button
-              class="icon-button"
-              on-click="_getFile"
-              alt="Upload file"
-              title="Upload a pbtxt file to view a graph from the local filesystem"
-            >
-              <iron-icon icon="file-upload" class="button-icon"></iron-icon>
-              <span class="button-text">Upload file</span>
-            </paper-button>
-
-            <div class="hidden-input">
-              <input type="file" id="file" name="file" on-change="_updateFileInput" accept=".pbtxt" />
-            </div>
-          </div>
-        </template>
         <div class="control-holder runs-row">
-          <div class="title">Run <span class="counter">([[datasets.length]])</span></div>
+          <div class="title">目录 <span class="counter">([[datasets.length]])</span></div>
           <paper-dropdown-menu no-label-float no-animations noink horizontal-align="left" class="run-dropdown">
             <paper-listbox class="dropdown-content" selected="{{_selectedRunIndex}}" slot="dropdown-content">
               <template is="dom-repeat" items="[[datasets]]">
@@ -519,7 +505,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         <template is="dom-if" if="[[showSessionRunsDropdown]]">
           <div class="control-holder tags-row">
             <div class="title">
-              Tag
+              文件
               <span class="counter">([[_numTags(datasets, _selectedRunIndex)]])</span>
             </div>
             <paper-dropdown-menu no-label-float no-animations horizontal-align="left" noink class="run-dropdown">
@@ -616,10 +602,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   @property({ type: Object })
   graphDef: any;
 
-  // 下载文件
-  @property({ type: Object })
-  _downloadFilename = 'graph.png';
-
   // Run 路径选择
   @property({ type: Number, observer: '_selectedRunIndexChanged' })
   _selectedRunIndex: number = 0;
@@ -668,15 +650,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   @property({ type: Object, notify: true })
   selectedFile: object;
 
-  @property({ type: Boolean })
-  showUploadButton: boolean = false;
-
-  // trace input to off-state
-  @property({ type: Boolean, notify: true })
-  traceInputs: boolean = false;
-
   @property({ type: String, notify: true })
   selectedNode: string | null = null;
+
+  @property({ type: Object, notify: true })
+  minimapVis: MinimapVis = { npu: true, bench: true };
 
   override ready(): void {
     super.ready();
@@ -738,10 +716,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     this.fire('fit-tap');
   }
 
-  download(): void {
-    this.fire('download-image-requested', this._downloadFilename);
-  }
-
   _clearMicroStep(): void {
     // 也清除一下MicroStep和Step
     this.set('_selectedMicroStep', -1);
@@ -753,32 +727,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     return microsteps.length > 0 ? microsteps.length - 1 : 0;
   }
 
-  _updateFileInput(e: Event): void {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) {
-      return;
-    }
-    // Strip off everything before the last "/" and strip off the file
-    // extension in order to get the name of the PNG for the graph.
-    let filePath = file.name;
-    const dotIndex = filePath.lastIndexOf('.');
-    if (dotIndex >= 0) {
-      filePath = filePath.substring(0, dotIndex);
-    }
-    const lastSlashIndex = filePath.lastIndexOf('/');
-    if (lastSlashIndex >= 0) {
-      filePath = filePath.substring(lastSlashIndex + 1);
-    }
-    this._setDownloadFilename(filePath);
-    this.set('selectedFile', e);
-  }
-
   _datasetsChanged(newDatasets: Dataset, oldDatasets: Dataset): void {
     if (oldDatasets !== null) {
       // Select the first dataset by default.
       this._selectedRunIndex = 0;
     }
-    this._setDownloadFilename(this.datasets[this._selectedRunIndex]?.name);
   }
 
   _computeSelection(
@@ -806,8 +759,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     }
     this._selectedTagIndex = 0;
     this._selectedGraphType = this._getDefaultSelectionType();
-    this.traceInputs = false; // Set trace input to off-state.
-    this._setDownloadFilename(this.datasets[runIndex]?.name);
   }
 
   _selectedTagIndexChanged(): void {
@@ -830,15 +781,13 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     return SelectionType.OP_GRAPH;
   }
 
-  _getFile(): void {
-    (this.$$('#file') as HTMLElement).click();
+  _toggleNpuMinimap(event: CustomEvent): void {
+    const checkbox = event.target as PaperCheckboxElement;
+    this.set('minimapVis.npu', checkbox.checked);
   }
 
-  _setDownloadFilename(name?: string): void {
-    this._downloadFilename = `${name ?? 'graph'}.png`;
-  }
-
-  _statsNotNull(stats: tf_graph_proto.StepStats): boolean {
-    return stats !== null;
+  _toggleBenchMinimap(event: CustomEvent): void {
+    const checkbox = event.target as PaperCheckboxElement;
+    this.set('minimapVis.bench', checkbox.checked);
   }
 }

@@ -61,9 +61,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   @property({ type: String })
   name: string;
 
-  @property({ type: Boolean })
-  traceInputs: boolean;
-
   // For each render hierarchy, we only fit it to the viewport once (when the scene is attached to
   // the DOM). We do not fit the hierarchy again (unless the user clicks the reset button). For
   // instance, if the user enters a certain view in the graph, switches to another dashboard, and
@@ -103,11 +100,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     observer: '_linkedNodeChanged',
   })
   linkedNode: string;
-
-  // An optional callback that implements the tf.graph.edge.EdgeSelectionCallback signature. If
-  // provided, edges are selectable, and this callback is run when an edge is selected.
-  @property({ type: Object })
-  handleEdgeSelected: object;
 
   /** Keeps track of if the graph has been zoomed/panned since loading */
   @property({
@@ -204,10 +196,15 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   @property({ type: Array })
   nodeContextMenuItems: unknown[];
 
+  @property({ type: Boolean })
+  showMinimap: boolean = true;
+
   /**
    * A minimap object to notify for zoom events.
    */
   private minimap: tf_graph_minimap.Minimap;
+
+  private enablePanSignal: Boolean = true;
 
   @observe('renderHierarchy')
   _renderHierarchyChanged(): void {
@@ -215,6 +212,12 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     this._hasRenderHierarchyBeenFitOnce = false;
     this._resetState();
     this._build(renderHierarchy);
+  }
+
+  @observe('showMinimap')
+  _minimapVisChanged(): void {
+    const minimap = this.$.minimap as HTMLElement;
+    minimap.style.display = this.showMinimap ? 'block' : 'none';
   }
 
   // Animation and fitting must come after the observer for the hierarchy changing because we must
@@ -312,6 +315,8 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
 
   ready(): void {
     super.ready();
+
+    this.addEventListener('no-pan-to-node', this._noPanToNode.bind(this))
     this._zoom = d3
       .zoom()
       .on('end', () => {
@@ -548,10 +553,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     );
   }
 
-  getImageBlob(): Promise<Blob> {
-    return this.minimap.getImageBlob();
-  }
-
   isNodeSelected(n): boolean {
     return n === this.selectedNode;
   }
@@ -602,19 +603,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     let nodeGroup = this.getNodeGroup(n);
     if (nodeGroup) {
       tf_graph_scene_node.stylize(nodeGroup, node, this as any);
-    }
-    if (
-      node.node.type === (tf_graph.NodeType.META || tf_graph.NodeType.API_LIST || tf_graph.NodeType.MULTI_COLLECTION) &&
-      (node.node as any).associatedFunction
-    ) {
-      // The node is that of a function call. Also link the node within the
-      // function library. This clarifies to the user that the library function
-      // is being used.
-      let libraryFunctionNodeName = tf_graph.FUNCTION_LIBRARY_NODE_PREFIX + (node.node as any).associatedFunction;
-      let functionGroup = d3.select(
-        `.${tf_graph_scene.Class.Scene.GROUP}>.${tf_graph_scene.Class.Scene.FUNCTION_LIBRARY} g[data-name="${libraryFunctionNodeName}"]`,
-      );
-      tf_graph_scene_node.stylize(functionGroup, node, this as any);
     }
     let annotationGroupIndex = this.getAnnotationGroupsIndex(n);
     _.each(annotationGroupIndex, (aGroup, hostName) => {
@@ -676,7 +664,11 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     // Give time for any expanding to finish before panning to a node.
     // Otherwise, the pan will be computed from incorrect measurements.
     setTimeout(() => {
-      this.panToNode(selectedNode);
+      // 鼠标点击不自动移动居中
+      if (this.enablePanSignal) {
+        this.panToNode(selectedNode);
+      }
+      this.enablePanSignal = true;
     }, tf_graph_layout.PARAMS.animation.duration);
   }
 
@@ -702,7 +694,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
     if (linkedNode) {
       this._updateNodeState(linkedNode);
     }
-    this._build(this.renderHierarchy);
   }
 
   _onZoomChanged(): void {
@@ -711,5 +702,10 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
 
   _fireEnableClick(): void {
     this.fire('enable-click');
+  }
+  
+  // 取消鼠标点击自动居中
+  _noPanToNode(): void {
+    this.enablePanSignal = false
   }
 }

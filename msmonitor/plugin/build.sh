@@ -3,7 +3,7 @@
 # install pybind11
 pip install pybind11
 
-# build dynolog_npu_plugin wheel
+# build msmonitor_plugin wheel
 python3 setup.py bdist_wheel
 
 # find .whl files in dist

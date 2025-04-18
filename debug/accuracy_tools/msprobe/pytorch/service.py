@@ -32,6 +32,7 @@ from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_register import get_api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.hook_module.jit_script_wrapper import wrap_jit_script_func
 from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -378,6 +379,7 @@ class Service:
                 functools.partial(self.build_hook, BaseScope.Module_Type_API)
             )
             self.api_register.register_all_api()
+            wrap_jit_script_func()
 
     def register_module_hook(self):
         if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:

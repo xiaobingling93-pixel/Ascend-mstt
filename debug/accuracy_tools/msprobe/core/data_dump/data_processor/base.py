@@ -462,8 +462,8 @@ class BaseDataProcessor:
             try:
                 self.set_value_into_nested_structure(nested_data_structure, full_index, grad_data_info)
             except (ValueError, IndexError) as e:
-                logger.warning(f"error occured while recording statistics of {grad_name_with_count} variable, "
-                               f"skip current recording, detailed infomation: {e}")
+                logger.warning(f"error occurred while recording statistics of {grad_name_with_count} variable, "
+                               f"skip current recording, detailed information: {e}")
             return grad
         wrap_register_hook_single_element = partial(self.register_hook_single_element, hook_fn=hook_fn)
         self.recursive_apply_transform(variable, wrap_register_hook_single_element)

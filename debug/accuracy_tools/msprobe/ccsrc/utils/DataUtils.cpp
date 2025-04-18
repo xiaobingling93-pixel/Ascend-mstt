@@ -56,10 +56,15 @@ BFloat16::BFloat16(float f32)
 
 BFloat16::operator float() const
 {
-    float f32 = 0;
-    uint32_t tmp = value_;
-    tmp <<= 16;
-    std::memcpy(&f32, &tmp, sizeof(f32));
+    /* 为了兼容性，不要用c++20的bit_cast */
+    union
+    {
+        float f32;
+        uint32_t ui32;
+    };
+    
+    ui32 = static_cast<uint32_t>(value_);
+    ui32 <<= 16; // 将ui32左移16位
     return f32;
 }
 

@@ -94,7 +94,7 @@ class GraphService:
             GraphUtils.safe_save_data(first_file_data, run, first_run_tag)
             return {'success': True, 'error': None, 'data': {}}
         except Exception as e:
-            return{'success': False, 'error': str(e), 'data': None}
+            return {'success': False, 'error': str(e), 'data': None}
 
     @staticmethod
     def save_data(meta_data):

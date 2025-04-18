@@ -35,7 +35,6 @@ class ErrorInfosManager {
 public:
     static void LogErrorInfo(DebuggerErrLevel level, DebuggerErrno errId, const std::string& info);
     static DebuggerErrLevel GetTopErrLevelInDuration();
-    static void SetLogPath(const std::string& path);
     static void SetLogThreshold(DebuggerErrLevel t) { threshold = t; }
 private:
     static DebuggerErrLevel topLevel;

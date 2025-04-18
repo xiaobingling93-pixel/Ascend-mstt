@@ -140,7 +140,12 @@ void DebuggerCfgParseUIntRange(const nlohmann::json& content, const std::string&
                 LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT, "Failed to parse " + name + ".");
                 return;
             }
-            realLen += (end - begin + 1);
+            uint32_t rangeSize = end - begin;
+            if (realLen > UINT32_MAX - (rangeSize + 1)) {
+                LOG_ERROR(DebuggerErrno::ERROR_VALUE_OVERFLOW, name + " size exceeds limit");
+                return;
+            }
+            realLen += (rangeSize + 1);
             buf.emplace_back(std::make_pair(begin, end));
         }
     }
