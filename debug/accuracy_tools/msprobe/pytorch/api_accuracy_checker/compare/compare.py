@@ -40,6 +40,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dty
     DETAIL_TEST_ROWS, BENCHMARK_COMPARE_SUPPORT_LIST
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.pytorch.common.log import logger
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
@@ -293,6 +294,7 @@ class Comparator:
                     test_final_success = CompareConst.WARNING
         return test_final_success, detailed_result_total
 
+    @recursion_depth_decorator("compare_core")
     def _compare_core(self, api_name, bench_output, device_output):
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
