@@ -9,7 +9,6 @@ class TestMatchNodesController:
         op_type = ut_test_case.get("type")
         input = ut_test_case.get('input')
         expected = ut_test_case.get("expected")
-        print('input: ===========', input)
          # 执行操作
         try:
             if op_type == "process_md5_task_add":

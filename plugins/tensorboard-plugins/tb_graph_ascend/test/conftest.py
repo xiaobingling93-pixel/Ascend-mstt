@@ -18,7 +18,6 @@ def load_ut_test_cases():
 
 # 动态生成测试用例
 def pytest_generate_tests(metafunc):
-    print("metafunc.fixturenames", metafunc.fixturenames)
     if "meta_data" in metafunc.fixturenames and "operation" in metafunc.fixturenames:
         ut_test_cases = load_st_test_cases()
         params = []
