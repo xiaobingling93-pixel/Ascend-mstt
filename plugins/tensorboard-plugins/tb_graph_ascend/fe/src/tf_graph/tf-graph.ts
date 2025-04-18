@@ -28,7 +28,6 @@ import * as tf_graph_render from '../tf_graph_common/render';
 import * as tf_graph_util from '../tf_graph_common/util';
 import * as tf_graph_layout from '../tf_graph_common/layout';
 import './tf-graph-scene';
-import '../main_graph/index'
 import './components/legend/index';
 import type { MinimapVis, Selection } from '../tf_graph_controls/tf-graph-controls';
 import { fetchPbTxt, parseGraphPbTxt } from '../tf_graph_common/parser';

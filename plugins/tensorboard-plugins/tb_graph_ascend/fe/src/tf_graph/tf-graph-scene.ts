@@ -306,7 +306,6 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
       },
       tb_debug.GraphDebugEventId.RENDER_SCENE_BUILD_SCENE,
     );
-    console.log('tf-graph-scene: built scene====', renderHierarchy);
     // Update the minimap again when the graph is done animating.
     setTimeout((): void => {
       this.minimap.update();
@@ -703,7 +702,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   _fireEnableClick(): void {
     this.fire('enable-click');
   }
-  
+
   // 取消鼠标点击自动居中
   _noPanToNode(): void {
     this.enablePanSignal = false
