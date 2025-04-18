@@ -30,6 +30,7 @@ from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import get_header_index, safe_get_value
 from msprobe.core.compare.utils import table_value_is_valid, get_name_and_state, CompareException
+from msprobe.core.compare.config import ModeConfig
 
 
 class HighlightCheck(abc.ABC):

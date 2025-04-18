@@ -211,6 +211,7 @@ class Const:
 
     DTYPE = 'dtype'
     SHAPE = 'shape'
+    STACK_INFO = 'stack_info'
     MAX = 'Max'
     MIN = 'Min'
     MEAN = 'Mean'
@@ -566,6 +567,14 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+
+    API_MAPPING_KEYS_TO_COMPARE = [
+                ('ms_args', 'pt_args'),
+                ('ms_outputs', 'pt_outputs'),
+                ('ms_parameters', 'pt_parameters'),
+                ('ms_parameters_grad', 'pt_parameters_grad'),
+            ]
+
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
@@ -573,8 +582,20 @@ class CompareConst:
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
+    CMP_KEY = 'compare_key'
+    CMP_SHAPE = 'compare_shape'
+
+    MATCH_RESULT_COLUMNS = [
+        'op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        CMP_KEY, CMP_SHAPE,
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+    ]
+
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
     UNREADABLE = 'unreadable data'
+    NPU_DUMP_DATA_DIR = 'npu_dump_data_dir'
+    BENCH_DUMP_DATA_DIR = 'bench_dump_data_dir'
+    NO_REAL_DATA_FLAG = '-1'
 
 
 class FileCheckConst:
