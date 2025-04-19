@@ -179,6 +179,41 @@ class Comparator:
             if not os.path.exists(detail_save_path):
                 write_csv(DETAIL_TEST_ROWS, detail_save_path)
 
+    @recursion_depth_decorator("compare_core")
+    def _compare_core(self, api_name, bench_output, device_output):
+        compare_column = CompareColumn()
+        if not isinstance(bench_output, type(device_output)):
+            status = CompareConst.ERROR
+            message = "bench and npu output type is different."
+        elif isinstance(bench_output, dict):
+            b_keys, n_keys = set(bench_output.keys()), set(device_output.keys())
+            if b_keys != n_keys:
+                status = CompareConst.ERROR
+                message = "bench and npu output dict keys are different."
+            else:
+                status, compare_column, message = self._compare_core(api_name, list(bench_output.values()),
+                                                                     list(device_output.values()))
+        elif isinstance(bench_output, torch.Tensor):
+            copy_bench_out = bench_output.detach().clone()
+            copy_device_output = device_output.detach().clone()
+            compare_column.bench_type = str(copy_bench_out.dtype)
+            compare_column.npu_type = str(copy_device_output.dtype)
+            compare_column.shape = tuple(device_output.shape)
+            status, compare_column, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
+                                                                         compare_column)
+        elif isinstance(bench_output, (bool, int, float, str)):
+            compare_column.bench_type = str(type(bench_output))
+            compare_column.npu_type = str(type(device_output))
+            status, compare_column, message = self._compare_builtin_type(bench_output, device_output, compare_column)
+        elif bench_output is None:
+            status = CompareConst.SKIP
+            message = "Bench output is None, skip this test."
+        else:
+            status = CompareConst.ERROR
+            message = "Unexpected output type in compare_core: {}".format(type(bench_output))
+
+        return status, compare_column, message
+    
     def write_summary_csv(self, test_result):
         test_rows = []
         try:
@@ -293,41 +328,6 @@ class Comparator:
                 elif item_status == CompareConst.WARNING:
                     test_final_success = CompareConst.WARNING
         return test_final_success, detailed_result_total
-
-    @recursion_depth_decorator("compare_core")
-    def _compare_core(self, api_name, bench_output, device_output):
-        compare_column = CompareColumn()
-        if not isinstance(bench_output, type(device_output)):
-            status = CompareConst.ERROR
-            message = "bench and npu output type is different."
-        elif isinstance(bench_output, dict):
-            b_keys, n_keys = set(bench_output.keys()), set(device_output.keys())
-            if b_keys != n_keys:
-                status = CompareConst.ERROR
-                message = "bench and npu output dict keys are different."
-            else:
-                status, compare_column, message = self._compare_core(api_name, list(bench_output.values()),
-                                                                     list(device_output.values()))
-        elif isinstance(bench_output, torch.Tensor):
-            copy_bench_out = bench_output.detach().clone()
-            copy_device_output = device_output.detach().clone()
-            compare_column.bench_type = str(copy_bench_out.dtype)
-            compare_column.npu_type = str(copy_device_output.dtype)
-            compare_column.shape = tuple(device_output.shape)
-            status, compare_column, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
-                                                                         compare_column)
-        elif isinstance(bench_output, (bool, int, float, str)):
-            compare_column.bench_type = str(type(bench_output))
-            compare_column.npu_type = str(type(device_output))
-            status, compare_column, message = self._compare_builtin_type(bench_output, device_output, compare_column)
-        elif bench_output is None:
-            status = CompareConst.SKIP
-            message = "Bench output is None, skip this test."
-        else:
-            status = CompareConst.ERROR
-            message = "Unexpected output type in compare_core: {}".format(type(bench_output))
-
-        return status, compare_column, message
 
     def _compare_torch_tensor(self, api_name, bench_output, device_output, compare_column):
         cpu_shape = bench_output.shape
