@@ -71,7 +71,7 @@ class Const:
     }
 
     NonDifferentiableType = (
-        mstype.int8, mstype.byte, mstype.uint8, mstype.ubyte,
+        mstype.bool_, mstype.int8, mstype.byte, mstype.uint8, mstype.ubyte,
         mstype.int16, mstype.short, mstype.uint16, mstype.ushort,
         mstype.int32, mstype.intc, mstype.uint32, mstype.uintc,
         mstype.int64, mstype.intp, mstype.uint64, mstype.uintp

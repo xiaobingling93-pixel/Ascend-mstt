@@ -180,8 +180,9 @@ class CellProcessor:
                     result = (result,)
                 if len(result) != len(outputs):
                     raise TypeError(
-                        "The backward pre hook return value size is {} not equal to output size {}".format(
-                            len(result), len(outputs)))
+                        f"The backward pre hook return value size is {len(result)} "
+                        f"not equal to output size {len(outputs)}"
+                    )
             return result
 
         return forward_pre_hook, forward_hook

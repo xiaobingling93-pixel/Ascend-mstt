@@ -182,7 +182,7 @@ class TestCellProcessor(unittest.TestCase):
             target_args = (Tensor([0.0]),)
             full_forward_name = f'{cell_name}{Const.FORWARD}.0'
             full_backward_name = f'{cell_name}{Const.BACKWARD}.0'
-
+            # call testing function - forward_pre_hook
             ret = forward_pre_hook(mock_cell, args)
             self.assertIsNone(CellProcessor.module_node[full_forward_name])
             self.assertEqual(CellProcessor.cell_stack, [full_forward_name])
@@ -193,11 +193,13 @@ class TestCellProcessor(unittest.TestCase):
             mock_CellBackwardHook.assert_called_with(full_backward_name, mock_cell,
                                                      CellProcessor.cell_backward_hook[-1])
             mock_bw.register_backward_hook.assert_called_once()
+            mock_bw.assert_called_with(*args)
             self.assertTrue((ret[0] == target_args[0]).all())
 
             backward_hook = CellProcessor.cell_backward_hook[-1][full_backward_name]
             grad_input = (Tensor([1.0]),)
             grad_output = (Tensor([2.0]),)
+            # call testing function - backward_hook
             ret = backward_hook(mock_cell, grad_input, grad_output)
             mock_backward_data_hook.assert_called_with(mock_cell, grad_input, grad_output)
             self.assertFalse(mock_cell.has_pre_hook_called)
@@ -209,6 +211,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_build_data_hook.reset_mock()
             args = (Tensor([1], dtype=ms.int32),)
             full_forward_name = f'{cell_name}{Const.FORWARD}.1'
+            # call testing function - forward_pre_hook
             ret = forward_pre_hook(mock_cell, args)
             self.assertIsNone(CellProcessor.module_node[full_forward_name])
             self.assertEqual(CellProcessor.cell_stack, [full_forward_name])
@@ -222,17 +225,91 @@ class TestCellProcessor(unittest.TestCase):
             CellProcessor.cell_stack = [full_forward_name]
             CellProcessor.api_parent_node = full_forward_name
             CellProcessor.module_node = {full_forward_name: None}
+            self.scope.reset_mock()
             mock_CellBackwardHook.reset_mock()
             mock_bw.reset_mock()
-            mock_backward_data_hook.reset_mock()
-            mock_forward_data_hook_hook = MagicMock()
             target_output = Tensor([0.5])
-            mock_forward_data_hook_hook.return_value = target_output
-            mock_build_data_hook.return_value = (None, mock_forward_data_hook_hook, mock_backward_data_hook, None)
             args = (Tensor([1.0]),)
             output = Tensor([2.0])
+            mock_bw.return_value = target_output
+            mock_backward_data_hook.reset_mock()
+            mock_forward_data_hook_hook = MagicMock()
+            mock_forward_data_hook_hook.return_value = output
+            mock_build_data_hook.return_value = (None, mock_forward_data_hook_hook, mock_backward_data_hook, None)
+            # call testing function - forward_hook
             ret = forward_hook(mock_cell, args, output)
+            self.assertEqual(CellProcessor.cell_count.get(cell_name), 0)
+            self.assertEqual(CellProcessor.cell_stack, [])
+            self.assertIsNone(CellProcessor.api_parent_node)
+            self.scope.end_module.assert_called_with(full_forward_name)
+            self.assertEqual(mock_bw.call_count, 2)
+            self.assertEqual(mock_bw.call_args_list[0][0][0], output)
+            self.assertEqual(mock_bw.call_args_list[1][0][0], target_output)
+            self.assertEqual(mock_CellBackwardHook.call_count, 1)
+            self.assertEqual(len(CellProcessor.cell_backward_pre_hook), 1)
             self.assertTrue((ret == target_output).all())
+
+            backward_pre_hook = CellProcessor.cell_backward_pre_hook[-1][full_backward_name]
+            mock_backward_data_hook.reset_mock()
+            grad_output = (Tensor([2.0]),)
+            # call testing function - backward_pre_hook
+            ret = backward_pre_hook(mock_cell, grad_output)
+            self.assertTrue(mock_cell.has_pre_hook_called)
+            self.scope.begin_module.assert_called_with(full_backward_name)
+            self.assertEqual(CellProcessor.cell_stack, [full_backward_name])
+            self.assertEqual(CellProcessor.api_parent_node, full_backward_name)
+            self.assertEqual(CellProcessor.module_node, {full_forward_name: None, full_backward_name: None})
+            self.scope.begin_module.assert_called_with(full_backward_name)
+            mock_backward_data_hook.assert_not_called()
+            self.assertIsNone(ret)
+
+            CellProcessor.cell_count = {cell_name: 0}
+            CellProcessor.cell_stack = [full_forward_name]
+            CellProcessor.api_parent_node = full_forward_name
+            CellProcessor.module_node = {full_forward_name: None}
+            mock_bw.reset_mock()
+            args = (Tensor([1.0]),)
+            output = (Tensor([2.0]),)
+            mock_forward_data_hook_hook.return_value = output
+            target_output = (Tensor([0.5]),)
+            # call testing function - forward_hook
+            ret = forward_hook(mock_cell, args, output)
+            self.assertEqual(mock_bw.call_count, 2)
+            self.assertEqual(mock_bw.call_args_list[0][0][0], *output)
+            self.assertEqual(mock_bw.call_args_list[1][0][0], mock_bw.return_value)
+            self.assertTrue((ret[0] == target_output[0]).all())
+
+            CellProcessor.cell_count = {cell_name: 0}
+            CellProcessor.cell_stack = [full_forward_name]
+            CellProcessor.api_parent_node = full_forward_name
+            CellProcessor.module_node = {full_forward_name: None}
+            CellProcessor.cell_bw_hook_kernels.clear()
+            CellProcessor.cell_backward_pre_hook.clear()
+            mock_bw.reset_mock()
+            mock_bw.return_value = (Tensor([0.5]),)
+            output = (Tensor([1.0]), Tensor([2.0]))
+            mock_forward_data_hook_hook.return_value = output
+            with self.assertRaises(TypeError) as context:
+                # call testing function - forward_hook
+                forward_hook(mock_cell, args, output)
+            self.assertEqual(str(context.exception),
+                             'The backward pre hook return value size is 1 not equal to output size 2')
+            mock_bw.assert_called_with(*output)
+
+            self.scope.reset_mock()
+            backward_pre_hook = CellProcessor.cell_backward_pre_hook[-1][full_backward_name]
+            # call testing function - backward_pre_hook
+            ret = backward_pre_hook(mock_cell, grad_output)
+            self.assertFalse(mock_cell.has_pre_hook_called)
+            self.scope.begin_module.assert_called_with(full_backward_name)
+            mock_backward_data_hook.assert_called_with(mock_cell, (), grad_output)
+            self.assertEqual(CellProcessor.cell_stack, [])
+            self.assertIsNone(CellProcessor.api_parent_node)
+            self.assertEqual(CellProcessor.module_node, {full_forward_name: None, full_backward_name: None})
+            self.scope.end_module.assert_called_with(full_backward_name)
+            self.assertIsNone(ret)
+
+            CellProcessor.reset_cell_stats()
 
     def test_set_construct_info_in_pre_hook(self):
         CellProcessor.reset_cell_stats()

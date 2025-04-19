@@ -144,11 +144,12 @@ class ModuleProcesser:
 
     def build_module_hook(self, module_name, build_data_hook):
         def forward_pre_hook(module, args, kwargs=None):
-            if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
-                return
-
             if kwargs is None:
                 kwargs = {}
+
+            if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
+                return (args, kwargs) if torch_version_above_or_equal_2 else args
+
             index = ModuleProcesser.set_and_get_calls_number(module_name)
             full_forward_name = f'{module_name}{Const.FORWARD}{Const.SEP}{index}'
             full_backward_name = f'{module_name}{Const.BACKWARD}{Const.SEP}{index}'
@@ -182,7 +183,7 @@ class ModuleProcesser:
 
         def forward_hook(module, args, kwargs_or_output, output_or_kwargs=None):
             if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
-                return
+                return output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
 
             index = ModuleProcesser.module_count.get(module_name)
             full_name = f'{module_name}{Const.FORWARD}{Const.SEP}{index}'

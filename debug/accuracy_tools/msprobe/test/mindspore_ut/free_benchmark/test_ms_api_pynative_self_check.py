@@ -99,11 +99,13 @@ class TestApiPyNativeSelfCheck(TestCase):
         _, forward_hook, backward_hook, _ = self.checker.build_hook("Functional.add.")
 
         cell = Cell()
+        cell.msprobe_input_kwargs = {}
 
         with patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.need_wrapper_func", return_value=False):
             self.assertIsNone(forward_hook(cell, "input", "output"))
 
         cell = Cell()
+        cell.msprobe_input_kwargs = {}
         self.checker.api_list = ["mindspore.ops.add"]
         self.checker.ori_func["mindspore.ops.add"] = "add"
         with patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.need_wrapper_func", return_value=True), \

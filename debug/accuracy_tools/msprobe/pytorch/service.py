@@ -65,9 +65,11 @@ class Service:
         self.init_for_debug_level()
 
     def build_hook(self, module_type, name):
-        def pre_hook(api_or_module_name, module, args, kwargs={}):
+        def pre_hook(api_or_module_name, module, args, kwargs=None):
+            kwargs = {} if kwargs is None else kwargs
+
             if module_type == BaseScope.Module_Type_Module or \
-              not self.should_execute_hook(module_type, module, True):
+                    not self.should_execute_hook(module_type, module, True):
                 return
             is_recompute = is_recomputation()
 
