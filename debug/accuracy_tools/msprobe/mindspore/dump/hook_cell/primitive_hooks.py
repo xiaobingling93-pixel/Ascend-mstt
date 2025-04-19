@@ -58,7 +58,7 @@ class PrimitiveHookService:
             def backward_hook(grad):
                 captured_grads.extend(grad)
                 backward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
-
+                self.inner_switch = True
                 try:
                     if hook_type == Const.INPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
@@ -77,6 +77,7 @@ class PrimitiveHookService:
                     logger.error(f"This is a primitive op {hook_type}_backward dump error: {exception}, "
                                  f"updated_primitive_name: {updated_primitive_name}")
                     raise DumpException(DumpException.BACKWARD_DATA_COLLECTION_ERROR) from exception
+                self.inner_switch = False
 
             return backward_hook
 
@@ -137,6 +138,7 @@ class PrimitiveHookService:
 
         def pre_forward_hook(primitive_name, primitive_instance, args, kwargs):
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
+            self.inner_switch = True
             try:
                 self.service_instance.data_collector.forward_input_data_collect(
                     primitive_name,
@@ -148,9 +150,11 @@ class PrimitiveHookService:
                 logger.error(f"This is a primitive op dump error during forward input data collection: {exception}, "
                              f"primitive_name: {primitive_name}")
                 raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
+            self.inner_switch = False
 
         def post_forward_hook(primitive_name, primitive_instance, args, kwargs, output):
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+            self.inner_switch = True
             try:
                 self.service_instance.data_collector.forward_output_data_collect(
                     primitive_name,
@@ -162,6 +166,7 @@ class PrimitiveHookService:
                 logger.error(f"This is a primitive op dump error during forward output data collection: {exception}, "
                              f"primitive_name: {primitive_name}")
                 raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
+            self.inner_switch = False
 
         def wrapped_primitive_call(instance_self, *args, **kwargs):
             """
@@ -180,6 +185,8 @@ class PrimitiveHookService:
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}{Const.SEP}{primitive_name}{Const.SEP}{current_count}"
 
             if not self.service_instance.primitive_switch:
+                return origin_func(*args, **kwargs)
+            if self.inner_switch:
                 return origin_func(*args, **kwargs)
 
             captured_grads_input, captured_grads_output = [], []
