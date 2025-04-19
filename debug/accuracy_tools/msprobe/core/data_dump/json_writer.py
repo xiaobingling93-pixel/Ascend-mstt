@@ -64,7 +64,7 @@ class DataWriter:
             for key in keys:  # 递归所有变量
                 value = data[key]
                 if key == Const.TENSOR_STAT_INDEX and isinstance(value, int):
-                    if value > 0:
+                    if value >= 0:
                         idx = value
                     else:
                         return
