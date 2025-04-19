@@ -20,7 +20,6 @@ import threading
 
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
-from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.decorator import recursion_depth_decorator
 
