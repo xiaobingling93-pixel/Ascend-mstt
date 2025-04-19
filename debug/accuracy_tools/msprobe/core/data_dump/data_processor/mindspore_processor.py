@@ -290,11 +290,17 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         if max_tensor is None or min_tensor is None:
             return
 
-        if mint.isinf(max_tensor) or mint.isnan(max_tensor):
+        def check_inf_nan(value):
+            # Use .item() if it's a tensor-like structure
+            if hasattr(value, "item"):
+                value = value.item()
+            return np.isinf(value) or np.isnan(value)
+
+        if check_inf_nan(max_tensor):
             self.has_overflow = True
             return
 
-        if mint.isinf(min_tensor) or mint.isnan(min_tensor):
+        if check_inf_nan(min_tensor):
             self.has_overflow = True
 
     def _analyze_tensor(self, tensor, suffix):
