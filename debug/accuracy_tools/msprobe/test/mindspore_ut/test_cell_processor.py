@@ -190,7 +190,8 @@ class TestCellProcessor(unittest.TestCase):
             self.scope.begin_module.assert_called_with(full_forward_name)
             mock_build_data_hook.assert_called_with('Module', full_forward_name)
             self.assertEqual(len(CellProcessor.cell_backward_hook), 1)
-            mock_CellBackwardHook.assert_called_with(full_backward_name, mock_cell, CellProcessor.cell_backward_hook[-1])
+            mock_CellBackwardHook.assert_called_with(full_backward_name, mock_cell,
+                                                     CellProcessor.cell_backward_hook[-1])
             mock_bw.register_backward_hook.assert_called_once()
             self.assertTrue((ret[0] == target_args[0]).all())
 
