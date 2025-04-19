@@ -37,6 +37,16 @@ def replace_checkpoint():
         torch.utils.checkpoint.checkpoint = checkpoint_without_early_stop
 
 
+def wrap_megatron_deallocate(func):
+    def wrapper_func(out, deallocate_pipeline_outputs=False):
+        if deallocate_pipeline_outputs and isinstance(out, torch.Tensor) and getattr(out, "_base") is not None:
+            out_clone = out.clone()
+            out.data = torch.empty((1,), device=out.device, dtype=out.dtype, )
+            return func(out_clone, deallocate_pipeline_outputs)
+        return func(out, deallocate_pipeline_outputs)
+    return wrapper_func
+
+
 class ModuleProcesser:
     module_count = {}
     module_stack = []
@@ -50,6 +60,14 @@ class ModuleProcesser:
         self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
         wrap_setup_input_output_hook()
         replace_checkpoint()
+        try:
+            from megatron.core.pipeline_parallel import schedules
+            schedules.deallocate_output_tensor = wrap_megatron_deallocate(schedules.deallocate_output_tensor)
+            logger.info_on_rank_0("Patch megatron method success.")
+        except ImportError:
+            logger.info_on_rank_0("No megatron find.")
+        except Exception as e:
+            logger.info_on_rank_0(f"Patch megatron method failed, detail:{str(e)}")
 
     @staticmethod
     def set_and_get_calls_number(module_name):

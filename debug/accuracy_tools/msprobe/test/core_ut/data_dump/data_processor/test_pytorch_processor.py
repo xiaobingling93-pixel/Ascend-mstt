@@ -278,11 +278,35 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result, self.processor._analyze_process_group(process_group_element))
 
     def test_analyze_single_element_numpy_conversion(self):
-        numpy_element = np.int64(1)
-        converted_numpy, numpy_type = self.processor._convert_numpy_to_builtin(numpy_element)
+        numpy_element = np.int32(5)
         result = self.processor.analyze_single_element(numpy_element, [])
-        expected_result = {"type": numpy_type, "value": converted_numpy} 
-        self.assertEqual(result, expected_result)
+        expected = {"type": 'int32', "value": 5}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.float32(3.14)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'float32', "value": 3.140000104904175}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.bool_(True)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'bool_', "value": True}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.str_("abc")
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'str_', "value": "abc"}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.byte(1)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'int8', "value": 1}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.complex128(1+2j)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'complex128', "value": (1+2j)}
+        self.assertEqual(result, expected)
 
     def test_analyze_single_element_tensor(self):
         tensor_element = torch.tensor([1, 2, 3])

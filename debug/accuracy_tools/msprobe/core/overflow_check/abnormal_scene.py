@@ -20,6 +20,7 @@ import numpy as np
 from msprobe.core.overflow_check.api_info import APIInfo
 from msprobe.core.overflow_check.level import OverflowLevel
 from msprobe.core.overflow_check.utils import has_nan_inf
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class AnomalyScene:
@@ -35,6 +36,7 @@ class AnomalyScene:
         raise NotImplementedError
 
     @staticmethod
+    @recursion_depth_decorator("AbnormalScene: AnomalyScene._has_anomaly")
     def _has_anomaly(data: Union[Dict, Any]) -> bool:
         """检查张量是否包含异常值"""
         if isinstance(data, dict):

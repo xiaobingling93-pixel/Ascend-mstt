@@ -211,6 +211,7 @@ class Const:
 
     DTYPE = 'dtype'
     SHAPE = 'shape'
+    STACK_INFO = 'stack_info'
     MAX = 'Max'
     MIN = 'Min'
     MEAN = 'Mean'
@@ -250,6 +251,7 @@ class Const:
     MS_API_TYPE_MINT = "mint.ops"
     MS_API_TYPE_MINT_FUNC = "mint.nn.functional"
     MS_API_TYPE_COM = "communication.comm_func"
+    MS_API_TYPE_MINT_DIST = "mint.distributed"
 
     FUNCTIONAL_API_TYPE_PREFIX = "Functional"
     TENSOR_API_TYPE_PREFIX = "Tensor"
@@ -262,6 +264,7 @@ class Const:
 
     MINT_API_TYPE_PREFIX = "Mint"
     MINT_FUNC_API_TYPE_PREFIX = "MintFunctional"
+    MINT_DIST_API_TYPE_PREFIX = "MintDistributed"
 
     SUPPORT_API_DICT_KEY_MAP = {
         PT_FRAMEWORK: {
@@ -280,7 +283,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: MS_API_TYPE_TENSOR,
             MS_API_TYPE_MINT: MS_API_TYPE_MINT,
             MS_API_TYPE_MINT_FUNC: MS_API_TYPE_MINT_FUNC,
-            MS_API_TYPE_COM: MS_API_TYPE_COM
+            MS_API_TYPE_COM: MS_API_TYPE_COM,
+            MS_API_TYPE_MINT_DIST: MS_API_TYPE_MINT_DIST
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: PT_API_TYPE_FUNCTIONAL,
@@ -308,7 +312,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: TENSOR_API_TYPE_PREFIX,
             MS_API_TYPE_MINT: MINT_API_TYPE_PREFIX,
             MS_API_TYPE_MINT_FUNC: MINT_FUNC_API_TYPE_PREFIX,
-            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX
+            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX,
+            MS_API_TYPE_MINT_DIST: MINT_DIST_API_TYPE_PREFIX
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: FUNCTIONAL_API_TYPE_PREFIX,
@@ -477,13 +482,6 @@ class CompareConst:
         Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
     }
 
-    STRUCT_COMPARE_KEY = [
-        INPUT_STRUCT,
-        OUTPUT_STRUCT,
-        PARAMS_STRUCT,
-        PARAMS_GRAD_STRUCT
-    ]
-
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
     THOUSAND_RATIO_THRESHOLD = 0.001
@@ -562,15 +560,34 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+
+    API_MAPPING_KEYS_TO_COMPARE = [
+        ('ms_args', 'pt_args'),
+        ('ms_outputs', 'pt_outputs'),
+        ('ms_parameters', 'pt_parameters'),
+        ('ms_parameters_grad', 'pt_parameters_grad')
+    ]
+
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
-    COMPARE_KEY = 'compare_key'
-    COMPARE_SHAPE = 'compare_shape'
+
+    CMP_KEY = 'compare_key'
+    CMP_SHAPE = 'compare_shape'
+
+    MATCH_RESULT_COLUMNS = [
+        'op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        CMP_KEY, CMP_SHAPE,
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+    ]
+
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
     UNREADABLE = 'unreadable data'
+    NPU_DUMP_DATA_DIR = 'npu_dump_data_dir'
+    BENCH_DUMP_DATA_DIR = 'bench_dump_data_dir'
+    NO_REAL_DATA_FLAG = '-1'
 
 
 class FileCheckConst:

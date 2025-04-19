@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import re
-from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
-from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file, get_csv_df
+from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data, get_csv_df
+from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
 from msprobe.core.common.const import Const
@@ -25,14 +25,16 @@ from msprobe.core.common.decorator import recursion_depth_decorator
 class GraphComparator:
     MAX_DEPTH = 1000
 
-    def __init__(self, graphs, dump_path_param, args, mapping_dict=None):
+    def __init__(self, graphs, dump_path_param, args, is_cross_framework, mapping_dict=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
         self._parse_param(dump_path_param, args.output_path)
         self.framework = args.framework
+        self.layer_mapping = args.layer_mapping
         self.mapping_dict = mapping_dict
         self.fuzzy_match = args.fuzzy_match
         self.pattern = re.compile(r'\.\d+\.')
+        self.is_cross_framework = is_cross_framework
 
     def compare(self):
         """
@@ -75,7 +77,7 @@ class GraphComparator:
         递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
         这里采用先序遍历，好处在于当这个节点被比较时，他的先序已经被匹配，这可以为后续的模糊匹配提供重要信息
         """
-        if self.mapping_dict:
+        if self.layer_mapping:
             node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_dict)
             if node_b:
                 ancestors_n.append(node_n.id)
@@ -128,7 +130,7 @@ class GraphComparator:
         if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df, self.framework, True if self.mapping_dict else False)
+        df = run_real_data(self.dump_path_param, df, self.framework, self.is_cross_framework)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])

@@ -89,13 +89,6 @@ class TestBaseDataProcessor(unittest.TestCase):
         }
         self.assertEqual(result, expected_output)
 
-    def test_convert_numpy_to_builtin(self):
-        self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(np.int32(5)), (5, 'int32'))
-        self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(np.float64(3.14)), (3.14, 'float64'))
-        self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(np.bool_(True)), (True, 'bool_'))
-        self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(np.str_('test')), ('test', 'str_'))
-        self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(5), (5, ''))
-
     def test_analyze_builtin(self):
         result = self.processor._analyze_builtin(slice(1, 10, 2))
         expected = {'type': 'slice', 'value': [1, 10, 2]}
@@ -113,12 +106,37 @@ class TestBaseDataProcessor(unittest.TestCase):
         expected = {'type': 'int', 'value': 1}
         self.assertEqual(result, expected)
 
+    def test_analyze_numpy(self):
+        result = BaseDataProcessor._analyze_numpy(np.int32(5))
+        expected = {"type": 'int32', "value": 5}
+        self.assertEqual(result, expected)
+
+        result = BaseDataProcessor._analyze_numpy(np.float32(3.14))
+        expected = {"type": 'float32', "value": 3.140000104904175}
+        self.assertEqual(result, expected)
+
+        result = BaseDataProcessor._analyze_numpy(np.bool_(True))
+        expected = {"type": 'bool_', "value": True}
+        self.assertEqual(result, expected)
+
+        result = BaseDataProcessor._analyze_numpy(np.str_("abc"))
+        expected = {"type": 'str_', "value": "abc"}
+        self.assertEqual(result, expected)
+
+        result = BaseDataProcessor._analyze_numpy(np.byte(1))
+        expected = {"type": 'int8', "value": 1}
+        self.assertEqual(result, expected)
+
+        result = BaseDataProcessor._analyze_numpy(np.complex128(1+2j))
+        expected = {"type": 'complex128', "value": (1+2j)}
+        self.assertEqual(result, expected)
+
     def test_get_special_types(self):
         self.assertIn(int, BaseDataProcessor.get_special_types())
 
-    def test_analyze_numpy(self):
+    def test_analyze_ndarray(self):
         ndarray = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
-        result = BaseDataProcessor._analyze_numpy(ndarray, 'numpy.ndarray')
+        result = BaseDataProcessor._analyze_ndarray(ndarray, 'numpy.ndarray')
         expected_result = {
             'type': 'numpy.ndarray',
             'dtype': 'int32',
@@ -127,6 +145,19 @@ class TestBaseDataProcessor(unittest.TestCase):
             'Min': 1,
             'Mean': 3.5,
             'Norm':9.539392014169456
+        }
+        self.assertEqual(result, expected_result)
+
+        ndarray = np.array([], dtype=np.int32)
+        result = BaseDataProcessor._analyze_ndarray(ndarray, 'numpy.ndarray')
+        expected_result = {
+            'type': 'numpy.ndarray',
+            'dtype': 'int32',
+            'shape': (0,),
+            'Max': None,
+            'Min': None,
+            'Mean': None,
+            'Norm': None
         }
         self.assertEqual(result, expected_result)
 

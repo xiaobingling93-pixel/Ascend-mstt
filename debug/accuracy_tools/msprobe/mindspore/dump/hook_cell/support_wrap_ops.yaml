@@ -1025,3 +1025,21 @@ communication.comm_func:
   - recv
   - isend
   - irecv
+
+mint.distributed:
+  - send
+  - recv
+  - broadcast
+  - all_reduce
+  - reduce
+  - all_gather
+  - gather
+  - isend
+  - irecv
+  - scatter
+  - reduce_scatter
+  - all_to_all_single
+  - all_to_all
+  - all_gather_into_tensor
+  - reduce_scatter_tensor
+  - batch_isend_irecv
