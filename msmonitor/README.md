@@ -75,6 +75,19 @@ msmonitor_plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用
 ### Profiler trace dump功能
 Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Torch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
 
+- 查看dyno支持的命令和帮助
+
+```bash
+dyno --help
+```
+
+dyno命令支持的参数选项
+
+| 命令                 | 参数类型   | 说明                           |
+|--------------------|--------|------------------------------|
+| hostname           | String | 网络中唯一标识一台设备的名称，默认值localhost  |
+| port               | i32    | 用于区分同一设备上的不同网络服务或应用程序，默认值1778 |
+
 - 查看nputrace支持的命令和帮助
 
 ```bash
@@ -155,9 +168,12 @@ dyno nputrace --start-step 10 --iterations 2 --activities NPU --analyse --data-s
 
 # 示例3：从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
 dyno nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
+
+# 示例4：多机场景下向特定机器x.x.x.x发送参数信息，参数表示从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
+dyno --hostname x.x.x.x nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
 ```
 
-### NPU Monitor功能（POC分支）
+### NPU Monitor功能（该功能当前只支持命令行参数，完整功能请使用[poc](https://gitee.com/ascend/mstt/tree/poc/msmonitor)分支）
 NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
 
 ```bash
@@ -225,6 +241,10 @@ dyno npu-monitor --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 # 示例4：性能监控开启时修改配置
 # 上报周期30s, 上报数据类型Marker和Kernel
 dyno npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
+
+# 示例5：多机场景下性能监控开启时修改配置
+# 多机场景下向特定机器x.x.x.x发送参数信息，参数表示上报周期30s, 上报数据类型Marker和Kernel
+dyno --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 ```
 
 Step5: 观测Prometheus上报数据
