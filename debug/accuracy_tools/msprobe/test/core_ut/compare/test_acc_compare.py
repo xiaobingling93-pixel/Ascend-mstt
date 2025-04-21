@@ -6,15 +6,49 @@ import threading
 import unittest
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import torch
 
+from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
-from msprobe.core.compare.acc_compare import Comparator, ModeConfig
-from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows, ApiBatch
-from msprobe.core.compare.utils import get_accuracy
-from msprobe.pytorch.compare.pt_compare import PTComparator
+from msprobe.core.compare.acc_compare import ModeConfig, MappingConfig, MappingDict, Comparator, ParseData, ProcessDf, \
+    Match, CreateTable, CalcStatsDiff
+
+npu_op_item_data_fuzzy = {
+    'op_name': 'Functional.conv2d.0.forward.input.0',
+    'dtype': 'torch.float32',
+    'shape': [1, 1, 28, 28],
+    'summary': [3.029174327850342, -2.926689624786377, -0.06619918346405029],
+    'stack_info': [],
+    'data_name': 'Functional.conv2d.0.forward.input.0.pt',
+    'compare_key': 'Functional.conv2d.0.forward.input.0',
+    'compare_shape': [1, 1, 28, 28],
+}
+npu_op_item_fuzzy = pd.Series(npu_op_item_data_fuzzy)
+npu_op_item_data_fuzzy_2 = {
+    'op_name': 'Functional.conv2d.0.forward.input.1',
+    'dtype': 'torch.float32',
+    'shape': [1, 1, 28, 28],
+    'summary': [3.029174327850342, -2.926689624786377, -0.06619918346405029],
+    'stack_info': [],
+    'data_name': 'Functional.conv2d.0.forward.input.1.pt',
+    'compare_key': 'Functional.conv2d.0.forward.input.1',
+    'compare_shape': [1, 1, 28, 28],
+}
+npu_op_item_fuzzy_2 = pd.Series(npu_op_item_data_fuzzy_2)
+bench_op_item_data_fuzzy = {
+    'op_name': 'Functional.conv2d.1.forward.input.0',
+    'dtype': 'torch.float32',
+    'shape': [1, 1, 28, 28],
+    'summary': [3.029174327850342, -2.926689624786377, -0.06619918346405029],
+    'stack_info': [],
+    'data_name': 'Functional.conv2d.1.forward.input.0.pt',
+    'compare_key': 'Functional.conv2d.1.forward.input.0',
+    'compare_shape': [1, 1, 28, 28],
+}
+bench_op_item_fuzzy = pd.Series(bench_op_item_data_fuzzy)
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                         'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
@@ -159,7 +193,8 @@ aten_result = [
      -10.640625, -0.008758544921875, 5.397906303405762, -5.796811580657959, 2.5283952709287405e-10, 'Warning',
      'Need double check api accuracy.', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward.output.1', 'Nan', 'torch.float32', 'Nan', [256], 'Nan',
-     ' ', ' ', ' ', ' ', ' ', ' ', 0.30550330877304077, -0.24485322833061218, -0.010361209511756897, 'Nan', 'Nan', 'Nan',
+     ' ', ' ', ' ', ' ', ' ', ' ', 0.30550330877304077, -0.24485322833061218, -0.010361209511756897, 'Nan', 'Nan',
+     'Nan',
      'Yes', '', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward.output.2', 'Nan', 'torch.float32', 'Nan', [256], 'Nan',
      ' ', ' ', ' ', ' ', ' ', ' ', 623.9192504882812, 432.96826171875, 520.2276611328125, 'Nan', 'Nan', 'Nan',
@@ -172,40 +207,6 @@ aten_result = [
      'Yes', '', 'None']]
 
 highlight_dict = {'red_rows': [], 'yellow_rows': []}
-
-num_0, num_1, num_2, num_3 = 0, 1, 2, 3
-summary_line_input = ['Functional_batch_norm_0_forward.input.0', 'Functional_batch_norm_0_forward.input.0',
-                      'torch.float16',
-                      'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1,
-                      'Yes', '']
-summary_line_1 = ['Functional_batch_norm_0_forward.output.0', 'Functional_batch_norm_0_forward.output.0',
-                  'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 10, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
-                  'Warning', '']
-summary_line_2 = ['Functional_batch_norm_0_forward.output.1', 'Functional_batch_norm_0_forward.output.1',
-                  'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1,
-                  'Warning', '']
-summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_norm_0_forward.output.2',
-                  'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
-                  'Warning', '']
-line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
-              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0.5, 1, 1, 0.95, 1,
-              1, 1, 1, 1, 1.01, 1, 1, 1,
-              'Yes', '']
-line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1, 1, 0.59, 1,
-          'nan', 0, 1, 1, 19, 1, 1, 1,
-          'Yes', '']
-line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 0.5, 1, 1, 0.8, 1,
-          0, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '']
-line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1.1e+10, 1, 0.85, 1,
-          9, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '']
 
 op_data = {
     'input_args': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
@@ -267,6 +268,33 @@ def generate_dump_json(base_dir):
         json.dump(data, json_file)
 
 
+def generate_dump_json_md5(base_dir):
+    data_path = os.path.join(base_dir, 'dump_md5.json')
+    data = {
+        'task': 'statistics',
+        'level': 'L1',
+        'dump_data_dir': '',
+        'data': {
+            'Functional.linear.0.forward': {
+                'input_args': [
+                    {'type': 'torch.Tensor',
+                     'dtype': 'torch.float32',
+                     'shape': [2, 2],
+                     'Max': 2,
+                     'Min': 0,
+                     'Mean': 1,
+                     'Norm': 1,
+                     'requires_grad': False,
+                     'md5': 123456
+                     }
+                ]
+            }
+        }
+    }
+    with open(data_path, 'w') as json_file:
+        json.dump(data, json_file)
+
+
 def generate_stack_json(base_dir):
     data_path = os.path.join(base_dir, 'stack.json')
     data = {'Functional.linear.0.forward': ['File']}
@@ -300,145 +328,6 @@ class TestUtilsMethods(unittest.TestCase):
         if os.path.exists(base_dir3):
             shutil.rmtree(base_dir3)
 
-    def test_get_accuracy_graph_mode(self):
-        result = []
-        get_accuracy(result, npu_dict_aten, bench_dict_functional, dump_mode=Const.SUMMARY)
-        self.assertEqual(result, aten_result)
-
-    def test_find_error_rows(self):
-        api_batch = ApiBatch("Functional_batch_norm_0_forward", 0)
-        api_batch.input_len = 1
-        api_batch.output_end_index = 4
-        api_batch.params_end_index = 4
-        summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
-        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        find_error_rows(summary_result, api_batch, highlight_dict_test, dump_mode=Const.SUMMARY)
-        self.assertEqual(highlight_dict_test,
-                         {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
-
-    def test_find_compare_result_error_rows(self):
-        result = [line_input, line_1, line_2, line_3]
-        result_df = pd.DataFrame(result)
-        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        find_compare_result_error_rows(result_df, highlight_dict_test, dump_mode=Const.ALL)
-        self.assertEqual(highlight_dict_test, {
-            "red_rows": {1, 3},
-            "yellow_rows": {2},
-            "red_lines": [
-                (1, ["maximum or minimum is nan, -inf, or inf"]),
-                (3, ["maximum absolute error exceeds 1e+10"])
-            ],
-            "yellow_lines": [
-                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input/parameters's"]),
-                (3, [
-                    "maximum absolute error of both input/parameters and output exceed 1, "
-                    "with the output larger by an order of magnitude",
-                    "The output's cosine decreases by more than 0.1 compared to the input/parameters's"])
-            ]
-        })
-
-    def test_calculate_summary_data(self):
-        npu_summary_data = [1, 1, 1, 1]
-        bench_summary_data = [2, 2, 2, 2]
-        result_item = ['', '', '', '', '', '', '', '', '', '', '', '', '', '']
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        comparator = Comparator(mode_config)
-        comparator.calculate_summary_data(npu_summary_data, bench_summary_data, result_item)
-        self.assertEqual(result_item,
-                         ['', '', '', '', '', '', -1, -1, -1, -1, '50.0%', '50.0%', '50.0%', '50.0%', '', ''])
-
-        bench_summary_data = [0, 0, 0, 0]
-        result_item = ['', '', '', '', '', '', '', '', '', '', '', '', '', '']
-
-        comparator.calculate_summary_data(npu_summary_data, bench_summary_data, result_item)
-        self.assertEqual(result_item, ['', '', '', '', '', '', 1, 1, 1, 1, 'N/A', 'N/A', 'N/A', 'N/A', 'Warning',
-                                       'Need double check api accuracy.'])
-
-    def test_make_result_table_stack_mode_True(self):
-        result_md5 = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', 'File']]
-        result_summary = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                           'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '', '', '',
-                           1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', 'File']]
-        result_all = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '',
-                       1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', 'File', '-1']]
-        columns_md5_stack_mode_true = CompareConst.MD5_COMPARE_RESULT_HEADER + ['NPU_Stack_Info']
-        result_table_md5_true = pd.DataFrame(result_md5, columns=columns_md5_stack_mode_true, dtype=object)
-        columns_summary_stack_mode_true = CompareConst.SUMMARY_COMPARE_RESULT_HEADER + ['NPU_Stack_Info']
-        result_table_summary_true = pd.DataFrame(result_summary, columns=columns_summary_stack_mode_true, dtype=object)
-        columns_all_stack_mode_true = CompareConst.COMPARE_RESULT_HEADER + ['NPU_Stack_Info'] + ['Data_name']
-        result_table_all_true = pd.DataFrame(result_all, columns=columns_all_stack_mode_true, dtype=object)
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-
-        dump_mode = Const.MD5
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        result_df = Comparator(mode_config).make_result_table(result_md5)
-        self.assertTrue(result_df.equals(result_table_md5_true))
-
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        result_df = Comparator(mode_config).make_result_table(result_summary)
-        self.assertTrue(result_df.equals(result_table_summary_true))
-
-        dump_mode = Const.ALL
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        result_df = Comparator(mode_config).make_result_table(result_all)
-        self.assertTrue(result_df.equals(result_table_all_true))
-
-    def test_make_result_table_stack_mode_False(self):
-        result_md5_test = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                            'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '']]
-        result_md5 = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '']]
-        result_summary_test = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                                'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '', '', '',
-                                1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '']]
-        result_summary = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                           'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '', '', '',
-                           1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']]
-        result_all_test = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                            'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '',
-                            1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '', '-1']]
-        result_all = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                       'torch.float32', 'torch.float32', [2, 2], [2, 2], '', '', '', '', '', '',
-                       1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
-        columns_md5_stack_mode_true = CompareConst.MD5_COMPARE_RESULT_HEADER
-        result_table_md5_true = pd.DataFrame(result_md5, columns=columns_md5_stack_mode_true, dtype='object')
-        columns_summary_stack_mode_true = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
-        result_table_summary_true = pd.DataFrame(result_summary, columns=columns_summary_stack_mode_true,
-                                                 dtype='object')
-        columns_all_stack_mode_true = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
-        result_table_all_true = pd.DataFrame(result_all, columns=columns_all_stack_mode_true, dtype='object')
-
-        stack_mode = False
-        auto_analyze = True
-        fuzzy_match = False
-
-        dump_mode = Const.MD5
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        result_df = Comparator(mode_config).make_result_table(result_md5_test)
-        self.assertTrue(result_df.equals(result_table_md5_true))
-
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        result_df = Comparator(mode_config).make_result_table(result_summary_test)
-        self.assertTrue(result_df.equals(result_table_summary_true))
-
-        dump_mode = Const.ALL
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        result_df = Comparator(mode_config).make_result_table(result_all_test)
-        self.assertTrue(result_df.equals(result_table_all_true))
-
     def test_gen_merge_list(self):
         op_data = {
             'input_args': [
@@ -469,32 +358,396 @@ class TestUtilsMethods(unittest.TestCase):
         dump_mode = Const.SUMMARY
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
 
-        result = Comparator(mode_config).gen_merge_list(json_data, op_name, stack_json_data)
+        result = ParseData(mode_config).gen_merge_list(json_data, op_name, stack_json_data)
         self.assertEqual(result, merge_list)
 
-    def test_check_op_fuzzy_false(self):
-        stack_mode = False
-        auto_analyze = True
-        dump_mode = Const.SUMMARY
-
-        fuzzy_match = False
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        pt_comparator = PTComparator(mode_config)
-        result = pt_comparator.check_op(npu_dict, bench_dict)
-        self.assertEqual(result, True)
-
-    def test_check_op_fuzzy_true(self):
+    def test_check_op_item_fuzzy(self):
         stack_mode = False
         auto_analyze = True
         dump_mode = Const.SUMMARY
 
         fuzzy_match = True
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
 
-        pt_comparator = PTComparator(mode_config)
-        result = pt_comparator.check_op(npu_dict2, bench_dict)
+        match = Match(mode_config, mapping_config, cross_frame=False)
+        result = match.check_op_item(npu_op_item_fuzzy, bench_op_item_fuzzy)
         self.assertEqual(result, True)
+
+    def test_compare_statistics(self):
+        generate_dump_json(base_dir)
+        generate_stack_json(base_dir)
+        file_list = [os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'dump.json'),
+                     os.path.join(base_dir, 'stack.json')]
+
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.SUMMARY
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+
+        from msprobe.pytorch.compare.pt_compare import read_real_data
+        comparator = Comparator(read_real_data, mode_config, mapping_config)
+        result = comparator.compare_statistics(file_list)
+        o_data = [
+            ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+             'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', 0, 0, 0, 0, '0.0%', 'N/A', '0.0%', '0.0%',
+             2, 0, 1, 1, 2, 0, 1, 1, '', '', ['File']
+             ]
+        ]
+        columns = CompareConst.SUMMARY_COMPARE_RESULT_HEADER + ['NPU_Stack_Info']
+        o_result = pd.DataFrame(o_data, columns=columns, dtype=object)
+        self.assertTrue(np.array_equal(result.to_numpy(), o_result.to_numpy()))
+
+
+class TestParseData(unittest.TestCase):
+
+    def setUp(self):
+        os.makedirs(base_dir, mode=0o750, exist_ok=True)
+        generate_dump_json(base_dir)
+        generate_dump_json_md5(base_dir)
+        generate_stack_json(base_dir)
+
+        self.lock = threading.Lock()
+
+    def tearDown(self):
+        if os.path.exists(base_dir):
+            shutil.rmtree(base_dir)
+
+    def test_parse(self):
+        file_list = [os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'dump.json'),
+                     os.path.join(base_dir, 'stack.json')]
+
+        stack_mode = True
+        mode_config = ModeConfig(stack_mode=stack_mode)
+        parse_data = ParseData(mode_config)
+        npu_df, bench_df = parse_data.parse(file_list)
+
+        target_df = pd.DataFrame(
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File']]],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info']
+        )
+        self.assertTrue(npu_df.equals(target_df))
+        self.assertTrue(bench_df.equals(target_df))
+
+    def test_gen_data_df_summary(self):
+        npu_json_path = os.path.join(base_dir, 'dump.json')
+        stack_json_path = os.path.join(base_dir, 'stack.json')
+        npu_json_data = load_json(npu_json_path)
+        stack_json_data = load_json(stack_json_path)
+
+        stack_mode = True
+        mode_config = ModeConfig(stack_mode=stack_mode)
+        parse_data = ParseData(mode_config)
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+
+        target_df = pd.DataFrame(
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File']]],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info']
+        )
+        self.assertTrue(npu_df.equals(target_df))
+
+    def test_gen_data_df_all(self):
+        npu_json_path = os.path.join(base_dir, 'dump.json')
+        stack_json_path = os.path.join(base_dir, 'stack.json')
+        npu_json_data = load_json(npu_json_path)
+        stack_json_data = load_json(stack_json_path)
+
+        stack_mode = True
+        mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=Const.ALL)
+        parse_data = ParseData(mode_config)
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+
+        target_df = pd.DataFrame(
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'Functional.linear.0.forward.input.0.pt']],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'data_name']
+        )
+        self.assertTrue(npu_df.equals(target_df))
+
+    def test_gen_data_df_md5(self):
+        npu_json_path = os.path.join(base_dir, 'dump_md5.json')
+        stack_json_path = os.path.join(base_dir, 'stack.json')
+        npu_json_data = load_json(npu_json_path)
+        stack_json_data = load_json(stack_json_path)
+
+        stack_mode = True
+        mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=Const.MD5)
+        parse_data = ParseData(mode_config)
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+
+        target_df = pd.DataFrame(
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 123456]],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'md5']
+        )
+        self.assertTrue(npu_df.equals(target_df))
+
+    def test_gen_merge_list(self):
+        npu_json_path = os.path.join(base_dir, 'dump.json')
+        stack_json_path = os.path.join(base_dir, 'stack.json')
+        npu_json_data = load_json(npu_json_path)
+        stack_json_data = load_json(stack_json_path)
+
+        stack_mode = True
+        mode_config = ModeConfig(stack_mode=stack_mode)
+        parse_data = ParseData(mode_config)
+        merge_list = parse_data.gen_merge_list(npu_json_data, 'Functional.linear.0.forward', stack_json_data)
+
+        target_dict = {
+            'input_struct': [('torch.float32', [2, 2])],
+            'op_name': ['Functional.linear.0.forward.input.0'],
+            'output_struct': [],
+            'params_grad_struct': [],
+            'params_struct': [],
+            'stack_info': [['File']],
+            'summary': [[2, 0, 1, 1]]
+        }
+        self.assertEqual(merge_list, target_dict)
+
+
+class TestProcessDf(unittest.TestCase):
+
+    def test_get_api_name_success(self):
+        api_list = ['Functional', 'linear', '0', 'forward', 'input', '0']
+
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+        api_name = process_df.get_api_name(api_list)
+
+        target_api_name = 'Functional.linear'
+        self.assertEqual(api_name, target_api_name)
+
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_get_api_name_index_error(self, mock_logger):
+        api_list = ['Functional']
+        with self.assertRaises(CompareException) as context:
+            mode_config = ModeConfig()
+            mapping_config = MappingConfig()
+            mapping_dict = MappingDict(mapping_config)
+            process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+            api_name = process_df.get_api_name(api_list)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+        mock_logger.error.assert_called_once_with('Failed to retrieve API name, please check if the dump data is reasonable')
+
+    def test_process_compare_key_and_shape(self):
+        npu_df_o = bench_df_o = pd.DataFrame(
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File']]],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info']
+        )
+
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+        npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df_o, bench_df_o)
+
+        target_df = pd.DataFrame(
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'Functional.linear.0.forward.input.0', [2, 2]]],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'compare_key', 'compare_shape']
+        )
+        self.assertTrue(npu_df.equals(target_df))
+        self.assertTrue(bench_df.equals(target_df))
+
+    def test_process_internal_api_mapping(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+
+        # mint to torch
+        npu_op_name = 'Mint.mean.0.input.0'
+        target_name = 'Torch.mean.0.input.0'
+        name = process_df.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(name, target_name)
+
+        # mintfunctional to functional
+        npu_op_name = 'MintFunctional.mean.0.input.0'
+        target_name = 'Functional.mean.0.input.0'
+        name = process_df.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(name, target_name)
+
+        # inner mapping exists
+        npu_op_name = 'Functional.abs.0.input.0'
+        mapping_dict.ms_to_pt_mapping = {'Functional.abs': 'Torch.abs'}
+        target_name = 'Torch.abs.0.input.0'
+        name = process_df.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(name, target_name)
+
+        # inner mapping not found
+        npu_op_name = 'Functional.abs.0.input.0'
+        mapping_dict.ms_to_pt_mapping = {}
+        target_name = 'Functional.abs.0.input.0'
+        name = process_df.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(name, target_name)
+
+    def test_modify_compare_data_with_user_mapping(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+        mapping_dict.api_mapping_dict = [{
+            'ms_api': 'Functional.conv2d',
+            'pt_api': 'Torch.conv2d',
+            'ms_args': [0],
+            'pt_args': [0]
+        }]
+
+        npu_df = pd.DataFrame([
+            ['Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.conv2d.0.forward.input.0'],
+            ['Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.amax.0.forward.input.0']
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'compare_key'])
+        bench_df = pd.DataFrame([
+            ['Torch.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Torch.conv2d.0.forward.input.0'],
+            ['Torch.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Torch.amax.0.forward.input.0']
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'compare_key'])
+
+        process_df.modify_compare_data_with_user_mapping(npu_df, bench_df)
+
+    def test_get_api_indices_dict(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+
+        op_name_df = pd.DataFrame([
+            ['Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.conv2d.0.forward.input.0'],
+            ['Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.amax.0.forward.input.0']
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'compare_key'])
+
+        api_indices_dict = process_df.get_api_indices_dict(op_name_df)
+        expected = {
+            'Functional.conv2d': [0],
+            'Functional.amax': [1]
+        }
+        self.assertEqual(api_indices_dict, expected)
+
+    def test_process_cell_mapping(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+
+        # not name
+        npu_op_name = None
+        name = process_df.process_cell_mapping(npu_op_name)
+        self.assertEqual(name, CompareConst.N_A)
+
+        # not params_grad
+        npu_op_name = 'MintFunctional.embedding.0.input.0'
+        name = process_df.process_cell_mapping(npu_op_name)
+        self.assertEqual(name, CompareConst.N_A)
+
+        # default replace
+        npu_op_name = 'Cell.network_with_loss.module.GPTModel.forward.1.input.0'
+        name = process_df.process_cell_mapping(npu_op_name)
+        self.assertEqual(name, 'Module.network_with_loss.module.GPTModel.forward.1.input.0')
+
+        # mapping_dict
+        npu_op_name = 'Cell.fc1.Dense.forward.0.input.0'
+        mapping_dict.cell_mapping_dict = {'fc1.Dense': 'module.name'}
+        name = process_df.process_cell_mapping(npu_op_name)
+        self.assertEqual(name, 'Module.module.name.forward.0.input.0')
+
+    def test_process_data_mapping(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+
+        npu_op_name = 'Functional.flash_attention_score.4.forward.input.0'
+        mapping_dict.data_mapping_dict = {'Functional.flash_attention_score.4.forward.input.0': 'NPU.npu_fusion_attention.4.forward.input.0'}
+        name = process_df.process_data_mapping(npu_op_name)
+        self.assertEqual(name, 'NPU.npu_fusion_attention.4.forward.input.0')
+
+
+class TestMatch(unittest.TestCase):
+
+    def test_put_unmatched_in_table(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=False)
+
+        match_result = pd.DataFrame(columns=CompareConst.MATCH_RESULT_COLUMNS)
+        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'op', [1, 2]],
+                                index=['op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+                                       'compare_key', 'compare_shape']
+                                )
+        match_result = match.put_unmatched_in_table(match_result, npu_op_item)
+        target_match_result = pd.DataFrame([['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'op', [1, 2],
+                                             'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A']],
+                                           columns=CompareConst.MATCH_RESULT_COLUMNS)
+        self.assertTrue(match_result.equals(target_match_result))
+
+    def test_put_matched_in_table(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=False)
+
+        match_result = pd.DataFrame(columns=CompareConst.MATCH_RESULT_COLUMNS)
+        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'op', [1, 2]],
+                                index=['op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+                                       'compare_key', 'compare_shape']
+                                )
+        bench_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'op', [1, 2]],
+                                  index=['op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+                                         'compare_key', 'compare_shape']
+                                  )
+        match_result = match.put_matched_in_table(match_result, npu_op_item, bench_op_item)
+        target_match_result = pd.DataFrame([['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'op', [1, 2],
+                                             'op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name']],
+                                           columns=CompareConst.MATCH_RESULT_COLUMNS)
+        self.assertTrue(match_result.equals(target_match_result))
+
+    def test_rename_api(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=False)
+
+        op_name = 'Functional.linear.0.forward.input.0'
+        result = match.rename_api(op_name)
+        self.assertTrue(result, 'Functional.linear.input.0')
+
+    def test_check_op_item(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=False)
+
+        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'Functional.linear.0.forward.input.0', [1, 2]],
+                                index=['op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+                                       'compare_key', 'compare_shape']
+                                )
+        bench_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'data_name', 'Functional.linear.1.forward.input.0', [1, 2]],
+                                  index=['op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+                                         'compare_key', 'compare_shape']
+                                  )
+        result = match.check_op_item(npu_op_item, bench_op_item)
+        self.assertTrue(result)
+
+    def test_process_fuzzy_match(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=False)
+
+        npu_df = pd.DataFrame([
+            ['Functional.conv2d.3.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.conv2d.3.forward.input.0.pt', 'Functional.conv2d.3.forward.input.0', [1, 2]],
+            ['Functional.amax.1.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.amax.0.forward.input.0.pt', 'Functional.amax.1.forward.input.0', [1, 2]]
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'data_name', 'compare_key', 'compare_shape'])
+        bench_df = pd.DataFrame([
+            ['Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.conv2d.0.forward.input.0.pt', 'Functional.conv2d.0.forward.input.0', [1, 2]],
+            ['Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.amax.0.forward.input.0.pt', 'Functional.amax.0.forward.input.0', [1, 2]]
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'data_name', 'compare_key', 'compare_shape'])
+
+        match_result = match.process_fuzzy_match(npu_df, bench_df)
+        expected = pd.DataFrame(
+            [
+                ['Functional.conv2d.3.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.conv2d.3.forward.input.0.pt', 'Functional.conv2d.3.forward.input.0', [1, 2], 'Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.conv2d.0.forward.input.0.pt'],
+                ['Functional.amax.1.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.amax.0.forward.input.0.pt', 'Functional.amax.1.forward.input.0', [1, 2], 'Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'Functional.amax.0.forward.input.0.pt']
+            ]
+        , columns=CompareConst.MATCH_RESULT_COLUMNS)
+
+        self.assertTrue(match_result.equals(expected))
 
     def test_match_op_both_last_element(self):
         stack_mode = False
@@ -502,9 +755,10 @@ class TestUtilsMethods(unittest.TestCase):
         fuzzy_match = False
         dump_mode = Const.SUMMARY
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
 
-        pt_comparator = PTComparator(mode_config)
-        a, b = pt_comparator.match_op([npu_dict], [bench_dict])
+        match = Match(mode_config, mapping_config, cross_frame=False)
+        a, b = match.match_op([npu_op_item_fuzzy], [bench_op_item_fuzzy])
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
@@ -514,9 +768,10 @@ class TestUtilsMethods(unittest.TestCase):
         fuzzy_match = False
         dump_mode = Const.SUMMARY
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
 
-        pt_comparator = PTComparator(mode_config)
-        a, b = pt_comparator.match_op([npu_dict], [bench_dict, 1])
+        match = Match(mode_config, mapping_config, cross_frame=False)
+        a, b = match.match_op([npu_op_item_fuzzy], [bench_op_item_fuzzy, 1])
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
@@ -526,217 +781,102 @@ class TestUtilsMethods(unittest.TestCase):
         fuzzy_match = False
         dump_mode = Const.SUMMARY
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
 
-        pt_comparator = PTComparator(mode_config)
-        a, b = pt_comparator.match_op([npu_dict, npu_dict2], [bench_dict])
+        match = Match(mode_config, mapping_config, cross_frame=False)
+        a, b = match.match_op([npu_op_item_fuzzy, npu_op_item_data_fuzzy_2], [bench_op_item_fuzzy])
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
-    def test_compare_process(self):
-        generate_dump_json(base_dir)
-        generate_stack_json(base_dir)
-        file_lists = [os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'dump.json'),
-                      os.path.join(base_dir, 'stack.json')]
+    def test_gen_dtype_condition(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=True)
 
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        # data mapping
+        mapping_config.data_mapping = True
+        match_result = pd.DataFrame([1, 2, 3])
+        result = match.gen_dtype_condition(match_result)
+        expected = pd.Series([True, True, True])
+        self.assertTrue(result.equals(expected))
 
-        result = PTComparator(mode_config).compare_process(file_lists)
-        o_data = [
-            ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-             'torch.float32', 'torch.float32', [2, 2], [2, 2], 0, 0, 0, 0, '0.0%', 'N/A', '0.0%', '0.0%',
-             2, 0, 1, 1, 2, 0, 1, 1, '', '', ['File']
-             ]
-        ]
-        columns = CompareConst.SUMMARY_COMPARE_RESULT_HEADER + ['NPU_Stack_Info']
-        o_result = pd.DataFrame(o_data, columns=columns, dtype=object)
-        self.assertTrue(result.equals(o_result))
+        # normal
+        mapping_config.data_mapping = None
+        match_result = pd.DataFrame([['Float16', 'Float32'], ['torch.float32', 'torch.bfloat16']], columns=['dtype_x', 'dtype_y'])
+        result = match.gen_dtype_condition(match_result)
+        expected = pd.Series([True, True])
+        self.assertTrue(result.equals(expected))
 
-    def test_merge_data(self):
-        op_data = {
-            'input_args': [
-                {
-                    'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [2, 2],
-                    'Max': 1, 'Min': 1, 'Mean': 1, 'Norm': 1, 'requires_grad': False,
-                    'data_name': 'Functional.linear.0.forward.input.0.pt',
-                    'full_op_name': 'Functional.linear.0.forward.input.0'
-                }
-            ]
+    def test_process_cross_frame_dtype(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        match = Match(mode_config, mapping_config, cross_frame=True)
+
+        dtype_o = pd.Series(['Int8', 'Float16', 'torch.bool', 'Complex64', 'unknown'])
+        dtype = match.process_cross_frame_dtype(dtype_o)
+        self.assertTrue(dtype.equals(pd.Series(['int', 'float', 'bool', 'complex', 'unknown'])))
+
+
+class TestCreateTable(unittest.TestCase):
+
+    def test_process_data_name(self):
+        mode_config = ModeConfig()
+        create_table = CreateTable(mode_config)
+
+        data = {
+            'data_name_x': ['A', 'B', 'C'],
+            'data_name_y': ['X', 'Y', 'Z']
         }
-        json_data = {'data': {'Functional.linear.0.forward': op_data}}
-        stack_json_data = {'Functional.linear.0.forward': ['File']}
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        result = Comparator(mode_config).merge_data(json_data, stack_json_data)
-        ops_all = {
-            'Functional.linear.0.forward.input.0': {
-                'data_name': None, 'stack_info': [['File']],
-                'struct': ('torch.float32', [2, 2]), 'summary': [1, 1, 1, 1]
-            }
+        result_o = pd.DataFrame(data)
+        result = create_table.process_data_name(result_o)
+        target_data = {
+            'data_name_x': [['A', 'X'], ['B', 'Y'], ['C', 'Z']],
+            'data_name_y': ['X', 'Y', 'Z']
         }
-        self.assertEqual(result, ops_all)
+        target_result = pd.DataFrame(target_data)
+        self.assertTrue(result.equals(target_result))
 
-    def test_compare_core_basic(self):
-        generate_dump_json(base_dir2)
-        generate_stack_json(base_dir2)
-        input_params = {
-            "npu_json_path": os.path.join(base_dir2, "dump.json"),
-            "bench_json_path": os.path.join(base_dir2, "dump.json"),
-            "stack_json_path": os.path.join(base_dir2, "stack.json"),
-        }
-        output_path = base_dir2
+    def test_set_summary(self):
+        mode_config = ModeConfig()
+        create_table = CreateTable(mode_config)
 
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        # all nan
+        result = create_table.set_summary(['nan', 'NaN', 'nAn'])
+        expected = [CompareConst.NAN, CompareConst.NAN, CompareConst.NAN]
+        self.assertEqual(result, expected)
 
-        PTComparator(mode_config).compare_core(input_params, output_path)
+        # mixed values
+        result = create_table.set_summary([1, 'nan', 2.0, 'NaN'])
+        expected = [1, CompareConst.NAN, 2.0, CompareConst.NAN]
+        self.assertEqual(result, expected)
 
-        output_files = os.listdir(output_path)
-        self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
+        # NA case
+        result = create_table.set_summary(CompareConst.N_A)
+        expected = [CompareConst.N_A, CompareConst.N_A, CompareConst.N_A, CompareConst.N_A]
+        self.assertEqual(result, expected)
 
-    def test_compare_ops(self):
-        generate_dump_json(base_dir3)
-        generate_stack_json(base_dir3)
-        generate_pt(pt_dir)
-        dump_path = os.path.join(base_dir3, 'dump.json')
-        stack_path = os.path.join(base_dir3, 'stack.json')
-        input_param = {'npu_json_path': dump_path, 'bench_json_path': dump_path, 'stack_json_path': stack_path,
-                       'is_print_compare_log': True, 'npu_dump_data_dir': pt_dir, 'bench_dump_data_dir': pt_dir}
-        dump_path_dict = {'Functional.linear.0.forward.input.0': ['Functional.linear.0.forward.input.0.pt',
-                                                                  'Functional.linear.0.forward.input.0.pt']}
-        result_df = pd.DataFrame({
-            'NPU Name': ['Functional.linear.0.forward.input.0'],
-            'Bench Name': ['Functional.linear.0.forward.input.0']
-        })
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.ALL
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        pt_comparator = PTComparator(mode_config)
-        updated_df = pt_comparator.compare_ops(idx=0, dump_path_dict=dump_path_dict, result_df=result_df,
-                                               lock=self.lock, input_param=input_param)
-
-        self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 1.0)
-        self.assertEqual(updated_df.loc[0, CompareConst.MAX_ABS_ERR], 0)
-
-    def test_do_multi_process(self):
-        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', ['-1', '-1']]]
-        o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                   'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                   1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', ['-1', '-1']]]
-        columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
-        result_df = pd.DataFrame(data, columns=columns)
-        o_result = pd.DataFrame(o_data, columns=columns)
-        generate_dump_json(base_dir)
-        input_param = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.ALL
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        comparator = Comparator(mode_config)
-        result = comparator.do_multi_process(input_param, result_df)
-        self.assertTrue(result.equals(o_result))
-
-    def test_compare_by_op_1(self):
-        npu_op_name = 'Functional.linear.0.forward.input.0'
-        bench_op_name = 'N/A'
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
-        input_param = {}
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.ALL
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        pt_comparator = PTComparator(mode_config)
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-
-        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', 'No bench data matched.'])
-
-    def test_compare_by_op_2(self):
-        npu_op_name = 'Functional.linear.0.forward.input.0'
-        bench_op_name = 'Functional.linear.0.forward.input.0'
-
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.ALL
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-
-        pt_comparator = PTComparator(mode_config)
-
-        pt_name = '-1'
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
-        input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', 'No bench data matched.'])
-
-        pt_name = 'Functional.linear.0.forward.input.0.pt'
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
-        input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', 'Dump file: Functional.linear.0.forward.input.0.pt not found.'])
-
-        generate_pt(base_dir)
-        result = pt_comparator.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, ''])
+        # empty input
+        result = create_table.set_summary([])
+        expected = []
+        self.assertEqual(result, expected)
 
 
-class TestComparator(unittest.TestCase):
-    def setUp(self):
-        mode_config = ModeConfig(dump_mode=Const.MD5)
-        self.comparator = Comparator(mode_config=mode_config)
-        self.npu_ops_all = {
-            'op1': {'struct': ['float32', [1, 96, 2], '83dcefb7']},
-        }
-        self.bench_ops_all = {
-            'op1': {'struct': ['float32', [1, 96, 2], '83dcefb7']},
-        }
+class TestCalcStatsDiff(unittest.TestCase):
 
-    def test_normal(self):
-        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
-                           CompareConst.PASS, CompareConst.NONE]
-        result = self.comparator.get_result_md5_compare('op1', 'op1',
-                                                        self.npu_ops_all, self.bench_ops_all)
-        self.assertEqual(result, expected_result)
+    def test_type_check(self):
+        mode_config = ModeConfig()
+        calc_stats_diff = CalcStatsDiff(mode_config)
 
-    @patch('msprobe.core.compare.acc_compare.logger')
-    def test_length_exception(self, mock_logger):
-        self.npu_ops_all['op1']['struct'] = ['npu_val1', 'npu_val2']
-        with self.assertRaises(CompareException) as context:
-            self.comparator.get_result_md5_compare('op1', 'op1',
-                                                   self.npu_ops_all, self.bench_ops_all)
-        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
-        mock_logger.error.assert_called_once_with("The length of npu_struct and bench_struct must be >= 3, "
-                                                  "but got npu_struct=2 and bench_struct=3. Please check!")
+        series = pd.Series([float('nan'), 5, 'nan', 10, 'abc', None])
+        result = calc_stats_diff.type_check(series)
+        expected = pd.Series([True, True, True, True, False, False])
+        self.assertTrue(result.equals(expected))
 
-    def test_with_extra_args(self):
-        expected_result = ['op1', 'op1', 'float32', 'float32', [1, 96, 2], [1, 96, 2], '83dcefb7', '83dcefb7',
-                           CompareConst.PASS, 'extra_data']
-        result = self.comparator.get_result_md5_compare('op1', 'op1',
-                                                        self.npu_ops_all, self.bench_ops_all, True, ['extra_data'])
-        self.assertEqual(result, expected_result)
+    def test_get_number(self):
+        mode_config = ModeConfig()
+        calc_stats_diff = CalcStatsDiff(mode_config)
+
+        series = pd.Series([1, '2', 3.5, 'text', None])
+        result = calc_stats_diff.get_number(series)
+        expected = pd.Series([1, 2, 3.5, float('nan'), float('nan')])
+        self.assertTrue(result.equals(expected))

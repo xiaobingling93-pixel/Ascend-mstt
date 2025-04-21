@@ -48,6 +48,10 @@
 
    绑核脚本，支持非侵入修改工程代码，实现一键式绑核功能。
 
+5. [msMonitor](./msmonitor)
+
+   MindStudio一站式在线监控工具。
+
 ## [Tensorboard](./plugins/tensorboard-plugins/tb_plugin)
 
 Tensorboard 支持 NPU 性能数据可视化插件 PyTorch Profiler TensorBoard NPU Plugin。

@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -15,14 +15,10 @@
 
 import os
 
-from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, get_dump_mode, \
-    set_dump_path
-from msprobe.core.compare.acc_compare import ModeConfig
-from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, set_stack_json_path
+from msprobe.core.common.utils import CompareException
+from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.compare.pt_compare import PTComparator, compare
+from msprobe.pytorch.compare.pt_compare import compare
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
