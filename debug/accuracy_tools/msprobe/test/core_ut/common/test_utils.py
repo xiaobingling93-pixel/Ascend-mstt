@@ -440,10 +440,6 @@ class TestUtils(TestCase):
         self.assertFalse(is_json_file(file_path_false))
 
 
-def none_check(*args, **kwargs):
-    return True
-
-
 class TestCheckCrtValid(TestCase):
     """
     Test the check_crt_valid function.
@@ -462,7 +458,6 @@ class TestCheckCrtValid(TestCase):
     @patch('msprobe.core.common.file_utils.datetime')
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    @patch('msprobe.core.common.file_utils.dedup_log', new=none_check)
     def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
@@ -477,7 +472,6 @@ class TestCheckCrtValid(TestCase):
     @patch('datetime.datetime')
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    @patch('msprobe.core.common.file_utils.dedup_log', new=none_check)
     def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime):
         mock_cert = MagicMock()
         mock_cert.get_notBefore.return_value = b'20220101'
@@ -492,7 +486,6 @@ class TestCheckCrtValid(TestCase):
 
     @patch('OpenSSL.crypto.load_certificate')
     @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    @patch('msprobe.core.common.file_utils.dedup_log', new=none_check)
     def test_check_crt_valid_exception(self, mock_open_, mock_load_certificate):
         mock_load_certificate.side_effect = Exception('Test Exception')
 

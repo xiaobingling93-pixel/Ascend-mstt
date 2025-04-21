@@ -20,8 +20,6 @@ import stat
 import json
 import re
 import shutil
-import atexit
-import multiprocessing as mp
 from datetime import datetime, timezone
 from dateutil import parser
 import yaml
@@ -31,7 +29,7 @@ import pandas as pd
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.const import FileCheckConst
 
 
 class FileChecker:
@@ -301,13 +299,12 @@ def check_path_before_create(path):
 def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    if dedup_log('check_dirpath_before_read', dirpath):
-        if check_others_writable(dirpath):
-            logger.warning(f"The directory is writable by others: {dirpath}.")
-        try:
-            check_path_owner_consistent(dirpath)
-        except FileCheckException:
-            logger.warning(f"The directory {dirpath} is not yours.")
+    if check_others_writable(dirpath):
+        logger.warning(f"The directory is writable by others: {dirpath}.")
+    try:
+        check_path_owner_consistent(dirpath)
+    except FileCheckException:
+        logger.warning(f"The directory {dirpath} is not yours.")
     
 
 def check_file_or_directory_path(path, isdir=False):
@@ -697,42 +694,3 @@ def read_xlsx(file_path):
         logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
         raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
     return result_df
-
-
-def dedup_log(func_name, dedup_name):
-    with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as lock_file:
-        fcntl.flock(lock_file, fcntl.LOCK_EX)
-        try:
-            with open(FileCheckConst.MSPROBE_DEDUP_LOG_PATH, 'r') as check_file:
-                content = json.loads(check_file.read())
-                exist_names = set(content.get(func_name, []))
-            if dedup_name in exist_names:
-                return False
-            with open(FileCheckConst.MSPROBE_DEDUP_LOG_PATH, 'w') as check_file:
-                exist_names.add(dedup_name)
-                content[func_name] = list(exist_names)
-                check_file.write(json.dumps(content))
-        except FileNotFoundError:
-            init_check_file(func_name, dedup_name)
-        finally:
-            fcntl.flock(lock_file, fcntl.LOCK_UN)
-    return True
-
-
-def init_check_file(func_name=None, dedup_name=None):
-    content = {}
-    if func_name and dedup_name:
-        content[func_name] = [dedup_name]
-    with open(FileCheckConst.MSPROBE_DEDUP_LOG_PATH, 'w') as check_file:
-        check_file.write(json.dumps(content))
-
-
-def cleanup():
-    if mp.current_process().name == Const.MAIN_PROCESS_NAME:
-        if os.path.exists(FileCheckConst.MSPROBE_DEDUP_LOG_PATH):
-            os.remove(FileCheckConst.MSPROBE_DEDUP_LOG_PATH)
-        if os.path.exists(FileCheckConst.MSPROBE_LOCKFILE_PATH):
-            os.remove(FileCheckConst.MSPROBE_LOCKFILE_PATH)
-
-
-atexit.register(cleanup)

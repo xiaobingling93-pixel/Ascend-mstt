@@ -329,7 +329,7 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
         export_build_graph_result = [task.get() for task in export_build_graph_tasks]
         if any(export_build_graph_result):
             failed_names = list(filter(lambda x: x, export_build_graph_result))
-            logger.error(f'Unable to export build graph results: {", ".join(failed_names)}.')
+            logger.error(f'Unable to export build graph results: {failed_names}.')
         else:
             logger.info(f'Successfully exported build graph results.')
 

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+from dataclasses import dataclass
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_json, save_json
@@ -287,18 +288,18 @@ class GraphExportConfig:
         self.overflow_check = overflow_check
 
 
+@dataclass
 class GraphInfo:
-    def __init__(self, graph: Graph, construct_path: str, data_path: str, stack_path: str):
-        self.graph = graph
-        self.construct_path = construct_path
-        self.data_path = data_path
-        self.stack_path = stack_path
+    graph: Graph
+    construct_path: str
+    data_path: str
+    stack_path: str
 
 
+@dataclass
 class BuildGraphTaskInfo:
-    def __init__(self, graph_info_n: GraphInfo, graph_info_b: GraphInfo, npu_rank, bench_rank, time_str):
-        self.graph_info_n = graph_info_n
-        self.graph_info_b = graph_info_b
-        self.npu_rank = npu_rank
-        self.bench_rank = bench_rank
-        self.time_str = time_str
+    graph_info_n: GraphInfo
+    graph_info_b: GraphInfo
+    npu_rank: str
+    bench_rank: str
+    time_str: str

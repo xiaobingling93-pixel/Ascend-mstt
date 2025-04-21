@@ -323,7 +323,6 @@ class Const:
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX
         }
     }
-    MAIN_PROCESS_NAME = 'MainProcess'
 
 
 class CompareConst:
@@ -634,8 +633,6 @@ class FileCheckConst:
         IR_SUFFIX: MAX_IR_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
-    MSPROBE_LOCKFILE_PATH = os.path.join('/tmp', 'msprobe_lockfile')
-    MSPROBE_DEDUP_LOG_PATH = os.path.join('/tmp', 'msprobe_common_file_util_dedup_log')
 
 
 class OverflowConst:

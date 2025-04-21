@@ -19,6 +19,7 @@ import json
 import pickle
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.log import logger
 
 
 def load_json_file(file_path):
@@ -192,8 +193,11 @@ def is_serializable(obj):
     try:
         pickle.dumps(obj)
         return True
-    except Exception:
+    except pickle.PicklingError:
         return False
+    except Exception as e:
+        logger.error('Unexpected error occurred while pickling obj.')
+        raise RuntimeError(e)
 
 
 class SerializableArgs:
