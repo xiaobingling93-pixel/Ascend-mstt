@@ -70,25 +70,15 @@ class DataWriter:
                         return
                     stat_values = stat_result[idx] if idx < len(stat_result) else [None] * 4
 
-                    if stat_values[2] is not None and stat_values[3] is not None:
-                        new_entries = {
-                            "type": data["type"],
-                            "dtype": data["dtype"],
-                            "shape": data["shape"],
-                            "Max": stat_values[0],
-                            "Min": stat_values[1],
-                            "Mean": stat_values[2],
-                            "Norm": stat_values[3],
-                        }
-                    else:
-                        # stat_values[2] 或 stat_values[3] 为 None 时，仅包含 Max 和 Min
-                        new_entries = {
-                            "type": data["type"],
-                            "dtype": data["dtype"],
-                            "shape": data["shape"],
-                            "Max": stat_values[0],
-                            "Min": stat_values[1],
-                        }
+                    new_entries = {
+                        "type": data["type"],
+                        "dtype": data["dtype"],
+                        "shape": data["shape"],
+                        "Max": stat_values[0],
+                        "Min": stat_values[1],
+                        "Mean": stat_values[2],
+                        "Norm": stat_values[3],
+                    }
                     del data[key]
 
                     # 重构字典顺序
