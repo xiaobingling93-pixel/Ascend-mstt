@@ -412,6 +412,8 @@ class Match:
         原api： {api_type}.{api_name}.{API调用次数}.{前向反向}.{input/output}.{参数序号}
         rename后： {api_type}.{api_name}.{API调用次数}.{input/output}.{参数序号}
         """
+        if Const.FORWARD not in op_name and Const.BACKWARD not in op_name:
+            return op_name
         process = Const.FORWARD if Const.FORWARD in op_name else Const.BACKWARD
         name_split = op_name.split(process)
         try:

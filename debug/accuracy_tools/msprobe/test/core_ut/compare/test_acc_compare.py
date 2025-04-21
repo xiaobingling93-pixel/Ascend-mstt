@@ -705,9 +705,17 @@ class TestMatch(unittest.TestCase):
         mapping_config = MappingConfig()
         match = Match(mode_config, mapping_config, cross_frame=False)
 
-        op_name = 'Functional.linear.0.forward.input.0'
-        result = match.rename_api(op_name)
-        self.assertTrue(result, 'Functional.linear.input.0')
+        op_name_1 = 'Functional.linear.0.forward.input.0'
+        result_1 = match.rename_api(op_name_1)
+        self.assertTrue(result_1, 'Functional.linear.input.0')
+
+        op_name_2 = 'Functional.linear.0.backward.input.0'
+        result_2 = match.rename_api(op_name_2)
+        self.assertTrue(result_2, 'Functional.linear.input.0')
+
+        op_name_3 = 'Functional.linear.0.x.input.0'
+        result_3 = match.rename_api(op_name_3)
+        self.assertTrue(result_3, 'Functional.linear.0.x.input.0')
 
     def test_check_op_item(self):
         mode_config = ModeConfig()
