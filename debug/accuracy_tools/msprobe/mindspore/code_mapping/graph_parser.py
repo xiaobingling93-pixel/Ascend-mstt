@@ -174,7 +174,7 @@ class Parser:
                     node_info.var_inputs.append(callee_name)
 
     def parse_subgraphs(self, text: str) -> None:
-        subgraph_pattern = re.compile(r'/subgraph\s+@([\w+]{1,1000})(\([^\)]{1,100}\))?\s+\S[^\{]\{/')
+        subgraph_pattern = re.compile(r'/subgraph\s+@([\w+]{1,1000)(\([^\)]{1,100}\))?\s+\S[^\{]\{/+')
         matches = list(subgraph_pattern.finditer(text))
         end_pos = 0
         for match in matches:
