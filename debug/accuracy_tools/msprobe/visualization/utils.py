@@ -193,7 +193,7 @@ def is_serializable(obj):
     try:
         pickle.dumps(obj)
         return True
-    except pickle.PicklingError:
+    except (pickle.PicklingError, AttributeError, TypeError):
         return False
     except Exception as e:
         logger.error('Unexpected error occurred while pickling obj.')
