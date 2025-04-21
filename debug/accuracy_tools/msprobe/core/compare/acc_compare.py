@@ -444,7 +444,12 @@ class Match:
         正常匹配和模糊匹配
         """
         if self.mapping_config.data_mapping:
-            match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY], how='outer')
+            match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY], how='left')
+            op_name_order = npu_df[CompareConst.OP_NAME].tolist()
+            match_result['op_name_x'] = pd.Categorical(match_result['op_name_x'], categories=op_name_order,
+                                                       ordered=True)
+            match_result = match_result.sort_values('op_name_x').reset_index(drop=True)
+            match_result['op_name_x'] = match_result['op_name_x'].astype('object')
         elif not self.mode_config.fuzzy_match:
             match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY, CompareConst.CMP_SHAPE],
                                     how='outer')
