@@ -112,7 +112,8 @@ class Parser:
             scope = scope_match.group(1) if scope_match else ""
 
             id_pattern = re.compile(r'cnode_primal_attrs:'
-                                    r'\s*\{[\w+]{1, 10000}\b(?:forward_unique_id|unique_id):\s*\"(\d+)\".*', re.IGNORECASE)
+                                    r'\s *\{[\w +]{1, 10000}\b(?:forward_unique_id | unique_id):\s *\"(\d+)\"',
+                                    re.IGNORECASE)
             unique_id_match = id_pattern.search(text, end_pos, scope_match.start())
             unique_id = unique_id_match.group(1) if unique_id_match else None
 
