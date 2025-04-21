@@ -51,7 +51,7 @@ debugger = PrecisionDebugger(config_path=config_path)
 
 # 设置 MindSpore 设备上下文
 context.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", device_id=0)
-print("set context successfully, please wait for the training task.")
+print("Context set successfully. Please wait for the training task.")
 
 # 定义卷积层
 def conv_layer(in_channels, out_channels, kernel_size, stride=1, padding=0, pad_mode="valid", has_bias=True):
