@@ -64,7 +64,6 @@ op_name = 'Functional.conv2d.0.backward.input.0'
 
 
 class TestUtilsMethods(unittest.TestCase):
-
     def test_check_dump_json_str(self):
         with self.assertRaises(CompareException) as context:
             check_dump_json_str(op_data, op_name)

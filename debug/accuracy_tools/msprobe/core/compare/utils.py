@@ -82,22 +82,6 @@ def check_and_return_dir_contents(dump_dir, prefix):
     return contents
 
 
-def rename_api(npu_name, process):
-    """
-    原api： {api_type}.{api_name}.{API调用次数}.{前向反向}.{input/output}.{参数序号}
-    rename后： {api_type}.{api_name}.{input/output}.{参数序号}
-    """
-    npu_split = npu_name.split(process)
-    try:
-        torch_func_index, in_out = npu_split[0], npu_split[1]
-    except IndexError as error:
-        logger.error(f'{npu_name} can not be split with {process}, please check!')
-        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
-    torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
-    torch_func = str(torch_func_split[0]) + str(in_out)
-    return torch_func
-
-
 def read_op(op_data, op_name):
     if Const.PARAMS_GRAD in op_name.split(Const.SEP):
         op_parsed_list = op_item_parse(op_data, op_name)
