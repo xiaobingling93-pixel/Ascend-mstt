@@ -111,8 +111,8 @@ class Parser:
             scope_match = scope_pattern.search(text, end_pos)
             scope = scope_match.group(1) if scope_match else ""
 
-            id_pattern = re.compile(r'.*cnode_primal_attrs:'
-                                    r'\s*\{.*\b(?:forward_unique_id|unique_id):\s*\"(\d+)\".*', re.IGNORECASE)
+            id_pattern = re.compile(r'cnode_primal_attrs:'
+                                    r'\s*\{[\w+]{1, 10000}\b(?:forward_unique_id|unique_id):\s*\"(\d+)\".*', re.IGNORECASE)
             unique_id_match = id_pattern.search(text, end_pos, scope_match.start())
             unique_id = unique_id_match.group(1) if unique_id_match else None
 
@@ -173,7 +173,7 @@ class Parser:
                     node_info.var_inputs.append(callee_name)
 
     def parse_subgraphs(self, text: str) -> None:
-        subgraph_pattern = re.compile(r'subgraph\s+@(\S+)(\([^\)]*\))?\s+.*\{')
+        subgraph_pattern = re.compile(r'/subgraph\s+@([\w+]{1,1000})(\([^\)]{1,100}\))?\s+\S[^\{]\{/')
         matches = list(subgraph_pattern.finditer(text))
         end_pos = 0
         for match in matches:

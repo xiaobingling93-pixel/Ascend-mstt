@@ -173,7 +173,7 @@ def _format_decimal_string(s):
     """
     使用正则表达式匹配包含数字、小数点和可选的百分号的字符串
     """
-    pattern = re.compile(r'\d{1,20}\.\d{1,20}%?')
+    pattern = re.compile(r'^\d{1,20}\.\d{1,20}%?$')
     matches = pattern.findall(s)
     for match in matches:
         is_percent = match.endswith('%')
