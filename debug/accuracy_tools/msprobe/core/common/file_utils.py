@@ -15,16 +15,13 @@
 
 import csv
 import fcntl
-import io
 import os
 import stat
 import json
 import re
 import shutil
 import atexit
-import pickle
 import multiprocessing as mp
-from multiprocessing.shared_memory import SharedMemory
 from datetime import datetime, timezone
 from dateutil import parser
 import yaml
@@ -703,58 +700,39 @@ def read_xlsx(file_path):
 
 
 def dedup_log(func_name, dedup_name):
-    print_log = False
-    with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+    with open(FileCheckConst.MSPROBE_LOCKFILE_PATH, 'w') as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
         try:
-            shm = SharedMemory(name=FileCheckConst.DEDUP_LOG_SHM_NAME)
-            new_data = safe_loads(shm.buf[:])
-            exist_names = new_data.get(func_name, set())
-            if dedup_name not in exist_names:
-                print_log = True
+            with open(FileCheckConst.MSPROBE_DEDUP_LOG_PATH, 'r') as check_file:
+                content = json.loads(check_file.read())
+                exist_names = set(content.get(func_name, []))
+            if dedup_name in exist_names:
+                return False
+            with open(FileCheckConst.MSPROBE_DEDUP_LOG_PATH, 'w') as check_file:
                 exist_names.add(dedup_name)
-                new_data[func_name] = exist_names
-                new_data_bytes = pickle.dumps(new_data)
-                shm.buf[0:len(new_data_bytes)] = bytearray(new_data_bytes)
+                content[func_name] = list(exist_names)
+                check_file.write(json.dumps(content))
+        except FileNotFoundError:
+            init_check_file(func_name, dedup_name)
         finally:
-            shm.close()
-            fcntl.flock(f, fcntl.LOCK_UN)
-    return print_log
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+    return True
 
 
-def is_shm_exists(name):
-    try:
-        SharedMemory(create=False, name=name).close()
-        return True
-    except FileNotFoundError:
-        return False
-
-_shm = None
-if mp.current_process().name == Const.MAIN_PROCESS_NAME and not is_shm_exists(FileCheckConst.DEDUP_LOG_SHM_NAME):
-    _shm = SharedMemory(create=True, size=1024 * 1024, name=FileCheckConst.DEDUP_LOG_SHM_NAME)
-    _data = pickle.dumps({})
-    _shm.buf[0:len(_data)] = bytearray(_data)
+def init_check_file(func_name=None, dedup_name=None):
+    content = {}
+    if func_name and dedup_name:
+        content[func_name] = [dedup_name]
+    with open(FileCheckConst.MSPROBE_DEDUP_LOG_PATH, 'w') as check_file:
+        check_file.write(json.dumps(content))
 
 
 def cleanup():
     if mp.current_process().name == Const.MAIN_PROCESS_NAME:
+        if os.path.exists(FileCheckConst.MSPROBE_DEDUP_LOG_PATH):
+            os.remove(FileCheckConst.MSPROBE_DEDUP_LOG_PATH)
         if os.path.exists(FileCheckConst.MSPROBE_LOCKFILE_PATH):
             os.remove(FileCheckConst.MSPROBE_LOCKFILE_PATH)
-        if _shm:
-            _shm.close()
-            _shm.unlink()
 
 
 atexit.register(cleanup)
-
-
-class SafeUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if module in FileCheckConst.UNPICKLE_WHITELIST and name in FileCheckConst.UNPICKLE_WHITELIST[module]:
-            return super().find_class(module, name)
-        raise pickle.UnpicklingError(f'Unpickling {module}.{name} object is illegal!')
-
-
-def safe_loads(data):
-    with io.BytesIO(data) as buff:
-        return SafeUnpickler(buff).load()
