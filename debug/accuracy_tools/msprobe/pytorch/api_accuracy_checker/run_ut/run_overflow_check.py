@@ -65,6 +65,7 @@ def check_tensor_overflow(x):
         return False
 
 
+@recursion_depth_decorator("check_data_overflow")
 def check_data_overflow(x, device):
     if isinstance(x, (tuple, list)):
         if not x:
