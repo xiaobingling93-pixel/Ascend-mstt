@@ -60,6 +60,7 @@ class DataWriter:
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
+        self.cache_debug = {}
 
     def initialize_json_file(self, **kwargs):
         if self.debug_file_path and not self.cache_debug:
@@ -145,6 +146,8 @@ class DataWriter:
 
     def fill_stack_tensor_data(self):
         self.process_stat_data_recursive(self.cache_data)
+        if self.cache_debug:
+            self.process_stat_data_recursive(self.cache_debug)
 
     @recursion_depth_decorator("AsyncDump: DataWriter.process_stat_data_recursive", max_depth=Const.DUMP_MAX_DEPTH)
     def process_stat_data_recursive(self, data):

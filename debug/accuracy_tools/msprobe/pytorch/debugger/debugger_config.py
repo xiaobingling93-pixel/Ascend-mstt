@@ -77,7 +77,7 @@ class DebuggerConfig:
         if not isinstance(self.async_dump, bool):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR and not self.list:
+        if self.async_dump and self.task == Const.TENSOR and not self.list and self.level != Const.LEVEL_DEBUG:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump is true in tensor task, the parameters list cannot be "
                                    f"empty.")

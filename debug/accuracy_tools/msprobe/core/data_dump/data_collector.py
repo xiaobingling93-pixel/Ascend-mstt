@@ -41,7 +41,7 @@ class DataCollector:
         self.backward_module_names = {}
         self.optimizer_status = ""
         self.optimizer_status_first_start = {Const.OPTIMIZER: True, Const.CLIP_GRAD: True}
-        atexit.register(self.write_json)
+        atexit.register(self.write_json_at_exit)
 
     @property
     def dump_data_dir(self):
@@ -76,6 +76,13 @@ class DataCollector:
         self.data_processor.update_api_or_module_name(api_or_module_name)
 
     def write_json(self):
+        self.data_writer.write_json()
+
+    def write_json_at_exit(self):
+        if self.config.async_dump:
+            self.fill_stack_tensor_data()
+            if self.config.task == Const.TENSOR:
+                self.data_processor.dump_async_data()
         self.data_writer.write_json()
 
     def update_data(self, name, data_info):
@@ -219,12 +226,15 @@ class DataCollector:
     def debug_data_collect_forward(self, variable, name_with_count):
 
         data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)
-        self.data_writer.update_debug({name_with_count: data_info})
+        name_with_count_category = name_with_count + Const.SEP + Const.DEBUG
+        self.data_writer.update_debug({name_with_count_category: data_info})
 
     def debug_data_collect_backward(self, variable, grad_name_with_count):
         # prepare all None nested data structure
         all_none_data_info = self.data_processor.analyze_element_to_all_none(variable)
-        self.data_writer.update_debug({grad_name_with_count: all_none_data_info})
+        grad_name_with_count_category = grad_name_with_count + Const.SEP + Const.DEBUG
+        self.data_writer.update_debug({grad_name_with_count_category: all_none_data_info})
 
         # register tensor backward hook
-        self.data_processor.analyze_debug_backward(variable, grad_name_with_count, self.data_writer.cache_debug['data'])
+        self.data_processor.analyze_debug_backward(variable, grad_name_with_count_category,
+                                                   self.data_writer.cache_debug['data'])

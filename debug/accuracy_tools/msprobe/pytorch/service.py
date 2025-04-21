@@ -63,7 +63,7 @@ class Service:
         # 提前注册，确保注册尽可能多的API hook
         self.api_register = get_api_register()
         self.register_api_hook()
-        self.init_for_debug_level()
+        self.currrent_step_first_debug_save = True
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -301,8 +301,6 @@ class Service:
         self.data_collector.write_json()
 
     def step(self):
-        if self.config.level == Const.LEVEL_DEBUG:
-            return
         if self.should_stop_service:
             return
         if self.config.async_dump:
@@ -311,6 +309,7 @@ class Service:
                 self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.loop += 1
+        self.currrent_step_first_debug_save = True
         self.reset_status()
 
     def need_stop_service(self):
@@ -364,9 +363,12 @@ class Service:
             dump_data_dir = None
 
         dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
-        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        if self.config.level != Const.LEVEL_DEBUG:
+            dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+            dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+            dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        else:
+            dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")
         self.data_collector.update_dump_paths(dump_path_aggregation)
@@ -461,6 +463,21 @@ class Service:
     def save(self, variable, name, save_backward):
         if self.config.level != Const.LEVEL_DEBUG:
             return
+
+        self.current_iter = self.loop + self.init_step
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+
+        if self.currrent_step_first_debug_save:
+            try:
+                self.current_rank = get_rank_if_initialized()
+            except DistributedNotInitializedError:
+                self.current_rank = None
+
+            self.create_dirs()
+            self.debug_variable_counter = defaultdict(int)
+            self.currrent_step_first_debug_save = False
+
         count = self.debug_variable_counter[name]
         self.debug_variable_counter[name] += 1
 

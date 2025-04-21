@@ -76,7 +76,7 @@ class DebuggerConfig:
             self.check_mode = "all"
         if not isinstance(self.async_dump, bool):
             raise Exception("The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR and not self.list:
+        if self.async_dump and self.task == Const.TENSOR and not self.list and self.level_ori != Const.LEVEL_DEBUG:
             raise Exception("The parameters async_dump is true in tensor task, the parameters list cannot be empty.")
         if self.task == Const.STRUCTURE and self.level_ori not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
