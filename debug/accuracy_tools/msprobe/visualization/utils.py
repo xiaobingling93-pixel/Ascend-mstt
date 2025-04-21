@@ -197,7 +197,7 @@ def is_serializable(obj):
         return False
     except Exception as e:
         logger.error('Unexpected error occurred while pickling obj.')
-        raise RuntimeError(e)
+        raise RuntimeError('Unexpected error occurred while pickling obj.') from e
 
 
 class SerializableArgs:
