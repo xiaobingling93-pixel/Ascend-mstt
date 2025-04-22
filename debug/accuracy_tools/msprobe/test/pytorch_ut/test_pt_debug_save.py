@@ -70,9 +70,13 @@ class TestPytorchDebuggerSave(TestCase):
             }
         }
 
-        for key in result_json["data"]:
-            if 'tensor_stat_index' in result_json["data"][key]:
-                del result_json["data"][key]['tensor_stat_index']
         loss = forward_func(x, y)
         loss.backward()
-        self.assertEqual(self.debugger.service.data_collector.data_writer.cache_debug, result_json)
+
+        result = self.debugger.service.data_collector.data_writer.cache_debug
+        # Remove 'tensor_stat_index' from all entries in the data dictionary
+        for key in result["data"]:
+            if 'tensor_stat_index' in result["data"][key]:
+                del result["data"][key]['tensor_stat_index']
+
+        self.assertEqual(result, result_json)
