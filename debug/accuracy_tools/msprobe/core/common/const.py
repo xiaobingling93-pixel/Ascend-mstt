@@ -209,6 +209,7 @@ class Const:
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
 
+    TYPE = 'type'
     DTYPE = 'dtype'
     SHAPE = 'shape'
     STACK_INFO = 'stack_info'

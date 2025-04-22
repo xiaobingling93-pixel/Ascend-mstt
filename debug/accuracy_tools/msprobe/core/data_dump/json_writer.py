@@ -71,13 +71,13 @@ class DataWriter:
                     stat_values = stat_result[idx] if idx < len(stat_result) else [None] * 4
 
                     new_entries = {
-                        "type": data["type"],
-                        "dtype": data["dtype"],
-                        "shape": data["shape"],
-                        "Max": stat_values[0],
-                        "Min": stat_values[1],
-                        "Mean": stat_values[2],
-                        "Norm": stat_values[3],
+                        Const.TYPE: data["type"],
+                        Const.DTYPE: data["dtype"],
+                        Const.SHAPE: data["shape"],
+                        Const.MAX: stat_values[0],
+                        Const.MIN: stat_values[1],
+                        Const.MEAN: stat_values[2],
+                        Const.NORM: stat_values[3],
                     }
                     del data[key]
 
