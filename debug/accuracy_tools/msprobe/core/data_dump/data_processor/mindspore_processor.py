@@ -62,8 +62,6 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def get_stat_info_sync(data):
         tensor_stat = TensorStatInfo()
         if data.dtype == ms.bool_:
-            # tensor_stat.max = mint.any(data)
-            # tensor_stat.min = mint.all(data)
             data_np = data.asnumpy()
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
