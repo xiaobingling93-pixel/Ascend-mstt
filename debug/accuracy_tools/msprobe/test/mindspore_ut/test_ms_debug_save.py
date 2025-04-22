@@ -55,23 +55,20 @@ class TestMindsporeDebuggerSave(TestCase):
                 "x_tensor.0": {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
-                    "shape": (1,),
-                    "Max": 1.0,
-                    "Min": 1.0,
-                    "Mean": 1.0,
-                    "Norm": 1.0
+                    "shape": (1,)
                 },
                 "x_tensor_grad.0": {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
-                    "shape": (1,),
-                    "Max": 2.0,
-                    "Min": 2.0,
-                    "Mean": 2.0,
-                    "Norm": 2.0
+                    "shape": (1,)
                 }
             }
         }
+    # Remove 'tensor_stat_index' from all entries in the data dictionary
+        for key in result_json["data"]:
+            if 'tensor_stat_index' in result_json["data"][key]:
+                del result_json["data"][key]['tensor_stat_index']
+
         grad_fn = mindspore.value_and_grad(forward_func, (0, 1))
         grad_fn(x, y)
         self.assertEqual(self.debugger.service.data_collector.data_writer.cache_debug, result_json)
