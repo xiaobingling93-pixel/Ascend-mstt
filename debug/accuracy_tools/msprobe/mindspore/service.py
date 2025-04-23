@@ -112,8 +112,8 @@ class Service:
                 self.inner_switch = True
                 cell.forward_data_collected = True
                 HOOKCell.add_cell_count(name)
-                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.msprobe_input_kwargs,
-                                                                 output=None)
+                kwargs = cell.msprobe_input_kwargs if hasattr(cell, 'msprobe_input_kwargs') else {}
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=kwargs, output=None)
                 self.data_collector.update_api_or_module_name(api_or_cell_name)
                 self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
                 self.inner_switch = False
@@ -169,8 +169,8 @@ class Service:
                 return None
             with _no_grad():
                 self.inner_switch = True
-                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.msprobe_input_kwargs,
-                                                                 output=output)
+                kwargs = cell.msprobe_input_kwargs if hasattr(cell, 'msprobe_input_kwargs') else {}
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=kwargs, output=output)
                 if target_type == BaseScope.Module_Type_Module:
                     params_dict = {}
                     if self.config.task != Const.STRUCTURE:
