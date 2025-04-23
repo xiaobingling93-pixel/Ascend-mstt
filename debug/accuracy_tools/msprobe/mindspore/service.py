@@ -274,10 +274,8 @@ class Service:
     def step(self):
         if self.config.level == Const.LEVEL_DEBUG:
             return
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task == Const.TENSOR:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.loop += 1
         self.reset_status()
@@ -352,10 +350,8 @@ class Service:
         self.switch = False
         self.primitive_switch = False
         self.start_call = False
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task == Const.TENSOR:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         JitDump.jit_dump_switch = False
 

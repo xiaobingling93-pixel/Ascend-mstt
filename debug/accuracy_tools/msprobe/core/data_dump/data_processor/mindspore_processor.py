@@ -66,7 +66,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             data_abs = np.abs(data.asnumpy())
             tensor_stat.max = np.max(data_abs).item()
@@ -77,28 +77,31 @@ class MindsporeDataProcessor(BaseDataProcessor):
             if not ops.is_floating_point(data) or data.dtype == ms.float64:
                 data = data.to(ms.float32)
             get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
-            tensor_stat.max = mint.max(data).item()
-            tensor_stat.min = mint.min(data).item()
-            tensor_stat.mean = mint.mean(data).item()
-            tensor_stat.norm = get_norm_value(data).item()
+            tensor_stat.max = mint.max(data)
+            tensor_stat.min = mint.min(data)
+            tensor_stat.mean = mint.mean(data)
+            tensor_stat.norm = get_norm_value(data)
         return tensor_stat
 
     @staticmethod
     def get_stat_info_async(data):
         tensor_stat = TensorStatInfo()
-        if data.dtype == ms.complex64 or data.dtype == ms.complex128:
+        if data.dtype == ms.bool_:
+            tensor_stat.max = mint.any(data)
+            tensor_stat.min = mint.all(data)
+        elif not data.shape:
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
+        elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             logger.warning("Async dump do not support complex data!")
             return tensor_stat
-        elif data.dtype == ms.bool_:
-            tensor_stat.stack_tensor_stat = (["Max", "Min"], ops.stack([data.any(), data.all()]))
-        elif not data.shape:
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], ops.stack([data, data, data, data]))
         else:
             if not ops.is_floating_point(data) or data.dtype == ms.float64:
                 data = data.to(ms.float32)
             get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], ops.stack(
-                [mint.max(data), mint.min(data), mint.mean(data), get_norm_value(data)]))
+            tensor_stat.max = mint.max(data)
+            tensor_stat.min = mint.min(data)
+            tensor_stat.mean = mint.mean(data)
+            tensor_stat.norm = get_norm_value(data)
         return tensor_stat
 
     @staticmethod
@@ -168,13 +171,18 @@ class MindsporeDataProcessor(BaseDataProcessor):
             'shape': tensor.shape
         }
 
-        if tensor_stat.stack_tensor_stat is None:
-            tensor_json.update({'Max': self.transfer_type(tensor_stat.max)})
-            tensor_json.update({'Min': self.transfer_type(tensor_stat.min)})
-            tensor_json.update({'Mean': self.transfer_type(tensor_stat.mean)})
-            tensor_json.update({'Norm': self.transfer_type(tensor_stat.norm)})
-        else:
-            tensor_json.update({'tensor_stat': tensor_stat.stack_tensor_stat})
+        # 将统计值存入全局 buffer，并返回占位索引
+        stat_values = [
+            tensor_stat.max,
+            tensor_stat.min,
+            tensor_stat.mean,
+            tensor_stat.norm
+        ]
+
+        placeholder_index = self.data_writer.append_stat_to_buffer(stat_values)
+
+        tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
+
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({Const.MD5: tensor_md5})
@@ -271,11 +279,26 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if tensor_json['Max'] is None:
+        tensor_stat_index = tensor_json.get(Const.TENSOR_STAT_INDEX)
+        if tensor_stat_index is None:
+            logger.warning("tensor_stat_index does not exist in tensor_json.")
             return
-        if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
+        max_tensor = self.data_writer.get_buffer_values_max(tensor_stat_index)
+        min_tensor = self.data_writer.get_buffer_values_min(tensor_stat_index)
+        if max_tensor is None or min_tensor is None:
+            return
+
+        def check_inf_nan(value):
+            # Use .item() if it's a tensor-like structure
+            if hasattr(value, "item"):
+                value = value.item()
+            return np.isinf(value) or np.isnan(value)
+
+        if check_inf_nan(max_tensor):
             self.has_overflow = True
-        if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
+            return
+
+        if check_inf_nan(min_tensor):
             self.has_overflow = True
 
     def _analyze_tensor(self, tensor, suffix):

@@ -213,8 +213,6 @@ class DataCollector:
         data_info = self.data_processor.analyze_params(grad_name, param_name, data)
         self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
 
-    def fill_stack_tensor_data(self):
-        self.data_writer.fill_stack_tensor_data()
 
     def debug_data_collect_forward(self, variable, name_with_count):
 

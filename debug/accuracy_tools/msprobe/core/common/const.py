@@ -209,6 +209,7 @@ class Const:
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
 
+    TYPE = 'type'
     DTYPE = 'dtype'
     SHAPE = 'shape'
     STACK_INFO = 'stack_info'
@@ -216,6 +217,7 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    TENSOR_STAT_INDEX = 'tensor_stat_index'
 
     CODE_STACK = 'Code Stack'
     OP_NAME = 'Op Name'
