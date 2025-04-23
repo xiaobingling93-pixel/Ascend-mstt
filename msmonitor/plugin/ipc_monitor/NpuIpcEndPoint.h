@@ -1,16 +1,13 @@
 #ifndef NPU_IPC_ENDPOINT_H
 #define NPU_IPC_ENDPOINT_H
-#include <cstdlib>
-#include <cerrno>
+
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <cstring>
+#include <cerrno>
 #include <stdexcept>
-#include <string>
-#include <memory>
-#include <vector>
 #include "utils.h"
 
 namespace dynolog_npu {
@@ -47,8 +44,8 @@ public:
         if (socketFd == -1) {
             throw std::runtime_error(std::strerror(errno) + IPC_ERROR(ErrCode::PARAM));
         }
-        struct sockaddr_un address;
         int ret;
+        struct sockaddr_un address;
         size_t addressLen = SetSocketAdress(addressName, address);
         if (address.sun_path[0] != STR_END_CHAR) {
             ret = unlink(address.sun_path);
@@ -69,10 +66,12 @@ public:
             throw std::runtime_error("Chmod failed, error is " + std::string(strerror(errno)) + IPC_ERROR(ErrCode::PARAM));
         }
     }
+
     ~NpuIpcEndPoint()
     {
         close(socketFd);
     }
+
     [[nodiscard]] auto BuildSendNpuCtxt(const std::string &desAddrName, const std::vector<NpuPayLoad> &npuPayLoad,
         const std::vector<fileDesT> &fileDes)
     {
@@ -184,7 +183,7 @@ protected:
     {
         auto ctxt = std::make_unique<Ctxt>(npuPayLoad.size());
         std::memset(&ctxt->msghdr, 0, sizeof(ctxt->msghdr));
-        for (auto i = 0; i < npuPayLoad.size(); i++) {
+        for (size_t i = 0; i < npuPayLoad.size(); i++) {
             ctxt->iov[i] = {npuPayLoad[i].data, npuPayLoad[i].size};
         }
         ctxt->msghdr.msg_name = &ctxt->messageName;
@@ -207,8 +206,7 @@ protected:
         return ctxt;
     }
 };
-
 } // namespace ipc_monitor
 } // namespace dynolog_npu
 
-#endif
+#endif // NPU_IPC_ENDPOINT_H
