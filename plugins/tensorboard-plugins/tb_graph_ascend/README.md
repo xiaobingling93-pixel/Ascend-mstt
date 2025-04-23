@@ -36,6 +36,8 @@
 
     ```
     cd fe
+    // 安装前端依赖
+    npm install --force
     // Windows系统
     npm run buildWin
     // 其他可使用cp指令的系统，如Linux或Mac

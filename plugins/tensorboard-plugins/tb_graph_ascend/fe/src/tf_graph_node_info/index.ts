@@ -170,7 +170,7 @@ class TfGraphNodeInfo extends PolymerElement {
                 handle-cell-click="[[handleGridCellClick]]"
                 is-single-graph-node="[[isSingleGraphNode]]"
               >
-              <tf-vaadin-table/>
+              </tf-vaadin-table>
           </div>
         </tf-resize-height>
       </div>
@@ -183,7 +183,7 @@ class TfGraphNodeInfo extends PolymerElement {
               dataset="[[detailData]]"
               handle-cell-click="[[handleGridCellClick]]"
             >
-            <tf-vaadin-text-table/>
+            </tf-vaadin-text-table>
           </div>
         </tf-resize-height>
       </div>
