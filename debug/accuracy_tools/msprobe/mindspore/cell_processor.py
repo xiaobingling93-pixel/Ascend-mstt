@@ -68,6 +68,8 @@ class CellProcessor:
         if not models:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    'The model cannot be None, when level is "L0" or "mix"')
+
+        is_registered = False
         model_type = Const.MODULE if is_mindtorch() else Const.CELL
         cells_and_names_with_index = get_cells_and_names(models)
 
@@ -91,7 +93,10 @@ class CellProcessor:
                 forward_pre_hook, forward_hook = self.build_cell_hook(prefix, build_hook)
                 cell.register_forward_pre_hook(forward_pre_hook)
                 cell.register_forward_hook(forward_hook)
-                logger.info("The cell hook function is successfully mounted to the model.")
+
+                if not is_registered:
+                    logger.info("The cell hook function is successfully mounted to the model.")
+                is_registered = True
 
     def build_cell_hook(self, cell_name, build_data_hook):
         def forward_pre_hook(cell, args):
