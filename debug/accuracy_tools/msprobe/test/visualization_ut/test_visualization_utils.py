@@ -1,7 +1,7 @@
 import os
 import unittest
 from msprobe.visualization.utils import (load_json_file, load_data_json_file, str2float, check_directory_content,
-                                         GraphConst)
+                                         GraphConst, SerializableArgs)
 
 
 class TestMappingConfig(unittest.TestCase):
@@ -36,6 +36,21 @@ class TestMappingConfig(unittest.TestCase):
 
         input_type = check_directory_content(os.path.join(self.input, "step0", "rank0"))
         self.assertEqual(input_type, GraphConst.FILES)
+
+    def test_serializable_args(self):
+        class TmpArgs:
+            def __init__(self, a, b, c):
+                self.a = a
+                self.b = b
+                self.c = c
+        input_args1 = TmpArgs('a', 123, [1, 2, 3])
+        serializable_args1 = SerializableArgs(input_args1)
+        self.assertEqual(serializable_args1.__dict__, input_args1.__dict__)
+        input_args2 = TmpArgs('a', 123, lambda x: print(x))
+        serializable_args2 = SerializableArgs(input_args2)
+        self.assertNotEqual(serializable_args2.__dict__, input_args2.__dict__)
+
+
 
 
 if __name__ == '__main__':

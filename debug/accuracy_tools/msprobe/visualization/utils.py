@@ -16,8 +16,10 @@
 import os
 import re
 import json
+import pickle
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.log import logger
 
 
 def load_json_file(file_path):
@@ -182,3 +184,24 @@ class GraphConst:
     OP = 'op'
     PEER = 'peer'
     GROUP_ID = 'group_id'
+
+
+def is_serializable(obj):
+    """
+    Check if an object is serializable
+    """
+    try:
+        pickle.dumps(obj)
+        return True
+    except (pickle.PicklingError, AttributeError, TypeError):
+        return False
+    except Exception as e:
+        logger.error('Unexpected error occurred while pickling obj.')
+        raise RuntimeError('Unexpected error occurred while pickling obj.') from e
+
+
+class SerializableArgs:
+    def __init__(self, args):
+        for k, v in vars(args).items():
+            if is_serializable(v):
+                setattr(self, k, v)
