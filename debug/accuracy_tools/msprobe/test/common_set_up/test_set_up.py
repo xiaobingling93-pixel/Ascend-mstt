@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 from unittest import TestCase
 from unittest.mock import MagicMock
 
@@ -24,7 +25,20 @@ except ImportError:
     distributed = MagicMock()
     setattr(mint, 'distributed', distributed)
 
+# ensure not to import torch_npu
+from msprobe.mindspore import service
+
+from .mindtorch import reset_torch_tensor
+from msprobe.mindspore.common import utils
+from msprobe.mindspore.common.utils import is_mindtorch
+
+utils.mindtorch_check_result = None
+importlib.reload(service)
+reset_torch_tensor()
+
 
 class SetUp(TestCase):
     def test_case(self):
         self.assertTrue(hasattr(mint, 'distributed'))
+        self.assertTrue(is_mindtorch())
+        utils.mindtorch_check_result = None

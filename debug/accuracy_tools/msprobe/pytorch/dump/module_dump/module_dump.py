@@ -13,75 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-from msprobe.core.common.const import Const
-from msprobe.core.data_dump.scope import BaseScope
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_register import get_api_register
-
-torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
 class ModuleDumper:
     def __init__(self, service):
         self.service = service
-        self.hook_handle_list = []
         self.api_register = get_api_register()
 
     def start_module_dump(self, module, dump_name):
+        if hasattr(module, 'msprobe_hook') and not hasattr(module, 'msprobe_module_dump'):
+            logger.info_on_rank_0("The init dump is enabled, and the module dump function will not be available.")
+            return
+
+        ModuleProcesser.enable_module_dump = True
         self.api_register.restore_all_api()
-        self.register_hook(module, dump_name)
+        if not hasattr(module, 'msprobe_module_dump'):
+            self.service.module_processor.register_module_hook(module, self.service.build_hook,
+                                                               recursive=False, module_names=[dump_name])
+            setattr(module, 'msprobe_module_dump', True)
 
     def stop_module_dump(self):
+        ModuleProcesser.enable_module_dump = False
         self.api_register.register_all_api()
-        for hook_handle in self.hook_handle_list:
-            if isinstance(hook_handle, torch.utils.hooks.RemovableHandle):
-                hook_handle.remove()
-        self.hook_handle_list.clear()
-
-    def register_hook(self, module, dump_name):
-        prefix_name = (
-                BaseScope.Module_Type_Module + Const.SEP +
-                dump_name + Const.SEP +
-                module.__class__.__name__ + Const.SEP
-        )
-        module_processor = self.service.module_processor
-        _, forward_hook, backward_hook, forward_hook_torch_version_below_2 = self.service.build_hook(
-            BaseScope.Module_Type_Module,
-            prefix_name
-        )
-
-        if module_processor.has_register_backward_hook(module):
-            logger.warning(
-                f"The {dump_name} module has registered deprecated register_backward_hook,"
-                f"which may cause abnormal data dump. The backward data dump for this module will be skipped."
-            )
-        if torch_version_above_or_equal_2:
-            forward_hook_handle = module.register_forward_hook(forward_hook, with_kwargs=True)
-        else:
-            if not module_processor.has_register_backward_hook(module):
-                backward_hook_handle = module.register_full_backward_hook(
-                    module_processor.node_hook(prefix_name + Const.BACKWARD, Const.STOP)
-                )
-                self.hook_handle_list.append(backward_hook_handle)
-            forward_hook_handle = module.register_forward_hook(forward_hook_torch_version_below_2)
-        self.hook_handle_list.append(forward_hook_handle)
-        if not module_processor.has_register_backward_hook(module):
-            backward_hook_handle = module.register_full_backward_hook(backward_hook)
-            self.hook_handle_list.append(backward_hook_handle)
-
-        forward_pre_hook_handle = module.register_forward_pre_hook(
-            module_processor.node_hook(prefix_name + Const.FORWARD, Const.START)
-        )
-        forward_hook_handle = module.register_forward_hook(
-            module_processor.node_hook(prefix_name + Const.FORWARD, Const.STOP)
-        )
-        self.hook_handle_list.extend([forward_pre_hook_handle, forward_hook_handle])
-        if torch_version_above_or_equal_2 and not module_processor.has_register_backward_hook(module):
-            backward_pre_hook_handle = module.register_full_backward_pre_hook(
-                module_processor.node_hook(prefix_name + Const.BACKWARD, Const.START)
-            )
-            backward_hook_handle = module.register_full_backward_hook(
-                module_processor.node_hook(prefix_name + Const.BACKWARD, Const.STOP)
-            )
-            self.hook_handle_list.extend([backward_pre_hook_handle, backward_hook_handle])

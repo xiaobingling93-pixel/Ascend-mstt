@@ -21,9 +21,7 @@ import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
-from msprobe.pytorch.common.utils import is_float8_tensor
-
-torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+from msprobe.pytorch.common.utils import is_float8_tensor, register_forward_pre_hook, register_forward_hook
 
 
 class HOOKModule(nn.Module):
@@ -43,13 +41,9 @@ class HOOKModule(nn.Module):
 
             prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
             if callable(hook_build_func):
-                forward_pre_hook, forward_hook, backward_hook, _ = hook_build_func(prefix)
-                if torch_version_above_or_equal_2:
-                    self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
-                    self.register_forward_hook(forward_hook, with_kwargs=True)
-                else:
-                    self.register_forward_pre_hook(forward_pre_hook)
-                    self.register_forward_hook(forward_hook)
+                forward_pre_hook, forward_hook, backward_hook = hook_build_func(prefix)
+                register_forward_pre_hook(self, forward_pre_hook)
+                register_forward_hook(self, forward_hook)
                 self.register_backward_hook(backward_hook)
 
     def __call__(self, *args, **kwargs):
@@ -79,13 +73,7 @@ class HOOKModule(nn.Module):
         if len(self._backward_hooks) > 0:
             full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
         for hook in self._forward_pre_hooks.values():
-            result_args, result_kwargs = hook(self, args, kwargs)
-            if result_args is not None:
-                if not isinstance(result_args, tuple):
-                    result_args = (result_args,)
-                args = result_args
-            if result_kwargs is not None:
-                kwargs = result_kwargs
+            hook(self, args, kwargs)
         bw_hook = None
         if len(full_backward_hooks) > 0:
             bw_hook = full_hooks.BackwardHook(self, full_backward_hooks)
