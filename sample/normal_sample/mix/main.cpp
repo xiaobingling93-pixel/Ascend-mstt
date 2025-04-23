@@ -101,7 +101,6 @@ void MakeTiling(int32_t *addr, size_t size)
     tiling->dbL0A = 2;
     tiling->dbL0B = 2;
     tiling->dbL0C = 1;
-    tiling->reserved = 0;
 }
 
 int32_t main(int32_t argc, char *argv[])

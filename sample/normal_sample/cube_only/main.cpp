@@ -49,7 +49,6 @@ void printAclFloat16(aclFloat16 *addr)
 
 void MakeTiling(uint32_t *addr, size_t size)
 {
-    assert(sizeof(TCubeTiling) <= size);
     // TCubeTiling该结构体在kernel_tiling/kernel_tiling.h中的结构体定义
     // tiling_api.h中本身定义的结构与kernel_tiling.h相近，通过GetTiling实现映射
     // TCubeTiling定义的可读性较好，可以直接理解，但使用tiling_api可以直接使能部分默认值
@@ -99,7 +98,6 @@ void MakeTiling(uint32_t *addr, size_t size)
     tiling->dbL0A = 2;
     tiling->dbL0B = 2;
     tiling->dbL0C = 1;
-    tiling->reserved = 0;
 }
 
 // y = matmul(xa, xb)
@@ -108,7 +106,7 @@ int32_t main(int32_t argc, char *argv[])
     size_t xaSize = 512 * 1024 * sizeof(aclFloat16);
     size_t xbSize = 512 * 1024 * sizeof(aclFloat16);
     size_t ySize = 512 * 1024 * sizeof(float);
-    size_t tilingSize = 48 * sizeof(uint32_t);
+    size_t tilingSize = sizeof(TCubeTiling);
     uint32_t blockDim = 8;
 
     CHECK_ACL(aclInit(nullptr));
