@@ -187,6 +187,7 @@ class TrainerMon:
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.origin_step_func = None
         self.origin_start_grad_sync = None
+        self.fsdp_post_backward_hook = None
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
@@ -221,6 +222,7 @@ class TrainerMon:
         self.dp_group = None
         self.tp_group = None
         self.enable_megatron = False
+        self.fsdp_wrapped_module = False
         self.micro_batch_number = 1
         self.optimizer_class = None
         self.optimizer_mon = None
@@ -458,7 +460,8 @@ class TrainerMon:
     def generate_param_metrics(self, opt_context):
         if not self.param_distribution:
             return
-        get_metrics(self.ops, self.name2param, self.eps, opt_context.param_metric)
+        name2param = {name: param for name, param in self.name2param.items() if param.numel() != 0}
+        get_metrics(self.ops, name2param, self.eps, opt_context.param_metric)
 
     def generate_mv_metrics(self, opt_context):
         if not self.mv_distribution:
@@ -483,15 +486,20 @@ class TrainerMon:
                 continue
             grad = param.main_grad if self.params_have_main_grad else param.grad
             if grad is None:
-                logger.warning(f"grad is None: {name}, maybe something wrong happened.")
+                if not self.fsdp_wrapped_module:
+                    logger.warning(f"grad is None: {name}, maybe something wrong happened.")
                 continue
             tag = self.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
             self._register_param_call_id("hook_optimizer", tag)
             grad_dict[tag] = grad
 
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
-        unreduced_grad = self.grad_context.acc_metric if self.weight_hooked else self.grad_context.pre
-        return self.grad_context.post, unreduced_grad
+        reduced_grad = self.grad_context.post
+        if self.enable_megatron or self.fsdp_wrapped_module:
+            unreduced_grad = self.grad_context.pre
+        else:
+            unreduced_grad = self.grad_context.acc_metric
+        return reduced_grad, unreduced_grad
 
     def generate_xy_metrics(self):
         actv = {}
@@ -545,7 +553,7 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.enable_megatron:
+        if self.enable_megatron or self.fsdp_wrapped_module:
             self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
         else:
             self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
@@ -791,7 +799,10 @@ class TrainerMon:
                 logger.info("remove _ParamAndGradBucketGroup start_grad_sync")
             except ImportError:
                 pass
-        else:  # not megatron
+        elif self.fsdp_post_backward_hook:  # fsdp
+            torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
+            logger.info("remove patch_post_backward_hook in fsdp.")
+        else:  # not megatron and not fsdp
             for handle in self.handles['wgrads']:
                 handle.remove()
             self.handles['wgrads'].clear()
@@ -877,6 +888,8 @@ class TrainerMon:
         for (param_name, param) in model_chunk.named_parameters():
             if not param.requires_grad:
                 continue
+            if not self.fsdp_wrapped_module and param_name.startswith("_fsdp_wrapped_module"):
+                self.fsdp_wrapped_module = True
             if self._is_target_param(param_name, param, prefix):
                 name = prefix + squash_param_name(param_name, self.squash_name)
                 if name in self.param2name.values():
@@ -1021,6 +1034,8 @@ class TrainerMon:
                 name = self._is_target_module(module_name, target_names, vpp_stage)
                 if not name:
                     continue
+                if submodule.__class__.__name__ == "FullyShardedDataParallel":
+                    continue
                 if not self.backward_only:
                     handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name))
                     self.handles['xy'].append(handle)
@@ -1060,6 +1075,10 @@ class TrainerMon:
 
         if not self.wg_distribution:
             return
+        if self.fsdp_wrapped_module:
+            # patch fsdp _runtime_utils._post_backward_hook
+            self._patch_fsdp_post_backward_hook()
+            return
 
         try:
             from megatron.core.distributed.param_and_grad_buffer import Bucket
@@ -1078,9 +1097,44 @@ class TrainerMon:
             logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
         except ImportError:
             self.enable_megatron = False | self.enable_megatron
+        if self.enable_megatron:
+            return
 
-        if not self.enable_megatron:
-            self._hook_weights()
+        # default hook weights
+        self._hook_weights()
+
+    def _patch_fsdp_post_backward_hook(self):
+        """
+        FSDP runtime 需要处理整个forward和backward计算和通信的流程，通过override nn.Module的forward，定义相应的逻辑。
+        对AccumulateGrad对象注册hook，可以在backward计算grad后立刻执行，在reduce_scatter操作前采集梯度累计后，通信聚合前的梯度。
+        每个forward阶段，fsdp对AccumulateGrad重复注册hook方法，monitor工具内注册hook无法生效，
+        因此对_post_backward_hook进行patch，在backward后，reduce_scatter前采集梯度。
+        """
+        def patch_post_backward_hook(_post_backward_hook):
+            def wrapper(state, handle, *unused):
+                grad_dict = {}
+                offset = 0
+                for param, name in self.param2name.items():
+                    limit = param.numel()
+                    if not limit:
+                        continue
+                    grad = handle.flat_param.grad[offset:offset + limit]
+                    offset += limit
+                    tag = self.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
+                    if tag is None:
+                        continue
+                    grad_dict[tag] = grad
+                    self._register_param_call_id("_post_backward_hook", tag)
+                get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                out = _post_backward_hook(state, handle, *unused)
+                return out
+
+            return wrapper
+
+        logger.info("Patch fsdp _post_backward_hook, collect pre_grad metrics.")
+        self.fsdp_post_backward_hook = torch.distributed.fsdp._runtime_utils._post_backward_hook
+        torch.distributed.fsdp._runtime_utils._post_backward_hook = \
+            patch_post_backward_hook(torch.distributed.fsdp._runtime_utils._post_backward_hook)
 
     def _hook_weights(self):
         context = self.grad_context
