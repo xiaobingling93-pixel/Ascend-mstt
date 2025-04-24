@@ -24,7 +24,7 @@ import numpy as np
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
-from msprobe.core.common.file_utils import path_len_exceeds_limit, save_npy
+from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
@@ -118,6 +118,11 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def get_special_types(cls):
         return super().get_special_types() + cls.mindspore_special_type
 
+    def dump_async_data(self):
+        for file_path, tensor in self._async_dump_cache.items():
+            save_tensor_as_npy(tensor, file_path)
+        self._async_dump_cache.clear()
+
     def get_stat_info(self, data):
         self.api_register.restore_inner_used_api()
         tensor_stat = TensorStatInfo()
@@ -188,20 +193,9 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
-
-class StatisticsDataProcessor(MindsporeDataProcessor):
-    pass
-
-
-class TensorDataProcessor(MindsporeDataProcessor):
-    def dump_async_data(self):
-        for file_path, tensor in self._async_dump_cache.items():
-            save_tensor_as_npy(tensor, file_path)
-        self._async_dump_cache.clear()
-
-    def _analyze_tensor(self, tensor, suffix):
+    def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        single_arg = super()._analyze_tensor(tensor, suffix)
+        single_arg = MindsporeDataProcessor._analyze_tensor(self, tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.copy()
@@ -209,12 +203,27 @@ class TensorDataProcessor(MindsporeDataProcessor):
             save_tensor_as_npy(tensor, file_path)
         return single_arg
 
+
+class StatisticsDataProcessor(MindsporeDataProcessor):
+    def _analyze_tensor(self, tensor, suffix):
+        if any(item in self.current_api_or_module_name for item in self.config.tensor_list):
+            return self._analyze_and_save_tensor(tensor, suffix)
+        else:
+            return super()._analyze_tensor(tensor, suffix)
+
     def _analyze_ndarray(self, ndarray, suffix):
-        dump_data_name, file_path = self.get_save_file_path(suffix)
-        save_npy(ndarray, file_path)
-        ndarray_json = super()._analyze_ndarray(ndarray, suffix)
-        ndarray_json.update({"data_name": dump_data_name})
-        return ndarray_json
+        if any(item in self.current_api_or_module_name for item in self.config.tensor_list):
+            return self._analyze_and_save_ndarray(ndarray, suffix)
+        else:
+            return super()._analyze_ndarray(ndarray, suffix)
+
+
+class TensorDataProcessor(MindsporeDataProcessor):
+    def _analyze_tensor(self, tensor, suffix):
+        return self._analyze_and_save_tensor(tensor, suffix)
+
+    def _analyze_ndarray(self, ndarray, suffix):
+        return self._analyze_and_save_ndarray(ndarray, suffix)
 
 
 class OverflowCheckDataProcessor(MindsporeDataProcessor):
