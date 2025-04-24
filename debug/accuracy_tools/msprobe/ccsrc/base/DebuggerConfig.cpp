@@ -424,7 +424,7 @@ void DebuggerConfig::Parse()
             iter = content.find(name);                            \
             if (iter != content.end()) {                          \
                 member = std::make_shared<basetype>();            \
-                member->Parse(*(iter));                             \
+                ((member)->Parse(*(iter)));                             \
             }                                                     \
         }                                                         \
     } while (0)
