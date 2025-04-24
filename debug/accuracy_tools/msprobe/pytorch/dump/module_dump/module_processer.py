@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
+
 import torch
-from torch.utils.hooks import BackwardHook
+from torch.utils.hooks import BackwardHook, RemovableHandle
 
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import is_torch_nn_module, register_forward_pre_hook, register_forward_hook
+from msprobe.pytorch.common.utils import is_torch_nn_module, register_forward_pre_hook
 from msprobe.pytorch.dump.module_dump.hook_wrapper import wrap_setup_input_output_hook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -131,7 +133,7 @@ class ModuleProcesser:
                 prefix_name = f'{BaseScope.Module_Type_Module}{Const.SEP}{module_index}{name}{Const.SEP}' + \
                               f'{module.__class__.__name__}{Const.SEP}'
 
-                forward_pre_hook, forward_hook = self.build_module_hook(prefix_name, build_hook)
+                forward_pre_hook = self.build_module_hook(prefix_name, build_hook)
 
                 if self.has_register_backward_hook(module):
                     logger.warning(
@@ -140,7 +142,6 @@ class ModuleProcesser:
                     )
                     ModuleProcesser.module_with_backward_hook[prefix_name] = True
                 register_forward_pre_hook(module, forward_pre_hook)
-                register_forward_hook(module, forward_hook)
 
     def build_module_hook(self, module_name, build_data_hook):
         def forward_pre_hook(module, args, kwargs=None):
@@ -155,6 +156,16 @@ class ModuleProcesser:
             full_backward_name = f'{module_name}{Const.BACKWARD}{Const.SEP}{index}'
 
             self.set_construct_info_in_pre_hook(full_forward_name)
+
+            if not hasattr(module, 'msprobe_forward_hook'):
+                forward_hooks_dict = getattr(module, '_forward_hooks', OrderedDict())
+                handle = RemovableHandle(forward_hooks_dict)
+                forward_hooks_dict[handle.id] = forward_hook
+                if torch_version_above_or_equal_2:
+                    forward_hooks_with_kwargs_dict = getattr(module, '_forward_hooks_with_kwargs', OrderedDict())
+                    forward_hooks_with_kwargs_dict[handle.id] = True
+
+                setattr(module, 'msprobe_forward_hook', True)
 
             _, _, backward_data_hook = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
 
@@ -203,7 +214,7 @@ class ModuleProcesser:
 
             return result
 
-        return forward_pre_hook, forward_hook
+        return forward_pre_hook
 
     def set_construct_info_in_pre_hook(self, full_name):
         if self.module_stack:
