@@ -80,6 +80,8 @@ class Const:
     NUMPY_SUFFIX = ".npy"
     NUMPY_PATTERN = "*.npy"
     PT_SUFFIX = ".pt"
+    PY_SUFFIX = ".py"
+    INIT_PY = "init.py"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
     ONE_MB = 1048576  # 1 * 1024 * 1024
@@ -246,6 +248,7 @@ class Const:
     PT_API_TYPE_ATEN = "aten"
     PT_API_TYPE_DIST = "distributed"
     PT_API_TYPE_NPU_DIST = "npu_distributed"
+    PT_API_TYPE_MINDSPEED = "mindspeed"
 
     MS_API_TYPE_OPS = "ops"
     MS_API_TYPE_TENSOR = "tensor"
@@ -263,6 +266,7 @@ class Const:
     NPU_API_TYPE_PREFIX = "NPU"
     ATEN_API_TYPE_PREFIX = "Aten"
     VF_API_TYPE_PREFIX = "VF"
+    MINDSPEED_API_TYPE_PREFIX = "MindSpeed"
 
     MINT_API_TYPE_PREFIX = "Mint"
     MINT_FUNC_API_TYPE_PREFIX = "MintFunctional"
@@ -277,7 +281,8 @@ class Const:
             PT_API_TYPE_NPU: PT_API_TYPE_NPU,
             PT_API_TYPE_ATEN: PT_API_TYPE_ATEN,
             PT_API_TYPE_DIST: PT_API_TYPE_DIST,
-            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST
+            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST,
+            PT_API_TYPE_MINDSPEED: PT_API_TYPE_MINDSPEED
         },
         MS_FRAMEWORK: {
             MS_API_TYPE_OPS: MS_API_TYPE_OPS,
@@ -306,7 +311,8 @@ class Const:
             PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
             PT_API_TYPE_ATEN: ATEN_API_TYPE_PREFIX,
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX,
-            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX
+            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX,
+            PT_API_TYPE_MINDSPEED: MINDSPEED_API_TYPE_PREFIX
         },
         MS_FRAMEWORK: {
             MS_API_TYPE_OPS: FUNCTIONAL_API_TYPE_PREFIX,

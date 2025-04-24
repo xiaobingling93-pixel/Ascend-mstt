@@ -26,9 +26,22 @@ from msprobe.pytorch.common.utils import (
 )
 from msprobe.pytorch.function_factory import npu_custom_functions
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.hook_module.utils import dynamic_import_op
+from msprobe.core.common.file_utils import load_yaml
+
+try:
+    import mindspeed.ops
+except ImportError:
+    mindspeed_enable = False
+else:
+    mindspeed_enable = True
 
 
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
+
+_inner_used_api = {}
+_supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
+_cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
 
 _api_types = {
     Const.PT_FRAMEWORK: {
@@ -57,10 +70,11 @@ if not is_gpu:
                                                                      torch_npu.distributed.distributed_c10d))
             }
         )
-
-_inner_used_api = {}
-_supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
-_cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
+    if mindspeed_enable:
+        _api_types.get(Const.PT_FRAMEWORK).update({Const.PT_API_TYPE_MINDSPEED: (mindspeed.ops, (mindspeed.ops,))})
+        mindspeed_op_list = load_yaml(_supported_api_list_path[0]).get(Const.PT_API_TYPE_MINDSPEED)
+        mindspeed_op_file_list = [op.split(Const.SEP)[0] + Const.PY_SUFFIX for op in mindspeed_op_list]
+        dynamic_import_op(mindspeed.ops, mindspeed_op_file_list)
 
 
 @parameter_adapter
