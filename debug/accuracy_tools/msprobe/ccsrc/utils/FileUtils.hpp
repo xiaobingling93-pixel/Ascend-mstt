@@ -65,7 +65,7 @@ constexpr const uint32_t FILE_NAME_MAX = 255;
 /* 基础检查函数库，不做过多校验，路径有效性由调用者保证 */
 bool IsPathExist(const std::string& path);
 std::vector<std::string> SplitPath(const std::string &path, char separator=pathSeparator);
-std::string GetAbsPath(const std::string &path);
+std::string GetAbsPath(const std::string &originPath);
 bool IsDir(const std::string& path);
 bool IsRegularFile(const std::string& path);
 bool IsFileSymbolLink(const std::string& path);
