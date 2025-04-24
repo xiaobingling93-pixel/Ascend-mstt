@@ -842,16 +842,16 @@ static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint
     int maxValue = 7;
     int minValue = -8;
     int signBitShift = 3;
-    int signBitMask = 0x08;
+    uint8_t signBitMask = 0x08;
     for (size_t i = 0; i < inputLength; ++i) {
         int8_t s = *srcData;
-        int8_t t = s & 0xf;
+        int8_t t = static_cast<int8_t>(static_cast<uint8_t>(s) & 0xf);
         // keep the sign bit not change
-        int8_t signBit = (t & signBitMask) >> signBitShift;
+        int8_t signBit = static_cast<int8_t>((static_cast<uint8_t>(t) & signBitMask) >> signBitShift);
         if (signBit == 1) {
-            t = t | 0xf0;
+            t = static_cast<int8_t>(static_cast<uint8_t>(t) | 0xf0);
         } else {
-            t = t & 0x0f;
+            t = static_cast<int8_t>(static_cast<uint8_t>(t) & 0x0f);
         }
         if (t < minValue || t > maxValue) {
             LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid int4 value.");
@@ -860,12 +860,12 @@ static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint
         ++dstData;
 
         int highByteShift = 4;
-        t = s >> highByteShift;
-        signBit = (t & signBitMask) >> signBitShift;
+        int8_t t = static_cast<int8_t>(static_cast<uint8_t>(s) >> highByteShift);
+        int8_t signBit = static_cast<int8_t>((static_cast<uint8_t>(t) & signBitMask) >> signBitShift);
         if (signBit == 1) {
-            t = t | 0xf0;
+            t = static_cast<int8_t>(static_cast<uint8_t>(t) | 0xf0);
         } else {
-            t = t & 0x0f;
+            t = static_cast<int8_t>(static_cast<uint8_t>(t) & 0x0f);
         }
         if (t < minValue || t > maxValue) {
             LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid int4 value.");
