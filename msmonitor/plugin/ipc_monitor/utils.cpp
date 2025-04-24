@@ -1,14 +1,20 @@
 #include "utils.h"
 #include <glog/logging.h>
 #include <glog/stl_logging.h>
-#include <algorithm>
 #include <cctype>
+#include <cstring>
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <random>
 #include <unordered_map>
+#include <fcntl.h>
+#include <libgen.h>
+#include <limits.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -226,5 +232,174 @@ void *MsptiMalloc(size_t size, size_t alignment)
 #endif
 }
 
+bool PathUtils::IsFileExist(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    return access(path.c_str(), F_OK) == 0;
+}
+
+bool PathUtils::IsFileWritable(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    return access(path.c_str(), W_OK) == 0;
+}
+
+bool PathUtils::IsDir(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    struct stat st{};
+    int ret = lstat(path.c_str(), &st);
+    if (ret != 0) {
+        return false;
+    }
+    return S_ISDIR(st.st_mode);
+}
+
+bool PathUtils::CreateDir(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    if (IsFileExist(path)) {
+        return IsDir(path);
+    }
+    size_t pos = 0;
+    while ((pos = path.find_first_of('/', pos)) != std::string::npos) {
+        std::string baseDir = path.substr(0, ++pos);
+        if (IsFileExist(baseDir)) {
+            if (IsDir(baseDir)) {
+                continue;
+            } else {
+                return false;
+            }
+        }
+        if (mkdir(baseDir.c_str(), DATA_DIR_AUTHORITY) != 0) {
+            if (errno != EEXIST) {
+                return false;
+            }
+        }
+    }
+    auto ret = mkdir(path.c_str(), DATA_DIR_AUTHORITY);
+    return (ret == 0 || errno == EEXIST) ? true : false;
+}
+
+std::string PathUtils::RealPath(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return "";
+    }
+    char realPath[PATH_MAX] = {0};
+    if (realpath(path.c_str(), realPath) == nullptr) {
+        return "";
+    }
+    return std::string(realPath);
+}
+
+std::string PathUtils::RelativeToAbsPath(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return "";
+    }
+    if (path[0] != '/') {
+        char pwdPath[PATH_MAX] = {0};
+        if (getcwd(pwdPath, PATH_MAX) != nullptr) {
+            return std::string(pwdPath) + "/" + path;
+        }
+        return "";
+    }
+    return std::string(path);
+}
+
+std::string PathUtils::DirName(const std::string &path)
+{
+    if (path.empty()) {
+        return "";
+    }
+    char tempPath[PATH_MAX] = {0};
+    strncpy(tempPath, path.c_str(), path.size() < PATH_MAX ? path.size() : PATH_MAX);
+    char* cPath = dirname(tempPath);
+    return cPath ? std::string(cPath) : "";
+}
+
+bool PathUtils::CreateFile(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX || !CreateDir(DirName(path))) {
+        return false;
+    }
+    int fd = creat(path.c_str(), DATA_FILE_AUTHORITY);
+    return (fd < 0 || close(fd) != 0) ? false : true;
+}
+
+bool PathUtils::IsSoftLink(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX || !IsFileExist(path)) {
+        return false;
+    }
+    struct stat st{};
+    if (lstat(path.c_str(), &st) != 0) {
+        return false;
+    }
+    return S_ISLNK(st.st_mode);
+}
+
+bool PathUtils::DirPathCheck(const std::string& absPath)
+{
+    if (absPath.empty() || absPath.size() > PATH_MAX) {
+        fprintf(stderr, "[ERROR] The length of Path %s is invalid.\n", absPath.c_str());
+        return false;
+    }
+    if (IsSoftLink(absPath)) {
+        fprintf(stderr, "[ERROR] Path %s is soft link.\n", absPath.c_str());
+        return false;
+    }
+    if (!IsFileExist(absPath) && !CreateDir(absPath)) {
+        fprintf(stderr, "[ERROR] Path %s not exist and create failed.\n", absPath.c_str());
+        return false;
+    }
+    if (!IsDir(absPath) || !IsFileWritable(absPath)) {
+        fprintf(stderr, "[ERROR] %s is not a directory or is not writable.\n", absPath.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool CreateMsmonitorLogPath(std::string& path)
+{
+    const char* logPathEnvVal = getenv("MSMONITOR_LOG_PATH");
+    std::string logPath;
+    if (logPathEnvVal != nullptr) {
+        logPath = logPathEnvVal;
+    }
+    if (logPath.empty()) {
+        char cwdPath[PATH_MAX] = {0};
+        if (getcwd(cwdPath, PATH_MAX) != nullptr) {
+            logPath = cwdPath;
+        }
+    }
+    if (logPath.empty()) {
+        fprintf(stderr, "[ERROR] Failed to get msmonitor log path.\n");
+        return false;
+    }
+    logPath = logPath + "/msmonitor_log";
+    std::string absPath = PathUtils::RelativeToAbsPath(logPath);
+    if (PathUtils::DirPathCheck(absPath)) {
+        std::string realPath = PathUtils::RealPath(absPath);
+        if (PathUtils::CreateDir(realPath)) {
+            path = realPath;
+            fprintf(stderr, "[INFO] Msmonitor log will record to %s.\n", realPath.c_str());
+            return true;
+        }
+        fprintf(stderr, "[ERROR] Create LOG_PATH: %s failed.\n", realPath.c_str());
+    } else {
+        fprintf(stderr, "[ERROR] LOG_PATH: %s of Msmonitor is invalid.\n", absPath.c_str());
+    }
+    return false;
+}
 } // namespace ipc_monitor
 } // namespace dynolog_npu
