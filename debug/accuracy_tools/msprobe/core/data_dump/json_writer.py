@@ -221,6 +221,8 @@ class DataWriter:
             # 遍历 cache_data，将占位符替换为最终统计值
             if stat_result:
                 self._replace_stat_placeholders(self.cache_data, stat_result)
+                if self.cache_debug:
+                    self._replace_stat_placeholders(self.cache_debug, stat_result)
             if self.cache_data:
                 self.write_data_json(self.dump_file_path)
             if self.cache_stack:
