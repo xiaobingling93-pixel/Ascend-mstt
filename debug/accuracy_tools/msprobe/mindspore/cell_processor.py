@@ -107,9 +107,12 @@ class CellProcessor:
             self.set_construct_info_in_pre_hook(full_forward_name)
 
             if not hasattr(cell, 'msprobe_forward_hook'):
-                forward_hook_dict = getattr(cell, '_forward_hook', OrderedDict())
-                handle = HookHandle(forward_hook_dict)
-                forward_hook_dict[handle.handle_id] = forward_hook
+                if is_mindtorch():
+                    cell.register_forward_hook(forward_hook)
+                else:
+                    forward_hook_dict = getattr(cell, '_forward_hook', OrderedDict())
+                    handle = HookHandle(forward_hook_dict)
+                    forward_hook_dict[handle.handle_id] = forward_hook
 
                 setattr(cell, 'msprobe_forward_hook', True)
 
