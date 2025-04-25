@@ -1,0 +1,265 @@
+import unittest
+import os
+import json
+import mindspore
+import numpy as np
+import shutil
+
+from msprobe.mindspore import PrecisionDebugger
+
+current_file = __file__
+parent_dir = os.path.abspath(os.path.dirname(current_file))
+test_dir = os.path.join(parent_dir, "test_dir")
+
+def deep_compare(obj1, obj2, float_tolerance=1e-5):
+    """
+    Recursively compare two objects to check if they are the same.
+    Supports nested dictionaries and lists.
+    """
+    if type(obj1) != type(obj2):
+        return False
+
+    if isinstance(obj1, dict):
+        if obj1.keys() != obj2.keys():
+            return False
+        return all(deep_compare(obj1[key], obj2[key]) for key in obj1)
+
+    if isinstance(obj1, (tuple, list)):
+        if len(obj1) != len(obj2):
+            return False
+        return all(deep_compare(item1, item2) for item1, item2 in zip(obj1, obj2))
+
+    if isinstance(obj1, float):
+        return abs(obj1 - obj2) < float_tolerance
+
+    return obj1 == obj2
+
+class TestDebuggerSave(unittest.TestCase):
+    @staticmethod
+    def write_config_json(step, async_dump, mode, dump_path, config_file_path):
+        task = "tensor" if mode == "tensor" else "statistics"
+        statistics_summary_mode = "statistics" if mode == "statistics" else "md5"
+        config = {
+            "task": task,
+            "dump_path": dump_path,
+            "rank": [],
+            "step": step,
+            "level": "debug",
+            "enable_dataloader": False,
+            "async_dump": async_dump,
+            "statistics": {
+                "summary_mode": statistics_summary_mode,
+            }
+        }
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+
+    @staticmethod
+    def read_debug_json_into_dict(debug_json_path):
+        with open(debug_json_path, "r", encoding="utf-8") as f:
+            debug_json = json.load(f)
+        return debug_json
+
+
+    @staticmethod
+    def check_real_npy(npy_path, target_ms_tensor, check_values=True, rtol=1e-5, atol=1e-8):
+        """
+        Enhanced version with optional value comparison.
+
+        Args:
+            npy_path (str): Path to the .npy file
+            target_ms_tensor: Target mindspore tensor to compare
+            check_values (bool): If True, also compare array values
+            rtol, atol: Relative and absolute tolerances for value comparison
+
+        Returns:
+            bool: True if all checks pass
+        """
+        # Convert mindspore tensor to numpy if needed
+        if hasattr(target_ms_tensor, 'numpy'):
+            target_ms_tensor = target_ms_tensor.numpy()
+
+        # Load the npy file
+        try:
+            npy_data = np.load(npy_path)
+        except FileNotFoundError:
+            print(f"Error: The file {npy_path} does not exist.")
+            return False
+        except Exception as e:
+            print(f"Error loading npy file: {e}")
+            return False
+
+        # Check shapes
+        if npy_data.shape != target_ms_tensor.shape:
+            print(f"Shape mismatch: npy data shape is {npy_data.shape}, target tensor shape is {target_ms_tensor.shape}")
+            return False
+
+        # Check dtypes
+        if npy_data.dtype != target_ms_tensor.dtype:
+            print(f"Shape mismatch: npy data dtype is {npy_data.dtype}, target tensor dtype is {target_ms_tensor.dtype}")
+            return False
+
+        # Optionally check values
+        if check_values:
+            if not np.allclose(npy_data, target_ms_tensor, rtol=rtol, atol=atol):
+                print("Value mismatch: npy data and target tensor values do not match within the specified tolerances.")
+                return False
+
+        return True
+
+
+    def setUp(self):
+        if not os.path.exists(test_dir):
+            os.makedirs(test_dir)
+        PrecisionDebugger._instance = None
+
+    def tearDown(self):
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        PrecisionDebugger._instance = None
+
+    def test_save_real_tensor(self):
+        data = {"a": mindspore.Tensor([1., 2.])}
+        step = []
+        async_dump = False
+        mode = "tensor"
+        dump_path = os.path.join(test_dir, "debug_save")
+        config_file_path = os.path.join(test_dir, "config.json")
+
+        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
+        debugger =  PrecisionDebugger(config_file_path)
+        PrecisionDebugger.save(data, "data_dict", save_backward=False)
+        PrecisionDebugger.step()
+
+        # check npy file
+        npy_path = os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "data_dict.0.debug.a.npy")
+        assert self.check_real_npy(npy_path, data["a"])
+
+        # check debug json
+        target_debug_info = {
+
+        }
+        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
+        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
+        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
+
+    def test_save_statistics(self):
+        data = {"a": mindspore.Tensor([1., 2.])}
+        step = []
+        async_dump = False
+        mode = "statistics"
+        dump_path = os.path.join(test_dir, "debug_save")
+        config_file_path = os.path.join(test_dir, "config.json")
+
+        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
+        debugger =  PrecisionDebugger(config_file_path)
+        PrecisionDebugger.save(data, "data_dict", save_backward=False)
+        PrecisionDebugger.step()
+
+        # check debug json
+        target_debug_info = {
+
+        }
+        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
+        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
+        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
+
+    def test_save_md5(self):
+        data = {"a": mindspore.Tensor([1., 2.])}
+        step = []
+        async_dump = False
+        mode = "md5"
+        dump_path = os.path.join(test_dir, "debug_save")
+        config_file_path = os.path.join(test_dir, "config.json")
+
+        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
+        debugger =  PrecisionDebugger(config_file_path)
+        PrecisionDebugger.save(data, "data_dict", save_backward=False)
+        PrecisionDebugger.step()
+
+        # check debug json
+        target_debug_info = {
+
+        }
+        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
+        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
+        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
+
+    def test_save_multiple_steps(self):
+        data = {"a": mindspore.Tensor([1., 2.])}
+        step = [0, 1, 2]
+        async_dump = False
+        mode = "tensor"
+        dump_path = os.path.join(test_dir, "debug_save")
+        config_file_path = os.path.join(test_dir, "config.json")
+
+        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
+        debugger =  PrecisionDebugger(config_file_path)
+        for _ in step:
+            PrecisionDebugger.save(data, "data_dict", save_backward=False)
+            PrecisionDebugger.step()
+
+        # check npy file
+        for i in range(step):
+            npy_path = os.path.join(dump_path, f"step{i}", "rank", "dump_tensor_data", "data_dict.0.debug.a.npy")
+            assert self.check_real_npy(npy_path, data["a"])
+
+        # check debug json
+        target_debug_info = {
+
+        }
+
+        for i in range(step):
+            debug_json_path = os.path.join(dump_path, f"step{i}", "rank", "debug.json")
+            debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
+            assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
+
+    def test_async_save_tensor(self):
+        data = {"a": mindspore.Tensor([1., 2.])}
+        step = []
+        async_dump = True
+        mode = "tensor"
+        dump_path = os.path.join(test_dir, "debug_save")
+        config_file_path = os.path.join(test_dir, "config.json")
+
+        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
+        debugger =  PrecisionDebugger(config_file_path)
+        PrecisionDebugger.save(data, "data_dict", save_backward=False)
+        PrecisionDebugger.step()
+
+        # check npy file
+        npy_path = os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "data_dict.0.debug.a.npy")
+        assert self.check_real_npy(npy_path, data["a"])
+
+        # check debug json
+        target_debug_info = {
+
+        }
+        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
+        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
+        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
+
+    def test_async_save_md5(self):
+        data = {"a": mindspore.Tensor([1., 2.])}
+        step = []
+        async_dump = True
+        mode = "md5"
+        dump_path = os.path.join(test_dir, "debug_save")
+        config_file_path = os.path.join(test_dir, "config.json")
+
+        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
+        debugger =  PrecisionDebugger(config_file_path)
+        PrecisionDebugger.save(data, "data_dict", save_backward=False)
+        PrecisionDebugger.step()
+
+        # check npy file
+        npy_path = os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "data_dict.0.debug.a.npy")
+        assert self.check_real_npy(npy_path, data["a"])
+
+        # check debug json
+        target_debug_info = {
+
+        }
+        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
+        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
+        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
