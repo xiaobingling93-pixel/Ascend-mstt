@@ -12,10 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import atexit
 import csv
 import fcntl
+import io
 import os
+import pickle
+import multiprocessing as mp
+from multiprocessing import shared_memory
 import stat
 import json
 import re
@@ -299,12 +303,13 @@ def check_path_before_create(path):
 def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    if check_others_writable(dirpath):
-        logger.warning(f"The directory is writable by others: {dirpath}.")
-    try:
-        check_path_owner_consistent(dirpath)
-    except FileCheckException:
-        logger.warning(f"The directory {dirpath} is not yours.")
+    if dedup_log('check_dirpath_before_read', dirpath):
+        if check_others_writable(dirpath):
+            logger.warning(f"The directory is writable by others: {dirpath}.")
+        try:
+            check_path_owner_consistent(dirpath)
+        except FileCheckException:
+            logger.warning(f"The directory {dirpath} is not yours.")
     
 
 def check_file_or_directory_path(path, isdir=False):
@@ -694,3 +699,93 @@ def read_xlsx(file_path):
         logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
         raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
     return result_df
+
+
+def dedup_log(func_name, filter_name):
+    with SharedDict() as shared_dict:
+        exist_names = shared_dict.get(func_name, set())
+        if filter_name in exist_names:
+            return False
+        exist_names.add(filter_name)
+        shared_dict[func_name] = exist_names
+        return True
+
+
+class SharedDict:
+    def __init__(self):
+        self._changed = False
+        self._dict = None
+        self._shm = None
+
+    def __enter__(self):
+        self._load_shared_memory()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if self._changed:
+                data = pickle.dumps(self._dict)
+                self._shm.buf[0:len(data)] = bytearray(data)
+            self._shm.close()
+        except FileNotFoundError:
+            name = self.get_shared_memory_name()
+            logger.warning(f'close shared memory {name} failed, shared memory has already been destroyed.')
+
+    def __setitem__(self, key, value):
+        self._dict[key] = value
+        self._changed = True
+
+    def __contains__(self, item):
+        return item in self._dict
+
+    @classmethod
+    def destroy_shared_memory(cls):
+        if mp.parent_process():
+            return
+        name = cls.get_shared_memory_name()
+        try:
+            shared_memory.SharedMemory(create=False, name=name).unlink()
+            logger.info(f'destroy shared memory, name: {name}')
+        except FileNotFoundError:
+            logger.warning(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
+
+    @classmethod
+    def get_shared_memory_name(cls):
+        if mp.parent_process():
+            return f'shared_memory_{mp.parent_process().ident}'
+        return f'shared_memory_{mp.current_process().ident}'
+
+    def get(self, key, default=None):
+        return self._dict.get(key, default)
+
+    def _load_shared_memory(self):
+        name = self.get_shared_memory_name()
+        try:
+            self._shm = shared_memory.SharedMemory(create=False, name=name)
+        except FileNotFoundError:
+            self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
+            data = pickle.dumps({})
+            self._shm.buf[0:len(data)] = bytearray(data)
+            logger.info(f'create shared memory, name: {name}')
+        self._safe_load()
+
+    def _safe_load(self):
+        with io.BytesIO(self._shm.buf[:]) as buff:
+            try:
+                self._dict = SafeUnpickler(buff).load()
+            except Exception as e:
+                logger.warning(f'shared dict is unreadable, reason: {e}, create new dict.')
+                self._dict = {}
+                self._changed = True
+
+
+class SafeUnpickler(pickle.Unpickler):
+    WHITELIST = {'builtins': {'str', 'bool', 'int', 'float', 'list', 'set', 'dict'}}
+
+    def find_class(self, module, name):
+        if module in self.WHITELIST and name in self.WHITELIST[module]:
+            return super().find_class(module, name)
+        raise pickle.PicklingError(f'Unpickling {module}.{name} is illegal!')
+
+
+atexit.register(SharedDict.destroy_shared_memory)
