@@ -68,7 +68,7 @@ BFloat16::operator float() const
     return f32;
 }
 
-const static std::unordered_map<DataType, size_t> kTypeSizeMap = {
+constexpr std::pair<DataType, size_t> kTypeSizeArray[] = {
     {DataType::DT_BOOL, 1},
     {DataType::DT_INT8, 1},
     {DataType::DT_UINT8, 1},
@@ -88,15 +88,16 @@ const static std::unordered_map<DataType, size_t> kTypeSizeMap = {
 
 size_t SizeOfDType(DataType type)
 {
-    auto it = kTypeSizeMap.find(type);
-    if (it == kTypeSizeMap.end()) {
-        return 0;
+    for (const auto& pair : kTypeSizeArray) {
+        if (pair.first == type) {
+            return pair.second;
+        }
     }
-    return it->second;
+    return 0;
 }
 
 constexpr auto kOpDType_UNKNOWN = "UNKNOWN";
-const static std::unordered_map<DataType, std::string> kDDTypeToStringMap = {
+constexpr std::pair<DataType, std::string> kDDTypeToStringArray[] = {
     {DataType::DT_UNDEFINED, "UNDEFINED"},
     {DataType::DT_FLOAT, "FLOAT"},
     {DataType::DT_FLOAT16, "FLOAT16"},
@@ -133,15 +134,16 @@ const static std::unordered_map<DataType, std::string> kDDTypeToStringMap = {
 
 std::string GetDTypeString(DataType dtype)
 {
-    auto it = kDDTypeToStringMap.find(dtype);
-    if (it != kDDTypeToStringMap.end()) {
-        return it->second;
+    for (const auto& pair : kDDTypeToStringArray) {
+        if (pair.first == dtype) {
+            return pair.second;
+        }
     }
     return kOpDType_UNKNOWN;
 }
 
 constexpr auto kOpFormat_UNKNOWN = "UNKNOWN";
-const static std::unordered_map<TensorFormat, std::string> kFormatToStringMap = {
+constexpr std::pair<TensorFormat, std::string> kFormatToStringArray[] = {
     {TensorFormat::FORMAT_NCHW, "NCHW"},
     {TensorFormat::FORMAT_NHWC, "NHWC"},
     {TensorFormat::FORMAT_ND, "ND"},
@@ -196,9 +198,10 @@ const static std::unordered_map<TensorFormat, std::string> kFormatToStringMap = 
 
 std::string GetFormatString(TensorFormat fmt)
 {
-    auto it = kFormatToStringMap.find(fmt);
-    if (it != kFormatToStringMap.end()) {
-        return it->second;
+    for (const auto& pair : kFormatToStringArray) {
+        if (pair.first == fmt) {
+            return pair.second;
+        }
     }
     return kOpFormat_UNKNOWN;
 }
