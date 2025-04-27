@@ -101,7 +101,6 @@ const static std::unordered_set<AclFormat> kSupportedFormat = {
 };
 
 const static std::map<std::pair<AclFormat, AclFormat>, TensorTransFunc> formatTransFuncMap = {
-    /* {{from, to}, function} */
     {{AclFormat::FORMAT_HWCN, AclFormat::FORMAT_NCHW}, nullptr},
     {{AclFormat::FORMAT_NHWC, AclFormat::FORMAT_NCHW}, nullptr},
     {{AclFormat::FORMAT_FRACTAL_Z, AclFormat::FORMAT_NCHW}, FRAC_Z_TO_NCHW},
