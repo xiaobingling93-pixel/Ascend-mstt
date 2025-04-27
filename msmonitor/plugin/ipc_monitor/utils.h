@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef IPC_MONITOR_UTILS_H
 #define IPC_MONITOR_UTILS_H
 
@@ -6,6 +22,7 @@
 #include <string>
 #include <utility>
 #include <unordered_map>
+#include <sys/types.h>
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -24,6 +41,8 @@ std::vector<std::string> split(const std::string& str, char delimiter);
 
 constexpr size_t ALIGN_SIZE = 8;
 void *MsptiMalloc(size_t size, size_t alignment);
+const mode_t DATA_FILE_AUTHORITY = 0640;
+const mode_t DATA_DIR_AUTHORITY = 0750;
 
 enum class SubModule {
     IPC = 0
@@ -63,6 +82,21 @@ auto groupby(const Container& vec, KeyFunc keyFunc) {
     }
     return grouped;
 }
+
+bool CreateMsmonitorLogPath(std::string& path);
+
+struct PathUtils {
+    static bool IsFileExist(const std::string &path);
+    static bool IsFileWritable(const std::string &path);
+    static bool IsDir(const std::string &path);
+    static bool CreateDir(const std::string &path);
+    static std::string RealPath(const std::string &path);
+    static std::string RelativeToAbsPath(const std::string &path);
+    static std::string DirName(const std::string &path);
+    static bool CreateFile(const std::string &path);
+    static bool IsSoftLink(const std::string &path);
+    static bool DirPathCheck(const std::string &path);
+};
 } // namespace ipc_monitor
 } // namespace dynolog_npu
 #endif // IPC_MONITOR_UTILS_H

@@ -152,13 +152,20 @@ Step 2：使能dynolog trace dump环境变量
 export KINETO_USE_DAEMON=1
 ```
 
-Step 3: 拉起训练任务
+Step 3: 配置Msmonitor日志路径(可选，默认路径为当前目录下的msmonitor_log)
+```bash
+export MSMONITOR_LOG_PATH=<LOG PATH>
+# 示例：
+export MSMONITOR_LOG_PATH=/tmp/msmonitor_log
+```
+
+Step 4: 拉起训练任务
 ```bash
 # 训练任务中需要使用pytorch的优化器/继承原生优化器
 bash train.sh
 ```
 
-Step 4：使用dyno CLI动态触发trace dump
+Step 5：使用dyno CLI动态触发trace dump
 ```bash
 # 示例1：从第10个step开始采集，采集2个step，采集框架、CANN和device数据，同时采集完后自动解析以及解析完成不做数据精简，落盘路径为/tmp/profile_data
 dyno nputrace --start-step 10 --iterations 2 --activities CPU,NPU --analyse --data-simplification false --log-file /tmp/profile_data
@@ -216,7 +223,14 @@ Step 2：使能dynolog环境变量
 export KINETO_USE_DAEMON=1
 ```
 
-Step 3: 拉起训练任务
+Step 3: 配置Msmonitor日志路径(可选，默认路径为当前目录下的msmonitor_log)
+```bash
+export MSMONITOR_LOG_PATH=<LOG PATH>
+# 示例：
+export MSMONITOR_LOG_PATH=/tmp/msmonitor_log
+```
+
+Step 4: 拉起训练任务
 ```bash
 # 训练任务拉起前需要设置LD_PRELOAD
 # 示例：export LD_PRELOAD=/usr/local/ascend-tookit/latest/lib64/libmspti.so
@@ -226,7 +240,7 @@ export LD_PRELOAD=<CANN tookkit安装路径>/ascend-tookit/latest/lib64/libmspti
 bash train.sh
 ```
 
-Step 4：使用dyno CLI使能npu-monitor
+Step 5：使用dyno CLI使能npu-monitor
 ```bash
 # 示例1：开启性能监控，使用默认配置
 dyno npu-monitor --npu-monitor-start
@@ -247,7 +261,7 @@ dyno npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kin
 dyno --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 ```
 
-Step5: 观测Prometheus上报数据
+Step6: 观测Prometheus上报数据
 ```
 # Prometheus默认端口为8080
 curl 127.0.0.1:8080/metrics

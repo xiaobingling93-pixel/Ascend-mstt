@@ -44,7 +44,7 @@ public:
         if (socketFd == -1) {
             throw std::runtime_error(std::strerror(errno) + IPC_ERROR(ErrCode::PARAM));
         }
-        int ret;
+        int ret = 0;
         struct sockaddr_un address;
         size_t addressLen = SetSocketAdress(addressName, address);
         if (address.sun_path[0] != STR_END_CHAR) {

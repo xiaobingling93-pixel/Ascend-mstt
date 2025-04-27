@@ -18,7 +18,6 @@ import fcntl
 import io
 import os
 import pickle
-import multiprocessing as mp
 from multiprocessing import shared_memory
 import stat
 import json
@@ -34,6 +33,7 @@ from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.global_lock import global_lock, is_main_process
 
 
 class FileChecker:
@@ -725,7 +725,9 @@ class SharedDict:
         try:
             if self._changed:
                 data = pickle.dumps(self._dict)
+                global_lock.acquire()
                 self._shm.buf[0:len(data)] = bytearray(data)
+                global_lock.release()
             self._shm.close()
         except FileNotFoundError:
             name = self.get_shared_memory_name()
@@ -740,20 +742,19 @@ class SharedDict:
 
     @classmethod
     def destroy_shared_memory(cls):
-        if mp.parent_process():
-            return
-        name = cls.get_shared_memory_name()
-        try:
-            shared_memory.SharedMemory(create=False, name=name).unlink()
-            logger.info(f'destroy shared memory, name: {name}')
-        except FileNotFoundError:
-            logger.warning(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
+        if is_main_process():
+            name = cls.get_shared_memory_name()
+            try:
+                shared_memory.SharedMemory(create=False, name=name).unlink()
+                logger.info(f'destroy shared memory, name: {name}')
+            except FileNotFoundError:
+                logger.warning(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
 
     @classmethod
     def get_shared_memory_name(cls):
-        if mp.parent_process():
-            return f'shared_memory_{mp.parent_process().ident}'
-        return f'shared_memory_{mp.current_process().ident}'
+        if is_main_process():
+            return f'shared_memory_{os.getpid()}'
+        return f'shared_memory_{os.getppid()}'
 
     def get(self, key, default=None):
         return self._dict.get(key, default)
