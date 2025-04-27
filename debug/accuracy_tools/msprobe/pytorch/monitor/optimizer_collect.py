@@ -61,7 +61,7 @@ class OptimizerMon(object):
         ratio_dict = {}
 
         if hasattr(self.torch_opt, 'state'):
-                state = self.torch_opt.state
+            state = self.torch_opt.state
         elif hasattr(self.torch_opt, 'optimizer') and hasattr(self.torch_opt.optimizer, 'state'):
             state = self.torch_opt.optimizer.state
         else:
