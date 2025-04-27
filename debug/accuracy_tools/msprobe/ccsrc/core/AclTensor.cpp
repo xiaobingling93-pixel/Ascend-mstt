@@ -879,7 +879,6 @@ static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint
 
 DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to)
 {
-
     if (tensor.dtype == to) {
         return DebuggerErrno::OK;
     }

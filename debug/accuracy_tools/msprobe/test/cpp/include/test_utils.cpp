@@ -22,7 +22,6 @@ std::string trim(const std::string& str)
 {
     std::string::size_type first = str.find_first_not_of(" \t\n\r\f\v");
     std::string::size_type last = str.find_last_not_of(" \t\n\r\f\v");
-    
     if (first == std::string::npos || last == std::string::npos) {
         return "";
     }

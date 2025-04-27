@@ -208,7 +208,6 @@ private:
 
 
 class DebuggerConfig {
-
 public:
     static DebuggerConfig& GetInstance() {
         static DebuggerConfig instance_;

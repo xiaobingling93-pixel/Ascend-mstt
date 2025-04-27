@@ -21,7 +21,6 @@
 #include "include/ErrorCode.hpp"
 
 extern "C" {
-
 typedef int aclError;
 constexpr int ACL_SUCCESS = 0;
 constexpr int ACL_ERROR_NONE = 0;
@@ -36,7 +35,6 @@ typedef struct acldumpChunk  {
     int32_t    flag;                                       // 预留Dump数据标识，当前数据无标识
     uint8_t    dataBuf[0];                                 // Dump数据的内存地址
 } acldumpChunk;
-
 }
 
 namespace MindStudioDebugger {

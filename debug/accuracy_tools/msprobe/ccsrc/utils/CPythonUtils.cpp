@@ -77,7 +77,6 @@ PythonObject PythonObject::From(const uint32_t& input)
 PythonObject PythonObject::From(const double& input)
 {
     return PythonNumberObject::From(input);
-
 }
 PythonObject PythonObject::From(const std::string& input)
 {
@@ -227,7 +226,6 @@ PythonObject PythonObject::GetGlobal(const std::string& name, bool ignore)
     }
 
     return PythonObject(PyDict_GetItemString(globals, name.c_str()));
-    
 }
 
 PythonObject PythonObject::Import(const std::string& name, bool ignore) noexcept

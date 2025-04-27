@@ -490,7 +490,6 @@ void AclDumper::FinalizeDump(ExtArgs& args)
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                   "Failed to finalize acldump(" + std::to_string(aclRet) + ").");
-
     }
 
     aclDumpHasSet = false;

@@ -676,7 +676,6 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
 
     // dump_path: dump_dir/op_type.op_name.task_id.stream_id.timestamp
     std::string dumpPathSlot = tensor.dumpPath + GetTensorInfoSuffix(tensor) +  "." + NPY_SUFFIX;
-
     if (StandardizedDumpPath(dumpPathSlot) != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR, "Failed to standardize path " + dumpPathSlot + ".");
         return DebuggerErrno::ERROR;
