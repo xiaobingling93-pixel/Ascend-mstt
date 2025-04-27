@@ -56,7 +56,7 @@ T DivCeil(T v, T divisor) {
 template <typename T>
 T AlignCeil(T v, T block)
 {
-  return DivCeil(v, block) * block;
+    return DivCeil(v, block) * block;
 }
 
 float Random();

@@ -42,7 +42,7 @@ std::string U64ToHexString(uint64_t v) {
 BFloat16::BFloat16(float f32)
 {
     if (std::isnan(f32)) {
-      value_ = BFloat16::nan_value;
+    value_ = BFloat16::nan_value;
     } else {
         union {
             uint32_t U32;

@@ -203,18 +203,18 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
 
 enum kAxis4D : int { kN = 0, kC, kH, kW, kNchwDims };
 enum Axis5D : int {
-  N_ncdhw = 0,
-  C_ncdhw,
-  D_ncdhw,
-  H_ncdhw,
-  W_ncdhw,
-  kNcdhw,
-  N_ndc1hwc0 = 0,
-  D_ndc1hwc0,
-  C1_ndc1hwc0,
-  H_ndc1hwc0,
-  W_ndc1hwc0,
-  C0_ndc1hwc0
+    N_ncdhw = 0,
+    C_ncdhw,
+    D_ncdhw,
+    H_ncdhw,
+    W_ncdhw,
+    kNcdhw,
+    N_ndc1hwc0 = 0,
+    D_ndc1hwc0,
+    C1_ndc1hwc0,
+    H_ndc1hwc0,
+    W_ndc1hwc0,
+    C0_ndc1hwc0
 };
 
 static inline AclDtype transAclDtype2MS(AclDumpMsg::OutputDataType dt)
@@ -249,7 +249,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
         }
         num *= static_cast<size_t>(dim);
     }
-  return num;
+    return num;
 }
 
 static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) {

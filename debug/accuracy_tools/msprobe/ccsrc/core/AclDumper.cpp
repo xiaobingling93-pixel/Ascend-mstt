@@ -497,39 +497,39 @@ void AclDumper::FinalizeDump(ExtArgs& args)
 }
 
 void KernelInitDump() {
-  if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
+    if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
     return;
-  }
+    }
 
-  DebuggerErrno ret = InitAcl();
+    DebuggerErrno ret = InitAcl();
   if (ret != DebuggerErrno::OK) {
     LOG_ERROR(ret, "Failed to call InitAcl.");
     return;
-  }
-  auto aclRet = CALL_ACL_API(aclmdlInitDump);
-  if (aclRet != ACL_SUCCESS) {
+    }
+    auto aclRet = CALL_ACL_API(aclmdlInitDump);
+    if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to init acldump(" + std::to_string(aclRet) + ").");
     return;
-  }
+    }
 }
 
 void KernelSetDump(const std::string &filePath) {
-  std::string dumpPath = FileUtils::GetAbsPath(filePath);
-  auto aclRet = CALL_ACL_API(aclmdlSetDump, dumpPath.c_str());
-  if (aclRet != ACL_SUCCESS) {
+    std::string dumpPath = FileUtils::GetAbsPath(filePath);
+    auto aclRet = CALL_ACL_API(aclmdlSetDump, dumpPath.c_str());
+    if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to enable acldump(" + std::to_string(aclRet) + ").");
     return;
-  }
+    }
 }
 
 void KernelFinalizeDump() {
-  CALL_ACL_API(aclrtSynchronizeDevice);
-  auto aclRet = CALL_ACL_API(aclmdlFinalizeDump);
-  if (aclRet != ACL_SUCCESS) {
+    CALL_ACL_API(aclrtSynchronizeDevice);
+    auto aclRet = CALL_ACL_API(aclmdlFinalizeDump);
+    if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to finalize acldump(" + std::to_string(aclRet) + ").");
-  }
+    }
 }
 }

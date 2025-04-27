@@ -39,13 +39,13 @@ class HookDynamicLoader {
 
  private:
   // Helper functions
-  bool loadFunction(void *handle, const std::string &functionName);
+    bool loadFunction(void *handle, const std::string &functionName);
 
   HookDynamicLoader() = default;
 
   void *handle_ = nullptr;
   std::vector<std::string> functionList_ = {kHookBegin, kHookEnd};
-  std::map<std::string, void *> funcMap_;
+    std::map<std::string, void *> funcMap_;
   std::mutex mutex_;
 };
 
