@@ -564,6 +564,7 @@ class TrainerMon:
             if context.step < self.start_step or (context.step - self.start_step) % self.step_interval != 0:
                 return
 
+            grad_dict = {}
             if self.wg_distribution:
                 grad_dict = self.optimizer_mon.fetch_grad(self, self.param2name)
             
