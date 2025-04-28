@@ -86,7 +86,7 @@ class GraphService:
     def update_colors(run, colors):
         """Set new colors in jsondata."""
         try:
-            first_run_tag = get_global_value("first_run_tag")
+            first_run_tag = get_global_value("first_run_tag", {}).get(run)
             first_file_data, error = GraphUtils.safe_load_data(run, first_run_tag)
             if error:
                 return {'success': False, 'error': error}

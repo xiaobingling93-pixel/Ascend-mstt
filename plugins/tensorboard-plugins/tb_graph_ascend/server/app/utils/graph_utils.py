@@ -77,8 +77,9 @@ class GraphUtils:
         return os.path.commonpath([abs_path, abs_base]) == str(abs_base)
     
     @staticmethod
-    def safe_save_data(data, run, tag):
+    def safe_save_data(data, run_name, tag):
         safe_base_dir = get_global_value('logdir')
+        run = get_global_value('runs', {}).get(run_name)
         if run is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
             return None, error_message
@@ -127,8 +128,9 @@ class GraphUtils:
             return None, 'failed to save file'
 
     @staticmethod
-    def safe_load_data(run_dir, tag, only_check=False):
+    def safe_load_data(run_name, tag, only_check=False):
         """Load a single .vis file from a given directory based on the tag."""
+        run_dir = get_global_value('runs', {}).get(run_name)
         if run_dir is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
             return None, error_message
@@ -170,4 +172,3 @@ class GraphUtils:
         except Exception as e:
             logger.error(f'Error: File "{file_path}" is not accessible. Error: {e}')
             return None, 'failed to load file'
-

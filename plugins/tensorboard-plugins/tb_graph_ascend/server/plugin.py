@@ -98,35 +98,16 @@ class GraphsPlugin(base_plugin.TBPlugin):
         )
 
     def info_impl(self):
-        """Returns a dict of all runs and their data availabilities"""
+        """
+        Returns a dict of all runs and their data availabilities,
+        including a flag indicating if a .vis file is present.
+        """
         result = {}
-
-        def add_row_item(run, tag=None, is_vis=False):
-            run_item = result.setdefault(
-                run,
-                {"run": run, "tags": {}},
-            )
-
-            tag_item = None
-            if tag:
-                tag_item = run_item.get("tags").setdefault(
-                    tag,
-                    {
-                        "tag": tag,
-                        "conceptual_graph": False,
-                        "op_graph": False,
-                        "profile": False,
-                    },
-                )
-            return (run_item, tag_item)
-
         run_tag_pairs = self._get_run_dirs()
         for run, tag in run_tag_pairs:
-            try:
-                add_row_item(run, tag, is_vis=True)
-            except ValueError as e:
-                logger.error(f"Warning: Skipping invalid run/tag pair ({run}, {tag}). Error: {e}")
-              
+            tags = result.setdefault(run, [])
+            if tag not in tags:
+                tags.append(tag)
         return result
 
     # 拿所有nodename的
@@ -356,7 +337,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
         all_node_names = self.get_all_node_names(json_data, request)
 
         # 读取第一个文件中的Colors和OverflowCheck
-        first_run_tag = get_global_value("first_run_tag")
+        first_run_tag = get_global_value("first_run_tag", {}).get(run)
         first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
         # 读取全局信息
         response_data['menu'] = all_node_names
@@ -602,13 +583,16 @@ class GraphsPlugin(base_plugin.TBPlugin):
             for file in files:
                 if file.endswith('.vis'):  # check for .vis extension
                     run = os.path.abspath(root)
+                    run_name = os.path.basename(run)
+                    set_global_value('runs', run, run_name)
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
-                    _, error = GraphUtils.safe_load_data(run, tag, True)
+                    _, error = GraphUtils.safe_load_data(run_name, tag, True)
                     if error:
                         logger.error(f'Error: File run:"{run},tag:{tag}" is not accessible. Error: {error}')
                         continue
-                    run_tag_pairs.append((run, tag))
+                    run_tag_pairs.append((run_name, tag))
         if len(run_tag_pairs) > 0:
-            set_global_value('first_run_tag', run_tag_pairs[0][1])
+            for run_name, tag in run_tag_pairs:
+                if run_name not in get_global_value('first_run_tag', {}):
+                    set_global_value('first_run_tag', tag, run_name)
         return run_tag_pairs
-
