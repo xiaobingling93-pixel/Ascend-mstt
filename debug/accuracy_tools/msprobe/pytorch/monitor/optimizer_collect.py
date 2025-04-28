@@ -208,7 +208,7 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
             param_id = self.get_param_index(lp_param, group_idx)
             if self.param_not_in_partition(lp_param, group_idx):
                 continue
-            if self.stage == 1: # 1 or 2
+            if self.stage == '1or2':
                 param_id = param_id - self.group_offset[group_idx] - 1
             grad = self.get_grad_for_param(lp_param, group_idx, param_id)
             tag = monitor.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
@@ -221,7 +221,7 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
 class DeepSpeedZeroOptimizerStage0Mon(DeepSpeedZeroOptimizerMon):
     def __init__(self, torch_opt):
         super().__init__(torch_opt)
-        self.stage = 0
+        self.stage = '0'
         self.bit16_groups = torch_opt.bf16_groups
         self.fp32_flat_groups = torch_opt.fp32_groups_flat_partition
         self.param2group = self.get_group_index()
@@ -234,7 +234,7 @@ class DeepSpeedZeroOptimizerStage0Mon(DeepSpeedZeroOptimizerMon):
 class DeepSpeedZeroOptimizerStage1or2Mon(DeepSpeedZeroOptimizerMon):
     def __init__(self, torch_opt):
         super().__init__(torch_opt)
-        self.stage = 1
+        self.stage = '1or2'
         self.bit16_groups = torch_opt.bit16_groups
         self.fp32_flat_groups = torch_opt.single_partition_of_fp32_groups
         self.param2group = self.get_group_index()
@@ -264,7 +264,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(DeepSpeedZeroOptimizerMon):
 class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
     def __init__(self, torch_opt):
         super().__init__(torch_opt)
-        self.stage = 3
+        self.stage = '3'
         self.bit16_groups = torch_opt.fp16_groups
         self.fp32_flat_groups = torch_opt.fp32_partitioned_groups_flat
         self.param2group = self.get_group_index()
