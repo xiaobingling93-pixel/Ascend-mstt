@@ -244,7 +244,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
             return 0;
         }
 
-        if (SIZE_MAX / dim < static_cast<int64_t>(num)) {
+        if (SIZE_MAX / dim < static_cast<unsigned long>(num)) {
             throw std::out_of_range(tensor + ": Count of element over size_t.");
         }
         num *= static_cast<size_t>(dim);
@@ -393,8 +393,8 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     auto cinOpt = AlignCeil(eMult * cinOri, cubeK);
     auto coutOpt = AlignCeil(eMult * coutOri, kCubeSize);
     auto c1Dim = cinOpt / cubeK;
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = static_cast<int64_t>(tensor.transBuf.begin());
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
 
@@ -455,8 +455,8 @@ static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
         return DebuggerErrno::ERROR_INVALID_VALUE;
     }
 
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIdx = 0; nIdx < n; nIdx++) {
@@ -533,8 +533,8 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
     }
     auto numW1 = w / w0;
 
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
 
@@ -597,8 +597,8 @@ static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
     auto hwc0 = h * wc0;
     auto c1hwc0 = c1 * hwc0;
 
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
@@ -652,8 +652,8 @@ static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
     const int64_t hwc0 = h * w * c0;
     const int64_t wc0 = w * c0;
 
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
@@ -701,8 +701,8 @@ static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor)
     auto c0 = tensor.deviceShape[c0Idx];
     auto cubeK = GetCubeSizeByType(tensor.dtype);
 
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
@@ -763,8 +763,8 @@ static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
     auto dhw = d * hw;
     auto cdhw = c * dhw;
 
-    const int16_t* src = static_cast<int16_t*>(tensor.aclData);
-    int64_t dst = static_cast<int64_t>(tensor.transBuf.begin());
+    const uint8_t* src = tensor.aclData;
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIdx = 0; nIdx < n; nIdx++) {
