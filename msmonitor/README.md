@@ -102,31 +102,31 @@ dyno nputrace [SUBCOMMANDS] --log-file <LOG_FILE>
 
 nputrace子命令支持的参数选项
 
-| 子命令 | 参数类型 | 说明 |
-|-------|-------|-------|
-| job-id | u64 | 采集任务的job id，默认值0，dynolog原生参数 |
-| pids | String | 采集任务的pid列表，多个pid用逗号分隔，默认值0，dynolog原生参数 |
-| process-limit | u64 | 最大采集进程的数量，默认值3，dynolog原生参数 |
-| profile-start-time | u64 | 用于同步采集的Unix时间戳，单位毫秒，默认值0，dynolog原生参数 |
-| duration-ms | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数 |
-| iterations | i64 | 采集总迭代数，默认值-1，dynolog原生参数 |
-| log-file | String | 采集落盘的路径，必选值 |
-| start-step | u64 | 开始采集的迭代数，默认值0 |
-| record-shapes | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集 |
-| profile-memory | action | 是否采集算子内存信息，设置参数采集，默认不采集 |
-| with-stack | action | 是否采集Python调用栈，设置参数采集，默认不采集 |
-| with-flops | action | 是否采集算子flops，设置参数采集，默认不采集 |
-| with-modules | action | 是否采集modules层级的Python调用栈，设置参数采集，默认不采集 |
-| analyse | action | 采集后是否自动解析，设置参数解析，默认不解析 |
-| l2-cache | action | 是否采集L2 Cache数据，设置参数采集，默认不采集 |
-| op-attr | action | 是否采集算子属性信息，设置参数采集，默认不采集 |
-| msprof-tx | action | 是否使能MSTX，设置参数采集，默认使能 |
-| data-simplification | String | 解析完成后是否数据精简，可选值范围[`true`, `false`]，默认值`true` |
-| activities | String | 控制CPU、NPU事件采集范围，可选值范围[`CPU,NPU`, `NPU,CPU`, `CPU`, `NPU`]，默认值`CPU,NPU` |
-| profiler-level | String | 控制profiler的采集等级，可选值范围[`Level_none`, `Level0`, `Level1`, `Level2`]，默认值`Level0`|
-| aic-metrics | String | AI Core的性能指标采集项，可选值范围[`AiCoreNone`, `PipeUtilization`, `ArithmeticUtilization`, `Memory`, `MemoryL0`, `ResourceConflictRatio`, `MemoryUB`, `L2Cache`, `MemoryAccess`]，默认值`AiCoreNone`|
-| export-type | String | profiler解析导出数据的类型，可选值范围[`Text`, `Db`]，默认值`Text`|
-| gc-detect-threshold | Option<f32> | GC检测阈值，单位ms，只采集超过阈值的GC事件。该参数为可选参数，默认不设置时不开启GC检测 |
+| 子命令 | 参数类型 | 说明 | PyTorch支持 | MindSpore支持 |
+|-------|-------|-------|:---------:|:-----------:|
+| job-id | u64 | 采集任务的job id，默认值0，dynolog原生参数 |     N     |      N      |
+| pids | String | 采集任务的pid列表，多个pid用逗号分隔，默认值0，dynolog原生参数 |     N     |      N      |
+| process-limit | u64 | 最大采集进程的数量，默认值3，dynolog原生参数 |     N     |      N      |
+| profile-start-time | u64 | 用于同步采集的Unix时间戳，单位毫秒，默认值0，dynolog原生参数 |     N     |      N      |
+| duration-ms | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数 |     N     |      N      |
+| iterations | i64 | 采集总迭代数，默认值-1，dynolog原生参数 |     Y     |      Y      |
+| log-file | String | 采集落盘的路径，必选值 |     Y     |      Y      |
+| start-step | u64 | 开始采集的迭代数，默认值0 |     Y     |      Y      |
+| record-shapes | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集 |     Y     |      N      |
+| profile-memory | action | 是否采集算子内存信息，设置参数采集，默认不采集 |     Y     |      Y      |
+| with-stack | action | 是否采集Python调用栈，设置参数采集，默认不采集，当前MindSpore和PyTorch框架都支持 |     Y     |      Y      |
+| with-flops | action | 是否采集算子flops，设置参数采集，默认不采集 |     Y     |      N      |
+| with-modules | action | 是否采集modules层级的Python调用栈，设置参数采集，默认不采集 |     Y     |      N      |
+| analyse | action | 采集后是否自动解析，设置参数解析，默认不解析 |     Y     |      Y      |
+| l2-cache | action | 是否采集L2 Cache数据，设置参数采集，默认不采集 |     Y     |      Y      |
+| op-attr | action | 是否采集算子属性信息，设置参数采集，默认不采集 |     Y     |      N      |
+| msprof-tx | action | 是否使能MSTX，设置参数采集，默认使能 |     Y     |      Y      |
+| data-simplification | String | 解析完成后是否数据精简，可选值范围[`true`, `false`]，默认值`true` |     Y     |      Y      |
+| activities | String | 控制CPU、NPU事件采集范围，可选值范围[`CPU,NPU`, `NPU,CPU`, `CPU`, `NPU`]，默认值`CPU,NPU` |     Y     |      Y      |
+| profiler-level | String | 控制profiler的采集等级，可选值范围[`Level_none`, `Level0`, `Level1`, `Level2`]，默认值`Level0` |     Y     |      Y      |
+| aic-metrics | String | AI Core的性能指标采集项，可选值范围[`AiCoreNone`, `PipeUtilization`, `ArithmeticUtilization`, `Memory`, `MemoryL0`, `ResourceConflictRatio`, `MemoryUB`, `L2Cache`, `MemoryAccess`]，默认值`AiCoreNone` |     Y     |      Y      |
+| export-type | String | profiler解析导出数据的类型，可选值范围[`Text`, `Db`]，默认值`Text` |     Y     |      Y      |
+| gc-detect-threshold | Option<f32> | GC检测阈值，单位ms，只采集超过阈值的GC事件。该参数为可选参数，默认不设置时不开启GC检测 |     Y     |      N      |
 
 
 - nputrace使用方法
@@ -187,12 +187,13 @@ dyno npu-monitor [SUBCOMMANDS]
 ```
 
 npu-monitor子命令支持的参数选项
-| 子命令 | 参数类型 | 说明 |
-|-------|-------|-------|
-| npu-monitor-start | action | 开启性能监控，设置参数开启，默认不采集 |
-| npu-monitor-stop | action | 停止性能监控，设置参数开启，默认不采集 |
-| report-interval-s | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60 |
-| mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker`|
+
+| 子命令 | 参数类型 | 说明 | PyTorch支持 | MindSpore支持 |
+|-------|-------|-------|:---------:|:-----------:|
+| npu-monitor-start | action | 开启性能监控，设置参数开启，默认不采集 | Y | Y |
+| npu-monitor-stop | action | 停止性能监控，设置参数开启，默认不采集 | Y | Y |
+| report-interval-s | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60持 | Y | Y |
+| mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker` | Y | Y |
 
 - npu-monitor使用方法
 
