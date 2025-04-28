@@ -2,7 +2,6 @@
 #include <array>
 #include <memory>
 #include <cstdio>
-#include <cstdlib>
 
 std::string TEST_ExecShellCommand(const std::string& cmd)
 {

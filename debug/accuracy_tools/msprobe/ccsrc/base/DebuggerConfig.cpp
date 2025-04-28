@@ -135,7 +135,8 @@ void DebuggerCfgParseUIntRange(const nlohmann::json& content, const std::string&
             realLen++;
         } else if (element.is_string()) {
             std::string exp = element.get<std::string>();
-            uint32_t begin, end;
+            uint32_t begin;
+            uint32_t end;
             if (!DebuggerCfgParseUIntRangeGetBorder(exp, begin, end)) {
                 LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT, "Failed to parse " + name + ".");
                 return;
@@ -266,7 +267,11 @@ void CommonCfg::Parse(const nlohmann::json& content)
 void DebuggerCfgParseDataMode(const nlohmann::json& content, DebuggerDataDirection& direction, DebuggerDataInOut& inout)
 {
     std::vector<std::string> buf;
-    bool fw, bw, in, out, all;
+    bool fw;
+    bool bw;
+    bool in;
+    bool out;
+    bool all;
 
     direction = DebuggerDataDirection::DIRECTION_BOTH;
     inout = DebuggerDataInOut::INOUT_BOTH;

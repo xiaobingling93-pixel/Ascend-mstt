@@ -166,7 +166,10 @@ int main(int argc, char** argv) {
     std::shared_ptr<gpumon::DcgmGroupInfo> dcgm;
 
   std::unique_ptr<tracing::IPCMonitor> ipcmon;
-  std::unique_ptr<std::thread> ipcmon_thread, data_ipcmon_thread, gpumon_thread, pm_thread;
+  std::unique_ptr<std::thread> ipcmon_thread;
+  std::unique_ptr<std::thread> data_ipcmon_thread;
+  std::unique_ptr<std::thread> gpumon_thread;
+  std::unique_ptr<std::thread> pm_thread;
 
   if (FLAGS_enable_ipc_monitor) {
     LOG(INFO) << "Starting IPC Monitor";
