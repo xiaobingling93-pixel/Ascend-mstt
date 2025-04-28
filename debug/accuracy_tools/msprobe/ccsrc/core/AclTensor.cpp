@@ -842,12 +842,12 @@ static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint
     int maxValue = 7;
     int minValue = -8;
     int signBitShift = 3;
-    int8_t signBitMask = 0x08;
+    int signBitMask = 0x08;
     for (size_t i = 0; i < inputLength; ++i) {
         int8_t s = *srcData;
         int8_t t = s & 0xf;
         // keep the sign bit not change
-        int8_t signBit = ((t) & signBitMask) >> signBitShift;
+        int8_t signBit = (t & signBitMask) >> signBitShift;
         if (signBit == 1) {
             t = t | 0xf0;
         } else {
@@ -861,7 +861,7 @@ static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint
 
         int highByteShift = 4;
         t = s >> highByteShift;
-        signBit = t & signBitMask >> signBitShift;
+        signBit = (t & signBitMask) >> signBitShift;
         if (signBit == 1) {
             t = t | 0xf0;
         } else {
