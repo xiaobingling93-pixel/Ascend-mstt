@@ -236,7 +236,7 @@ static inline AclFormat transAclFormat2MS(AclDumpMsg::OutputFormat fmt)
 }
 
 static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
-    int64_t num = 1;
+    size_t num = 1;
     const AclShape& shape = host ? tensor.hostShape : tensor.deviceShape;
     for (auto dim : shape) {
         if (dim <= 0) {
@@ -244,7 +244,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
             return 0;
         }
 
-        if (SIZE_MAX / dim < num) {
+        if (SIZE_MAX / dim < static_cast<int64_t>(num)) {
             throw std::out_of_range(tensor + ": Count of element over size_t.");
         }
         num *= static_cast<size_t>(dim);
