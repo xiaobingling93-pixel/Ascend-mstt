@@ -394,7 +394,7 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     auto coutOpt = AlignCeil(eMult * coutOri, kCubeSize);
     auto c1Dim = cinOpt / cubeK;
     const uint8_t* src = tensor.aclData;
-    auto dst = static_cast<int64_t>(tensor.transBuf.begin());
+    auto dst = tensor.transBuf.begin();
     int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
     int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
 

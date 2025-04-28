@@ -68,7 +68,7 @@ BFloat16::operator float() const
     return f32;
 }
 
-constexpr std::pair<DataType, size_t> kTypeSizeArray[] = {
+const std::pair<DataType, size_t> kTypeSizeArray[] = {
     {DataType::DT_BOOL, 1},
     {DataType::DT_INT8, 1},
     {DataType::DT_UINT8, 1},
@@ -97,7 +97,7 @@ size_t SizeOfDType(DataType type)
 }
 
 constexpr auto kOpDType_UNKNOWN = "UNKNOWN";
-constexpr std::pair<DataType, std::string> kDDTypeToStringArray[] = {
+const std::pair<DataType, std::string> kDDTypeToStringArray[] = {
     {DataType::DT_UNDEFINED, "UNDEFINED"},
     {DataType::DT_FLOAT, "FLOAT"},
     {DataType::DT_FLOAT16, "FLOAT16"},
@@ -143,7 +143,7 @@ std::string GetDTypeString(DataType dtype)
 }
 
 constexpr auto kOpFormat_UNKNOWN = "UNKNOWN";
-constexpr std::pair<TensorFormat, std::string> kFormatToStringArray[] = {
+const std::pair<TensorFormat, std::string> kFormatToStringArray[] = {
     {TensorFormat::FORMAT_NCHW, "NCHW"},
     {TensorFormat::FORMAT_NHWC, "NHWC"},
     {TensorFormat::FORMAT_ND, "ND"},
