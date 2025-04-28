@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from abc import abstractmethod
 
 import torch
 import torch.distributed as dist
@@ -160,6 +160,19 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
     - Handling gradient collection for different ZeRO stages
     - Managing optimizer state access for monitoring
     """
+    def __init__(self, torch_opt):
+        super().__init__(torch_opt)
+        self.stage = ''
+        self.bit16_groups = []
+        self.fp32_flat_groups = []
+        self.param2group = ()
+        self.param2index = []
+        self.group_offset = {}
+
+    @abstractmethod
+    def get_grad_for_param(self, lp_param, group_idx, param_id):
+        raise NotImplementedError
+    
     def param_not_in_partition(self, lp_param, group_idx):
         param_slice_mapping = self.torch_opt.state_dict()['param_slice_mappings'][group_idx]
         hp_address = param_slice_mapping.get(self.torch_opt.param_names.get(lp_param))
@@ -225,7 +238,6 @@ class DeepSpeedZeroOptimizerStage0Mon(DeepSpeedZeroOptimizerMon):
         self.bit16_groups = torch_opt.bf16_groups
         self.fp32_flat_groups = torch_opt.fp32_groups_flat_partition
         self.param2group = self.get_group_index()
-        self.param2index = []
             
     def get_grad_for_param(self, lp_param, group_idx, param_id):
         return self.torch_opt.fp32_groups_gradient_dict[group_idx][param_id]
@@ -238,7 +250,6 @@ class DeepSpeedZeroOptimizerStage1or2Mon(DeepSpeedZeroOptimizerMon):
         self.bit16_groups = torch_opt.bit16_groups
         self.fp32_flat_groups = torch_opt.single_partition_of_fp32_groups
         self.param2group = self.get_group_index()
-        self.param2index = []
         self.group_offset = {}
         self.get_group_offset()
 
@@ -268,7 +279,6 @@ class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
         self.bit16_groups = torch_opt.fp16_groups
         self.fp32_flat_groups = torch_opt.fp32_partitioned_groups_flat
         self.param2group = self.get_group_index()
-        self.param2index = []
 
     def param_not_in_partition(self, param, group_index):
         """Each param partioned across all zero ranks"""
