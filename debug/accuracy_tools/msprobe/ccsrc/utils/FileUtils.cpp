@@ -60,7 +60,7 @@ static std::string GetFullPath(const std::string &originPath)
     }
 
     cwd = cwdBuf;
-    std::string fullPath = std::move(cwd + pathSeparator + originPath);
+    std::string fullPath = std::move(cwd + PATH_SEPARATOR + originPath);
 
     return fullPath;
 }
@@ -127,9 +127,9 @@ bool IsDir(const std::string& path) {
 }
 
 bool IsRegularFile(const std::string& path) {
-    struct stat path_stat;
-    if (stat(path.c_str(), &path_stat) == 0) {
-        return S_ISREG(path_stat.st_mode);
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISREG(pathStat.st_mode);
     }
     return false;
 }
@@ -243,14 +243,14 @@ bool IsPathLengthLegal(const std::string& path)
 
 bool IsPathDepthValid(const std::string& path)
 {
-    return std::count(path.begin(), path.end(), pathSeparator) <= PATH_DEPTH_MAX;
+    return std::count(path.begin(), path.end(), PATH_SEPARATOR) <= PATH_DEPTH_MAX;
 }
 
 bool IsFileOwner(const std::string& path)
 {
-    struct stat file_stat;
-    if (stat(path.c_str(), &file_stat) == 0) {
-        if (file_stat.st_uid == getuid()) {
+    struct stat fileStat;
+    if (stat(path.c_str(), &fileStat) == 0) {
+        if (fileStat.st_uid == getuid()) {
             return true;
         }
     }
@@ -405,15 +405,15 @@ DebuggerErrno Chmod(const std::string& path, const mode_t& mode)
 }
 
 DebuggerErrno GetFileSize(const std::string &path, size_t& size) {
-    struct stat path_stat;
-    if (stat(path.c_str(), &path_stat) != 0) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) != 0) {
         return DebuggerErrno::ERROR_FILE_NOT_EXISTS;
     }
-    if (!S_ISREG(path_stat.st_mode)) {
+    if (!S_ISREG(pathStat.st_mode)) {
         return DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE;
     }
 
-    size = static_cast<size_t>(path_stat.st_size);
+    size = static_cast<size_t>(pathStat.st_size);
     return DebuggerErrno::OK;
 }
 

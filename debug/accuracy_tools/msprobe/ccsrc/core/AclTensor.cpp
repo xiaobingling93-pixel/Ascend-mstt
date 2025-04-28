@@ -33,21 +33,21 @@ namespace AclTensor {
 
 using namespace MathUtils;
 
-constexpr int64_t kCubeSize = 16;
-constexpr int64_t kCube16 = kCubeSize;
-constexpr int64_t kCube32 = 32;
-constexpr int64_t kCube64 = 64;
-constexpr int64_t kCubeSize_C04 = 4;
+constexpr int64_t CUBE_SIZE = 16;
+constexpr int64_t CUBE_16 = CUBE_SIZE;
+constexpr int64_t CUBE_32 = 32;
+constexpr int64_t CUBE_64 = 64;
+constexpr int64_t CUBE_SIZE_C04 = 4;
 
-constexpr size_t hwH = 1;
-constexpr size_t hwW = 2;
-constexpr size_t fnzW1 = 4;
-constexpr size_t fnzH1 = 3;
-constexpr size_t fnzH0 = 2;
-constexpr size_t fnzW0 = 1;
-constexpr size_t fzN0 = 1;
-constexpr size_t fzNi = 2;
-constexpr size_t fzC0 = 3;
+constexpr size_t HW_H = 1;
+constexpr size_t HW_W = 2;
+constexpr size_t FNZ_W1 = 4;
+constexpr size_t FNZ_H1 = 3;
+constexpr size_t FNZ_H0 = 2;
+constexpr size_t FNZ_W0 = 1;
+constexpr size_t FZ_N0 = 1;
+constexpr size_t FZ_NI = 2;
+constexpr size_t FZ_C0 = 3;
 
 using TensorTransFunc = DebuggerErrno (*)(AclTensorInfo &);
 
@@ -94,7 +94,7 @@ const static std::unordered_set<AclFormat> kSupportedFormat = {
     AclFormat::FORMAT_DHWNC,
     AclFormat::FORMAT_NDC1HWC0,
     AclFormat::FORMAT_FRACTAL_Z_3D,
-    AclFormat::FORMAT_C1HWNCoC0,
+    AclFormat::FORMAT_C1HWNCOC0,
     AclFormat::FORMAT_FRACTAL_NZ,
     AclFormat::FORMAT_FRACTAL_ZN_LSTM,
     AclFormat::FORMAT_NCL,
@@ -108,7 +108,7 @@ const static std::map<std::pair<AclFormat, AclFormat>, TensorTransFunc> formatTr
     {{AclFormat::FORMAT_FRACTAL_NZ, AclFormat::FORMAT_NCHW}, FRAC_NZ_TO_NCHW},
     {{AclFormat::FORMAT_NC1HWC0, AclFormat::FORMAT_NCHW}, NC1HWC0_TO_NCHW},
     {{AclFormat::FORMAT_NDC1HWC0, AclFormat::FORMAT_NCHW}, NDC1HWC0_TO_NCDHW},
-    {{AclFormat::FORMAT_C1HWNCoC0, AclFormat::FORMAT_NCHW}, C1HWNCoC0_TO_NCHW},
+    {{AclFormat::FORMAT_C1HWNCOC0, AclFormat::FORMAT_NCHW}, C1HWNCoC0_TO_NCHW},
     {{AclFormat::FORMAT_NC1HWC0_C04, AclFormat::FORMAT_NCHW}, NC1HWC0_C04_TO_NCHW},
     {{AclFormat::FORMAT_FRACTAL_Z_3D, AclFormat::FORMAT_NCHW}, FRAC_Z3D_TO_NCDHW},
 };
@@ -174,7 +174,7 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
     {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_VALUE, AclFormat::FORMAT_HASHTABLE_LOOKUP_VALUE},
     {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_OUTPUT, AclFormat::FORMAT_HASHTABLE_LOOKUP_OUTPUT},
     {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_HITS, AclFormat::FORMAT_HASHTABLE_LOOKUP_HITS},
-    {AclDumpMsg::OutputFormat::FORMAT_C1HWNCoC0, AclFormat::FORMAT_C1HWNCoC0},
+    {AclDumpMsg::OutputFormat::FORMAT_C1HWNCoC0, AclFormat::FORMAT_C1HWNCOC0},
     {AclDumpMsg::OutputFormat::FORMAT_MD, AclFormat::FORMAT_MD},
     {AclDumpMsg::OutputFormat::FORMAT_NDHWC, AclFormat::FORMAT_NDHWC},
     {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_ZZ, AclFormat::FORMAT_FRACTAL_ZZ},
@@ -201,20 +201,20 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
     {AclDumpMsg::OutputFormat::FORMAT_C1HWC0, AclFormat::FORMAT_C1HWC0},
 };
 
-enum kAxis4D : int { kN = 0, kC, kH, kW, kNchwDims };
+enum Axis4D : int { AXIS_N = 0, AXIS_C, AXIS_H, AXIS_W, NCHW_DIMS };
 enum Axis5D : int {
-  N_ncdhw = 0,
-  C_ncdhw,
-  D_ncdhw,
-  H_ncdhw,
-  W_ncdhw,
-  kNcdhw,
-  N_ndc1hwc0 = 0,
-  D_ndc1hwc0,
-  C1_ndc1hwc0,
-  H_ndc1hwc0,
-  W_ndc1hwc0,
-  C0_ndc1hwc0
+  N_NCDHW = 0,
+  C_NCDHW,
+  D_NCDHW,
+  H_NCDHW,
+  W_NCDHW,
+  NCDHW,
+  N_NDC1HWC0 = 0,
+  D_NDC1HWC0,
+  C1_NDC1HWC0,
+  H_NDC1HWC0,
+  W_NDC1HWC0,
+  C0_NDC1HWC0
 };
 
 static inline AclDtype transAclDtype2MS(AclDumpMsg::OutputDataType dt)
@@ -271,14 +271,14 @@ size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) {
 
 static inline int64_t GetCubeSizeByType(const AclDtype& dtype) {
     if (dtype == AclDtype::DT_UINT8 || dtype == AclDtype::DT_INT8) {
-        return kCube32;
+        return CUBE_32;
     }
 
     if (dtype == AclDtype::DT_INT4) {
-        return kCube64;
+        return CUBE_64;
     }
 
-    return kCube16;
+    return CUBE_16;
 }
 
 static inline void AssertDim(const AclShape& shape, size_t dim)
@@ -291,11 +291,11 @@ static inline void AssertDim(const AclShape& shape, size_t dim)
 
 static inline void AssertConsis(const AclTensorInfo& tensor)
 {
-    size_t tensor_size = EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor);
+    size_t tensorSize = EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor);
     // Processing dtype whose size < 1
     // The ele num of quantization type(qint4*2) in MindSpore must be even.
-    if (tensor.dtype == AclDtype::DT_INT4) tensor_size = EleNumOfTensor(tensor, false) / 2;
-    if (tensor_size != tensor.dataSize) {
+    if (tensor.dtype == AclDtype::DT_INT4) tensorSize = EleNumOfTensor(tensor, false) / 2;
+    if (tensorSize != tensor.dataSize) {
         throw std::runtime_error(tensor + ": The internal data of Tensor is inconsistent.");
     }
 }
@@ -335,7 +335,7 @@ AclTensorInfo ParseAttrsFromDumpData(const std::string& dumpPath, const uint8_t*
 
     // convert format to host format. It can be either NCHW or ND (non 4-dimemsions).
     AclFormat hFmt;
-    if (hShape.size() == kDim4) {
+    if (hShape.size() == DIM_4) {
         hFmt = AclFormat::FORMAT_NCHW;
     } else if (hShape.empty()) {
         hFmt = dFmt;
@@ -364,14 +364,14 @@ static inline void AllocTensorTransBuf(AclTensorInfo& tensor)
 
 static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
 {
-    AssertDim(tensor.hostShape, kDim4);
+    AssertDim(tensor.hostShape, DIM_4);
     AssertConsis(tensor);
     AllocTensorTransBuf(tensor);
 
-    auto nDim = tensor.hostShape[kN];
-    auto cDim = tensor.hostShape[kC];
-    auto hDim = tensor.hostShape[kH];
-    auto wDim = tensor.hostShape[kW];
+    auto nDim = tensor.hostShape[AXIS_N];
+    auto cDim = tensor.hostShape[AXIS_C];
+    auto hDim = tensor.hostShape[AXIS_H];
+    auto wDim = tensor.hostShape[AXIS_W];
     auto groups = tensor.subFormat;
     auto cinOri = cDim;
     auto coutOri = nDim / groups;
@@ -382,7 +382,7 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     }
 
     auto cubeK = GetCubeSizeByType(tensor.dtype);
-    auto eMult = std::min(Lcm(Lcm(cinOri, cubeK) / cinOri, Lcm(coutOri, kCubeSize) / cinOri),
+    auto eMult = std::min(Lcm(Lcm(cinOri, cubeK) / cinOri, Lcm(coutOri, CUBE_SIZE) / cinOri),
                           static_cast<int64_t>(groups));
     if (eMult == 0) {
         LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE,
@@ -391,7 +391,7 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     }
 
     auto cinOpt = AlignCeil(eMult * cinOri, cubeK);
-    auto coutOpt = AlignCeil(eMult * coutOri, kCubeSize);
+    auto coutOpt = AlignCeil(eMult * coutOri, CUBE_SIZE);
     auto c1Dim = cinOpt / cubeK;
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
@@ -433,17 +433,17 @@ static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
         return FRAC_Z_TO_NCHW_WITH_GROUPS(tensor);
     }
 
-    AssertDim(tensor.hostShape, kDim4);
+    AssertDim(tensor.hostShape, DIM_4);
     AssertConsis(tensor);
     AllocTensorTransBuf(tensor);
 
-    auto n0 = tensor.deviceShape.at(fzN0);
-    auto ni = tensor.deviceShape.at(fzNi);
-    auto c0 = tensor.deviceShape.at(fzC0);
-    auto n = tensor.hostShape[kN];
-    auto c = tensor.hostShape[kC];
-    auto h = tensor.hostShape[kH];
-    auto w = tensor.hostShape[kW];
+    auto n0 = tensor.deviceShape.at(FZ_N0);
+    auto ni = tensor.deviceShape.at(FZ_NI);
+    auto c0 = tensor.deviceShape.at(FZ_C0);
+    auto n = tensor.hostShape[AXIS_N];
+    auto c = tensor.hostShape[AXIS_C];
+    auto h = tensor.hostShape[AXIS_H];
+    auto w = tensor.hostShape[AXIS_W];
     auto nc = ni * n0;
     auto ncc0 = nc * c0;
     auto wncc0 = w * ncc0;
@@ -487,7 +487,7 @@ static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
 
 static void TransShapeToHwNz(const AclShape &hostShape, AclShape& hwShape)
 {
-    if (hostShape.size() == kDim1) {
+    if (hostShape.size() == DIM_1) {
         hwShape.push_back(1);
         hwShape.push_back(1);
         hwShape.push_back(hostShape[0]);
@@ -495,12 +495,12 @@ static void TransShapeToHwNz(const AclShape &hostShape, AclShape& hwShape)
     }
     auto size = hostShape.size();
     int64_t times = 1;
-    for (size_t i = 0; i != size - kDim2; i++) {
+    for (size_t i = 0; i != size - DIM_2; i++) {
         times *= hostShape[i];
     }
     hwShape.push_back(times);
-    hwShape.push_back(hostShape[size - kDim2]);
-    hwShape.push_back(hostShape[size - kDim1]);
+    hwShape.push_back(hostShape[size - DIM_2]);
+    hwShape.push_back(hostShape[size - DIM_1]);
 }
 
 static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
@@ -511,20 +511,20 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
     AclShape hwShape;
     TransShapeToHwNz(tensor.hostShape, hwShape);
     auto times = hwShape.at(0);
-    auto h = hwShape.at(hwH);
-    auto w = hwShape.at(hwW);
+    auto h = hwShape.at(HW_H);
+    auto w = hwShape.at(HW_W);
     auto hw = h * w;
 
     auto shapeSize = tensor.deviceShape.size();
-    if (shapeSize < kDim4) {
+    if (shapeSize < DIM_4) {
         LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
         return DebuggerErrno::ERROR_INVALID_VALUE;
     }
 
-    auto w1 = tensor.deviceShape[shapeSize - fnzW1];
-    auto h1 = tensor.deviceShape[shapeSize - fnzH1];
-    auto h0 = tensor.deviceShape[shapeSize - fnzH0];
-    auto w0 = tensor.deviceShape[shapeSize - fnzW0];
+    auto w1 = tensor.deviceShape[shapeSize - FNZ_W1];
+    auto h1 = tensor.deviceShape[shapeSize - FNZ_H1];
+    auto h0 = tensor.deviceShape[shapeSize - FNZ_H0];
+    auto w0 = tensor.deviceShape[shapeSize - FNZ_W0];
     auto h1h0w0 = h1 * h0 * w0;
     auto w1h1h0w0 = w1 * h1h0w0;
     if (w0 == 0) {
@@ -576,16 +576,16 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
 
 static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
 {
-    AssertDim(tensor.hostShape, kDim4);
+    AssertDim(tensor.hostShape, DIM_4);
     AssertConsis(tensor);
     AllocTensorTransBuf(tensor);
 
-    auto n = tensor.hostShape[kN];
-    auto c = tensor.hostShape[kC];
-    auto h = tensor.hostShape[kH];
-    auto w = tensor.hostShape[kW];
-    auto c1 = tensor.deviceShape[kDim1];
-    auto c0 = tensor.deviceShape[kDim4];
+    auto n = tensor.hostShape[AXIS_N];
+    auto c = tensor.hostShape[AXIS_C];
+    auto h = tensor.hostShape[AXIS_H];
+    auto w = tensor.hostShape[AXIS_W];
+    auto c1 = tensor.deviceShape[DIM_1];
+    auto c0 = tensor.deviceShape[DIM_4];
     if (c0 == 0) {
         LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
         return DebuggerErrno::ERROR_INVALID_VALUE;
@@ -628,17 +628,17 @@ static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
 
 static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
 {
-    AssertDim(tensor.hostShape, kDim5);
+    AssertDim(tensor.hostShape, DIM_5);
     AssertConsis(tensor);
     AllocTensorTransBuf(tensor);
 
-    auto n = tensor.hostShape[N_ncdhw];
-    auto c = tensor.hostShape[C_ncdhw];
-    auto d = tensor.hostShape[D_ncdhw];
-    auto h = tensor.hostShape[H_ncdhw];
-    auto w = tensor.hostShape[W_ncdhw];
-    auto c1 = tensor.deviceShape[C1_ndc1hwc0];
-    auto c0 = tensor.deviceShape[C0_ndc1hwc0];
+    auto n = tensor.hostShape[N_NCDHW];
+    auto c = tensor.hostShape[C_NCDHW];
+    auto d = tensor.hostShape[D_NCDHW];
+    auto h = tensor.hostShape[H_NCDHW];
+    auto w = tensor.hostShape[W_NCDHW];
+    auto c1 = tensor.deviceShape[C1_NDC1HWC0];
+    auto c0 = tensor.deviceShape[C0_NDC1HWC0];
     if (c0 == 0) {
         LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
         return DebuggerErrno::ERROR_INVALID_VALUE;
@@ -687,14 +687,14 @@ static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
 
 static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor)
 {
-    AssertDim(tensor.hostShape, kDim4);
+    AssertDim(tensor.hostShape, DIM_4);
     AssertConsis(tensor);
     AllocTensorTransBuf(tensor);
 
-    auto n = tensor.hostShape[kN];
-    auto c = tensor.hostShape[kC];
-    auto h = tensor.hostShape[kH];
-    auto w = tensor.hostShape[kW];
+    auto n = tensor.hostShape[AXIS_N];
+    auto c = tensor.hostShape[AXIS_C];
+    auto h = tensor.hostShape[AXIS_H];
+    auto w = tensor.hostShape[AXIS_W];
     const int coIdx = 4;
     const int c0Idx = 5;
     auto co = tensor.deviceShape[coIdx];
@@ -736,17 +736,17 @@ static DebuggerErrno NC1HWC0_C04_TO_NCHW(AclTensorInfo& tensor)
 
 static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
 {
-    AssertDim(tensor.hostShape, kDim5);
+    AssertDim(tensor.hostShape, DIM_5);
     AssertConsis(tensor);
     AllocTensorTransBuf(tensor);
 
-    auto n = tensor.hostShape[N_ncdhw];
-    auto c = tensor.hostShape[C_ncdhw];
-    auto d = tensor.hostShape[D_ncdhw];
-    auto h = tensor.hostShape[H_ncdhw];
-    auto w = tensor.hostShape[W_ncdhw];
-    constexpr int kFZ3D_C0 = 3;
-    auto c0 = tensor.deviceShape[kFZ3D_C0];
+    auto n = tensor.hostShape[N_NCDHW];
+    auto c = tensor.hostShape[C_NCDHW];
+    auto d = tensor.hostShape[D_NCDHW];
+    auto h = tensor.hostShape[H_NCDHW];
+    auto w = tensor.hostShape[W_NCDHW];
+    constexpr int FZ3D_C0 = 3;
+    auto c0 = tensor.deviceShape[FZ3D_C0];
     if (c0 == 0) {
         LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
         return DebuggerErrno::ERROR_INVALID_VALUE;

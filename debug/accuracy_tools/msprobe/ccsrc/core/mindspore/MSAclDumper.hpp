@@ -26,8 +26,8 @@ namespace MindStudioDebugger {
 class MSAclDumper : public PrecisionDbgTaskBase {
 public:
     static MSAclDumper& GetInstance() {
-        static MSAclDumper instance_;
-        return instance_;
+        static MSAclDumper dumperInstance;
+        return dumperInstance;
     }
 
     std::string Name() const override {return "MindSpore AclDumper";}
