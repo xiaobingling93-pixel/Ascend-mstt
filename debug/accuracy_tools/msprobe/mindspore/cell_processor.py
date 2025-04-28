@@ -16,6 +16,7 @@
 from collections import OrderedDict
 
 from mindspore import Tensor
+from mindspore.common.hook_handle import HookHandle
 from mindspore.ops.operations import _inner_ops as inner
 
 from msprobe.core.common.const import Const
@@ -90,9 +91,8 @@ class CellProcessor:
                 cell_index = (index + Const.SEP) if index != "-1" else ""
                 prefix = f'{model_type}{Const.SEP}{cell_index}{name}{Const.SEP}{cell.__class__.__name__}{Const.SEP}'
 
-                forward_pre_hook, forward_hook = self.build_cell_hook(prefix, build_hook)
+                forward_pre_hook = self.build_cell_hook(prefix, build_hook)
                 cell.register_forward_pre_hook(forward_pre_hook)
-                cell.register_forward_hook(forward_hook)
 
                 if not is_registered:
                     logger.info("The cell hook function is successfully mounted to the model.")
@@ -105,6 +105,16 @@ class CellProcessor:
             full_backward_name = f'{cell_name}{Const.BACKWARD}{Const.SEP}{index}'
 
             self.set_construct_info_in_pre_hook(full_forward_name)
+
+            if not hasattr(cell, 'msprobe_forward_hook'):
+                if is_mindtorch():
+                    cell.register_forward_hook(forward_hook)
+                else:
+                    forward_hook_dict = getattr(cell, '_forward_hook', OrderedDict())
+                    handle = HookHandle(forward_hook_dict)
+                    forward_hook_dict[handle.handle_id] = forward_hook
+
+                setattr(cell, 'msprobe_forward_hook', True)
 
             def get_backward_hook(backward_data_hook, full_backward_name):
                 def backward_hook_fn(cell, grad_input, grad_output):
@@ -190,7 +200,7 @@ class CellProcessor:
                     )
             return result
 
-        return forward_pre_hook, forward_hook
+        return forward_pre_hook
 
     def set_construct_info_in_pre_hook(self, full_name):
         if self.cell_stack:

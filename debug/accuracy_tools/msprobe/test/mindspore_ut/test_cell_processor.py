@@ -113,7 +113,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_cell = MagicMock()
             mock_sub_cell = MagicMock()
             mock_get_cells_and_names.return_value = {'-1': [('cell', mock_cell), ('sub_cell', mock_sub_cell)]}
-            mock_build_cell_hook.return_value = ('forward_pre_hook', 'forward_hook')
+            mock_build_cell_hook.return_value = 'forward_pre_hook'
             mock_get_cell_construct.return_value = '_construct'
 
             mock_is_mindtorch.return_value = False
@@ -126,7 +126,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_build_cell_hook.assert_called_with('Cell.sub_cell.MagicMock.', None)
             mock_cell.assert_not_called()
             mock_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
-            mock_sub_cell.register_forward_hook.assert_called_with('forward_hook')
+            mock_sub_cell.register_forward_hook.assert_not_called()
             mock_logger_info.assert_called_with('The cell hook function is successfully mounted to the model.')
 
             del MagicMock.construct
@@ -141,7 +141,7 @@ class TestCellProcessor(unittest.TestCase):
             self.processor.register_cell_hook(mock_cell, None)
             mock_get_cell_construct.assert_not_called()
             mock_another_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
-            mock_another_sub_cell.register_forward_hook.assert_called_with('forward_hook')
+            mock_another_sub_cell.register_forward_hook.assert_not_called()
 
             del mock_another_sub_cell.__class__.msprobe_construct
 
@@ -156,7 +156,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_build_cell_hook.assert_called_with('Module.another_sub_cell.MagicMock.', None)
             mock_cell.assert_not_called()
             mock_another_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
-            mock_another_sub_cell.register_forward_hook.assert_called_with('forward_hook')
+            mock_another_sub_cell.register_forward_hook.assert_not_called()
 
             del MagicMock.forward
             del mock_another_sub_cell.__class__.forward
@@ -174,7 +174,8 @@ class TestCellProcessor(unittest.TestCase):
         mock_cell = MagicMock()
 
         with patch.object(_inner_ops, 'CellBackwardHook') as mock_CellBackwardHook:
-            forward_pre_hook, forward_hook = self.processor.build_cell_hook(cell_name, mock_build_data_hook)
+            forward_pre_hook = self.processor.build_cell_hook(cell_name, mock_build_data_hook)
+            forward_hook = forward_pre_hook.__closure__[2].cell_contents
 
             mock_bw = mock_CellBackwardHook.return_value
             mock_bw.return_value = (Tensor([0.0]),)

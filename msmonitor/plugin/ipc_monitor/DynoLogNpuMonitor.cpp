@@ -63,7 +63,6 @@ std::string DynoLogNpuMonitor::Poll()
         return "";
     }
     if (res.empty()) {
-        LOG(INFO) << "Request from dynolog daemon is empty";
         return "";
     }
     LOG(INFO) << "Received NPU configuration successfully";

@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from typing import Dict, Any, Optional, Callable, Union, List, Tuple
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.log import logger
 
 
 def _get_attr(module, attr_name):
@@ -44,6 +46,38 @@ class ApiWrapper:
         self.api_names = self._get_api_names()
         self.wrapped_api_functions = dict()
 
+    @staticmethod
+    def deal_with_self_kwargs(api_name, api_func, args, kwargs):
+        if kwargs and 'self' in kwargs:
+            func_params = None
+            try:
+                func_params = inspect.signature(api_func).parameters
+            except Exception:
+                if api_name in Const.API_WITH_SELF_ARG:
+                    func_params = inspect.signature(Const.API_WITH_SELF_ARG.get(api_name)).parameters
+            if func_params is None:
+                return False, args, kwargs
+
+            for name, param in func_params.items():
+                if name == 'self' and param.kind == inspect.Parameter.KEYWORD_ONLY:
+                    return False, args, kwargs
+            args_ = list(args)
+            names_and_values = []
+            self_index = 0
+            for i, item in enumerate(func_params.items()):
+                names_and_values.append((item[0], item[1].default))
+                if item[0] == 'self':
+                    self_index = i
+                    break
+            for i in range(len(args), self_index + 1):
+                if names_and_values[i][0] in kwargs:
+                    args_.append(kwargs.pop(names_and_values[i][0]))
+                else:
+                    args_.append(names_and_values[i][1])
+            args = tuple(args_)
+
+        return True, args, kwargs
+
     def wrap_api(
         self, api_templates, hook_build_func: Optional[Callable]
     ):
@@ -68,6 +102,14 @@ class ApiWrapper:
                     if callable(ori_api):
                         def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
                             def api_function(*args, **kwargs):
+                                api_name_with_prefix = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1])
+                                enable_wrap, args, kwargs = self.deal_with_self_kwargs(api_name_with_prefix,
+                                                                                       api_func, args, kwargs)
+                                if not enable_wrap:
+                                    logger.warning(f'Cannot collect precision data of {api_name_with_prefix}. '
+                                                   'It may be fixed by passing the value of "self" '
+                                                   'as a positional argument instead of a keyword argument. ')
+                                    return api_func(*args, **kwargs)
                                 return api_template(api_name, api_func, prefix, hook_build_func)(*args, **kwargs)
                             api_function.__name__ = api_name
                             return api_function
