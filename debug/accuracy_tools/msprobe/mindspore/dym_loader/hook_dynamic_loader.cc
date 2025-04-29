@@ -30,9 +30,9 @@ HookDynamicLoader &HookDynamicLoader::GetInstance() {
 
 bool HookDynamicLoader::loadFunction(void *handle, const std::string &functionName) {
     void *func = dlsym(handle, functionName.c_str());
-  if (!func) {
-    MS_LOG(WARNING) << "Could not load function: " << functionName << ", error: " << dlerror();
-    return false;
+    if (!func) {
+        MS_LOG(WARNING) << "Could not load function: " << functionName << ", error: " << dlerror();
+        return false;
     }
     funcMap_[functionName] = func;
     return true;
@@ -40,13 +40,13 @@ bool HookDynamicLoader::loadFunction(void *handle, const std::string &functionNa
 
 bool HookDynamicLoader::LoadLibrary() {
     std::string msprobePath = "";
-  // 获取gil锁
-  py::gil_scoped_acquire acquire;
-  try {
-    py::module msprobeMod = py::module::import("msprobe.lib._msprobe_c");
-    if (!py::hasattr(msprobeMod, "__file__")) {
-    MS_LOG(WARNING) << "Adump mod not found";
-    return false;
+    // 获取gil锁
+    py::gil_scoped_acquire acquire;
+    try {
+        py::module msprobeMod = py::module::import("msprobe.lib._msprobe_c");
+        if (!py::hasattr(msprobeMod, "__file__")) {
+        MS_LOG(WARNING) << "Adump mod not found";
+        return false;
     }
     msprobePath = msprobeMod.attr("__file__").cast<std::string>();
     } catch (const std::exception& e) {
@@ -54,26 +54,26 @@ bool HookDynamicLoader::LoadLibrary() {
     return false;
     }
     std::lock_guard<std::mutex> lock(mutex_);
-  if (handle_) {
-    MS_LOG(WARNING) << "Hook library already loaded!";
-    return false;
+    if (handle_) {
+        MS_LOG(WARNING) << "Hook library already loaded!";
+        return false;
     }
     if (msprobePath == "") {
-    MS_LOG(WARNING) << "Adump path not loaded";
-    return false;
+        MS_LOG(WARNING) << "Adump path not loaded";
+        return false;
     }
     handle_ = dlopen(msprobePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
-  if (!handle_) {
-    MS_LOG(WARNING) << "Failed to load Hook library: " << dlerror();
-    return false;
+    if (!handle_) {
+        MS_LOG(WARNING) << "Failed to load Hook library: " << dlerror();
+        return false;
     }
 
     for (const auto &functionName : functionList_) {
     if (!loadFunction(handle_, functionName)) {
-    MS_LOG(WARNING) << "Failed to load adump function";
-      dlclose(handle_);
-      handle_ = nullptr;
-      return false;
+        MS_LOG(WARNING) << "Failed to load adump function";
+        dlclose(handle_);
+        handle_ = nullptr;
+        return false;
     }
     }
 
@@ -83,24 +83,24 @@ bool HookDynamicLoader::LoadLibrary() {
 
 bool HookDynamicLoader::UnloadLibrary() {
     std::lock_guard<std::mutex> lock(mutex_);
-  if (!handle_) {
-    MS_LOG(WARNING) << "Hook library hasn't been loaded.";
-    return false;
+    if (!handle_) {
+        MS_LOG(WARNING) << "Hook library hasn't been loaded.";
+        return false;
     }
 
     dlclose(handle_);
-  handle_ = nullptr;
-  funcMap_.clear();
-  MS_LOG(INFO) << "Library unloaded successfully.";
-  return true;
+    handle_ = nullptr;
+    funcMap_.clear();
+    MS_LOG(INFO) << "Library unloaded successfully.";
+    return true;
 }
 
 void *HookDynamicLoader::GetHooker(const std::string &funcName) {
     std::lock_guard<std::mutex> lock(mutex_);
-  auto iter = funcMap_.find(funcName);
-  if (iter == funcMap_.end()) {
-    MS_LOG(WARNING) << "Function not found: " << funcName;
-    return nullptr;
+    auto iter = funcMap_.find(funcName);
+    if (iter == funcMap_.end()) {
+        MS_LOG(WARNING) << "Function not found: " << funcName;
+        return nullptr;
     }
     return iter->second;
 }
