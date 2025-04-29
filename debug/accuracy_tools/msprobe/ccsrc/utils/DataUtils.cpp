@@ -136,7 +136,7 @@ std::string GetDTypeString(DataType dtype)
 {
     for (const auto& pair : kDDTypeToStringArray) {
         if (pair.first == dtype) {
-            return pair.second;
+            return std::string(pair.second);
         }
     }
     return kOpDType_UNKNOWN;
@@ -200,7 +200,7 @@ std::string GetFormatString(TensorFormat fmt)
 {
     for (const auto& pair : kFormatToStringArray) {
         if (pair.first == fmt) {
-            return pair.second;
+            return std::string(pair.second);
         }
     }
     return kOpFormat_UNKNOWN;
