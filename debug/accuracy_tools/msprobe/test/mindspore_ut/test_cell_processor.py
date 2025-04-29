@@ -117,11 +117,11 @@ class TestCellProcessor(unittest.TestCase):
             mock_get_cell_construct.return_value = '_construct'
 
             mock_is_mindtorch.return_value = False
-            setattr(MagicMock, 'construct', 'construct')
+            setattr(MagicMock, '_run_construct', '_run_construct')
             self.processor.register_cell_hook(mock_cell, None)
             self.assertTrue(mock_sub_cell.__class__.msprobe_construct)
-            mock_get_cell_construct.assert_called_with('construct')
-            self.assertEqual(mock_sub_cell.__class__.construct, '_construct')
+            mock_get_cell_construct.assert_called_with('_run_construct')
+            self.assertEqual(mock_sub_cell.__class__._run_construct, '_construct')
             self.assertTrue(mock_sub_cell.msprobe_hook)
             mock_build_cell_hook.assert_called_with('Cell.sub_cell.MagicMock.', None)
             mock_cell.assert_not_called()
@@ -129,8 +129,8 @@ class TestCellProcessor(unittest.TestCase):
             mock_sub_cell.register_forward_hook.assert_not_called()
             mock_logger_info.assert_called_with('The cell hook function is successfully mounted to the model.')
 
-            del MagicMock.construct
-            del mock_sub_cell.__class__.construct
+            del MagicMock._run_construct
+            del mock_sub_cell.__class__._run_construct
             del mock_sub_cell.__class__.msprobe_construct
 
             mock_get_cell_construct.reset_mock()
@@ -148,18 +148,18 @@ class TestCellProcessor(unittest.TestCase):
             mock_build_cell_hook.reset_mock()
             mock_get_cell_construct.reset_mock()
             mock_another_sub_cell.reset_mock()
-            setattr(MagicMock, 'forward', 'forward')
+            setattr(MagicMock, '_call_impl', '_call_impl')
             mock_is_mindtorch.return_value = True
             self.processor.register_cell_hook(mock_cell, None)
             self.assertTrue(mock_another_sub_cell.__class__.msprobe_construct)
-            mock_get_cell_construct.assert_called_with('forward')
+            mock_get_cell_construct.assert_called_with('_call_impl')
             mock_build_cell_hook.assert_called_with('Module.another_sub_cell.MagicMock.', None)
             mock_cell.assert_not_called()
             mock_another_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
             mock_another_sub_cell.register_forward_hook.assert_not_called()
 
-            del MagicMock.forward
-            del mock_another_sub_cell.__class__.forward
+            del MagicMock._call_impl
+            del mock_another_sub_cell.__class__._call_impl
             del mock_another_sub_cell.__class__.msprobe_construct
 
     def test_build_cell_hook(self):

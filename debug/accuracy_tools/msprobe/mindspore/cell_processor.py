@@ -73,6 +73,7 @@ class CellProcessor:
         is_registered = False
         model_type = Const.MODULE if is_mindtorch() else Const.CELL
         cells_and_names_with_index = get_cells_and_names(models)
+        construct_name = '_call_impl' if is_mindtorch() else '_run_construct'
 
         for index, cells_and_names in cells_and_names_with_index.items():
             model = models if index == "-1" else models[int(index)]
@@ -82,10 +83,9 @@ class CellProcessor:
 
                 if not hasattr(cell.__class__, 'msprobe_construct'):
                     setattr(cell.__class__, 'msprobe_construct', True)
-                    if is_mindtorch():
-                        setattr(cell.__class__, 'forward', get_cell_construct(cell.__class__.forward))
-                    else:
-                        setattr(cell.__class__, 'construct', get_cell_construct(cell.__class__.construct))
+                    if hasattr(cell.__class__, construct_name):
+                        setattr(cell.__class__, construct_name,
+                                get_cell_construct(getattr(cell.__class__, construct_name)))
                 setattr(cell, 'msprobe_hook', True)
 
                 cell_index = (index + Const.SEP) if index != "-1" else ""
