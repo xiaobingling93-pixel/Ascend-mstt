@@ -91,20 +91,20 @@ auto next_wakeup(int sec) {
 void kernel_monitor_loop() {
     KernelCollector kc;
 
-  LOG(INFO) << "Running kernel monitor loop : interval = "
+    LOG(INFO) << "Running kernel monitor loop : interval = "
             << FLAGS_kernel_monitor_reporting_interval_s << " s.";
 
     while (1) {
-    auto logger = getLogger();
-    auto wakeup_timepoint =
-        next_wakeup(FLAGS_kernel_monitor_reporting_interval_s);
+        auto logger = getLogger();
+        auto wakeup_timepoint =
+            next_wakeup(FLAGS_kernel_monitor_reporting_interval_s);
 
-    kc.step();
-    kc.log(*logger);
-    logger->finalize();
+        kc.step();
+        kc.log(*logger);
+        logger->finalize();
 
-    /* sleep override */
-    std::this_thread::sleep_until(wakeup_timepoint);
+        /* sleep override */
+        std::this_thread::sleep_until(wakeup_timepoint);
     }
 }
 
@@ -119,16 +119,16 @@ void perf_monitor_loop() {
             << FLAGS_perf_monitor_reporting_interval_s << " s.";
 
     while (1) {
-    auto logger = getLogger();
-    auto wakeup_timepoint =
-        next_wakeup(FLAGS_perf_monitor_reporting_interval_s);
+        auto logger = getLogger();
+        auto wakeup_timepoint =
+            next_wakeup(FLAGS_perf_monitor_reporting_interval_s);
 
-    pm.step();
-    pm.log(*logger);
+        pm.step();
+        pm.log(*logger);
 
-    logger->finalize();
-    /* sleep override */
-    std::this_thread::sleep_until(wakeup_timepoint);
+        logger->finalize();
+        /* sleep override */
+        std::this_thread::sleep_until(wakeup_timepoint);
     }
 }
 
