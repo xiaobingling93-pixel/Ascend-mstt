@@ -97,7 +97,7 @@ size_t SizeOfDType(DataType type)
 }
 
 constexpr auto kOpDType_UNKNOWN = "UNKNOWN";
-const std::pair<DataType, std::string> kDDTypeToStringArray[] = {
+const std::pair<DataType, std::string_view> kDDTypeToStringArray[] = {
     {DataType::DT_UNDEFINED, "UNDEFINED"},
     {DataType::DT_FLOAT, "FLOAT"},
     {DataType::DT_FLOAT16, "FLOAT16"},
@@ -143,7 +143,7 @@ std::string GetDTypeString(DataType dtype)
 }
 
 constexpr auto kOpFormat_UNKNOWN = "UNKNOWN";
-const std::pair<TensorFormat, std::string> kFormatToStringArray[] = {
+const std::pair<TensorFormat, std::string_view> kFormatToStringArray[] = {
     {TensorFormat::FORMAT_NCHW, "NCHW"},
     {TensorFormat::FORMAT_NHWC, "NHWC"},
     {TensorFormat::FORMAT_ND, "ND"},
