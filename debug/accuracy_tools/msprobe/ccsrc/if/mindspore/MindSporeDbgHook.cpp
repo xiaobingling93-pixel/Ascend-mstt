@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define _GLIBCXX_USE_CXX11_ABI 0
+#define GLIBCXX_USE_CXX11_ABI 0
 
 #include <string>
 #include <vector>
@@ -32,7 +32,7 @@ EXPORT_SYMBOL void MS_DbgOnStepBegin(uint32_t device, int32_t curStep,
         if (ext.first >= static_cast<uint32_t>(MindStudioDebugger::MindStudioExtensionArgs::ARG_MAX)) {
             continue;
         }
-        /* mindspore使用了_GLIBCXX_USE_CXX11_ABI=0，为了解决CXX版本兼容问题，此处将string转char*使用 */
+        /* mindspore使用了GLIBCXX_USE_CXX11_ABI=0，为了解决CXX版本兼容问题，此处将string转char*使用 */
         if (ext.first == static_cast<uint32_t>(MindStudioDebugger::MindStudioExtensionArgs::ALL_KERNEL_NAMES)) {
             if (ext.second == nullptr) {
                 continue;

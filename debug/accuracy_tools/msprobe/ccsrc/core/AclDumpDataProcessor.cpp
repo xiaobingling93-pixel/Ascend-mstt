@@ -542,8 +542,7 @@ static std::string MappingFilePath(const std::string& originPath)
         return std::string();
     }
 
-    DebuggerErrno ret;
-    ret = FileUtils::CreateDir(dir);
+    DebuggerErrno ret = FileUtils::CreateDir(dir);
     if (ret != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR, "Failed to create directory " + dir + ".");
         return std::string();

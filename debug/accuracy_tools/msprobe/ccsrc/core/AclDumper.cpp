@@ -458,8 +458,7 @@ void AclDumper::SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args)
         return;
     }
 
-    aclError aclRet;
-    aclRet = CALL_ACL_API(aclmdlInitDump);
+    aclError aclRet = CALL_ACL_API(aclmdlInitDump);
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                   "Failed to init acldump(" + std::to_string(aclRet) + ").");
