@@ -152,5 +152,5 @@ aclError AclApiAclrtSynchronizeDevice()
     return g_aclrtSynchronizeDeviceFunc();
 }
 
-} 
+}
 }

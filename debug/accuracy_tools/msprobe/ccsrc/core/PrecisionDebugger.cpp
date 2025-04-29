@@ -83,12 +83,12 @@ int32_t PrecisionDebugger::Initialize(const std::string& framework, const std::s
         return ret;
     }
 
-    if(AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
+    if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
         return -1;
     }
 
     const DebuggerConfig& cfg = DebuggerConfig::GetInstance();
-    for (auto iter = subDebuggers.begin(); iter != subDebuggers.end(); ) {
+    for (auto iter = subDebuggers.begin(); iter != subDebuggers.end();) {
         if (!(*iter)->Condition(cfg)) {
             iter = subDebuggers.erase(iter);
         } else {

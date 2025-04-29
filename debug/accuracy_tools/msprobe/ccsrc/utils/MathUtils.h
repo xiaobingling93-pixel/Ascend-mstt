@@ -65,7 +65,7 @@ T AlignCeil(T v, T block)
 float Random();
 float Random(float floor, float ceil);
 int32_t RandomInt(int32_t floor, int32_t ceil);
-std::string RandomString(uint32_t len, char min=' ', char max='~');
+std::string RandomString(uint32_t len, char min = ' ', char max = '~');
 
 std::string CalculateMD5(const uint8_t* data, size_t length);
 

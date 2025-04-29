@@ -64,7 +64,7 @@ constexpr const uint32_t FILE_NAME_MAX = 255;
 
 /* 基础检查函数库，不做过多校验，路径有效性由调用者保证 */
 bool IsPathExist(const std::string& path);
-std::vector<std::string> SplitPath(const std::string &path, char separator=PATH_SEPARATOR);
+std::vector<std::string> SplitPath(const std::string &path, char separator = PATH_SEPARATOR);
 std::string GetAbsPath(const std::string &originpath);
 bool IsDir(const std::string& path);
 bool IsRegularFile(const std::string& path);
@@ -85,19 +85,19 @@ bool IsFileOwner(const std::string& path);
 
 /* 文件操作函数库，会对入参做基本检查 */
 DebuggerErrno DeleteFile(const std::string &path);
-DebuggerErrno DeleteDir(const std::string &path, bool recursion=false);
-DebuggerErrno CreateDir(const std::string &path, bool recursion=false, mode_t mode=NORMAL_DIR_MODE_DEFAULT);
+DebuggerErrno DeleteDir(const std::string &path, bool recursion = false);
+DebuggerErrno CreateDir(const std::string &path, bool recursion = false, mode_t mode = NORMAL_DIR_MODE_DEFAULT);
 DebuggerErrno Chmod(const std::string& path, const mode_t& mode);
 DebuggerErrno GetFileSize(const std::string &path, size_t& size);
-DebuggerErrno OpenFile(const std::string& path, std::ifstream& ifs, std::ios::openmode mode=std::ios::in);
-DebuggerErrno OpenFile(const std::string& path, std::ofstream& ofs, std::ios::openmode mode=std::ios::out,
-                       mode_t permission=NORMAL_FILE_MODE_DEFAULT);
+DebuggerErrno OpenFile(const std::string& path, std::ifstream& ifs, std::ios::openmode mode = std::ios::in);
+DebuggerErrno OpenFile(const std::string& path, std::ofstream& ofs, std::ios::openmode mode = std::ios::out,
+                       mode_t permission = NORMAL_FILE_MODE_DEFAULT);
 
 /* 通用检查函数 */
 DebuggerErrno CheckFileSuffixAndSize(const std::string &path, FileType type);
 DebuggerErrno CheckDirCommon(const std::string &path);
 DebuggerErrno CheckFileBeforeRead(const std::string &path, const std::string& authority="r",
-                                  FileType type=FileType::COMMON);
-DebuggerErrno CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite=false);
+                                  FileType type = FileType::COMMON);
+DebuggerErrno CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite = false);
 }
 }

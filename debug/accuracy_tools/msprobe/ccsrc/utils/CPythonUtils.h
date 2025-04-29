@@ -40,14 +40,14 @@ namespace  CPythonUtils {
  * |  tuple            |  PythonTupleObject  |
  * |  dict             |  PythonDictObject   |
  * -------------------------------------------
- * 
+ *
  * 创建对象的方式：
  * 1、通过原生PyObject*类型创建，PythonObject生命周期内会持有原生对象的一个引用
  * 2、通过From方法从c++对象创建
  * 3、通过GetGlobal、Import等方法从解释器上下文获取
  * 4、通过GetRegisteredPyObj获取到上下文的python对象
  * 5、通过已有PythonObject对象的Get、GetItem等方法获取子对象
- * 
+ *
  * 对象转换：
  * 1、对于转换成PyObject*、bool、string的场景，支持隐式转换
  * 2、对于非通用类型转换，调用To方法，返回0表示成功
@@ -56,7 +56,7 @@ namespace  CPythonUtils {
  *     python维度支持bool()的都可以转bool（即并非只有bool类型支持转换，下同）
  *     支持str()的都可以转string
  *     可迭代对象(且元素支持转换)都可以转vector
- * 
+ *
  * 对象传递：
  * 1、子类可以安全传递或拷贝给PythonObject对象
  * 2、PythonObject传给子类时，若类型匹配，可以安全转递，否则会转为None
@@ -81,7 +81,7 @@ PythonObject GetRegisteredPyObj(const std::string& name);
 
 class PythonObject {
 public:
-    PythonObject() 
+    PythonObject()
     {
         Py_INCREF(Py_None);
         ptr = Py_None;
@@ -92,21 +92,21 @@ public:
         }
         Py_XINCREF(ptr);
     }
-    ~PythonObject() 
+    ~PythonObject()
     {
         Py_XDECREF(ptr);
     }
     explicit PythonObject(const PythonObject &obj) : PythonObject(static_cast<PyObject*>(obj)) {}
-    PythonObject& operator=(const PythonObject &obj) 
+    PythonObject& operator=(const PythonObject &obj)
     {
         SetPtr(static_cast<PyObject*>(obj));
         return *this;
     }
 
     /* 获取全局对象 */
-    static PythonObject GetGlobal(const std::string& name, bool ignore=true);
+    static PythonObject GetGlobal(const std::string& name, bool ignore = true);
     /* 获取模块对象；若其还未加载至缓存，则加载一遍 */
-    static PythonObject Import (const std::string& name, bool ignore=true) noexcept;
+    static PythonObject Import (const std::string& name, bool ignore = true) noexcept;
 
     /* From/To转换，统一放一份在基类，用于遍历迭代器等场景 */
     static PythonObject From(const PythonObject& input);
@@ -139,18 +139,18 @@ public:
     bool IsCallable() const {return PyCallable_Check(ptr);}
 
     /* 用于调用可调用对象，相当于python代码中的obj()，为了简单只实现了args+kwargs参数形式 */
-    PythonObject Call(bool ignore=true) noexcept;
-    PythonObject Call(PythonTupleObject& args, bool ignore=true) noexcept;
-    PythonObject Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore=true) noexcept;
+    PythonObject Call(bool ignore = true) noexcept;
+    PythonObject Call(PythonTupleObject& args, bool ignore = true) noexcept;
+    PythonObject Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore = true) noexcept;
 
     /* 用于获取对象属性，相当于python代码中的obj.xx */
-    PythonObject Get(const std::string& name, bool ignore=true) const;
-    PythonObject& NewRef() 
+    PythonObject Get(const std::string& name, bool ignore = true) const;
+    PythonObject& NewRef()
     {
         Py_XINCREF(ptr);
         return *this;
     }
-    std::string ToString() const 
+    std::string ToString() const
     {
         std::string ret;
         if (To(ret) == 0) {
@@ -161,24 +161,24 @@ public:
 
     operator PyObject*() const {return ptr;}
     operator bool() const {return static_cast<bool>(PyObject_IsTrue(ptr));}
-    operator std::string() const 
+    operator std::string() const
     {
         return ToString();
     }
-    PythonObject operator()(bool ignore=true) {return Call(ignore);}
-    PythonObject operator()(PythonTupleObject& args, bool ignore=true) {return Call(args, ignore);}
-    PythonObject operator()(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore=true) 
+    PythonObject operator()(bool ignore = true) {return Call(ignore);}
+    PythonObject operator()(PythonTupleObject& args, bool ignore = true) {return Call(args, ignore);}
+    PythonObject operator()(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore = true)
     {
         return Call(args, kwargs, ignore);
     }
 
 protected:
-    void SetPtr(PyObject* o) 
+    void SetPtr(PyObject* o)
     {
         Py_XDECREF(ptr);
         if (o == nullptr) {
             o = Py_None;
-        } 
+        }
         Py_INCREF(o);
         ptr = o;
     }
@@ -228,11 +228,11 @@ public:
 
     size_t Size() const;
     template <typename T>
-    PythonListObject& Append(T value, bool ignore=true);
-    PythonObject GetItem(size_t pos, bool ignore=true);
-    PythonListObject& SetItem(size_t pos, PythonObject& item, bool ignore=true);
-    PythonListObject& Insert(int64_t pos, PythonObject& item, bool ignore=true);
-    PythonTupleObject ToTuple(bool ignore=true);
+    PythonListObject& Append(T value, bool ignore = true);
+    PythonObject GetItem(size_t pos, bool ignore = true);
+    PythonListObject& SetItem(size_t pos, PythonObject& item, bool ignore = true);
+    PythonListObject& Insert(int64_t pos, PythonObject& item, bool ignore = true);
+    PythonTupleObject ToTuple(bool ignore = true);
 };
 
 class PythonTupleObject : public PythonObject {
@@ -244,7 +244,7 @@ public:
     static PythonTupleObject From(const std::vector<T>& input);
 
     size_t Size() const;
-    PythonObject GetItem(size_t pos, bool ignore=true);
+    PythonObject GetItem(size_t pos, bool ignore = true);
 };
 
 class PythonDictObject : public PythonObject {
@@ -256,11 +256,11 @@ public:
     static PythonDictObject From(const std::map<T1, T2>& input);
 
     template <typename T1, typename T2>
-    PythonDictObject& Add(T1 key, T2 value, bool ignore=true);
+    PythonDictObject& Add(T1 key, T2 value, bool ignore = true);
     template <typename T>
-    PythonDictObject& Delete(T key, bool ignore=true);
+    PythonDictObject& Delete(T key, bool ignore = true);
     template <typename T>
-    PythonObject GetItem(T key, bool ignore=true);
+    PythonObject GetItem(T key, bool ignore = true);
 };
 
 /**************************************************************************************************/

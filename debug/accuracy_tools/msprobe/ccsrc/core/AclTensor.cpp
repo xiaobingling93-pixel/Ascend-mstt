@@ -163,7 +163,8 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
     {AclDumpMsg::OutputFormat::FORMAT_NC1HWC0_C04, AclFormat::FORMAT_NC1HWC0_C04},
     {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_C04, AclFormat::FORMAT_FRACTAL_Z_C04},
     {AclDumpMsg::OutputFormat::FORMAT_CHWN, AclFormat::FORMAT_CHWN},
-    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS, AclFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS,
+    AclFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS},
     {AclDumpMsg::OutputFormat::FORMAT_HWCN, AclFormat::FORMAT_HWCN},
     {AclDumpMsg::OutputFormat::FORMAT_NC1KHKWHWC0, AclFormat::FORMAT_NC1KHKWHWC0},
     {AclDumpMsg::OutputFormat::FORMAT_BN_WEIGHT, AclFormat::FORMAT_BN_WEIGHT},
@@ -354,7 +355,8 @@ AclTensorInfo ParseAttrsFromDumpData(const std::string& dumpPath, const uint8_t*
     }
 
     int32_t subFormat = tensor.sub_format();
-    return AclTensorInfo{dumpPath, data, dtype, dtype, dFmt, hFmt, dShape, hShape, dataSize, subFormat, io, slot, dumpOriginData};
+    return AclTensorInfo{dumpPath, data, dtype, dtype, dFmt, hFmt,
+        dShape, hShape, dataSize, subFormat, io, slot, dumpOriginData};
 }
 
 template AclTensorInfo ParseAttrsFromDumpData<AclDumpMsg::OpOutput>(

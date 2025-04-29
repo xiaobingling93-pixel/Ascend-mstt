@@ -60,7 +60,7 @@ static PyObject* CPythonAgentRegister(PyObject *module, PyObject *args)
 static PyObject* CPythonAgentUnRegister(PyObject *module, PyObject *obj)
 {
     CPythonUtils::PythonStringObject name(obj);
-    if(name.IsNone()) {
+    if (name.IsNone()) {
         PyErr_SetString(PyExc_TypeError, "\"name\" should be a string.");
         Py_RETURN_NONE;
     }
@@ -72,7 +72,7 @@ static PyObject* CPythonAgentUnRegister(PyObject *module, PyObject *obj)
 static PyObject* CPythonAgentGetContext(PyObject *module, PyObject *obj)
 {
     CPythonUtils::PythonStringObject name(obj);
-    if(name.IsNone()) {
+    if (name.IsNone()) {
         PyErr_SetString(PyExc_TypeError, "\"name\" should be a string.");
         Py_RETURN_NONE;
     }
