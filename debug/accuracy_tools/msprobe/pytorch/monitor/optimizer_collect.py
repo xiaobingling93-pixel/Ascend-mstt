@@ -72,7 +72,7 @@ class OptimizerMon(object):
             if lp_param in self.fp16_to_fp32_param:
                 hp_param = self.fp16_to_fp32_param[lp_param]
             else:
-                continue # not in current partition for distributed optimizer
+                hp_param = lp_param
 
             if hp_param in state:
                 state_param = state.get(hp_param, None)
