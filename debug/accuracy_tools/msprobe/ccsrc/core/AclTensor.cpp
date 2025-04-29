@@ -202,13 +202,13 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
 
 enum kAxis4D : int { kN = 0, kC, kH, kW, kNchwDims };
 enum Axis5D : int {
-    N_ncdhw = 0,
+    N_ncdhw,
     C_ncdhw,
     D_ncdhw,
     H_ncdhw,
     W_ncdhw,
     kNcdhw,
-    N_ndc1hwc0 = 0,
+    N_ndc1hwc0,
     D_ndc1hwc0,
     C1_ndc1hwc0,
     H_ndc1hwc0,

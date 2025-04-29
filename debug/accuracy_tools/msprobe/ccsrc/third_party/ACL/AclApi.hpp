@@ -21,7 +21,7 @@
 #include "include/ErrorCode.hpp"
 
 extern "C" {
-typedef int aclError;
+using aclError = int;
 constexpr int ACL_SUCCESS = 0;
 constexpr int ACL_ERROR_NONE = 0;
 constexpr int ACL_ERROR_REPEAT_INITIALIZE = 100002;
@@ -43,6 +43,7 @@ namespace AscendCLApi {
 DebuggerErrno LoadAclApi();
 
 using AclDumpCallbackFuncType = int32_t (*)(const acldumpChunk*, int32_t);
+using aclError = int;
 aclError ACLAPI_aclInit(const char* cfg);
 aclError ACLAPI_aclmdlInitDump();
 aclError ACLAPI_aclmdlSetDump(const char* cfg);
