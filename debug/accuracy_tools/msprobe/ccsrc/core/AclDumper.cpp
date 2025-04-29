@@ -496,13 +496,13 @@ void AclDumper::FinalizeDump(ExtArgs& args)
 
 void KernelInitDump() {
     if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
-    return;
+        return;
     }
 
     DebuggerErrno ret = InitAcl();
-  if (ret != DebuggerErrno::OK) {
-    LOG_ERROR(ret, "Failed to call InitAcl.");
-    return;
+    if (ret != DebuggerErrno::OK) {
+        LOG_ERROR(ret, "Failed to call InitAcl.");
+        return;
     }
     auto aclRet = CALL_ACL_API(aclmdlInitDump);
     if (aclRet != ACL_SUCCESS) {
