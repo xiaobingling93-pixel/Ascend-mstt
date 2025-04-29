@@ -22,7 +22,7 @@ import re
 
 import torch
 
-from msprobe.core.common.const import MonitorConst, Const
+from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
@@ -43,7 +43,6 @@ DIRECTORY_MAX_LENGTH = 4096
 
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
-MVGradResult = namedtuple('MVGradResult', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
 
 
 class MsgConst:
