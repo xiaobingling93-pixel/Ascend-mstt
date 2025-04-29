@@ -23,7 +23,8 @@
 
 namespace py = pybind11;
 
-HookDynamicLoader &HookDynamicLoader::GetInstance() {
+HookDynamicLoader &HookDynamicLoader::GetInstance() 
+{
     static HookDynamicLoader instance;
     return instance;
 }
@@ -38,7 +39,8 @@ bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionNa
     return true;
 }
 
-bool HookDynamicLoader::LoadLibrary() {
+bool HookDynamicLoader::LoadLibrary() 
+{
     std::string msprobePath = "";
     // 获取gil锁
     py::gil_scoped_acquire acquire;
@@ -81,7 +83,8 @@ bool HookDynamicLoader::LoadLibrary() {
     return true;
 }
 
-bool HookDynamicLoader::UnloadLibrary() {
+bool HookDynamicLoader::UnloadLibrary() 
+{
     std::lock_guard<std::mutex> lock(mutex_);
     if (!handle_) {
         MS_LOG(WARNING) << "Hook library hasn't been loaded.";
@@ -95,7 +98,8 @@ bool HookDynamicLoader::UnloadLibrary() {
     return true;
 }
 
-void *HookDynamicLoader::GetHooker(const std::string &funcName) {
+void *HookDynamicLoader::GetHooker(const std::string &funcName) 
+{
     std::lock_guard<std::mutex> lock(mutex_);
     auto iter = funcMap_.find(funcName);
     if (iter == funcMap_.end()) {

@@ -234,7 +234,8 @@ static inline AclFormat transAclFormat2MS(AclDumpMsg::OutputFormat fmt)
     return AclFormat::FORMAT_MAX;
 }
 
-static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
+static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) 
+{
     size_t num = 1;
     const AclShape& shape = host ? tensor.hostShape : tensor.deviceShape;
     for (auto dim : shape) {
@@ -251,15 +252,18 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
     return num;
 }
 
-static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) {
+static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) 
+{
     return DataUtils::SizeOfDType(tensor.dtype);
 }
 
-static inline size_t SizeOfAclDType(const AclDtype& dtype) {
+static inline size_t SizeOfAclDType(const AclDtype& dtype) 
+{
     return DataUtils::SizeOfDType(dtype);
 }
 
-size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) {
+size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) 
+{
     size_t num = EleNumOfTensor(tensor, host);
     size_t eleSize = SizeOfAclDType(tensor);
     if (num != 0 && SIZE_MAX / num < eleSize) {
@@ -268,7 +272,8 @@ size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) {
     return num * eleSize;
 }
 
-static inline int64_t GetCubeSizeByType(const AclDtype& dtype) {
+static inline int64_t GetCubeSizeByType(const AclDtype& dtype) 
+{
     if (dtype == AclDtype::DT_UINT8 || dtype == AclDtype::DT_INT8) {
         return CUBE_32;
     }

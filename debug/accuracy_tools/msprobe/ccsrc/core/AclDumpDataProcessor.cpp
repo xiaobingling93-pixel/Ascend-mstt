@@ -585,7 +585,8 @@ static DebuggerErrno StandardizedDumpPath(std::string& originPath)
     return DebuggerErrno::OK;
 }
 
-static std::string GenDataPath(const std::string& path) {
+static std::string GenDataPath(const std::string& path)
+{
     LOG_DEBUG("Original acl data path is " + path);
     std::string outputPath = DebuggerConfig::GetInstance().GetOutputPath();
     std::string dataPath;
