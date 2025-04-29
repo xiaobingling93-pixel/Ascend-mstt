@@ -68,7 +68,7 @@ BFloat16::operator float() const
     return f32;
 }
 
-const std::pair<DataType, uint8_t> kTypeSizeArray[] = {
+constexpr std::pair<DataType, size_t> kTypeSizeArray[] = {
     {DataType::DT_BOOL, 1},
     {DataType::DT_INT8, 1},
     {DataType::DT_UINT8, 1},
