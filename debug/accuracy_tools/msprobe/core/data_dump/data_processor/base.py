@@ -456,7 +456,7 @@ class BaseDataProcessor:
     def analyze_debug_backward(self, variable, grad_name_with_count_category, nested_data_structure):
         def hook_fn(grad, indexes):
             suffix = Const.SEP.join([str(index) for index in indexes])
-            suffix_with_sep = suffix + Const.SEP if suffix else ""
+            suffix_with_sep = Const.SEP + suffix if suffix else ""
             self.save_name = grad_name_with_count_category + suffix_with_sep
             grad_data_info = self.analyze_element(grad)
             self.save_name = None
