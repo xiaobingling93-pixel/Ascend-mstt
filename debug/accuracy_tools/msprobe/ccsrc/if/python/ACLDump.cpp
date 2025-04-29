@@ -46,9 +46,9 @@ static PyObject *CPythonKernelSetDump(PyObject *module, PyObject *args) {
 
 static PyObject *CPythonKernelFinalizeDump(PyObject *module, PyObject *args) {
     PyGILState_STATE gstate = PyGILState_Ensure();
-  KernelFinalizeDump();
-  PyGILState_Release(gstate);
-  Py_RETURN_NONE;
+    KernelFinalizeDump();
+    PyGILState_Release(gstate);
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef DumpMethods[] = {
