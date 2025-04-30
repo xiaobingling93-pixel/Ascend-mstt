@@ -80,6 +80,7 @@ class Service:
         self.api_register = get_api_register()
         self.register_api_hook()
         self.currrent_step_first_debug_save = True
+        self.debug_variable_counter = None
 
     @staticmethod
     def check_model_valid(models):

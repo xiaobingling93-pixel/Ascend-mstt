@@ -63,6 +63,7 @@ class Service:
         self.api_register = get_api_register()
         self.register_api_hook()
         self.currrent_step_first_debug_save = True
+        self.debug_variable_counter = None
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs=None):
@@ -418,33 +419,6 @@ class Service:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
-
-    def init_for_debug_level(self):
-        if not (self.config.level == Const.LEVEL_DEBUG and self.config.task in [Const.TENSOR, Const.STATISTICS]):
-            return
-        try:
-            self.current_rank = get_rank_if_initialized()
-        except DistributedNotInitializedError:
-            self.current_rank = None
-
-        # dir: dump_path -- rank{} -- debug.json
-        self.dump_iter_dir = self.config.dump_path
-        cur_rank = self.current_rank if self.current_rank is not None else ''
-        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
-        create_directory(dump_dir)
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
-            dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
-            create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
-
-        dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
-        self.data_collector.update_dump_paths(dump_path_aggregation)
-        self.data_collector.initialize_json_file(framework=Const.PT_FRAMEWORK)
-
-        self.debug_variable_counter = defaultdict(int)
 
     def save(self, variable, name, save_backward):
         if self.config.level != Const.LEVEL_DEBUG:
