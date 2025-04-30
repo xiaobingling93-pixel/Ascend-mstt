@@ -2011,3 +2011,22 @@ distributed:
 npu_distributed:
   - isend
   - irecv
+
+mindspeed:
+  - dropout_add_layer_norm.npu_dropout_add_layer_norm
+  - npu_rotary_position_embedding.npu_rotary_position_embedding
+  - fusion_attention_v2.npu_fusion_attention
+  - npu_mm_all_reduce_add_rms_norm.npu_mm_all_reduce_add_rms_norm
+  - npu_mm_all_reduce_add_rms_norm_.npu_mm_all_reduce_add_rms_norm_
+  - gmm.npu_gmm
+  - gmm.npu_gmm_v2
+  - npu_grouped_mat_mul_all_reduce.npu_grouped_mat_mul_all_reduce
+  - ffn.npu_ffn
+  - npu_moe_token_permute.npu_moe_token_permute
+  - npu_moe_token_unpermute.npu_moe_token_unpermute
+  - npu_ring_attention_update.npu_ring_attention_update
+  - npu_matmul_add.npu_matmul_add_fp32
+  - npu_groupmatmul_add.npu_groupmatmul_add_fp32
+  - quant_gmm.npu_quant_gmm
+  - quant_gmm.npu_quant_gmm_v2
+  - npu_apply_fused_ema_adamw.npu_apply_fused_ema_adamw

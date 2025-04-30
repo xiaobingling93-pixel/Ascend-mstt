@@ -102,19 +102,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             logger.warning("Async dump do not support complex data!")
             return tensor_stat
         elif data.dtype == torch.bool:
-            tensor_stat.stack_tensor_stat = (["Max", "Min"], torch.stack(
-                [torch.any(data), torch.all(data)]))
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([data, data, data, data]))
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         else:
-            if not data.is_floating_point() or data.dtype == torch.float64:
+            if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([
-                torch.max(data),
-                torch.min(data),
-                torch.mean(data),
-                torch.norm(data)
-            ]))
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
         return tensor_stat
 
     @staticmethod
@@ -127,17 +125,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.min = np.min(data_abs).item()
             tensor_stat.mean = np.mean(data_abs).item()
         elif data.dtype == torch.bool:
-            tensor_stat.max = torch.any(data).item()
-            tensor_stat.min = torch.all(data).item()
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         else:
-            if not data.is_floating_point() or data.dtype == torch.float64:
+            if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
-            tensor_stat.max = torch.max(data).item()
-            tensor_stat.min = torch.min(data).item()
-            tensor_stat.mean = torch.mean(data).item()
-            tensor_stat.norm = torch.norm(data).item()
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
         return tensor_stat
 
     @staticmethod
@@ -176,10 +174,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         group_ranks = dist.get_process_group_ranks(arg)
         group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
         return group_ranks_hash
-
-    @staticmethod
-    def is_distributed_op(module):
-        return getattr(module, "op_is_distributed", False)
 
     @staticmethod
     def is_hookable_element(element):
@@ -236,31 +230,23 @@ class PytorchDataProcessor(BaseDataProcessor):
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
-        if isinstance(element, torch.Size):
-            return self._analyze_torch_size(element)
-        if isinstance(element, torch.memory_format):
-            return self._analyze_memory_format(element)
-        if isinstance(element, dist.ProcessGroup):
-            return self._analyze_process_group(element)
-        if isinstance(element, dist.P2POp):
-            return self._analyze_p2pop(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, dist.ReduceOp):
-            return self._analyze_reduce_op(element)
-        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
-        if converted_numpy is not element:
-            return {"type": numpy_type, "value": converted_numpy}
-        if isinstance(element, torch.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, np.ndarray):
-            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
-            return self._analyze_builtin(element)
-        return {}
 
-    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
-        if self.is_distributed_op(module):
-            module_input_output.update_output_with_args_and_kwargs()
-        return super().analyze_forward_output(name, module, module_input_output)
+        suffix_str = Const.SEP.join(str(s) for s in suffix_stack)
+        type_analyzer = [
+            (PytorchDataProcessor.builtin_type, self._analyze_builtin),
+            (torch.Size, self._analyze_torch_size),
+            (torch.Tensor, lambda e: self._analyze_tensor(e, suffix_str)),
+            (torch.memory_format, self._analyze_memory_format),
+            (dist.ProcessGroup, self._analyze_process_group),
+            (dist.P2POp, lambda e: self._analyze_p2pop(e, suffix_str)),
+            (dist.ReduceOp, self._analyze_reduce_op),
+            (PytorchDataProcessor.np_type[:-1], self._analyze_numpy),
+            (np.ndarray, lambda e: self._analyze_ndarray(e, suffix_str)),
+        ]
+        for type_key, analyze_fn in type_analyzer:
+            if isinstance(element, type_key):
+                return analyze_fn(element)
+        return {}
 
     def _analyze_p2pop(self, arg, suffix):
         p2pop_info = {"class_type": "torch.distributed.P2POp"}
@@ -284,22 +270,17 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_json.update({'type': 'torch.Tensor'})
         tensor_json.update({'dtype': dtype})
         tensor_json.update({"shape": tensor.shape})
-        if tensor_stat.stack_tensor_stat is None:
-            tensor_json.update({"Max": tensor_stat.max})
-            tensor_json.update({"Min": tensor_stat.min})
-            tensor_json.update({"Mean": tensor_stat.mean})
-            tensor_json.update({"Norm": tensor_stat.norm})
-            tensor_json.update({"requires_grad": tensor.requires_grad})
-            if tensor_stat.max is not None:
-                if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
-                    tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
-            if tensor_stat.min is not None:
-                if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
-                    tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
 
-        else:
-            tensor_json.update({"requires_grad": tensor.requires_grad})
-            tensor_json.update({"tensor_stat": tensor_stat.stack_tensor_stat})
+        stat_values = [
+            tensor_stat.max,
+            tensor_stat.min,
+            tensor_stat.mean,
+            tensor_stat.norm
+        ]
+        placeholder_index = self.data_writer.append_stat_to_buffer(stat_values)
+
+        tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
+        tensor_json.update({"requires_grad": tensor.requires_grad})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
@@ -329,10 +310,10 @@ class TensorDataProcessor(PytorchDataProcessor):
             save_pt(saved_tensor, file_path)
         return single_arg
 
-    def _analyze_numpy(self, ndarray, suffix):
+    def _analyze_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_pt(torch.tensor(ndarray), file_path)
-        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json = super()._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
 
@@ -427,10 +408,22 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             raise RuntimeError(f"overflow check failed") from e
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if tensor_json['Max'] is None or tensor_json['Min'] is None:
+        tensor_stat_index = tensor_json.get(Const.TENSOR_STAT_INDEX)
+        if tensor_stat_index is None:
+            logger.warning("tensor_stat_index does not exist in tensor_json.")
             return
-        self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
-                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
+        max_tensor = self.data_writer.get_buffer_values_max(tensor_stat_index)
+        min_tensor = self.data_writer.get_buffer_values_min(tensor_stat_index)
+
+        if max_tensor is None or min_tensor is None:
+            return
+
+        if torch.isinf(max_tensor) or torch.isnan(max_tensor):
+            self.has_overflow = True
+            return
+
+        if torch.isinf(min_tensor) or torch.isnan(min_tensor):
+            self.has_overflow = True
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)

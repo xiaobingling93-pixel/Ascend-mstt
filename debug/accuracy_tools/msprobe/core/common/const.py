@@ -80,6 +80,8 @@ class Const:
     NUMPY_SUFFIX = ".npy"
     NUMPY_PATTERN = "*.npy"
     PT_SUFFIX = ".pt"
+    PY_SUFFIX = ".py"
+    INIT_PY = "init.py"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
     ONE_MB = 1048576  # 1 * 1024 * 1024
@@ -210,12 +212,15 @@ class Const:
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
 
+    TYPE = 'type'
     DTYPE = 'dtype'
     SHAPE = 'shape'
+    STACK_INFO = 'stack_info'
     MAX = 'Max'
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    TENSOR_STAT_INDEX = 'tensor_stat_index'
 
     CODE_STACK = 'Code Stack'
     OP_NAME = 'Op Name'
@@ -244,6 +249,7 @@ class Const:
     PT_API_TYPE_ATEN = "aten"
     PT_API_TYPE_DIST = "distributed"
     PT_API_TYPE_NPU_DIST = "npu_distributed"
+    PT_API_TYPE_MINDSPEED = "mindspeed"
 
     MS_API_TYPE_OPS = "ops"
     MS_API_TYPE_TENSOR = "tensor"
@@ -251,6 +257,7 @@ class Const:
     MS_API_TYPE_MINT = "mint.ops"
     MS_API_TYPE_MINT_FUNC = "mint.nn.functional"
     MS_API_TYPE_COM = "communication.comm_func"
+    MS_API_TYPE_MINT_DIST = "mint.distributed"
 
     FUNCTIONAL_API_TYPE_PREFIX = "Functional"
     TENSOR_API_TYPE_PREFIX = "Tensor"
@@ -260,9 +267,11 @@ class Const:
     NPU_API_TYPE_PREFIX = "NPU"
     ATEN_API_TYPE_PREFIX = "Aten"
     VF_API_TYPE_PREFIX = "VF"
+    MINDSPEED_API_TYPE_PREFIX = "MindSpeed"
 
     MINT_API_TYPE_PREFIX = "Mint"
     MINT_FUNC_API_TYPE_PREFIX = "MintFunctional"
+    MINT_DIST_API_TYPE_PREFIX = "MintDistributed"
 
     SUPPORT_API_DICT_KEY_MAP = {
         PT_FRAMEWORK: {
@@ -273,7 +282,8 @@ class Const:
             PT_API_TYPE_NPU: PT_API_TYPE_NPU,
             PT_API_TYPE_ATEN: PT_API_TYPE_ATEN,
             PT_API_TYPE_DIST: PT_API_TYPE_DIST,
-            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST
+            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST,
+            PT_API_TYPE_MINDSPEED: PT_API_TYPE_MINDSPEED
         },
         MS_FRAMEWORK: {
             MS_API_TYPE_OPS: MS_API_TYPE_OPS,
@@ -281,7 +291,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: MS_API_TYPE_TENSOR,
             MS_API_TYPE_MINT: MS_API_TYPE_MINT,
             MS_API_TYPE_MINT_FUNC: MS_API_TYPE_MINT_FUNC,
-            MS_API_TYPE_COM: MS_API_TYPE_COM
+            MS_API_TYPE_COM: MS_API_TYPE_COM,
+            MS_API_TYPE_MINT_DIST: MS_API_TYPE_MINT_DIST
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: PT_API_TYPE_FUNCTIONAL,
@@ -301,7 +312,8 @@ class Const:
             PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
             PT_API_TYPE_ATEN: ATEN_API_TYPE_PREFIX,
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX,
-            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX
+            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX,
+            PT_API_TYPE_MINDSPEED: MINDSPEED_API_TYPE_PREFIX
         },
         MS_FRAMEWORK: {
             MS_API_TYPE_OPS: FUNCTIONAL_API_TYPE_PREFIX,
@@ -309,7 +321,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: TENSOR_API_TYPE_PREFIX,
             MS_API_TYPE_MINT: MINT_API_TYPE_PREFIX,
             MS_API_TYPE_MINT_FUNC: MINT_FUNC_API_TYPE_PREFIX,
-            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX
+            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX,
+            MS_API_TYPE_MINT_DIST: MINT_DIST_API_TYPE_PREFIX
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: FUNCTIONAL_API_TYPE_PREFIX,
@@ -318,6 +331,30 @@ class Const:
             PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX
         }
+    }
+
+    def _fused_adamw_(
+        self,
+        grads,
+        exp_avgs,
+        exp_avg_sqs,
+        max_exp_avg_sqs,
+        state_steps,
+        *,
+        lr,
+        beta1,
+        beta2,
+        weight_decay,
+        eps,
+        amsgrad,
+        maximize,
+        grad_scale=None,
+        found_inf=None
+    ):
+        pass
+
+    API_WITH_SELF_ARG = {
+        'Torch._fused_adamw_': _fused_adamw_
     }
 
 
@@ -478,13 +515,6 @@ class CompareConst:
         Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
     }
 
-    STRUCT_COMPARE_KEY = [
-        INPUT_STRUCT,
-        OUTPUT_STRUCT,
-        PARAMS_STRUCT,
-        PARAMS_GRAD_STRUCT
-    ]
-
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
     THOUSAND_RATIO_THRESHOLD = 0.001
@@ -563,15 +593,35 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+
+    API_MAPPING_KEYS_TO_COMPARE = [
+        ('ms_args', 'pt_args'),
+        ('ms_outputs', 'pt_outputs'),
+        ('ms_parameters', 'pt_parameters'),
+        ('ms_parameters_grad', 'pt_parameters_grad')
+    ]
+
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
-    COMPARE_KEY = 'compare_key'
-    COMPARE_SHAPE = 'compare_shape'
+
+    CMP_KEY = 'compare_key'
+    CMP_SHAPE = 'compare_shape'
+
+    OP_NAME_X = 'op_name_x'
+    MATCH_RESULT_COLUMNS = [
+        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        CMP_KEY, CMP_SHAPE,
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+    ]
+
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
     UNREADABLE = 'unreadable data'
+    NPU_DUMP_DATA_DIR = 'npu_dump_data_dir'
+    BENCH_DUMP_DATA_DIR = 'bench_dump_data_dir'
+    NO_REAL_DATA_FLAG = '-1'
 
 
 class FileCheckConst:

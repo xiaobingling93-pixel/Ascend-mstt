@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16) 
+cmake_minimum_required(VERSION 3.16)
 project(IPCMonitor)
 
 set(CMAKE_SKIP_RPATH TRUE)
@@ -12,11 +12,18 @@ find_package(Python REQUIRED COMPONENTS Interpreter Development)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/metric
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/mspti_monitor
     ${DYNOLOG_PATH}/third_party/glog/src
     ${DYNOLOG_PATH}/build/third_party/glog
+    ${DYNOLOG_PATH}/third_party/json/single_include
 )
 
-file(GLOB_RECURSE IPC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/*.cpp)
+file(GLOB_RECURSE IPC_SOURCES 
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/metric/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/mspti_monitor/*.cpp
+)
 
 set(SOURCES
     bindings.cpp
@@ -31,13 +38,19 @@ set_target_properties(IPCMonitor
     PREFIX  ""
 )
 
-target_link_libraries(IPCMonitor PRIVATE pybind11::module)
+target_link_libraries(IPCMonitor PRIVATE 
+    pybind11::module
+    pthread
+    ${CMAKE_CURRENT_SOURCE_DIR}/stub/libmspti.so
+)
+
 target_link_libraries(IPCMonitor PRIVATE ${DYNOLOG_PATH}/build/third_party/glog/libglog.a)
 
 target_compile_options(IPCMonitor PRIVATE
     -fPIC
     -fstack-protector-all
     -ftrapv
+    $<$<NOT:$<STREQUAL:${CMAKE_BUILD_TYPE},Debug>>:-O2>
 )
 
 target_link_options(IPCMonitor PRIVATE

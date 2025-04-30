@@ -1,10 +1,24 @@
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
 from unittest.mock import MagicMock
 
 import torch
 
 from msprobe.core.data_dump.scope import ModuleRangeScope
-from msprobe.pytorch.common.utils import Const
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 
 
@@ -25,58 +39,12 @@ class TestModuleProcesser(unittest.TestCase):
         processor = ModuleProcesser(scope)
         self.assertIsNone(processor.scope)
 
-    def test_module_count_func(self):
+    def test_set_and_get_calls_number(self):
+        ModuleProcesser.reset_module_stats()
         test = ModuleProcesser(None)
         self.assertEqual(test.module_count, {})
         module_name = "nope"
-        test.module_count_func(module_name)
+        test.set_and_get_calls_number(module_name)
         self.assertEqual(test.module_count["nope"], 0)
 
-    def test_node_hook_forward_start(self):
-        name_prefix = "forward_layer"
-        hook = self.processor.node_hook(name_prefix, start_or_stop=Const.START)
-        module = MagicMock()
-        input = (self.mock_tensor,)
-        module.mindstudio_reserved_name = None
-        hook(module, input)
-        expected_name = f"forward_layer{Const.SEP}0"
-        self.assertEqual(module.mindstudio_reserved_name, [expected_name])
-        self.assertIn(expected_name, ModuleProcesser.module_stack)
-        self.assertEqual(ModuleProcesser.api_parent_node, expected_name)
-
-    def test_node_hook_forward_stop(self):
-        name_prefix = "forward_layer"
-        hook = self.processor.node_hook(name_prefix, start_or_stop=Const.STOP)
-        ModuleProcesser.module_stack.append(f"forward_layer{Const.SEP}0")
-
-        module = MagicMock()
-        input = (self.mock_tensor,)
-        reserved_name = f"forward_layer{Const.SEP}0"
-        module.mindstudio_reserved_name = [reserved_name]
-        hook(module, input)
-        self.assertNotIn([f"forward_layer{Const.SEP}0"], ModuleProcesser.module_stack)
-        self.assertEqual(ModuleProcesser.api_parent_node, reserved_name)
-
-    def test_node_hook_backward(self):
-        name_prefix = "backward_layer"
-        hook = self.processor.node_hook(name_prefix, start_or_stop=Const.START)
-
-        module = MagicMock()
-        input = (self.mock_tensor,)
-        module.mindstudio_reserved_name = None
-        ModuleProcesser.module_node[f"forward_layer{Const.SEP}0"] = None
-        hook(module, input)
-        expected_name = f"backward_layer{Const.SEP}0"
-        self.assertEqual(module.mindstudio_reserved_name, [expected_name])
-        self.assertIn(expected_name, ModuleProcesser.module_node)
-
-    def test_has_register_backward_hook(self):
-        module = MagicMock()
-        module._backward_hooks = {0: lambda: None}
-        module._is_full_backward_hook = False
-        result = self.processor.has_register_backward_hook(module)
-        self.assertTrue(result)
-
-        module._is_full_backward_hook = True
-        result = self.processor.has_register_backward_hook(module)
-        self.assertFalse(result)
+        ModuleProcesser.reset_module_stats()

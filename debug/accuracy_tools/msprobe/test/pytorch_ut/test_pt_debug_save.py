@@ -36,13 +36,15 @@ class TestPytorchDebuggerSave(TestCase):
         }
         common_config = CommonConfig(statistics_task_json)
         task_config = BaseConfig(statistics_task_json)
-        with patch("msprobe.pytorch.debugger.precision_debugger.parse_json_config", return_value=(common_config, task_config)):
+        with patch("msprobe.pytorch.debugger.precision_debugger.parse_json_config",
+                   return_value=(common_config, task_config)):
             self.debugger = PrecisionDebugger()
 
     def test_forward_and_backward(self):
         def forward_func(x, y):
             PrecisionDebugger.save(x, "x_tensor")
             return x * y
+
         x = torch.tensor([1.])
         y = torch.tensor([2.])
         x.requires_grad = True
@@ -57,24 +59,24 @@ class TestPytorchDebuggerSave(TestCase):
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
                     "shape": torch.Size([1]),
-                    "Max": 1.0,
-                    "Min": 1.0,
-                    "Mean": 1.0,
-                    "Norm": 1.0,
                     "requires_grad": True
                 },
                 "x_tensor_grad.0": {
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
                     "shape": torch.Size([1]),
-                    "Max": 2.0,
-                    "Min": 2.0,
-                    "Mean": 2.0,
-                    "Norm": 2.0,
                     "requires_grad": False
                 }
             }
         }
+
         loss = forward_func(x, y)
         loss.backward()
-        self.assertEqual(self.debugger.service.data_collector.data_writer.cache_debug, result_json)
+
+        result = self.debugger.service.data_collector.data_writer.cache_debug
+        # Remove 'tensor_stat_index' from all entries in the data dictionary
+        for key in result["data"]:
+            if 'tensor_stat_index' in result["data"][key]:
+                del result["data"][key]['tensor_stat_index']
+
+        self.assertEqual(result, result_json)

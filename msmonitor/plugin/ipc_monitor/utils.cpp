@@ -1,4 +1,20 @@
 #include "utils.h"
+#include <glog/logging.h>
+#include <glog/stl_logging.h>
+#include <cctype>
+#include <cstring>
+#include <algorithm>
+#include <chrono>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <random>
+#include <unordered_map>
+#include <fcntl.h>
+#include <libgen.h>
+#include <limits.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -38,6 +54,14 @@ std::string getCurrentTimestamp()
     return oss.str();
 }
 
+uint64_t getCurrentTimestamp64()
+{
+    auto now = std::chrono::system_clock::now();
+    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
+    auto milli_time = std::chrono::duration_cast<std::chrono::milliseconds>(micros).count();
+    return milli_time;
+}
+
 std::string formatErrorCode(SubModule submodule, ErrCode errorCode)
 {
     std::ostringstream oss;
@@ -45,10 +69,8 @@ std::string formatErrorCode(SubModule submodule, ErrCode errorCode)
     oss << "ERR" << std::setw(2) << std::setfill('0') << static_cast<int>(submodule); // 2: 字段宽度
     oss << std::setw(3) << std::setfill('0') << static_cast<int>(errorCode); // 3: 字段宽度
     oss << " " << submoduleMap[submodule] << " " << errCodeMap[errorCode];
-
     return oss.str();
 };
-
 
 int32_t GetProcessId()
 {
@@ -68,11 +90,10 @@ std::pair<int32_t, std::string> GetParentPidAndCommand(int32_t pid)
     if (std::getline(statFile, line)) {
         int ret = sscanf(line.c_str(), "%*d (%[^)]) %*c %d", command.data(), &parentPid);
         if (ret == 2) { // 2: 接收到2个字符
-            LOG(INFO) << "Success to get parent pid: " << parentPid;
             return std::make_pair(parentPid, command);
         }
     }
-    LOG(ERROR) << " Failed to parse /proc/" << pid << "/stat";
+    LOG(WARNING) << "Failed to parse /proc/" << pid << "/stat";
     return std::make_pair(0, "");
 }
 
@@ -97,8 +118,10 @@ std::vector<int32_t> GetPids()
     for (const auto &pidPair : pids) {
         res.push_back(pidPair.first);
     }
+    LOG(INFO) << "Success to get parent pid: " << res;
     return res;
 }
+
 std::string GenerateUuidV4()
 {
     static std::random_device randomDevice;
@@ -131,5 +154,252 @@ std::string GenerateUuidV4()
     return stringStream.str();
 }
 
+bool Str2Uint32(uint32_t& dest, const std::string& str)
+{
+    if (str.empty()) {
+        LOG(ERROR) << "Str to uint32 failed, input string is null";
+        return false;
+    }
+    size_t pos = 0;
+    try {
+        dest = static_cast<uint32_t>(std::stoul(str, &pos));
+    } catch(...) {
+        LOG(ERROR) << "Str to uint32 failed, input string is " << str;
+        return false;
+    }
+    if (pos != str.size()) {
+        LOG(ERROR) << "Str to uint32 failed, input string is " << str;
+        return false;
+    }
+    return true;
+}
+
+bool Str2Bool(bool& dest, const std::string& str)
+{
+    std::string lower_str = str;
+    std::transform(lower_str.begin(), lower_str.end(), lower_str.begin(), ::tolower);
+
+    if (lower_str == "true" || lower_str == "1") {
+        dest = true;
+        return true;
+    }
+
+    if (lower_str == "false" || lower_str == "0") {
+        dest = false;
+        return true;
+    }
+    LOG(ERROR) << "Str to bool failed, input string is " << str;
+    return false;
+}
+
+std::string& trim(std::string& str)
+{
+    if (str.empty()) {
+        return str;
+    }
+    str.erase(0, str.find_first_not_of(" "));
+    str.erase(str.find_last_not_of(" ") + 1);
+    return str;
+}
+
+// split函数
+std::vector<std::string> split(const std::string& str, char delimiter)
+{
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(str);
+
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
+
+void *MsptiMalloc(size_t size, size_t alignment)
+{
+    if (alignment > 0) {
+        size = (size + alignment - 1) / alignment * alignment;
+    }
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L
+    void *ptr = nullptr;
+    if (posix_memalign(&ptr, alignment, size) != 0) {
+        ptr = nullptr;
+    }
+    return ptr;
+#else
+    return malloc(size);
+#endif
+}
+
+bool PathUtils::IsFileExist(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    return access(path.c_str(), F_OK) == 0;
+}
+
+bool PathUtils::IsFileWritable(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    return access(path.c_str(), W_OK) == 0;
+}
+
+bool PathUtils::IsDir(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    struct stat st{};
+    int ret = lstat(path.c_str(), &st);
+    if (ret != 0) {
+        return false;
+    }
+    return S_ISDIR(st.st_mode);
+}
+
+bool PathUtils::CreateDir(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    if (IsFileExist(path)) {
+        return IsDir(path);
+    }
+    size_t pos = 0;
+    while ((pos = path.find_first_of('/', pos)) != std::string::npos) {
+        std::string baseDir = path.substr(0, ++pos);
+        if (IsFileExist(baseDir)) {
+            if (IsDir(baseDir)) {
+                continue;
+            } else {
+                return false;
+            }
+        }
+        if (mkdir(baseDir.c_str(), DATA_DIR_AUTHORITY) != 0) {
+            if (errno != EEXIST) {
+                return false;
+            }
+        }
+    }
+    auto ret = mkdir(path.c_str(), DATA_DIR_AUTHORITY);
+    return (ret == 0 || errno == EEXIST) ? true : false;
+}
+
+std::string PathUtils::RealPath(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return "";
+    }
+    char realPath[PATH_MAX] = {0};
+    if (realpath(path.c_str(), realPath) == nullptr) {
+        return "";
+    }
+    return std::string(realPath);
+}
+
+std::string PathUtils::RelativeToAbsPath(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return "";
+    }
+    if (path[0] != '/') {
+        char pwdPath[PATH_MAX] = {0};
+        if (getcwd(pwdPath, PATH_MAX) != nullptr) {
+            return std::string(pwdPath) + "/" + path;
+        }
+        return "";
+    }
+    return std::string(path);
+}
+
+std::string PathUtils::DirName(const std::string &path)
+{
+    if (path.empty()) {
+        return "";
+    }
+    char tempPath[PATH_MAX] = {0};
+    strncpy(tempPath, path.c_str(), path.size() < PATH_MAX ? path.size() : PATH_MAX);
+    char* cPath = dirname(tempPath);
+    return cPath ? std::string(cPath) : "";
+}
+
+bool PathUtils::CreateFile(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX || !CreateDir(DirName(path))) {
+        return false;
+    }
+    int fd = creat(path.c_str(), DATA_FILE_AUTHORITY);
+    return (fd < 0 || close(fd) != 0) ? false : true;
+}
+
+bool PathUtils::IsSoftLink(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX || !IsFileExist(path)) {
+        return false;
+    }
+    struct stat st{};
+    if (lstat(path.c_str(), &st) != 0) {
+        return false;
+    }
+    return S_ISLNK(st.st_mode);
+}
+
+bool PathUtils::DirPathCheck(const std::string& absPath)
+{
+    if (absPath.empty() || absPath.size() > PATH_MAX) {
+        fprintf(stderr, "[ERROR] The length of Path %s is invalid.\n", absPath.c_str());
+        return false;
+    }
+    if (IsSoftLink(absPath)) {
+        fprintf(stderr, "[ERROR] Path %s is soft link.\n", absPath.c_str());
+        return false;
+    }
+    if (!IsFileExist(absPath) && !CreateDir(absPath)) {
+        fprintf(stderr, "[ERROR] Path %s not exist and create failed.\n", absPath.c_str());
+        return false;
+    }
+    if (!IsDir(absPath) || !IsFileWritable(absPath)) {
+        fprintf(stderr, "[ERROR] %s is not a directory or is not writable.\n", absPath.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool CreateMsmonitorLogPath(std::string& path)
+{
+    const char* logPathEnvVal = getenv("MSMONITOR_LOG_PATH");
+    std::string logPath;
+    if (logPathEnvVal != nullptr) {
+        logPath = logPathEnvVal;
+    }
+    if (logPath.empty()) {
+        char cwdPath[PATH_MAX] = {0};
+        if (getcwd(cwdPath, PATH_MAX) != nullptr) {
+            logPath = cwdPath;
+        }
+    }
+    if (logPath.empty()) {
+        fprintf(stderr, "[ERROR] Failed to get msmonitor log path.\n");
+        return false;
+    }
+    logPath = logPath + "/msmonitor_log";
+    std::string absPath = PathUtils::RelativeToAbsPath(logPath);
+    if (PathUtils::DirPathCheck(absPath)) {
+        std::string realPath = PathUtils::RealPath(absPath);
+        if (PathUtils::CreateDir(realPath)) {
+            path = realPath;
+            fprintf(stderr, "[INFO] Msmonitor log will record to %s.\n", realPath.c_str());
+            return true;
+        }
+        fprintf(stderr, "[ERROR] Create LOG_PATH: %s failed.\n", realPath.c_str());
+    } else {
+        fprintf(stderr, "[ERROR] LOG_PATH: %s of Msmonitor is invalid.\n", absPath.c_str());
+    }
+    return false;
+}
 } // namespace ipc_monitor
 } // namespace dynolog_npu

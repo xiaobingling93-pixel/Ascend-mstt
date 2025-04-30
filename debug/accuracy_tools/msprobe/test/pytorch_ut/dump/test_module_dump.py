@@ -16,47 +16,68 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-import torch
-import torch.nn as nn
+from torch import nn
 
-from msprobe.core.data_dump.api_registry import ApiRegistry
-from msprobe.pytorch import PrecisionDebugger
-from msprobe.pytorch.hook_module.api_register import get_api_register
-from msprobe.pytorch.service import torch_version_above_or_equal_2
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
+from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 
 
 class TestModuleDumper(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        PrecisionDebugger._instance = None
-        get_api_register().restore_all_api()
-
-    @classmethod
-    def tearDownClass(cls):
-        PrecisionDebugger._instance = None
-        get_api_register().restore_all_api()
-
     def setUp(self):
-        self.module = nn.Linear(8, 4)
-        debugger = PrecisionDebugger(dump_path="./")
-        self.module_dumper = debugger.module_dumper
+        self.service = MagicMock()
+        with patch('msprobe.pytorch.dump.module_dump.module_dump.get_api_register'):
+            self.module_dumper = ModuleDumper(self.service)
+
+    def test__init__(self):
+        self.service = MagicMock()
+        with patch('msprobe.pytorch.dump.module_dump.module_dump.get_api_register') as mock_get_api_register:
+            self.module_dumper = ModuleDumper(self.service)
+            self.assertEqual(self.module_dumper.service, self.service)
+            mock_get_api_register.assert_called_once()
+
+    def test_start_module_dump(self):
+        module = nn.Module()
+        with patch.object(logger, 'info_on_rank_0') as mock_info:
+            module.msprobe_hook = True
+            ModuleProcesser.enable_module_dump = False
+            self.module_dumper.api_register.restore_all_api.reset_mock()
+            self.module_dumper.start_module_dump(module, 'dump_name')
+            mock_info.assert_called_with('The init dump is enabled, and the module dump function will not be available.')
+            self.assertFalse(ModuleProcesser.enable_module_dump)
+            self.module_dumper.api_register.restore_all_api.assert_not_called()
+            self.assertFalse(hasattr(module, 'msprobe_module_dump'))
+
+            del module.msprobe_hook
+            mock_info.reset_mock()
+            self.module_dumper.start_module_dump(module, 'dump_name')
+            mock_info.assert_not_called()
+            self.assertTrue(ModuleProcesser.enable_module_dump)
+            self.module_dumper.api_register.restore_all_api.assert_called_once()
+            self.module_dumper.service.module_processor.register_module_hook.assert_called_with(
+                module,
+                self.module_dumper.service.build_hook,
+                recursive=False,
+                module_names=['dump_name']
+            )
+            self.assertTrue(module.msprobe_module_dump)
+            ModuleProcesser.enable_module_dump = False
+
+            self.module_dumper.api_register.restore_all_api.reset_mock()
+            self.module_dumper.service.module_processor.register_module_hook.reset_mock()
+            self.module_dumper.start_module_dump(module, 'dump_name')
+            mock_info.assert_not_called()
+            self.assertTrue(ModuleProcesser.enable_module_dump)
+            self.module_dumper.api_register.restore_all_api.assert_called_once()
+            self.module_dumper.service.module_processor.register_module_hook.assert_not_called()
+
+            ModuleProcesser.enable_module_dump = False
 
     def test_stop_module_dump(self):
-        self.module_dumper.hook_handle_list.extend([1, 2, 3])
-        with patch.object(ApiRegistry, 'register_all_api') as mock_api_register:
-            mock_handle1 = MagicMock(spec=torch.utils.hooks.RemovableHandle)
-            mock_handle2 = MagicMock(spec=torch.utils.hooks.RemovableHandle)
-            self.module_dumper.hook_handle_list.extend([mock_handle1, mock_handle2])
+        ModuleProcesser.enable_module_dump = True
+        self.module_dumper.api_register.register_all_api.reset_mock()
+        self.module_dumper.stop_module_dump()
+        self.assertFalse(ModuleProcesser.enable_module_dump)
+        self.module_dumper.api_register.register_all_api.assert_called_once()
 
-            self.module_dumper.stop_module_dump()
-            mock_handle1.remove.assert_called_once()
-            mock_handle2.remove.assert_called_once()
-            self.assertEqual(self.module_dumper.hook_handle_list, [])
-            mock_api_register.assert_called_once()
-
-    def test_register_hook(self):
-        self.module_dumper.register_hook(self.module, "TestModule")
-        if torch_version_above_or_equal_2:
-            self.assertEqual(len(self.module_dumper.hook_handle_list), 6)
-        else:
-            self.assertEqual(len(self.module_dumper.hook_handle_list), 5)
+        self.module_dumper.api_register.register_all_api.reset_mock()

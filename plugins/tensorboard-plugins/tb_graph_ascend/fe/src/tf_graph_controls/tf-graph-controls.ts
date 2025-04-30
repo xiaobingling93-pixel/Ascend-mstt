@@ -490,7 +490,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         </div>
         <div class="minimap-control">
           <paper-checkbox checked on-change="_toggleNpuMinimap">调试侧缩略图</paper-checkbox>
-          <paper-checkbox class="right-checkbox" checked on-click="_toggleBenchMinimap">标杆侧缩略图</paper-checkbox>
+          <template is="dom-if" if="[[renderHierarchy.bench]]">
+            <paper-checkbox class="right-checkbox" checked on-click="_toggleBenchMinimap">标杆侧缩略图</paper-checkbox>
+          </template>
         </div>
         <div class="control-holder runs-row">
           <div class="title">目录 <span class="counter">([[datasets.length]])</span></div>

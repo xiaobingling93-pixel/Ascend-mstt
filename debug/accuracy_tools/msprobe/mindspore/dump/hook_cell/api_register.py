@@ -16,6 +16,7 @@
 import os
 
 from mindspore import Tensor, ops, mint
+from mindspore.mint import distributed
 from mindspore.mint.nn import functional
 from mindspore.communication import comm_func
 
@@ -41,7 +42,8 @@ if not is_mindtorch():
             Const.MS_API_TYPE_TENSOR: (Tensor, (Tensor,)),
             Const.MS_API_TYPE_MINT: (mint, (mint,)),
             Const.MS_API_TYPE_MINT_FUNC: (functional, (functional,)),
-            Const.MS_API_TYPE_COM: (comm_func, (comm_func,))
+            Const.MS_API_TYPE_COM: (comm_func, (comm_func,)),
+            Const.MS_API_TYPE_MINT_DIST: (distributed, (distributed,))
         }
     }
     if stub_tensor_existed:
@@ -70,7 +72,7 @@ _inner_used_api = {
         ops, "norm", "square", "sqrt", "is_complex", "stack", "is_floating_point"
     ),
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_TENSOR: (
-        Tensor, "to", "numel"
+        Tensor, "to", "numel", 'sum'
     ),
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_MINT: (
         mint, "max", "min", "mean", "norm"
@@ -84,6 +86,8 @@ class ApiTemplate(HOOKCell):
         self.api_func = api_func
         self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
         super().__init__(hook_build_func)
+        if prefix == Const.MINT_DIST_API_TYPE_PREFIX:
+            self.op_is_distributed = True
 
     @staticmethod
     def async_to_sync(output):
@@ -103,9 +107,14 @@ class ApiTemplate(HOOKCell):
 
         output = self.api_func(*args, **kwargs)
 
-        if self.prefix_api_name.startswith(MsConst.DISTRIBUTED_DATA_PREFIX):
+        if self.prefix_api_name.startswith(
+            (MsConst.DISTRIBUTED_DATA_PREFIX, Const.MINT_DIST_API_TYPE_PREFIX)
+        ):
             if kwargs.get("async_op") or self.api_name in ["isend", "irecv"]:
                 output = self.async_to_sync(output)
+            if self.api_name == "batch_isend_irecv" and isinstance(output, list):
+                output = [self.async_to_sync(handle) for handle in output]
+
         return output
 
     def forward(self, *args, **kwargs):

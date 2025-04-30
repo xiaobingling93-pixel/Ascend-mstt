@@ -20,6 +20,7 @@ import zlib
 from dataclasses import dataclass
 
 import numpy as np
+import pandas as pd
 
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
@@ -79,22 +80,6 @@ def check_and_return_dir_contents(dump_dir, prefix):
             )
             raise CompareException(CompareException.INVALID_PATH_ERROR)
     return contents
-
-
-def rename_api(npu_name, process):
-    """
-    原api： {api_type}.{api_name}.{API调用次数}.{前向反向}.{input/output}.{参数序号}
-    rename后： {api_type}.{api_name}.{input/output}.{参数序号}
-    """
-    npu_split = npu_name.split(process)
-    try:
-        torch_func_index, in_out = npu_split[0], npu_split[1]
-    except IndexError as error:
-        logger.error(f'{npu_name} can not be split with {process}, please check!')
-        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
-    torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
-    torch_func = str(torch_func_split[0]) + str(in_out)
-    return torch_func
 
 
 def read_op(op_data, op_name):
@@ -191,35 +176,146 @@ def gen_op_item(op_data, op_name):
     return op_item
 
 
-def resolve_api_special_parameters(data_dict, full_op_name, item_list):
+@dataclass
+class ApiItemInfo:
+    name: str
+    struct: tuple
+    stack_info: list
+
+
+def merge_tensor(tensor_list, dump_mode):
+    keys = [
+        CompareConst.OP_NAME,
+        CompareConst.INPUT_STRUCT,
+        CompareConst.KWARGS_STRUCT,
+        CompareConst.OUTPUT_STRUCT,
+        CompareConst.PARAMS_STRUCT,
+        CompareConst.PARAMS_GRAD_STRUCT,
+        Const.SUMMARY,
+        Const.STACK_INFO
+    ]
+    op_dict = {key: [] for key in keys}
+
+    if dump_mode == Const.ALL:
+        op_dict["data_name"] = []
+
+    for tensor in tensor_list:
+        # A dict(len=2) with 'full_op_name' and 'full_info' is added to the tensor only if self.stack_mode is True
+        if len(tensor) == 2:
+            op_dict[Const.STACK_INFO].append(tensor['full_info'])
+            break
+
+        op_dict[CompareConst.OP_NAME].append(tensor['full_op_name'])
+
+        _, state = get_name_and_state(tensor['full_op_name'])
+        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
+        if not struct_key:
+            continue
+        if dump_mode == Const.MD5:
+            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
+        else:
+            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
+        op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
+
+        if dump_mode == Const.ALL:
+            op_dict["data_name"].append(tensor['data_name'])
+
+    if not op_dict[CompareConst.KWARGS_STRUCT]:
+        del op_dict[CompareConst.KWARGS_STRUCT]
+    return op_dict if op_dict[CompareConst.OP_NAME] else {}
+
+
+def print_compare_ends_info():
+    total_len = len(CompareConst.COMPARE_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
+    logger.info('*' * total_len)
+    logger.info(f"*{CompareConst.COMPARE_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
+    logger.info('*' * total_len)
+
+
+def table_value_is_valid(value: str) -> bool:
+    if not isinstance(value, str):
+        return True
+    try:
+        # -1.00 or +1.00 should be considered as digit numbers
+        float(value)
+    except ValueError:
+        # otherwise, they will be considered as formular injections
+        return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+    return True
+
+
+def get_name_and_state(name):
     """
-    Function Description:
-        解析下面格式的数据, 是api参数的一种特殊格式
-        {
-         "last_hidden_state": {
-          "type": "torch.Tensor",
-          "dtype": "torch.bfloat16",
-          ...
-         },
-         "loss": {
-          "type": "torch.Tensor",
-          "dtype": "torch.float32",
-          ...
-         }
-        }
-    Parameter:
-        data_dict: 字典格式的数据
-        full_op_name: 参数的全名字符串
-        item_list: 参数信息集合        
+    Get api/module name and state
+    example:
+    name = 'conv2d.forward.1.input.0'
+    return: ('conv2d.forward.1.', 'input')
+
+    name = 'Functional.pad.0.backward.output.0'
+    return: ('Functional.pad.0.backward.', 'output')
+
+    state type: input, output, kwargs, parameters, parameters_grad
     """
-    for key, value in data_dict.items():
-        if isinstance(value, dict):
-            parsed_item = value
-            parts = full_op_name.split(Const.SEP)
-            parts.insert(-1, key)
-            full_op_name_new = ".".join(parts)
-            parsed_item['full_op_name'] = full_op_name_new
-            item_list.append(parsed_item)
+    if not isinstance(name, str):
+        logger.error(f'Invalid name: {name}, type should be string, please check.')
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
+
+    if Const.PARAMS_GRAD in name.split(Const.SEP):
+        return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
+
+    split = re.split(Const.REGEX_FORWARD_BACKWARD, name)
+    if len(split) < 3:
+        logger.error(f'Invalid name string: {name}, can not be split by forward/backward, please check.')
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
+    api = f'{split[0]}.{split[1]}.'
+    state_str = split[2]
+    match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
+    if not match:
+        raise CompareException(f'Invalid name string: {name}')
+    if match.group(1):
+        api = f'{api}{match.group(1)}'
+    state = match.group(2)
+    return api, state
+
+
+def reorder_op_name_list(op_name_list):
+    if not op_name_list:
+        return op_name_list
+
+    parameters = []
+    output = []
+    parameters_grad = []
+    others = []
+    for x in op_name_list:
+        state = get_name_and_state(x)[1]
+        if state == Const.PARAMS:
+            parameters.append(x)
+        elif state == Const.OUTPUT:
+            output.append(x)
+        elif state == Const.PARAMS_GRAD:
+            parameters_grad.append(x)
+        else:
+            others.append(x)
+    # 合并others, parameters, 和output，确保parameters排在output前面
+    op_name_reorder = others + parameters + output + parameters_grad
+    return op_name_reorder
+
+
+def reorder_op_x_list(op_name_list, summary_list, data_name_list):
+    """对op_name, summary, data_name重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理"""
+    if not op_name_list or not summary_list:
+        return op_name_list, summary_list, data_name_list
+
+    index_map = {name: index for index, name in enumerate(op_name_list)}
+
+    op_name_reorder = reorder_op_name_list(op_name_list)
+    summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
+    if data_name_list:
+        data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
+    else:
+        data_name_reorder = data_name_list
+
+    return op_name_reorder, summary_reorder, data_name_reorder
 
 
 def process_summary_data(summary_data):
@@ -407,204 +503,23 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                       CompareConst.PARAMS_GRAD_STRUCT)
 
 
-def append_stack_info(result_item, npu_stack_info, index):
-    """添加堆栈信息到 result_item"""
-    if npu_stack_info and index == 0:
-        result_item.extend(npu_stack_info)
-    else:
-        result_item.append(CompareConst.NONE)
+def make_result_table(result, dump_mode, stack_mode):
+    header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode][:]
 
-
-def get_un_match_accuracy(result, n_dict, dump_mode):
-    npu_stack_info = n_dict.get("stack_info", None)
-    bench_name, bench_type, bench_shape = CompareConst.N_A, CompareConst.N_A, CompareConst.N_A
-
-    struct_to_index_mapping = {
-        CompareConst.INPUT_STRUCT: 0,
-        CompareConst.OUTPUT_STRUCT: 0,
-        CompareConst.PARAMS_STRUCT: 0,
-        CompareConst.PARAMS_GRAD_STRUCT: 0
-    }
-
-    op_name_list = n_dict.get(CompareConst.OP_NAME)
-    summary_list = n_dict.get(Const.SUMMARY)
-    data_name_list = n_dict.get('data_name')
-    op_name_reorder, summary_reorder, _ = reorder_op_x_list(op_name_list,
-                                                            summary_list,
-                                                            data_name_list)
-    for index, n_name in enumerate(op_name_reorder):
-        _, state = get_name_and_state(n_name)
-        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
-        if not struct_key:
-            continue
-        n_struct = safe_get_value(n_dict, struct_to_index_mapping.get(struct_key), "n_dict", key=struct_key)
-        struct_to_index_mapping[struct_key] += 1
-
-        try:
-            result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
-        except IndexError as e:
-            err_msg = "index out of bounds error occurs, please check!\n" \
-                      f"op_name of n_dict is {n_dict['op_name']}\n" \
-                      f"input_struct of n_dict is {n_dict[CompareConst.INPUT_STRUCT]}\n" \
-                      f"output_struct of n_dict is {n_dict[CompareConst.OUTPUT_STRUCT]}"
-            logger.error(err_msg)
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-
-        if dump_mode == Const.MD5:
-            result_item.extend([CompareConst.N_A] * 3)
-            append_stack_info(result_item, npu_stack_info, index)
-            result.append(result_item)
-            continue
-        if dump_mode == Const.SUMMARY:
-            result_item.extend([CompareConst.N_A] * 8)  # 8个统计量数据情况的比对指标
+    if stack_mode:
+        header.append(CompareConst.STACK)
         if dump_mode == Const.ALL:
-            result_item.extend([CompareConst.N_A] * 6)  # 6个真实数据情况的比对指标
-
-        npu_summary_data = safe_get_value(summary_reorder, index, "summary_reorder")
-        bench_summary_data = [CompareConst.N_A] * 4
-        result_item.extend(npu_summary_data)
-        result_item.extend(bench_summary_data)
-        err_msg = CompareConst.NO_BENCH
-        accuracy_check_res = CompareConst.N_A
-        result_item.append(accuracy_check_res)
-        result_item.append(err_msg)
-        append_stack_info(result_item, npu_stack_info, index)
-        if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
-            result_item.extend([["-1", "-1"]])
-        result.append(result_item)
-
-
-def merge_tensor(tensor_list, dump_mode):
-    op_dict = {}
-    op_dict["op_name"] = []
-    op_dict[CompareConst.INPUT_STRUCT] = []
-    op_dict[CompareConst.KWARGS_STRUCT] = []
-    op_dict[CompareConst.OUTPUT_STRUCT] = []
-    op_dict[CompareConst.PARAMS_STRUCT] = []
-    op_dict[CompareConst.PARAMS_GRAD_STRUCT] = []
-    op_dict[Const.SUMMARY] = []
-    op_dict["stack_info"] = []
-
-    if dump_mode == Const.ALL:
-        op_dict["data_name"] = []
-
-    for tensor in tensor_list:
-        # A dict(len=2) with 'full_op_name' and 'full_info' is added to the tensor only if self.stack_mode is True
-        if len(tensor) == 2:
-            op_dict['stack_info'].append(tensor['full_info'])
-            break
-
-        op_dict["op_name"].append(tensor['full_op_name'])
-
-        _, state = get_name_and_state(tensor['full_op_name'])
-        struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
-        if not struct_key:
-            continue
-        if dump_mode == Const.MD5:
-            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
-        else:
-            op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-        op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
-
-        if dump_mode == Const.ALL:
-            op_dict["data_name"].append(tensor['data_name'])
-
-    if not op_dict[CompareConst.KWARGS_STRUCT]:
-        del op_dict[CompareConst.KWARGS_STRUCT]
-    return op_dict if op_dict["op_name"] else {}
-
-
-def print_compare_ends_info():
-    total_len = len(CompareConst.COMPARE_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
-    logger.info('*' * total_len)
-    logger.info(f"*{CompareConst.COMPARE_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
-    logger.info('*' * total_len)
-
-
-def table_value_is_valid(value: str) -> bool:
-    if not isinstance(value, str):
-        return True
-    try:
-        # -1.00 or +1.00 should be considered as digit numbers
-        float(value)
-    except ValueError:
-        # otherwise, they will be considered as formular injections
-        return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
-    return True
-
-
-def get_name_and_state(name):
-    """
-    Get api/module name and state
-    example:
-    name = 'conv2d.forward.1.input.0'
-    return: ('conv2d.forward.1.', 'input')
-
-    name = 'Functional.pad.0.backward.output.0'
-    return: ('Functional.pad.0.backward.', 'output')
-
-    state type: input, output, kwargs, parameters, parameters_grad
-    """
-    if not isinstance(name, str):
-        logger.error(f'Invalid name: {name}, type should be string, please check.')
-        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
-
-    if Const.PARAMS_GRAD in name.split(Const.SEP):
-        return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
-
-    split = re.split(Const.REGEX_FORWARD_BACKWARD, name)
-    if len(split) < 3:
-        logger.error(f'Invalid name string: {name}, can not be split by forward/backward, please check.')
-        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
-    api = f'{split[0]}.{split[1]}.'
-    state_str = split[2]
-    match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
-    if not match:
-        raise CompareException(f'Invalid name string: {name}')
-    if match.group(1):
-        api = f'{api}{match.group(1)}'
-    state = match.group(2)
-    return api, state
-
-
-def reorder_op_name_list(op_name_list):
-    if not op_name_list:
-        return op_name_list
-
-    parameters = []
-    output = []
-    parameters_grad = []
-    others = []
-    for x in op_name_list:
-        state = get_name_and_state(x)[1]
-        if state == Const.PARAMS:
-            parameters.append(x)
-        elif state == Const.OUTPUT:
-            output.append(x)
-        elif state == Const.PARAMS_GRAD:
-            parameters_grad.append(x)
-        else:
-            others.append(x)
-    # 合并others, parameters, 和output，确保parameters排在output前面
-    op_name_reorder = others + parameters + output + parameters_grad
-    return op_name_reorder
-
-
-def reorder_op_x_list(op_name_list, summary_list, data_name_list):
-    """对op_name, summary, data_name重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理"""
-    if not op_name_list or not summary_list:
-        return op_name_list, summary_list, data_name_list
-
-    index_map = {name: index for index, name in enumerate(op_name_list)}
-
-    op_name_reorder = reorder_op_name_list(op_name_list)
-    summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
-    if data_name_list:
-        data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
+            header.append(CompareConst.DATA_NAME)
     else:
-        data_name_reorder = data_name_list
-
-    return op_name_reorder, summary_reorder, data_name_reorder
+        if dump_mode == Const.ALL:
+            for row in result:
+                del row[-2]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，真实数据时为倒数第2列
+            header.append(CompareConst.DATA_NAME)
+        else:
+            for row in result:
+                del row[-1]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，非真实数据时为倒数第1列
+    result_df = pd.DataFrame(result, columns=header, dtype='object')
+    return result_df
 
 
 def _compare_parser(parser):

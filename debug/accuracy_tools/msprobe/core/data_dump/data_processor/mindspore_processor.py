@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+import hashlib
 import zlib
 
 import mindspore as ms
 from mindspore import mint, ops, hal
+from mindspore.mint import distributed
 from mindspore._c_expression.typing import Number
 import numpy as np
 
@@ -36,7 +37,7 @@ except ImportError:
 
 
 class MindsporeDataProcessor(BaseDataProcessor):
-    mindspore_special_type = tuple([ms.Tensor, Number])
+    mindspore_special_type = tuple([ms.Tensor, Number, distributed.P2POp])
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -65,7 +66,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             data_abs = np.abs(data.asnumpy())
             tensor_stat.max = np.max(data_abs).item()
@@ -76,33 +77,42 @@ class MindsporeDataProcessor(BaseDataProcessor):
             if not ops.is_floating_point(data) or data.dtype == ms.float64:
                 data = data.to(ms.float32)
             get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
-            tensor_stat.max = mint.max(data).item()
-            tensor_stat.min = mint.min(data).item()
-            tensor_stat.mean = mint.mean(data).item()
-            tensor_stat.norm = get_norm_value(data).item()
+            tensor_stat.max = mint.max(data)
+            tensor_stat.min = mint.min(data)
+            tensor_stat.mean = mint.mean(data)
+            tensor_stat.norm = get_norm_value(data)
         return tensor_stat
 
     @staticmethod
     def get_stat_info_async(data):
         tensor_stat = TensorStatInfo()
-        if data.dtype == ms.complex64 or data.dtype == ms.complex128:
+        if data.dtype == ms.bool_:
+            tensor_stat.max = mint.any(data)
+            tensor_stat.min = mint.all(data)
+        elif not data.shape:
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
+        elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             logger.warning("Async dump do not support complex data!")
             return tensor_stat
-        elif data.dtype == ms.bool_:
-            tensor_stat.stack_tensor_stat = (["Max", "Min"], ops.stack([data.any(), data.all()]))
-        elif not data.shape:
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], ops.stack([data, data, data, data]))
         else:
             if not ops.is_floating_point(data) or data.dtype == ms.float64:
                 data = data.to(ms.float32)
             get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], ops.stack(
-                [mint.max(data), mint.min(data), mint.mean(data), get_norm_value(data)]))
+            tensor_stat.max = mint.max(data)
+            tensor_stat.min = mint.min(data)
+            tensor_stat.mean = mint.mean(data)
+            tensor_stat.norm = get_norm_value(data)
         return tensor_stat
 
     @staticmethod
     def is_hookable_element(element):
         return hasattr(element, "register_hook") and callable(element.register_hook)
+
+    @staticmethod
+    def process_group_hash(arg):
+        group_ranks = distributed.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
 
     @classmethod
     def get_special_types(cls):
@@ -125,18 +135,33 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if suffix_stack and suffix_stack[-1] in self.mindspore_object_key:
             return self.mindspore_object_key[suffix_stack[-1]](element)
 
-        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
-        if converted_numpy is not element:
-            return {"type": numpy_type, "value": converted_numpy}
-        if isinstance(element, Number):
-            return self.analyze_dtype_in_kwargs(element)
-        if isinstance(element, ms.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, np.ndarray):
-            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
-            return self._analyze_builtin(element)
+        suffix_str = Const.SEP.join(str(s) for s in suffix_stack)
+        type_analyzer = [
+            (MindsporeDataProcessor.builtin_type, self._analyze_builtin),
+            (ms.Tensor, lambda e: self._analyze_tensor(e, suffix_str)),
+            (Number, self.analyze_dtype_in_kwargs),
+            (MindsporeDataProcessor.np_type[:-1], self._analyze_numpy),
+            (np.ndarray, lambda e: self._analyze_ndarray(e, suffix_str)),
+            (distributed.P2POp, lambda e: self._analyze_p2pop(e, suffix_str))
+        ]
+        for type_key, analyze_fn in type_analyzer:
+            if isinstance(element, type_key):
+                return analyze_fn(element)
         return {}
+
+    def _analyze_p2pop(self, arg, suffix):
+        p2pop_info = {"class_type": "mindspore.mint.distributed.P2POp"}
+        try:
+            tensor_info = self._analyze_tensor(arg.tensor, suffix)
+            p2pop_info.update({"tensor": tensor_info})
+            p2pop_info.update({"op": arg.op})
+            p2pop_info.update({"peer": arg.peer})
+            p2pop_info.update({"tag": arg.tag})
+            group_id = self.process_group_hash(arg.group) if arg.group else None
+            p2pop_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to parse the P2POp content with error info: {e}.")
+        return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
@@ -146,13 +171,18 @@ class MindsporeDataProcessor(BaseDataProcessor):
             'shape': tensor.shape
         }
 
-        if tensor_stat.stack_tensor_stat is None:
-            tensor_json.update({'Max': self.transfer_type(tensor_stat.max)})
-            tensor_json.update({'Min': self.transfer_type(tensor_stat.min)})
-            tensor_json.update({'Mean': self.transfer_type(tensor_stat.mean)})
-            tensor_json.update({'Norm': self.transfer_type(tensor_stat.norm)})
-        else:
-            tensor_json.update({'tensor_stat': tensor_stat.stack_tensor_stat})
+        # 将统计值存入全局 buffer，并返回占位索引
+        stat_values = [
+            tensor_stat.max,
+            tensor_stat.min,
+            tensor_stat.mean,
+            tensor_stat.norm
+        ]
+
+        placeholder_index = self.data_writer.append_stat_to_buffer(stat_values)
+
+        tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
+
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({Const.MD5: tensor_md5})
@@ -179,10 +209,10 @@ class TensorDataProcessor(MindsporeDataProcessor):
             save_tensor_as_npy(tensor, file_path)
         return single_arg
 
-    def _analyze_numpy(self, ndarray, suffix):
+    def _analyze_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_npy(ndarray, file_path)
-        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json = super()._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
 
@@ -249,11 +279,26 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if tensor_json['Max'] is None:
+        tensor_stat_index = tensor_json.get(Const.TENSOR_STAT_INDEX)
+        if tensor_stat_index is None:
+            logger.warning("tensor_stat_index does not exist in tensor_json.")
             return
-        if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
+        max_tensor = self.data_writer.get_buffer_values_max(tensor_stat_index)
+        min_tensor = self.data_writer.get_buffer_values_min(tensor_stat_index)
+        if max_tensor is None or min_tensor is None:
+            return
+
+        def check_inf_nan(value):
+            # Use .item() if it's a tensor-like structure
+            if hasattr(value, "item"):
+                value = value.item()
+            return np.isinf(value) or np.isnan(value)
+
+        if check_inf_nan(max_tensor):
             self.has_overflow = True
-        if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
+            return
+
+        if check_inf_nan(min_tensor):
             self.has_overflow = True
 
     def _analyze_tensor(self, tensor, suffix):

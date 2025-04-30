@@ -2,7 +2,6 @@
 #define PYDYNAMIC_MONITOR_PROXY_H
 
 #include <glog/logging.h>
-#include <memory>
 #include "MonitorBase.h"
 #include "DynoLogNpuMonitor.h"
 
@@ -16,14 +15,19 @@ public:
     {
         try {
             if (!google::IsGoogleLoggingInitialized()) {
-                google::InitGoogleLogging("DynoLogNpuMonitor");
-                google::SetLogDestination(google::GLOG_INFO, "/var/log/dynolog_npu_");
-                google::SetLogFilenameExtension(".log");
+                std::string logPath;
+                if (CreateMsmonitorLogPath(logPath)) {
+                    logPath = logPath + "/msmonitor_";
+                    google::InitGoogleLogging("MsMonitor");
+                    google::SetLogDestination(google::GLOG_INFO, logPath.c_str());
+                    google::SetLogFilenameExtension(".log");
+                } else {
+                    fprintf(stderr, "Failed to create log path, log will not record\n");
+                }
             }
             monitor_ = DynoLogNpuMonitor::GetInstance();
             monitor_->SetNpuId(npuId);
             bool res = monitor_->Init();
-            LOG(ERROR) << res;
             return res;
         } catch (const std::exception &e) {
             LOG(ERROR) << "Error when init dyno " << e.what();
@@ -34,16 +38,16 @@ public:
     std::string PollDyno()
     {
         return monitor_->Poll();
-    };
+    }
 
     void EnableMsptiMonitor(std::unordered_map<std::string, std::string>& config_map)
     {
-        LOG(WARNING) << "EnableMsptiMonitor is not support now";
+        DynoLogNpuMonitor::GetInstance()->EnableMsptiMonitor(config_map);
     }
 
     void FinalizeDyno()
     {
-        LOG(WARNING) << "FinalizeDyno is not support now";
+        DynoLogNpuMonitor::GetInstance()->Finalize();
     }
 private:
     MonitorBase *monitor_ = nullptr;
@@ -51,5 +55,4 @@ private:
 
 } // namespace ipc_monitor
 } // namespace dynolog_npu
-
-#endif
+#endif // PYDYNAMIC_MONITOR_PROXY_H

@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,21 +79,17 @@ class ModuleBackwardOutputs:
 
 
 class TensorStatInfo:
-    def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None, stack_tensor_stat=None):
+    def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None):
         self.max = max_val
         self.min = min_val
         self.mean = mean_val
         self.norm = norm_val
-        self.stack_tensor_stat = stack_tensor_stat
 
 
 class BaseDataProcessor:
     _recursive_key_stack = []
-    special_type = (
-        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_, np.ndarray,
-        bool, int, float, str, slice,
-        type(Ellipsis)
-    )
+    builtin_type = (bool, int, float, str, slice, type(Ellipsis))
+    np_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_, np.ndarray)
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -176,22 +172,10 @@ class BaseDataProcessor:
             else:
                 raise ValueError("set_value_into_nested_structure failed: "
                                  "invalid data_structure type or invalid index")
-
+            
     @staticmethod
-    def _convert_numpy_to_builtin(arg):
-        type_mapping = {
-            np.integer: int,
-            np.floating: float,
-            np.bool_: bool,
-            np.complexfloating: complex,
-            np.str_: str,
-            np.byte: bytes,
-            np.unicode_: str
-        }
-        for numpy_type, builtin_type in type_mapping.items():
-            if isinstance(arg, numpy_type):
-                return builtin_type(arg), type(arg).__name__
-        return arg, ''
+    def is_distributed_op(module):
+        return getattr(module, "op_is_distributed", False)
 
     @staticmethod
     def _analyze_builtin(arg):
@@ -217,7 +201,11 @@ class BaseDataProcessor:
         return single_arg
 
     @staticmethod
-    def _analyze_numpy(ndarray, numpy_type):
+    def _analyze_numpy(arg):
+        return {"type": type(arg).__name__, "value": arg.item()}
+
+    @staticmethod
+    def _analyze_ndarray(ndarray, _):
         ndarray_json = {}
         ndarray_json.update({'type': 'numpy.ndarray'})
         ndarray_json.update({'dtype': str(ndarray.dtype)})
@@ -248,7 +236,7 @@ class BaseDataProcessor:
 
     @classmethod
     def get_special_types(cls):
-        return cls.special_type
+        return cls.builtin_type + cls.np_type
 
     @classmethod
     def recursive_apply_transform(cls, args, transform, depth=0) -> Union[dict, list, None]:
@@ -303,6 +291,7 @@ class BaseDataProcessor:
 
             def real_hook_fn(grad):
                 return wrap_hook_fn(grad)
+
             element.register_hook(real_hook_fn)
 
     def if_return_forward_new_output(self):
@@ -350,6 +339,8 @@ class BaseDataProcessor:
         return api_info_struct
 
     def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        if self.is_distributed_op(module):
+            module_input_output.update_output_with_args_and_kwargs()
         api_info_struct = {}
         # check whether data_mode contains forward or input
         if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):
@@ -467,5 +458,6 @@ class BaseDataProcessor:
                 logger.warning(f"error occurred while recording statistics of {grad_name_with_count_category} variable,"
                                f"skip current recording, detailed information: {e}")
             return grad
+
         wrap_register_hook_single_element = partial(self.register_hook_single_element, hook_fn=hook_fn)
         self.recursive_apply_transform(variable, wrap_register_hook_single_element)

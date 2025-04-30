@@ -75,7 +75,7 @@ class ApiPyNativeSelfCheck:
             ret = None
 
             if not need_wrapper_func():
-                del cell.input_kwargs
+                del cell.msprobe_input_kwargs
                 return ret
 
             api_name_with_id = api_name_with_id[:-1]
@@ -84,9 +84,9 @@ class ApiPyNativeSelfCheck:
                         api_name_with_id[api_name_with_id.find(Const.SEP) + 1:api_name_with_id.rfind(Const.SEP)])
             if api_name in self.api_list:
                 ret = check_self(api_name_with_id, output_data, self.ori_func.get(api_name),
-                                 *input_data, **cell.input_kwargs)
+                                 *input_data, **cell.msprobe_input_kwargs)
 
-            del cell.input_kwargs
+            del cell.msprobe_input_kwargs
             return ret
 
         def backward_hook(cell, grad_input, grad_output):

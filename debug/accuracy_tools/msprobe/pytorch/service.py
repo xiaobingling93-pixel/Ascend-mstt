@@ -15,13 +15,14 @@
 
 import functools
 import os
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 
 import torch
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import print_tools_ends_info, DumpPathAggregation
+from msprobe.core.common.utils import print_tools_ends_info, DumpPathAggregation, replace_last_occurrence
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope
@@ -38,8 +39,6 @@ from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimiz
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
     from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
-
-HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
 
 class Service:
@@ -66,22 +65,22 @@ class Service:
         self.currrent_step_first_debug_save = True
 
     def build_hook(self, module_type, name):
-        def pre_hook(api_or_module_name, module, args, kwargs):
-            if not self.should_execute_hook(module_type, module, True):
-                return args, kwargs
+        def pre_hook(api_or_module_name, module, args, kwargs=None):
+            kwargs = {} if kwargs is None else kwargs
+
+            if module_type == BaseScope.Module_Type_Module or \
+                    not self.should_execute_hook(module_type, module, True):
+                return
             is_recompute = is_recomputation()
 
             self.inner_switch = True
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name[-1]
-            else:
-                module.forward_data_collected = True
-                HOOKModule.add_module_count(name)
+            module.forward_data_collected = True
+            HOOKModule.add_module_count(name)
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
                 self.inner_switch = False
-                return None, None
+                return
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.forward_input_data_collect(
@@ -93,7 +92,6 @@ class Service:
                 )
 
             self.inner_switch = False
-            return args, kwargs
 
         def grad_hook(module, ori_name, param_name):
             def hook_fn(grad):
@@ -140,10 +138,12 @@ class Service:
                     # 记录当前模块的参数梯度信息已占位
                     self.params_grad_info[grad_name] = True
 
-        def forward_hook(api_or_module_name, module, args, kwargs, output):
+        def forward_hook(api_or_module_name, module, args, kwargs_or_output, output_or_kwargs=None):
             if not self.should_execute_hook(module_type, module, True):
                 return None
             is_recompute = is_recomputation()
+            kwargs = kwargs_or_output if torch_version_above_or_equal_2 else {}
+            output = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
 
             self.inner_switch = True
             if self.config.online_run_ut:
@@ -163,9 +163,8 @@ class Service:
                 return None
 
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+            self.data_collector.update_api_or_module_name(api_or_module_name)
             if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name[-1]
-                self.data_collector.update_api_or_module_name(api_or_module_name)
                 params_dict = {}
                 if self.config.task != Const.STRUCTURE:
                     params_dict = {
@@ -189,7 +188,6 @@ class Service:
                 )
                 init_params_grad_info(module, params_dict)
             else:
-                self.data_collector.update_api_or_module_name(api_or_module_name)
                 self.data_collector.forward_output_data_collect(
                     api_or_module_name,
                     module,
@@ -205,17 +203,12 @@ class Service:
             self.inner_switch = False
             return output
 
-        def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
-            return forward_hook(api_or_module_name, module, args, {}, output)
-
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if not self.should_execute_hook(module_type, module, False):
                 return
             is_recompute = is_recomputation()
 
             self.inner_switch = True
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name[-1]
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
@@ -235,19 +228,15 @@ class Service:
             self.inner_switch = False
 
         pid = os.getpid()
-        full_forward_name = None
-        full_backward_name = None
+        full_forward_name = name
         if module_type == BaseScope.Module_Type_API:
             full_forward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.FORWARD
-            full_backward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.BACKWARD
+        full_backward_name = replace_last_occurrence(full_forward_name, Const.FORWARD, Const.BACKWARD)
         pre_forward_hook_fn = functools.partial(pre_hook, full_forward_name)
         forward_hook_fn = functools.partial(forward_hook, full_forward_name)
         backward_hook_fn = functools.partial(backward_hook, full_backward_name)
-        forward_hook_torch_version_below_2_fn = functools.partial(
-            forward_hook_torch_version_below_2,
-            full_forward_name
-        )
-        return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
+
+        return pre_forward_hook_fn, forward_hook_fn, backward_hook_fn
 
     def start(self, model):
         self.current_iter = self.loop + self.init_step
@@ -294,19 +283,15 @@ class Service:
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, False, self.config.online_run_ut_recompute)
             return
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task == Const.TENSOR:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
 
     def step(self):
         if self.should_stop_service:
             return
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task == Const.TENSOR:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.loop += 1
         self.currrent_step_first_debug_save = True
@@ -316,7 +301,7 @@ class Service:
         if self.should_stop_service:
             return True
         end_service = self.config.step and self.current_iter > max(self.config.step) or \
-                      self.data_collector and self.data_collector.data_processor.is_terminated
+            self.data_collector and self.data_collector.data_processor.is_terminated
         if end_service:
             if self.config.online_run_ut:
                 # send stop signal if online_run_ut
@@ -386,6 +371,7 @@ class Service:
     def register_module_hook(self):
         if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.info_on_rank_0(f"The module {self.config.task} hook function is successfully mounted to the model.")
+            ModuleProcesser.enable_module_dump = True
             self.module_processor.register_module_hook(self.model, self.build_hook)
 
     def attl_init(self):

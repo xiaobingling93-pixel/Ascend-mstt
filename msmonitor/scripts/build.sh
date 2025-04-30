@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export BUILD_PROMETHEUS=1
 
 check_gcc_version() {
     if ! command -v gcc >/dev/null 2>&1; then

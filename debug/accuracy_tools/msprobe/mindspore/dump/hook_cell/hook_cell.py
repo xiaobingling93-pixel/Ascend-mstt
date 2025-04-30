@@ -31,7 +31,7 @@ def get_cell_count(name):
 def __init__(self, hook_build_func) -> None:
     super(HOOKCell, self).__init__()
     self.changed_status = False
-    self.input_kwargs = {}
+    self.msprobe_input_kwargs = {}
     if not HOOKCell.g_stop_hook:
         HOOKCell.g_stop_hook = True
         self.changed_status = True
@@ -49,7 +49,7 @@ def __init__(self, hook_build_func) -> None:
 # 重载call，加全局标志。
 def __call__(self, *args, **kwargs):
     try:
-        self.input_kwargs = kwargs
+        self.msprobe_input_kwargs = kwargs
         out = super(HOOKCell, self).__call__(*args, **kwargs)
     except Exception as e:
         raise e

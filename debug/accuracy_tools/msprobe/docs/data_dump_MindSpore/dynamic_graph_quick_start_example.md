@@ -51,6 +51,7 @@ debugger = PrecisionDebugger(config_path=config_path)
 
 # 设置 MindSpore 设备上下文
 context.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", device_id=0)
+print("Context set successfully. Please wait for the training task.")
 
 # 定义卷积层
 def conv_layer(in_channels, out_channels, kernel_size, stride=1, padding=0, pad_mode="valid", has_bias=True):
@@ -199,7 +200,7 @@ python alexnet_model.py
 
 ## 5. 数据分析
 
-在 `dump_path` 参数指定的路径下（本例中为 `./output`），会出现如下目录结构，后续精度数据分析操作可使用 msprobe 工具的精度预检和精度比对等功能，详细流程请参见[《msprobe使用手册》](../../README.md#2-精度预检)。：
+在 `dump_path` 参数指定的路径下（本例中为 `./output`），会出现如下目录结构，后续精度数据分析操作可使用 msprobe 工具的精度预检和精度比对等功能，详细流程请参见[《msprobe使用手册》](../../README.md#2-精度预检)。
 
 ```bash
 output/
@@ -208,4 +209,5 @@ output/
         ├── construct.json             # level为L0时，保存Cell的层级关系信息。当前场景为空
         ├── dump.json                  # 保存API前反向输入输出数据的统计量信息
         └── stack.json                 # 保存API的调用栈
+    ......
 ```

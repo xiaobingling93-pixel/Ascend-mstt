@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import Any
 from dataclasses import dataclass
 from unittest.mock import patch
 from unittest.mock import MagicMock
@@ -12,7 +13,7 @@ from msprobe.visualization.utils import GraphConst
 class Args:
     input_path: str = None
     output_path: str = None
-    layer_mapping: str = None
+    layer_mapping: Any = None
     framework: str = None
     overflow_check: bool = False
     fuzzy_match: bool = False
@@ -39,7 +40,7 @@ class TestGraphComparator(unittest.TestCase):
         mock_load_data_json_file.return_value = "data_dict"
         mock_load_json_file.return_value = "construct_dict"
         mock_get_compare_mode.return_value = GraphConst.SUMMARY_COMPARE
-        self.comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path))
+        self.comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         self.comparator._parse_param(self.dump_path_param, self.output_path)
 
         self.assertEqual(self.comparator.dump_path_param, {
@@ -57,7 +58,7 @@ class TestGraphComparator(unittest.TestCase):
         mock_load_data_json_file.return_value = "data_dict"
         mock_load_json_file.return_value = "construct_dict"
         mock_get_compare_mode.return_value = GraphConst.SUMMARY_COMPARE
-        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path))
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         comparator._compare_nodes = MagicMock()
         comparator._postcompare = MagicMock()
 
@@ -76,7 +77,7 @@ class TestGraphComparator(unittest.TestCase):
         node = MagicMock()
         compare_result_list = [("output1", "data1"), ("input1", "data2")]
 
-        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path))
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         comparator.ma = MagicMock()
         comparator.ma.prepare_real_data.return_value = True
 
@@ -100,7 +101,7 @@ class TestGraphComparator(unittest.TestCase):
         mock_run_real_data.return_value = mock_df
         mock_get_csv_df.return_value = mock_df
         mock_get_node_error_status.return_value = True
-        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path))
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         comparator.ma = MagicMock()
         comparator.ma.compare_mode = GraphConst.REAL_DATA_COMPARE
         comparator._handle_api_collection_index = MagicMock()
@@ -118,7 +119,7 @@ class TestGraphComparator(unittest.TestCase):
         mock_load_data_json_file.return_value = "data_dict"
         mock_load_json_file.return_value = "construct_dict"
         mock_get_compare_mode.return_value = GraphConst.SUMMARY_COMPARE
-        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path))
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         apis = BaseNode(NodeOp.api_collection, 'Apis_Between_Modules.0')
         api1 = BaseNode(NodeOp.function_api, 'Tensor.a.0')
         api1.data = {GraphConst.JSON_INDEX_KEY: 0.9}
@@ -145,11 +146,12 @@ class TestGraphComparator(unittest.TestCase):
         mock_get_compare_mode.return_value = GraphConst.SUMMARY_COMPARE
         mock_mapping_match.return_value = (node_b, [], [])
         mock_compare_node.return_value = ['result']
-        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path))
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path, layer_mapping=True), True)
         comparator.mapping_dict = True
         comparator._compare_nodes(node_n)
         self.assertEqual(node_n.matched_node_link, ['Tensor.b.0'])
         self.assertEqual(node_b.matched_node_link, ['Tensor.a.0'])
+        comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         comparator.mapping_dict = False
         node_n = BaseNode(NodeOp.function_api, 'Tensor.a.0')
         node_b = BaseNode(NodeOp.function_api, 'Tensor.a.0')
@@ -185,6 +187,6 @@ class TestGraphComparator(unittest.TestCase):
             'stack_json_path': os.path.join(dir_name, 'input', 'step0', 'rank0', 'stack.json'),
             'is_print_compare_log': True
         }
-        comparator = GraphComparator(self.graphs, dump_path_param, Args(output_path=self.output_path))
+        comparator = GraphComparator(self.graphs, dump_path_param, Args(output_path=self.output_path), False)
         comparator.add_compare_result_to_node(node, compare_result_list)
         self.assertEqual(node.data, {'precision_index': 0})

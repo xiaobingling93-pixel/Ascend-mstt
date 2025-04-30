@@ -74,6 +74,7 @@ class MsprobeBaseException(Exception):
     NAMES_STRUCTS_MATCH_ERROR = 34
     INVALID_STATE_ERROR = 35
     INVALID_API_NAME_ERROR = 36
+    CROSS_FRAME_ERROR = 37
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -284,8 +285,8 @@ def set_dump_path(input_param):
     if not npu_path_valid or not bench_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.BENCH_DUMP_DATA_DIR] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
 
 
 def get_dump_mode(input_param):
@@ -506,3 +507,12 @@ def is_save_variable_valid(variable, valid_special_types, depth=0):
                    for key, value in variable.items())
     else:
         return False
+
+
+def replace_last_occurrence(text, old, new):
+    if text is None:
+        return text
+    index = text.rfind(old)
+    if index != -1:
+        return text[:index] + text[index:].replace(old, new, 1)
+    return text

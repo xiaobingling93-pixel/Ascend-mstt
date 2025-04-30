@@ -187,7 +187,10 @@ class DataCollector:
                     self.optimizer_status_first_start[self.optimizer_status] = False
                 self.data_writer.update_construct({name: self.optimizer_status})
             else:
-                self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+                if self.config.level == Const.LEVEL_MIX and \
+                  not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
+                    self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, flush=False):
@@ -220,8 +223,6 @@ class DataCollector:
         data_info = self.data_processor.analyze_params(grad_name, param_name, data)
         self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
 
-    def fill_stack_tensor_data(self):
-        self.data_writer.fill_stack_tensor_data()
 
     def debug_data_collect_forward(self, variable, name_with_count):
 

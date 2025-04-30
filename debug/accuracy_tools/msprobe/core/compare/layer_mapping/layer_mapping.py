@@ -23,7 +23,7 @@ from msprobe.core.common.utils import (add_time_with_yaml,
                                        get_stack_construct_by_dump_json_path)
 from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
 from msprobe.core.compare.utils import read_op, reorder_op_name_list
-
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class LayerTrie:
@@ -71,6 +71,7 @@ class LayerTrie:
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         save_yaml(file_path, result)
 
+    @recursion_depth_decorator("LayerMapping: LayerTrie.convert_to_dict", max_depth=100)
     def convert_to_dict(self, node):
         result = {}
         result["data_item"] = {st: [dt.data_name for dt in dts] for st, dts in node.data_items.items()}

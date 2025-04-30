@@ -66,7 +66,7 @@ class Legend extends PolymerElement {
           <tf-graph-icon type="OP" height="16"></tf-graph-icon>
           <span class="legend-item-value">Unexpanded Module or Operators</span>
           <div class="legend-item-value legend-clarifier">
-            <paper-tooltip animation-delay="0" position="right" offset="0">
+            <paper-tooltip fit-to-visible-bounds animation-delay="0" position="right" offset="0">
               <div class="custom-tooltip">
                 Unexpandable Node: It can be an Api, operator or module. It cannot be expanded because it has no
                 subnodes

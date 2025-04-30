@@ -1,0 +1,44 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import importlib
+from unittest import TestCase
+from unittest.mock import MagicMock
+
+from mindspore import mint
+
+try:
+    from mint import distributed
+except ImportError:
+    distributed = MagicMock()
+    setattr(mint, 'distributed', distributed)
+
+# ensure not to import torch_npu
+from msprobe.mindspore import service
+
+from .mindtorch import reset_torch_tensor
+from msprobe.mindspore.common import utils
+from msprobe.mindspore.common.utils import is_mindtorch
+
+utils.mindtorch_check_result = None
+importlib.reload(service)
+reset_torch_tensor()
+
+
+class SetUp(TestCase):
+    def test_case(self):
+        self.assertTrue(hasattr(mint, 'distributed'))
+        self.assertTrue(is_mindtorch())
+        utils.mindtorch_check_result = None

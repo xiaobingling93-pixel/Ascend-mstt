@@ -15,7 +15,7 @@
  */
 
 import { PolymerElement, html } from '@polymer/polymer';
-import { customElement, property, query } from '@polymer/decorators';
+import { customElement, property } from '@polymer/decorators';
 import '@vaadin/grid'; // 引入新的 Vaadin Grid 组件
 import '@vaadin/tooltip';
 import type { GridEventContext } from '@vaadin/grid';
@@ -102,13 +102,13 @@ class TfVaadinTable extends PolymerElement {
     type: Array,
     computed: '_computeHeaders(dataset)',
   })
-  headers!: any[];
+  headers: any[] = [];
 
   @property({
     type: Boolean,
     computed: '_isEmptyGrid(dataset)',
   })
-  isEmptyGrid!: false;
+  isEmptyGrid: boolean = false;
 
   renderDefaultValue!: (root: HTMLElement, column: any, rowData: any) => void;
   tooltipGenerator!: (context: GridEventContext<Record<string, string>>) => string;
@@ -186,12 +186,22 @@ class TfVaadinTable extends PolymerElement {
     const textarea = document.createElement('textarea');
     textarea.readOnly = true;
     textarea.value = rowData.item[propertyName];
+    textarea.onmouseenter = () => {
+      button.style.display = 'unset';
+    };
+    textarea.onmouseleave = () => {
+      button.style.display = 'none';
+    };
     container.appendChild(textarea);
 
     const button = document.createElement('button');
     button.className = 'copy-button';
     button.textContent = '复制';
-    button.addEventListener('click', () => {
+    button.style.display = 'none';
+    button.onmousemove = () => {
+      button.style.display = 'unset';
+    };
+    button.onclick = () => {
       navigator.clipboard
         .writeText(textarea.value)
         .then(() => {
@@ -209,7 +219,7 @@ class TfVaadinTable extends PolymerElement {
           });
           console.error('Failed to copy text:', err);
         });
-    });
+    };
     container.appendChild(button);
 
     root.appendChild(container);
