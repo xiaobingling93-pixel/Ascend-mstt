@@ -1,3 +1,19 @@
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 from mindspore import nn
 from mindspore import communication
 from msprobe.mindspore.monitor.utils import logger
@@ -7,7 +23,7 @@ if is_mindtorch():
 
 
 def is_valid_instance(model):
-    return isinstance(torch.nn.Module) if is_mindtorch() else isinstance(model, nn.Cell)
+    return isinstance(model, torch.nn.Module) if is_mindtorch() else isinstance(model, nn.Cell)
 
 
 def get_submodules(model):
@@ -42,6 +58,7 @@ def optimizer_pre_hook(optimizer, fn):
     """
     if is_mindtorch():
         origin_api = optimizer.__class__.step
+
         def patch_step(func, optimizer):
             def wrapper(*args, **kwargs):
                 fn(optimizer, args, kwargs)
@@ -50,6 +67,7 @@ def optimizer_pre_hook(optimizer, fn):
             return wrapper
         optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
         return (optimizer.__class__.step, origin_api)
+
     else:
         handle = optimizer.register_forward_pre_hook(fn)
         return handle
@@ -58,6 +76,7 @@ def optimizer_pre_hook(optimizer, fn):
 def optimizer_post_hook(optimizer, fn):
     if is_mindtorch():
         origin_api = optimizer.__class__.step
+
         def patch_step(func, optimizer):
             def wrapper(*args, **kwargs):
                 out = func(*args, **kwargs)
@@ -66,6 +85,7 @@ def optimizer_post_hook(optimizer, fn):
             return wrapper
         optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
         return (optimizer.__class__.step, origin_api)
+
     else:
         handle = optimizer.register_forward_hook(fn)
         return handle

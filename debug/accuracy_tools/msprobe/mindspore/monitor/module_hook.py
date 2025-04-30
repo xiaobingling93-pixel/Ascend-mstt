@@ -32,6 +32,7 @@ from msprobe.mindspore.monitor.common_func import is_valid_instance, get_paramet
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
     is_skip_step, get_metrics, get_single_metrics, get_target_output_dir
 from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
+from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
@@ -219,6 +220,7 @@ class TrainerMon:
         self.dp_group = None
         self.tp_group = None
         self.micro_batch_number = 1
+        self.optimizer_mon = None
 
         # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
@@ -297,18 +299,19 @@ class TrainerMon:
         if self.format not in FORMAT_MAPPING:
             logger.error(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
             self.format = MonitorConst.CSV
-        writer = FORMAT_MAPPING[self.format]
         self.step_count_per_record = self.config.get('step_count_per_record', 1)
-        self.summary_writer = writer(
-            WriterInput(
-                self.tensorboard_dir,
-                self.alert_rules,
-                self.unique_id,
-                self.anomaly_data_factory,
-                self.ndigits,
-                self.step_count_per_record
+        if (self.rank in self.module_rank_list) or len(self.module_rank_list) == 0:
+            writer = FORMAT_MAPPING[self.format]
+            self.summary_writer = writer(
+                WriterInput(
+                    self.tensorboard_dir,
+                    self.alert_rules,
+                    self.unique_id,
+                    self.anomaly_data_factory,
+                    self.ndigits,
+                    self.step_count_per_record
+                )
             )
-        )
 
     def common_info(self):
         if not self.xy_distribution:
@@ -340,6 +343,7 @@ class TrainerMon:
         self.micro_batch_number = grad_acc_steps
         self.dp_group = dp_group
         self.tp_group = tp_group
+        self.optimizer_mon = OptimizerMonFactory.create_optimizer_mon(optimizer)
         self.hook_step_final(optimizer)
         if not isinstance(model, list):
             model = [model]
@@ -379,7 +383,18 @@ class TrainerMon:
             context.step += 1
             self.dynamic_monitor(optimizer)
 
-        optimizer.register_forward_hook(step_final_hook)
+        if is_mindtorch():
+            def patch_step(func, optimizer):
+                def wrapper(*args, **kwargs):
+                    out = func(*args, **kwargs)
+                    step_final_hook(optimizer, args, kwargs)
+                    return out
+                return wrapper
+            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+            self.origin_step_func = optimizer.__class__.step
+        else:
+            handle = optimizer.register_forward_hook(step_final_hook)
+            self.handles['step_final'].append(handle)
         return
 
     def dynamic_monitor(self, optimizer):
@@ -414,7 +429,7 @@ class TrainerMon:
                 logger.error(f"set config wrong because {e}, not updated, please check!!!")
                 return
 
-            self._remove_all_hooks()
+            self._remove_all_hooks(optimizer)
             self.register_hooks(optimizer)
 
     def register_hooks(self, optimizer):
@@ -453,13 +468,6 @@ class TrainerMon:
             if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times,
                             self.collect_times):
                 return
-            # gradient_list = gradients[0] if isinstance(gradients, tuple) else gradients
-            # is_select = self.is_select
-            # for idx, grad in enumerate(gradient_list):
-            #     grad_name = grad_names[idx]
-            #     if is_select and grad_name not in self.targets:
-            #         continue
-            #     get_single_metrics(self.ops, grad_name, grad, context.param_weight_grad)
             grad_dict = {}
             if self.wg_distribution:
                 grad_dict = self.optimizer_mon.fetch_grad(self, self.param2name)
@@ -500,7 +508,7 @@ class TrainerMon:
 
     def generate_wgrad_metrics(self, grad_dict):
         if not self.wg_distribution:
-            return {}, {}
+            return
 
         if self.weight_hooked:
             get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
@@ -572,7 +580,7 @@ class TrainerMon:
         metrics = {}
         key = get_summary_writer_tag_name(module_name, tag, str(self.rank))
         if isinstance(tensor, Tensor):
-            self._register_param_call_id("_hook_module", key)
+            self.register_param_call_id("_hook_module", key)
             metrics[key] = tensor
         return metrics
 
@@ -738,6 +746,16 @@ class TrainerMon:
                 hooked_count += 1
         return hooked_count
 
+    def register_param_call_id(self, hook_name: str, key: str):
+        """
+        :param hook_name:
+        :param key: str, '0:relu_0/output_grad'
+        :return:
+        """
+        logger.debug(f"{hook_name} {key}: {self.call_id}")
+        self.param_name_call_id[key] = self.call_id
+        self.call_id += 1
+
     def _patch_grad_sync(self):
         if not self.wg_distribution:
             return
@@ -749,7 +767,7 @@ class TrainerMon:
         @_no_grad()
         def param_hook(grad, context_dict, param, key):
             param.micro_step += 1
-            self._register_param_call_id("param_hook", key)
+            self.register_param_call_id("param_hook", key)
             if param.micro_step == self.micro_batch_number:
                 param.micro_step = 0
                 context_dict[key] = grad
@@ -788,17 +806,7 @@ class TrainerMon:
                 return pattern
         return ""
 
-    def _register_param_call_id(self, hook_name: str, key: str):
-        """
-        :param hook_name:
-        :param key: str, '0:relu_0/output_grad'
-        :return:
-        """
-        logger.debug(f"{hook_name} {key}: {self.call_id}")
-        self.param_name_call_id[key] = self.call_id
-        self.call_id += 1
-
-    def _remove_all_hooks(self):
+    def _remove_all_hooks(self, optimizer):
         # 清空hook handle
         for handle in self.handles['xy']:
             handle.remove()
@@ -819,6 +827,8 @@ class TrainerMon:
             for handle in self.handles['optimizer']:
                 handle.remove()
             self.handles['optimizer'].clear()
+            if is_mindtorch():
+                optimizer.__class__.step = self.origin_step_func
         for _, context in self.optimizer_context.items():
             context.reset()
         self.optimizer_hooked = False
@@ -857,4 +867,4 @@ class TrainerMon:
             except Exception as e:
                 logger.warning(f"Finish monitor, set config'dynamic_on=False fail because {e}, please check!!!")
         logger.info("Finish monitor")
-        self._remove_all_hooks()
+        self._remove_all_hooks(optimizer)
