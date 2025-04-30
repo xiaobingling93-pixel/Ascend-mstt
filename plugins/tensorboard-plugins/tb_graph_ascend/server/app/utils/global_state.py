@@ -29,7 +29,8 @@ ADD_MATCH_KEYS = [
 ]
 FILE_NAME_REGEX = r'^[a-zA-Z0-9_\-\.]+$'  # 文件名正则表达式
 
-_state = {'logdir': '', "current_tag": '', "current_file_path": '', 'current_file_data': {}, 'runs': {}}
+_state = {'logdir': '', 'current_tag': '', 'current_run': '', 'current_file_path': '', 'current_file_data': {},
+          'runs': {}}
 
 
 def init_defaults():
@@ -37,7 +38,8 @@ def init_defaults():
     初始化全局变量的默认值
     """
     global _state
-    _state = {'logdir': '', "current_tag": '', "current_file_path": '', 'current_file_data': {}, 'runs': {}}
+    _state = {'logdir': '', 'current_tag': '', 'current_run': '', 'current_file_path': '', 'current_file_data': {},
+              'runs': {}}
 
 
 def set_global_value(key, value, inner_key=None):

@@ -295,7 +295,7 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
     this.set('outStats', null);
     const params = new URLSearchParams();
     params.set('run', run);
-    if (tag) {
+    if (tag !== undefined && tag !== null) {
       params.set('tag', tag);
     }
     params.set('batch', String(batch === -1 ? -1 : batch - 1));

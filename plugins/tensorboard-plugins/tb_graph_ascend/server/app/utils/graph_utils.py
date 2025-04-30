@@ -34,7 +34,8 @@ class GraphUtils:
         run = meta_data.get('run')
         tag = meta_data.get('tag')
         current_tag = get_global_value('current_tag')
-        if current_tag == tag:
+        current_run = get_global_value('current_run')
+        if current_run == run and current_tag == tag:
             return get_global_value('current_file_data'), None  # 直接返回获取结果
         else:
             json_data, error_message = GraphUtils.safe_load_data(run, tag)
@@ -42,6 +43,7 @@ class GraphUtils:
                 return None, error_message
             set_global_value('current_file_data', json_data)
             set_global_value('current_tag', tag)
+            set_global_value('current_run', run)
             return json_data, error_message
 
     @staticmethod
@@ -172,3 +174,17 @@ class GraphUtils:
         except Exception as e:
             logger.error(f'Error: File "{file_path}" is not accessible. Error: {e}')
             return None, 'failed to load file'
+
+    @staticmethod
+    def process_vis_file(dir_path, file, run_tag_pairs):
+        file_path = os.path.join(dir_path, file)
+        if os.path.isfile(file_path) and file.endswith('.vis'):
+            run = dir_path
+            run_name = os.path.basename(run)
+            set_global_value('runs', run, run_name)
+            tag = file[:-4]  # Use the filename without extension as tag
+            _, error = GraphUtils.safe_load_data(run_name, tag, True)
+            if error:
+                logger.error(f'Error: File run:"{run}, tag:{tag}" is not accessible. Error: {error}')
+                return
+            run_tag_pairs.setdefault(run_name, []).append(tag)
