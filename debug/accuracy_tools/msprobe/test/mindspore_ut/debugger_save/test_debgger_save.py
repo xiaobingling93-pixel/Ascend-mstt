@@ -114,7 +114,6 @@ class TestDebuggerSave(unittest.TestCase):
         PrecisionDebugger._instance = None
 
     def tearDown(self):
-        # return
         if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
         PrecisionDebugger._instance = None

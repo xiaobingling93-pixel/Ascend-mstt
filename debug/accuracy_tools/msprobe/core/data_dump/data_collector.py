@@ -79,10 +79,8 @@ class DataCollector:
         self.data_writer.write_json()
 
     def write_json_at_exit(self):
-        if self.config.async_dump:
-            self.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task == Const.TENSOR:
+            self.data_processor.dump_async_data()
         self.data_writer.write_json()
 
     def update_data(self, name, data_info):
