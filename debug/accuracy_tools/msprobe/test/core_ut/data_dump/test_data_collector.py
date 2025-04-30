@@ -106,7 +106,7 @@ class TestDataCollector(unittest.TestCase):
     @patch.object(BaseDataProcessor, "analyze_debug_forward", return_value="data_info")
     def test_debug_data_collect_forward(self, _, mock_update_debug):
         self.data_collector.debug_data_collect_forward("variable", "name_with_count")
-        mock_update_debug.assert_called_with({"name_with_count": "data_info"})
+        mock_update_debug.assert_called_with({"name_with_count.debug": "data_info"})
 
     @patch.object(DataWriter, "update_debug")
     @patch.object(BaseDataProcessor, "analyze_debug_backward")

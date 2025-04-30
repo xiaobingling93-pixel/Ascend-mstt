@@ -4,6 +4,7 @@ import json
 import mindspore
 import numpy as np
 import shutil
+from unittest.mock import patch
 
 from msprobe.mindspore import PrecisionDebugger
 
@@ -118,7 +119,8 @@ class TestDebuggerSave(unittest.TestCase):
             shutil.rmtree(test_dir)
         PrecisionDebugger._instance = None
 
-    def test_save_real_tensor(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_real_tensor(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         async_dump = False
@@ -154,7 +156,8 @@ class TestDebuggerSave(unittest.TestCase):
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_save_statistics(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_statistics(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         async_dump = False
@@ -185,7 +188,8 @@ class TestDebuggerSave(unittest.TestCase):
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_save_md5(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_md5(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         async_dump = False
@@ -217,7 +221,8 @@ class TestDebuggerSave(unittest.TestCase):
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_save_multiple_steps(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_multiple_steps(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = [0, 1, 2]
         async_dump = False
@@ -257,7 +262,8 @@ class TestDebuggerSave(unittest.TestCase):
             debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
             assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_async_save_tensor(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_async_save_tensor(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         async_dump = True
@@ -293,7 +299,8 @@ class TestDebuggerSave(unittest.TestCase):
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_async_save_md5(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_async_save_md5(self, _):
         # async_dump case, md5 configuration not working,only save statistics
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
@@ -325,7 +332,8 @@ class TestDebuggerSave(unittest.TestCase):
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_save_multiple_times(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_multiple_times(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         call_times = 3
@@ -366,8 +374,8 @@ class TestDebuggerSave(unittest.TestCase):
             debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
             assert deep_compare(debug_json_dict["data"][f"data_dict.{i}.debug"], target_debug_info)
 
-
-    def test_save_backward(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_backward(self, _):
         x = mindspore.Tensor([1., 2.])
         target_x_grad = mindspore.Tensor([1., 1.])
         def _forward_simple_func(x):
@@ -429,9 +437,8 @@ class TestDebuggerSave(unittest.TestCase):
             assert self.check_real_npy(target_tensor_path, target_tensor)
             assert deep_compare(debug_json_dict["data"][target_tensor_key], target_tensor_info)
 
-
-
-    def test_save_compilcated_data_structure_backward(self):
+    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
+    def test_save_compilcated_data_structure_backward(self, _):
         x = mindspore.Tensor([1., 2.])
         target_x_grad = mindspore.Tensor([1., 1.])
 
