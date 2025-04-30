@@ -1,4 +1,5 @@
 use std::net::TcpStream;
+use rustls::{ClientConnection, StreamOwned};
 
 use anyhow::Result;
 use serde_json::Value;
@@ -118,7 +119,7 @@ impl NpuTraceConfig {
 }
 
 pub fn run_nputrace(
-    client: TcpStream,
+    mut client: StreamOwned<ClientConnection, TcpStream>,
     job_id: u64,
     pids: &str,
     process_limit: u32,
@@ -140,9 +141,9 @@ pub fn run_nputrace(
         config_str, job_id, pids, process_limit
     );
 
-    utils::send_msg(&client, &request_json).expect("Error sending message to service");
+    utils::send_msg(&mut client, &request_json).expect("Error sending message to service");
 
-    let resp_str = utils::get_resp(&client).expect("Unable to decode output bytes");
+    let resp_str = utils::get_resp(&mut client).expect("Unable to decode output bytes");
 
     println!("response = {}", resp_str);
 
