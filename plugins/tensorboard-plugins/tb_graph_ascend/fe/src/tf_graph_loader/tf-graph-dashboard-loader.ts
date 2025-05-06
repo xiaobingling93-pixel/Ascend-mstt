@@ -291,34 +291,25 @@ class TfGraphDashboardLoader extends LegacyElementMixin(PolymerElement) {
   }
 
   _load(selection: tf_graph_controls.Selection): void {
-    const { run, tag, type: selectionType, batch, step } = selection;
-    switch (selectionType) {
-      case tf_graph_common.SelectionType.OP_GRAPH:
-      case tf_graph_common.SelectionType.CONCEPTUAL_GRAPH: {
-        // Clear stats about the previous graph.
-        this.set('outStats', null);
-        const params = new URLSearchParams();
-        params.set('run', run);
-        params.set('conceptual', String(selectionType === tf_graph_common.SelectionType.CONCEPTUAL_GRAPH));
-        if (tag) {
-          params.set('tag', tag);
-        }
-        params.set('batch', String(batch === -1 ? -1 : batch - 1));
-        params.set('step', String(step === -1 ? -1 : step - 1));
-        const componentsPath = `components?${String(params)}`;
-        params.set('node', 'root');
-        const graphPath = `subgraph?${String(params)}`;
-        this._setCompoments(componentsPath).then(() => {
-          // _setCompoments 完成后执行此行
-          this._fetchAndConstructHierarchicalGraph(graphPath).then(() => {
-            this._graphRunTag = { run, tag }; // 图形构建完成后执行
-          });
-        });
-        return;
-      }
-      default:
-        console.error(`Unknown selection type: ${selectionType}`);
+    const { run, tag, batch, step } = selection;
+    this.set('outStats', null);
+    const params = new URLSearchParams();
+    params.set('run', run);
+    if (tag !== undefined && tag !== null) {
+      params.set('tag', tag);
     }
+    params.set('batch', String(batch === -1 ? -1 : batch - 1));
+    params.set('step', String(step === -1 ? -1 : step - 1));
+    const componentsPath = `components?${String(params)}`;
+    params.set('node', 'root');
+    const graphPath = `subgraph?${String(params)}`;
+    this._setCompoments(componentsPath).then(() => {
+      // _setCompoments 完成后执行此行
+      this._fetchAndConstructHierarchicalGraph(graphPath).then(() => {
+        this._graphRunTag = { run, tag }; // 图形构建完成后执行
+      });
+    });
+    return;
   }
 
   _fetchAndConstructHierarchicalGraph(path: string | null, pbTxtFile?: Blob): Promise<void> {

@@ -33,16 +33,6 @@ import '../tf_graph_loader/tf-graph-dashboard-loader';
  * The (string) name for the run of the selected dataset in the graph dashboard.
  */
 const RUN_STORAGE_KEY = 'run';
-/**
- * TODO(stephanwlee): Convert this to proper type when converting to TypeScript.
- * @typedef {{
- *   tag: ?string,
- *   displayName: string,
- *   conceptualGraph: boolean,
- *   opGraph: boolean,
- *   profile: boolean,
- * }}
- */
 
 /**
  * tf-graph-dashboard displays a graph from a TensorFlow run.
@@ -166,7 +156,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     </style>
   `;
 
-
   @property({ type: Array })
   _datasets: any[] = [];
 
@@ -232,17 +221,8 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
       const runNames = Object.keys(dataset);
       // Transform raw data into UI friendly data.
       this._datasets = runNames.sort(vz_sorting.compareTagNames).map((runName) => {
-        const runData = dataset[runName];
-        const tagNames = Object.keys(runData.tags).sort(vz_sorting.compareTagNames);
-        const tags = tagNames
-          .map((name) => runData.tags[name])
-          .map(({ tag, conceptual_graph, op_graph, profile }) => ({
-            tag,
-            displayName: tag,
-            conceptualGraph: conceptual_graph,
-            opGraph: op_graph,
-            profile,
-          }));
+        const tagsData = dataset[runName];
+        const tags = tagsData.sort(vz_sorting.compareTagNames);
         return { name: runName, tags };
       });
       this._datasetsFetched = true;
