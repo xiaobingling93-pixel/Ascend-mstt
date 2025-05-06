@@ -28,7 +28,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param
+    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json
 from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path
@@ -163,7 +163,7 @@ class ParseData:
         npu_json_path, bench_json_path, stack_json_path = file_list
         npu_json_data = load_json(npu_json_path)
         bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path) if self.mode_config.stack_mode else None
+        stack_json_data = load_stack_json(stack_json_path) if self.mode_config.stack_mode else None
 
         # parse json data and generate df
         npu_df = self.gen_data_df(npu_json_data, stack_json_data)

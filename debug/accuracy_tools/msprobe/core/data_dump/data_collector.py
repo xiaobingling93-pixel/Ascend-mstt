@@ -89,6 +89,10 @@ class DataCollector:
         logger.debug(msg)
         self.data_writer.update_data(data_info)
 
+    def call_stack_collect(self, name):
+        stack_info = self.data_processor.analyze_api_call_stack(name)
+        self.data_writer.update_stack(name, stack_info)
+
     def forward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         if self.config.task == Const.FREE_BENCHMARK:
             backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
@@ -118,7 +122,7 @@ class DataCollector:
         self.set_is_recomputable(data_info, is_recompute)
         if self.config.level == Const.LEVEL_L2:
             return
-        self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -130,7 +134,7 @@ class DataCollector:
         if self.config.task != Const.STRUCTURE:
             data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
-        self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
