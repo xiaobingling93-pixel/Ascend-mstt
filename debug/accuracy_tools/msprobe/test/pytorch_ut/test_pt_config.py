@@ -181,7 +181,7 @@ class TestStatisticsConfig(unittest.TestCase):
         self.config.summary_mode = "invalid_mode"
         with self.assertRaises(Exception) as context:
             self.config._check_summary_mode()
-        self.assertIn(str(context.exception), "summary_mode is invalid")
+        self.assertIn(str(context.exception), "[msprobe] 无效参数：")
 
     def test_check_summary_mode_none(self):
         self.config.summary_mode = None

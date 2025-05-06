@@ -70,7 +70,7 @@ class Const:
     SUMMARY = "summary"
     MD5 = "md5"
     VALUE = "value"
-    SUMMARY_MODE = [ALL, SUMMARY, MD5]
+    SUMMARY_MODE = ["statistics", "md5"]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
