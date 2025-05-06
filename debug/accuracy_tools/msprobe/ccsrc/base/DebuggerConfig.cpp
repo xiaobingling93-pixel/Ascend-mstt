@@ -52,7 +52,8 @@ DebuggerErrno ParseJsonBaseObj2Var(const nlohmann::json& content, const std::str
 
 template<typename T>
 DebuggerErrno ParseJsonStringAndTrans(const nlohmann::json& content, const std::string& field,
-                                const std::map<int32_t, std::string>& enum2name, T& output, bool mandatory=false) {
+                                const std::map<int32_t, std::string>& enum2name, T& output, bool mandatory=false)
+{
     DebuggerErrno ret;
     std::string value;
 

@@ -29,7 +29,8 @@ namespace MindStudioDebugger {
 
 class AclDumper {
 public:
-    static AclDumper& GetInstance() {
+    static AclDumper& GetInstance() 
+    {
         static AclDumper dumperInstance;
         return dumperInstance;
     }

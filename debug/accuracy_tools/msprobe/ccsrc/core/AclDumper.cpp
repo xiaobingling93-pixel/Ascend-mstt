@@ -247,7 +247,8 @@ DebuggerErrno AclDumper::AclDumpGenStatJson(std::shared_ptr<const StatisticsCfg>
         aclDumpJson[ACL_DUMP_STEP] = std::to_string(INT_MAX);
     } else {
         std::vector<std::string> kernelsList = statisticsCfg->matcher.GenRealKernelList(kernels);
-        if (!kernelsList.empty()){
+        if (!kernelsList.empty())
+        {
             aclDumpJson[ACL_DUMP_LIST].push_back({{ACL_DUMP_LAYER, kernelsList}});
         }
     }
@@ -494,7 +495,8 @@ void AclDumper::FinalizeDump(ExtArgs& args)
     aclDumpHasSet = false;
 }
 
-void KernelInitDump() {
+void KernelInitDump() 
+{
     if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
         return;
     }
@@ -512,7 +514,8 @@ void KernelInitDump() {
     }
 }
 
-void KernelSetDump(const std::string &filePath) {
+void KernelSetDump(const std::string &filePath) 
+{
     std::string dumpPath = FileUtils::GetAbsPath(filePath);
     auto aclRet = CALL_ACL_API(AclmdlSetDump, dumpPath.c_str());
     if (aclRet != ACL_SUCCESS) {
@@ -522,7 +525,8 @@ void KernelSetDump(const std::string &filePath) {
     }
 }
 
-void KernelFinalizeDump() {
+void KernelFinalizeDump() 
+{
     CALL_ACL_API(AclrtSynchronizeDevice);
     auto aclRet = CALL_ACL_API(AclmdlFinalizeDump);
     if (aclRet != ACL_SUCCESS) {

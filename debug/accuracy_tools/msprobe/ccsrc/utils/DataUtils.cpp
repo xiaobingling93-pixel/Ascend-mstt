@@ -26,14 +26,16 @@
 namespace MindStudioDebugger {
 namespace  DataUtils {
 
-int64_t SizeToS64(size_t v) {
+int64_t SizeToS64(size_t v) 
+{
     if (v > static_cast<size_t>(INT64_MAX)) {
         throw std::runtime_error("Value " + std::to_string(v) + "exceeds the maximum value of int64.");
     }
     return static_cast<int64_t>(v);
 }
 
-std::string U64ToHexString(uint64_t v) {
+std::string U64ToHexString(uint64_t v) 
+{
     std::stringstream ss;
     ss << "0x" << std::hex << std::uppercase << v;
     return std::move(ss.str());
@@ -59,8 +61,7 @@ BFloat16::operator float() const
 {
     /* 为了兼容性，不要用c++20的bit_cast */
     constexpr uint8_t offsetSize = 16;
-    union
-    {
+    union {
         float f32;
         uint32_t ui32;
     };
