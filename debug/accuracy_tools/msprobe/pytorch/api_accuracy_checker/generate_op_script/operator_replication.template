@@ -39,7 +39,7 @@ ILLEGAL_PATH_ERROR = "非法文件路径"
 ILLEGAL_PARAM_ERROR = "非法打开方式"
 FILE_TOO_LARGE_ERROR = "文件过大"
 FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
-FILE_SIZE_DICT = {
+FILE_SIZE_DICT = {{
     ".pkl": 1073741824,  # 1 * 1024 * 1024 * 1024
     ".npy": 10737418240,  # 10 * 1024 * 1024 * 1024
     ".json": 1073741824,  # 1 * 1024 * 1024 * 1024
@@ -48,7 +48,7 @@ FILE_SIZE_DICT = {
     ".xlsx": 1073741824,  # 1 * 1024 * 1024 * 1024
     ".yaml": 1073741824,  # 1 * 1024 * 1024 * 1024
     ".ir": 1073741824  # 1 * 1024 * 1024 * 1024
-}
+}}
 COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
 
 class CompareStandard(Enum):
@@ -79,7 +79,7 @@ class FileChecker:
     @staticmethod
     def _check_path_type(path_type):
         if path_type not in [DIR, FILE]:
-            print(f'ERROR: The path_type must be {DIR} or {FILE}.')
+            print(f'ERROR: The path_type must be {{DIR}} or {{FILE}}.')
             raise Exception(ILLEGAL_PARAM_ERROR)
         return path_type
 
@@ -122,7 +122,7 @@ class FileChecker:
     def check_link(path):
         abs_path = os.path.abspath(path)
         if os.path.islink(abs_path):
-            print('ERROR: The file path {} is a soft link.'.format(path))
+            print('ERROR: The file path {{}} is a soft link.'.format(path))
             raise Exception(SOFT_LINK_ERROR)
 
     @staticmethod
@@ -137,11 +137,11 @@ class FileChecker:
     def check_path_type(file_path, file_type):
         if file_type == FILE:
             if not os.path.isfile(file_path):
-                print(f"ERROR: The {file_path} should be a file!")
+                print(f"ERROR: The {{file_path}} should be a file!")
                 raise Exception(INVALID_FILE_ERROR)
         if file_type == DIR:
             if not os.path.isdir(file_path):
-                print(f"ERROR: The {file_path} should be a dictionary!")
+                print(f"ERROR: The {{file_path}} should be a dictionary!")
                 raise Exception(INVALID_FILE_ERROR)
 
     @staticmethod
@@ -171,17 +171,17 @@ class FileChecker:
         try:
             file_size = os.path.getsize(file_path)
         except OSError as os_error:
-            print(f'ERROR: Failed to open "{file_path}". {str(os_error)}')
+            print(f'ERROR: Failed to open "{{file_path}}". {{str(os_error)}}')
             raise Exception(INVALID_FILE_ERROR) from os_error
         if file_size >= max_size:
-            print(f'ERROR: The size ({file_size}) of {file_path} exceeds ({max_size}) bytes, tools not support.')
+            print(f'ERROR: The size ({{file_size}}) of {{file_path}} exceeds ({{max_size}}) bytes, tools not support.')
             raise Exception(FILE_TOO_LARGE_ERROR)
 
     @staticmethod
     def check_file_suffix(file_path, file_suffix):
         if file_suffix:
             if not file_path.endswith(file_suffix):
-                print(f"The {file_path} should be a {file_suffix} file!")
+                print(f"The {{file_path}} should be a {{file_suffix}} file!")
                 raise Exception(INVALID_FILE_ERROR)
 
     @staticmethod
@@ -189,11 +189,11 @@ class FileChecker:
         path = os.path.realpath(path)
         dirpath = os.path.dirname(path)
         if FileChecker.check_others_writable(dirpath):
-            print(f"WARNING: The directory is writable by others: {dirpath}.")
+            print(f"WARNING: The directory is writable by others: {{dirpath}}.")
         try:
             FileChecker.check_path_owner_consistent(dirpath)
         except Exception:
-            print(f"WARNING: The directory {dirpath} is not yours.")
+            print(f"WARNING: The directory {{dirpath}} is not yours.")
 
     @staticmethod
     def check_others_writable(directory):
@@ -203,6 +203,12 @@ class FileChecker:
                 bool(dir_stat.st_mode & stat.S_IWOTH)  # 其他用户可写
         )
         return is_writable
+
+    @staticmethod
+    def check_path_readability(path):
+        if not os.access(path, os.R_OK):
+            print('ERROR: The file path %s is not readable.' % path)
+            raise Exception(FILE_PERMISSION_ERROR)
 
     @staticmethod
     def check_path_writability(path):
