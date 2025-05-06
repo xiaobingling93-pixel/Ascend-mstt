@@ -523,7 +523,7 @@ void KernelSetDump(const std::string &filePath) {
 }
 
 void KernelFinalizeDump() {
-    CALL_ACL_API(aclrtSynchronizeDevice);
+    CALL_ACL_API(AclrtSynchronizeDevice);
     auto aclRet = CALL_ACL_API(AclmdlFinalizeDump);
     if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
