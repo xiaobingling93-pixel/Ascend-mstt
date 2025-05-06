@@ -4,7 +4,7 @@ from mindspore.common.initializer import Normal
 import mindspore as ms
 import numpy as np
 
-from msprobe.mindspore.common.utils import is_mindtorch
+from msprobe.mindspore.common.utils import is_mindtorch, mindtorch_check_result
 from msprobe.mindspore.monitor.common_func import (
     is_valid_instance,
     get_submodules,
@@ -15,6 +15,8 @@ from msprobe.mindspore.monitor.common_func import (
     optimizer_post_hook
 )
 
+mindtorch_check_result = None
+TORCH_AVAILABLE = False
 if is_mindtorch():
     try:
         import torch
