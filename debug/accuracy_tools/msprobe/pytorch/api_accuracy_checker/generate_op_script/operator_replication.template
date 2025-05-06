@@ -403,6 +403,7 @@ def compare_tensor(out_device, out_bench, api_name):
         else:
             abs_err = torch.abs(out_device - out_bench)
             abs_bench = torch.abs(out_bench)
+            eps = 2 ** -23
             if dtype_bench == torch.float32:
                 eps = 2 ** -23
             if dtype_bench == torch.float64:
