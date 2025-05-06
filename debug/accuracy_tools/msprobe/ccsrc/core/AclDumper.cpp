@@ -458,7 +458,7 @@ void AclDumper::SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args)
         return;
     }
 
-    aclError aclRet = CALL_ACL_API(aclmdlInitDump);
+    aclError aclRet = CALL_ACL_API(AclmdlInitDump);
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                   "Failed to init acldump(" + std::to_string(aclRet) + ").");
@@ -504,7 +504,7 @@ void KernelInitDump() {
         LOG_ERROR(ret, "Failed to call InitAcl.");
         return;
     }
-    auto aclRet = CALL_ACL_API(aclmdlInitDump);
+    auto aclRet = CALL_ACL_API(AclmdlInitDump);
     if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to init acldump(" + std::to_string(aclRet) + ").");
@@ -514,7 +514,7 @@ void KernelInitDump() {
 
 void KernelSetDump(const std::string &filePath) {
     std::string dumpPath = FileUtils::GetAbsPath(filePath);
-    auto aclRet = CALL_ACL_API(aclmdlSetDump, dumpPath.c_str());
+    auto aclRet = CALL_ACL_API(AclmdlSetDump, dumpPath.c_str());
     if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to enable acldump(" + std::to_string(aclRet) + ").");
@@ -524,7 +524,7 @@ void KernelSetDump(const std::string &filePath) {
 
 void KernelFinalizeDump() {
     CALL_ACL_API(aclrtSynchronizeDevice);
-    auto aclRet = CALL_ACL_API(aclmdlFinalizeDump);
+    auto aclRet = CALL_ACL_API(AclmdlFinalizeDump);
     if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to finalize acldump(" + std::to_string(aclRet) + ").");
