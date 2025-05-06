@@ -295,9 +295,9 @@ static inline void AssertConsis(const AclTensorInfo& tensor)
     // The ele num of quantization type(qint4*2) in MindSpore must be even.
     int int4_size_factor = 2;
     if (tensor.dtype == AclDtype::DT_INT4) {
-        tensor_size = EleNumOfTensor(tensor, false) / int4_size_factor;
+        tensorSize = EleNumOfTensor(tensor, false) / int4_size_factor;
     }
-    if (tensor_size != tensor.dataSize) {
+    if (tensorSize != tensor.dataSize) {
         throw std::runtime_error(tensor + ": The internal data of Tensor is inconsistent.");
     }
 }
