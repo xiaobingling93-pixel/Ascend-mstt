@@ -1,10 +1,9 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from mindspore import nn, context
 from mindspore.common.initializer import Normal
 import mindspore as ms
-import numpy as np
 
-from msprobe.mindspore.common.utils import is_mindtorch, mindtorch_check_result
 from msprobe.mindspore.monitor.common_func import (
     is_valid_instance,
     get_submodules,
@@ -15,15 +14,13 @@ from msprobe.mindspore.monitor.common_func import (
     optimizer_post_hook
 )
 
-mindtorch_check_result = None
 TORCH_AVAILABLE = False
-if is_mindtorch():
-    try:
-        import torch
-        import torch.nn as torch_nn
-        TORCH_AVAILABLE = True
-    except ImportError:
-        TORCH_AVAILABLE = False
+try:
+    import torch
+    import torch.nn as torch_nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
 
 
 class TestModelUtils:
@@ -39,16 +36,14 @@ class TestModelUtils:
         """Cleanup after all tests in this class"""
         pass
 
-    @pytest.fixture(params=['torch'] if TORCH_AVAILABLE else ['mindspore'])
-    def model(self, request):
-        """Fixture providing both MindSpore and PyTorch models"""
-        if request.param == 'mindspore':
-            return self.ms_model
-        elif request.param == 'torch' and TORCH_AVAILABLE:
-            return self.torch_model
 
-    def test_is_valid_instance_if_model_is_cell_or_module_then_return_true(self, model):
-        assert is_valid_instance(model)
+    def test_is_valid_instance_if_model_is_cell_or_module_then_return_true(self):
+        with patch('msprobe.mindspore.monitor.common_func.is_mindtorch') as mock_is_mindtorch:
+            if TORCH_AVAILABLE:
+                mock_is_mindtorch.return_value = True
+                assert is_valid_instance(self.torch_model)
+            mock_is_mindtorch.return_value = False
+            assert is_valid_instance(self.ms_model)
 
     def test_is_valid_instance_if_input_is_string_then_return_false(self):
         assert not is_valid_instance("not a model")
@@ -56,24 +51,33 @@ class TestModelUtils:
     def test_is_valid_instance_if_input_is_number_then_return_false(self):
         assert not is_valid_instance(123)
 
-    def test_get_submodules_if_model_is_valid_then_return_non_empty_dict(self, model):
-        submodules = dict(get_submodules(model))
-        assert len(submodules) > 0
-        if isinstance(model, nn.Cell):
+    def test_get_submodules_if_model_is_valid_then_return_non_empty_dict(self):
+        with patch('msprobe.mindspore.monitor.common_func.is_mindtorch') as mock_is_mindtorch:
+            mock_is_mindtorch.return_value = True
+            if TORCH_AVAILABLE:
+                submodules = dict(get_submodules(self.torch_model))
+                assert len(submodules) > 0
+                assert any(name == 'conv1' for name in submodules)
+
+            mock_is_mindtorch.return_value = False
+            submodules = dict(get_submodules(self.ms_model))
+            assert len(submodules) > 0
             assert any(name.endswith('conv1') for name in submodules)
-        elif TORCH_AVAILABLE and isinstance(model, torch_nn.Module):
-            assert any(name == 'conv1' for name in submodules)
+
 
     def test_get_submodules_if_model_is_invalid_then_return_empty_dict(self):
         assert get_submodules("invalid") == {}
 
-    def test_get_parameters_if_model_is_valid_then_return_non_empty_dict(self, model):
-        params = dict(get_parameters(model))
-        assert len(params) > 0
-        if isinstance(model, nn.Cell):
+    def test_get_parameters_if_model_is_valid_then_return_non_empty_dict(self):
+        with patch('msprobe.mindspore.monitor.common_func.is_mindtorch') as mock_is_mindtorch:
+            mock_is_mindtorch.return_value = True
+            if TORCH_AVAILABLE:
+                params = dict(get_parameters(self.torch_model))
+                assert any(name == 'conv1.weight' for name in params)
+            mock_is_mindtorch.return_value = False
+            params = dict(get_parameters(self.ms_model))
             assert any('conv1.weight' in name for name in params)
-        elif TORCH_AVAILABLE and isinstance(model, torch_nn.Module):
-            assert any(name == 'conv1.weight' for name in params)
+
 
     def test_get_parameters_if_model_is_invalid_then_return_empty_dict(self):
         assert get_parameters(123) == {}
