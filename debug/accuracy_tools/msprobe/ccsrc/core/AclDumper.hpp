@@ -30,8 +30,8 @@ namespace MindStudioDebugger {
 class AclDumper {
 public:
     static AclDumper& GetInstance() {
-        static AclDumper instance_;
-        return instance_;
+        static AclDumper dumperInstance;
+        return dumperInstance;
     }
 
     static bool IsIterNeedDump(uint32_t iterId);
@@ -39,7 +39,7 @@ public:
 
     void SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args);
     void FinalizeDump(ExtArgs& args);
-    void OnAclDumpCallBack(const acldumpChunk* chunk, int32_t len);
+    void OnAclDumpCallBack(const AclDumpChunk* chunk, int32_t len);
 
     std::string GetDumpPath(uint32_t curStep) const;
 
@@ -58,7 +58,7 @@ private:
                                      uint32_t curStep, const char** kernels);
     DebuggerErrno AclDumpGenOverflowJson(std::shared_ptr<const OverflowCheckCfg> overflowCfg, uint32_t rank,
                                          uint32_t curStep);
-    void CountOverflowNumbers(const acldumpChunk* chunk);
+    void CountOverflowNumbers(const AclDumpChunk* chunk);
     bool IsOverflowCompleted();
 
     bool initialized{false};

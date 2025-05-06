@@ -17,7 +17,7 @@ std::string TEST_ExecShellCommand(const std::string& cmd)
     return result;
 }
 
-std::string trim(const std::string& str)
+std::string Trim(const std::string& str)
 {
     std::string::size_type first = str.find_first_not_of(" \t\n\r\f\v");
     std::string::size_type last = str.find_last_not_of(" \t\n\r\f\v");

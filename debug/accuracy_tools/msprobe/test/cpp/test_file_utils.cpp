@@ -52,7 +52,7 @@ TEST_F(FileUtilsTest, TestIsPathExist)
 
 TEST_F(FileUtilsTest, TestGetAbsPath)
 {
-    std::string pwd = trim(TEST_ExecShellCommand("pwd"));
+    std::string pwd = Trim(TEST_ExecShellCommand("pwd"));
     EXPECT_EQ(pwd, GetAbsPath("."));
     EXPECT_EQ(pwd + "/testpath", GetAbsPath("./testpath"));
     EXPECT_EQ(pwd + "/testpath", GetAbsPath("./testpath/"));
@@ -210,8 +210,8 @@ TEST_F(FileUtilsTest, TestIsPathLengthLegal)
 TEST_F(FileUtilsTest, TestIsPathDepthValid)
 {
     EXPECT_TRUE(IsPathDepthValid(""));
-    EXPECT_TRUE(IsPathDepthValid(std::string(PATH_DEPTH_MAX, pathSeparator)));
-    EXPECT_FALSE(IsPathDepthValid(std::string(PATH_DEPTH_MAX + 1, pathSeparator)));
+    EXPECT_TRUE(IsPathDepthValid(std::string(PATH_DEPTH_MAX, PATH_SEPARATOR)));
+    EXPECT_FALSE(IsPathDepthValid(std::string(PATH_DEPTH_MAX + 1, PATH_SEPARATOR)));
 }
 
 TEST_F(FileUtilsTest, TestIsFileOwner)

@@ -39,7 +39,7 @@ class HookDynamicLoader {
 
  private:
     // Helper functions
-    bool loadFunction(void *handle, const std::string &functionName);
+    bool LoadFunction(void *handle, const std::string &functionName);
 
     HookDynamicLoader() = default;
 

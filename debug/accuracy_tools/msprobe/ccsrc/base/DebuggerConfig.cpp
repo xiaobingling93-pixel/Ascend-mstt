@@ -66,7 +66,7 @@ DebuggerErrno ParseJsonStringAndTrans(const nlohmann::json& content, const std::
     }
 
     int32_t enumId = GetEnumIdFromName(enum2name, value);
-    if (enumId == debuggerInvalidEnum) {
+    if (enumId == DEBUGGER_INVALID_ENUM) {
         return DebuggerErrno::ERROR_UNKNOWN_VALUE;
     }
 
@@ -176,9 +176,9 @@ void CommonCfgParseTasks(const nlohmann::json& content, std::vector<DebuggerTask
     std::string taskName;
     DebuggerErrno ret;
 
-    ret = ParseJsonBaseObj2Var<std::string>(content, kTask, taskName, true);
+    ret = ParseJsonBaseObj2Var<std::string>(content, TASK, taskName, true);
     if (ret == DebuggerErrno::ERROR_FIELD_NOT_EXISTS) {
-        ret = ParseJsonBaseObj2Var<std::vector<std::string>>(content, kTasks, taskNameList, true);
+        ret = ParseJsonBaseObj2Var<std::vector<std::string>>(content, TASKS, taskNameList, true);
     } else {
         taskNameList.emplace_back(taskName);
     }
@@ -189,8 +189,8 @@ void CommonCfgParseTasks(const nlohmann::json& content, std::vector<DebuggerTask
     }
 
     for (auto& ele : taskNameList) {
-        int32_t enumId = GetEnumIdFromName(TaskTypeEnum2Name, ele);
-        if (enumId == debuggerInvalidEnum) {
+        int32_t enumId = GetEnumIdFromName(TASK_TYPE_ENUM_2_NAME, ele);
+        if (enumId == DEBUGGER_INVALID_ENUM) {
             LOG_WARNING(DebuggerErrno::ERROR_UNKNOWN_VALUE, "Task " + ele + " is unknown.");
             continue;
         }
@@ -201,19 +201,19 @@ void CommonCfgParseTasks(const nlohmann::json& content, std::vector<DebuggerTask
     return;
 }
 
-constexpr char kRegexPrefix[] = "name-regex(";
-constexpr char kRegexSuffix[] = ")";
-constexpr size_t kRegexPrefixLen = sizeof(kRegexPrefix) - 1;
-constexpr size_t kRegexSuffixLen = sizeof(kRegexSuffix) - 1;
+constexpr char REGEX_PREFIX[] = "name-regex(";
+constexpr char REGEX_SUFFIX[] = ")";
+constexpr size_t REGEX_PREFIX_LEN = sizeof(REGEX_PREFIX) - 1;
+constexpr size_t REGEX_SUFFIX_LEN = sizeof(REGEX_SUFFIX) - 1;
 
 void KernelListMatcher::Parse(const std::vector<std::string>& expressions)
 {
     for (auto& expression : expressions) {
         size_t len = expression.size();
-        if (strncmp(expression.c_str(), kRegexPrefix, kRegexPrefixLen) == 0 &&
-            strncmp(expression.c_str() + (len - kRegexSuffixLen), kRegexSuffix, kRegexSuffixLen) == 0) {
+        if (strncmp(expression.c_str(), REGEX_PREFIX, REGEX_PREFIX_LEN) == 0 &&
+            strncmp(expression.c_str() + (len - REGEX_SUFFIX_LEN), REGEX_SUFFIX, REGEX_SUFFIX_LEN) == 0) {
             /* name-regex(xxx)表示正则表达式*/
-            regexList.emplace_back(expression.substr(kRegexPrefixLen, len - kRegexPrefixLen - kRegexSuffixLen));
+            regexList.emplace_back(expression.substr(REGEX_PREFIX_LEN, len - REGEX_PREFIX_LEN - REGEX_SUFFIX_LEN));
         } else {
             /* 否则认为是full scope name */
             fullNameList.emplace_back(expression);
@@ -225,7 +225,7 @@ std::vector<std::string> KernelListMatcher::GenRealKernelList(const char** fullK
 {
     std::vector<std::string> output;
     /* 返回空列表表示全部dump，返回一个空字符串表示没有匹配上的，都不dump */
-    if (this->empty() || fullKernelList == nullptr) {
+    if (this->Empty() || fullKernelList == nullptr) {
         return output;
     }
     output = fullNameList;
@@ -253,15 +253,15 @@ void CommonCfg::Parse(const nlohmann::json& content)
         return;
     }
 
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kOutputPath, outputPath);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, OUTPUT_PATH, outputPath);
     outputPath = FileUtils::GetAbsPath(outputPath);
-    DebuggerCfgParseUIntRange(content, kRank, rank);
-    DebuggerCfgParseUIntRange(content, kStep, step);
-    PARSE_OPTIONAL_FIELD_TRANS_CHECK_RET(content, kLevel, DebuggerLevelEnum2Name, level);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kSeed, seed);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kIsDeterministic, isDeterministic);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kEnableDataloader, enableDataloader);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kAclConfig, aclConfig);
+    DebuggerCfgParseUIntRange(content, RANK, rank);
+    DebuggerCfgParseUIntRange(content, STEP, step);
+    PARSE_OPTIONAL_FIELD_TRANS_CHECK_RET(content, LEVEL, DEBUGGER_LEVEL_ENUM_2_NAME, level);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, SEED, seed);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, IS_DETERMINISTIC, isDeterministic);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, ENABLE_DATALOADER, enableDataloader);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, ACL_CONFIG, aclConfig);
 }
 
 void DebuggerCfgParseDataMode(const nlohmann::json& content, DebuggerDataDirection& direction, DebuggerDataInOut& inout)
@@ -275,16 +275,16 @@ void DebuggerCfgParseDataMode(const nlohmann::json& content, DebuggerDataDirecti
 
     direction = DebuggerDataDirection::DIRECTION_BOTH;
     inout = DebuggerDataInOut::INOUT_BOTH;
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kDataMode, buf);
-    all = static_cast<bool>(std::find(buf.begin(), buf.end(), kDataModeAll) != buf.end());
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, DATA_MODE, buf);
+    all = static_cast<bool>(std::find(buf.begin(), buf.end(), DATA_MODE_ALL) != buf.end());
     if (buf.empty() || all) {
         return;
     }
 
-    fw = static_cast<bool>(std::find(buf.begin(), buf.end(), kDirectionForward) != buf.end());
-    bw = static_cast<bool>(std::find(buf.begin(), buf.end(), kDirectionBackward) != buf.end());
-    in = static_cast<bool>(std::find(buf.begin(), buf.end(), kInOutInput) != buf.end());
-    out = static_cast<bool>(std::find(buf.begin(), buf.end(), kInOutOutput) != buf.end());
+    fw = static_cast<bool>(std::find(buf.begin(), buf.end(), DIRECTION_FORWARD) != buf.end());
+    bw = static_cast<bool>(std::find(buf.begin(), buf.end(), DIRECTION_BACKWARD) != buf.end());
+    in = static_cast<bool>(std::find(buf.begin(), buf.end(), INOUT_INPUT) != buf.end());
+    out = static_cast<bool>(std::find(buf.begin(), buf.end(), INOUT_OUTPUT) != buf.end());
 
     /* 互补项都配或都不配都表示both，因此关注不同的场景就行 */
     if (fw != bw) {
@@ -308,18 +308,18 @@ void StatisticsCfgParseSummary(const nlohmann::json& content, std::vector<Debugg
 {
     /* 老规则支持"statistics"或"md5"，新规则支持"max"/"min"/"l2norm"/"md5"组合，此处兼容 */
     DebuggerErrno ret;
-    std::string mode = kStatistics;
+    std::string mode = STATISTICS;
     std::vector<std::string> modeListName;
 
     /* 若无该字段，认为是statistic，因此这里给mode设个默认值 */
-    ret = ParseJsonBaseObj2Var<std::string>(content, kSummaryMode, mode);
+    ret = ParseJsonBaseObj2Var<std::string>(content, SUMMARY_MODE, mode);
     if (ret == DebuggerErrno::OK) {
-        if (mode == kStatistics) {
+        if (mode == STATISTICS) {
             summaryOption.push_back(DebuggerSummaryOption::MAX);
             summaryOption.push_back(DebuggerSummaryOption::MIN);
             summaryOption.push_back(DebuggerSummaryOption::MEAN);
             summaryOption.push_back(DebuggerSummaryOption::L2NORM);
-        } else if (mode == kMd5) {
+        } else if (mode == MD5) {
             summaryOption.push_back(DebuggerSummaryOption::MD5);
         } else {
             LOG_ERROR(DebuggerErrno::ERROR_UNKNOWN_VALUE, "Summary mode " + mode + " is unknown.");
@@ -327,7 +327,7 @@ void StatisticsCfgParseSummary(const nlohmann::json& content, std::vector<Debugg
         return;
     }
 
-    ret = ParseJsonBaseObj2Var<std::vector<std::string>>(content, kSummaryMode, modeListName);
+    ret = ParseJsonBaseObj2Var<std::vector<std::string>>(content, SUMMARY_MODE, modeListName);
     if (ret != DebuggerErrno::OK) {
         LOG_ERROR(ret, "Value of field summary_mode should be string or list.");
         return;
@@ -343,8 +343,8 @@ void StatisticsCfgParseSummary(const nlohmann::json& content, std::vector<Debugg
     }
 
     for (auto& ele : modeListName) {
-        int32_t enumId = GetEnumIdFromName(SummaryOptionEnum2Name, ele);
-        if (enumId == debuggerInvalidEnum) {
+        int32_t enumId = GetEnumIdFromName(SUMMARY_OPTION_ENUM_2_NAME, ele);
+        if (enumId == DEBUGGER_INVALID_ENUM) {
             LOG_ERROR(DebuggerErrno::ERROR_UNKNOWN_VALUE, "Summary mode " + ele + " is unknown.");
             return;
         }
@@ -357,8 +357,8 @@ void StatisticsCfgParseSummary(const nlohmann::json& content, std::vector<Debugg
 void StatisticsCfg::Parse(const nlohmann::json& content)
 {
     std::vector<std::string> filter;
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kScope, scope);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kList, filter);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, SCOPE, scope);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, LIST, filter);
     filter.erase(std::remove_if(filter.begin(), filter.end(),
                                 [](const std::string& s) { return s.find_first_not_of(' ') == std::string::npos; }),
                                 filter.end());
@@ -373,8 +373,8 @@ void StatisticsCfg::Parse(const nlohmann::json& content)
 void DumpTensorCfg::Parse(const nlohmann::json& content)
 {
     std::vector<std::string> filter;
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kScope, scope);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kList, filter);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, SCOPE, scope);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, LIST, filter);
     filter.erase(std::remove_if(filter.begin(), filter.end(),
                                 [](const std::string& s) { return s.find_first_not_of(' ') == std::string::npos; }),
                                 filter.end());
@@ -383,14 +383,14 @@ void DumpTensorCfg::Parse(const nlohmann::json& content)
         matcher.Parse(list);
     }
     DebuggerCfgParseDataMode(content, direction, inout);
-    PARSE_OPTIONAL_FIELD_TRANS_CHECK_RET(content, kFileFormat, DumpFileFormatEnum2Name, fileFormat);
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kBackwardInput, backwardInput);
+    PARSE_OPTIONAL_FIELD_TRANS_CHECK_RET(content, FILE_FORMAT, DUMP_FILE_FORMAT_ENUM_2_NAME, fileFormat);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, BACKWARD_INPUT, backwardInput);
 }
 
 void OverflowCheckCfg::Parse(const nlohmann::json& content)
 {
-    PARSE_OPTIONAL_FIELD_CHECK_RET(content, kOverflowNums, overflowNums);
-    PARSE_OPTIONAL_FIELD_TRANS_CHECK_RET(content, kCheckMode, OpCheckLevelEnum2Name, checkMode);
+    PARSE_OPTIONAL_FIELD_CHECK_RET(content, OVERFLOW_NUMS, overflowNums);
+    PARSE_OPTIONAL_FIELD_TRANS_CHECK_RET(content, CHECK_MODE, OP_CHECK_LEVEL_ENUM_2_NAME, checkMode);
 }
 
 void DebuggerConfig::Reset()
@@ -434,9 +434,9 @@ void DebuggerConfig::Parse()
         }                                                         \
     } while (0)
 
-    PARSE_SUBTASK_CONFIG(DebuggerTaskType::TASK_DUMP_STATISTICS, kTaskStatistics, statisticCfg, StatisticsCfg);
-    PARSE_SUBTASK_CONFIG(DebuggerTaskType::TASK_DUMP_TENSOR, kTaskDumpTensor, dumpTensorCfg, DumpTensorCfg);
-    PARSE_SUBTASK_CONFIG(DebuggerTaskType::TASK_OVERFLOW_CHECK, kTaskOverflowCheck, overflowCheckCfg, OverflowCheckCfg);
+    PARSE_SUBTASK_CONFIG(DebuggerTaskType::TASK_DUMP_STATISTICS, TASK_STATISTICS, statisticCfg, StatisticsCfg);
+    PARSE_SUBTASK_CONFIG(DebuggerTaskType::TASK_DUMP_TENSOR, TASK_DUMP_TENSOR, dumpTensorCfg, DumpTensorCfg);
+    PARSE_SUBTASK_CONFIG(DebuggerTaskType::TASK_OVERFLOW_CHECK, TASK_OVERFLOW_CHECK, overflowCheckCfg, OverflowCheckCfg);
 
 #undef PARSE_SUBTASK_CONFIG
     return;
@@ -461,8 +461,8 @@ int32_t DebuggerConfig::LoadConfig(const std::string& framework, const std::stri
         return -1;
     }
 
-    int32_t enumId = GetEnumIdFromName(FrameworkEnum2Name, framework);
-    if (enumId == debuggerInvalidEnum) {
+    int32_t enumId = GetEnumIdFromName(FRAMEWORK_ENUM_2_NAME, framework);
+    if (enumId == DEBUGGER_INVALID_ENUM) {
         LOG_ERROR(DebuggerErrno::ERROR_UNKNOWN_VALUE, "Unknown framework " + framework +  ".");
         return -1;
     }

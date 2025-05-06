@@ -28,12 +28,12 @@ HookDynamicLoader &HookDynamicLoader::GetInstance() {
     return instance;
 }
 
-bool HookDynamicLoader::loadFunction(void *handle, const std::string &functionName) {
+bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionName) {
     void *func = dlsym(handle, functionName.c_str());
     if (!func) {
         MS_LOG(WARNING) << "Could not load function: " << functionName << ", error: " << dlerror();
         return false;
-    }
+  }
     funcMap_[functionName] = func;
     return true;
 }
@@ -44,28 +44,36 @@ bool HookDynamicLoader::LoadLibrary() {
     py::gil_scoped_acquire acquire;
     try {
         py::module msprobeMod = py::module::import("msprobe.lib._msprobe_c");
-        if (!py::hasattr(msprobeMod, "__file__")) {
-        MS_LOG(WARNING) << "Adump mod not found";
-        return false;
-    }
-    msprobePath = msprobeMod.attr("__file__").cast<std::string>();
+		if (!py::hasattr(msprobeMod, "__file__")) {
+			MS_LOG(WARNING) << "Adump mod not found";
+			return false;
+		}
+		msprobePath = msprobeMod.attr("__file__").cast<std::string>();
     } catch (const std::exception& e) {
-    MS_LOG(WARNING) << "Adump mod path unable to get: " << e.what();
-    return false;
-    }
+		MS_LOG(WARNING) << "Adump mod path unable to get: " << e.what();
+		return false;
+	}
     std::lock_guard<std::mutex> lock(mutex_);
     if (handle_) {
         MS_LOG(WARNING) << "Hook library already loaded!";
         return false;
     }
-    if (msprobePath == "") {
-        MS_LOG(WARNING) << "Adump path not loaded";
-        return false;
-    }
+	if (msprobePath == "") {
+		MS_LOG(WARNING) << "Adump path not loaded";
+		return false;
+	}
     handle_ = dlopen(msprobePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
     if (!handle_) {
         MS_LOG(WARNING) << "Failed to load Hook library: " << dlerror();
         return false;
+    }
+
+    for (const auto &functionName : functionList_) {
+        if (!LoadFunction(handle_, functionName)) {
+            MS_LOG(WARNING) << "Failed to load adump function";
+            dlclose(handle_);
+            handle_ = nullptr;
+            return false;
     }
 
     for (const auto &functionName : functionList_) {

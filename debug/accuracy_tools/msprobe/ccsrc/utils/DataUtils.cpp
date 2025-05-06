@@ -42,33 +42,34 @@ std::string U64ToHexString(uint64_t v) {
 BFloat16::BFloat16(float f32)
 {
     if (std::isnan(f32)) {
-        value_ = BFloat16::nan_value;
+        value_ = BFloat16::NAN_VALUE;
     } else {
+        constexpr uint8_t offsetSize = 16;
         union {
-            uint32_t U32;
-            float F32;
+            uint32_t u32Value;
+            float f32Value;
         };
-        F32 = f32;
-        uint32_t rounding_bias = ((U32 >> 16) & 1) + UINT32_C(0x7FFF);
-        value_ = static_cast<uint16_t>((U32 + rounding_bias) >> 16);
+        f32Value = f32;
+        uint32_t rounding_bias = ((u32Value >> offsetSize) & 1) + UINT32_C(0x7FFF);
+        value_ = static_cast<uint16_t>((u32Value + rounding_bias) >> offsetSize);
     }
 }
 
 BFloat16::operator float() const
 {
     /* 为了兼容性，不要用c++20的bit_cast */
+    constexpr uint8_t offsetSize = 16;
     union
     {
         float f32;
         uint32_t ui32;
     };
-    
     ui32 = static_cast<uint32_t>(value_);
-    ui32 <<= 16; // 将ui32左移16位
+    ui32 <<= offsetSize; // 将ui32左移16位
     return f32;
 }
 
-const static std::unordered_map<DataType, size_t> kTypeSizeMap = {
+const static std::unordered_map<DataType, size_t> TYPE_SIZE_MAP = {
     {DataType::DT_BOOL, 1},
     {DataType::DT_INT8, 1},
     {DataType::DT_UINT8, 1},
@@ -88,15 +89,15 @@ const static std::unordered_map<DataType, size_t> kTypeSizeMap = {
 
 size_t SizeOfDType(DataType type)
 {
-    auto it = kTypeSizeMap.find(type);
-    if (it == kTypeSizeMap.end()) {
+    auto it = TYPE_SIZE_MAP.find(type);
+    if (it == TYPE_SIZE_MAP.end()) {
         return 0;
     }
     return it->second;
 }
 
-constexpr auto kOpDType_UNKNOWN = "UNKNOWN";
-const static std::unordered_map<DataType, std::string> kDDTypeToStringMap = {
+constexpr auto OP_DTYPE_UNKNOWN = "UNKNOWN";
+const static std::unordered_map<DataType, std::string> DTYPE_TO_STRING_MAP = {
     {DataType::DT_UNDEFINED, "UNDEFINED"},
     {DataType::DT_FLOAT, "FLOAT"},
     {DataType::DT_FLOAT16, "FLOAT16"},
@@ -133,15 +134,15 @@ const static std::unordered_map<DataType, std::string> kDDTypeToStringMap = {
 
 std::string GetDTypeString(DataType dtype)
 {
-    auto it = kDDTypeToStringMap.find(dtype);
-    if (it != kDDTypeToStringMap.end()) {
+    auto it = DTYPE_TO_STRING_MAP.find(dtype);
+    if (it != DTYPE_TO_STRING_MAP.end()) {
         return it->second;
     }
-    return kOpDType_UNKNOWN;
+    return OP_DTYPE_UNKNOWN;
 }
 
-constexpr auto kOpFormat_UNKNOWN = "UNKNOWN";
-const static std::unordered_map<TensorFormat, std::string> kFormatToStringMap = {
+constexpr auto OP_FORMAT_UNKNOWN = "UNKNOWN";
+const static std::unordered_map<TensorFormat, std::string> FORMAT_TO_STRING_MAP = {
     {TensorFormat::FORMAT_NCHW, "NCHW"},
     {TensorFormat::FORMAT_NHWC, "NHWC"},
     {TensorFormat::FORMAT_ND, "ND"},
@@ -167,7 +168,7 @@ const static std::unordered_map<TensorFormat, std::string> kFormatToStringMap = 
     {TensorFormat::FORMAT_HASHTABLE_LOOKUP_VALUE, "HASHTABLE_LOOKUP_VALUE"},
     {TensorFormat::FORMAT_HASHTABLE_LOOKUP_OUTPUT, "HASHTABLE_LOOKUP_OUTPUT"},
     {TensorFormat::FORMAT_HASHTABLE_LOOKUP_HITS, "HASHTABLE_LOOKUP_HITS"},
-    {TensorFormat::FORMAT_C1HWNCoC0, "C1HWNCoC0"},
+    {TensorFormat::FORMAT_C1HWNCOC0, "C1HWNCoC0"},
     {TensorFormat::FORMAT_MD, "MD"},
     {TensorFormat::FORMAT_NDHWC, "NDHWC"},
     {TensorFormat::FORMAT_FRACTAL_ZZ, "FRACTAL_ZZ"},
@@ -196,11 +197,11 @@ const static std::unordered_map<TensorFormat, std::string> kFormatToStringMap = 
 
 std::string GetFormatString(TensorFormat fmt)
 {
-    auto it = kFormatToStringMap.find(fmt);
-    if (it != kFormatToStringMap.end()) {
+    auto it = FORMAT_TO_STRING_MAP.find(fmt);
+    if (it != FORMAT_TO_STRING_MAP.end()) {
         return it->second;
     }
-    return kOpFormat_UNKNOWN;
+    return OP_FORMAT_UNKNOWN;
 }
 
 std::string GetShapeString(const TensorShape& shape)
