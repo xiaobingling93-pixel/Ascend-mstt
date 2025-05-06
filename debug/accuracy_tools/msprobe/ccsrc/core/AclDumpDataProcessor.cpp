@@ -542,8 +542,7 @@ static std::string MappingFilePath(const std::string& originPath)
         return std::string();
     }
 
-    DebuggerErrno ret;
-    ret = FileUtils::CreateDir(dir);
+    DebuggerErrno ret = FileUtils::CreateDir(dir);
     if (ret != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR, "Failed to create directory " + dir + ".");
         return std::string();
@@ -676,7 +675,6 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
 
     // dump_path: dump_dir/op_type.op_name.task_id.stream_id.timestamp
     std::string dumpPathSlot = tensor.dumpPath + GetTensorInfoSuffix(tensor) +  "." + NPY_SUFFIX;
-
     if (StandardizedDumpPath(dumpPathSlot) != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR, "Failed to standardize path " + dumpPathSlot + ".");
         return DebuggerErrno::ERROR;

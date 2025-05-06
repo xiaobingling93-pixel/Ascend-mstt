@@ -21,8 +21,7 @@
 #include "include/ErrorCode.hpp"
 
 extern "C" {
-
-typedef int aclError;
+using aclError = int;
 constexpr int ACL_SUCCESS = 0;
 constexpr int ACL_ERROR_NONE = 0;
 constexpr int ACL_ERROR_REPEAT_INITIALIZE = 100002;

@@ -306,7 +306,6 @@ static DebuggerErrno DeleteDirRec(const std::string &path, uint32_t depth)
                 closedir(dir);
                 return DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE;
         }
-
     }
 
     closedir(dir);

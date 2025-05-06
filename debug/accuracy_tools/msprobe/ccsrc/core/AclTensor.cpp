@@ -101,7 +101,6 @@ const static std::unordered_set<AclFormat> kSupportedFormat = {
 };
 
 const static std::map<std::pair<AclFormat, AclFormat>, TensorTransFunc> formatTransFuncMap = {
-    /* {{from, to}, function} */
     {{AclFormat::FORMAT_HWCN, AclFormat::FORMAT_NCHW}, nullptr},
     {{AclFormat::FORMAT_NHWC, AclFormat::FORMAT_NCHW}, nullptr},
     {{AclFormat::FORMAT_FRACTAL_Z, AclFormat::FORMAT_NCHW}, FRAC_Z_TO_NCHW},
@@ -203,18 +202,18 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
 
 enum Axis4D : int { AXIS_N = 0, AXIS_C, AXIS_H, AXIS_W, NCHW_DIMS };
 enum Axis5D : int {
-  N_NCDHW = 0,
-  C_NCDHW,
-  D_NCDHW,
-  H_NCDHW,
-  W_NCDHW,
-  NCDHW,
-  N_NDC1HWC0 = 0,
-  D_NDC1HWC0,
-  C1_NDC1HWC0,
-  H_NDC1HWC0,
-  W_NDC1HWC0,
-  C0_NDC1HWC0
+    N_NCDHW,
+    C_NCDHW,
+    D_NCDHW,
+    H_NCDHW,
+    W_NCDHW,
+    NCDHW,
+    N_NDC1HWC0,
+    D_NDC1HWC0,
+    C1_NDC1HWC0,
+    H_NDC1HWC0,
+    W_NDC1HWC0,
+    C0_NDC1HWC0
 };
 
 static inline AclDtype transAclDtype2MS(AclDumpMsg::OutputDataType dt)
@@ -249,7 +248,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
         }
         num *= static_cast<size_t>(dim);
     }
-  return num;
+    return num;
 }
 
 static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) {
@@ -294,7 +293,10 @@ static inline void AssertConsis(const AclTensorInfo& tensor)
     size_t tensorSize = EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor);
     // Processing dtype whose size < 1
     // The ele num of quantization type(qint4*2) in MindSpore must be even.
-    if (tensor.dtype == AclDtype::DT_INT4) tensorSize = EleNumOfTensor(tensor, false) / 2;
+    int int4_size_factor = 2;
+    if (tensor.dtype == AclDtype::DT_INT4) {
+        tensorSize = EleNumOfTensor(tensor, false) / int4_size_factor;
+    }
     if (tensorSize != tensor.dataSize) {
         throw std::runtime_error(tensor + ": The internal data of Tensor is inconsistent.");
     }
@@ -879,7 +881,6 @@ static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint
 
 DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to)
 {
-
     if (tensor.dtype == to) {
         return DebuggerErrno::OK;
     }
