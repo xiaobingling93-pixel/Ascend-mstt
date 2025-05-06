@@ -24,6 +24,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.base_handler import BaseHandler
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 
 
 class Handler(BaseHandler):
@@ -45,6 +46,7 @@ class TestBaseHandler(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.base_handler = Handler("api_name_with_id")
+        get_api_register(True).restore_all_api()
 
     def test___init__(self):
         base_handler = Handler("api_name_with_id")
