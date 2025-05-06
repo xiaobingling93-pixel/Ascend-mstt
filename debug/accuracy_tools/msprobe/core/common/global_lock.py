@@ -37,7 +37,7 @@ class GlobalLock:
             try:
                 self._shm = SharedMemory(create=True, name=self.name, size=1)
                 self._shm.buf[0] = 0
-                logger.info(f'{self.name} is created.')
+                logger.debug(f'{self.name} is created.')
             except FileExistsError:
                 self.__init__()
 
@@ -60,7 +60,7 @@ class GlobalLock:
         if is_main_process():
             try:
                 self._shm.unlink()
-                logger.info(f'{self.name} is unlinked.')
+                logger.debug(f'{self.name} is unlinked.')
             except FileNotFoundError:
                 logger.warning(f'{self.name} has already been unlinked.')
 
