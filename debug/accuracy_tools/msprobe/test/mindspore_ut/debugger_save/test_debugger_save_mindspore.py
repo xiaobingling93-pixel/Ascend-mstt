@@ -381,7 +381,6 @@ class TestDebuggerSave(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_backward(self, _):
-        get_api_register().restore_all_api()
         x = mindspore.Tensor([1., 2.])
         target_x_grad = mindspore.Tensor([1., 1.])
         def _forward_simple_func(x):
@@ -396,6 +395,7 @@ class TestDebuggerSave(unittest.TestCase):
 
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
+        get_api_register().restore_all_api()
 
         grad_fn(x)
         PrecisionDebugger.step()
@@ -445,7 +445,6 @@ class TestDebuggerSave(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_compilcated_data_structure_backward(self, _):
-        get_api_register().restore_all_api()
         x = mindspore.Tensor([1., 2.])
         target_x_grad = mindspore.Tensor([1., 1.])
 
@@ -462,6 +461,7 @@ class TestDebuggerSave(unittest.TestCase):
 
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
+        get_api_register().restore_all_api()
 
         grad_fn(x)
         PrecisionDebugger.step()
