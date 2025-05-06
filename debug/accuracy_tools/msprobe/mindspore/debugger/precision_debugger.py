@@ -36,6 +36,13 @@ from msprobe.mindspore.service import Service
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 try:
+    from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
+except ImportError:
+    dynamic_set_dump = False
+else:
+    dynamic_set_dump = True
+
+try:
     from msprobe.lib import _msprobe_c
 except ImportError:
     _msprobe_c = None
@@ -95,6 +102,9 @@ class PrecisionDebugger:
 
         Runtime.step_count = 0
         Runtime.is_running = False
+        if dynamic_set_dump:
+            _dump_set_dynamic()
+
 
     @staticmethod
     def check_input_params(args):
@@ -167,6 +177,12 @@ class PrecisionDebugger:
                 get_api_register().restore_all_api()
                 handler = TaskHandlerFactory.create(instance.config)
                 handler.handle()
+                if dynamic_set_dump:
+                    _set_init_iter(0)
+            if dynamic_set_dump:
+                if (not instance.config.rank or Runtime.rank_id in instance.config.rank) and \
+                    (not instance.config.step or Runtime.step_count in instance.config.step):
+                    _dump_start()
 
         instance.first_start = True
         Runtime.is_running = True
@@ -187,6 +203,8 @@ class PrecisionDebugger:
             return
         if instance.service:
             instance.service.stop()
+        if dynamic_set_dump:
+            _dump_stop()
         Runtime.is_running = False
 
     @classmethod
@@ -202,6 +220,8 @@ class PrecisionDebugger:
         CellProcessor.reset_cell_stats()
 
         Runtime.step_count += 1
+        if dynamic_set_dump:
+            _dump_step(1)
 
     @classmethod
     def monitor(cls, opt):
