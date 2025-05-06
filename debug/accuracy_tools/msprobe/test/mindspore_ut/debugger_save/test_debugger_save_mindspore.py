@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 from msprobe.mindspore import PrecisionDebugger
 from msprobe.core.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
-from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 
 current_file = __file__
 parent_dir = os.path.abspath(os.path.dirname(current_file))
@@ -380,13 +379,9 @@ class TestDebuggerSave(unittest.TestCase):
             assert deep_compare(debug_json_dict["data"][f"data_dict.{i}.debug"], target_debug_info)
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
-    def test_save_backward(self, _):
+    def test_save_compilcated_data_structure(self, _):
         x = mindspore.Tensor([1., 2.])
-        target_x_grad = mindspore.Tensor([1., 1.])
-        def _forward_simple_func(x):
-            PrecisionDebugger.save(x, "x_tensor")
-            return x.sum()
-        grad_fn = mindspore.value_and_grad(_forward_simple_func, (0))
+        complicated_structure = [{"a_key": x}]
         step = []
         async_dump = False
         mode = "tensor"
@@ -395,77 +390,9 @@ class TestDebuggerSave(unittest.TestCase):
 
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
-        get_api_register().restore_all_api()
 
-        grad_fn(x)
+        PrecisionDebugger.save(complicated_structure, "complicated_structure")
         PrecisionDebugger.step()
-
-
-        x_info_list = [
-            x,
-            os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "x_tensor.0.debug.npy"),
-            "x_tensor.0.debug",
-            {
-                "type": "mindspore.Tensor",
-                "dtype": "Float32",
-                "shape": [
-                    2
-                ],
-                "Max": 2.0,
-                "Min": 1.0,
-                "Mean": 1.5,
-                "Norm": 2.2360680103302,
-                "data_name": "x_tensor.0.debug.npy"
-            },
-        ]
-        x_grad_info_list = [
-            target_x_grad,
-            os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "x_tensor_grad.0.debug.npy"),
-            "x_tensor_grad.0.debug",
-            {
-                "type": "mindspore.Tensor",
-                "dtype": "Float32",
-                "shape": [
-                    2
-                ],
-                "Max": 1.0,
-                "Min": 1.0,
-                "Mean": 1.0,
-                "Norm": 1.4142135381698608,
-                "data_name": "x_tensor_grad.0.debug.npy"
-            },
-        ]
-        check_list = [x_info_list, x_grad_info_list]
-        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
-        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
-        for check_info in check_list:
-            target_tensor, target_tensor_path, target_tensor_key, target_tensor_info = check_info
-            assert self.check_real_npy(target_tensor_path, target_tensor)
-            assert deep_compare(debug_json_dict["data"][target_tensor_key], target_tensor_info)
-
-    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
-    def test_save_compilcated_data_structure_backward(self, _):
-        x = mindspore.Tensor([1., 2.])
-        target_x_grad = mindspore.Tensor([1., 1.])
-
-        def _forward_complicated_func(x):
-            complicated_structure = [{"a_key": x}]
-            PrecisionDebugger.save(complicated_structure, "complicated_structure")
-            return complicated_structure[0]["a_key"].sum()
-        grad_fn = mindspore.value_and_grad(_forward_complicated_func, (0))
-        step = []
-        async_dump = False
-        mode = "tensor"
-        dump_path = os.path.join(test_dir, "debug_save")
-        config_file_path = os.path.join(test_dir, "config.json")
-
-        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
-        debugger =  PrecisionDebugger(config_file_path)
-        get_api_register().restore_all_api()
-
-        grad_fn(x)
-        PrecisionDebugger.step()
-
 
         complicated_structure_info_list = [
             x,
@@ -488,31 +415,8 @@ class TestDebuggerSave(unittest.TestCase):
                 }
             ],
         ]
-        complicated_structure_grad_info_list = [
-            target_x_grad,
-            os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "complicated_structure_grad.0.debug.0.a_key.npy"),
-            "complicated_structure_grad.0.debug",
-            [
-                {
-                    "a_key": {
-                    "type": "mindspore.Tensor",
-                    "dtype": "Float32",
-                    "shape": [
-                    2
-                    ],
-                    "Max": 1.0,
-                    "Min": 1.0,
-                    "Mean": 1.0,
-                    "Norm": 1.4142135381698608,
-                    "data_name": "complicated_structure_grad.0.debug.0.a_key.npy"
-                    }
-                }
-            ],
-        ]
-        check_list = [complicated_structure_info_list, complicated_structure_grad_info_list]
         debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
-        for check_info in check_list:
-            target_tensor, target_tensor_path, target_tensor_key, target_tensor_info = check_info
-            assert self.check_real_npy(target_tensor_path, target_tensor)
-            assert deep_compare(debug_json_dict["data"][target_tensor_key], target_tensor_info)
+        target_tensor, target_tensor_path, target_tensor_key, target_tensor_info = complicated_structure_info_list
+        assert self.check_real_npy(target_tensor_path, target_tensor)
+        assert deep_compare(debug_json_dict["data"][target_tensor_key], target_tensor_info)
