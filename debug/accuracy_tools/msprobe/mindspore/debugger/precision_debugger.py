@@ -44,23 +44,6 @@ except ImportError:
 ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task", "dump_path", "level"])
 
 
-# class TensorConfig(BaseConfig):
-#     def __init__(self, json_config):
-#         super().__init__(json_config)
-#         self.check_mode = None
-#         self.file_format = json_config.get("file_format")
-#         self.check_config()
-#         self._check_config()
-#
-#     def _check_config(self):
-#         if self.file_format and self.file_format not in ["npy", "bin"]:
-#             raise Exception("file_format is invalid")
-#
-#
-# TaskDict = {
-#     Const.TENSOR: TensorConfig
-# }
-
 class PrecisionDebugger:
     _instance = None
     task_not_need_service = [Const.GRAD_PROBE]
@@ -89,33 +72,11 @@ class PrecisionDebugger:
         config_params = ConfigParameters(config_path, task, dump_path, level)
         self.check_input_params(config_params)
 
-        # 模拟从 JSON 中读取的内容
-        if task == "api_check":
-            task = "tensor"
-            print(f"走到这儿了")
-            json_content = {
-                "task": "tensor",  # 你传入的任务
-                "dump_path": "./output",  # 动态传入的 dump_path
-                "rank": [],
-                "step": [],
-                "level": "L1",
-                "tensor": {
-                    "scope": [],
-                    "list": [],
-                    "data_mode": ["all"]
-                }
-            }
-            common_config, task_config = self.simulate_parse_json_config(json_content)
-            print(f"common_config: {common_config}")
-            print(f"task_config: {task_config}")
-            common_config.task = task if task else common_config.task
-            self.task = common_config.task
-        else:
-            common_config, task_config = parse_json_config(config_path)
-            print(f"common_config:{common_config}")
-            print(f"task_config:{task_config}")
-            common_config.task = task if task else common_config.task
-            self.task = common_config.task
+        common_config, task_config = parse_json_config(config_path)
+        print(f"common_config:{common_config}")
+        print(f"task_config:{task_config}")
+        common_config.task = task if task else common_config.task
+        self.task = common_config.task
         if self.task == Const.GRAD_PROBE:
             self.gm = GradientMonitor(common_config, task_config)
             return
@@ -135,21 +96,6 @@ class PrecisionDebugger:
 
         Runtime.step_count = 0
         Runtime.is_running = False
-
-    @staticmethod
-    def simulate_parse_json_config(json_content):
-        """
-        模拟从 JSON 内容中解析出 common_config 和 task_config
-        """
-        common_config = CommonConfig(json_content)  # `CommonConfig` 类处理这些数据
-        # 获取 task，并通过 TaskDict 查找对应的配置类
-        task = common_config.task
-        if task not in TaskDict:
-            raise Exception(f"Invalid task: {task}")
-
-        # 从 TaskDict 获取对应的配置类，并用 task 配置进行初始化
-        task_config = TaskDict[task](json_content.get(task, {}))  # 如果没有找到配置项，默认使用空字典
-        return common_config, task_config
 
     @staticmethod
     def check_input_params(args):
