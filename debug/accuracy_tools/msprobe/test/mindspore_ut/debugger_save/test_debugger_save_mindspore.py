@@ -7,6 +7,7 @@ import shutil
 from unittest.mock import patch
 
 from msprobe.mindspore import PrecisionDebugger
+from msprobe.core.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
 
 current_file = __file__
 parent_dir = os.path.abspath(os.path.dirname(current_file))
@@ -113,11 +114,14 @@ class TestDebuggerSave(unittest.TestCase):
         if not os.path.exists(test_dir):
             os.makedirs(test_dir)
         PrecisionDebugger._instance = None
+        self.original_mindspore_special_type = MindsporeDataProcessor.mindspore_special_type
+        MindsporeDataProcessor.mindspore_special_type = tuple([mindspore.Tensor])
 
     def tearDown(self):
         if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
         PrecisionDebugger._instance = None
+        MindsporeDataProcessor.mindspore_special_type = self.original_mindspore_special_type
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_real_tensor(self, _):
