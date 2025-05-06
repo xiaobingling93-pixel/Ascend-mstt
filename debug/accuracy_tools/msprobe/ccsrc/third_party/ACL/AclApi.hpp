@@ -21,21 +21,20 @@
 #include "include/ErrorCode.hpp"
 
 extern "C" {
-
-typedef int aclError;
+using aclError = int;
 constexpr int ACL_SUCCESS = 0;
 constexpr int ACL_ERROR_NONE = 0;
 constexpr int ACL_ERROR_REPEAT_INITIALIZE = 100002;
 
 #define ACL_DUMP_MAX_FILE_PATH_LENGTH 4096
-typedef struct acldumpChunk  {
+typedef struct AclDumpChunk  {
     char       fileName[ACL_DUMP_MAX_FILE_PATH_LENGTH];    // 待落盘的Dump数据文件名，ACL_DUMP_MAX_FILE_PATH_LENGTH表示文件名最大长度，当前为4096
     uint32_t   bufLen;                                     // dataBuf数据长度，单位Byte
     uint32_t   isLastChunk;                                // 标识Dump数据是否为最后一个分片，0表示不是最后一个分片，1表示最后一个分片
     int64_t    offset;                                     // Dump数据文件内容的偏移，其中-1表示文件追加内容
     int32_t    flag;                                       // 预留Dump数据标识，当前数据无标识
     uint8_t    dataBuf[0];                                 // Dump数据的内存地址
-} acldumpChunk;
+} AclDumpChunk;
 
 }
 
@@ -44,16 +43,16 @@ namespace AscendCLApi {
 
 DebuggerErrno LoadAclApi();
 
-using AclDumpCallbackFuncType = int32_t (*)(const acldumpChunk*, int32_t);
-aclError ACLAPI_aclInit(const char* cfg);
-aclError ACLAPI_aclmdlInitDump();
-aclError ACLAPI_aclmdlSetDump(const char* cfg);
-aclError ACLAPI_aclmdlFinalizeDump();
-aclError ACLAPI_acldumpRegCallback(AclDumpCallbackFuncType messageCallback, int32_t flag);
+using AclDumpCallbackFuncType = int32_t (*)(const AclDumpChunk*, int32_t);
+aclError AclApiAclInit(const char* cfg);
+aclError AclApiAclmdlInitDump();
+aclError AclApiAclmdlSetDump(const char* cfg);
+aclError AclApiAclmdlFinalizeDump();
+aclError AclApiAcldumpRegCallback(AclDumpCallbackFuncType messageCallback, int32_t flag);
 
-aclError ACLAPI_aclrtSynchronizeDevice();
+aclError AclApiAclrtSynchronizeDevice();
 
-#define CALL_ACL_API(func, ...) MindStudioDebugger::AscendCLApi::ACLAPI_##func(__VA_ARGS__)
+#define CALL_ACL_API(func, ...) MindStudioDebugger::AscendCLApi::AclApi##func(__VA_ARGS__)
 
 }
 }

@@ -111,3 +111,10 @@ class BaseConfig:
                         f"The element '{mode}' of data_mode {self.data_mode} is not in {Const.DUMP_DATA_MODE_LIST}.",
                         MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
                     )
+
+    def _check_summary_mode(self):
+        if self.summary_mode and self.summary_mode not in Const.SUMMARY_MODE:
+            logger.error_log_with_exp(
+                        f"summary_mode is invalid, summary_mode is not in {Const.SUMMARY_MODE}.",
+                        MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+                    )

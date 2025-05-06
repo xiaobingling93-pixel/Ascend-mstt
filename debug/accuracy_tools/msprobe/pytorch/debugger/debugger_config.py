@@ -59,6 +59,7 @@ class DebuggerConfig:
                 if isinstance(task_config.online_run_ut_recompute, bool) else False
 
         self.check()
+        self._check_statistics_config(task_config)
 
         if self.level == Const.LEVEL_L2:
             self.is_backward_kernel_dump = False
@@ -134,3 +135,14 @@ class DebuggerConfig:
             self.is_backward_kernel_dump = True
             api_forward_name = api_name[:-len(Const.BACKWARD)] + Const.FORWARD
             self.list.append(api_forward_name)
+
+    def _check_statistics_config(self, task_config):
+        if self.task != Const.STATISTICS:
+            return
+        self.tensor_list = []
+        if not hasattr(task_config, "tensor_list"):
+            return
+        if self.level == Const.LEVEL_DEBUG and task_config.tensor_list:
+            logger.warning_on_rank_0("When level is set to debug, the tensor_list will be invalid.")
+            return
+        self.tensor_list = task_config.tensor_list

@@ -53,7 +53,6 @@ static int InitPrecisionDebugger(PyObject *self, PyObject *args, PyObject *kws)
     CPythonUtils::PythonDictObject kwArgs(kws);
     std::string framework = kwArgs.GetItem("framework");
     std::string cfgFile = kwArgs.GetItem("config_path");
-
     if (PrecisionDebugger::GetInstance().Initialize(framework, cfgFile) != 0) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to load config, read log for more details.");
         return -1;
@@ -182,5 +181,4 @@ PyTypeObject* GetPyPrecisionDebuggerType()
     }
     return &PyPrecisionDebuggerType;
 }
-
 }

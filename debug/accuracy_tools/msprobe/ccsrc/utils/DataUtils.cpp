@@ -26,14 +26,16 @@
 namespace MindStudioDebugger {
 namespace  DataUtils {
 
-int64_t SizeToS64(size_t v) {
+int64_t SizeToS64(size_t v) 
+{
     if (v > static_cast<size_t>(INT64_MAX)) {
         throw std::runtime_error("Value " + std::to_string(v) + "exceeds the maximum value of int64.");
     }
     return static_cast<int64_t>(v);
 }
 
-std::string U64ToHexString(uint64_t v) {
+std::string U64ToHexString(uint64_t v) 
+{
     std::stringstream ss;
     ss << "0x" << std::hex << std::uppercase << v;
     return std::move(ss.str());
@@ -42,33 +44,33 @@ std::string U64ToHexString(uint64_t v) {
 BFloat16::BFloat16(float f32)
 {
     if (std::isnan(f32)) {
-      value_ = BFloat16::nan_value;
+        value_ = BFloat16::NAN_VALUE;
     } else {
+        constexpr uint8_t offsetSize = 16;
         union {
-            uint32_t U32;
-            float F32;
+            uint32_t u32Value;
+            float f32Value;
         };
-        F32 = f32;
-        uint32_t rounding_bias = ((U32 >> 16) & 1) + UINT32_C(0x7FFF);
-        value_ = static_cast<uint16_t>((U32 + rounding_bias) >> 16);
+        f32Value = f32;
+        uint32_t rounding_bias = ((u32Value >> offsetSize) & 1) + UINT32_C(0x7FFF);
+        value_ = static_cast<uint16_t>((u32Value + rounding_bias) >> offsetSize);
     }
 }
 
 BFloat16::operator float() const
 {
     /* 为了兼容性，不要用c++20的bit_cast */
-    union
-    {
+    constexpr uint8_t offsetSize = 16;
+    union {
         float f32;
         uint32_t ui32;
     };
-    
     ui32 = static_cast<uint32_t>(value_);
-    ui32 <<= 16; // 将ui32左移16位
+    ui32 <<= offsetSize; // 将ui32左移16位
     return f32;
 }
 
-constexpr std::pair<DataType, size_t> kTypeSizeArray[] = {
+constexpr std::pair<DataType, size_t> TYPE_SIZE_ARRAY[] = {
     {DataType::DT_BOOL, 1},
     {DataType::DT_INT8, 1},
     {DataType::DT_UINT8, 1},
@@ -88,7 +90,7 @@ constexpr std::pair<DataType, size_t> kTypeSizeArray[] = {
 
 size_t SizeOfDType(DataType type)
 {
-    for (const auto& pair : kTypeSizeArray) {
+    for (const auto& pair : TYPE_SIZE_ARRAY) {
         if (pair.first == type) {
             return pair.second;
         }
@@ -96,8 +98,8 @@ size_t SizeOfDType(DataType type)
     return 0;
 }
 
-constexpr auto kOpDType_UNKNOWN = "UNKNOWN";
-const std::pair<DataType, std::string_view> kDDTypeToStringArray[] = {
+constexpr auto OP_DTYPE_UNKNOWN = "UNKNOWN";
+const std::pair<DataType, std::string_view> DTYPE_TO_STRING_ARRAY[] = {
     {DataType::DT_UNDEFINED, "UNDEFINED"},
     {DataType::DT_FLOAT, "FLOAT"},
     {DataType::DT_FLOAT16, "FLOAT16"},
@@ -134,16 +136,16 @@ const std::pair<DataType, std::string_view> kDDTypeToStringArray[] = {
 
 std::string GetDTypeString(DataType dtype)
 {
-    for (const auto& pair : kDDTypeToStringArray) {
+    for (const auto& pair : DTYPE_TO_STRING_ARRAY) {
         if (pair.first == dtype) {
             return std::string(pair.second);
         }
     }
-    return kOpDType_UNKNOWN;
+    return OP_DTYPE_UNKNOWN;
 }
 
-constexpr auto kOpFormat_UNKNOWN = "UNKNOWN";
-const std::pair<TensorFormat, std::string_view> kFormatToStringArray[] = {
+constexpr auto OP_FORMAT_UNKNOWN = "UNKNOWN";
+const std::pair<TensorFormat, std::string_view> FORMAT_TO_STRING_ARRAY[] = {
     {TensorFormat::FORMAT_NCHW, "NCHW"},
     {TensorFormat::FORMAT_NHWC, "NHWC"},
     {TensorFormat::FORMAT_ND, "ND"},
@@ -169,7 +171,7 @@ const std::pair<TensorFormat, std::string_view> kFormatToStringArray[] = {
     {TensorFormat::FORMAT_HASHTABLE_LOOKUP_VALUE, "HASHTABLE_LOOKUP_VALUE"},
     {TensorFormat::FORMAT_HASHTABLE_LOOKUP_OUTPUT, "HASHTABLE_LOOKUP_OUTPUT"},
     {TensorFormat::FORMAT_HASHTABLE_LOOKUP_HITS, "HASHTABLE_LOOKUP_HITS"},
-    {TensorFormat::FORMAT_C1HWNCoC0, "C1HWNCoC0"},
+    {TensorFormat::FORMAT_C1HWNCOC0, "C1HWNCoC0"},
     {TensorFormat::FORMAT_MD, "MD"},
     {TensorFormat::FORMAT_NDHWC, "NDHWC"},
     {TensorFormat::FORMAT_FRACTAL_ZZ, "FRACTAL_ZZ"},
@@ -198,12 +200,12 @@ const std::pair<TensorFormat, std::string_view> kFormatToStringArray[] = {
 
 std::string GetFormatString(TensorFormat fmt)
 {
-    for (const auto& pair : kFormatToStringArray) {
+    for (const auto& pair : FORMAT_TO_STRING_ARRAY) {
         if (pair.first == fmt) {
             return std::string(pair.second);
         }
     }
-    return kOpFormat_UNKNOWN;
+    return OP_FORMAT_UNKNOWN;
 }
 
 std::string GetShapeString(const TensorShape& shape)

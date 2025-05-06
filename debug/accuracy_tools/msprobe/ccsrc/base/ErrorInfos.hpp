@@ -41,7 +41,8 @@ private:
     static DebuggerErrLevel threshold;
 };
 
-inline void CleanErrorInfoCache() {
+inline void CleanErrorInfoCache()
+{
     ErrorInfosManager::GetTopErrLevelInDuration();
 }
 

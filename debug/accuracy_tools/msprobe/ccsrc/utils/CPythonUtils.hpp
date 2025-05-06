@@ -81,7 +81,8 @@ PythonObject GetRegisteredPyObj(const std::string& name);
 
 class PythonObject {
 public:
-    PythonObject() {
+    PythonObject() 
+    {
         Py_INCREF(Py_None);
         ptr = Py_None;
     }
@@ -91,11 +92,13 @@ public:
         }
         Py_XINCREF(ptr);
     }
-    ~PythonObject() {
+    ~PythonObject() 
+    {
         Py_XDECREF(ptr);
     }
     explicit PythonObject(const PythonObject &obj) : PythonObject(static_cast<PyObject*>(obj)) {}
-    PythonObject& operator=(const PythonObject &obj) {
+    PythonObject& operator=(const PythonObject &obj) 
+    {
         SetPtr(static_cast<PyObject*>(obj));
         return *this;
     }
@@ -142,11 +145,13 @@ public:
 
     /* 用于获取对象属性，相当于python代码中的obj.xx */
     PythonObject Get(const std::string& name, bool ignore=true) const;
-    PythonObject& NewRef() {
+    PythonObject& NewRef() 
+    {
         Py_XINCREF(ptr);
         return *this;
     }
-    std::string ToString() const {
+    std::string ToString() const 
+    {
         std::string ret;
         if (To(ret) == 0) {
             return ret;
@@ -156,17 +161,20 @@ public:
 
     operator PyObject*() const {return ptr;}
     operator bool() const {return static_cast<bool>(PyObject_IsTrue(ptr));}
-    operator std::string() const {
+    operator std::string() const 
+    {
         return ToString();
     }
     PythonObject operator()(bool ignore=true) {return Call(ignore);}
     PythonObject operator()(PythonTupleObject& args, bool ignore=true) {return Call(args, ignore);}
-    PythonObject operator()(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore=true) {
+    PythonObject operator()(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore=true) 
+    {
         return Call(args, kwargs, ignore);
     }
 
 protected:
-    void SetPtr(PyObject* o) {
+    void SetPtr(PyObject* o) 
+    {
         Py_XDECREF(ptr);
         if (o == nullptr) {
             o = Py_None;

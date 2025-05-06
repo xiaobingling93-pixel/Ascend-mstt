@@ -34,7 +34,8 @@ struct NpyDtypeDescr {
     char type;
     size_t length;
 
-    std::string str() const {
+    std::string Str() const 
+    {
         std::ostringstream buffer;
         buffer << "\'" << byteorder << type << length << "\'";
         return buffer.str();
@@ -42,9 +43,9 @@ struct NpyDtypeDescr {
 };
 
 // npy file header start information
-constexpr char kNpyMagicPrefix[] = "\x93NUMPY";
-constexpr size_t kNpyMagicLen = sizeof(kNpyMagicPrefix) - 1;
-constexpr size_t kNpyArrayAlign = 64;
+constexpr char NPY_MAGIC_PREFIX[] = "\x93NUMPY";
+constexpr size_t NPY_MAGIC_LEN = sizeof(NPY_MAGIC_PREFIX) - 1;
+constexpr size_t NPY_ARRAY_ALIGN = 64;
 static const std::unordered_map<DataType, NpyDtypeDescr> npyTypeDescMap = {
     {DataType::DT_BOOL, NpyDtypeDescr{'|', 'b', 1}},      {DataType::DT_INT8, NpyDtypeDescr{'|', 'i', 1}},
     {DataType::DT_INT16, NpyDtypeDescr{'<', 'i', 2}},     {DataType::DT_INT32, NpyDtypeDescr{'<', 'i', 4}},
@@ -90,7 +91,8 @@ inline static std::string NpyTransShapeToStr(const DataUtils::TensorShape &shape
     return buffer.str();
 }
 
-inline static std::vector<char> NpyLen2Bytes(size_t length, size_t lengthLen) {
+inline static std::vector<char> NpyLen2Bytes(size_t length, size_t lengthLen) 
+{
     std::vector<char> buff;
     lengthLen = std::min(lengthLen, static_cast<size_t>(sizeof(length)));
     for (size_t i = 0; i < lengthLen; i++) {
@@ -111,7 +113,7 @@ static std::string GenerateNpyHeader(const DataUtils::TensorShape &shape, DataUt
     std::string fortranOrderStr = fortranOrder ? "True" : "False" ;
 
     buffer << "{";
-    buffer << "'descr': " << typeDesc->second.str() << ", ";
+    buffer << "'descr': " << typeDesc->second.Str() << ", ";
     buffer << "'fortran_order': " << fortranOrderStr << ", ";
     buffer << "'shape': " << NpyTransShapeToStr(shape) << ", ";
     buffer << "}";
@@ -125,19 +127,19 @@ static std::string GenerateNpyHeader(const DataUtils::TensorShape &shape, DataUt
     constexpr const size_t lengthLenV2 = 4;
     size_t lengthLen = lengthLenV1;
 
-    size_t totalLen = kNpyMagicLen + versionLen + lengthLen + headerLen + 1;
+    size_t totalLen = NPY_MAGIC_LEN + versionLen + lengthLen + headerLen + 1;
     if (totalLen > maxLen) {
         version = {2, 0};
         lengthLen = lengthLenV2;
-        totalLen = kNpyMagicLen + versionLen + lengthLen + headerLen + 1;
+        totalLen = NPY_MAGIC_LEN + versionLen + lengthLen + headerLen + 1;
     }
 
-    const size_t padLen = kNpyArrayAlign - totalLen % kNpyArrayAlign;
+    const size_t padLen = NPY_ARRAY_ALIGN - totalLen % NPY_ARRAY_ALIGN;
     const size_t paddingHeaderLen = headerLen + padLen + 1;
     const std::string padding(padLen, ' ');
     std::vector<char> lengthBytes = NpyLen2Bytes(paddingHeaderLen, lengthLen);
     std::ostringstream out;
-    out.write(kNpyMagicPrefix, DataUtils::SizeToS64(kNpyMagicLen));
+    out.write(NPY_MAGIC_PREFIX, DataUtils::SizeToS64(NPY_MAGIC_LEN));
     out.put(version.first);
     out.put(version.second);
     out.write(lengthBytes.data(), DataUtils::SizeToS64(lengthBytes.size()));

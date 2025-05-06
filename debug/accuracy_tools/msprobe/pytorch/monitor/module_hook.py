@@ -224,7 +224,6 @@ class TrainerMon:
         self.enable_megatron = False
         self.fsdp_wrapped_module = False
         self.micro_batch_number = 1
-        self.optimizer_class = None
         self.optimizer_mon = None
         self.optimizer_trans = None
 
@@ -236,7 +235,6 @@ class TrainerMon:
         self.grad_context = GradContext()
         self.handles = defaultdict(list)
         self.param2name = defaultdict(str)
-        self.name2index = defaultdict()
         self.name2indices = defaultdict()
         self.name2param = {}
         self.duplicate_param = {}
@@ -413,7 +411,7 @@ class TrainerMon:
         self.micro_batch_number = grad_acc_steps
         self.dp_group = dp_group
         self.tp_group = tp_group
-        self.optimizer_mon, self.optimizer_class = OptimizerMonFactory.create_optimizer_mon(optimizer)
+        self.optimizer_mon = OptimizerMonFactory.create_optimizer_mon(optimizer)
         self.hook_step_final(optimizer)
         if not isinstance(model, list):
             model = [model]
@@ -444,14 +442,14 @@ class TrainerMon:
 
     def build_tbtag_tensor_map(self, module_name, tag, tensor):
         key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        self._register_param_call_id("_hook_module", key)
+        self.register_param_call_id("_hook_module", key)
         return {key: tensor}
 
     def generate_param_map(self, tag, param_tensor):
         metrics = {}
         for name in self.param2name.values():
             key = get_summary_writer_tag_name(name, tag, self.rank)
-            self._register_param_call_id("optimizer_pre_step_hook", key)
+            self.register_param_call_id("optimizer_pre_step_hook", key)
             if name not in param_tensor or param_tensor[name] is None:
                 continue
             metrics[key] = param_tensor[name]
@@ -473,27 +471,14 @@ class TrainerMon:
         get_metrics(self.ops, m_tag_tensor_map, self.eps, opt_context.exp_avg_metric)
         get_metrics(self.ops, v_tag_tensor_map, self.eps, opt_context.exp_avg_sq_metric)
 
-    def generate_wgrad_metrics(self):
+    def generate_wgrad_metrics(self, post_grad_dict):
         if not self.wg_distribution:
             return {}, {}
 
         if self.weight_hooked:
             get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
 
-        grad_dict = {}
-        for param, name in self.param2name.items():
-            if self.duplicate_param.get(name, False):
-                continue
-            grad = param.main_grad if self.params_have_main_grad else param.grad
-            if grad is None:
-                if not self.fsdp_wrapped_module:
-                    logger.warning(f"grad is None: {name}, maybe something wrong happened.")
-                continue
-            tag = self.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
-            self._register_param_call_id("hook_optimizer", tag)
-            grad_dict[tag] = grad
-
-        get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
+        get_metrics(self.ops, post_grad_dict, self.eps, self.grad_context.post)
         reduced_grad = self.grad_context.post
         if self.enable_megatron or self.fsdp_wrapped_module:
             unreduced_grad = self.grad_context.pre
@@ -578,21 +563,21 @@ class TrainerMon:
             # skip generate metrics
             if context.step < self.start_step or (context.step - self.start_step) % self.step_interval != 0:
                 return
+
+            grad_dict = {}
+            if self.wg_distribution:
+                grad_dict = self.optimizer_mon.fetch_grad(self, self.param2name)
+            
             mv_result = None
-            if MonitorConst.DEEPSPEED_ZERO_OPT_FILTER in self.optimizer_class:  # use deepspeed with zero1/2/3
-                if not self.name2indices:
-                    self.name2indices = self.optimizer_mon.get_param_index(self.param2name, self.name2index, optimizer)
-                mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
-                self.param2name = mv_result.grad
-            elif self.mv_distribution or self.ur_distribution or self.mg_direction:
-                mv_result = self.optimizer_mon.fetch_mv(self, optimizer, self.param2name)
+            if self.mv_distribution or self.ur_distribution or self.mg_direction:
+                mv_result = self.optimizer_mon.fetch_mv(self, self.param2name)
             if mv_result:
                 context.param_exp_avg = mv_result.exp_avg
                 context.param_exp_avg_sq = mv_result.exp_avg_sq
                 context.param_adam_update = mv_result.update
                 context.param_adam_ratio = mv_result.ratio
 
-            self.generate_wgrad_metrics()
+            self.generate_wgrad_metrics(grad_dict)
             self.generate_mv_metrics(context)
             self.generate_param_metrics(context)
 
@@ -773,6 +758,16 @@ class TrainerMon:
         BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
         return
+    
+    def register_param_call_id(self, hook_name: str, key: str):
+        """
+        :param hook_name:
+        :param key: str, '0:relu_0/output_grad'
+        :return:
+        """
+        logger.debug(f"{hook_name} {key}: {self.call_id}")
+        self.param_name_call_id[key] = self.call_id
+        self.call_id += 1
 
     def _remove_all_hooks(self, optimizer):
         # 清空hook handle
@@ -824,7 +819,6 @@ class TrainerMon:
 
         # 清空节点缓存
         self.param2name.clear()
-        self.name2index.clear()
         self.name2indices.clear()
         self.name2param.clear()
         self.duplicate_param.clear()
@@ -884,7 +878,6 @@ class TrainerMon:
         return False
 
     def _register_chunk(self, model_chunk, prefix):
-        index = 0
         for (param_name, param) in model_chunk.named_parameters():
             if not param.requires_grad:
                 continue
@@ -896,7 +889,6 @@ class TrainerMon:
                     name = prefix + param_name
                 self.param2name[param] = name
                 self.name2param[name] = param
-                self.name2index[name] = index
 
                 if self.tp_group and not param_is_not_tensor_parallel_duplicate(param, self.tp_group):
                     self.duplicate_param[name] = True
@@ -906,7 +898,6 @@ class TrainerMon:
                     MonitorConst.PRE_GRAD: get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank),
                     MonitorConst.POST_GRAD: get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
                 }
-                index += 1
 
     def _register_param_name(self):
         for vpp_stage, model_chunk in enumerate(self.model):
@@ -1066,7 +1057,7 @@ class TrainerMon:
                     if tag is None:
                         continue
                     grad_dict[tag] = grad
-                    self._register_param_call_id("sync_grad_func", tag)
+                    self.register_param_call_id("sync_grad_func", tag)
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = sync_grad_func(bucket)
                 return out
@@ -1124,7 +1115,7 @@ class TrainerMon:
                     if tag is None:
                         continue
                     grad_dict[tag] = grad
-                    self._register_param_call_id("_post_backward_hook", tag)
+                    self.register_param_call_id("_post_backward_hook", tag)
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = _post_backward_hook(state, handle, *unused)
                 return out
@@ -1142,7 +1133,7 @@ class TrainerMon:
         @torch.no_grad
         def param_hook(*args, context_dict, param, key, name):
             param.micro_step += 1
-            self._register_param_call_id("param_hook", key)
+            self.register_param_call_id("param_hook", key)
             if param.micro_step == self.micro_batch_number:
                 param.micro_step = 0
                 if self.params_have_main_grad:
@@ -1165,13 +1156,3 @@ class TrainerMon:
             self.handles['wgrads'].append(handle)
 
         self.weight_hooked = True
-
-    def _register_param_call_id(self, hook_name: str, key: str):
-        """
-        :param hook_name:
-        :param key: str, '0:relu_0/output_grad'
-        :return:
-        """
-        logger.debug(f"{hook_name} {key}: {self.call_id}")
-        self.param_name_call_id[key] = self.call_id
-        self.call_id += 1

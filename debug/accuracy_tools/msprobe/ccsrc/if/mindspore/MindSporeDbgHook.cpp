@@ -70,5 +70,3 @@ EXPORT_SYMBOL void MS_DbgOnStepEnd(std::map<uint32_t, void*>& exts)
     }
     return MindStudioDebugger::MindSporeTrigger::TriggerOnStepEnd(args);
 }
-
-

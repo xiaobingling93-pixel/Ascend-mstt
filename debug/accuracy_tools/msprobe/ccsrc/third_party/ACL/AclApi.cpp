@@ -26,22 +26,22 @@ namespace AscendCLApi {
 
 using namespace MindStudioDebugger;
 
-constexpr const char* kLibAscendclName = "libascendcl.so";
-constexpr const char* kLibMSAscendName = "libmindspore_ascend.so.2";
+constexpr const char* LIB_ASCEND_CL_NAME = "libascendcl.so";
+constexpr const char* LIB_MS_ASCEND_NAME = "libmindspore_ascend.so.2";
 
-using aclInitFuncType = aclError (*)(const char *);
-using aclmdlInitDumpFuncType = aclError (*)();
-using aclmdlSetDumpFuncType = aclError (*)(const char *);
-using aclmdlFinalizeDumpFuncType = aclError (*)();
-using acldumpRegCallbackFuncType = aclError (*)(AclDumpCallbackFuncType, int32_t);
-using aclrtSynchronizeDeviceFuncType = aclError (*)();
+using AclInitFuncType = aclError (*)(const char *);
+using AclmdlInitDumpFuncType = aclError (*)();
+using AclmdlSetDumpFuncType = aclError (*)(const char *);
+using AclmdlFinalizeDumpFuncType = aclError (*)();
+using AcldumpRegCallbackFuncType = aclError (*)(AclDumpCallbackFuncType, int32_t);
+using AclrtSynchronizeDeviceFuncType = aclError (*)();
 
-static aclInitFuncType aclInitFunc = nullptr;
-static aclmdlInitDumpFuncType aclmdlInitDumpFunc = nullptr;
-static aclmdlSetDumpFuncType aclmdlSetDumpFunc = nullptr;
-static aclmdlFinalizeDumpFuncType aclmdlFinalizeDumpFunc = nullptr;
-static acldumpRegCallbackFuncType acldumpRegCallbackFunc = nullptr;
-static aclrtSynchronizeDeviceFuncType aclrtSynchronizeDeviceFunc = nullptr;
+static AclInitFuncType g_aclInitFunc = nullptr;
+static AclmdlInitDumpFuncType g_aclmdlInitDumpFunc = nullptr;
+static AclmdlSetDumpFuncType g_aclmdlSetDumpFunc = nullptr;
+static AclmdlFinalizeDumpFuncType g_aclmdlFinalizeDumpFunc = nullptr;
+static AcldumpRegCallbackFuncType g_acldumpRegCallbackFunc = nullptr;
+static AclrtSynchronizeDeviceFuncType g_aclrtSynchronizeDeviceFunc = nullptr;
 
 DebuggerErrno LoadAclApi()
 {
@@ -52,7 +52,7 @@ DebuggerErrno LoadAclApi()
         return DebuggerErrno::OK;
     }
 
-    hLibAscendcl = dlopen(kLibAscendclName, RTLD_LAZY | RTLD_NOLOAD);
+    hLibAscendcl = dlopen(LIB_ASCEND_CL_NAME, RTLD_LAZY | RTLD_NOLOAD);
     if (hLibAscendcl == nullptr) {
         LOG_ERROR(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND,
                   "Failed to search libascendcl.so." + std::string(dlerror()));
@@ -60,11 +60,11 @@ DebuggerErrno LoadAclApi()
     }
 
     static const std::map<const char*, void**> functionMap = {
-        {"aclInit", reinterpret_cast<void**>(&aclInitFunc)},
-        {"aclmdlInitDump", reinterpret_cast<void**>(&aclmdlInitDumpFunc)},
-        {"aclmdlSetDump", reinterpret_cast<void**>(&aclmdlSetDumpFunc)},
-        {"aclmdlFinalizeDump", reinterpret_cast<void**>(&aclmdlFinalizeDumpFunc)},
-        {"aclrtSynchronizeDevice", reinterpret_cast<void**>(&aclrtSynchronizeDeviceFunc)},
+        {"aclInit", reinterpret_cast<void**>(&g_aclInitFunc)},
+        {"aclmdlInitDump", reinterpret_cast<void**>(&g_aclmdlInitDumpFunc)},
+        {"aclmdlSetDump", reinterpret_cast<void**>(&g_aclmdlSetDumpFunc)},
+        {"aclmdlFinalizeDump", reinterpret_cast<void**>(&g_aclmdlFinalizeDumpFunc)},
+        {"aclrtSynchronizeDevice", reinterpret_cast<void**>(&g_aclrtSynchronizeDeviceFunc)},
     };
 
     for (auto& iter : functionMap) {
@@ -83,15 +83,15 @@ DebuggerErrno LoadAclApi()
     }
 
     /* 规避adump的bug，mindspore场景优先使用libmindspore_ascend.so中的符号 */
-    void* handler = dlopen(kLibMSAscendName, RTLD_LAZY | RTLD_NOLOAD);
-    std::string libName = kLibMSAscendName;
+    void* handler = dlopen(LIB_MS_ASCEND_NAME, RTLD_LAZY | RTLD_NOLOAD);
+    std::string libName = LIB_MS_ASCEND_NAME;
     if (handler == nullptr) {
         handler = hLibAscendcl;
-        libName = kLibAscendclName;
+        libName = LIB_ASCEND_CL_NAME;
     }
 
-    acldumpRegCallbackFunc = reinterpret_cast<acldumpRegCallbackFuncType>(dlsym(handler, "acldumpRegCallback"));
-    if (acldumpRegCallbackFunc == nullptr) {
+    g_acldumpRegCallbackFunc = reinterpret_cast<AcldumpRegCallbackFuncType>(dlsym(handler, "acldumpRegCallback"));
+    if (g_acldumpRegCallbackFunc == nullptr) {
         LOG_ERROR(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load function acldumpRegCallback from " +
                   libName + ".");
     }
@@ -104,52 +104,52 @@ DebuggerErrno LoadAclApi()
     return DebuggerErrno::OK;
 }
 
-aclError ACLAPI_aclInit(const char* cfg)
+aclError AclApiAclInit(const char* cfg)
 {
-    if (aclInitFunc == nullptr) {
+    if (g_aclInitFunc == nullptr) {
         throw std::runtime_error("API aclInit does not have a definition.");
     }
-    return aclInitFunc(cfg);
+    return g_aclInitFunc(cfg);
 }
 
-aclError ACLAPI_aclmdlInitDump()
+aclError AclApiAclmdlInitDump()
 {
-    if (aclmdlInitDumpFunc == nullptr) {
+    if (g_aclmdlInitDumpFunc == nullptr) {
         throw std::runtime_error("API aclmdlInitDump does not have a definition.");
     }
-    return aclmdlInitDumpFunc();
+    return g_aclmdlInitDumpFunc();
 }
 
-aclError ACLAPI_aclmdlSetDump(const char* cfg)
+aclError AclApiAclmdlSetDump(const char* cfg)
 {
-    if (aclmdlSetDumpFunc == nullptr) {
+    if (g_aclmdlSetDumpFunc == nullptr) {
         throw std::runtime_error("API aclmdlSetDump does not have a definition.");
     }
-    return aclmdlSetDumpFunc(cfg);
+    return g_aclmdlSetDumpFunc(cfg);
 }
 
-aclError ACLAPI_aclmdlFinalizeDump()
+aclError AclApiAclmdlFinalizeDump()
 {
-    if (aclmdlFinalizeDumpFunc == nullptr) {
+    if (g_aclmdlFinalizeDumpFunc == nullptr) {
         throw std::runtime_error("API aclmdlFinalizeDump does not have a definition.");
     }
-    return aclmdlFinalizeDumpFunc();
+    return g_aclmdlFinalizeDumpFunc();
 }
 
-aclError ACLAPI_acldumpRegCallback(AclDumpCallbackFuncType messageCallback, int32_t flag)
+aclError AclApiAcldumpRegCallback(AclDumpCallbackFuncType messageCallback, int32_t flag)
 {
-    if (acldumpRegCallbackFunc == nullptr) {
+    if (g_acldumpRegCallbackFunc == nullptr) {
         throw std::runtime_error("API acldumpRegCallback does not have a definition.");
     }
-    return acldumpRegCallbackFunc(messageCallback, flag);
+    return g_acldumpRegCallbackFunc(messageCallback, flag);
 }
 
-aclError ACLAPI_aclrtSynchronizeDevice()
+aclError AclApiAclrtSynchronizeDevice()
 {
-    if (aclrtSynchronizeDeviceFunc == nullptr) {
+    if (g_aclrtSynchronizeDeviceFunc == nullptr) {
         throw std::runtime_error("API aclrtSynchronizeDevice does not have a definition.");
     }
-    return aclrtSynchronizeDeviceFunc();
+    return g_aclrtSynchronizeDeviceFunc();
 }
 
 } 

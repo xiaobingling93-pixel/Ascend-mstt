@@ -16,8 +16,8 @@
 
 #include "include/Macro.hpp"
 #include "base/ErrorInfos.hpp"
-#include "MindSporeTrigger.hpp"
 #include "MSAclDumper.hpp"
+#include "MindSporeTrigger.hpp"
 
 namespace MindStudioDebugger {
 

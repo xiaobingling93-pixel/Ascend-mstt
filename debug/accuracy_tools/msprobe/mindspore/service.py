@@ -104,8 +104,8 @@ class Service:
 
     def build_hook(self, target_type, name):
         def pre_hook(api_or_cell_name, cell, input_data):
-            if target_type == BaseScope.Module_Type_Module or\
-              not self.should_execute_hook(target_type, cell, True):
+            if target_type == BaseScope.Module_Type_Module or \
+                    not self.should_execute_hook(target_type, cell, True):
                 return
 
             with _no_grad():
@@ -267,7 +267,7 @@ class Service:
     def step(self):
         if self.config.level == Const.LEVEL_DEBUG:
             return
-        if self.config.async_dump and self.config.task == Const.TENSOR:
+        if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
             self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.loop += 1
@@ -344,7 +344,7 @@ class Service:
         self.switch = False
         self.primitive_switch = False
         self.start_call = False
-        if self.config.async_dump and self.config.task == Const.TENSOR:
+        if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
             self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         JitDump.jit_dump_switch = False
@@ -383,11 +383,12 @@ class Service:
 
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
+
+        dump_data_dir = None
+        if self.config.task in self.data_collector.tasks_need_tensor_data or (
+                self.config.task == Const.STATISTICS and self.config.tensor_list):
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
 
         dump_path_aggregation = DumpPathAggregation()
         dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
@@ -456,11 +457,11 @@ class Service:
         cur_rank = self.current_rank if self.current_rank is not None else ''
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
+
+        dump_data_dir = None
         if self.config.task in self.data_collector.tasks_need_tensor_data:
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
 
         dump_path_aggregation = DumpPathAggregation()
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir

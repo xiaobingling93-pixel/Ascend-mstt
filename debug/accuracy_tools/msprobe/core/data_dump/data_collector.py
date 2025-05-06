@@ -207,6 +207,7 @@ class DataCollector:
 
     def params_data_collect(self, name, param_name, pid, data):
         grad_name = name + Const.SEP + Const.PARAMS_GRAD
+        self.update_api_or_module_name(grad_name)
         # 校验scope和pid，以及当前name是否有过反向计算
         if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
             # 如果没有反向计算，则需要清除之前占位写入的grad数据
