@@ -202,18 +202,18 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
 
 enum Axis4D : int { AXIS_N = 0, AXIS_C, AXIS_H, AXIS_W, NCHW_DIMS };
 enum Axis5D : int {
-    N_ncdhw,
-    C_ncdhw,
-    D_ncdhw,
-    H_ncdhw,
-    W_ncdhw,
-    kNcdhw,
-    N_ndc1hwc0,
-    D_ndc1hwc0,
-    C1_ndc1hwc0,
-    H_ndc1hwc0,
-    W_ndc1hwc0,
-    C0_ndc1hwc0
+    N_NCDHW,
+    C_NCDHW,
+    D_NCDHW,
+    H_NCDHW,
+    W_NCDHW,
+    NCDHW,
+    N_NDC1HWC0,
+    D_NDC1HWC0,
+    C1_NDC1HWC0,
+    H_NDC1HWC0,
+    W_NDC1HWC0,
+    C0_NDC1HWC0
 };
 
 static inline AclDtype transAclDtype2MS(AclDumpMsg::OutputDataType dt)
