@@ -124,7 +124,7 @@ void PrecisionDebugger::Stop()
     }
 
     enable = false;
-    CALL_ACL_API(aclrtSynchronizeDevice);
+    CALL_ACL_API(AclrtSynchronizeDevice);
 
     for (auto task : subDebuggers) {
         task->OnStop();
@@ -147,7 +147,7 @@ void PrecisionDebugger::Step(uint32_t step)
         throw std::runtime_error("Step over upper limit(4294967295).");
     }
     curStep += step;
-    CALL_ACL_API(aclrtSynchronizeDevice);
+    CALL_ACL_API(AclrtSynchronizeDevice);
 
     for (auto task : subDebuggers) {
         task->OnStep(curStep);

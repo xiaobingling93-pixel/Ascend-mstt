@@ -10,15 +10,15 @@ using namespace MindStudioDebugger::DataUtils;
 namespace MsProbeTest {
 
 TEST(DataUtilsTest, TestUnpackUint64Value) {
-    uint64_t data_le = 0x0102030405060708;
-    uint64_t result = UnpackUint64Value_Le(&data_le);
+    uint64_t dataLe = 0x0102030405060708;
+    uint64_t result = UnpackUint64ValueLe(&dataLe);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     EXPECT_EQ(result, 0x0102030405060708);
 #else
     EXPECT_EQ(result, 0x0807060504030201);
 #endif
-    uint64_t data_be = 0x0102030405060708;
-    result = UnpackUint64Value_Be(&data_be);
+    uint64_t dataBe = 0x0102030405060708;
+    result = UnpackUint64ValueBe(&dataBe);
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     EXPECT_EQ(result, 0x0807060504030201);
 #else
@@ -74,7 +74,7 @@ TEST(DataUtilsTest, TestGetFormatString) {
     EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_FRACTAL_Z), "FRACTAL_Z");
     EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_C1HWNC0), "C1HWNC0");
     EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_HWCN), "HWCN");
-    EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_C1HWNCoC0), "C1HWNCoC0");
+    EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_C1HWNCOC0), "C1HWNCoC0");
     EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_DHWNC), "DHWNC");
     EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_NCL), "NCL");
     EXPECT_EQ(GetFormatString(TensorFormat::FORMAT_MAX), "UNKNOWN");

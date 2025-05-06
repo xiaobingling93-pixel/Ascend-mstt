@@ -9,7 +9,7 @@ using namespace MindStudioDebugger;
 
 namespace MsProbeTest {
 
-static const std::string cfgContent = R"({
+static const std::string CFG_CONTENT = R"({
     "task": "statistics",
     "dump_path": "./dump_path", 
     "rank": [],
@@ -104,7 +104,7 @@ void TestConfigMindSpore::SetUp()
     DebuggerConfig::GetInstance().Reset();
     CleanErrorInfoCache();
     ErrorInfosManager::SetLogPath(logpath);
-    cfgJson = nlohmann::json::parse(cfgContent);
+    cfgJson = nlohmann::json::parse(CFG_CONTENT);
 }
 
 void TestConfigMindSpore::TearDown()
@@ -173,7 +173,7 @@ TEST_F(TestConfigMindSpore, TestCommonCfg)
     ASSERT_EQ(DumpCfgFile(), 0);
     EXPECT_EQ(cfg.LoadConfig(framework, cfgPath), 0);
     EXPECT_EQ(cfg.GetTaskList(), std::vector<DebuggerTaskType>({DebuggerTaskType::TASK_DUMP_STATISTICS}));
-    EXPECT_EQ(cfg.GetOutputPath(), trim(TEST_ExecShellCommand("realpath ./output1")));
+    EXPECT_EQ(cfg.GetOutputPath(), Trim(TEST_ExecShellCommand("realpath ./output1")));
     EXPECT_EQ(cfg.GetRankRange(), std::vector<uint32_t>({0, 1, 8}));
     EXPECT_EQ(cfg.GetStepRange(), std::vector<uint32_t>({2, 4, 6, 7, 8}));
     EXPECT_EQ(cfg.GetDebugLevel(), DebuggerLevel::L2);

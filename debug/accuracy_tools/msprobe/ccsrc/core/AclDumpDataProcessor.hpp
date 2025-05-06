@@ -26,7 +26,7 @@
 
 namespace MindStudioDebugger {
 
-constexpr size_t kMaxDataLen = 4ULL * 1024 * 1024 * 1024;
+constexpr size_t MAX_DATA_LEN = 4ULL * 1024 * 1024 * 1024;
 
 class AclDumpDataProcessor {
 public:
@@ -36,7 +36,7 @@ public:
 
     bool IsCompleted() const {return completed;}
     bool ErrorOccurred() const {return errorOccurred;}
-    DebuggerErrno PushData(const acldumpChunk *chunk);
+    DebuggerErrno PushData(const AclDumpChunk *chunk);
     DebuggerErrno DumpToDisk();
     std::string ToString() const;
 

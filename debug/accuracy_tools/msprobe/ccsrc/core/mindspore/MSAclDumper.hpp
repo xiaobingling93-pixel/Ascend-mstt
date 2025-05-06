@@ -25,13 +25,15 @@ namespace MindStudioDebugger {
 
 class MSAclDumper : public PrecisionDbgTaskBase {
 public:
-    static MSAclDumper& GetInstance() {
-        static MSAclDumper instance_;
-        return instance_;
+    static MSAclDumper& GetInstance() 
+    {
+        static MSAclDumper dumperInstance;
+        return dumperInstance;
     }
 
     std::string Name() const override {return "MindSpore AclDumper";}
-    bool Condition(const DebuggerConfig& cfg) const override {
+    bool Condition(const DebuggerConfig& cfg) const override 
+    {
         return cfg.GetFramework() == DebuggerFramework::FRAMEWORK_MINDSPORE &&
                cfg.GetDebugLevel() == DebuggerLevel::L2;
     }

@@ -39,42 +39,42 @@ namespace MindStudioDebugger {
 
 namespace AclDumpMsg = toolkit::dumpdata;
 
-constexpr size_t kDhaAtomicAddInfoSize = 128;
-constexpr size_t kL2AtomicAddInfoSize = 128;
-constexpr size_t kAiCoreInfoSize = 256;
-constexpr size_t kDhaAtomicAddStatusSize = 256;
-constexpr size_t kL2AtomicAddStatusSize = 256;
-constexpr size_t kUint64Size = sizeof(uint64_t);
-constexpr const char* debugFileSign = "Opdebug.Node_OpDebug.";
+constexpr size_t DHA_ATOMIC_ADD_INFO_SIZE = 128;
+constexpr size_t L2_ATOMIC_ADD_INFO_SIZE = 128;
+constexpr size_t AICORE_INFO_SIZE = 256;
+constexpr size_t DHA_ATOMIC_ADD_STATUS_SIZE = 256;
+constexpr size_t L2_ATOMIC_ADD_STATUS_SIZE = 256;
+constexpr size_t UINT64_SIZE = sizeof(uint64_t);
+constexpr const char* DEBUG_FILE_SIGN = "Opdebug.Node_OpDebug.";
 
-constexpr const char* kStatsHeaderInout = "Input/Output";
-constexpr const char* kStatsHeaderId = "Index";
-constexpr const char* kStatsHeaderDataSize = "Data Size";
-constexpr const char* kStatsHeaderDataType = "Data Type";
-constexpr const char* kStatsHeaderFormat = "Format";
-constexpr const char* kStatsHeaderShape = "Shape";
-constexpr const char* kStatsHeaderMax = "Max Value";
-constexpr const char* kStatsHeaderMin = "Min Value";
-constexpr const char* kStatsHeaderAvg = "Avg Value";
-constexpr const char* kStatsHeaderL2Norm = "l2norm";
-constexpr const char* kStatsHeaderL2NormInCsv = "L2Norm Value";
-constexpr const char* kStatsHeaderMD5 = "MD5 Value";
-constexpr const char* kStatsHeaderNan = "Nan Count";
-constexpr const char* kStatsHeaderNanInCsv = "NaN Count";
-constexpr const char* kStatsHeaderNegInf = "Negative Inf Count";
-constexpr const char* kStatsHeaderPosInf = "Positive Inf Count";
-constexpr const char* kRankId = "RANK_ID";
-constexpr const char* kDigitalNumbers = "0123456789";
+constexpr const char* STATS_HEADER_INOUT = "Input/Output";
+constexpr const char* STATS_HEADER_ID = "Index";
+constexpr const char* STATS_HEADER_DATA_SIZE = "Data Size";
+constexpr const char* STATS_HEADER_DATA_TYPE = "Data Type";
+constexpr const char* STATS_HEADER_FORMAT = "Format";
+constexpr const char* STATS_HEADER_SHAPE = "Shape";
+constexpr const char* STATS_HEADER_MAX = "Max Value";
+constexpr const char* STATS_HEADER_MIN = "Min Value";
+constexpr const char* STATS_HEADER_AVG = "Avg Value";
+constexpr const char* STATS_HEADER_L2NORM = "l2norm";
+constexpr const char* STATS_CSV_HEADER_L2NORM = "L2Norm Value";
+constexpr const char* STATS_HEADER_MD5 = "MD5 Value";
+constexpr const char* STATS_HEADER_NAN = "Nan Count";
+constexpr const char* STATS_CSV_HEADER_NAN = "NaN Count";
+constexpr const char* STATS_HEADER_NEG_INF = "Negative Inf Count";
+constexpr const char* STATS_HEADER_POS_INF = "Positive Inf Count";
+constexpr const char* RANK_ID = "RANK_ID";
+constexpr const char* DIGITAL_NUMBERS = "0123456789";
 
-static const std::map<DebuggerSummaryOption, std::pair<std::string, std::string>> summaryOptionHeaderStrMap = {
-    {DebuggerSummaryOption::MAX, {kStatsHeaderMax, kStatsHeaderMax}},
-    {DebuggerSummaryOption::MIN, {kStatsHeaderMin, kStatsHeaderMin}},
-    {DebuggerSummaryOption::MEAN, {kStatsHeaderAvg, kStatsHeaderAvg}},
-    {DebuggerSummaryOption::L2NORM, {kStatsHeaderL2Norm, kStatsHeaderL2NormInCsv}},
-    {DebuggerSummaryOption::NAN_CNT, {kStatsHeaderNan, kStatsHeaderNanInCsv}},
-    {DebuggerSummaryOption::NEG_INF_CNT, {kStatsHeaderNegInf, kStatsHeaderNegInf}},
-    {DebuggerSummaryOption::POS_INF_CNT, {kStatsHeaderPosInf, kStatsHeaderPosInf}},
-    {DebuggerSummaryOption::MD5, {kStatsHeaderMD5, kStatsHeaderMD5}},
+static const std::map<DebuggerSummaryOption, std::pair<std::string, std::string>> SUMMARY_OPTION_HEADER_STR_MAP = {
+    {DebuggerSummaryOption::MAX, {STATS_HEADER_MAX, STATS_HEADER_MAX}},
+    {DebuggerSummaryOption::MIN, {STATS_HEADER_MIN, STATS_HEADER_MIN}},
+    {DebuggerSummaryOption::MEAN, {STATS_HEADER_AVG, STATS_HEADER_AVG}},
+    {DebuggerSummaryOption::L2NORM, {STATS_HEADER_L2NORM, STATS_CSV_HEADER_L2NORM}},
+    {DebuggerSummaryOption::NAN_CNT, {STATS_HEADER_NAN, STATS_CSV_HEADER_NAN}},
+    {DebuggerSummaryOption::NEG_INF_CNT, {STATS_HEADER_NEG_INF, STATS_HEADER_NEG_INF}},
+    {DebuggerSummaryOption::POS_INF_CNT, {STATS_HEADER_POS_INF, STATS_HEADER_POS_INF}},
+    {DebuggerSummaryOption::MD5, {STATS_HEADER_MD5, STATS_HEADER_MD5}},
 };
 
 const static std::map<AclDtype, AclDtype> kDtypeTransMap = {
@@ -91,7 +91,7 @@ public:
     std::string GetCsvHeader() const;
     std::string GetCsvValue() const;
     std::string GetPath() const {return path;}
-    bool empty() const {return stats.empty();};
+    bool Empty() const {return stats.empty();};
 
     static AclTensorStats CalTensorSummary(const AclTensorInfo& tensor, const std::vector<DebuggerSummaryOption>& opt);
     static AclTensorStats ParseTensorSummary(const std::string& dumpPath, const std::string& input);
@@ -114,7 +114,7 @@ private:
     void ParseInfoFromDumpPath(const std::string& dumpPath);
     std::string& operator[](DebuggerSummaryOption opt) { return stats[opt]; }
 
-    static constexpr const size_t bufferLen = 1024;
+    static constexpr const size_t BUFFER_LEN = 1024;
 };
 
 void AclTensorStats::ParseInfoFromDumpPath(const std::string& dumpPath)
@@ -176,7 +176,7 @@ static std::map<uint32_t, DebuggerSummaryOption> ParseTensorSummaryHeaderOrder(c
     std::map<uint32_t, DebuggerSummaryOption> ret;
     for (size_t pos = 0; pos < segs.size(); ++pos) {
         const std::string& opt = segs[pos];
-        for (auto it = summaryOptionHeaderStrMap.begin(); it != summaryOptionHeaderStrMap.end(); ++it) {
+        for (auto it = SUMMARY_OPTION_HEADER_STR_MAP.begin(); it != SUMMARY_OPTION_HEADER_STR_MAP.end(); ++it) {
             if (opt == it->second.first) {
                 ret[pos] = it->first;
                 break;
@@ -195,7 +195,7 @@ AclTensorStats AclTensorStats::ParseTensorSummary(const std::string& dumpPath, c
     std::vector<std::string> segs = FileUtils::SplitPath(input, ',');
     /* device计算统计量场景，各个kernel的统计项的顺序是相同的，只要计算一次即可 */
     if (order.empty()) {
-        if (segs.size() <= optPosBase || segs[0] != kStatsHeaderInout) {
+        if (segs.size() <= optPosBase || segs[0] != STATS_HEADER_INOUT) {
             LOG_WARNING(DebuggerErrno::ERROR_INVALID_FORMAT, "Summary data miss header, some data may lose.");
             return AclTensorStats();
         }
@@ -211,7 +211,7 @@ AclTensorStats AclTensorStats::ParseTensorSummary(const std::string& dumpPath, c
     }
 
     /* 不重复解析header行 */
-    if (segs[0] == kStatsHeaderInout) {
+    if (segs[0] == STATS_HEADER_INOUT) {
         return AclTensorStats();
     }
 
@@ -236,11 +236,11 @@ std::string AclTensorStats::GetCsvHeader() const
         return std::string();
     }
     std::string ret;
-    ret.reserve(bufferLen);
+    ret.reserve(BUFFER_LEN);
     ret.append("Op Type,Op Name,Task ID,Stream ID,Timestamp,Input/Output,Slot,Data Size,Data Type,Format,Shape");
     for (auto it = stats.begin(); it != stats.end(); it++) {
         ret.append(",");
-        ret.append(summaryOptionHeaderStrMap.at(it->first).second);
+        ret.append(SUMMARY_OPTION_HEADER_STR_MAP.at(it->first).second);
     }
     ret.append("\n");
 
@@ -254,7 +254,7 @@ std::string AclTensorStats::GetCsvValue() const
     }
 
     std::string ret;
-    ret.reserve(bufferLen);
+    ret.reserve(BUFFER_LEN);
     ret.append(opType).append(",").append(opName).append(",").append(taskID).append(",").append(streamID).append(",") \
        .append(timestamp).append(",").append(inout).append(",").append(slot).append(",") .append(dataSize) \
        .append(",").append(dataType).append(",").append(format).append(",").append(shape);
@@ -282,7 +282,7 @@ std::string AclDumpDataProcessor::ToString() const
            std::to_string(totalLen) + ")";
 }
 
-DebuggerErrno AclDumpDataProcessor::PushData(const acldumpChunk *chunk)
+DebuggerErrno AclDumpDataProcessor::PushData(const AclDumpChunk *chunk)
 {
     DEBUG_FUNC_TRACE();
     if (completed) {
@@ -305,7 +305,7 @@ DebuggerErrno AclDumpDataProcessor::PushData(const acldumpChunk *chunk)
     }
 
     /* 防止正负翻转 */
-    if (SIZE_MAX - len < totalLen || totalLen + len > kMaxDataLen) {
+    if (SIZE_MAX - len < totalLen || totalLen + len > MAX_DATA_LEN) {
         LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, ToString() + ": buffer overflow(cached size " +
                   std::to_string(totalLen) + ", receiving size " + std::to_string(len) + ").");
         errorOccurred = true;
@@ -417,17 +417,17 @@ static nlohmann::json ParseOverflowInfo(const uint8_t* data)
     DEBUG_FUNC_TRACE();
     uint32_t index = 0;
     nlohmann::json overflowInfo;
-    uint64_t modelId = DataUtils::UnpackUint64Value_Le(data);
-    index += kUint64Size;
-    uint64_t streamId = DataUtils::UnpackUint64Value_Le(data + index);
-    index += kUint64Size;
-    uint64_t taskId = DataUtils::UnpackUint64Value_Le(data + index);
-    index += kUint64Size;
-    uint64_t taskType = DataUtils::UnpackUint64Value_Le(data + index);
-    index += kUint64Size;
-    uint64_t pcStart = DataUtils::UnpackUint64Value_Le(data + index);
-    index += kUint64Size;
-    uint64_t paraBase = DataUtils::UnpackUint64Value_Le(data + index);
+    uint64_t modelId = DataUtils::UnpackUint64ValueLe(data);
+    index += UINT64_SIZE;
+    uint64_t streamId = DataUtils::UnpackUint64ValueLe(data + index);
+    index += UINT64_SIZE;
+    uint64_t taskId = DataUtils::UnpackUint64ValueLe(data + index);
+    index += UINT64_SIZE;
+    uint64_t taskType = DataUtils::UnpackUint64ValueLe(data + index);
+    index += UINT64_SIZE;
+    uint64_t pcStart = DataUtils::UnpackUint64ValueLe(data + index);
+    index += UINT64_SIZE;
+    uint64_t paraBase = DataUtils::UnpackUint64ValueLe(data + index);
 
     overflowInfo["model_id"] = modelId;
     overflowInfo["stream_id"] = streamId;
@@ -448,25 +448,25 @@ static DebuggerErrno DumpOpDebugDataToDisk(const std::string& dumpPath, AclDumpM
         uint32_t offset = 0;
         // parse DHA Atomic Add info
         nlohmann::json dhaAtomicAddInfo = ParseOverflowInfo(data + offset);
-        offset += kDhaAtomicAddInfoSize;
+        offset += DHA_ATOMIC_ADD_INFO_SIZE;
         // parse L2 Atomic Add info
         nlohmann::json l2AtomicAddInfo = ParseOverflowInfo(data + offset);
-        offset += kL2AtomicAddInfoSize;
+        offset += L2_ATOMIC_ADD_INFO_SIZE;
         // parse AICore info
         nlohmann::json aiCoreInfo = ParseOverflowInfo(data + offset);
-        offset += kAiCoreInfoSize;
+        offset += AICORE_INFO_SIZE;
         // parse DHA Atomic Add status
-        dhaAtomicAddInfo["status"] = DataUtils::UnpackUint64Value_Le(data + offset);
-        offset += kDhaAtomicAddStatusSize;
+        dhaAtomicAddInfo["status"] = DataUtils::UnpackUint64ValueLe(data + offset);
+        offset += DHA_ATOMIC_ADD_STATUS_SIZE;
         // parse L2 Atomic Add status
-        l2AtomicAddInfo["status"] = DataUtils::UnpackUint64Value_Le(data + offset);
-        offset += kL2AtomicAddStatusSize;
+        l2AtomicAddInfo["status"] = DataUtils::UnpackUint64ValueLe(data + offset);
+        offset += L2_ATOMIC_ADD_STATUS_SIZE;
         // parse AICore status
-        uint64_t kernelCode = DataUtils::UnpackUint64Value_Le(data + offset);
-        offset += kUint64Size;
-        uint64_t blockIdx = DataUtils::UnpackUint64Value_Le(data + offset);
-        offset += kUint64Size;
-        uint64_t status = DataUtils::UnpackUint64Value_Le(data + offset);
+        uint64_t kernelCode = DataUtils::UnpackUint64ValueLe(data + offset);
+        offset += UINT64_SIZE;
+        uint64_t blockIdx = DataUtils::UnpackUint64ValueLe(data + offset);
+        offset += UINT64_SIZE;
+        uint64_t status = DataUtils::UnpackUint64ValueLe(data + offset);
         aiCoreInfo["kernel_code"] = DataUtils::U64ToHexString(kernelCode);
         aiCoreInfo["block_idx"] = blockIdx;
         aiCoreInfo["status"] = status;
@@ -542,8 +542,7 @@ static std::string MappingFilePath(const std::string& originPath)
         return std::string();
     }
 
-    DebuggerErrno ret;
-    ret = FileUtils::CreateDir(dir);
+    DebuggerErrno ret = FileUtils::CreateDir(dir);
     if (ret != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR, "Failed to create directory " + dir + ".");
         return std::string();
@@ -586,7 +585,8 @@ static DebuggerErrno StandardizedDumpPath(std::string& originPath)
     return DebuggerErrno::OK;
 }
 
-static std::string GenDataPath(const std::string& path) {
+static std::string GenDataPath(const std::string& path)
+{
     LOG_DEBUG("Original acl data path is " + path);
     std::string outputPath = DebuggerConfig::GetInstance().GetOutputPath();
     std::string dataPath;
@@ -676,7 +676,6 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
 
     // dump_path: dump_dir/op_type.op_name.task_id.stream_id.timestamp
     std::string dumpPathSlot = tensor.dumpPath + GetTensorInfoSuffix(tensor) +  "." + NPY_SUFFIX;
-
     if (StandardizedDumpPath(dumpPathSlot) != DebuggerErrno::OK) {
         LOG_ERROR(DebuggerErrno::ERROR, "Failed to standardize path " + dumpPathSlot + ".");
         return DebuggerErrno::ERROR;
@@ -702,7 +701,7 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
 static DebuggerErrno WriteOneTensorStatToDisk(const AclTensorStats& stat)
 {
     DEBUG_FUNC_TRACE();
-    if (stat.empty()) {
+    if (stat.Empty()) {
         return DebuggerErrno::OK;
     }
 
@@ -903,7 +902,7 @@ DebuggerErrno AclDumpDataProcessor::DumpToDisk()
 
     const std::string dataPath = GenDataPath(dumpPath);
     DebuggerErrno ret;
-    if (FileUtils::GetFileName(dumpPath).find(debugFileSign) == 0 &&
+    if (FileUtils::GetFileName(dumpPath).find(DEBUG_FILE_SIGN) == 0 &&
         DebuggerConfig::GetInstance().GetOverflowCheckCfg() != nullptr) {
         ret = DumpOpDebugDataToDisk(dataPath, dumpData, msg + dataSegOffset, dataSegLen);
     } else if (DebuggerConfig::GetInstance().GetStatisticsCfg() != nullptr &&

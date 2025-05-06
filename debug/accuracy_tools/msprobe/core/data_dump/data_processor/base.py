@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import inspect
 import os
 from dataclasses import dataclass, is_dataclass
-from typing import Tuple, Dict, Optional, Any
 from functools import partial
-import copy
-from typing import Union
+from typing import Tuple, Dict, Optional, Any, Union
 
 import numpy as np
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import save_npy
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, CompareException
 
@@ -418,6 +418,7 @@ class BaseDataProcessor:
         api_info_struct = {}
         self.save_name = name + Const.SEP + param_name
         data_info = self.analyze_element(grad)
+        self.save_name = None
         grad_info_dict = {param_name: [data_info]}
         api_info_struct[name] = grad_info_dict
         return api_info_struct
@@ -426,7 +427,6 @@ class BaseDataProcessor:
         file_format = Const.PT_SUFFIX if self.config.framework == Const.PT_FRAMEWORK else Const.NUMPY_SUFFIX
         if self.save_name is not None:
             dump_data_name = (self.save_name + file_format)
-            self.save_name = None
         else:
             suffix_with_seq = Const.SEP + suffix if suffix else ""
             dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + suffix_with_seq +
@@ -461,3 +461,10 @@ class BaseDataProcessor:
 
         wrap_register_hook_single_element = partial(self.register_hook_single_element, hook_fn=hook_fn)
         self.recursive_apply_transform(variable, wrap_register_hook_single_element)
+
+    def _analyze_and_save_ndarray(self, ndarray, suffix):
+        dump_data_name, file_path = self.get_save_file_path(suffix)
+        save_npy(ndarray, file_path)
+        ndarray_json = BaseDataProcessor._analyze_ndarray(ndarray, suffix)
+        ndarray_json.update({"data_name": dump_data_name})
+        return ndarray_json

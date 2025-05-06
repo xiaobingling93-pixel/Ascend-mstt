@@ -43,6 +43,7 @@ class TensorConfig(BaseConfig):
         self.tls_path = json_config.get("tls_path", "./")
         self.online_run_ut_recompute = json_config.get("online_run_ut_recompute", False)
         self.check_config()
+        self._check_summary_mode()
         self._check_file_format()
         if self.online_run_ut:
             self._check_online_run_ut()
@@ -82,9 +83,8 @@ class StatisticsConfig(BaseConfig):
         self.check_config()
         self._check_summary_mode()
 
-    def _check_summary_mode(self):
-        if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
-            raise Exception("summary_mode is invalid")
+        self.tensor_list = json_config.get("tensor_list", [])
+        self._check_str_list_config(self.tensor_list, "tensor_list")
 
 
 class OverflowCheckConfig(BaseConfig):
