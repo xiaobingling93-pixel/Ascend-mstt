@@ -37,6 +37,7 @@ from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs,
                                                         ModuleBackwardInputs)
 from msprobe.core.data_dump.scope import BaseScope
+from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (
@@ -45,7 +46,7 @@ from msprobe.mindspore.common.utils import (
     is_mindtorch,
     get_cells_and_names
 )
-from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register, ApiTemplate
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -80,6 +81,7 @@ class Service:
         self.api_register = get_api_register()
         self.register_api_hook()
         self.init_for_debug_level()
+        self.ori_customer_func = {}
 
     @staticmethod
     def check_model_valid(models):
@@ -494,3 +496,13 @@ class Service:
         # backward save
         if save_backward:
             self.data_collector.debug_data_collect_backward(variable, grad_name_with_count)
+
+    def register_custom_api(self, module, api_name, api_prefix):
+        self.ori_customer_func[str(module) + Const.SEP + api_name] = getattr(module, api_name)
+        ApiRegistry.register_custom_api(module, api_name, api_prefix,
+                                          functools.partial(self.build_hook, BaseScope.Module_Type_API), ApiTemplate)
+
+    def restore_custom_api(self, module, api):
+        ori_func = self.ori_customer_func.get(str(module) + Const.SEP + api)
+        if ori_func:
+            setattr(module, api, ori_func)

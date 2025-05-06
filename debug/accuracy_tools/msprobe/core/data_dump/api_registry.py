@@ -174,6 +174,18 @@ class ApiRegistry:
             else:
                 setattr(api_group, api, api_attr)
 
+    @staticmethod
+    def register_custom_api(module, api_name, api_prefix, hook_build_func, api_template):
+        def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
+            def api_function(*args, **kwargs):
+                return api_template(api_name, api_func, prefix, hook_build_func)(*args, **kwargs)
+
+            api_function.__name__ = api_name
+            return api_function
+
+        setattr(module, api_name,
+                wrap_api_func(api_name, getattr(module, api_name), api_prefix, hook_build_func, api_template))
+
     def register_all_api(self):
         self.all_api_registered = True
         for framework, api_types in self.api_types.items():
