@@ -764,10 +764,13 @@ class SharedDict:
         try:
             self._shm = shared_memory.SharedMemory(create=False, name=name)
         except FileNotFoundError:
-            self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
-            data = pickle.dumps({})
-            self._shm.buf[0:len(data)] = bytearray(data)
-            logger.info(f'create shared memory, name: {name}')
+            try:
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
+                data = pickle.dumps({})
+                self._shm.buf[0:len(data)] = bytearray(data)
+                logger.info(f'create shared memory, name: {name}')
+            except FileExistsError:
+                self._shm = shared_memory.SharedMemory(create=False, name=name)
         self._safe_load()
 
     def _safe_load(self):
