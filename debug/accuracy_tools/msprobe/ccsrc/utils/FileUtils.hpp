@@ -27,7 +27,7 @@
 
 namespace MindStudioDebugger {
 
-constexpr const char pathSeparator = '/';
+constexpr const char PATH_SEPARATOR = '/';
 constexpr const uint32_t FULL_PATH_LENGTH_MAX = 4096;
 constexpr const uint32_t FILE_NAME_LENGTH_MAX = 255;
 constexpr const uint32_t PATH_DEPTH_MAX = 32;
@@ -64,7 +64,7 @@ constexpr const uint32_t FILE_NAME_MAX = 255;
 
 /* 基础检查函数库，不做过多校验，路径有效性由调用者保证 */
 bool IsPathExist(const std::string& path);
-std::vector<std::string> SplitPath(const std::string &path, char separator=pathSeparator);
+std::vector<std::string> SplitPath(const std::string &path, char separator=PATH_SEPARATOR);
 std::string GetAbsPath(const std::string &path);
 bool IsDir(const std::string& path);
 bool IsRegularFile(const std::string& path);

@@ -44,8 +44,8 @@ protected:
 class PrecisionDebugger {
 public:
     static PrecisionDebugger& GetInstance() {
-        static PrecisionDebugger instance_;
-        return instance_;
+        static PrecisionDebugger debuggerInstance;
+        return debuggerInstance;
     }
 
     int32_t Initialize(const std::string& framework, const std::string& cfgFile);

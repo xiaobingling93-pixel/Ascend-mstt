@@ -28,7 +28,7 @@ HookDynamicLoader &HookDynamicLoader::GetInstance() {
   return instance;
 }
 
-bool HookDynamicLoader::loadFunction(void *handle, const std::string &functionName) {
+bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionName) {
   void *func = dlsym(handle, functionName.c_str());
   if (!func) {
     MS_LOG(WARNING) << "Could not load function: " << functionName << ", error: " << dlerror();
@@ -69,7 +69,7 @@ bool HookDynamicLoader::LoadLibrary() {
   }
 
   for (const auto &functionName : functionList_) {
-    if (!loadFunction(handle_, functionName)) {
+    if (!LoadFunction(handle_, functionName)) {
       MS_LOG(WARNING) << "Failed to load adump function";
       dlclose(handle_);
       handle_ = nullptr;

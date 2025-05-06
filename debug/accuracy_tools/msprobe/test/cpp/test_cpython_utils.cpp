@@ -56,79 +56,79 @@ TEST_F(CPythonUtilsTest, CPythonAgent) {
 
 TEST_F(CPythonUtilsTest, PythonObjectFromTo) {
     // 测试PythonObject的From和To函数
-    int32_t input_int = -42;
-    PythonObject obj_int = PythonObject::From(input_int);
-    EXPECT_TRUE(obj_int.IsNumber());
+    int32_t inputInt = -42;
+    PythonObject objInt = PythonObject::From(inputInt);
+    EXPECT_TRUE(objInt.IsNumber());
 
-    int32_t output_int;
-    EXPECT_EQ(obj_int.To(output_int), 0);
-    EXPECT_EQ(output_int, input_int);
+    int32_t outputInt;
+    EXPECT_EQ(objInt.To(outputInt), 0);
+    EXPECT_EQ(outputInt, inputInt);
 
-    uint32_t input_uint = 56;
-    PythonObject obj_uint = PythonObject::From(input_uint);
-    EXPECT_TRUE(obj_uint.IsNumber());
+    uint32_t inputUint = 56;
+    PythonObject objUint = PythonObject::From(inputUint);
+    EXPECT_TRUE(objUint.IsNumber());
 
-    uint32_t output_uint;
-    EXPECT_EQ(obj_uint.To(output_uint), 0);
-    EXPECT_EQ(output_uint, input_uint);
+    uint32_t outputUint;
+    EXPECT_EQ(objUint.To(outputUint), 0);
+    EXPECT_EQ(outputUint, inputUint);
 
-    double input_double = 3.14;
-    PythonObject obj_double = PythonObject::From(input_double);
-    EXPECT_TRUE(obj_double.IsNumber());
+    double inputDouble = 3.14;
+    PythonObject objDouble = PythonObject::From(inputDouble);
+    EXPECT_TRUE(objDouble.IsNumber());
 
-    double output_double;
-    EXPECT_EQ(obj_double.To(output_double), 0);
-    EXPECT_DOUBLE_EQ(output_double, input_double);
+    double outputDouble;
+    EXPECT_EQ(objDouble.To(outputDouble), 0);
+    EXPECT_DOUBLE_EQ(outputDouble, inputDouble);
 
-    std::string input_str = "hello";
-    PythonObject obj_str = PythonObject::From(input_str);
-    EXPECT_TRUE(obj_str.IsString());
+    std::string inputStr = "hello";
+    PythonObject objStr = PythonObject::From(inputStr);
+    EXPECT_TRUE(objStr.IsString());
 
-    std::string output_str;
-    EXPECT_EQ(obj_str.To(output_str), 0);
-    EXPECT_EQ(output_str, input_str);
+    std::string outputStr;
+    EXPECT_EQ(objStr.To(outputStr), 0);
+    EXPECT_EQ(outputStr, inputStr);
 
-    const char* input_char = "world";
-    PythonObject obj_str1 = PythonObject::From(input_char);
-    EXPECT_TRUE(obj_str1.IsString());
+    const char* inputChar = "world";
+    PythonObject objStr1 = PythonObject::From(inputChar);
+    EXPECT_TRUE(objStr1.IsString());
 
-    EXPECT_EQ(obj_str1.To(output_str), 0);
-    EXPECT_EQ(output_str, std::string(input_char));
+    EXPECT_EQ(objStr1.To(outputStr), 0);
+    EXPECT_EQ(outputStr, std::string(inputChar));
 
-    bool input_bool = true;
-    PythonObject obj_bool = PythonObject::From(input_bool);
-    EXPECT_TRUE(obj_bool.IsBool());
+    bool inputBool = true;
+    PythonObject objBool = PythonObject::From(inputBool);
+    EXPECT_TRUE(objBool.IsBool());
 
-    bool output_bool;
-    EXPECT_EQ(obj_bool.To(output_bool), 0);
-    EXPECT_EQ(output_bool, input_bool);
+    bool outputBool;
+    EXPECT_EQ(objBool.To(outputBool), 0);
+    EXPECT_EQ(outputBool, inputBool);
 
-    std::vector<int> input_vector_int = {1, 2, 3, 100};
-    PythonObject list_int_obj = PythonObject::From(input_vector_int);
-    EXPECT_TRUE(list_int_obj.IsList());
+    std::vector<int> inputVectorInt = {1, 2, 3, 100};
+    PythonObject listIntObj = PythonObject::From(inputVectorInt);
+    EXPECT_TRUE(listIntObj.IsList());
 
-    std::vector<int> output_vector_int;
-    EXPECT_EQ(list_int_obj.To(output_vector_int), 0);
+    std::vector<int> outputVectorInt;
+    EXPECT_EQ(listIntObj.To(outputVectorInt), 0);
 
-    size_t size = input_vector_int.size();
-    EXPECT_EQ(size, output_vector_int.size());
+    size_t size = inputVectorInt.size();
+    EXPECT_EQ(size, outputVectorInt.size());
 
     for (size_t i = 0; i < size; ++i) {
-        EXPECT_EQ(input_vector_int[i], output_vector_int[i]);
+        EXPECT_EQ(inputVectorInt[i], outputVectorInt[i]);
     }
 
-    std::vector<std::string> input_vector_str = {"a", "bb", "ccc", "dddd"};
-    PythonObject list_str_obj = PythonObject::From(input_vector_str);
-    EXPECT_TRUE(list_str_obj.IsList());
+    std::vector<std::string> inputVectorStr = {"a", "bb", "ccc", "dddd"};
+    PythonObject listStrObj = PythonObject::From(inputVectorStr);
+    EXPECT_TRUE(listStrObj.IsList());
 
-    std::vector<std::string> output_vector_str;
-    EXPECT_EQ(list_str_obj.To(output_vector_str), 0);
+    std::vector<std::string> outputVectorStr;
+    EXPECT_EQ(listStrObj.To(outputVectorStr), 0);
 
-    size = input_vector_str.size();
-    EXPECT_EQ(size, output_vector_str.size());
+    size = inputVectorStr.size();
+    EXPECT_EQ(size, outputVectorStr.size());
 
     for (size_t i = 0; i < size; ++i) {
-        EXPECT_EQ(input_vector_str[i], output_vector_str[i]);
+        EXPECT_EQ(inputVectorStr[i], outputVectorStr[i]);
     }
 }
 
@@ -199,18 +199,18 @@ TEST_F(CPythonUtilsTest, PythonNumberObject) {
     PythonNumberObject o5(PythonObject::From(4.44));
     PythonNumberObject o6(PythonObject::From("1111"));
 
-    int int_v;
-    EXPECT_EQ(o1.To(int_v), 0);
-    EXPECT_EQ(int_v, 123);
-    double double_v;
-    EXPECT_EQ(o2.To(double_v), 0);
-    EXPECT_TRUE(std::fabs(double_v - 3.14) < 1e-5);
-    EXPECT_EQ(o3.To(int_v), 0);
-    EXPECT_EQ(int_v, 321);
-    EXPECT_EQ(o4.To(double_v), 0);
-    EXPECT_TRUE(std::fabs(double_v - 2.33) < 1e-5);
-    EXPECT_EQ(o5.To(double_v), 0);
-    EXPECT_TRUE(std::fabs(double_v - 4.44) < 1e-5);
+    int intV;
+    EXPECT_EQ(o1.To(intV), 0);
+    EXPECT_EQ(intV, 123);
+    double doubleV;
+    EXPECT_EQ(o2.To(doubleV), 0);
+    EXPECT_TRUE(std::fabs(doubleV - 3.14) < 1e-5);
+    EXPECT_EQ(o3.To(intV), 0);
+    EXPECT_EQ(intV, 321);
+    EXPECT_EQ(o4.To(doubleV), 0);
+    EXPECT_TRUE(std::fabs(doubleV - 2.33) < 1e-5);
+    EXPECT_EQ(o5.To(doubleV), 0);
+    EXPECT_TRUE(std::fabs(doubleV - 4.44) < 1e-5);
     EXPECT_TRUE(o6.IsNone());
 }
 

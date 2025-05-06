@@ -24,11 +24,11 @@
 namespace MindStudioDebugger {
 namespace  DataUtils {
 
-inline uint64_t UnpackUint64Value_Le(const void* data)
+inline uint64_t UnpackUint64ValueLe(const void* data)
 {
     return le64toh(*reinterpret_cast<const uint64_t *>(data));
 }
-inline uint64_t UnpackUint64Value_Be(const void* data)
+inline uint64_t UnpackUint64ValueBe(const void* data)
 {
     return be64toh(*reinterpret_cast<const uint64_t *>(data));
 }
@@ -38,11 +38,11 @@ std::string U64ToHexString(uint64_t v);
 
 class BFloat16 {
 public:
-    static constexpr uint16_t value_mask = 0x7fff;
-    static constexpr uint16_t inf_value = 0x7f80;
-    static constexpr uint16_t nan_value = 0x7fc0;
-    static constexpr uint16_t true_value = 0x3c00;
-    static constexpr uint32_t f32_inf_value = 0x7f800000;
+    static constexpr uint16_t VALUE_MASK = 0x7fff;
+    static constexpr uint16_t INF_VALUE = 0x7f80;
+    static constexpr uint16_t NAN_VALUE = 0x7fc0;
+    static constexpr uint16_t TRUE_VALUE = 0x3c00;
+    static constexpr uint32_t F32_INF_VALUE = 0x7f800000;
 
     BFloat16() = default;
     ~BFloat16() = default;
@@ -131,7 +131,7 @@ enum TensorFormat : int {
     FORMAT_HASHTABLE_LOOKUP_VALUE = 22,
     FORMAT_HASHTABLE_LOOKUP_OUTPUT = 23,
     FORMAT_HASHTABLE_LOOKUP_HITS = 24,
-    FORMAT_C1HWNCoC0 = 25,
+    FORMAT_C1HWNCOC0 = 25,
     FORMAT_MD = 26,
     FORMAT_NDHWC = 27,
     FORMAT_FRACTAL_ZZ = 28,
