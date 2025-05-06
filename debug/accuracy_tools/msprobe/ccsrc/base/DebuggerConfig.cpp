@@ -213,7 +213,7 @@ void KernelListMatcher::Parse(const std::vector<std::string>& expressions)
         size_t len = expression.size();
         if (strncmp(expression.c_str(), REGEX_PREFIX, REGEX_PREFIX_LEN) == 0 &&
             strncmp(expression.c_str() + (len - REGEX_SUFFIX_LEN), REGEX_SUFFIX, REGEX_SUFFIX_LEN) == 0) {
-            /* name-regex(xxx)表示正则表达式*/
+            /* name-regex(xxx)表示正则表达式 */
             regexList.emplace_back(expression.substr(REGEX_PREFIX_LEN, len - REGEX_PREFIX_LEN - REGEX_SUFFIX_LEN));
         } else {
             /* 否则认为是full scope name */
