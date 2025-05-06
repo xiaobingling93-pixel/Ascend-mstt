@@ -188,6 +188,7 @@ class TrainerMon:
         self.config_file_path = config_file_path
         self.process_group = process_group
         self.params_have_main_grad = params_have_main_grad
+        self.origin_step_func = None
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
@@ -475,7 +476,8 @@ class TrainerMon:
 
             if self.mv_distribution or self.ur_distribution or self.mg_direction:
                 if is_mindtorch():
-                    context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
+                    context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, \
+                    context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
                 else:
                     context.param_exp_avg, context.param_exp_avg_sq = self.get_mv_for_ms(optimizer)
 
@@ -522,6 +524,8 @@ class TrainerMon:
 
     def generate_param_map(self, tag, param_tensor):
         metrics = {}
+        if not is_mindtorch():
+            return param_tensor
         for name in self.param2name.values():
             key = get_summary_writer_tag_name(name, tag, self.rank)
             self.register_param_call_id("optimizer_pre_step_hook", key)
@@ -549,13 +553,8 @@ class TrainerMon:
         v_dict = {}
         for name, param in get_parameters(common_opt):
             if MonitorConst.EXP_AVG_SQ in name:
-                if self.targets and name not in self.targets:
-                    continue
                 m_dict[name] = param
             elif MonitorConst.EXP_AVG in name:
-                if self.targets and name not in self.targets:
-                    continue
-                get_single_metrics(self.ops, name, param, opt_context.exp_avg_sq_metric)
                 v_dict[name] = param
         return m_dict, v_dict
 
