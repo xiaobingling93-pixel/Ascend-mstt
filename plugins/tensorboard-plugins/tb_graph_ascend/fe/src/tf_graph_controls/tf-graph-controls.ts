@@ -29,7 +29,6 @@ import './components/tf_manual_match/index';
 import './components/tf_color_select/index';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import '../tf_dashboard_common/tensorboard-color';
-import { SelectionType } from '../tf_graph_common/common';
 import * as tf_graph_render from '../tf_graph_common/render';
 import '../tf_graph_common/tf-graph-icon';
 import '../tf_graph_loader/tf-graph-dashboard-loader';
@@ -38,20 +37,12 @@ import { PaperCheckboxElement } from '../polymer/irons_and_papers';
 export interface Selection {
   run: string;
   tag: string | null;
-  type: SelectionType;
   batch: number;
   step: number;
 }
-export interface TagItem {
-  tag: string | null;
-  displayName: string;
-  conceptualGraph: boolean;
-  opGraph: boolean;
-  profile: boolean;
-}
 export interface RunItem {
   name: string;
-  tags: TagItem[];
+  tags: string[];
 }
 export interface MinimapVis {
   npu: boolean;
@@ -508,12 +499,12 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           <div class="control-holder tags-row">
             <div class="title">
               文件
-              <span class="counter">([[_numTags(datasets, _selectedRunIndex)]])</span>
+              <span class="counter">([[tagList.length]])</span>
             </div>
             <paper-dropdown-menu no-label-float no-animations horizontal-align="left" noink class="run-dropdown">
               <paper-listbox class="dropdown-content" selected="{{_selectedTagIndex}}" slot="dropdown-content">
-                <template is="dom-repeat" items="[[_getTags(datasets, _selectedRunIndex)]]">
-                  <paper-item on-click="_clearMicroStep">[[item.displayName]]</paper-item>
+                <template is="dom-repeat" items="[[tagList]]">
+                  <paper-item on-click="_clearMicroStep">[[item]]</paper-item>
                 </template>
               </paper-listbox>
             </paper-dropdown-menu>
@@ -591,25 +582,22 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     notify: true,
     readOnly: true,
     computed:
-      '_computeSelection(datasets, _selectedRunIndex, _selectedTagIndex, _selectedGraphType, _selectedMicroStep)',
+      '_computeSelection(datasets, _selectedRunIndex, _selectedTagIndex, _selectedMicroStep)',
   })
   selection: object;
-
-  /**
-   * @type {SelectionType}
-   */
-  @property({ type: String })
-  _selectedGraphType: string = SelectionType.OP_GRAPH;
 
   @property({ type: Object })
   graphDef: any;
 
+  @property({ type: Array, computed: '_getTags(datasets, _selectedRunIndex)' })
+  tagList: string[] = [];
+
   // Run 路径选择
-  @property({ type: Number, observer: '_selectedRunIndexChanged' })
+  @property({ type: Number })
   _selectedRunIndex: number = 0;
 
   // Tag选择
-  @property({ type: Number, observer: '_selectedTagIndexChanged' })
+  @property({ type: Number })
   _selectedTagIndex: number = 0;
 
   @property({ type: Boolean })
@@ -703,14 +691,15 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     this._showTabContent('匹配', 'match-content');
   }
 
-  _numTags(datasets: Dataset, _selectedRunIndex: number): number {
-    return this._getTags(datasets, _selectedRunIndex).length;
-  }
-
-  _getTags(datasets: Dataset, _selectedRunIndex: number): TagItem[] {
+  _getTags(datasets: Dataset, _selectedRunIndex: number): string[] {
     if (!datasets || !datasets[_selectedRunIndex]) {
       return [];
     }
+    this.set('_selectedTagIndex', -1);
+    // 需等待dom-repeat加载完成，因此需要再次异步以刷新下拉选项
+    setTimeout(() => {
+      this.set('_selectedTagIndex', 0);
+    }, 0);
     return datasets[_selectedRunIndex].tags;
   }
 
@@ -740,47 +729,17 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     datasets: Dataset,
     _selectedRunIndex: number,
     _selectedTagIndex: number,
-    _selectedGraphType: SelectionType,
     _selectedMicroStep: number,
-  ): { run: string; tag: string | null; type: SelectionType; batch: number; step: number } | null {
+  ): { run: string; tag: string | null; batch: number; step: number } | null {
     if (!datasets[_selectedRunIndex] || !datasets[_selectedRunIndex].tags[_selectedTagIndex]) {
       return null;
     }
     return {
       run: datasets[_selectedRunIndex].name,
-      tag: datasets[_selectedRunIndex].tags[_selectedTagIndex].tag,
-      type: _selectedGraphType,
+      tag: datasets[_selectedRunIndex].tags[_selectedTagIndex],
       batch: _selectedMicroStep,
       step: this._selectedStep,
     };
-  }
-
-  _selectedRunIndexChanged(runIndex: number): void {
-    if (!this.datasets) {
-      return;
-    }
-    this._selectedTagIndex = 0;
-    this._selectedGraphType = this._getDefaultSelectionType();
-  }
-
-  _selectedTagIndexChanged(): void {
-    this._selectedGraphType = this._getDefaultSelectionType();
-  }
-
-  _getDefaultSelectionType(): SelectionType {
-    const { datasets: newDatasets, _selectedRunIndex: run, _selectedTagIndex: tag } = this;
-    const shouldSkip = !newDatasets || !newDatasets[run] || !(newDatasets[run] as any).tags[tag] || (newDatasets[run] as any).tags[tag].opGraph;
-    if (shouldSkip) {
-      return SelectionType.OP_GRAPH;
-    }
-    const datasetForRun = newDatasets[run] as any;
-    if (datasetForRun.tags[tag].profile) {
-      return SelectionType.PROFILE;
-    }
-    if (datasetForRun.tags[tag].conceptualGraph) {
-      return SelectionType.CONCEPTUAL_GRAPH;
-    }
-    return SelectionType.OP_GRAPH;
   }
 
   _toggleNpuMinimap(event: CustomEvent): void {

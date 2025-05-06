@@ -65,7 +65,8 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 
 not_backward_list = ['repeat_interleave']
 unsupported_backward_list = ['masked_select']
-unsupported_api_list = ["to"]
+unsupported_api_list = ["to", "empty", "empty_like", "empty_strided", "new_empty", "new_empty_strided", 
+                        "empty_with_format"]
 
 
 tqdm_params = {

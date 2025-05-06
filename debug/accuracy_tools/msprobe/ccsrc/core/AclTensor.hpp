@@ -29,12 +29,12 @@ using AclShape = DataUtils::TensorShape;
 using AclDtype = DataUtils::DataType;
 using AclFormat = DataUtils::TensorFormat;
 
-constexpr uint8_t kDim1 = 1;
-constexpr uint8_t kDim2 = 2;
-constexpr uint8_t kDim3 = 3;
-constexpr uint8_t kDim4 = 4;
-constexpr uint8_t kDim5 = 5;
-constexpr uint8_t kDim6 = 6;
+constexpr uint8_t DIM_1 = 1;
+constexpr uint8_t DIM_2 = 2;
+constexpr uint8_t DIM_3 = 3;
+constexpr uint8_t DIM_4 = 4;
+constexpr uint8_t DIM_5 = 5;
+constexpr uint8_t DIM_6 = 6;
 
 struct AclTensorInfo {
     std::string dumpPath;

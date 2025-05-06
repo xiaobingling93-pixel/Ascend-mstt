@@ -29,41 +29,41 @@
 
 namespace MindStudioDebugger {
 
-constexpr const char* kAclDumpScene = "dump_scene";
-constexpr const char* kSceneNormal = "normal";
-constexpr const char* kSceneException ="lite_exception";
+constexpr const char* ACL_DUMP_SCENE = "dump_scene";
+constexpr const char* SCENE_NORMAL = "normal";
+constexpr const char* SCENE_EXCEPTION ="lite_exception";
 
-constexpr const char* kAclDumpPath = "dump_path";
-constexpr const char* kAclDumpStep = "dump_step";
+constexpr const char* ACL_DUMP_PATH = "dump_path";
+constexpr const char* ACL_DUMP_STEP = "dump_step";
 
-constexpr const char* kAclDumpList = "dump_list";
-constexpr const char* kAclDumpLayer = "layer";
-constexpr const char* kAclDumpModel = "model_name";
+constexpr const char* ACL_DUMP_LIST = "dump_list";
+constexpr const char* ACL_DUMP_LAYER = "layer";
+constexpr const char* ACL_DUMP_MODEL_NAME = "model_name";
 
-constexpr const char* kAclDumpMode = "dump_mode";
-constexpr const char* kAclModeInput = "input";
-constexpr const char* kAclModeOutput = "output";
-constexpr const char* kAclModeAll = "all";
+constexpr const char* ACL_DUMP_MODE = "dump_mode";
+constexpr const char* ACL_MODE_INPUT = "input";
+constexpr const char* ACL_MODE_OUTPUT = "output";
+constexpr const char* ACL_MODE_ALL = "all";
 
-constexpr const char* kAclDumpOpSwitch = "dump_op_switch";
-constexpr const char* kAclDumpDebug = "dump_debug";
-constexpr const char* kAclSwitchOn = "on";
-constexpr const char* kAclSwitchOff = "off";
+constexpr const char* DUMP_OP_SWITCH = "dump_op_switch";
+constexpr const char* ACL_DUMP_DEBUG = "dump_debug";
+constexpr const char* ACL_SWITCH_ON = "on";
+constexpr const char* ACL_SWITCH_OFF = "off";
 
-constexpr const char* kAclDumpData = "dump_data";
-constexpr const char* kAclDumpTensor = "tensor";
-constexpr const char* kAclDumpStats = "stats";
+constexpr const char* ACL_DUMP_DATA = "dump_data";
+constexpr const char* ACL_DUMP_TENSOR = "tensor";
+constexpr const char* ACL_DUMP_STATS = "stats";
 
-constexpr const char* kAclDumpStatsOpt = "dump_stats";
-constexpr const char* kAclDumpStatsMax = "Max";
-constexpr const char* kAclDumpStatsMin = "Min";
-constexpr const char* kAclDumpStatsAvg = "Avg";
-constexpr const char* kAclDumpStatsNorn = "L2norm";
-constexpr const char* kAclDumpStatsNan = "Nan";
-constexpr const char* kAclDumpStatsNegInf = "Negative Inf";
-constexpr const char* kAclDumpStatsPosInf = "Positive Inf";
+constexpr const char* ACL_DUMP_STATS_OPT = "dump_stats";
+constexpr const char* ACL_DUMP_STATS_MAX = "Max";
+constexpr const char* ACL_DUMP_STATS_MIN = "Min";
+constexpr const char* ACL_DUMP_STATS_AVG = "Avg";
+constexpr const char* ACL_DUMP_STATS_NORM = "L2norm";
+constexpr const char* ACL_DUMP_STATS_NAN = "Nan";
+constexpr const char* ACL_DUMP_STATS_NEG_INF = "Negative Inf";
+constexpr const char* ACL_DUMP_STATS_POS_INF = "Positive Inf";
 
-constexpr const size_t kProcessorNumMax = 100;
+constexpr const size_t PROCESSOR_NUM_MAX = 100;
 
 inline std::string GenAclJsonPath(const std::string& dumpPath, uint32_t rank)
 {
@@ -74,14 +74,14 @@ inline std::string GenAclJsonPath(const std::string& dumpPath, uint32_t rank)
 static std::string GenDumpInoutString(DebuggerDataInOut mode)
 {
     static std::map<DebuggerDataInOut, std::string> dumpModeMap = {
-        {DebuggerDataInOut::INOUT_INPUT, kAclModeInput},
-        {DebuggerDataInOut::INOUT_OUTPUT, kAclModeOutput},
-        {DebuggerDataInOut::INOUT_BOTH, kAclModeAll},
+        {DebuggerDataInOut::INOUT_INPUT, ACL_MODE_INPUT},
+        {DebuggerDataInOut::INOUT_OUTPUT, ACL_MODE_OUTPUT},
+        {DebuggerDataInOut::INOUT_BOTH, ACL_MODE_ALL},
     };
 
     auto it = dumpModeMap.find(mode);
     if (it == dumpModeMap.end()) {
-        return kAclModeAll;
+        return ACL_MODE_ALL;
     } else {
         return it->second;
     }
@@ -90,13 +90,13 @@ static std::string GenDumpInoutString(DebuggerDataInOut mode)
 static std::vector<std::string> GenStatsOptions(const std::vector<DebuggerSummaryOption>& options)
 {
     static std::map<DebuggerSummaryOption, std::string> summaryOptMap = {
-        {DebuggerSummaryOption::MAX, kAclDumpStatsMax},
-        {DebuggerSummaryOption::MIN, kAclDumpStatsMin},
-        {DebuggerSummaryOption::MEAN, kAclDumpStatsAvg},
-        {DebuggerSummaryOption::L2NORM, kAclDumpStatsNorn},
-        {DebuggerSummaryOption::NAN_CNT, kAclDumpStatsNan},
-        {DebuggerSummaryOption::NEG_INF_CNT, kAclDumpStatsNegInf},
-        {DebuggerSummaryOption::POS_INF_CNT, kAclDumpStatsPosInf},
+        {DebuggerSummaryOption::MAX, ACL_DUMP_STATS_MAX},
+        {DebuggerSummaryOption::MIN, ACL_DUMP_STATS_MIN},
+        {DebuggerSummaryOption::MEAN, ACL_DUMP_STATS_AVG},
+        {DebuggerSummaryOption::L2NORM, ACL_DUMP_STATS_NORM},
+        {DebuggerSummaryOption::NAN_CNT, ACL_DUMP_STATS_NAN},
+        {DebuggerSummaryOption::NEG_INF_CNT, ACL_DUMP_STATS_NEG_INF},
+        {DebuggerSummaryOption::POS_INF_CNT, ACL_DUMP_STATS_POS_INF},
     };
 
     std::vector<std::string> output;
@@ -156,7 +156,7 @@ bool AclDumper::IsOverflowCompleted()
     return overflowNums != -1 && realOverflowNums > overflowNums;
 }
 
-void AclDumper::CountOverflowNumbers(const acldumpChunk* chunk)
+void AclDumper::CountOverflowNumbers(const AclDumpChunk* chunk)
 {
     if (IsOverflowCompleted() || !isOverflowDump || !chunk->isLastChunk) {
         return;
@@ -194,19 +194,19 @@ DebuggerErrno AclDumper::AclDumpGenTensorJson(std::shared_ptr<const DumpTensorCf
         fullDumpPath = dumpPath;
     }
 
-    aclDumpJson[kAclDumpPath] = fullDumpPath;
-    aclDumpJson[kAclDumpMode] = GenDumpInoutString(dumpTensorCfg->inout);
-    aclDumpJson[kAclDumpData] = kAclDumpTensor;
-    aclDumpJson[kAclDumpList] = nlohmann::json::array();
-    aclDumpJson[kAclDumpOpSwitch] = kAclSwitchOn;
+    aclDumpJson[ACL_DUMP_PATH] = fullDumpPath;
+    aclDumpJson[ACL_DUMP_MODE] = GenDumpInoutString(dumpTensorCfg->inout);
+    aclDumpJson[ACL_DUMP_DATA] = ACL_DUMP_TENSOR;
+    aclDumpJson[ACL_DUMP_LIST] = nlohmann::json::array();
+    aclDumpJson[DUMP_OP_SWITCH] = ACL_SWITCH_ON;
 
     if (!needDump) {
         /* 这里沿用mindspore框架的方案，用一个大数0x7FFFFFFF表示不需要dump；这个方案非常奇怪，后续可以看下能否优化 */
-        aclDumpJson[kAclDumpStep] = std::to_string(INT_MAX);
+        aclDumpJson[ACL_DUMP_STEP] = std::to_string(INT_MAX);
     } else {
         std::vector<std::string> kernelsList = dumpTensorCfg->matcher.GenRealKernelList(kernels);
         if (!kernelsList.empty()) {
-            aclDumpJson[kAclDumpList].push_back({{kAclDumpLayer, kernelsList}});
+            aclDumpJson[ACL_DUMP_LIST].push_back({{ACL_DUMP_LAYER, kernelsList}});
         }
     }
 
@@ -230,25 +230,25 @@ DebuggerErrno AclDumper::AclDumpGenStatJson(std::shared_ptr<const StatisticsCfg>
         fullDumpPath = dumpPath;
     }
 
-    aclDumpJson[kAclDumpPath] = fullDumpPath;
-    aclDumpJson[kAclDumpMode] = GenDumpInoutString(statisticsCfg->inout);
-    aclDumpJson[kAclDumpList] = nlohmann::json::array();
-    aclDumpJson[kAclDumpOpSwitch] = kAclSwitchOn;
+    aclDumpJson[ACL_DUMP_PATH] = fullDumpPath;
+    aclDumpJson[ACL_DUMP_MODE] = GenDumpInoutString(statisticsCfg->inout);
+    aclDumpJson[ACL_DUMP_LIST] = nlohmann::json::array();
+    aclDumpJson[DUMP_OP_SWITCH] = ACL_SWITCH_ON;
 
     /* 如果需要host侧分析，下给acl的任务还是dump tensor，然后在host侧转成统计量 */
     if (!hostAnalysisOpt.empty()) {
-        aclDumpJson[kAclDumpData] = kAclDumpTensor;
+        aclDumpJson[ACL_DUMP_DATA] = ACL_DUMP_TENSOR;
     } else {
-        aclDumpJson[kAclDumpData] = kAclDumpStats;
-        aclDumpJson[kAclDumpStatsOpt] = GenStatsOptions(statisticsCfg->summaryOption);
+        aclDumpJson[ACL_DUMP_DATA] = ACL_DUMP_STATS;
+        aclDumpJson[ACL_DUMP_STATS_OPT] = GenStatsOptions(statisticsCfg->summaryOption);
     }
 
     if (!needDump) {
-        aclDumpJson[kAclDumpStep] = std::to_string(INT_MAX);
+        aclDumpJson[ACL_DUMP_STEP] = std::to_string(INT_MAX);
     } else {
         std::vector<std::string> kernelsList = statisticsCfg->matcher.GenRealKernelList(kernels);
         if (!kernelsList.empty()){
-            aclDumpJson[kAclDumpList].push_back({{kAclDumpLayer, kernelsList}});
+            aclDumpJson[ACL_DUMP_LIST].push_back({{ACL_DUMP_LAYER, kernelsList}});
         }
     }
 
@@ -277,10 +277,10 @@ DebuggerErrno AclDumper::AclDumpGenOverflowJson(std::shared_ptr<const OverflowCh
         return ret;
     }
 
-    aclDumpJson[kAclDumpPath] =  fullDumpPath;
-    aclDumpJson[kAclDumpDebug] = kAclSwitchOn;
+    aclDumpJson[ACL_DUMP_PATH] =  fullDumpPath;
+    aclDumpJson[ACL_DUMP_DEBUG] = ACL_SWITCH_ON;
     if (!needDump) {
-        aclDumpJson[kAclDumpStep] = std::to_string(INT_MAX);
+        aclDumpJson[ACL_DUMP_STEP] = std::to_string(INT_MAX);
     }
     nlohmann::json content = {{"dump", aclDumpJson}};
     LOG_DEBUG("AclDumpGenOverflowJson dump json to " + GenAclJsonPath(dumpPath, rank));
@@ -297,13 +297,13 @@ static DebuggerErrno InitAcl()
         return DebuggerErrno::ERROR_CANNOT_PARSE_PATH;
     }
 
-    constexpr const char* AclErrMsgOn = "1";
-    aclInitJson["err_msg_mode"] = AclErrMsgOn;
+    constexpr const char* aclErrMsgOn = "1";
+    aclInitJson["err_msg_mode"] = aclErrMsgOn;
     LOG_DEBUG("InitAcl dump json to " + aclInitJsonPath);
     FileOperation::DumpJson(aclInitJsonPath, aclInitJson);
     aclError ret;
     try {
-        ret = CALL_ACL_API(aclInit, aclInitJsonPath.c_str());
+        ret = CALL_ACL_API(AclInit, aclInitJsonPath.c_str());
     } catch (const std::runtime_error& e) {
         LOG_ERROR(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Cannot find function aclInit.");
         return DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND;
@@ -319,7 +319,7 @@ static DebuggerErrno InitAcl()
     return DebuggerErrno::OK;
 }
 
-int32_t AclDumpCallBack(const acldumpChunk* chunk, int32_t len)
+int32_t AclDumpCallBack(const AclDumpChunk* chunk, int32_t len)
 {
     AclDumper& dumper = AclDumper::GetInstance();
     dumper.OnAclDumpCallBack(chunk, len);
@@ -363,7 +363,7 @@ DebuggerErrno AclDumper::Initialize()
     if (needCallback) {
         LOG_DEBUG("Register acl dump callback.");
         /* 上面aclInit成功，此处认为acldumpRegCallback符号也存在，不会抛出异常 */
-        aclRet = CALL_ACL_API(acldumpRegCallback, AclDumpCallBack, 0);
+        aclRet = CALL_ACL_API(AcldumpRegCallback, AclDumpCallBack, 0);
         if (aclRet != ACL_SUCCESS) {
             LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                       "Failed to register acldump callback(" + std::to_string(aclRet) + ").");
@@ -374,7 +374,7 @@ DebuggerErrno AclDumper::Initialize()
     return DebuggerErrno::OK;
 }
 
-void AclDumper::OnAclDumpCallBack(const acldumpChunk* chunk, int32_t len)
+void AclDumper::OnAclDumpCallBack(const AclDumpChunk* chunk, int32_t len)
 {
     DEBUG_FUNC_TRACE();
     CountOverflowNumbers(chunk);
@@ -385,7 +385,7 @@ void AclDumper::OnAclDumpCallBack(const acldumpChunk* chunk, int32_t len)
     std::string dumpPath = FileUtils::GetAbsPath(chunk->fileName);
     auto it = dataProcessors.find(dumpPath);
     if (it == dataProcessors.end()) {
-        if (dataProcessors.size() > kProcessorNumMax) {
+        if (dataProcessors.size() > PROCESSOR_NUM_MAX) {
             LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, "The number of processors has reached the upper limit.");
             return;
         }
@@ -458,8 +458,7 @@ void AclDumper::SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args)
         return;
     }
 
-    aclError aclRet;
-    aclRet = CALL_ACL_API(aclmdlInitDump);
+    aclError aclRet = CALL_ACL_API(AclmdlInitDump);
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                   "Failed to init acldump(" + std::to_string(aclRet) + ").");
@@ -467,7 +466,7 @@ void AclDumper::SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args)
     }
 
     const std::string& dumpPath = DebuggerConfig::GetInstance().GetOutputPath();
-    aclRet = CALL_ACL_API(aclmdlSetDump, GenAclJsonPath(dumpPath, rank).c_str());
+    aclRet = CALL_ACL_API(AclmdlSetDump, GenAclJsonPath(dumpPath, rank).c_str());
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                   "Failed to enable acldump(" + std::to_string(aclRet) + ").");
@@ -485,51 +484,50 @@ void AclDumper::FinalizeDump(ExtArgs& args)
         return;
     }
 
-    CALL_ACL_API(aclrtSynchronizeDevice);
-    aclError aclRet = CALL_ACL_API(aclmdlFinalizeDump);
+    CALL_ACL_API(AclrtSynchronizeDevice);
+    aclError aclRet = CALL_ACL_API(AclmdlFinalizeDump);
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
                   "Failed to finalize acldump(" + std::to_string(aclRet) + ").");
-
     }
 
     aclDumpHasSet = false;
 }
 
 void KernelInitDump() {
-  if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
-    return;
-  }
+    if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
+        return;
+    }
 
-  DebuggerErrno ret = InitAcl();
-  if (ret != DebuggerErrno::OK) {
-    LOG_ERROR(ret, "Failed to call InitAcl.");
-    return;
-  }
-  auto aclRet = CALL_ACL_API(aclmdlInitDump);
-  if (aclRet != ACL_SUCCESS) {
+    DebuggerErrno ret = InitAcl();
+    if (ret != DebuggerErrno::OK) {
+        LOG_ERROR(ret, "Failed to call InitAcl.");
+        return;
+    }
+    auto aclRet = CALL_ACL_API(AclmdlInitDump);
+    if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to init acldump(" + std::to_string(aclRet) + ").");
     return;
-  }
+    }
 }
 
 void KernelSetDump(const std::string &filePath) {
-  std::string dumpPath = FileUtils::GetAbsPath(filePath);
-  auto aclRet = CALL_ACL_API(aclmdlSetDump, dumpPath.c_str());
-  if (aclRet != ACL_SUCCESS) {
+    std::string dumpPath = FileUtils::GetAbsPath(filePath);
+    auto aclRet = CALL_ACL_API(AclmdlSetDump, dumpPath.c_str());
+    if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to enable acldump(" + std::to_string(aclRet) + ").");
     return;
-  }
+    }
 }
 
 void KernelFinalizeDump() {
-  CALL_ACL_API(aclrtSynchronizeDevice);
-  auto aclRet = CALL_ACL_API(aclmdlFinalizeDump);
-  if (aclRet != ACL_SUCCESS) {
+    CALL_ACL_API(AclrtSynchronizeDevice);
+    auto aclRet = CALL_ACL_API(AclmdlFinalizeDump);
+    if (aclRet != ACL_SUCCESS) {
     LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
               "Failed to finalize acldump(" + std::to_string(aclRet) + ").");
-  }
+    }
 }
 }

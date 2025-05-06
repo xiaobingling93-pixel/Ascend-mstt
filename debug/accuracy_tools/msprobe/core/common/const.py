@@ -70,7 +70,7 @@ class Const:
     SUMMARY = "summary"
     MD5 = "md5"
     VALUE = "value"
-    SUMMARY_MODE = [ALL, SUMMARY, MD5]
+    SUMMARY_MODE = ["statistics", "md5"]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -330,6 +330,30 @@ class Const:
             PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX
         }
+    }
+
+    def _fused_adamw_(
+        self,
+        grads,
+        exp_avgs,
+        exp_avg_sqs,
+        max_exp_avg_sqs,
+        state_steps,
+        *,
+        lr,
+        beta1,
+        beta2,
+        weight_decay,
+        eps,
+        amsgrad,
+        maximize,
+        grad_scale=None,
+        found_inf=None
+    ):
+        pass
+
+    API_WITH_SELF_ARG = {
+        'Torch._fused_adamw_': _fused_adamw_
     }
 
 

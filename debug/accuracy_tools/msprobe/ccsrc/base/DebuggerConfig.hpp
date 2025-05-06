@@ -30,7 +30,7 @@
 
 namespace MindStudioDebugger {
 
-constexpr int debuggerInvalidEnum = -1;
+constexpr int DEBUGGER_INVALID_ENUM = -1;
 
 enum class DebuggerFramework {
     FRAMEWORK_PYTORCH,
@@ -47,7 +47,7 @@ enum class DebuggerTaskType {
     TASK_RUN_UT,
     TASK_GRAD_PROBE,
 
-    TASK_BUTT = debuggerInvalidEnum,
+    TASK_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerDevType {
@@ -55,7 +55,7 @@ enum class DebuggerDevType {
     DEVICE_TYPE_GPU,
     DEVICE_TYPE_CPU,
 
-    DEVICE_TYPE_BUTT = debuggerInvalidEnum,
+    DEVICE_TYPE_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerLevel {
@@ -64,7 +64,7 @@ enum class DebuggerLevel {
     L2,
     MIX,
 
-    LEVEL_BUTT = debuggerInvalidEnum,
+    LEVEL_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerDataDirection {
@@ -72,7 +72,7 @@ enum class DebuggerDataDirection {
     DIRECTION_BACKWARD,
     DIRECTION_BOTH,
 
-    DIRECTION_BUTT = debuggerInvalidEnum,
+    DIRECTION_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerDataInOut {
@@ -80,14 +80,14 @@ enum class DebuggerDataInOut {
     INOUT_OUTPUT,
     INOUT_BOTH,
 
-    INOUT_BUTT = debuggerInvalidEnum,
+    INOUT_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerDumpFileFormat {
     FILE_FORMAT_BIN,
     FILE_FORMAT_NPY,
 
-    FILE_FORMAT_BUTT = debuggerInvalidEnum,
+    FILE_FORMAT_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerOpCheckLevel {
@@ -95,7 +95,7 @@ enum class DebuggerOpCheckLevel {
     CHECK_LEVEL_ATOMIC,
     CHECK_LEVEL_ALL,
 
-    CHECK_LEVEL_BUTT = debuggerInvalidEnum,
+    CHECK_LEVEL_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 enum class DebuggerSummaryOption {
@@ -108,7 +108,7 @@ enum class DebuggerSummaryOption {
     POS_INF_CNT,
     MD5,
 
-    SUMMARY_BUTT = debuggerInvalidEnum,
+    SUMMARY_BUTT = DEBUGGER_INVALID_ENUM,
 };
 
 class KernelListMatcher {
@@ -119,8 +119,8 @@ public:
     void Parse(const std::vector<std::string>& expressions);
     std::vector<std::string> GenRealKernelList(const char** fullKernelList) const;
 
-    inline bool empty() const {return fullNameList.empty() && regexList.empty();}
-    inline bool needAllKernels() const {return !regexList.empty();}
+    inline bool Empty() const {return fullNameList.empty() && regexList.empty();}
+    inline bool NeedAllKernels() const {return !regexList.empty();}
 
 private:
     std::vector<std::string> fullNameList;
@@ -208,11 +208,10 @@ private:
 
 
 class DebuggerConfig {
-
 public:
     static DebuggerConfig& GetInstance() {
-        static DebuggerConfig instance_;
-        return instance_;
+        static DebuggerConfig configInstance;
+        return configInstance;
     }
 
     int32_t LoadConfig(const std::string& framework, const std::string& cfgFilePath);

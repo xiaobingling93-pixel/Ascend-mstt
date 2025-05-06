@@ -21,7 +21,7 @@
 namespace MindStudioDebugger {
 namespace Environment {
 
-static int32_t GetRankID_PT()
+static int32_t GetPTRankID()
 {
     /*  if torch.distributed.is_initialized():
      *     return torch.distributed.get_rank()
@@ -48,10 +48,10 @@ static int32_t GetRankID_PT()
     return id;
 }
 
-static int32_t GetRankID_MS()
+static int32_t GetMSRankID()
 {
-    constexpr const char* kRankId = "RANK_ID";
-    const char* rankIdEnv =  getenv(kRankId);
+    constexpr const char* RANK_ID = "RANK_ID";
+    const char* rankIdEnv =  getenv(RANK_ID);
     if (rankIdEnv == nullptr) {
         return -1;
     }
@@ -78,9 +78,9 @@ int32_t GetRankID()
     }
 
     if (DebuggerConfig::GetInstance().GetFramework() == DebuggerFramework::FRAMEWORK_PYTORCH) {
-        id = GetRankID_PT();
+        id = GetPTRankID();
     } else if (DebuggerConfig::GetInstance().GetFramework() == DebuggerFramework::FRAMEWORK_MINDSPORE) {
-        id = GetRankID_MS();
+        id = GetMSRankID();
     }
 
     return id;

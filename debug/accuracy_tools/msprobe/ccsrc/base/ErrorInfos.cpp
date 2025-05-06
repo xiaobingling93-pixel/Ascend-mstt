@@ -27,7 +27,7 @@
 
 namespace MindStudioDebugger {
 
-static std::mutex errInfoMtx;
+static std::mutex g_errInfoMtx;
 DebuggerErrLevel ErrorInfosManager::topLevel = DebuggerErrLevel::LEVEL_NONE;
 DebuggerErrLevel ErrorInfosManager::threshold = DebuggerErrLevel::LEVEL_INFO;
 
@@ -83,7 +83,7 @@ void ErrorInfosManager::LogErrorInfo(DebuggerErrLevel level, DebuggerErrno errId
         return;
     }
 
-    std::lock_guard<std::mutex> lk(errInfoMtx);
+    std::lock_guard<std::mutex> lk(g_errInfoMtx);
     std::ostream& output = std::cout;
     output << "[" << ErrorLevelString[level] << "]";
     if (errId != DebuggerErrno::NONE) {
@@ -100,7 +100,7 @@ void ErrorInfosManager::LogErrorInfo(DebuggerErrLevel level, DebuggerErrno errId
 
 DebuggerErrLevel ErrorInfosManager::GetTopErrLevelInDuration()
 {
-    std::lock_guard<std::mutex> lk(errInfoMtx);
+    std::lock_guard<std::mutex> lk(g_errInfoMtx);
     DebuggerErrLevel ret = topLevel;
     topLevel = DebuggerErrLevel::LEVEL_NONE;
     return ret;
