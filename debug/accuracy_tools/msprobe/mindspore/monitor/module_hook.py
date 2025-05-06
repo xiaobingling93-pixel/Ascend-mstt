@@ -189,6 +189,7 @@ class TrainerMon:
         self.process_group = process_group
         self.params_have_main_grad = params_have_main_grad
         self.origin_step_func = None
+        self.is_mindtorch = is_mindtorch()
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
@@ -384,7 +385,7 @@ class TrainerMon:
             context.step += 1
             self.dynamic_monitor(optimizer)
 
-        if is_mindtorch():
+        if self.is_mindtorch:
             def patch_step(func, optimizer):
                 def wrapper(*args, **kwargs):
                     out = func(*args, **kwargs)
@@ -475,7 +476,7 @@ class TrainerMon:
                 grad_dict = self.optimizer_mon.fetch_grad(self, self.param2name)
 
             if self.mv_distribution or self.ur_distribution or self.mg_direction:
-                if is_mindtorch():
+                if self.is_mindtorch:
                     context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, \
                     context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
                 else:
@@ -505,7 +506,7 @@ class TrainerMon:
 
         if self.optimizer_hooked or not self.is_target_rank():
             return
-        if is_mindtorch():
+        if self.is_mindtorch:
             optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
         else:
             handle = optimizer.register_forward_pre_hook(optimizer_pre_step_hook)
@@ -524,7 +525,7 @@ class TrainerMon:
 
     def generate_param_map(self, tag, param_tensor):
         metrics = {}
-        if not is_mindtorch():
+        if not self.is_mindtorch:
             return param_tensor
         for name in self.param2name.values():
             key = get_summary_writer_tag_name(name, tag, self.rank)
@@ -854,7 +855,7 @@ class TrainerMon:
             for handle in self.handles['optimizer']:
                 handle.remove()
             self.handles['optimizer'].clear()
-            if is_mindtorch():
+            if self.is_mindtorch:
                 optimizer.__class__.step = self.origin_step_func
         for _, context in self.optimizer_context.items():
             context.reset()
