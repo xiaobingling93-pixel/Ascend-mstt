@@ -45,6 +45,9 @@ class StatisticsConfig(BaseConfig):
         self.check_config()
         self._check_summary_mode()
 
+        self.tensor_list = json_config.get("tensor_list", [])
+        self._check_str_list_config(self.tensor_list, "tensor_list")
+
     def _check_summary_mode(self):
         muti_opt = ["md5", "max", "min", "mean", "l2norm"]
         if isinstance(self.summary_mode, str) and self.summary_mode not in Const.SUMMARY_MODE:

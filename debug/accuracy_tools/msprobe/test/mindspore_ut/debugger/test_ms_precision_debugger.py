@@ -16,13 +16,14 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.const import Const, MsgConst
+from msprobe.core.common_config import CommonConfig
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from msprobe.mindspore.ms_config import StatisticsConfig
 from msprobe.mindspore.runtime import Runtime
 
 
@@ -48,7 +49,7 @@ class TestPrecisionDebugger(unittest.TestCase):
         }
 
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         handler = Handler()
 
         mock_get_mode = MagicMock()

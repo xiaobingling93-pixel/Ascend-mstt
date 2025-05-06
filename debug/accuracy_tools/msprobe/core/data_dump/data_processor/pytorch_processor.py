@@ -227,6 +227,11 @@ class PytorchDataProcessor(BaseDataProcessor):
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
 
+    def dump_async_data(self):
+        for file_path, tensor in self._async_dump_cache.items():
+            save_pt(tensor.contiguous(), file_path)
+        self._async_dump_cache.clear()
+
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
@@ -287,20 +292,9 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
-
-class StatisticsDataProcessor(PytorchDataProcessor):
-    pass
-
-
-class TensorDataProcessor(PytorchDataProcessor):
-    def dump_async_data(self):
-        for file_path, tensor in self._async_dump_cache.items():
-            save_pt(tensor.contiguous(), file_path)
-        self._async_dump_cache.clear()
-
-    def _analyze_tensor(self, tensor, suffix):
+    def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        single_arg = super()._analyze_tensor(tensor, suffix)
+        single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         tensor, _ = self._cast_to_float_if_fp8(tensor)
         if self.config.async_dump:
@@ -310,12 +304,34 @@ class TensorDataProcessor(PytorchDataProcessor):
             save_pt(saved_tensor, file_path)
         return single_arg
 
-    def _analyze_ndarray(self, ndarray, suffix):
+    def _analyze_and_save_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_pt(torch.tensor(ndarray), file_path)
-        ndarray_json = super()._analyze_ndarray(ndarray, suffix)
+        ndarray_json = PytorchDataProcessor._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
+
+
+class StatisticsDataProcessor(PytorchDataProcessor):
+    def _analyze_tensor(self, tensor, suffix):
+        if any(item in self.current_api_or_module_name for item in self.config.tensor_list):
+            return self._analyze_and_save_tensor(tensor, suffix)
+        else:
+            return super()._analyze_tensor(tensor, suffix)
+
+    def _analyze_ndarray(self, ndarray, suffix):
+        if any(item in self.current_api_or_module_name for item in self.config.tensor_list):
+            return self._analyze_and_save_ndarray(ndarray, suffix)
+        else:
+            return super()._analyze_ndarray(ndarray, suffix)
+
+
+class TensorDataProcessor(PytorchDataProcessor):
+    def _analyze_tensor(self, tensor, suffix):
+        return self._analyze_and_save_tensor(tensor, suffix)
+
+    def _analyze_ndarray(self, ndarray, suffix):
+        return self._analyze_and_save_ndarray(ndarray, suffix)
 
 
 class OverflowCheckDataProcessor(PytorchDataProcessor):

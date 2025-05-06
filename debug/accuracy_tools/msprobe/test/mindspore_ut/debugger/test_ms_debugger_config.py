@@ -17,10 +17,11 @@ import unittest
 from unittest.mock import patch
 
 from msprobe.core.common.const import Const
-from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.log import logger
+from msprobe.core.common_config import CommonConfig
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.ms_config import StatisticsConfig
 
 
 class TestDebuggerConfig(unittest.TestCase):
@@ -34,12 +35,13 @@ class TestDebuggerConfig(unittest.TestCase):
             "level": "L2"
         }
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         debugger_config = DebuggerConfig(common_config, task_config)
         self.assertEqual(debugger_config.task, Const.STATISTICS)
         self.assertEqual(debugger_config.file_format, "npy")
         self.assertEqual(debugger_config.check_mode, "all")
         self.assertEqual(debugger_config.overflow_nums, 1)
+        self.assertEqual(debugger_config.tensor_list, [])
 
         common_config.level = "L1"
         common_config.task = Const.FREE_BENCHMARK
