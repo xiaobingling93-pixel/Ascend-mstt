@@ -64,7 +64,7 @@ class OptimizerMon(object):
             state = self.optim.optimizer.state
         else:
             logger.warning('optimizer state can not accessed')
-            return exp_avg_dict,exp_avg_sq_dict, update_dict, ratio_dict
+            return exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict
 
         for lp_param, name in params2name.items():
             if lp_param in self.fp16_to_fp32_param:
@@ -97,7 +97,7 @@ class OptimizerMon(object):
                     ratio_dict[name] = exp_avg_hat / mint.sqrt(exp_avg_sq_hat)
                     monitor.update_heatmap_visualizer[name].pre_cal(update_dict[name])
                     monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
-        return exp_avg_dict,exp_avg_sq_dict, update_dict, ratio_dict
+        return exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict
     
 
 class MixPrecisionOptimizerMon(OptimizerMon):

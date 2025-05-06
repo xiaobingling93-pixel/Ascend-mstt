@@ -463,17 +463,22 @@ class TrainerMon:
         logger.info(f"> {hooked_count} modules are monitored.")
 
     def hook_optimizer(self, optimizer):
-        def optimizer_pre_step_hook(opt, args, kwargs):
+        def optimizer_pre_step_hook(opt, *args, **kwargs):
             context = self.optimizer_context[opt]
             if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times,
                             self.collect_times):
                 return
+
             grad_dict = {}
             if self.wg_distribution:
                 grad_dict = self.optimizer_mon.fetch_grad(self, self.param2name)
+
             if self.mv_distribution or self.ur_distribution or self.mg_direction:
-                context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
-            
+                if is_mindtorch():
+                    context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
+                else:
+                    context.param_exp_avg, context.param_exp_avg_sq = self.get_mv_for_ms(optimizer)
+
             self.generate_wgrad_metrics(grad_dict)
             self.generate_mv_metrics(context)
             self.generate_param_metrics(context)
@@ -531,6 +536,29 @@ class TrainerMon:
         name2param = {name: param for name, param in self.name2param.items() if param.numel() != 0}
         get_metrics(self.ops, name2param, self.eps, opt_context.param_metric)
 
+    def get_mv_for_ms(self, opt):
+        if not self.mv_distribution:
+            return {}, {}
+        common_opt = opt
+        if not is_valid_instance(opt):
+            common_opt = getattr(opt, 'optimizer')
+            if not is_valid_instance(common_opt):
+                logger.warning("Optimizer is not valid, please check usage")
+                return {}, {}
+        m_dict = {}
+        v_dict = {}
+        for name, param in get_parameters(common_opt):
+            if MonitorConst.EXP_AVG_SQ in name:
+                if self.targets and name not in self.targets:
+                    continue
+                m_dict[name] = param
+            elif MonitorConst.EXP_AVG in name:
+                if self.targets and name not in self.targets:
+                    continue
+                get_single_metrics(self.ops, name, param, opt_context.exp_avg_sq_metric)
+                v_dict[name] = param
+        return m_dict, v_dict
+
     def generate_mv_metrics(self, opt_context):
         if not self.mv_distribution:
             return
@@ -583,6 +611,16 @@ class TrainerMon:
             self.register_param_call_id("_hook_module", key)
             metrics[key] = tensor
         return metrics
+
+    def register_param_call_id(self, hook_name: str, key: str):
+        """
+        :param hook_name:
+        :param key: str, '0:relu_0/output_grad'
+        :return:
+        """
+        logger.debug(f"{hook_name} {key}: {self.call_id}")
+        self.param_name_call_id[key] = self.call_id
+        self.call_id += 1
 
     def _register_param_name(self):
         for vpp_stage, model_chunk in enumerate(self.model):
@@ -745,16 +783,6 @@ class TrainerMon:
                 logger.info(f"> {name} is monitored successfully")
                 hooked_count += 1
         return hooked_count
-
-    def register_param_call_id(self, hook_name: str, key: str):
-        """
-        :param hook_name:
-        :param key: str, '0:relu_0/output_grad'
-        :return:
-        """
-        logger.debug(f"{hook_name} {key}: {self.call_id}")
-        self.param_name_call_id[key] = self.call_id
-        self.call_id += 1
 
     def _patch_grad_sync(self):
         if not self.wg_distribution:
