@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from msprobe.mindspore import PrecisionDebugger
 from msprobe.core.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 
 current_file = __file__
 parent_dir = os.path.abspath(os.path.dirname(current_file))
@@ -380,6 +381,7 @@ class TestDebuggerSave(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_backward(self, _):
+        get_api_register().restore_all_api()
         x = mindspore.Tensor([1., 2.])
         target_x_grad = mindspore.Tensor([1., 1.])
         def _forward_simple_func(x):
@@ -443,6 +445,7 @@ class TestDebuggerSave(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_compilcated_data_structure_backward(self, _):
+        get_api_register().restore_all_api()
         x = mindspore.Tensor([1., 2.])
         target_x_grad = mindspore.Tensor([1., 1.])
 

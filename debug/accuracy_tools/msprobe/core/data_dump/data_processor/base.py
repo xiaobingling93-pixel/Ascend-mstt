@@ -172,7 +172,7 @@ class BaseDataProcessor:
             else:
                 raise ValueError("set_value_into_nested_structure failed: "
                                  "invalid data_structure type or invalid index")
-            
+
     @staticmethod
     def is_distributed_op(module):
         return getattr(module, "op_is_distributed", False)
