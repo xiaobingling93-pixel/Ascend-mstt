@@ -53,6 +53,7 @@ if is_mindtorch():
 
 class Service:
     def __init__(self, config):
+        print(f"config:{config}")
         self.model = None
         self.config = copy.deepcopy(config)
         self.config.level = self.config.level_ori

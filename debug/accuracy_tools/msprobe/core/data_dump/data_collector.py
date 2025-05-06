@@ -42,6 +42,9 @@ class DataCollector:
         self.optimizer_status = ""
         self.optimizer_status_first_start = {Const.OPTIMIZER: True, Const.CLIP_GRAD: True}
         atexit.register(self.write_json)
+        print("Config properties:")
+        for key, value in vars(self.config).items():
+            print(f"{key}: {value}")
 
     @property
     def dump_data_dir(self):
