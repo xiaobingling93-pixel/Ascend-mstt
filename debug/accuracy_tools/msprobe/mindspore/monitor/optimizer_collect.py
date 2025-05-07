@@ -35,8 +35,6 @@ class OptimizerMon(object):
                 continue
             grad = param.main_grad if monitor.params_have_main_grad else param.grad
             if grad is None:
-                if not monitor.fsdp_wrapped_module:
-                    logger.warning(f"grad is None: {name}, maybe something wrong happened.")
                 continue
             tag = monitor.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
             monitor.register_param_call_id("hook_optimizer", tag)

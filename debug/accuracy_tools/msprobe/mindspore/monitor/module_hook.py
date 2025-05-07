@@ -302,7 +302,7 @@ class TrainerMon:
             logger.error(f"Unsupported format: {self.format}, use default format: {MonitorConst.CSV}")
             self.format = MonitorConst.CSV
         self.step_count_per_record = self.config.get('step_count_per_record', 1)
-        if (self.rank in self.module_rank_list) or len(self.module_rank_list) == 0:
+        if not self.module_rank_list or (self.rank in self.module_rank_list):
             writer = FORMAT_MAPPING[self.format]
             self.summary_writer = writer(
                 WriterInput(
