@@ -745,8 +745,10 @@ class SharedDict:
         if is_main_process():
             name = cls.get_shared_memory_name()
             try:
-                shared_memory.SharedMemory(create=False, name=name).unlink()
-                logger.info(f'destroy shared memory, name: {name}')
+                shm = shared_memory.SharedMemory(create=False, name=name)
+                shm.close()
+                shm.unlink()
+                logger.debug(f'destroy shared memory, name: {name}')
             except FileNotFoundError:
                 logger.warning(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
 
@@ -768,7 +770,7 @@ class SharedDict:
                 self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
                 data = pickle.dumps({})
                 self._shm.buf[0:len(data)] = bytearray(data)
-                logger.info(f'create shared memory, name: {name}')
+                logger.debug(f'create shared memory, name: {name}')
             except FileExistsError:
                 self._shm = shared_memory.SharedMemory(create=False, name=name)
         self._safe_load()
