@@ -443,7 +443,7 @@ static DebuggerErrno DumpOpDebugDataToDisk(const std::string& dumpPath, AclDumpM
 {
     DEBUG_FUNC_TRACE();
     std::string outPath = dumpPath + ".output.";
-    uint32_t num = dumpData.output().size();
+    uint32_t num = static_cast<uint32_t>(dumpData.output().size());
     for (uint32_t slot = 0; slot < num; slot++) {
         uint32_t offset = 0;
         // parse DHA Atomic Add info

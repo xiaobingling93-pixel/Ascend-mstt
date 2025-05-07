@@ -106,7 +106,7 @@ static bool DebuggerCfgParseUIntRangeGetBorder(const std::string& exp, uint32_t&
     }
     if (left >= right) {
         LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT,
-                    "When using a range expression, the left border should be smaller than the right.");
+                  "When using a range expression, the left border should be smaller than the right.");
         return false;
     }
     return true;
@@ -155,7 +155,7 @@ void DebuggerCfgParseUIntRange(const nlohmann::json& content, const std::string&
     constexpr uint32_t maxEleNum = 65536;
     if (realLen > maxEleNum) {
         LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT,
-                    "When using a range expression in " + name + ", maximum of 65536 elements can be expressed.");
+                  "When using a range expression in " + name + ", maximum of 65536 elements can be expressed.");
         return;
     }
 
@@ -362,7 +362,7 @@ void StatisticsCfg::Parse(const nlohmann::json& content)
     PARSE_OPTIONAL_FIELD_CHECK_RET(content, LIST, filter);
     filter.erase(std::remove_if(filter.begin(), filter.end(),
                                 [](const std::string& s) { return s.find_first_not_of(' ') == std::string::npos; }),
-                                filter.end());
+                 filter.end());
     list = std::move(filter);
     if (DebuggerConfig::GetInstance().GetDebugLevel() == DebuggerLevel::L2) {
         matcher.Parse(list);
@@ -378,7 +378,7 @@ void DumpTensorCfg::Parse(const nlohmann::json& content)
     PARSE_OPTIONAL_FIELD_CHECK_RET(content, LIST, filter);
     filter.erase(std::remove_if(filter.begin(), filter.end(),
                                 [](const std::string& s) { return s.find_first_not_of(' ') == std::string::npos; }),
-                                filter.end());
+                 filter.end());
     list = std::move(filter);
     if (DebuggerConfig::GetInstance().GetDebugLevel() == DebuggerLevel::L2) {
         matcher.Parse(list);
@@ -430,7 +430,7 @@ void DebuggerConfig::Parse()
             iter = content.find(name);                            \
             if (iter != content.end()) {                          \
                 member = std::make_shared<basetype>();            \
-                member->Parse(*(iter));                             \
+                ((member)->Parse(*(iter)));                             \
             }                                                     \
         }                                                         \
     } while (0)

@@ -27,7 +27,7 @@ constexpr auto kHookBegin = "MS_DbgOnStepBegin";
 constexpr auto kHookEnd = "MS_DbgOnStepEnd";
 
 class HookDynamicLoader {
- public:
+public:
     static HookDynamicLoader &GetInstance();
 
     HookDynamicLoader(const HookDynamicLoader &) = delete;
@@ -37,7 +37,7 @@ class HookDynamicLoader {
     bool UnloadLibrary();
     void *GetHooker(const std::string &funcName);
 
- private:
+private:
     // Helper functions
     bool LoadFunction(void *handle, const std::string &functionName);
 
