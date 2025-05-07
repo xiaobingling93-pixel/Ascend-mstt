@@ -92,9 +92,9 @@ class ApiAccuracyChecker:
         self.data_manager = DataManager(args.out_path, args.result_csv_path)  # 在初始化时实例化 DataManager
         config = Config(
             execution_mode="pynative",
-            dump_path="./output",
-            dump_tensor_data_dir="./dumpoutput",
-            task="tensor",  # 任务类型
+            dump_path=f"{args.out_path}",
+            dump_tensor_data_dir=f"{args.out_path}",
+            task="tensor",  # 任务类型,模拟保存tensor数据
             level="L1",  # 级别
             scope=None,  # 作用域 (None)
             list=None,  # API 列表 (None)
@@ -104,33 +104,33 @@ class ApiAccuracyChecker:
             async_dump=False
         )
 
-        dump_dir = "./output"
-        dump_data_dir = os.path.join(dump_dir, "dump_tensor_data_a")
+        dump_dir = f"{args.out_path}"
+        dump_data_dir = os.path.join(dump_dir, "error_data")
         create_directory(dump_data_dir)
         dump_path_aggregation = DumpPathAggregation()
         dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
         dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        # dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")
+        # dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")
         self.data_collector = build_data_collector(config)
         self.data_collector.update_dump_paths(dump_path_aggregation)
 
-        print(f"走到这儿了2")
-
-    def pre_forward_hook(self, primitive_name, primitive_instance, args, kwargs):
+    def pre_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs):
+        self.data_collector.update_api_or_module_name(api_or_module_name)
         module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
         self.data_collector.forward_input_data_collect(
-            primitive_name,
+            api_or_module_name,
             primitive_instance,
             os.getpid(),
             module_input_output
         )
 
-    def post_forward_hook(self, primitive_name, primitive_instance, args, kwargs, output):
+    def post_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs, output):
+        self.data_collector.update_api_or_module_name(api_or_module_name)
         module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
         self.data_collector.forward_output_data_collect(
-            primitive_name,
+            api_or_module_name,
             primitive_instance,
             os.getpid(),
             module_input_output
@@ -210,20 +210,21 @@ class ApiAccuracyChecker:
                     compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
                 status = CompareConst.PASS
                 err_msg = ""
-                self.data_collector.update_api_or_module_name(api_name_str)
+
                 if forward_or_backward == Const.FORWARD:
-                    self.pre_forward_hook(api_name_str, None, inputs, kwargs)
-                    self.post_forward_hook(api_name_str, None, inputs, kwargs, forward_result_tuple)
+                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
+                    self.pre_forward_hook(api_name_str_backward, None, inputs, kwargs)
+                    self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
                 if forward_or_backward == Const.BACKWARD:
-                    api_name_str_backward = f"{api_name_str}_backward"
+                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
                     self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
 
             else:
                 status = CompareConst.ERROR
                 err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
                            compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
-                self.data_collector.update_api_or_module_name(api_name_str)
-                self.pre_forward_hook(api_name_str, None, inputs, kwargs)
+
+                # self.pre_forward_hook(api_name_str, None, inputs, kwargs)
             basic_info_status = \
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
