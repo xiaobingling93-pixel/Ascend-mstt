@@ -23,13 +23,13 @@ import json
 from collections import defaultdict
 
 import numpy as np
-import torch
 import pandas as pd
-from msprobe.pytorch.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
-from msprobe.pytorch.common.utils import get_rank_id
-from msprobe.core.common.file_utils import create_file_in_zip, load_json, save_excel
-from msprobe.pytorch.config_check.checkers.base_checker import BaseChecker
-from msprobe.pytorch.config_check.utils.utils import config_checking_print
+from msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
+from msprobe.core.common.file_utils import create_file_in_zip, load_json
+from msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.utils.utils import config_checking_print
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.const import Const
 
 
 random_log_dict = defaultdict(dict)
@@ -106,25 +106,8 @@ def track_random_call(func: Callable, name: str):
     return wrapper
 
 
-def apply_patches():
-    random_patches = {
-        'random': random.random,
-        'randint': random.randint,
-        'uniform': random.uniform,
-        'choice': random.choice
-    }
-    for name, func in random_patches.items():
-        setattr(random, name, track_random_call(func, f"random.{name}"))
-    
-    np_random_patches = {
-        'rand': np.random.rand,
-        'randint': np.random.randint,
-        'choice': np.random.choice,
-        'normal': np.random.normal
-    }
-    for name, func in np_random_patches.items():
-        setattr(np.random, name, track_random_call(func, f"np.random.{name}"))
-    
+def torch_patchs():
+    import torch
     torch_patches = {
         'rand': torch.rand,
         'randint': torch.randint,
@@ -136,7 +119,7 @@ def apply_patches():
     }
     for name, func in torch_patches.items():
         setattr(torch, name, track_random_call(func, f"torch.{name}"))
-    
+
     tensor_patches = {
         'exponential_': torch.Tensor.exponential_,
         'geometric_': torch.Tensor.geometric_,
@@ -145,8 +128,25 @@ def apply_patches():
     }
     for name, func in tensor_patches.items():
         setattr(torch.Tensor, name, track_random_call(func, f"torch.Tensor.{name}"))
-    
 
+
+def mindspore_patchs():
+    import mindspore
+
+    mindspore_ops_patches = {
+        'rand': mindspore.ops.uniform,
+        'randint': mindspore.ops.randint,
+        'randn': mindspore.ops.normal
+    }
+    for name, func in mindspore_ops_patches.items():
+        setattr(mindspore.ops, name, track_random_call(func, f"mindspore.ops.{name}"))
+
+    mindspore_patches = {
+        'manual_seed': mindspore.set_seed
+    }
+    for name, func in mindspore_patches.items():
+        setattr(mindspore, name, track_random_call(func, f"mindspore.{name}"))
+    
 
 @register_checker_item("random")
 class RandomChecker(BaseChecker):
@@ -164,7 +164,7 @@ class RandomChecker(BaseChecker):
             if RandomChecker.write_once:
                 return
 
-            random_log_filepath = os.path.join(RandomChecker.target_name_in_zip, f"rank{get_rank_id()}.json")
+            random_log_filepath = os.path.join(RandomChecker.target_name_in_zip, f"rank{FmkAdp.get_rank_id()}.json")
             create_file_in_zip(output_zip_path, random_log_filepath, json.dumps(random_log_dict, indent=4))
             config_checking_print(f"add first random_log input features to zip")
             RandomChecker.write_once = True
@@ -172,11 +172,37 @@ class RandomChecker(BaseChecker):
         register_pre_forward_fun_list(collect_input)
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path):
+    def compare(bench_dir, cmp_dir, output_path, fmk):
         bench_random_log_pack_path = os.path.join(bench_dir, RandomChecker.target_name_in_zip)
         cmp_random_log_pack_path = os.path.join(cmp_dir, RandomChecker.target_name_in_zip)
 
         df = compare_random(bench_random_log_pack_path, cmp_random_log_pack_path)
         pass_check = False not in df['equal'].values
         return RandomChecker.target_name_in_zip, pass_check, df
-        
+
+    @staticmethod
+    def apply_patches(fmk=Const.PT_FRAMEWORK):
+        random_patches = {
+            'random': random.random,
+            'randint': random.randint,
+            'uniform': random.uniform,
+            'choice': random.choice
+        }
+        for name, func in random_patches.items():
+            setattr(random, name, track_random_call(func, f"random.{name}"))
+
+        np_random_patches = {
+            'rand': np.random.rand,
+            'randint': np.random.randint,
+            'choice': np.random.choice,
+            'normal': np.random.normal
+        }
+        for name, func in np_random_patches.items():
+            setattr(np.random, name, track_random_call(func, f"np.random.{name}"))
+
+        if fmk == Const.PT_FRAMEWORK:
+            torch_patchs()
+        elif fmk == Const.MS_FRAMEWORK:
+            mindspore_patchs()
+        else:
+            raise Exception(f"apply patches framework error, not in {FmkAdp.supported_fmk}")

@@ -13,30 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.pytorch.config_check.config_checker import ConfigChecker
-from msprobe.pytorch.common.log import logger
+from msprobe.core.config_check.config_checker import ConfigChecker
+from msprobe.core.common.log import logger
 
 
-def pack(config_filepath):
-    ConfigChecker(config_filepath)
+def pack(shell_path, output_path, framework):
+    ConfigChecker(shell_path=shell_path, output_zip_path=output_path, fmk=framework)
 
 
-def compare(bench_zip_path, cmp_zip_path, outpath):
-    ConfigChecker.compare(bench_zip_path, cmp_zip_path, outpath)
+def compare(bench_zip_path, cmp_zip_path, output_path, framework):
+    ConfigChecker.compare(bench_zip_path, cmp_zip_path, output_path, framework)
 
 
 def _config_checking_parser(parser):
-    parser.add_argument('-pack', '--pack', help='Pack a directory into a zip file')
+    parser.add_argument('-d', '--dump', nargs='*', help='Collect the train config into a zip file')
     parser.add_argument('-c', '--compare', nargs=2, help='Compare two zip files')
     parser.add_argument('-o', '--output', help='output path, default is current directory')
 
 
 def _run_config_checking_command(args):
-    if args.pack:
-        pack(args.pack)
+    if args.dump is not None:
+        output_dirpath = args.output if args.output else "./config_check_pack.zip"
+        pack(args.dump, output_dirpath, args.framework)
     elif args.compare:
         output_dirpath = args.output if args.output else "./config_check_result"
-        compare(args.compare[0], args.compare[1], output_dirpath)
+        compare(args.compare[0], args.compare[1], output_dirpath, args.framework)
     else:
-        logger.error("The param is not correct, you need to give '-pack' for pack or '-c' for compare.")
-        raise Exception("The param is not correct, you need to give '-pack' for pack or '-c' for compare.")
+        logger.error("The param is not correct, you need to give '-d' for dump or '-c' for compare.")
+        raise Exception("The param is not correct, you need to give '-d' for dump or '-c' for compare.")

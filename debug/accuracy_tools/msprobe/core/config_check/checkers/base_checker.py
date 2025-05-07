@@ -14,10 +14,8 @@
 # limitations under the License.
 
 import os
-from abc import ABC, abstractmethod
 
-import torch
-
+from msprobe.core.common.framework_adapter import FmkAdp
 from msprobe.core.common.const import FileCheckConst
 
 
@@ -30,31 +28,33 @@ class PackInput:
         self.check_input_params()
 
     def check_input_params(self):
-        if self.model and not isinstance(self.model, torch.nn.Module):
-            raise Exception(f"model is not torch.nn.Module or module list.")
+        if self.model and not FmkAdp.is_nn_module(self.model):
+            raise Exception(f"model is not torch.nn.Module/mindspore.nn.Cell or module list.")
         if not isinstance(self.output_zip_path, str) or not self.output_zip_path.endswith(FileCheckConst.ZIP_SUFFIX):
             raise Exception(f"output zip path must be a string and ends with '.zip'")
 
 
-class BaseChecker(ABC):
+class BaseChecker:
     input_needed = None
     target_name_in_zip = None
     multi_rank = False
 
     @staticmethod
-    @abstractmethod
     def pack(pack_input):
         pass
 
     @staticmethod
-    @abstractmethod
-    def compare(bench_dir, cmp_dir, output_path):
+    def compare(bench_dir, cmp_dir, output_path, fmk):
+        pass
+
+    @staticmethod
+    def apply_patches(fmk):
         pass
 
     @classmethod
-    def compare_ex(cls, bench_dir, cmp_dir, output_path):
+    def compare_ex(cls, bench_dir, cmp_dir, output_path, fmk):
         bench_filepath = os.path.join(bench_dir, cls.target_name_in_zip)
         cmp_filepath = os.path.join(cmp_dir, cls.target_name_in_zip)
         if not os.path.exists(bench_filepath) or not os.path.exists(cmp_filepath):
             return None, None, None
-        return cls.compare(bench_dir, cmp_dir, output_path)
+        return cls.compare(bench_dir, cmp_dir, output_path, fmk)

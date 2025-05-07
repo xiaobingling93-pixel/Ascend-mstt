@@ -15,29 +15,19 @@
 
 import os
 import json
-import torch
 import pandas as pd
 from msprobe.core.common.file_utils import create_file_in_zip, load_json
-from msprobe.pytorch.common.utils import get_rank_id
-from msprobe.pytorch.config_check.checkers.base_checker import BaseChecker
-from msprobe.pytorch.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
-from msprobe.pytorch.config_check.utils.utils import config_checking_print
+from msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
+from msprobe.core.config_check.utils.utils import config_checking_print, get_tensor_features
 from msprobe.core.common.decorator import recursion_depth_decorator
-
-
-def process_tensor(tensor):
-    return {
-        'max': float(tensor.max().item()),
-        'min': float(tensor.min().item()),
-        'mean': float(tensor.mean().item()),
-        'norm': float(torch.norm(tensor).item())
-    }
+from msprobe.core.common.framework_adapter import FmkAdp
 
 
 @recursion_depth_decorator("config_check: process_obj")
 def process_obj(obj):
-    if isinstance(obj, torch.Tensor):
-        return process_tensor(obj)
+    if FmkAdp.is_tensor(obj):
+        return get_tensor_features(obj)
     elif isinstance(obj, (tuple, list)):
         return {i: process_obj(x) for i, x in enumerate(obj)}
     elif isinstance(obj, dict):
@@ -59,24 +49,34 @@ def parse_args_and_kargs(args, kwargs):
 @recursion_depth_decorator("config_check: compare_dataset_dicts")
 def compare_dataset_dicts(dict1, dict2, tag=''):
     results = []
-    for key, value1 in dict1.items():
+    # 处理 dict1 中的键
+    for key in dict1:
         new_tag = f"{tag}.{key}" if tag else key
+        if key not in dict2:
+            result = {'tag': new_tag, 'equal': False, 'status': 'delete'}
+            results.append(result)
+            continue
+        value1 = dict1[key]
         value2 = dict2[key]
-        # 若为包含四个指定键的字典，不再递归
         if not isinstance(value1, dict):
             continue
         if set(value1.keys()) == {'max', 'min', 'mean', 'norm'}:
             equal = value1 == value2
             relative_diffs = {
-                f"{k}_relative_diff": (abs(value1[k] - value2[k]) / value1[k]) \
-                if value1[k] != 0 else None \
+                f"{k}_relative_diff": (abs(value1[k] - value2[k]) / value1[k]) if value1[k] != 0 else None
                 for k in ['max', 'min', 'mean', 'norm']
             }
-            result = {'tag': new_tag, 'equal': equal}
+            result = {'tag': new_tag, 'equal': equal, 'status': 'unchanged'}
             result.update(relative_diffs)
             results.append(result)
         else:
             results.extend(compare_dataset_dicts(value1, value2, new_tag))
+    # 处理 dict2 中独有的键
+    for key in dict2:
+        if key not in dict1:
+            new_tag = f"{tag}.{key}" if tag else key
+            result = {'tag': new_tag, 'equal': False, 'status': 'added'}
+            results.append(result)
     return results
 
 
@@ -122,14 +122,14 @@ class DatasetChecker(BaseChecker):
         def collect_input(model, args, kwargs, step):
             features = parse_args_and_kargs(args, kwargs)
             dataset_filepath = os.path.join(DatasetChecker.target_name_in_zip, 
-                                            f"step{step}", f"rank{get_rank_id()}", "dataset.json")
+                                            f"step{step}", f"rank{FmkAdp.get_rank_id()}", "dataset.json")
             create_file_in_zip(output_zip_path, dataset_filepath, json.dumps(features, indent=4))
             config_checking_print(f"add first dataset input features to zip")
             
         register_pre_forward_fun_list(collect_input)
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path):
+    def compare(bench_dir, cmp_dir, output_path, fmk):
         bench_dataset_pack_path = os.path.join(bench_dir, DatasetChecker.target_name_in_zip)
         cmp_dataset_pack_path = os.path.join(cmp_dir, DatasetChecker.target_name_in_zip)
 

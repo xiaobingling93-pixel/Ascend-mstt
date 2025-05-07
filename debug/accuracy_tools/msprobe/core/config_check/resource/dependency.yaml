@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['BaseChecker', 'apply_patches']
-
-import msprobe.pytorch.config_check.checkers.dataset_checker
-import msprobe.pytorch.config_check.checkers.weights_checker
-import msprobe.pytorch.config_check.checkers.random_checker
-
-from msprobe.pytorch.config_check.checkers.random_checker import apply_patches
-
-from msprobe.pytorch.config_check.checkers.base_checker import BaseChecker
+dependency:
+  - transformers
+  - deepspeed
+  - megatron
+  - numpy
+  - datasets
+  - peft
