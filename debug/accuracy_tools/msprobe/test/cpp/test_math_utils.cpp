@@ -3,7 +3,7 @@
 #include <random>
 #include <string>
 #include <sstream>
-#include "utils/MathUtils.hpp"
+#include "utils/MathUtils.h"
 
 using namespace MindStudioDebugger;
 using namespace MindStudioDebugger::MathUtils;

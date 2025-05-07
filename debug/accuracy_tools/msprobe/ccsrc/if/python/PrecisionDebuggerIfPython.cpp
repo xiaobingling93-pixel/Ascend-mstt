@@ -18,8 +18,8 @@
 #include <exception>
 #include <cstring>
 
-#include "utils/CPythonUtils.hpp"
-#include "core/PrecisionDebugger.hpp"
+#include "utils/CPythonUtils.h"
+#include "core/PrecisionDebugger.h"
 
 namespace MindStudioDebugger {
 

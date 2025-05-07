@@ -18,7 +18,7 @@
 
 #include <string>
 #include <vector>
-#include "include/ErrorCode.hpp"
+#include "include/ErrorCode.h"
 
 namespace MindStudioDebugger {
 

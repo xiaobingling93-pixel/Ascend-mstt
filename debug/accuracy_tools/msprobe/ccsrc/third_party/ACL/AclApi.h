@@ -18,7 +18,7 @@
 
 #include <cstdint>
 
-#include "include/ErrorCode.hpp"
+#include "include/ErrorCode.h"
 
 extern "C" {
 using aclError = int;

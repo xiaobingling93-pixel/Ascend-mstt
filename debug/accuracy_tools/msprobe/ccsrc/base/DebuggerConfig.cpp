@@ -19,12 +19,12 @@
 #include <cstring>
 #include <numeric>
 
-#include "include/ErrorCode.hpp"
-#include "include/Macro.hpp"
-#include "utils/FileUtils.hpp"
-#include "base/ErrorInfos.hpp"
-#include "DebuggerConfigFieldMap.hpp"
-#include "DebuggerConfig.hpp"
+#include "include/ErrorCode.h"
+#include "include/Macro.h"
+#include "utils/FileUtils.h"
+#include "base/ErrorInfosManager.h"
+#include "DebuggerConfigFieldMap.h"
+#include "DebuggerConfig.h"
 
 namespace MindStudioDebugger {
 

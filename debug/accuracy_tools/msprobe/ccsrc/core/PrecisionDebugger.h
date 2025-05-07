@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "base/DebuggerConfig.hpp"
+#include "base/DebuggerConfig.h"
 
 namespace MindStudioDebugger {
 

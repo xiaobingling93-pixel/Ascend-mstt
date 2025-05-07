@@ -26,7 +26,7 @@
 #include <stdexcept>
 #include <nlohmann/json.hpp>
 
-#include "include/Macro.hpp"
+#include "include/Macro.h"
 
 namespace MindStudioDebugger {
 

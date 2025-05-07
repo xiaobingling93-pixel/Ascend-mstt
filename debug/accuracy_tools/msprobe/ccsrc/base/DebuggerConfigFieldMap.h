@@ -19,7 +19,7 @@
 #include <string>
 #include <map>
 
-#include "DebuggerConfig.hpp"
+#include "DebuggerConfig.h"
 
 namespace MindStudioDebugger {
 

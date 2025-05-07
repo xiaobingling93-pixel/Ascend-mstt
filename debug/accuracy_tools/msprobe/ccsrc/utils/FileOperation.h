@@ -16,24 +16,23 @@
 
 #pragma once
 
-#include <string>
+#include <nlohmann/json.hpp>
 
-#include "include/ExtArgs.hpp"
+#include "include/ErrorCode.h"
+#include "DataUtils.h"
 
 namespace MindStudioDebugger {
 
-class MindSporeTrigger {
-public:
-    static void TriggerOnStepBegin(uint32_t device, uint32_t curStep, ExtArgs& args);
-    static void TriggerOnStepEnd(ExtArgs& args);
-    static void LaunchPreDbg() {}
-    static void LaunchPostDbg() {}
+constexpr const char* JSON_SUFFIX = "json";
+constexpr const char* NPY_SUFFIX = "npy";
+constexpr const char* CSV_SUFFIX = "csv";
 
-private:
-    MindSporeTrigger() = default;
-    ~MindSporeTrigger() = default;
+namespace FileOperation {
 
-    static bool stepBeginFlag;
-};
+DebuggerErrno DumpJson(const std::string &path, const nlohmann::json& content);
+bool IsDtypeSupportByNpy(DataUtils::DataType dt);
+DebuggerErrno DumpNpy(const std::string &path, const uint8_t* data, size_t len, DataUtils::DataType dt,
+                      const DataUtils::TensorShape& shape);
 
+}
 }

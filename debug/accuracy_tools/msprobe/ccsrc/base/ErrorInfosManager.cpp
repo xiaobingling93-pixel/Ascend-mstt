@@ -22,8 +22,8 @@
 #include <iostream>
 #include <fstream>
 
-#include "utils/FileUtils.hpp"
-#include "ErrorInfos.hpp"
+#include "utils/FileUtils.h"
+#include "ErrorInfosManager.h"
 
 namespace MindStudioDebugger {
 

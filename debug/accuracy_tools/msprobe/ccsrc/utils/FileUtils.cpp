@@ -27,8 +27,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "include/ErrorCode.hpp"
-#include "FileUtils.hpp"
+#include "include/ErrorCode.h"
+#include "FileUtils.h"
 
 /* 部分环境上c++版本比较老，这里不用filesystem库实现 */
 

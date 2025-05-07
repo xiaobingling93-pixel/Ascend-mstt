@@ -16,11 +16,11 @@
 
 #include <cstdlib>
 
-#include "base/ErrorInfos.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "base/Environment.hpp"
-#include "core/AclDumper.hpp"
-#include "MSAclDumper.hpp"
+#include "base/ErrorInfosManager.h"
+#include "base/DebuggerConfig.h"
+#include "base/Environment.h"
+#include "core/AclDumper.h"
+#include "MSAclDumper.h"
 
 namespace MindStudioDebugger {
 

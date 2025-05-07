@@ -18,9 +18,9 @@
 #include <sstream>
 #include <climits>
 
-#include "FileUtils.hpp"
-#include "DataUtils.hpp"
-#include "FileOperation.hpp"
+#include "FileUtils.h"
+#include "DataUtils.h"
+#include "FileOperation.h"
 
 namespace MindStudioDebugger {
 namespace FileOperation {
