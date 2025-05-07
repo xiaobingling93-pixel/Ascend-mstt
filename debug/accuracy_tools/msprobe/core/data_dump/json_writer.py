@@ -101,6 +101,7 @@ class DataWriter:
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
+        self.cache_debug = {}
 
     def initialize_json_file(self, **kwargs):
         if self.debug_file_path and not self.cache_debug:

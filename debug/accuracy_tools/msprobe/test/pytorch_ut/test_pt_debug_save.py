@@ -55,13 +55,13 @@ class TestPytorchDebuggerSave(TestCase):
             "framework": "pytorch",
             "dump_data_dir": None,
             "data": {
-                "x_tensor.0": {
+                "x_tensor.0.debug": {
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
                     "shape": torch.Size([1]),
                     "requires_grad": True
                 },
-                "x_tensor_grad.0": {
+                "x_tensor_grad.0.debug": {
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
                     "shape": torch.Size([1]),

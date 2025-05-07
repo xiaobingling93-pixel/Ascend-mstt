@@ -52,8 +52,7 @@ class TestService(unittest.TestCase):
              patch('msprobe.mindspore.service.CellProcessor') as mock_CellProcessor, \
              patch('msprobe.mindspore.service.PrimitiveHookService') as mock_PrimitiveHookService, \
              patch('msprobe.mindspore.service.get_api_register') as mock_get_api_register, \
-             patch.object(Service, 'register_api_hook') as mock_register_api_hook, \
-             patch.object(Service, 'init_for_debug_level') as mock_init_for_debug_level:
+             patch.object(Service, 'register_api_hook') as mock_register_api_hook:
             self.service = Service(self.config_mock)
             self.assertIsNone(self.service.model)
             self.assertEqual(self.service.config.level_ori, Const.LEVEL_L0)
@@ -82,7 +81,6 @@ class TestService(unittest.TestCase):
             self.assertEqual(self.service.hook_handle_dict, {})
             mock_get_api_register.assert_called_with()
             mock_register_api_hook.assert_called_with()
-            mock_init_for_debug_level.assert_called_with()
 
     def test_check_model_valid(self):
         with patch('msprobe.mindspore.service.is_mindtorch') as mock_is_mindtorch:

@@ -430,8 +430,9 @@ class BaseDataProcessor:
         if self.save_name is not None:
             dump_data_name = (self.save_name + file_format)
         else:
-            dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
-                              suffix + file_format)
+            suffix_with_seq = (Const.SEP + suffix) if suffix else ""
+            dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + suffix_with_seq +
+                              file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
 
@@ -440,22 +441,23 @@ class BaseDataProcessor:
 
     def analyze_debug_forward(self, variable, name_with_count):
         self.current_api_or_module_name = name_with_count
-        self.api_data_category = Const.TENSOR
-        # these two attributes are used to construct tensor file name {name_with_count}.tensor.{indexes}.npy/pt
+        self.api_data_category = Const.DEBUG
+        # these two attributes are used to construct tensor file name {name_with_count}.debug.{indexes}.npy/pt
         data_info = self.analyze_element(variable)
         return data_info
 
-    def analyze_debug_backward(self, variable, grad_name_with_count, nested_data_structure):
+    def analyze_debug_backward(self, variable, grad_name_with_count_category, nested_data_structure):
         def hook_fn(grad, indexes):
             suffix = Const.SEP.join([str(index) for index in indexes])
-            self.save_name = grad_name_with_count + Const.SEP + Const.TENSOR + Const.SEP + suffix
+            suffix_with_sep = (Const.SEP + suffix) if suffix else ""
+            self.save_name = grad_name_with_count_category + suffix_with_sep
             grad_data_info = self.analyze_element(grad)
             self.save_name = None
-            full_index = [grad_name_with_count] + indexes
+            full_index = [grad_name_with_count_category] + indexes
             try:
                 self.set_value_into_nested_structure(nested_data_structure, full_index, grad_data_info)
             except (ValueError, IndexError) as e:
-                logger.warning(f"error occurred while recording statistics of {grad_name_with_count} variable, "
+                logger.warning(f"error occurred while recording statistics of {grad_name_with_count_category} variable,"
                                f"skip current recording, detailed information: {e}")
             return grad
 

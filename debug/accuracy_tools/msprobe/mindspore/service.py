@@ -80,7 +80,8 @@ class Service:
         # 提前注册，确保注册尽可能多的API hook
         self.api_register = get_api_register()
         self.register_api_hook()
-        self.init_for_debug_level()
+        self.currrent_step_first_debug_save = True
+        self.debug_variable_counter = None
         self.ori_customer_func = {}
 
     @staticmethod
@@ -267,11 +268,10 @@ class Service:
             self.primitive_counters[primitive_name] += 1
 
     def step(self):
-        if self.config.level == Const.LEVEL_DEBUG:
-            return
         if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
             self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
+        self.currrent_step_first_debug_save = True
         self.loop += 1
         self.reset_status()
 
@@ -393,9 +393,12 @@ class Service:
             create_directory(dump_data_dir)
 
         dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
-        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        if self.config.level != Const.LEVEL_DEBUG:
+            dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+            dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+            dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        else:
+            dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         self.data_collector.update_dump_paths(dump_path_aggregation)
 
@@ -447,32 +450,6 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
 
-    def init_for_debug_level(self):
-        if not (self.config.level == Const.LEVEL_DEBUG and self.config.task in [Const.TENSOR, Const.STATISTICS]):
-            return
-        try:
-            self.current_rank = get_rank_if_initialized()
-        except DistributedNotInitializedError:
-            self.current_rank = None
-        # dir: dump_path -- rank{} -- debug.json
-        self.dump_iter_dir = self.config.dump_path
-        cur_rank = self.current_rank if self.current_rank is not None else ''
-        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
-        create_directory(dump_dir)
-
-        dump_data_dir = None
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
-            dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
-            create_directory(dump_data_dir)
-
-        dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
-        self.data_collector.update_dump_paths(dump_path_aggregation)
-        self.data_collector.initialize_json_file(
-            framework=Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
-        )
-        self.debug_variable_counter = defaultdict(int)
 
     def save(self, variable, name, save_backward):
         '''
@@ -485,6 +462,21 @@ class Service:
         '''
         if self.config.level != Const.LEVEL_DEBUG:
             return
+
+        self.current_iter = self.loop + self.init_step
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+
+        if self.currrent_step_first_debug_save:
+            try:
+                self.current_rank = get_rank_if_initialized()
+            except DistributedNotInitializedError:
+                self.current_rank = None
+
+            self.create_dirs()
+            self.debug_variable_counter = defaultdict(int)
+            self.currrent_step_first_debug_save = False
+
         count = self.debug_variable_counter[name]
         self.debug_variable_counter[name] += 1
 

@@ -97,6 +97,7 @@ class Const:
     GRAD_OUTPUT = 'grad_output'
     PARAMS = 'parameters'
     PARAMS_GRAD = 'parameters_grad'
+    DEBUG = 'debug'
     START = "start"
     STOP = "stop"
     ENV_ENABLE = "1"
