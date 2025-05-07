@@ -193,7 +193,11 @@ class Const:
 
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
+
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
+    STACK_FILTER_KEYWORDS = ["msprobe/core", "msprobe/pytorch", "msprobe/mindspore"]
+    CALL_STACK_FLAG = "data_dump/api_registry"
+    NEW_STACK_FLAG = "0"
 
     STEP = "step"
     RANK = "rank"

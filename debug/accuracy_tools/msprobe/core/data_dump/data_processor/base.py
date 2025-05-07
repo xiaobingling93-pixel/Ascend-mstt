@@ -125,12 +125,14 @@ class BaseDataProcessor:
             for (_, path, line, func, code, _) in api_stack:
                 if not code:
                     continue
+                if any(filter_path in path for filter_path in Const.STACK_FILTER_KEYWORDS) and \
+                        Const.CALL_STACK_FLAG not in path:
+                    continue
                 stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
                 stack_str.append(stack_line)
         else:
             stack_str.append(Const.WITHOUT_CALL_STACK)
-        stack_info_struct = {name: stack_str}
-        return stack_info_struct
+        return tuple(stack_str)
 
     @staticmethod
     def transfer_type(data):
@@ -172,7 +174,7 @@ class BaseDataProcessor:
             else:
                 raise ValueError("set_value_into_nested_structure failed: "
                                  "invalid data_structure type or invalid index")
-            
+
     @staticmethod
     def is_distributed_op(module):
         return getattr(module, "op_is_distributed", False)
