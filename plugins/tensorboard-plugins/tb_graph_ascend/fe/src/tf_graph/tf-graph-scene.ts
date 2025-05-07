@@ -702,7 +702,7 @@ class TfGraphScene2 extends LegacyElementMixin(DarkModeMixin(PolymerElement)) im
   _fireEnableClick(): void {
     this.fire('enable-click');
   }
-  
+
   // 取消鼠标点击自动居中
   _noPanToNode(): void {
     this.enablePanSignal = false
