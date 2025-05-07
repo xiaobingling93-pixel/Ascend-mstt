@@ -428,7 +428,7 @@ class BaseDataProcessor:
         if self.save_name is not None:
             dump_data_name = (self.save_name + file_format)
         else:
-            suffix_with_seq = Const.SEP + suffix if suffix else ""
+            suffix_with_seq = (Const.SEP + suffix) if suffix else ""
             dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + suffix_with_seq +
                               file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
@@ -447,7 +447,7 @@ class BaseDataProcessor:
     def analyze_debug_backward(self, variable, grad_name_with_count_category, nested_data_structure):
         def hook_fn(grad, indexes):
             suffix = Const.SEP.join([str(index) for index in indexes])
-            suffix_with_sep = Const.SEP + suffix if suffix else ""
+            suffix_with_sep = (Const.SEP + suffix) if suffix else ""
             self.save_name = grad_name_with_count_category + suffix_with_sep
             grad_data_info = self.analyze_element(grad)
             self.save_name = None
