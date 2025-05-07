@@ -7,6 +7,9 @@ edition = "2021"
 anyhow = "1.0.57"
 clap = { version = "3.1.0", features = ["derive"]}
 serde_json = "1.0"
+rustls = "0.21.0"
+rustls-pemfile = "1.0"
+webpki = "0.22"
 
 [net]
 git-fetch-with-cli = true
