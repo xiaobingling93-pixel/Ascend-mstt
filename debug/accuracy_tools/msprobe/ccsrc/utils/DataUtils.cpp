@@ -70,7 +70,7 @@ BFloat16::operator float() const
     return f32;
 }
 
-const static std::unordered_map<DataType, size_t> TYPE_SIZE_MAP = {
+constexpr std::pair<DataType, size_t> TYPE_SIZE_ARRAY[] = {
     {DataType::DT_BOOL, 1},
     {DataType::DT_INT8, 1},
     {DataType::DT_UINT8, 1},
@@ -90,15 +90,16 @@ const static std::unordered_map<DataType, size_t> TYPE_SIZE_MAP = {
 
 size_t SizeOfDType(DataType type)
 {
-    auto it = TYPE_SIZE_MAP.find(type);
-    if (it == TYPE_SIZE_MAP.end()) {
-        return 0;
+    for (const auto& pair : TYPE_SIZE_ARRAY) {
+        if (pair.first == type) {
+            return pair.second;
+        }
     }
-    return it->second;
+    return 0;
 }
 
 constexpr auto OP_DTYPE_UNKNOWN = "UNKNOWN";
-const static std::unordered_map<DataType, std::string> DTYPE_TO_STRING_MAP = {
+const std::pair<DataType, std::string_view> DTYPE_TO_STRING_ARRAY[] = {
     {DataType::DT_UNDEFINED, "UNDEFINED"},
     {DataType::DT_FLOAT, "FLOAT"},
     {DataType::DT_FLOAT16, "FLOAT16"},
@@ -135,15 +136,16 @@ const static std::unordered_map<DataType, std::string> DTYPE_TO_STRING_MAP = {
 
 std::string GetDTypeString(DataType dtype)
 {
-    auto it = DTYPE_TO_STRING_MAP.find(dtype);
-    if (it != DTYPE_TO_STRING_MAP.end()) {
-        return it->second;
+    for (const auto& pair : DTYPE_TO_STRING_ARRAY) {
+        if (pair.first == dtype) {
+            return std::string(pair.second);
+        }
     }
     return OP_DTYPE_UNKNOWN;
 }
 
 constexpr auto OP_FORMAT_UNKNOWN = "UNKNOWN";
-const static std::unordered_map<TensorFormat, std::string> FORMAT_TO_STRING_MAP = {
+const std::pair<TensorFormat, std::string_view> FORMAT_TO_STRING_ARRAY[] = {
     {TensorFormat::FORMAT_NCHW, "NCHW"},
     {TensorFormat::FORMAT_NHWC, "NHWC"},
     {TensorFormat::FORMAT_ND, "ND"},
@@ -198,9 +200,10 @@ const static std::unordered_map<TensorFormat, std::string> FORMAT_TO_STRING_MAP 
 
 std::string GetFormatString(TensorFormat fmt)
 {
-    auto it = FORMAT_TO_STRING_MAP.find(fmt);
-    if (it != FORMAT_TO_STRING_MAP.end()) {
-        return it->second;
+    for (const auto& pair : FORMAT_TO_STRING_ARRAY) {
+        if (pair.first == fmt) {
+            return std::string(pair.second);
+        }
     }
     return OP_FORMAT_UNKNOWN;
 }

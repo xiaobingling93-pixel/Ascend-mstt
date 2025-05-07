@@ -51,7 +51,7 @@ public:
     BFloat16 &operator=(const BFloat16 &other) noexcept = default;
     BFloat16 &operator=(BFloat16 &&other) noexcept = default;
 
-    explicit BFloat16(float f);
+    explicit BFloat16(float f32);
     explicit operator float() const;
     BFloat16 operator+(const BFloat16& other) const
         { return BFloat16(static_cast<float>(*this) + static_cast<float>(other)); }

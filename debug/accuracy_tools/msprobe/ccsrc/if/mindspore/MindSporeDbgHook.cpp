@@ -38,7 +38,7 @@ EXPORT_SYMBOL void MS_DbgOnStepBegin(uint32_t device, int32_t curStep,
                 continue;
             }
             std::vector<std::string>* ss = reinterpret_cast<std::vector<std::string>*>(ext.second);
-            strBuf = new const char*[(*ss).size() + 1];
+            strBuf = new const char* [(*ss).size() + 1];
             strBuf[(*ss).size()] = nullptr;
             size_t i = 0;
             for (std::string& s : *ss) {
