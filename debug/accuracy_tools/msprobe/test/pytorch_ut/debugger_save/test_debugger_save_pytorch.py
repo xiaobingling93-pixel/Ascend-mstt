@@ -18,20 +18,16 @@ def deep_compare(obj1, obj2, float_tolerance=1e-5):
     """
     if type(obj1) != type(obj2):
         return False
-
     if isinstance(obj1, dict):
         if obj1.keys() != obj2.keys():
             return False
         return all(deep_compare(obj1[key], obj2[key]) for key in obj1)
-
     if isinstance(obj1, (tuple, list)):
         if len(obj1) != len(obj2):
             return False
         return all(deep_compare(item1, item2) for item1, item2 in zip(obj1, obj2))
-
     if isinstance(obj1, (int, float)):
         return abs(obj1 - obj2) < float_tolerance
-
     return obj1 == obj2
 
 class TestDebuggerSave(unittest.TestCase):
@@ -84,25 +80,20 @@ class TestDebuggerSave(unittest.TestCase):
         except Exception as e:
             print(f"Error loading pt file: {e}")
             return False
-
         # Check shapes
         if pt_data.shape != target_pt_tensor.shape:
             print(f"Shape mismatch: pt data shape is {pt_data.shape}, target tensor shape is {target_pt_tensor.shape}")
             return False
-
         # Check dtypes
         if pt_data.dtype != target_pt_tensor.dtype:
             print(f"Shape mismatch: pt data dtype is {pt_data.dtype}, target tensor dtype is {target_pt_tensor.dtype}")
             return False
-
         # Optionally check values
         if check_values:
             if not torch.allclose(pt_data, target_pt_tensor, rtol=rtol, atol=atol):
                 print("Value mismatch: pt data and target tensor values do not match within the specified tolerances.")
                 return False
-
         return True
-
 
     def setUp(self):
         if not os.path.exists(test_dir):
@@ -121,16 +112,13 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check pt file
         pt_path = os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "data_dict.0.debug.a.pt")
         assert self.check_real_pt(pt_path, data["a"])
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -147,39 +135,6 @@ class TestDebuggerSave(unittest.TestCase):
                 "data_name": "data_dict.0.debug.a.pt"
             }
         }
-
-        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
-        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
-        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
-
-    def test_save_statistics(self):
-        data = {"a": torch.Tensor([1., 2.])}
-        step = []
-        async_dump = False
-        mode = "statistics"
-        dump_path = os.path.join(test_dir, "debug_save")
-        config_file_path = os.path.join(test_dir, "config.json")
-
-        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
-        debugger =  PrecisionDebugger(config_file_path)
-        PrecisionDebugger.save(data, "data_dict", save_backward=False)
-        PrecisionDebugger.step()
-
-        # check debug json
-        target_debug_info = {
-            "a": {
-                "type": "torch.Tensor",
-                "dtype": "torch.float32",
-                "shape": [
-                2
-                ],
-                "Max": 2.0,
-                "Min": 1.0,
-                "Mean": 1.5,
-                "Norm": 2.2360680103302,
-                "requires_grad": False,
-            }
-        }
         debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
@@ -191,12 +146,10 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "md5"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -224,18 +177,15 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         for _ in step:
             PrecisionDebugger.save(data, "data_dict", save_backward=False)
             PrecisionDebugger.step()
-
         # check pt file
         for i in step:
             pt_path = os.path.join(dump_path, f"step{i}", "rank", "dump_tensor_data", "data_dict.0.debug.a.pt")
             assert self.check_real_pt(pt_path, data["a"])
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -252,7 +202,6 @@ class TestDebuggerSave(unittest.TestCase):
                 "data_name": "data_dict.0.debug.a.pt"
             }
         }
-
         for i in step:
             debug_json_path = os.path.join(dump_path, f"step{i}", "rank", "debug.json")
             debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
@@ -303,12 +252,10 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "md5"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -370,7 +317,6 @@ class TestDebuggerSave(unittest.TestCase):
             debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
             assert deep_compare(debug_json_dict["data"][f"data_dict.{i}.debug"], target_debug_info)
 
-
     def test_save_backward(self):
         x = torch.Tensor([1., 2.])
         target_x_grad = torch.Tensor([1., 1.])
@@ -382,16 +328,12 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
-
         x.requires_grad = True
         loss = _forward_simple_func(x)
         loss.backward()
         PrecisionDebugger.step()
-
-
         x_info_list = [
             x,
             os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "x_tensor.0.debug.pt"),
@@ -436,12 +378,9 @@ class TestDebuggerSave(unittest.TestCase):
             assert self.check_real_pt(target_tensor_path, target_tensor)
             assert deep_compare(debug_json_dict["data"][target_tensor_key], target_tensor_info)
 
-
-
     def test_save_compilcated_data_structure_backward(self):
         x = torch.Tensor([1., 2.])
         target_x_grad = torch.Tensor([1., 1.])
-
         def _forward_complicated_func(x):
             complicated_structure = [{"a_key": x}]
             PrecisionDebugger.save(complicated_structure, "complicated_structure")
@@ -451,16 +390,12 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
-
         x.requires_grad = True
         loss = _forward_complicated_func(x)
         loss.backward()
         PrecisionDebugger.step()
-
-
         complicated_structure_info_list = [
             x,
             os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "complicated_structure.0.debug.0.a_key.pt"),

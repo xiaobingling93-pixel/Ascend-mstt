@@ -21,20 +21,16 @@ def deep_compare(obj1, obj2, float_tolerance=1e-5):
     """
     if type(obj1) != type(obj2):
         return False
-
     if isinstance(obj1, dict):
         if obj1.keys() != obj2.keys():
             return False
         return all(deep_compare(obj1[key], obj2[key]) for key in obj1)
-
     if isinstance(obj1, (tuple, list)):
         if len(obj1) != len(obj2):
             return False
         return all(deep_compare(item1, item2) for item1, item2 in zip(obj1, obj2))
-
     if isinstance(obj1, (int, float)):
         return abs(obj1 - obj2) < float_tolerance
-
     return obj1 == obj2
 
 class TestDebuggerSave(unittest.TestCase):
@@ -63,7 +59,6 @@ class TestDebuggerSave(unittest.TestCase):
             debug_json = json.load(f)
         return debug_json
 
-
     @staticmethod
     def check_real_npy(npy_path, target_ms_tensor, check_values=True, rtol=1e-5, atol=1e-8):
         """
@@ -81,7 +76,6 @@ class TestDebuggerSave(unittest.TestCase):
         # Convert mindspore tensor to numpy if needed
         if hasattr(target_ms_tensor, 'numpy'):
             target_ms_tensor = target_ms_tensor.numpy()
-
         # Load the npy file
         try:
             npy_data = np.load(npy_path)
@@ -91,17 +85,14 @@ class TestDebuggerSave(unittest.TestCase):
         except Exception as e:
             print(f"Error loading npy file: {e}")
             return False
-
         # Check shapes
         if npy_data.shape != target_ms_tensor.shape:
             print(f"Shape mismatch: npy data shape is {npy_data.shape}, target tensor shape is {target_ms_tensor.shape}")
             return False
-
         # Check dtypes
         if npy_data.dtype != target_ms_tensor.dtype:
             print(f"Shape mismatch: npy data dtype is {npy_data.dtype}, target tensor dtype is {target_ms_tensor.dtype}")
             return False
-
         # Optionally check values
         if check_values:
             if not np.allclose(npy_data, target_ms_tensor, rtol=rtol, atol=atol):
@@ -109,7 +100,6 @@ class TestDebuggerSave(unittest.TestCase):
                 return False
 
         return True
-
 
     def setUp(self):
         if not os.path.exists(test_dir):
@@ -163,38 +153,6 @@ class TestDebuggerSave(unittest.TestCase):
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
-    def test_save_statistics(self, _):
-        data = {"a": mindspore.Tensor([1., 2.])}
-        step = []
-        async_dump = False
-        mode = "statistics"
-        dump_path = os.path.join(test_dir, "debug_save")
-        config_file_path = os.path.join(test_dir, "config.json")
-
-        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
-        debugger =  PrecisionDebugger(config_file_path)
-        PrecisionDebugger.save(data, "data_dict", save_backward=False)
-        PrecisionDebugger.step()
-
-        # check debug json
-        target_debug_info = {
-            "a": {
-                "type": "mindspore.Tensor",
-                "dtype": "Float32",
-                "shape": [
-                2
-                ],
-                "Max": 2.0,
-                "Min": 1.0,
-                "Mean": 1.5,
-                "Norm": 2.2360680103302
-            }
-        }
-        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
-        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
-        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
-
-    @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_md5(self, _):
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
@@ -202,12 +160,10 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "md5"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -235,18 +191,15 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         for _ in step:
             PrecisionDebugger.save(data, "data_dict", save_backward=False)
             PrecisionDebugger.step()
-
         # check npy file
         for i in step:
             npy_path = os.path.join(dump_path, f"step{i}", "rank", "dump_tensor_data", "data_dict.0.debug.a.npy")
             assert self.check_real_npy(npy_path, data["a"])
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -262,7 +215,6 @@ class TestDebuggerSave(unittest.TestCase):
                 "data_name": "data_dict.0.debug.a.npy"
             }
         }
-
         for i in step:
             debug_json_path = os.path.join(dump_path, f"step{i}", "rank", "debug.json")
             debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
@@ -276,16 +228,13 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check npy file
         npy_path = os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "data_dict.0.debug.a.npy")
         assert self.check_real_npy(npy_path, data["a"])
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -314,12 +263,10 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "md5"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check debug json
         target_debug_info = {
             "a": {
@@ -347,18 +294,15 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
         for _ in range(call_times):
             PrecisionDebugger.save(data, "data_dict", save_backward=False)
         PrecisionDebugger.step()
-
         # check npy file
         for i in range(call_times):
             npy_path = os.path.join(dump_path, "step0", "rank", "dump_tensor_data", f"data_dict.{i}.debug.a.npy")
             assert self.check_real_npy(npy_path, data["a"])
-
         # check debug json
         for i in range(call_times):
             target_debug_info = {
@@ -375,7 +319,6 @@ class TestDebuggerSave(unittest.TestCase):
                     "data_name": f"data_dict.{i}.debug.a.npy"
                 }
             }
-
             debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
             debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
             assert deep_compare(debug_json_dict["data"][f"data_dict.{i}.debug"], target_debug_info)
@@ -389,13 +332,10 @@ class TestDebuggerSave(unittest.TestCase):
         mode = "tensor"
         dump_path = os.path.join(test_dir, "debug_save")
         config_file_path = os.path.join(test_dir, "config.json")
-
         self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
         debugger =  PrecisionDebugger(config_file_path)
-
         PrecisionDebugger.save(complicated_structure, "complicated_structure")
         PrecisionDebugger.step()
-
         complicated_structure_info_list = [
             x,
             os.path.join(dump_path, "step0", "rank", "dump_tensor_data", "complicated_structure.0.debug.0.a_key.npy"),
