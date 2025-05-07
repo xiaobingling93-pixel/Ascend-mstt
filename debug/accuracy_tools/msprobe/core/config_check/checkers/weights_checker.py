@@ -15,20 +15,19 @@
 
 import os
 import json
-import torch
 import pandas as pd
 
-from msprobe.core.common.file_utils import create_file_in_zip, save_excel, os_walk_for_files, load_json
-from msprobe.pytorch.common.utils import get_rank_id
-from msprobe.pytorch.config_check.checkers.base_checker import BaseChecker
-from msprobe.pytorch.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
-from msprobe.pytorch.config_check.utils.utils import config_checking_print, get_tensor_features
+from msprobe.core.common.file_utils import create_file_in_zip, os_walk_for_files, load_json
+from msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
+from msprobe.core.config_check.utils.utils import config_checking_print, get_tensor_features
+from msprobe.core.common.framework_adapter import FmkAdp
 
 
 def collect_weights_data(model):
     weights_data = {}
-    for name, param in model.named_parameters():
-        if param.dtype == torch.bfloat16:
+    for name, param in FmkAdp.named_parameters(model):
+        if param.dtype != FmkAdp.dtype("float32"):
             param = param.float()
         weights_data[name] = get_tensor_features(param)
     return weights_data
@@ -131,13 +130,13 @@ class WeightsChecker(BaseChecker):
         def collect_weights(model, args, kwargs, step):
             weights_data_dict = collect_weights_data(model)
             weights_data_filepath = os.path.join(WeightsChecker.target_name_in_zip, 
-                                                 f"step{step}", f"rank{get_rank_id()}", "weight.json")
+                                                 f"step{step}", f"rank{FmkAdp.get_rank_id()}", "weight.json")
             create_file_in_zip(output_zip_path, weights_data_filepath, json.dumps(weights_data_dict, indent=4))
             config_checking_print(f"add weights info to zip")
         register_pre_forward_fun_list(collect_weights)
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path):
+    def compare(bench_dir, cmp_dir, output_path, fmk):
         bench_weight_pack_path = os.path.join(bench_dir, WeightsChecker.target_name_in_zip)
         cmp_weight_pack_path = os.path.join(cmp_dir, WeightsChecker.target_name_in_zip)
         df = compare_weight(bench_weight_pack_path, cmp_weight_pack_path)

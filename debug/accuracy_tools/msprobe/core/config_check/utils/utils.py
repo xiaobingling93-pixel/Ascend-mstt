@@ -17,9 +17,8 @@ import os
 import re
 import hashlib
 
-import torch
-
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.log import logger
 
 
 def merge_keys(dir_0, dir_1):
@@ -53,15 +52,13 @@ def tensor_to_hash(tensor):
 
 def get_tensor_features(tensor):
     features = {
-        "max": lambda x: torch.max(x).item(),
-        "min": lambda x: torch.min(x).item(),
-        "mean": lambda x: torch.mean(x).item(),
-        "norm": lambda x: torch.norm(x).item(),
+        "max": FmkAdp.tensor_max(tensor),
+        "min": FmkAdp.tensor_max(tensor),
+        "mean": FmkAdp.tensor_max(tensor),
+        "norm": FmkAdp.tensor_max(tensor),
     }
 
-    if not tensor.is_floating_point() or tensor.dtype == torch.float64:
-        tensor = tensor.float()
-    return {key: features.get(key)(tensor) for key in features}
+    return features
 
 
 def compare_dicts(dict1, dict2, path=''):
@@ -97,3 +94,14 @@ def bytes_hash(obj: bytes):
     hex_dig = hashlib.sha256(obj).hexdigest()
     short_hash = int(hex_dig, 16) % (2 ** 16)
     return short_hash
+
+
+def update_dict(ori_dict, new_dict):
+    for key, value in new_dict.items():
+        if key in ori_dict and ori_dict[key] != value:
+            if "values" in ori_dict.keys():
+                ori_dict[key]["values"].append(new_dict[key])
+            else:
+                ori_dict[key] = {"description": "duplicate_value", "values": [ori_dict[key], new_dict[key]]}
+        else:
+            ori_dict[key] = value

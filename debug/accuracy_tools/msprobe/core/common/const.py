@@ -135,6 +135,7 @@ class Const:
     NPU = 'NPU'
     NPU_LOWERCASE = 'npu'
     CPU_LOWERCASE = 'cpu'
+    GPU_LOWERCASE = 'gpu'
     CUDA_LOWERCASE = 'cuda'
     DEVICE = 'device'
     DISTRIBUTED = 'Distributed'
@@ -360,6 +361,11 @@ class Const:
     API_WITH_SELF_ARG = {
         'Torch._fused_adamw_': _fused_adamw_
     }
+
+    ASCEND = "ASCEND"
+    MATCH_MODE_NAME = "pure name"
+    MATCH_MODE_MAPPING = "mapping"
+    MATCH_MODE_SIMILARITY = "similarity"
 
 
 class CompareConst:
@@ -647,6 +653,8 @@ class FileCheckConst:
     XLSX_SUFFIX = ".xlsx"
     YAML_SUFFIX = ".yaml"
     IR_SUFFIX = ".ir"
+    ZIP_SUFFIX = ".zip"
+    SHELL_SUFFIX = ".sh"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -655,6 +663,8 @@ class FileCheckConst:
     MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_ZIP_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_FILE_IN_ZIP_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -668,7 +678,8 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         XLSX_SUFFIX: MAX_XLSX_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE,
-        IR_SUFFIX: MAX_IR_SIZE
+        IR_SUFFIX: MAX_IR_SIZE,
+        ZIP_SUFFIX: MAX_ZIP_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
