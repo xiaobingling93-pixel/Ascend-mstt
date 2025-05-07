@@ -67,8 +67,6 @@ class ProcessResultPacket:
         self.err_msg = err_msg
 
 
-
-
 class Config:
     def __init__(self, execution_mode, dump_path, task, level, scope, list, framework, data_mode, file_format,
                  dump_tensor_data_dir, async_dump):
@@ -90,29 +88,8 @@ class ApiAccuracyChecker:
     def __init__(self, args):
         self.api_infos = dict()
         self.data_manager = DataManager(args.out_path, args.result_csv_path)  # 在初始化时实例化 DataManager
-        config = Config(
-            execution_mode="pynative",
-            dump_path=f"{args.out_path}",
-            dump_tensor_data_dir=f"{args.out_path}",
-            task="tensor",  # 任务类型,模拟保存tensor数据
-            level="L1",  # 级别
-            scope=None,  # 作用域 (None)
-            list=None,  # API 列表 (None)
-            framework="mindspore",  # 框架类型
-            data_mode="all",
-            file_format="npy",
-            async_dump=False
-        )
 
-        dump_dir = f"{args.out_path}"
-        dump_data_dir = os.path.join(dump_dir, "error_data")
-        create_directory(dump_data_dir)
-        dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
-        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        # dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
-        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        # dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")
+        config, dump_path_aggregation = self.init_save_error_data(args)
         self.data_collector = build_data_collector(config)
         self.data_collector.update_dump_paths(dump_path_aggregation)
 
@@ -229,6 +206,32 @@ class ApiAccuracyChecker:
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
         return output_list
+
+    @staticmethod
+    def init_save_error_data(args):
+        config = Config(
+            execution_mode="pynative",
+            dump_path=f"{args.out_path}",
+            dump_tensor_data_dir=f"{args.out_path}",
+            task="tensor",  # 任务类型,模拟保存tensor数据
+            level="L1",  # 级别
+            scope=None,  # 作用域 (None)
+            list=None,  # API 列表 (None)
+            framework="mindspore",  # 框架类型
+            data_mode="all",
+            file_format="npy",
+            async_dump=False
+        )
+
+        dump_dir = f"{args.out_path}"
+        dump_data_dir = os.path.join(dump_dir, "error_data")
+        create_directory(dump_data_dir)
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+        # dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        return config, dump_path_aggregation
 
     @staticmethod
     def prepare_api_input_aggregation(api_info, forward_or_backward=Const.FORWARD):
