@@ -125,7 +125,7 @@ class ApiAccuracyChecker:
             module_input_output
         )
 
-    @staticmethod
+    # @staticmethod
     def run_and_compare_helper(self, api_info, api_name_str, api_input_aggregation, forward_or_backward):
         """
         Args:
