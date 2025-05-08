@@ -21,9 +21,9 @@
 #include <map>
 #include <memory>
 
-#include "include/ExtArgs.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "AclDumpDataProcessor.hpp"
+#include "include/ExtArgs.h"
+#include "base/DebuggerConfig.h"
+#include "AclDumpDataProcessor.h"
 
 namespace MindStudioDebugger {
 

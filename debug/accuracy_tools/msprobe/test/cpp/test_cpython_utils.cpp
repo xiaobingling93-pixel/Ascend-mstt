@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "test_utils.hpp"
-#include "utils/CPythonUtils.hpp"
+#include "utils/CPythonUtils.h"
 
 using namespace MindStudioDebugger;
 using namespace MindStudioDebugger::CPythonUtils;

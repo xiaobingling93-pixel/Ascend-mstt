@@ -16,10 +16,10 @@
 
 #include <cstring>
 
-#include "base/ErrorInfos.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "third_party/ACL/AclApi.hpp"
-#include "PrecisionDebugger.hpp"
+#include "base/ErrorInfosManager.h"
+#include "base/DebuggerConfig.h"
+#include "third_party/ACL/AclApi.h"
+#include "PrecisionDebugger.h"
 
 namespace MindStudioDebugger {
 

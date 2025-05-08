@@ -18,7 +18,7 @@
 #include <exception>
 #include <cstring>
 
-#include "utils/CPythonUtils.hpp"
+#include "utils/CPythonUtils.h"
 
 namespace MindStudioDebugger {
 

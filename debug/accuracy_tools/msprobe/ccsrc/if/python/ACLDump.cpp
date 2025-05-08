@@ -18,9 +18,9 @@
 #include <exception>
 #include <stdexcept>
 
-#include "base/ErrorInfos.hpp"
-#include "core/AclDumper.hpp"
-#include "utils/CPythonUtils.hpp"
+#include "base/ErrorInfosManager.h"
+#include "core/AclDumper.h"
+#include "utils/CPythonUtils.h"
 
 namespace MindStudioDebugger {
 

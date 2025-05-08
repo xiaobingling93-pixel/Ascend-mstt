@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 
 #include "test_utils.hpp"
-#include "utils/FileUtils.hpp"
+#include "utils/FileUtils.h"
 
 using namespace MindStudioDebugger;
 using namespace MindStudioDebugger::FileUtils;

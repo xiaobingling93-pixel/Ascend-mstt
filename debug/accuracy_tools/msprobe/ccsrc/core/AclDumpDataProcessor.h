@@ -20,9 +20,9 @@
 #include <vector>
 #include <queue>
 
-#include "include/ErrorCode.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "third_party/ACL/AclApi.hpp"
+#include "include/ErrorCode.h"
+#include "base/DebuggerConfig.h"
+#include "third_party/ACL/AclApi.h"
 
 namespace MindStudioDebugger {
 

@@ -16,9 +16,9 @@
 
 #include <Python.h>
 
-#include "PrecisionDebuggerIfPython.hpp"
-#include "CPythonAgent.hpp"
-#include "ACLDump.hpp"
+#include "PrecisionDebuggerIfPython.h"
+#include "CPythonAgent.h"
+#include "ACLDump.h"
 
 namespace MindStudioDebugger {
 

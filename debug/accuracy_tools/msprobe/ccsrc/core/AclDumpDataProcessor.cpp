@@ -25,15 +25,15 @@
 #include <chrono>
 #include <sys/file.h>
 
-#include "include/Macro.hpp"
-#include "utils/FileUtils.hpp"
-#include "utils/FileOperation.hpp"
-#include "utils/DataUtils.hpp"
-#include "utils/MathUtils.hpp"
-#include "core/AclTensor.hpp"
-#include "base/ErrorInfos.hpp"
+#include "include/Macro.h"
+#include "utils/FileUtils.h"
+#include "utils/FileOperation.h"
+#include "utils/DataUtils.h"
+#include "utils/MathUtils.h"
+#include "core/AclTensor.h"
+#include "base/ErrorInfosManager.h"
 #include "proto/AclDumpMsg.pb.h"
-#include "AclDumpDataProcessor.hpp"
+#include "AclDumpDataProcessor.h"
 
 namespace MindStudioDebugger {
 

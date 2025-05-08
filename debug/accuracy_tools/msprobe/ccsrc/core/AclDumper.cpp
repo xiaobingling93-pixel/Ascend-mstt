@@ -19,13 +19,13 @@
 #include <ctime>
 #include <cstdlib>
 
-#include "include/Macro.hpp"
-#include "utils/FileUtils.hpp"
-#include "utils/FileOperation.hpp"
-#include "third_party/ACL/AclApi.hpp"
-#include "base/Environment.hpp"
-#include "base/ErrorInfos.hpp"
-#include "AclDumper.hpp"
+#include "include/Macro.h"
+#include "utils/FileUtils.h"
+#include "utils/FileOperation.h"
+#include "third_party/ACL/AclApi.h"
+#include "base/Environment.h"
+#include "base/ErrorInfosManager.h"
+#include "AclDumper.h"
 
 namespace MindStudioDebugger {
 

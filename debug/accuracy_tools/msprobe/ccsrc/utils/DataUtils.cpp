@@ -21,7 +21,7 @@
 #include <cstring>
 #include <unordered_map>
 
-#include "DataUtils.hpp"
+#include "DataUtils.h"
 
 namespace MindStudioDebugger {
 namespace  DataUtils {

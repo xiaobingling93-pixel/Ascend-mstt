@@ -19,9 +19,9 @@
 #include <string>
 #include <vector>
 
-#include "include/ErrorCode.hpp"
+#include "include/ErrorCode.h"
 #include "proto/AclDumpMsg.pb.h"
-#include "utils/DataUtils.hpp"
+#include "utils/DataUtils.h"
 
 namespace MindStudioDebugger {
 

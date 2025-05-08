@@ -2,8 +2,8 @@
 #include "gtest/gtest.h"
 #include "nlohmann/json.hpp"
 #include "test_utils.hpp"
-#include "base/ErrorInfos.hpp"
-#include "base/DebuggerConfig.hpp"
+#include "base/ErrorInfosManager.h"
+#include "base/DebuggerConfig.h"
 
 using namespace MindStudioDebugger;
 

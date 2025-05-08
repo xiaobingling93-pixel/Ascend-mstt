@@ -18,8 +18,8 @@
 
 #include <string>
 
-#include "include/ExtArgs.hpp"
-#include "core/PrecisionDebugger.hpp"
+#include "include/ExtArgs.h"
+#include "core/PrecisionDebugger.h"
 
 namespace MindStudioDebugger {
 

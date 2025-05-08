@@ -19,9 +19,9 @@
 #include <string>
 #include <vector>
 
-#include "include/Macro.hpp"
-#include "include/ExtArgs.hpp"
-#include "core/mindspore/MindSporeTrigger.hpp"
+#include "include/Macro.h"
+#include "include/ExtArgs.h"
+#include "core/mindspore/MindSporeTrigger.h"
 
 EXPORT_SYMBOL void MS_DbgOnStepBegin(uint32_t device, int32_t curStep,
                                      std::map<uint32_t, void*> exts)

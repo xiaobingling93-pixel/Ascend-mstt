@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <endian.h>
-#include "utils/DataUtils.hpp"
+#include "utils/DataUtils.h"
 
 using namespace MindStudioDebugger;
 using namespace MindStudioDebugger::DataUtils;

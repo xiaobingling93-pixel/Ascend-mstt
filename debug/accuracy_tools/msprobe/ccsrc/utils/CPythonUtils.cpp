@@ -18,7 +18,7 @@
 #include <string>
 #include <map>
 
-#include "CPythonUtils.hpp"
+#include "CPythonUtils.h"
 
 namespace MindStudioDebugger {
 namespace  CPythonUtils {

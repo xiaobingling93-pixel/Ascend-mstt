@@ -22,10 +22,10 @@
 #include <cstring>
 #include <algorithm>
 
-#include "utils/DataUtils.hpp"
-#include "utils/MathUtils.hpp"
-#include "base/ErrorInfos.hpp"
-#include "AclTensor.hpp"
+#include "utils/DataUtils.h"
+#include "utils/MathUtils.h"
+#include "base/ErrorInfosManager.h"
+#include "AclTensor.h"
 
 namespace MindStudioDebugger {
 namespace AclDumpMsg = toolkit::dumpdata;
