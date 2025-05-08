@@ -254,6 +254,45 @@ class BaseWriterWithAD:
         self.anomalies = []
         self.ndigits = writer_input.ndigits
 
+    @staticmethod
+    def stack_tensors(tensor_list):
+        """
+        Torch not support stack cpu and xpu tensors. Group the tensors into cpu_group and xpu_group,
+        stack them separately, migrate xpu_group to cpu, and then restore in the order of input.
+
+        :param tensor_list: [tensor(-1.6165), tensor(-1.0985), tensor(-1.7777), tensor(-1.8408, device='npu:0')]
+        :return: tensor: tensor([-1.6165, -1.0985, -1.7777, -1.8408], device='cpu')
+        """
+        cpu_tensors = []
+        xpu_tensors = []
+
+        # 将张量分别放入cpu_tensors和xpu_tensors列表
+        for tensor in tensor_list:
+            if tensor.device.type == 'cpu':
+                cpu_tensors.append(tensor)
+            else:
+                xpu_tensors.append(tensor)
+
+        # 分别堆叠cpu_tensors和xpu_tensors
+        cpu_stack = torch.stack(cpu_tensors) if cpu_tensors else torch.tensor([])
+        xpu_stack = torch.stack(xpu_tensors).cpu() if xpu_tensors else torch.tensor([])
+
+        # 按照输入的顺序恢复
+        result = []
+        cpu_tensors_idx, xpu_tensors_idx = 0, 0
+        for tensor in tensor_list:
+            if tensor.device.type == 'cpu':
+                result.append(cpu_stack[cpu_tensors_idx])
+                cpu_tensors_idx += 1
+            else:
+                result.append(xpu_stack[xpu_tensors_idx])
+                xpu_tensors_idx += 1
+
+        # 将结果堆叠成一个张量
+        result = torch.stack(result)
+
+        return result
+
     def get_anomalies(self):
         """返回已检测到的异常列表
         """
@@ -299,7 +338,7 @@ class BaseWriterWithAD:
                 end = (i+1) * MonitorConst.SLICE_SIZE
                 if begin == len(tensors):
                     continue
-                metric_list = torch.stack(tensors[begin:end]).cpu()
+                metric_list = self.stack_tensors(tensors[begin:end])
                 for tag, metric in zip(tags[begin:end], metric_list):
                     self.add_scalar(tag, metric, step)
 

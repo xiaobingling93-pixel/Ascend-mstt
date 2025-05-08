@@ -54,8 +54,6 @@ FORMAT_MAPPING = {
     MonitorConst.API: BaseWriterWithAD
 }
 
-DEVICE_CPU = torch.device("cpu")
-
 
 def param_is_not_tensor_parallel_duplicate(param, tp_group):
     return (hasattr(param, 'tensor_model_parallel') and param.tensor_model_parallel) or (
@@ -948,8 +946,7 @@ class TrainerMon:
 
             module_input = [tensor for tensor in args if torch.is_tensor(tensor)]
             if kwargs:
-                kwargs_tensors = [tensor for tensor in kwargs.values()
-                                  if torch.is_tensor(tensor) and tensor.device != DEVICE_CPU]
+                kwargs_tensors = [tensor for tensor in kwargs.values() if torch.is_tensor(tensor)]
                 module_input.extend(kwargs_tensors)
 
             if module not in self.module_fwd_hook_context_by_module:
