@@ -125,7 +125,7 @@ class ApiAccuracyChecker:
             module_input_output
         )
 
-    # @staticmethod
+    @staticmethod
     def run_and_compare_helper(self, api_info, api_name_str, api_input_aggregation, forward_or_backward):
         """
         Args:
@@ -148,15 +148,10 @@ class ApiAccuracyChecker:
                 tested_outputs, inputs, kwargs, forward_result_tuple = api_runner(api_input_aggregation, api_name_str,
                                                                                   forward_or_backward,
                                                                                   global_context.get_framework())
-                print(f"inputs:{inputs}")
-                print(f"kwargs:{kwargs}")
-                print(f"forward_result_tuple:{forward_result_tuple}")
             elif forward_or_backward == Const.BACKWARD:
                 tested_outputs, gradient_inputs, backward_result_tuple = api_runner(api_input_aggregation, api_name_str,
                                                                                     forward_or_backward,
                                                                                     global_context.get_framework())
-                print(f"gradient_inputs:{gradient_inputs}")
-                print(f"backward_result_tuple:{backward_result_tuple}")
             else:
                 tested_outputs = api_runner(api_input_aggregation, api_name_str,
                                             forward_or_backward, global_context.get_framework())
@@ -167,9 +162,10 @@ class ApiAccuracyChecker:
 
         tested_outputs = trim_output_compute_element_list(tested_outputs, forward_or_backward)
         bench_outputs = trim_output_compute_element_list(bench_outputs, forward_or_backward)
-        logger.warning(f"ApiAccuracyChecker.run_and_compare_helper: api: {api_name_str}.{forward_or_backward}, "
-                       "number of bench outputs and tested outputs is different, comparing result can be wrong. "
-                       f"tested outputs: {len(tested_outputs)}, bench outputs: {len(bench_outputs)}")
+        if len(tested_outputs) != len(bench_outputs):
+            logger.warning(f"ApiAccuracyChecker.run_and_compare_helper: api: {api_name_str}.{forward_or_backward}, "
+                           "number of bench outputs and tested outputs is different, comparing result can be wrong. "
+                           f"tested outputs: {len(tested_outputs)}, bench outputs: {len(bench_outputs)}")
 
         # compare output
         output_list = []
@@ -193,15 +189,17 @@ class ApiAccuracyChecker:
                 status = CompareConst.ERROR
                 err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
                            compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
+
                 if forward_or_backward == Const.FORWARD and self.save_error_data:
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
                     self.pre_forward_hook(api_name_str_backward, None, inputs, kwargs)
                     self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
+                    self.data_collector.write_json()
                 if forward_or_backward == Const.BACKWARD and self.save_error_data:
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
                     self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
+                    self.data_collector.write_json()
 
-                # self.pre_forward_hook(api_name_str, None, inputs, kwargs)
             basic_info_status = \
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
@@ -229,7 +227,6 @@ class ApiAccuracyChecker:
         dump_path_aggregation = DumpPathAggregation()
         dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
         dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        # dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         return config, dump_path_aggregation
 
