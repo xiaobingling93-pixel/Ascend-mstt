@@ -60,7 +60,7 @@ class TestTensorProcessing(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['tag'], 'a.b')
 
-    @patch('os.listdir', return_value=['step1'])
+    @patch('os.listdir', side_effect=[["step1"], ["rank1"]])
     @patch('os.path.isdir', return_value=True)
     @patch('os.path.isfile', return_value=True)
     @patch('msprobe.core.config_check.checkers.dataset_checker.load_json')

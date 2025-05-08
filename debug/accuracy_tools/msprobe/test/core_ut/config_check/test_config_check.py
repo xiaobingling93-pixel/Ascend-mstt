@@ -22,6 +22,7 @@ testdir = os.path.dirname(__file__)
 config_checking_dir = os.path.dirname(testdir)
 temp_dir = os.path.join(config_checking_dir, "temp")
 os.makedirs(temp_dir, exist_ok=True)
+ms.set_context(device_target="CPU")
 
 
 def seed_all(seed=1234, mode=False):
@@ -119,7 +120,6 @@ def train_test(seed, output_zip_path, shell_path, mock_env, mock_pip):
 class TestConfigChecker(unittest.TestCase):
     def tearDown(self):
         FmkAdp.set_fmk("pytorch")
-        return
         shutil.rmtree(temp_dir)
         
 
