@@ -97,8 +97,8 @@ def compare_dataset(bench_dir, cmp_dir):
             dict2 = load_json(rank_path_cmp)
             results = compare_dataset_dicts(dict1, dict2)
             for result in results:
-                result['step'] = step
-                result['rank'] = rank
+                result['step'] = int(step.replace("step", ""))
+                result['rank'] = int(rank.replace("rank", ""))
             all_results.extend(results)
 
     df = pd.DataFrame(all_results, columns=DatasetChecker.result_header)

@@ -85,8 +85,8 @@ def compare_weight(bench_dir, cmp_dir):
         cmp_root = os.path.join(cmp_dir, relative_path)
         cmp_file = os.path.join(cmp_root, info["file"])
 
-        step = relative_path.split(os.sep)[0].replace("step", "")
-        rank = relative_path.split(os.sep)[1].replace("rank", "")
+        step = int(relative_path.split(os.sep)[0].replace("step", ""))
+        rank = int(relative_path.split(os.sep)[1].replace("rank", ""))
 
         if not os.path.exists(cmp_file):
             bench_data = load_json(bench_file)
