@@ -88,10 +88,11 @@ class ApiAccuracyChecker:
     def __init__(self, args):
         self.api_infos = dict()
         self.data_manager = DataManager(args.out_path, args.result_csv_path)  # 在初始化时实例化 DataManager
-
-        config, dump_path_aggregation = self.init_save_error_data(args)
-        self.data_collector = build_data_collector(config)
-        self.data_collector.update_dump_paths(dump_path_aggregation)
+        self.save_error_data = args.save_error_data
+        if self.save_error_data:
+            config, dump_path_aggregation = self.init_save_error_data(args)
+            self.data_collector = build_data_collector(config)
+            self.data_collector.update_dump_paths(dump_path_aggregation)
 
     def pre_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs):
         self.data_collector.update_api_or_module_name(api_or_module_name)
@@ -188,11 +189,11 @@ class ApiAccuracyChecker:
                 status = CompareConst.PASS
                 err_msg = ""
 
-                if forward_or_backward == Const.FORWARD:
+                if forward_or_backward == Const.FORWARD and self.save_error_data:
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
                     self.pre_forward_hook(api_name_str_backward, None, inputs, kwargs)
                     self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
-                if forward_or_backward == Const.BACKWARD:
+                if forward_or_backward == Const.BACKWARD and self.save_error_data:
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
                     self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
 
