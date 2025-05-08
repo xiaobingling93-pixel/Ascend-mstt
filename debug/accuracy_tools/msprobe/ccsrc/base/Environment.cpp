@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "utils/CPythonUtils.hpp"
-#include "DebuggerConfig.hpp"
-#include "Environment.hpp"
+#include "utils/CPythonUtils.h"
+#include "DebuggerConfig.h"
+#include "Environment.h"
 
 namespace MindStudioDebugger {
 namespace Environment {

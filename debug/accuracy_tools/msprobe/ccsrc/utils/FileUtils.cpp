@@ -27,8 +27,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "include/ErrorCode.hpp"
-#include "FileUtils.hpp"
+#include "include/ErrorCode.h"
+#include "FileUtils.h"
 
 /* 部分环境上c++版本比较老，这里不用filesystem库实现 */
 
@@ -38,7 +38,8 @@ namespace  FileUtils {
 using namespace  MindStudioDebugger;
 
 /********************* 基础检查函数库，不做过多校验，路径有效性由调用者保证 ******************/
-bool IsPathExist(const std::string& path) {
+bool IsPathExist(const std::string& path) 
+{
     struct stat buffer;
     return (stat(path.c_str(), &buffer) == 0);
 }
@@ -84,7 +85,8 @@ std::vector<std::string> SplitPath(const std::string &path, char separator)
     return tokens;
 }
 
-std::string GetAbsPath(const std::string &originPath) {
+std::string GetAbsPath(const std::string &originPath) 
+{
     std::string fullPath = GetFullPath(originPath);
     if (fullPath.empty()) {
         return "";
@@ -118,7 +120,8 @@ std::string GetAbsPath(const std::string &originPath) {
     return resolvedPath;
 }
 
-bool IsDir(const std::string& path) {
+bool IsDir(const std::string& path) 
+{
     struct stat buffer;
     if (stat(path.c_str(), &buffer) == 0) {
         return (buffer.st_mode & S_IFDIR) != 0;
@@ -126,7 +129,8 @@ bool IsDir(const std::string& path) {
     return false;
 }
 
-bool IsRegularFile(const std::string& path) {
+bool IsRegularFile(const std::string& path) 
+{
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
         return S_ISREG(pathStat.st_mode);
@@ -134,7 +138,8 @@ bool IsRegularFile(const std::string& path) {
     return false;
 }
 
-bool IsFileSymbolLink(const std::string& path) {
+bool IsFileSymbolLink(const std::string& path) 
+{
     struct stat buffer;
     if (lstat(path.c_str(), &buffer) == 0) {
         if (S_ISLNK(buffer.st_mode)) {
@@ -144,7 +149,8 @@ bool IsFileSymbolLink(const std::string& path) {
     return false;
 }
 
-bool IsPathCharactersValid(const std::string& path) {
+bool IsPathCharactersValid(const std::string& path) 
+{
     for (const char& ch : path) {
         if (!std::isalnum(ch) && ch != '_' && ch != '.' && ch != ':' && ch != '/' && ch != '-') {
             return false;
@@ -320,7 +326,8 @@ static DebuggerErrno DeleteDirRec(const std::string &path, uint32_t depth)
     return DebuggerErrno::OK;
 }
 
-DebuggerErrno DeleteDir(const std::string &path, bool recursion) {
+DebuggerErrno DeleteDir(const std::string &path, bool recursion) 
+{
     if (!IsPathExist(path)) {
         return DebuggerErrno::OK;
     }
@@ -339,7 +346,8 @@ DebuggerErrno DeleteDir(const std::string &path, bool recursion) {
     return DebuggerErrno::OK;
 }
 
-static DebuggerErrno CreateDirAux(const std::string& path, bool recursion, mode_t mode) {
+static DebuggerErrno CreateDirAux(const std::string& path, bool recursion, mode_t mode) 
+{
     std::string parent = GetParentDir(path);
     DebuggerErrno ret;
 
@@ -403,7 +411,8 @@ DebuggerErrno Chmod(const std::string& path, const mode_t& mode)
     return chmod(absPath.c_str(), mode) == 0 ? DebuggerErrno::OK : DebuggerErrno::ERROR_SYSCALL_FAILED;
 }
 
-DebuggerErrno GetFileSize(const std::string &path, size_t& size) {
+DebuggerErrno GetFileSize(const std::string &path, size_t& size) 
+{
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) != 0) {
         return DebuggerErrno::ERROR_FILE_NOT_EXISTS;

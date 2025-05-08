@@ -18,8 +18,8 @@
 #include <exception>
 #include <cstring>
 
-#include "utils/CPythonUtils.hpp"
-#include "core/PrecisionDebugger.hpp"
+#include "utils/CPythonUtils.h"
+#include "core/PrecisionDebugger.h"
 
 namespace MindStudioDebugger {
 
@@ -100,7 +100,11 @@ static PyObject* PrecisionDebuggerStop(PyObject *self)
 
 static PyObject* PrecisionDebuggerStep(PyObject *self, PyObject *args)
 {
-    if (args == nullptr || PyTuple_GET_SIZE(args) == 0) {
+    if (args == nullptr || !PyTuple_Check(args)) {
+        PrecisionDebugger::GetInstance().Step();
+        Py_RETURN_NONE;
+    }
+    if (PyTuple_GET_SIZE(args) == 0) {
         PrecisionDebugger::GetInstance().Step();
         Py_RETURN_NONE;
     }

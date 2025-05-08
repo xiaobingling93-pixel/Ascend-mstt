@@ -516,3 +516,18 @@ def replace_last_occurrence(text, old, new):
     if index != -1:
         return text[:index] + text[index:].replace(old, new, 1)
     return text
+
+
+def load_stack_json(stack_path):
+    stack_dict = load_json(stack_path)
+    if not stack_dict.get(Const.NEW_STACK_FLAG):
+        return stack_dict
+
+    new_stack_dict = {}
+    for stack_info in stack_dict.values():
+        if len(stack_info) != 2:
+            continue
+        api_list, stack_str = stack_info
+        for api_name in api_list:
+            new_stack_dict.update({api_name: stack_str})
+    return new_stack_dict

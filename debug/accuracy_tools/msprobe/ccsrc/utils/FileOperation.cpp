@@ -18,9 +18,9 @@
 #include <sstream>
 #include <climits>
 
-#include "FileUtils.hpp"
-#include "DataUtils.hpp"
-#include "FileOperation.hpp"
+#include "FileUtils.h"
+#include "DataUtils.h"
+#include "FileOperation.h"
 
 namespace MindStudioDebugger {
 namespace FileOperation {
@@ -34,7 +34,8 @@ struct NpyDtypeDescr {
     char type;
     size_t length;
 
-    std::string Str() const {
+    std::string Str() const 
+    {
         std::ostringstream buffer;
         buffer << "\'" << byteorder << type << length << "\'";
         return buffer.str();
@@ -90,7 +91,8 @@ inline static std::string NpyTransShapeToStr(const DataUtils::TensorShape &shape
     return buffer.str();
 }
 
-inline static std::vector<char> NpyLen2Bytes(size_t length, size_t lengthLen) {
+inline static std::vector<char> NpyLen2Bytes(size_t length, size_t lengthLen) 
+{
     std::vector<char> buff;
     lengthLen = std::min(lengthLen, static_cast<size_t>(sizeof(length)));
     for (size_t i = 0; i < lengthLen; i++) {

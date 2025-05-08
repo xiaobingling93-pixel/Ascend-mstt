@@ -18,8 +18,8 @@
 #include <map>
 #include <stdexcept>
 
-#include "base/ErrorInfos.hpp"
-#include "AclApi.hpp"
+#include "base/ErrorInfosManager.h"
+#include "AclApi.h"
 
 namespace MindStudioDebugger {
 namespace AscendCLApi {

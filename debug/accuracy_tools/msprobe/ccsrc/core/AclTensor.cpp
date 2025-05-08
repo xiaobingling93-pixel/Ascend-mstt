@@ -22,10 +22,10 @@
 #include <cstring>
 #include <algorithm>
 
-#include "utils/DataUtils.hpp"
-#include "utils/MathUtils.hpp"
-#include "base/ErrorInfos.hpp"
-#include "AclTensor.hpp"
+#include "utils/DataUtils.h"
+#include "utils/MathUtils.h"
+#include "base/ErrorInfosManager.h"
+#include "AclTensor.h"
 
 namespace MindStudioDebugger {
 namespace AclDumpMsg = toolkit::dumpdata;
@@ -234,7 +234,8 @@ static inline AclFormat transAclFormat2MS(AclDumpMsg::OutputFormat fmt)
     return AclFormat::FORMAT_MAX;
 }
 
-static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
+static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) 
+{
     size_t num = 1;
     const AclShape& shape = host ? tensor.hostShape : tensor.deviceShape;
     for (auto dim : shape) {
@@ -243,7 +244,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
             return 0;
         }
 
-        if (SIZE_MAX / dim < num) {
+        if (SIZE_MAX / dim < static_cast<unsigned long>(num)) {
             throw std::out_of_range(tensor + ": Count of element over size_t.");
         }
         num *= static_cast<size_t>(dim);
@@ -251,15 +252,18 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
     return num;
 }
 
-static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) {
+static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) 
+{
     return DataUtils::SizeOfDType(tensor.dtype);
 }
 
-static inline size_t SizeOfAclDType(const AclDtype& dtype) {
+static inline size_t SizeOfAclDType(const AclDtype& dtype) 
+{
     return DataUtils::SizeOfDType(dtype);
 }
 
-size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) {
+size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) 
+{
     size_t num = EleNumOfTensor(tensor, host);
     size_t eleSize = SizeOfAclDType(tensor);
     if (num != 0 && SIZE_MAX / num < eleSize) {
@@ -268,7 +272,8 @@ size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) {
     return num * eleSize;
 }
 
-static inline int64_t GetCubeSizeByType(const AclDtype& dtype) {
+static inline int64_t GetCubeSizeByType(const AclDtype& dtype) 
+{
     if (dtype == AclDtype::DT_UINT8 || dtype == AclDtype::DT_INT8) {
         return CUBE_32;
     }
@@ -327,8 +332,8 @@ AclTensorInfo ParseAttrsFromDumpData(const std::string& dumpPath, const uint8_t*
     for (auto d : tensor.original_shape().dim()) {
         if (d > INT64_MAX) {
             LOG_WARNING(DebuggerErrno::ERROR_VALUE_OVERFLOW,
-                    "The value(" + std::to_string(d) + ") exceeds the max value of int64_t, " +
-                    "this maybe caused by the unfixed shape operaters.");
+                        "The value(" + std::to_string(d) + ") exceeds the max value of int64_t, " +
+                        "this maybe caused by the unfixed shape operaters.");
             hShape.clear();
             break;
         }
@@ -397,8 +402,8 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     auto c1Dim = cinOpt / cubeK;
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
 
     for (int64_t g = 0; g < groups; ++g) {
         for (int64_t c = 0; c < cDim; ++c) {
@@ -459,8 +464,8 @@ static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
 
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIdx = 0; nIdx < n; nIdx++) {
         int64_t nHeadAddr = nIdx * chw;
         for (int64_t cIdx = 0; cIdx < c; cIdx++) {
@@ -537,8 +542,8 @@ static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
 
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
 
     for (int64_t timesIdx = 0; timesIdx < times; timesIdx++) {
         auto timesHead = timesIdx * w1h1h0w0;
@@ -601,8 +606,8 @@ static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
 
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
         int64_t nHeadAddr = nIndex * chw;
         for (int64_t cIndex = 0; cIndex < c; cIndex++) {
@@ -656,8 +661,8 @@ static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
 
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
         int64_t nHead = nIndex * cdhw;
         for (int64_t cIndex = 0; cIndex < c; cIndex++) {
@@ -705,8 +710,8 @@ static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor)
 
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIndex = 0; nIndex < n; nIndex++) {
         for (int64_t cIndex = 0; cIndex < c; cIndex++) {
             for (int64_t hIndex = 0; hIndex < h; hIndex++) {
@@ -767,8 +772,8 @@ static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
 
     const uint8_t* src = tensor.aclData;
     auto dst = tensor.transBuf.begin();
-    auto dtypeSize = SizeOfAclDType(tensor);
-    auto dstSize = tensor.transBuf.size();
+    int64_t dtypeSize = static_cast<int64_t>(SizeOfAclDType(tensor));
+    int64_t dstSize = static_cast<int64_t>(tensor.transBuf.size());
     for (int64_t nIdx = 0; nIdx < n; nIdx++) {
         int64_t nHead = nIdx * cdhw;
         for (int64_t cIdx = 0; cIdx < c; cIdx++) {

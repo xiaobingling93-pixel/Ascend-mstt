@@ -23,6 +23,9 @@ import stat
 import json
 import re
 import shutil
+import sys
+import zipfile
+import multiprocessing
 from datetime import datetime, timezone
 from dateutil import parser
 import yaml
@@ -34,6 +37,8 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.global_lock import global_lock, is_main_process
+
+proc_lock = multiprocessing.Lock()
 
 
 class FileChecker:
@@ -691,14 +696,135 @@ def check_crt_valid(pem_path, is_public_key=False):
         raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")
 
 
-def read_xlsx(file_path):
+def read_xlsx(file_path, sheet_name=None):
     check_file_or_directory_path(file_path)
     try:
-        result_df = pd.read_excel(file_path, keep_default_na=False)
+        if sheet_name:
+            result_df = pd.read_excel(file_path, keep_default_na=False, sheet_name=sheet_name)
+        else:
+            result_df = pd.read_excel(file_path, keep_default_na=False)
     except Exception as e:
         logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
         raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
     return result_df
+
+
+def create_file_with_list(result_list, filepath):
+    check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
+    try:
+        with FileOpen(filepath, 'w', encoding='utf-8') as file:
+            fcntl.flock(file, fcntl.LOCK_EX)
+            for item in result_list:
+                file.write(item + '\n')
+            fcntl.flock(file, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save list to file "{os.path.basename(filepath)}" failed.')
+        raise RuntimeError(f"Save list to file {os.path.basename(filepath)} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def create_file_with_content(data, filepath):
+    check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
+    try:
+        with FileOpen(filepath, 'w', encoding='utf-8') as file:
+            fcntl.flock(file, fcntl.LOCK_EX)
+            file.write(data)
+            fcntl.flock(file, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save content to file "{os.path.basename(filepath)}" failed.')
+        raise RuntimeError(f"Save content to file {os.path.basename(filepath)} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def add_file_to_zip(zip_file_path, file_path, arc_path=None):
+    """
+    Add a file to a ZIP archive, if zip does not exist, create one.
+
+    :param zip_file_path: Path to the ZIP archive
+    :param file_path: Path to the file to add
+    :param arc_path: Optional path inside the ZIP archive where the file should be added
+    """
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_file_size(file_path, FileCheckConst.MAX_FILE_IN_ZIP_SIZE)
+    zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
+    if zip_size + os.path.getsize(file_path) > FileCheckConst.MAX_ZIP_SIZE:
+        raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+    check_path_before_create(zip_file_path)
+    try:
+        proc_lock.acquire()
+        with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
+            zip_file.write(file_path, arc_path)
+    except Exception as e:
+        logger.error(f'add file to zip "{os.path.basename(zip_file_path)}" failed.')
+        raise RuntimeError(f"add file to zip {os.path.basename(zip_file_path)} failed.") from e
+    finally:
+        proc_lock.release()
+    change_mode(zip_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def create_file_in_zip(zip_file_path, file_name, content):
+    """
+    Create a file with content inside a ZIP archive.
+
+    :param zip_file_path: Path to the ZIP archive
+    :param file_name: Name of the file to create
+    :param content: Content to write to the file
+    """
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_path_before_create(zip_file_path)
+    zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
+    if zip_size + sys.getsizeof(content) > FileCheckConst.MAX_ZIP_SIZE:
+        raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+    try:
+        proc_lock.acquire()
+        with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
+            zip_info = zipfile.ZipInfo(file_name)
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+            zip_file.writestr(zip_info, content)
+    except Exception as e:
+        logger.error(f'Save content to file "{os.path.basename(zip_file_path)}" failed.')
+        raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
+    finally:
+        proc_lock.release()
+    change_mode(zip_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def extract_zip(zip_file_path, extract_dir):
+    """
+    Extract the contents of a ZIP archive to a specified directory.
+
+    :param zip_file_path: Path to the ZIP archive
+    :param extract_dir: Directory to extract the contents to
+    """
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    try:
+        proc_lock.acquire()
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+            total_size = 0
+            if len(zip_file.infolist()) > FileCheckConst.MAX_FILE_IN_ZIP_SIZE:
+                raise ValueError(f"Too many files in {os.path.basename(zip_file_path)}")
+            for file_info in zip_file.infolist():
+                if file_info.file_size > FileCheckConst.MAX_FILE_IN_ZIP_SIZE:
+                    raise ValueError(f"File {file_info.filename} is too large to extract")
+
+                total_size += file_info.file_size
+                if total_size > FileCheckConst.MAX_ZIP_SIZE:
+                    raise ValueError(f"Total extracted size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+    except Exception as e:
+        logger.error(f'Save content to file "{os.path.basename(zip_file_path)}" failed.')
+        raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
+    finally:
+        proc_lock.release()
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+        zip_file.extractall(extract_dir)
+
+
+def split_zip_file_path(zip_file_path):
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    zip_file_path = os.path.realpath(zip_file_path)
+    return os.path.dirname(zip_file_path), os.path.basename(zip_file_path)
 
 
 def dedup_log(func_name, filter_name):
@@ -745,8 +871,10 @@ class SharedDict:
         if is_main_process():
             name = cls.get_shared_memory_name()
             try:
-                shared_memory.SharedMemory(create=False, name=name).unlink()
-                logger.info(f'destroy shared memory, name: {name}')
+                shm = shared_memory.SharedMemory(create=False, name=name)
+                shm.close()
+                shm.unlink()
+                logger.debug(f'destroy shared memory, name: {name}')
             except FileNotFoundError:
                 logger.warning(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
 
@@ -764,10 +892,13 @@ class SharedDict:
         try:
             self._shm = shared_memory.SharedMemory(create=False, name=name)
         except FileNotFoundError:
-            self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
-            data = pickle.dumps({})
-            self._shm.buf[0:len(data)] = bytearray(data)
-            logger.info(f'create shared memory, name: {name}')
+            try:
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
+                data = pickle.dumps({})
+                self._shm.buf[0:len(data)] = bytearray(data)
+                logger.debug(f'create shared memory, name: {name}')
+            except FileExistsError:
+                self._shm = shared_memory.SharedMemory(create=False, name=name)
         self._safe_load()
 
     def _safe_load(self):

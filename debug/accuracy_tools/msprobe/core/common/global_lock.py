@@ -34,9 +34,12 @@ class GlobalLock:
             self._shm = SharedMemory(create=False, name=self.name)
             time.sleep(random.randint(0, 500) / 10000) # 等待随机时长以避免同时获得锁
         except FileNotFoundError:
-            self._shm = SharedMemory(create=True, name=self.name, size=1)
-            self._shm.buf[0] = 0
-            logger.info(f'{self.name} is created.')
+            try:
+                self._shm = SharedMemory(create=True, name=self.name, size=1)
+                self._shm.buf[0] = 0
+                logger.debug(f'{self.name} is created.')
+            except FileExistsError:
+                self.__init__()
 
     @classmethod
     def get_lock_name(cls):
@@ -57,7 +60,7 @@ class GlobalLock:
         if is_main_process():
             try:
                 self._shm.unlink()
-                logger.info(f'{self.name} is unlinked.')
+                logger.debug(f'{self.name} is unlinked.')
             except FileNotFoundError:
                 logger.warning(f'{self.name} has already been unlinked.')
 

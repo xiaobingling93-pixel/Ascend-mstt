@@ -18,7 +18,7 @@
 #include <string>
 #include <map>
 
-#include "CPythonUtils.hpp"
+#include "CPythonUtils.h"
 
 namespace MindStudioDebugger {
 namespace  CPythonUtils {
@@ -481,7 +481,7 @@ PythonTupleObject::PythonTupleObject() : PythonObject()
 
 PythonTupleObject::PythonTupleObject(PyObject* o) : PythonObject()
 {
-    if (!PyTuple_Check(o)) {
+    if (!o || !PyTuple_Check(o)) {
         return;
     }
 

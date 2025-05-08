@@ -83,6 +83,9 @@ class StatisticsConfig(BaseConfig):
         self.check_config()
         self._check_summary_mode()
 
+        self.tensor_list = json_config.get("tensor_list", [])
+        self._check_str_list_config(self.tensor_list, "tensor_list")
+
 
 class OverflowCheckConfig(BaseConfig):
     def __init__(self, json_config):

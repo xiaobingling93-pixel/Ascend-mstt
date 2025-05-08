@@ -59,6 +59,7 @@ class DebuggerConfig:
                 if isinstance(task_config.online_run_ut_recompute, bool) else False
 
         self.check()
+        self._check_statistics_config(task_config)
 
         if self.level == Const.LEVEL_L2:
             self.is_backward_kernel_dump = False
@@ -77,10 +78,13 @@ class DebuggerConfig:
         if not isinstance(self.async_dump, bool):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR and not self.list:
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                   f"The parameters async_dump is true in tensor task, the parameters list cannot be "
-                                   f"empty.")
+        if self.async_dump and self.task == Const.TENSOR:
+            if self.level == Const.LEVEL_DEBUG:
+                self.list = [] # async_dump + debug level case ignore list
+            if not self.list and self.level != Const.LEVEL_DEBUG:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                    f"The parameters async_dump is true in tensor task, the parameters list cannot be "
+                                    f"empty.")
         if self.task == Const.STRUCTURE and self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
                 f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
@@ -134,3 +138,14 @@ class DebuggerConfig:
             self.is_backward_kernel_dump = True
             api_forward_name = api_name[:-len(Const.BACKWARD)] + Const.FORWARD
             self.list.append(api_forward_name)
+
+    def _check_statistics_config(self, task_config):
+        if self.task != Const.STATISTICS:
+            return
+        self.tensor_list = []
+        if not hasattr(task_config, "tensor_list"):
+            return
+        if self.level == Const.LEVEL_DEBUG and task_config.tensor_list:
+            logger.warning_on_rank_0("When level is set to debug, the tensor_list will be invalid.")
+            return
+        self.tensor_list = task_config.tensor_list

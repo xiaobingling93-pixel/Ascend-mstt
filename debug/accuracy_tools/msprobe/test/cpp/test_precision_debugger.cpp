@@ -2,9 +2,9 @@
 #include <mockcpp/mockcpp.hpp>
 
 #include "include/test_utils.hpp"
-#include "third_party/ACL/AclApi.hpp"
-#include "base/ErrorInfos.hpp"
-#include "core/PrecisionDebugger.hpp"
+#include "third_party/ACL/AclApi.h"
+#include "base/ErrorInfosManager.h"
+#include "core/PrecisionDebugger.h"
 
 using namespace MindStudioDebugger;
 
