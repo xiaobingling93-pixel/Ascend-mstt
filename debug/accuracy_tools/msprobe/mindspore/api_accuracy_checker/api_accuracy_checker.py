@@ -189,6 +189,10 @@ class ApiAccuracyChecker:
                 status = CompareConst.PASS
                 err_msg = ""
 
+            else:
+                status = CompareConst.ERROR
+                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
+                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
                 if forward_or_backward == Const.FORWARD and self.save_error_data:
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
                     self.pre_forward_hook(api_name_str_backward, None, inputs, kwargs)
@@ -196,11 +200,6 @@ class ApiAccuracyChecker:
                 if forward_or_backward == Const.BACKWARD and self.save_error_data:
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
                     self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
-
-            else:
-                status = CompareConst.ERROR
-                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
-                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
 
                 # self.pre_forward_hook(api_name_str, None, inputs, kwargs)
             basic_info_status = \
@@ -347,15 +346,15 @@ class ApiAccuracyChecker:
                                                         result=None, err_msg=f"{e}")
             return process_result_packet
 
-        # try:
-        forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation,
-                                                          Const.FORWARD)
-        # except Exception as e:
-        #     logger.warning(f"Exception occurs when running and comparing {api_name_str} forward api. "
-        #                    f"Detailed exception information: {e}.")
-        #     process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
-        #                                                 result=None, err_msg=f"{e}")
-        #     return process_result_packet
+        try:
+            forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation,
+                                                              Const.FORWARD)
+        except Exception as e:
+            logger.warning(f"Exception occurs when running and comparing {api_name_str} forward api. "
+                           f"Detailed exception information: {e}.")
+            process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                        result=None, err_msg=f"{e}")
+            return process_result_packet
 
         process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
                                                     result=forward_output_list, err_msg="")
@@ -378,16 +377,16 @@ class ApiAccuracyChecker:
             process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
                                                         result=None, err_msg=f"{e}")
             return process_result_packet
-        #
-        # try:
-        backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation,
-                                                           Const.BACKWARD)
-        # except Exception as e:
-        #     logger.warning(f"Exception occurs when running and comparing {api_name_str} backward api. "
-        #                    f"Detailed exception information: {e}.")
-        #     process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
-        #                                                 result=None, err_msg=f"{e}")
-        #     return process_result_packet
+
+        try:
+            backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation,
+                                                               Const.BACKWARD)
+        except Exception as e:
+            logger.warning(f"Exception occurs when running and comparing {api_name_str} backward api. "
+                           f"Detailed exception information: {e}.")
+            process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                        result=None, err_msg=f"{e}")
+            return process_result_packet
 
         process_result_packet = ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
                                                     result=backward_output_list, err_msg="")
