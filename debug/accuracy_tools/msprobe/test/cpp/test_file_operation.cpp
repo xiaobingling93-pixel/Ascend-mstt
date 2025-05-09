@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "test_utils.hpp"
-#include "utils/DataUtils.hpp"
-#include "utils/FileOperation.hpp"
+#include "utils/DataUtils.h"
+#include "utils/FileOperation.h"
 
 using namespace MindStudioDebugger;
 using namespace MindStudioDebugger::FileOperation;

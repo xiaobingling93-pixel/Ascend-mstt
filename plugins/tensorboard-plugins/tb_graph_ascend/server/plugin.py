@@ -78,11 +78,15 @@ class GraphsPlugin(base_plugin.TBPlugin):
         }
 
     def is_active(self):
-        """The graphs plugin is active iff any run has a graph."""
-        for _, _, files in os.walk(self.logdir):
-            for file in files:
-                if file.endswith('.vis'):
-                    return True
+        """The graphs plugin is active if any run has a graph."""
+        for content in os.listdir(self.logdir):
+            content_path = os.path.join(self.logdir, content)
+            if os.path.isfile(content_path) and content.endswith('.vis'):
+                return True
+            if os.path.isdir(content_path):
+                for file in os.listdir(content_path):
+                    if os.path.isfile(os.path.join(content_path, file)) and file.endswith('.vis'):
+                        return True
         return False
 
     def data_plugin_names(self):
@@ -96,38 +100,6 @@ class GraphsPlugin(base_plugin.TBPlugin):
             es_module_path='/index.js',
             disable_reload=True,
         )
-
-    def info_impl(self):
-        """Returns a dict of all runs and their data availabilities"""
-        result = {}
-
-        def add_row_item(run, tag=None, is_vis=False):
-            run_item = result.setdefault(
-                run,
-                {"run": run, "tags": {}},
-            )
-
-            tag_item = None
-            if tag:
-                tag_item = run_item.get("tags").setdefault(
-                    tag,
-                    {
-                        "tag": tag,
-                        "conceptual_graph": False,
-                        "op_graph": False,
-                        "profile": False,
-                    },
-                )
-            return (run_item, tag_item)
-
-        run_tag_pairs = self._get_run_dirs()
-        for run, tag in run_tag_pairs:
-            try:
-                add_row_item(run, tag, is_vis=True)
-            except ValueError as e:
-                logger.error(f"Warning: Skipping invalid run/tag pair ({run}, {tag}). Error: {e}")
-              
-        return result
 
     # 拿所有nodename的
     def get_all_node_names(self, json_data, request):
@@ -354,9 +326,8 @@ class GraphsPlugin(base_plugin.TBPlugin):
         if json_data.get('StepList', {}) and 'ALL' not in json_data.get('StepList', {}):
             json_data['StepList'].insert(0, 'ALL')
         all_node_names = self.get_all_node_names(json_data, request)
-
         # 读取第一个文件中的Colors和OverflowCheck
-        first_run_tag = get_global_value("first_run_tag")
+        first_run_tag = get_global_value("first_run_tag", {}).get(run)
         first_file_data, _ = GraphUtils.safe_load_data(run, first_run_tag)
         # 读取全局信息
         response_data['menu'] = all_node_names
@@ -497,8 +468,24 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
     @wrappers.Request.application
     def info_route(self, request):
-        info = self.info_impl()
-        return http_util.Respond(request, info, "application/json")
+        """
+        Returns a dict of all runs and their data availabilities,
+        including a flag indicating if a .vis file is present.
+        """
+        run_tag_pairs = {}
+        for content in os.listdir(self.logdir):
+            content_path = os.path.join(self.logdir, content)
+            if os.path.isdir(content_path):
+                for file in os.listdir(content_path):
+                    GraphUtils.process_vis_file(content_path, file, run_tag_pairs)
+            else:
+                GraphUtils.process_vis_file(self.logdir, content, run_tag_pairs)
+
+        first_run_tag = {}
+        for run in run_tag_pairs.keys():
+            first_run_tag[run] = run_tag_pairs[run][0]
+        set_global_value('first_run_tag', first_run_tag)
+        return http_util.Respond(request, run_tag_pairs, "application/json")
 
     # 同上二者一体
     def _extract_subgraph(self, json_data, node_id):
@@ -594,21 +581,3 @@ class GraphsPlugin(base_plugin.TBPlugin):
                 protobuf_format += f'  stack_info: {node_data.get("stack_info")}\n'
             protobuf_format += '}\n'
         return protobuf_format
-
-    def _get_run_dirs(self):
-        """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
-        run_tag_pairs = []
-        for root, _, files in os.walk(self.logdir):
-            for file in files:
-                if file.endswith('.vis'):  # check for .vis extension
-                    run = os.path.abspath(root)
-                    tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
-                    _, error = GraphUtils.safe_load_data(run, tag, True)
-                    if error:
-                        logger.error(f'Error: File run:"{run},tag:{tag}" is not accessible. Error: {error}')
-                        continue
-                    run_tag_pairs.append((run, tag))
-        if len(run_tag_pairs) > 0:
-            set_global_value('first_run_tag', run_tag_pairs[0][1])
-        return run_tag_pairs
-

@@ -125,8 +125,8 @@ class CheckerConfig:
             save_error_data=config_params.get('save_error_data'),
             is_continue_run_ut=config_params.get('is_continue_run_ut'),
             real_data_path=config_params.get('real_data_path'),
-            white_list=self.white_list,
-            black_list=self.black_list,
+            white_list=self.white_list.copy() if self.white_list else [],
+            black_list=self.black_list.copy() if self.black_list else [],
             error_data_path=config_params.get('error_data_path'),
             online_config=self.get_online_config()
         )

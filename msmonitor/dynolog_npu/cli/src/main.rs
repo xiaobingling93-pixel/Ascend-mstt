@@ -2,9 +2,14 @@
 //
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
-
+use std::fs::File;
+use std::io::BufReader;
+use rustls::{Certificate, RootCertStore, PrivateKey, ClientConnection, StreamOwned};
+use std::sync::Arc;
 use std::net::TcpStream;
 use std::net::ToSocketAddrs;
+use std::path::PathBuf;
+use std::io;
 
 use anyhow::Result;
 use clap::Parser;
@@ -44,6 +49,8 @@ struct Opts {
     hostname: String,
     #[clap(long, default_value_t = DYNO_PORT)]
     port: u16,
+    #[clap(long, required = true)]
+    certs_dir: String,
     #[clap(subcommand)]
     cmd: Command,
 }
@@ -210,29 +217,98 @@ enum Command {
     DcgmResume,
 }
 
-/// Create a socket connection to dynolog
-fn create_dyno_client(host: &str, port: u16) -> Result<TcpStream> {
+struct ClientConfigPath {
+    cert_path: PathBuf,
+    key_path: PathBuf,
+    ca_cert_path: PathBuf,
+}
+
+fn create_dyno_client(
+    host: &str, 
+    port: u16,
+    config: &ClientConfigPath
+) -> Result<StreamOwned<ClientConnection, TcpStream>> {
     let addr = (host, port)
         .to_socket_addrs()?
         .next()
-        .expect("Failed to connect to the server");
+        .ok_or_else(|| io::Error::new(
+            io::ErrorKind::NotFound,
+            "Could not resolve the host address"
+        ))?;
 
-    TcpStream::connect(addr).map_err(|err| err.into())
+    let stream = TcpStream::connect(addr)?;
+
+    println!("Loading CA cert from: {}", config.ca_cert_path.display());
+    let mut root_store = RootCertStore::empty();
+    let ca_file = File::open(&config.ca_cert_path)?;
+    let mut ca_reader = BufReader::new(ca_file);
+    let ca_certs = rustls_pemfile::certs(&mut ca_reader)?;
+    for ca_cert in ca_certs {
+        root_store.add(&Certificate(ca_cert))?;
+    }
+
+    println!("Loading client cert from: {}", config.cert_path.display());
+    let cert_file = File::open(&config.cert_path)?;
+    let mut cert_reader = BufReader::new(cert_file);
+    let certs = rustls_pemfile::certs(&mut cert_reader)?
+        .into_iter()
+        .map(Certificate)
+        .collect();
+
+    println!("Loading client key from: {}", config.key_path.display());
+    let key_file = File::open(&config.key_path)?;
+    let mut key_reader = BufReader::new(key_file);
+    let keys = rustls_pemfile::pkcs8_private_keys(&mut key_reader)?;
+    if keys.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "No private key found in the key file"
+        ).into());
+    }
+    let key = PrivateKey(keys[0].clone());
+
+    let config = rustls::ClientConfig::builder()
+        .with_safe_defaults()
+        .with_root_certificates(root_store)
+        .with_client_auth_cert(certs, key)?;
+
+    let server_name = rustls::ServerName::try_from(host)
+        .map_err(|e| io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Invalid hostname: {}", e)
+        ))?;
+
+    let conn = rustls::ClientConnection::new(
+        Arc::new(config),
+        server_name
+    )?;
+
+    // 返回 TLS stream
+    Ok(StreamOwned::new(conn, stream))
 }
 
 fn main() -> Result<()> {
     let Opts {
         hostname,
         port,
+        certs_dir,
         cmd,
     } = Opts::parse();
 
-    let dyno_client =
-        create_dyno_client(&hostname, port).expect("Couldn't connect to the server...");
+    let certs_dir = PathBuf::from(&certs_dir);
+
+    let config = ClientConfigPath {
+        cert_path: certs_dir.join("client.crt"),
+        key_path: certs_dir.join("client.key"),
+        ca_cert_path: certs_dir.join("ca.crt"),
+    };
+
+    let client = create_dyno_client(&hostname, port, &config)
+        .expect("Couldn't connect to the server...");
 
     match cmd {
-        Command::Status => status::run_status(dyno_client),
-        Command::Version => version::run_version(dyno_client),
+        Command::Status => status::run_status(client),
+        Command::Version => version::run_version(client),
         Command::Gputrace {
             job_id,
             pids,
@@ -271,7 +347,7 @@ fn main() -> Result<()> {
                 trigger_config,
                 trace_options,
             };
-            gputrace::run_gputrace(dyno_client, job_id, &pids, process_limit, trace_config)
+            gputrace::run_gputrace(client, job_id, &pids, process_limit, trace_config)
         }
         Command::Nputrace {
             job_id,
@@ -332,7 +408,7 @@ fn main() -> Result<()> {
                 trigger_config,
                 trace_options,
             };
-            nputrace::run_nputrace(dyno_client, job_id, &pids, process_limit, trace_config)
+            nputrace::run_nputrace(client, job_id, &pids, process_limit, trace_config)
         }
         Command::NpuMonitor {
             npu_monitor_start,
@@ -346,10 +422,10 @@ fn main() -> Result<()> {
                 report_interval_s,
                 mspti_activity_kind
             };
-            npumonitor::run_npumonitor(dyno_client, npu_mon_config)
+            npumonitor::run_npumonitor(client, npu_mon_config)
         }
-        Command::DcgmPause { duration_s } => dcgm::run_dcgm_pause(dyno_client, duration_s),
-        Command::DcgmResume => dcgm::run_dcgm_resume(dyno_client),
+        Command::DcgmPause { duration_s } => dcgm::run_dcgm_pause(client, duration_s),
+        Command::DcgmResume => dcgm::run_dcgm_resume(client),
         // ... add new commands here
     }
 }

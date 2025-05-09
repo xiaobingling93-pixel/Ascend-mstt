@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "include/Macro.hpp"
-#include "base/ErrorInfos.hpp"
-#include "MindSporeTrigger.hpp"
-#include "MSAclDumper.hpp"
+#include "include/Macro.h"
+#include "base/ErrorInfosManager.h"
+#include "MSAclDumper.h"
+#include "MindSporeTrigger.h"
 
 namespace MindStudioDebugger {
 

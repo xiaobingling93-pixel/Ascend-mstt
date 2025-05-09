@@ -29,6 +29,7 @@ class TensorConfig(BaseConfig):
         self.check_mode = None
         self.file_format = json_config.get("file_format")
         self.check_config()
+        self._check_summary_mode()
         self._check_config()
 
     def _check_config(self):
@@ -42,12 +43,14 @@ class StatisticsConfig(BaseConfig):
         self.file_format = None
         self.check_mode = None
         self.check_config()
-        self._check_config()
+        self._check_summary_mode()
 
-    def _check_config(self):
-        single_opt = ["statistics", "md5"]
+        self.tensor_list = json_config.get("tensor_list", [])
+        self._check_str_list_config(self.tensor_list, "tensor_list")
+
+    def _check_summary_mode(self):
         muti_opt = ["md5", "max", "min", "mean", "l2norm"]
-        if isinstance(self.summary_mode, str) and self.summary_mode not in single_opt:
+        if isinstance(self.summary_mode, str) and self.summary_mode not in Const.SUMMARY_MODE:
             raise Exception("summary_mode is invalid")
         if isinstance(self.summary_mode, list) and not all(opt in muti_opt for opt in self.summary_mode):
             raise Exception("summary_mode is invalid")

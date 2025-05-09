@@ -18,7 +18,7 @@
 #include <string>
 #include <map>
 
-#include "CPythonUtils.hpp"
+#include "CPythonUtils.h"
 
 namespace MindStudioDebugger {
 namespace  CPythonUtils {
@@ -77,7 +77,6 @@ PythonObject PythonObject::From(const uint32_t& input)
 PythonObject PythonObject::From(const double& input)
 {
     return PythonNumberObject::From(input);
-
 }
 PythonObject PythonObject::From(const std::string& input)
 {
@@ -203,7 +202,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwarg
     if (args.IsNone() || kwargs.IsNone()) {
         if (!ignore) {
             PyErr_SetString(PyExc_TypeError, "Call python object with invalid parameters.");
-        } 
+        }
         return PythonObject();
     }
 
@@ -227,7 +226,6 @@ PythonObject PythonObject::GetGlobal(const std::string& name, bool ignore)
     }
 
     return PythonObject(PyDict_GetItemString(globals, name.c_str()));
-    
 }
 
 PythonObject PythonObject::Import(const std::string& name, bool ignore) noexcept
@@ -483,7 +481,7 @@ PythonTupleObject::PythonTupleObject() : PythonObject()
 
 PythonTupleObject::PythonTupleObject(PyObject* o) : PythonObject()
 {
-    if (!PyTuple_Check(o)) {
+    if (!o || !PyTuple_Check(o)) {
         return;
     }
 

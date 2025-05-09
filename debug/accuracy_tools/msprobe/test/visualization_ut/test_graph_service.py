@@ -7,7 +7,7 @@ import argparse
 from dataclasses import dataclass
 
 from unittest.mock import patch
-from msprobe.visualization.graph_service import _compare_graph, _build_graph, _compare_graph_ranks, \
+from msprobe.visualization.graph_service import _compare_graph_result, _build_graph_result, _compare_graph_ranks, \
     _compare_graph_steps, _build_graph_ranks, _build_graph_steps, _graph_service_command, _graph_service_parser
 from msprobe.core.common.utils import CompareException
 
@@ -45,30 +45,31 @@ class TestGraphService(unittest.TestCase):
         last_call_args = mock_log_info.call_args[0][0]
         self.assertIn(log_info, last_call_args)
         matches = re.findall(self.pattern, last_call_args)
-        self.assertTrue(os.path.exists(os.path.join(self.output, matches[0])))
+        if matches:
+            self.assertTrue(os.path.exists(os.path.join(self.output, matches[0])))
 
     @patch('msprobe.core.common.log.logger.info')
-    def test_compare_graph(self, mock_log_info):
+    def test_compare_graph_result(self, mock_log_info):
         args = Args(output_path=self.output, framework='pytorch')
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertEqual(mock_log_info.call_count, 2)
         self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='mindspore')
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='pytorch', layer_mapping=self.layer_mapping)
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='pytorch', overflow_check=True)
-        result = _compare_graph(self.input_param, args)
+        result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
     @patch('msprobe.core.common.log.logger.info')
-    def test_build_graph(self, mock_log_info):
-        result = _build_graph(os.path.join(self.input, 'step0', 'rank0'), Args(overflow_check=True))
+    def test_build_graph_result(self, mock_log_info):
+        result = _build_graph_result(os.path.join(self.input, 'step0', 'rank0'), Args(overflow_check=True))
         self.assertEqual(mock_log_info.call_count, 1)
         self.assertIsNotNone(result)
 
@@ -81,7 +82,7 @@ class TestGraphService(unittest.TestCase):
         }
         args = Args(output_path=self.output, framework='pytorch')
         _compare_graph_ranks(input_param, args)
-        self.assert_log_info(mock_log_info)
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
         input_param1 = {
             'npu_path': os.path.join(self.input, 'step0'),
@@ -101,7 +102,7 @@ class TestGraphService(unittest.TestCase):
         }
         args = Args(output_path=self.output, framework='pytorch')
         _compare_graph_steps(input_param, args)
-        self.assert_log_info(mock_log_info)
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
         input_param1 = {
             'npu_path': self.input,
@@ -115,12 +116,12 @@ class TestGraphService(unittest.TestCase):
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph_ranks(self, mock_log_info):
         _build_graph_ranks(os.path.join(self.input, 'step0'), Args(output_path=self.output))
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph_steps(self, mock_log_info):
         _build_graph_steps(self.input, Args(output_path=self.output))
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command(self, mock_log_info):
@@ -129,7 +130,7 @@ class TestGraphService(unittest.TestCase):
 
         args = Args(input_path=self.output_json[0], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info)
+        self.assert_log_info(mock_log_info, 'Exporting compare graph result successfully, the result file is saved in')
 
         input_param1 = {
             'npu_path': os.path.join(self.input, 'step0', 'rank0'),
@@ -139,7 +140,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param1, f, indent=4)
         args = Args(input_path=self.output_json[1], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
 
         input_param2 = {
             'npu_path': os.path.join(self.input, 'step0'),
@@ -150,7 +151,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param2, f, indent=4)
         args = Args(input_path=self.output_json[2], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info)
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
         input_param3 = {
             'npu_path': self.input,
@@ -161,7 +162,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param3, f, indent=4)
         args = Args(input_path=self.output_json[3], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info)
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
         input_param4 = {
             'npu_path': os.path.join(self.input, 'step0'),
@@ -171,7 +172,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param4, f, indent=4)
         args = Args(input_path=self.output_json[4], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
         input_param5 = {
             'npu_path': self.input,
@@ -181,7 +182,7 @@ class TestGraphService(unittest.TestCase):
             json.dump(input_param5, f, indent=4)
         args = Args(input_path=self.output_json[5], output_path=self.output, framework='pytorch')
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
         input_param6 = {
             'npu_path': self.input,

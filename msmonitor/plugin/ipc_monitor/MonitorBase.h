@@ -1,5 +1,6 @@
 #ifndef MONITOR_BASE_H
 #define MONITOR_BASE_H
+
 #include <string>
 
 namespace dynolog_npu {
@@ -14,5 +15,4 @@ public:
 
 } // namespace ipc_monitor
 } // namespace dynolog_npu
-
-#endif
+#endif // MONITOR_BASE_H

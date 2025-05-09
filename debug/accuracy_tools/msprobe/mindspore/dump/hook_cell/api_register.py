@@ -72,7 +72,7 @@ _inner_used_api = {
         ops, "norm", "square", "sqrt", "is_complex", "stack", "is_floating_point"
     ),
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_TENSOR: (
-        Tensor, "to", "numel"
+        Tensor, "to", "numel", 'sum'
     ),
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_MINT: (
         mint, "max", "min", "mean", "norm"

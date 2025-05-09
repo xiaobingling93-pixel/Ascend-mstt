@@ -161,8 +161,9 @@ class TestDataWriter(unittest.TestCase):
         self.assertEqual(self.data_writer.cache_data, expected)
 
     def test_update_stack(self):
-        self.data_writer.update_stack(self.data_content)
-        self.assertEqual(self.data_writer.cache_stack, self.data_content)
+        self.data_writer.cache_stack = {"stack1": ["test1"]}
+        self.data_writer.update_stack("test2", "stack1")
+        self.assertEqual(self.data_writer.cache_stack, {"stack1": ["test1", "test2"]})
 
     def test_update_construct(self):
         self.data_writer.update_construct(self.data_content)
@@ -180,13 +181,13 @@ class TestDataWriter(unittest.TestCase):
             os.remove(file_path)
 
     def test_write_stack_info_json(self):
-        self.data_writer.cache_stack = self.data_content
+        self.data_writer.cache_stack = {("api1", "api2"): ["stack1"]}
         file_path = os.path.join(self.cur_path, "stack.json")
         self.data_writer.write_stack_info_json(file_path)
         load_result = load_json(file_path)
 
         try:
-            self.assertEqual(load_result, self.data_content)
+            self.assertEqual(load_result, {"0": [["stack1"], ["api1", "api2"]]})
         finally:
             os.remove(file_path)
 

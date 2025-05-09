@@ -27,26 +27,26 @@ constexpr auto kHookBegin = "MS_DbgOnStepBegin";
 constexpr auto kHookEnd = "MS_DbgOnStepEnd";
 
 class HookDynamicLoader {
- public:
-  static HookDynamicLoader &GetInstance();
+public:
+    static HookDynamicLoader &GetInstance();
 
-  HookDynamicLoader(const HookDynamicLoader &) = delete;
-  HookDynamicLoader &operator=(const HookDynamicLoader &) = delete;
+    HookDynamicLoader(const HookDynamicLoader &) = delete;
+    HookDynamicLoader &operator=(const HookDynamicLoader &) = delete;
 
-  bool LoadLibrary();
-  bool UnloadLibrary();
-  void *GetHooker(const std::string &funcName);
+    bool LoadLibrary();
+    bool UnloadLibrary();
+    void *GetHooker(const std::string &funcName);
 
- private:
-  // Helper functions
-  bool loadFunction(void *handle, const std::string &functionName);
+private:
+    // Helper functions
+    bool LoadFunction(void *handle, const std::string &functionName);
 
-  HookDynamicLoader() = default;
+    HookDynamicLoader() = default;
 
-  void *handle_ = nullptr;
-  std::vector<std::string> functionList_ = {kHookBegin, kHookEnd};
-  std::map<std::string, void *> funcMap_;
-  std::mutex mutex_;
+    void *handle_ = nullptr;
+    std::vector<std::string> functionList_ = {kHookBegin, kHookEnd};
+    std::map<std::string, void *> funcMap_;
+    std::mutex mutex_;
 };
 
 #endif  // HOOK_DYNAMIC_LOADER_H

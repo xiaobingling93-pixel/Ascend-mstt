@@ -24,6 +24,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.base_handler import BaseHandler
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 
 
 class Handler(BaseHandler):
@@ -45,6 +46,7 @@ class TestBaseHandler(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.base_handler = Handler("api_name_with_id")
+        get_api_register(True).restore_all_api()
 
     def test___init__(self):
         base_handler = Handler("api_name_with_id")
@@ -93,7 +95,7 @@ class TestBaseHandler(unittest.TestCase):
 
             first_tensor = Tensor([1.0, 1.2], dtype=ms.bfloat16)
             second_tensor = Tensor([1.5, 2.0], dtype=ms.bfloat16)
-            target = ops.max(ops.div(second_tensor.to(ms.float32), first_tensor.to(ms.float32)))[0].item()
+            target = ops.max(ops.div(ops.cast(second_tensor, ms.float32), ops.cast(first_tensor, ms.float32)))[0].item()
             ret = self.base_handler.get_endless_norm(first_tensor, second_tensor, abs_tol)
             self.assertEqual(ret, target)
 

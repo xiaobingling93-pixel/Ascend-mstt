@@ -285,8 +285,8 @@ def set_dump_path(input_param):
     if not npu_path_valid or not bench_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.BENCH_DUMP_DATA_DIR] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
 
 
 def get_dump_mode(input_param):
@@ -507,3 +507,27 @@ def is_save_variable_valid(variable, valid_special_types, depth=0):
                    for key, value in variable.items())
     else:
         return False
+
+
+def replace_last_occurrence(text, old, new):
+    if text is None:
+        return text
+    index = text.rfind(old)
+    if index != -1:
+        return text[:index] + text[index:].replace(old, new, 1)
+    return text
+
+
+def load_stack_json(stack_path):
+    stack_dict = load_json(stack_path)
+    if not stack_dict.get(Const.NEW_STACK_FLAG):
+        return stack_dict
+
+    new_stack_dict = {}
+    for stack_info in stack_dict.values():
+        if len(stack_info) != 2:
+            continue
+        api_list, stack_str = stack_info
+        for api_name in api_list:
+            new_stack_dict.update({api_name: stack_str})
+    return new_stack_dict

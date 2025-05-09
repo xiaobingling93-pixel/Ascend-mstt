@@ -52,12 +52,12 @@ class TestMindsporeDebuggerSave(TestCase):
             "framework": "mindspore",
             "dump_data_dir": None,
             "data": {
-                "x_tensor.0": {
+                "x_tensor.0.debug": {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
                     "shape": (1,)
                 },
-                "x_tensor_grad.0": {
+                "x_tensor_grad.0.debug": {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
                     "shape": (1,)

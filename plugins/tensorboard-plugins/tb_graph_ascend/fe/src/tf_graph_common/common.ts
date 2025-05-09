@@ -22,13 +22,6 @@ export interface ProgressTracker {
   setMessage: (msg: string) => void;
   reportError: (msg: string, err: Error) => void;
 }
-// Note that tf-graph-control depends on the value of the enum.
-// Polymer does not let one use JS variable as a prop.
-export enum SelectionType {
-  OP_GRAPH = 'op_graph',
-  CONCEPTUAL_GRAPH = 'conceptual_graph',
-  PROFILE = 'profile',
-}
 
 /** Enums element class of objects in the scene */
 export const Class = {

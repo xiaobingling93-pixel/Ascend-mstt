@@ -106,7 +106,7 @@ class TestDataCollector(unittest.TestCase):
     @patch.object(BaseDataProcessor, "analyze_debug_forward", return_value="data_info")
     def test_debug_data_collect_forward(self, _, mock_update_debug):
         self.data_collector.debug_data_collect_forward("variable", "name_with_count")
-        mock_update_debug.assert_called_with({"name_with_count": "data_info"})
+        mock_update_debug.assert_called_with({"name_with_count.debug": "data_info"})
 
     @patch.object(DataWriter, "update_debug")
     @patch.object(BaseDataProcessor, "analyze_debug_backward")
@@ -114,6 +114,6 @@ class TestDataCollector(unittest.TestCase):
     def test_debug_data_collect_backward(self, _, mock_analyze_debug_backward, mock_update_debug):
         self.data_collector.data_writer.cache_debug = {"data": None}
         self.data_collector.debug_data_collect_backward("variable", "name_with_count")
-        mock_update_debug.assert_called_with({"name_with_count": "all_none_data_info"})
-        mock_analyze_debug_backward.assert_called_with("variable", "name_with_count", self.data_collector.data_writer.cache_debug['data'])
+        mock_update_debug.assert_called_with({"name_with_count.debug": "all_none_data_info"})
+        mock_analyze_debug_backward.assert_called_with("variable", "name_with_count.debug", self.data_collector.data_writer.cache_debug['data'])
         self.data_collector.data_writer.cache_debug = None

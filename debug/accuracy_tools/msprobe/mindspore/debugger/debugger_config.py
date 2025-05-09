@@ -43,6 +43,7 @@ class DebuggerConfig:
         self.summary_mode = task_config.summary_mode
         self.async_dump = common_config.async_dump if common_config.async_dump else False
         self.check()
+        self._check_statistics_config(task_config)
         create_directory(self.dump_path)
 
         if self.task == Const.FREE_BENCHMARK:
@@ -76,8 +77,12 @@ class DebuggerConfig:
             self.check_mode = "all"
         if not isinstance(self.async_dump, bool):
             raise Exception("The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR and not self.list:
-            raise Exception("The parameters async_dump is true in tensor task, the parameters list cannot be empty.")
+        if self.async_dump and self.task == Const.TENSOR:
+            if self.level_ori == Const.LEVEL_DEBUG:
+                self.list = [] # async_dump + debug level case ignore list
+            if not self.list and self.level_ori != Const.LEVEL_DEBUG:
+                raise Exception("The parameters async_dump is true in tensor task,"
+                                " the parameters list cannot be empty.")
         if self.task == Const.STRUCTURE and self.level_ori not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
                 f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
@@ -98,3 +103,14 @@ class DebuggerConfig:
         if not self.list or len(self.list) != 1:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the list must be configured as a list with one api name.")
+
+    def _check_statistics_config(self, task_config):
+        if self.task != Const.STATISTICS:
+            return
+        self.tensor_list = []
+        if not hasattr(task_config, "tensor_list"):
+            return
+        if self.level_ori == Const.LEVEL_DEBUG and task_config.tensor_list:
+            logger.warning_on_rank_0("When level is set to debug, the tensor_list will be invalid.")
+            return
+        self.tensor_list = task_config.tensor_list

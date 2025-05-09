@@ -41,7 +41,7 @@ class DataCollector:
         self.backward_module_names = {}
         self.optimizer_status = ""
         self.optimizer_status_first_start = {Const.OPTIMIZER: True, Const.CLIP_GRAD: True}
-        atexit.register(self.write_json)
+        atexit.register(self.write_json_at_exit)
 
     @property
     def dump_data_dir(self):
@@ -78,6 +78,11 @@ class DataCollector:
     def write_json(self):
         self.data_writer.write_json()
 
+    def write_json_at_exit(self):
+        if self.config.async_dump and self.config.task == Const.TENSOR:
+            self.data_processor.dump_async_data()
+        self.data_writer.write_json()
+
     def update_data(self, name, data_info):
         msg = f"msprobe is collecting data on {name}."
         if self.config.task == Const.OVERFLOW_CHECK:
@@ -88,6 +93,10 @@ class DataCollector:
             return
         logger.debug(msg)
         self.data_writer.update_data(data_info)
+
+    def call_stack_collect(self, name):
+        stack_info = self.data_processor.analyze_api_call_stack(name)
+        self.data_writer.update_stack(name, stack_info)
 
     def forward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         if self.config.task == Const.FREE_BENCHMARK:
@@ -120,6 +129,7 @@ class DataCollector:
             return
         if need_stack:
             self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+            self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None, need_stack=True):
@@ -133,6 +143,7 @@ class DataCollector:
         self.set_is_recomputable(data_info, is_recompute)
         if need_stack:
             self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+            self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -182,7 +193,10 @@ class DataCollector:
                     self.optimizer_status_first_start[self.optimizer_status] = False
                 self.data_writer.update_construct({name: self.optimizer_status})
             else:
-                self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+                if self.config.level == Const.LEVEL_MIX and \
+                  not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
+                    self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, flush=False):
@@ -206,6 +220,7 @@ class DataCollector:
 
     def params_data_collect(self, name, param_name, pid, data):
         grad_name = name + Const.SEP + Const.PARAMS_GRAD
+        self.update_api_or_module_name(grad_name)
         # 校验scope和pid，以及当前name是否有过反向计算
         if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
             # 如果没有反向计算，则需要清除之前占位写入的grad数据
@@ -219,12 +234,15 @@ class DataCollector:
     def debug_data_collect_forward(self, variable, name_with_count):
 
         data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)
-        self.data_writer.update_debug({name_with_count: data_info})
+        name_with_count_category = name_with_count + Const.SEP + Const.DEBUG
+        self.data_writer.update_debug({name_with_count_category: data_info})
 
     def debug_data_collect_backward(self, variable, grad_name_with_count):
         # prepare all None nested data structure
         all_none_data_info = self.data_processor.analyze_element_to_all_none(variable)
-        self.data_writer.update_debug({grad_name_with_count: all_none_data_info})
+        grad_name_with_count_category = grad_name_with_count + Const.SEP + Const.DEBUG
+        self.data_writer.update_debug({grad_name_with_count_category: all_none_data_info})
 
         # register tensor backward hook
-        self.data_processor.analyze_debug_backward(variable, grad_name_with_count, self.data_writer.cache_debug['data'])
+        self.data_processor.analyze_debug_backward(variable, grad_name_with_count_category,
+                                                   self.data_writer.cache_debug['data'])

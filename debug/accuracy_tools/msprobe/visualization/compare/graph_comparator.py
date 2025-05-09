@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import re
-from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
-from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file, get_csv_df
+from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data, get_csv_df
+from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
 from msprobe.core.common.const import Const

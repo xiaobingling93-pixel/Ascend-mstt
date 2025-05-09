@@ -70,23 +70,22 @@ class TestBaseDataProcessor(unittest.TestCase):
     @patch('inspect.stack')
     def test_analyze_api_call_stack(self, mock_stack):
         mock_stack.return_value = [
-            (None, 'file0.py', 0, 'function0', ['code line 0'], None),
-            (None, 'file1.py', 10, 'function1', ['code line 1'], None),
-            (None, 'file2.py', 20, 'function2', ['code line 2'], None),
             (None, 'file3.py', 30, 'function3', ['code line 3'], None),
-            (None, 'file4.py', 40, 'function4', ['code line 4'], None),
-            (None, 'file5.py', 50, 'function5', ['code line 5'], None),
-            (None, 'file6.py', 60, 'function6', ['code line 6'], None),
-            (None, 'file7.py', 70, 'function7', ['code line 7'], None),
+            (None, 'file1.py', 40, 'function1', ['code line 1'], None),
+            (None, 'file2.py', 50, 'function2', ['code line 2'], None),
+            (None, 'file3.py', 60, 'function3', ['code line 3'], None),
+            (None, 'file1.py', 70, 'function1', ['code line 1'], None),
+            (None, 'file1.py', 80, 'function1', ['code line 1'], None),
+            (None, 'file2.py', 90, 'function2', ['code line 2'], None),
+            (None, 'file3.py', 100, 'function3', ['code line 3'], None)
         ]
         result = BaseDataProcessor.analyze_api_call_stack('test_stack')
-        expected_output = {
-            'test_stack': [
-                'File file5.py, line 50, in function5, \n code line 5',
-                'File file6.py, line 60, in function6, \n code line 6',
-                'File file7.py, line 70, in function7, \n code line 7',
-            ]
-        }
+        expected_output = (
+            'File file1.py, line 80, in function1, \n code line 1',
+            'File file2.py, line 90, in function2, \n code line 2',
+            'File file3.py, line 100, in function3, \n code line 3',
+        )
+
         self.assertEqual(result, expected_output)
 
     def test_analyze_builtin(self):
@@ -127,8 +126,8 @@ class TestBaseDataProcessor(unittest.TestCase):
         expected = {"type": 'int8', "value": 1}
         self.assertEqual(result, expected)
 
-        result = BaseDataProcessor._analyze_numpy(np.complex128(1+2j))
-        expected = {"type": 'complex128', "value": (1+2j)}
+        result = BaseDataProcessor._analyze_numpy(np.complex128(1 + 2j))
+        expected = {"type": 'complex128', "value": (1 + 2j)}
         self.assertEqual(result, expected)
 
     def test_get_special_types(self):
@@ -144,7 +143,7 @@ class TestBaseDataProcessor(unittest.TestCase):
             'Max': 6,
             'Min': 1,
             'Mean': 3.5,
-            'Norm':9.539392014169456
+            'Norm': 9.539392014169456
         }
         self.assertEqual(result, expected_result)
 
@@ -165,6 +164,7 @@ class TestBaseDataProcessor(unittest.TestCase):
         transform = lambda x, _: x * 2
         Test = namedtuple("Test", ['a'])
         myNamedTuple = Test(1)
+
         @dataclass
         class MyDataClass:
             last_hidden_state: int = None
@@ -176,7 +176,7 @@ class TestBaseDataProcessor(unittest.TestCase):
             hidden_states=(2, 3),
             attentions=(4, 5)
         )
-        expected_dataclass_res = {'last_hidden_state': 2, 'hidden_states': [4, 6], 'attentions': [8,10]}
+        expected_dataclass_res = {'last_hidden_state': 2, 'hidden_states': [4, 6], 'attentions': [8, 10]}
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(2, transform), 4)
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(myData, transform), expected_dataclass_res)
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(myNamedTuple, transform), {'a': 2})
@@ -311,9 +311,9 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.assertEqual(dst_data_structure, excepted_result)
 
     def test_analyze_element_to_all_none(self):
-        element = {"key1": [12, 3, {"key2": 10, "key3":["12"]}]}
+        element = {"key1": [12, 3, {"key2": 10, "key3": ["12"]}]}
         result = self.processor.analyze_element_to_all_none(element)
-        excepted_result = {"key1": [None, None, {"key2": None, "key3":[None]}]}
+        excepted_result = {"key1": [None, None, {"key2": None, "key3": [None]}]}
         self.assertEqual(result, excepted_result)
 
     @patch.object(MindsporeDataProcessor, "is_hookable_element", return_value=True)

@@ -16,10 +16,10 @@
 
 #include <cstring>
 
-#include "base/ErrorInfos.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "third_party/ACL/AclApi.hpp"
-#include "PrecisionDebugger.hpp"
+#include "base/ErrorInfosManager.h"
+#include "base/DebuggerConfig.h"
+#include "third_party/ACL/AclApi.h"
+#include "PrecisionDebugger.h"
 
 namespace MindStudioDebugger {
 
@@ -83,12 +83,12 @@ int32_t PrecisionDebugger::Initialize(const std::string& framework, const std::s
         return ret;
     }
 
-    if(AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
+    if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
         return -1;
     }
 
     const DebuggerConfig& cfg = DebuggerConfig::GetInstance();
-    for (auto iter = subDebuggers.begin(); iter != subDebuggers.end(); ) {
+    for (auto iter = subDebuggers.begin(); iter != subDebuggers.end();) {
         if (!(*iter)->Condition(cfg)) {
             iter = subDebuggers.erase(iter);
         } else {
@@ -124,7 +124,7 @@ void PrecisionDebugger::Stop()
     }
 
     enable = false;
-    CALL_ACL_API(aclrtSynchronizeDevice);
+    CALL_ACL_API(AclrtSynchronizeDevice);
 
     for (auto task : subDebuggers) {
         task->OnStop();
@@ -147,7 +147,7 @@ void PrecisionDebugger::Step(uint32_t step)
         throw std::runtime_error("Step over upper limit(4294967295).");
     }
     curStep += step;
-    CALL_ACL_API(aclrtSynchronizeDevice);
+    CALL_ACL_API(AclrtSynchronizeDevice);
 
     for (auto task : subDebuggers) {
         task->OnStep(curStep);

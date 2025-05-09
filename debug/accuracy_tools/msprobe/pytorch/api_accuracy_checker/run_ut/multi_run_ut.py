@@ -87,10 +87,6 @@ def signal_handler(signum, frame):
     raise KeyboardInterrupt()
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
-
 ParallelUTConfig = namedtuple('ParallelUTConfig', ['api_files', 'out_path', 'num_splits',
                                                    'save_error_data_flag', 'jit_compile_flag', 'device_id',
                                                    'result_csv_path', 'total_items', 'config_path'])
@@ -217,6 +213,8 @@ def prepare_config(args):
 
 
 def main():
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     parser = argparse.ArgumentParser(description='Run UT in parallel')
     _run_ut_parser(parser)
     parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, 
