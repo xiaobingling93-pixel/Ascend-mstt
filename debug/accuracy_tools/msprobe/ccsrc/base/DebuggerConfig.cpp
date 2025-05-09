@@ -30,7 +30,7 @@ namespace MindStudioDebugger {
 
 template<typename T>
 DebuggerErrno ParseJsonBaseObj2Var(const nlohmann::json& content, const std::string& field, T& output,
-                                   bool mandatory=false)
+                                   bool mandatory = false)
 {
     nlohmann::json::const_iterator iter = content.find(field);
     if (iter == content.end()) {
@@ -52,7 +52,7 @@ DebuggerErrno ParseJsonBaseObj2Var(const nlohmann::json& content, const std::str
 
 template<typename T>
 DebuggerErrno ParseJsonStringAndTrans(const nlohmann::json& content, const std::string& field,
-                                const std::map<int32_t, std::string>& enum2name, T& output, bool mandatory=false)
+                                const std::map<int32_t, std::string>& enum2name, T& output, bool mandatory = false)
 {
     DebuggerErrno ret;
     std::string value;
@@ -94,14 +94,16 @@ DebuggerErrno ParseJsonStringAndTrans(const nlohmann::json& content, const std::
 static bool DebuggerCfgParseUIntRangeGetBorder(const std::string& exp, uint32_t& left, uint32_t& right)
 {
     if (std::count(exp.begin(), exp.end(), '-') != 1) {
-        LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT, "When using a range expression, it should be formatted as \"a-b\".");
+        LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT,
+                    "When using a range expression, it should be formatted as \"a-b\".");
         return false;
     }
     std::istringstream iss(exp);
     char dash;
     iss >> left >> dash >> right;
     if (iss.fail() || dash != '-') {
-        LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT, "When using a range expression, it should be formatted as \"a-b\".");
+        LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT,
+                    "When using a range expression, it should be formatted as \"a-b\".");
         return false;
     }
     if (left >= right) {

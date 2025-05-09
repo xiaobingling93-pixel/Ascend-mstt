@@ -159,7 +159,8 @@ AclTensorStats::AclTensorStats(const AclTensorInfo& tensor, const std::map<Debug
     shape = DataUtils::GetShapeString(tensor.hostShape);
 }
 
-AclTensorStats AclTensorStats::CalTensorSummary(const AclTensorInfo& tensor, const std::vector<DebuggerSummaryOption>& opt)
+AclTensorStats AclTensorStats::CalTensorSummary(const AclTensorInfo& tensor,
+    const std::vector<DebuggerSummaryOption>& opt)
 {
     DEBUG_FUNC_TRACE();
     std::map<DebuggerSummaryOption, std::string> summary;
@@ -608,7 +609,8 @@ static std::string GenDataPath(const std::string& path)
         }
         /*
         * ACL 接口返回数据的路径格式如下
-        * {dump_path}/rank_{rank_id}/{time stamp}/step_{step_id}/{time}/{device_id}/{model_name}/{model_id}/{iteration_id}/{data name}
+        * {dump_path}/rank_{rank_id}/{time stamp}/step_{step_id}/{time}
+        /{device_id}/{model_name}/{model_id}/{iteration_id}/{data name}
         * items[0] 表示 rank_{rank_id}
         * items[1] 表示 {time stamp}
         * items[2] 表示 step_{step_id}
@@ -668,8 +670,9 @@ static DebuggerErrno DumpOneAclTensorFmtNpy(AclTensorInfo& tensor)
         AclDtype dstDtype = it->second;
         ret = AclTensor::TransDtype(tensor, dstDtype);
         if (ret != DebuggerErrno::OK) {
-            LOG_ERROR(ret, tensor + ": Failed to transform dtype from " + DataUtils::GetDTypeString(it->first) + " to " +
-                      DataUtils::GetDTypeString(it->second)+ ".");
+            LOG_ERROR(ret, tensor + ": Failed to transform dtype from " +
+                        DataUtils::GetDTypeString(it->first) + " to " +
+                        DataUtils::GetDTypeString(it->second)+ ".");
             return ret;
         }
     }
