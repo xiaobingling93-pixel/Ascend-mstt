@@ -126,7 +126,6 @@ class ApiAccuracyChecker:
             module_input_output
         )
 
-    # @staticmethod
     def run_and_compare_helper(self, api_info, api_name_str, api_input_aggregation, forward_or_backward):
         """
         Args:
@@ -208,6 +207,7 @@ class ApiAccuracyChecker:
 
     @staticmethod
     def init_save_error_data(args):
+        print("初始化了")
         config = Config(
             execution_mode="pynative",
             dump_path=f"{args.out_path}",

@@ -73,8 +73,6 @@ class PrecisionDebugger:
         self.check_input_params(config_params)
 
         common_config, task_config = parse_json_config(config_path)
-        print(f"common_config:{common_config}")
-        print(f"task_config:{task_config}")
         common_config.task = task if task else common_config.task
         self.task = common_config.task
         if self.task == Const.GRAD_PROBE:
