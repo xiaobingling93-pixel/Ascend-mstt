@@ -35,7 +35,7 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
-        self.flush_size = 1000
+        self.flush_size = 20000
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
