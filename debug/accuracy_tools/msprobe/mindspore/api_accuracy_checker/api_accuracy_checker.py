@@ -111,7 +111,8 @@ class ApiAccuracyChecker:
             api_or_module_name,
             primitive_instance,
             os.getpid(),
-            module_input_output
+            module_input_output,
+            need_stack=False
         )
 
     def backward_hook(self, api_or_module_name, module, grad_input, grad_output):

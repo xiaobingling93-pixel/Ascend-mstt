@@ -107,7 +107,7 @@ class DataCollector:
             return
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-    def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None, need_stack=True):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
@@ -118,10 +118,11 @@ class DataCollector:
         self.set_is_recomputable(data_info, is_recompute)
         if self.config.level == Const.LEVEL_L2:
             return
-        self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        if need_stack:
+            self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-    def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None, need_stack=True):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
@@ -130,7 +131,8 @@ class DataCollector:
         if self.config.task != Const.STRUCTURE:
             data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
-        self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        if need_stack:
+            self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
