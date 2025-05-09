@@ -590,7 +590,8 @@ class TrainerMon:
         if not self.mv_distribution:
             return
         self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, opt_context.step, MonitorConst.EXP_AVG)
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step, MonitorConst.EXP_AVG_SQ)
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step,
+                                          MonitorConst.EXP_AVG_SQ)
 
     def write_grad_tb(self, step):
         if not self.wg_distribution:
@@ -765,7 +766,8 @@ class TrainerMon:
                 if not name:
                     continue
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name), with_kwargs=True)
+                    handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name),
+                                                             with_kwargs=True)
                     self.handles['xy'].append(handle)
                 if not self.forward_only:
                     handle = submodule.register_backward_hook(bwd_hook_fun)
