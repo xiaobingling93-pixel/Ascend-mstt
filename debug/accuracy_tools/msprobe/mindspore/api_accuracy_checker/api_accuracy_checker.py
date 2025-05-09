@@ -207,7 +207,6 @@ class ApiAccuracyChecker:
 
     @staticmethod
     def init_save_error_data(args):
-        print("初始化了")
         config = Config(
             execution_mode="pynative",
             dump_path=f"{args.out_path}",
