@@ -28,8 +28,9 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json
-from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
+    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type
+from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
+    check_debug_json_str
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
@@ -48,6 +49,7 @@ class ComparisonConfig:
     cell_mapping: dict
     api_mapping: dict
     layer_mapping: dict
+    compared_file_type: str
 
 
 class Comparator:
@@ -209,8 +211,10 @@ class ParseData:
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
                 elif CompareConst.PARAMS_PATTERN in op_name:
                     struct = merge_list[CompareConst.PARAMS_STRUCT].pop(0)
-                else:
+                elif CompareConst.PARAMS_GRAD_STRUCT in op_name:
                     struct = merge_list[CompareConst.PARAMS_GRAD_STRUCT].pop(0)
+                else:
+                    struct = merge_list[CompareConst.DEBUG_STRUCT].pop(0)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])
                 if self.mode_config.dump_mode == Const.MD5:
@@ -227,7 +231,10 @@ class ParseData:
 
     def gen_merge_list(self, json_data, op_name, stack_json_data):
         op_data = json_data['data'][op_name]
-        check_dump_json_str(op_data, op_name)
+        if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+            check_dump_json_str(op_data, op_name)
+        elif self.mode_config.compared_file_type == Const.DEBUG_JSON_FILE:
+            check_debug_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
 
         if self.mode_config.stack_mode:
@@ -697,10 +704,12 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             cell_mapping=kwargs.get('cell_mapping', {}),
             api_mapping=kwargs.get('api_mapping', {}),
             layer_mapping=kwargs.get('layer_mapping', {}),
+            compared_file_type='',
         )
 
         set_dump_path(input_param)
         config.dump_mode = get_dump_mode(input_param)
+        config.compared_file_type = get_file_type(input_param.get("npu_json_path", None))
 
         # set stack_mode and set "stack_json_path" in input_param
         if 'stack_json_path' in input_param:

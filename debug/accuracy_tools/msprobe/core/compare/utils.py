@@ -83,6 +83,8 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 
 def read_op(op_data, op_name):
+    if Const.DEBUG in op_name.split(Const.SEP):
+        op_parsed_list = op_item_parse(op_data, op_name)
     if Const.PARAMS_GRAD in op_name.split(Const.SEP):
         op_parsed_list = op_item_parse(op_data, op_name)
     else:
@@ -191,6 +193,7 @@ def merge_tensor(tensor_list, dump_mode):
         CompareConst.OUTPUT_STRUCT,
         CompareConst.PARAMS_STRUCT,
         CompareConst.PARAMS_GRAD_STRUCT,
+        CompareConst.DEBUG_STRUCT,
         Const.SUMMARY,
         Const.STACK_INFO
     ]
@@ -254,12 +257,17 @@ def get_name_and_state(name):
     name = 'Functional.pad.0.backward.output.0'
     return: ('Functional.pad.0.backward.', 'output')
 
-    state type: input, output, kwargs, parameters, parameters_grad
+    name = 'x_tensor.0.debug.{index}'
+    return: ('x_tensor.0.', 'debug')
+
+    state type: input, output, kwargs, parameters, parameters_grad, debug
     """
     if not isinstance(name, str):
         logger.error(f'Invalid name: {name}, type should be string, please check.')
         raise CompareException(CompareException.INVALID_API_NAME_ERROR)
 
+    if Const.DEBUG in name.split(Const.SEP):
+        return name.split(Const.DEBUG)[0], Const.DEBUG
     if Const.PARAMS_GRAD in name.split(Const.SEP):
         return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
 

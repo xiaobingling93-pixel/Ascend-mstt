@@ -30,7 +30,10 @@ from msprobe.core.common.exceptions import MsprobeException
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
-
+file_suffix_to_file_type = {
+    "dump.json": Const.DUMP_JSON_FILE,
+    "debug.json": Const.DEBUG_JSON_FILE,
+}
 
 class MsprobeBaseException(Exception):
     """
@@ -232,17 +235,30 @@ def format_value(value):
     return float('{:.12f}'.format(value))
 
 
-def md5_find(data):
-    for key_op in data:
-        for api_info in data[key_op]:
-            if isinstance(data[key_op][api_info], list):
-                for data_detail in data[key_op][api_info]:
-                    if data_detail and 'md5' in data_detail:
+def md5_find(data, json_type=Const.DUMP_JSON_FILE):
+    if json_type == Const.DUMP_JSON_FILE:
+        for key_op in data:
+            for api_info in data[key_op]:
+                if isinstance(data[key_op][api_info], list):
+                    for data_detail in data[key_op][api_info]:
+                        if data_detail and 'md5' in data_detail:
+                            return True
+                if isinstance(data[key_op][api_info], bool):
+                    continue
+                elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
+                    return True
+    elif json_type == Const.DEBUG_JSON_FILE:
+        for data_info in data:
+            if isinstance(data_info, dict):
+                if "md5" in data_info:
+                    return True
+                else:
+                    if md5_find(data_info, Const.DEBUG_JSON_FILE):
                         return True
-            if isinstance(data[key_op][api_info], bool):
-                continue
-            elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
-                return True
+            elif isinstance(data_info, list):
+                for sub_data_info in data_info:
+                    if md5_find(sub_data_info, Const.DEBUG_JSON_FILE):
+                        return True
     return False
 
 
@@ -280,13 +296,26 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    npu_path_valid = npu_path is not None and npu_path.endswith("dump.json")
-    bench_path_valid = bench_path is not None and bench_path.endswith("dump.json")
-    if not npu_path_valid or not bench_path_valid:
+    dump_json_path_valid = npu_path is not None and npu_path.endswith("dump.json") and \
+        bench_path is not None and bench_path.endswith("dump.json")
+    debug_json_path_valid = npu_path is not None and npu_path.endswith("debug.json") and \
+        bench_path is not None and bench_path.endswith("debug.json")
+    if not dump_json_path_valid or not debug_json_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
     input_param[CompareConst.BENCH_DUMP_DATA_DIR] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+
+
+def get_file_type(file_path):
+    if not isinstance(file_path, str):
+        logger.error(f"get_file_type failed, check the type of file_path.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    file_type = file_suffix_to_file_type.get(file_path.split(Const.SCOPE_SEPARATOR)[-1])
+    if file_type is None:
+        logger.error(f"get_file_type failed, file_path is neither dump.json nor debug.json.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    return file_type
 
 
 def get_dump_mode(input_param):
@@ -294,6 +323,7 @@ def get_dump_mode(input_param):
     bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
+    json_type = get_file_type(file_path=npu_path)
 
     npu_task = npu_json_data.get('task', None)
     bench_task = bench_json_data.get('task', None)
@@ -313,8 +343,8 @@ def get_dump_mode(input_param):
         return Const.STRUCTURE
 
     if npu_task == Const.STATISTICS:
-        npu_md5_compare = md5_find(npu_json_data['data'])
-        bench_md5_compare = md5_find(bench_json_data['data'])
+        npu_md5_compare = md5_find(npu_json_data['data'], json_type)
+        bench_md5_compare = md5_find(bench_json_data['data'], json_type)
         if npu_md5_compare == bench_md5_compare:
             return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:
