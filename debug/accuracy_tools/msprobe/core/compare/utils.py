@@ -85,7 +85,7 @@ def check_and_return_dir_contents(dump_dir, prefix):
 def read_op(op_data, op_name):
     if Const.DEBUG in op_name.split(Const.SEP):
         op_parsed_list = op_item_parse(op_data, op_name)
-    if Const.PARAMS_GRAD in op_name.split(Const.SEP):
+    elif Const.PARAMS_GRAD in op_name.split(Const.SEP):
         op_parsed_list = op_item_parse(op_data, op_name)
     else:
         op_parsed_list = []

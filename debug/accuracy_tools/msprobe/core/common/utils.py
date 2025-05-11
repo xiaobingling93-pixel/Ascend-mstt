@@ -300,7 +300,7 @@ def set_dump_path(input_param):
         bench_path is not None and bench_path.endswith("dump.json")
     debug_json_path_valid = npu_path is not None and npu_path.endswith("debug.json") and \
         bench_path is not None and bench_path.endswith("debug.json")
-    if not dump_json_path_valid or not debug_json_path_valid:
+    if not dump_json_path_valid and not debug_json_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
