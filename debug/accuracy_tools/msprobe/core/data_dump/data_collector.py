@@ -128,7 +128,6 @@ class DataCollector:
         if self.config.level == Const.LEVEL_L2:
             return
         if need_stack:
-            self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
             self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
@@ -142,7 +141,6 @@ class DataCollector:
             data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         self.set_is_recomputable(data_info, is_recompute)
         if need_stack:
-            self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
             self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
