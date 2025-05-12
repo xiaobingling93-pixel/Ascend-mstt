@@ -27,8 +27,14 @@ void MindSporeTrigger::TriggerOnStepBegin(uint32_t device, uint32_t curStep, Ext
 {
     DEBUG_FUNC_TRACE();
     CleanErrorInfoCache();
+    
+    auto& dumper = MSAclDumper::GetInstance();
+    dumper.OnStepBegin(
+        device,
+        dumper.GetMsprobeStep(),
+        args
+    );
 
-    MSAclDumper::GetInstance().OnStepBegin(device, curStep, args);
     stepBeginFlag = true;
 
     CleanErrorInfoCache();

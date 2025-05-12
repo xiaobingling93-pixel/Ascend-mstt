@@ -133,25 +133,7 @@ void PrecisionDebugger::Stop()
 
 void PrecisionDebugger::Step()
 {
-    return Step(1);
-}
-
-void PrecisionDebugger::Step(uint32_t step)
-{
-    DEBUG_FUNC_TRACE();
-    if (!initialized) {
-        return;
-    }
-
-    if (step > UINT32_MAX - curStep) {
-        throw std::runtime_error("Step over upper limit(4294967295).");
-    }
-    curStep += step;
-    CALL_ACL_API(AclrtSynchronizeDevice);
-
-    for (auto task : subDebuggers) {
-        task->OnStep(curStep);
-    }
+    MSAclDumper::GetInstance().Step();
 }
 
 }

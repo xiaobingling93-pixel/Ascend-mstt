@@ -180,8 +180,9 @@ class PrecisionDebugger:
                 if dynamic_set_dump:
                     _set_init_iter(0)
             if dynamic_set_dump:
-                if (not instance.config.rank or Runtime.rank_id in instance.config.rank) and \
-                    (not instance.config.step or Runtime.step_count in instance.config.step):
+                valid_rank = (not instance.config.rank or Runtime.rank_id in instance.config.rank)
+                valid_step = (not instance.config.step or Runtime.step_count in instance.config.step)
+                if valid_rank and valid_step:
                     _dump_start()
 
         instance.first_start = True

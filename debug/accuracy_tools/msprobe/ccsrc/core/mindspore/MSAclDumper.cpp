@@ -51,6 +51,12 @@ void MSAclDumper::OnStepEnd(ExtArgs& args)
     AclDumper::GetInstance().FinalizeDump(args);
 }
 
+void MSAclDumper::Step()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    msprobeStep++;
+}
+
 __attribute__((constructor)) void RegisterMSAclDumper()
 {
     MSAclDumper::GetInstance().Register();
