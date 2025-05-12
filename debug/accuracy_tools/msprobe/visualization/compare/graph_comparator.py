@@ -71,27 +71,6 @@ class GraphComparator:
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index
         node.data.update(other_dict)
 
-    @recursion_depth_decorator('GraphComparator._compare_nodes_fuzzy', max_depth=MAX_DEPTH)
-    def _compare_nodes_fuzzy(self, node_n):
-        if node_n.op != NodeOp.function_api:
-            # 模块经过模糊匹配
-            node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node_n, self.graph_b.node_map.get(node_n.id))
-            if node_b:
-                self._process_matched_nodes(node_n, node_b, ancestors_n, ancestors_b)
-                # 匹配上的两个模块中的所有api, 忽略dump调用次数，按照名称一致+模块中的调用顺序进行匹配
-                recount_result_n = self._recount_api_node(node_n)
-                recount_result_b = self._recount_api_node(node_b)
-                for recount_node_id, node_id_n in recount_result_n.items():
-                    api_node_n = self.graph_n.node_map.get(node_id_n)
-                    if not api_node_n:
-                        continue
-                    api_node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(
-                        api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)))
-                    if api_node_b:
-                        self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
-        for sub_node in node_n.subnodes:
-            self._compare_nodes_fuzzy(sub_node)
-
     def _compare_nodes(self, node_n):
         """
         遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
@@ -118,6 +97,30 @@ class GraphComparator:
         node_list = [node_n]
         while node_list:
             compare_single_node(node_list.pop(0))
+
+    def _compare_nodes_fuzzy(self, node_n):
+        def compare_single_nodes_fuzzy(node):
+            if node.op != NodeOp.function_api:
+                # 模块经过模糊匹配
+                node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node, self.graph_b.node_map.get(node.id))
+                if node_b:
+                    self._process_matched_nodes(node, node_b, ancestors_n, ancestors_b)
+                    # 匹配上的两个模块中的所有api, 忽略dump调用次数，按照名称一致+模块中的调用顺序进行匹配
+                    recount_result_n = self._recount_api_node(node)
+                    recount_result_b = self._recount_api_node(node_b)
+                    for recount_node_id, node_id_n in recount_result_n.items():
+                        api_node_n = self.graph_n.node_map.get(node_id_n)
+                        if not api_node_n:
+                            continue
+                        api_node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(
+                            api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)))
+                        if api_node_b:
+                            self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
+            node_list.extend(node.subnodes)
+
+        node_list = [node_n]
+        while node_list:
+            compare_single_nodes_fuzzy(node_list.pop(0))
 
     def _parse_param(self, dump_path_param, output_path):
         self.dump_path_param = dump_path_param
