@@ -397,7 +397,7 @@ class HighLight:
         def err_call(args):
             logger.error("Multiprocessing malicious value check failed! Reason: {}".format(args))
             try:
-                pool.terminate()
+                pool.close()
             except OSError:
                 logger.error("Pool terminate failed")
 

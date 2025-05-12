@@ -214,7 +214,7 @@ def _compare_graph_ranks(input_param, args, step=None):
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
-                pool.terminate()
+                pool.close()
             except OSError as e:
                 logger.error(f'Error occurred while terminating the pool: {e}')
 
@@ -305,7 +305,7 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
-                pool.terminate()
+                pool.close()
             except OSError as e:
                 logger.error(f'Error occurred while terminating the pool: {e}')
 
