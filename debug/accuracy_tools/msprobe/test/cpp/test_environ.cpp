@@ -2,8 +2,8 @@
 #include <gtest/gtest.h>
 
 #include "include/test_utils.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "base/Environment.hpp"
+#include "base/DebuggerConfig.h"
+#include "base/Environment.h"
 
 using namespace MindStudioDebugger;
 using namespace MindStudioDebugger::Environment;

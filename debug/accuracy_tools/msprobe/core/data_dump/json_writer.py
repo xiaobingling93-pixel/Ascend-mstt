@@ -35,7 +35,7 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
-        self.flush_size = 1000
+        self.flush_size = 20000
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
@@ -101,6 +101,7 @@ class DataWriter:
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
+        self.cache_debug = {}
 
     def initialize_json_file(self, **kwargs):
         if self.debug_file_path and not self.cache_debug:
@@ -148,9 +149,13 @@ class DataWriter:
             else:
                 dump_data.update(new_data)
 
-    def update_stack(self, new_data):
+    def update_stack(self, name, stack_data):
         with lock:
-            self.cache_stack.update(new_data)
+            api_list = self.cache_stack.get(stack_data)
+            if api_list is None:
+                self.cache_stack.update({stack_data: [name]})
+            else:
+                api_list.append(name)
 
     def update_construct(self, new_data):
         with lock:
@@ -165,7 +170,11 @@ class DataWriter:
         save_json(file_path, self.cache_data, indent=1)
 
     def write_stack_info_json(self, file_path):
-        save_json(file_path, self.cache_stack, indent=1)
+        num, new_cache_stack = 0, {}
+        for key, value in self.cache_stack.items():
+            new_cache_stack[num] = [value, key]
+            num += 1
+        save_json(file_path, new_cache_stack, indent=1)
 
     def write_construct_info_json(self, file_path):
         save_json(file_path, self.cache_construct, indent=1)

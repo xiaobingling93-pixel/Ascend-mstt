@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import functools
 from collections import namedtuple
 
 from torch.utils.data import dataloader
@@ -76,6 +76,7 @@ class PrecisionDebugger:
             self.service = Service(self.config)
             self.module_dumper = ModuleDumper(self.service)
             self.enable_dataloader = self.config.enable_dataloader
+            self.ori_customer_func = {}
             if self.enable_dataloader:
                 logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
@@ -180,6 +181,31 @@ class PrecisionDebugger:
         check_init_step(step)
         instance.service.init_step = step
         instance.service.loop = 0
+
+    @classmethod
+    def register_custom_api(cls, module, api, api_prefix=None):
+        if not api_prefix:
+            api_prefix = getattr(module, "__name__", "Custom")
+        if not isinstance(api_prefix, str):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, "api_prefix must be string")
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.register_custom_api(module, api, api_prefix)
+
+    @classmethod
+    def restore_custom_api(cls, module, api):
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.restore_custom_api(module, api)
 
 
 def module_dump(module, dump_name):

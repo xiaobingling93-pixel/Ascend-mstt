@@ -260,6 +260,31 @@ class PrecisionDebugger:
         instance.service.loop = 0
 
     @classmethod
+    def register_custom_api(cls, module, api_name, api_prefix=None):
+        if not api_prefix:
+            api_prefix = getattr(module, "__name__", "Custom")
+        if not isinstance(api_prefix, str):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, "api_prefix must be string")
+        if not hasattr(module, api_name):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api_name}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.register_custom_api(module, api_name, api_prefix)
+
+    @classmethod
+    def restore_custom_api(cls, module, api):
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.restore_custom_api(module, api)
+
+    @classmethod
     def _need_service(cls):
         instance = cls._instance
         if not instance:

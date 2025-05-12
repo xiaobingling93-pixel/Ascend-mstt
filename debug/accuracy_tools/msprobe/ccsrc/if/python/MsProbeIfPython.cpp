@@ -16,9 +16,9 @@
 
 #include <Python.h>
 
-#include "PrecisionDebuggerIfPython.hpp"
-#include "CPythonAgent.hpp"
-#include "ACLDump.hpp"
+#include "PrecisionDebuggerIfPython.h"
+#include "CPythonAgent.h"
+#include "ACLDump.h"
 
 namespace MindStudioDebugger {
 
@@ -27,7 +27,7 @@ PyDoc_STRVAR(MsProbeCModuleDoc,
 class _PrecisionDebugger: PrecisionDebugger in CXX \n\
 class _DebuggerConfig: Configuration data of PrecisionDebugger \n\
 class CPythonAgent: Used for front-end and back-end code interactions \n\
- \n\
+    \n\
 ...");
 
 static struct PyModuleDef g_MsProbeCModule = {

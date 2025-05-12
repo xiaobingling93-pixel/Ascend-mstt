@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.common.utils import load_stack_json
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
@@ -45,7 +46,7 @@ class GraphBuilder:
         """
         construct_dict = load_json(construct_path)
         dump_dict = load_json(data_path)
-        stack_dict = load_json(stack_path)
+        stack_dict = load_stack_json(stack_path)
         if not complete_stack:
             GraphBuilder._simplify_stack(stack_dict)
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
