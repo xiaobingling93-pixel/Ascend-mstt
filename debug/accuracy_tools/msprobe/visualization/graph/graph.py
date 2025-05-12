@@ -146,7 +146,7 @@ class Graph:
         """
         return self.node_map.get(node_id, None)
 
-    def to_dict(self):
+    def to_dict(self, compare_mode=None):
         """
         用于数据输出
         """
@@ -155,7 +155,7 @@ class Graph:
         result[GraphConst.JSON_DATA_KEY] = self.data_path
         result[GraphConst.JSON_NODE_KEY] = {}
         for node_id in self.node_map:
-            info = self.node_map.get(node_id).to_dict()
+            info = self.node_map.get(node_id).to_dict(compare_mode)
             result[GraphConst.JSON_NODE_KEY][node_id] = info
         return result
 

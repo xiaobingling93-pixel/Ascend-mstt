@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import json
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.visualization.utils import ToolTip, GraphConst, str2float
@@ -23,6 +24,12 @@ class ModeAdapter:
         self.compare_mode = compare_mode
         self.csv_data = []
         self.compare_nodes = []
+
+    @staticmethod
+    def _is_invalid(value):
+        if not isinstance(value, float):
+            return False
+        return math.isnan(value) or math.isinf(value)
 
     @staticmethod
     def _add_md5_compare_data(node_data, compare_data_dict):
@@ -48,6 +55,8 @@ class ModeAdapter:
         for key, value in node_data.items():
             if not isinstance(value, dict):
                 continue
+            if value.get(Const.MAX) is None:
+                continue
             compare_data = compare_data_dict.get(key)
             if compare_data:
                 headers = CompareConst.COMPARE_RESULT_HEADER
@@ -66,9 +75,13 @@ class ModeAdapter:
                 if thousandth is not None:
                     numbers.append(thousandth)
                 node_data[key] = value
+            if ModeAdapter._is_invalid(value.get(Const.MAX)) or ModeAdapter._is_invalid(value.get(Const.MIN)):
+                numbers.append(CompareConst.N_A)
         # 双千指标都是None的异常情况
         if not numbers:
             min_thousandth = None
+        elif CompareConst.N_A in numbers:
+            min_thousandth = CompareConst.N_A
         else:
             min_thousandth = min(numbers + [min_thousandth])
         return min_thousandth
@@ -79,6 +92,8 @@ class ModeAdapter:
         # data_info: {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [2, 536320], 'Max': 9.66036224, ...}
         for key, data_info in node_data.items():
             if not isinstance(data_info, dict):
+                continue
+            if data_info.get(Const.MAX) is None:
                 continue
             compare_data = compare_data_dict.get(key)
             if compare_data:
@@ -91,6 +106,8 @@ class ModeAdapter:
                     relative_err = str2float(data_info.get(item))
                     max_relative_err = max(max_relative_err, relative_err)
                 node_data[key] = data_info
+            if ModeAdapter._is_invalid(data_info.get(Const.MAX)) or ModeAdapter._is_invalid(data_info.get(Const.MIN)):
+                max_relative_err = GraphConst.MAX_INDEX_KEY
         max_relative_err = 1 if max_relative_err > 1 else max_relative_err
         return max_relative_err
 
@@ -132,7 +149,11 @@ class ModeAdapter:
             ModeAdapter._check_list_len(compare_data_dict_list, 1)
             min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict_list[0])
             min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict_list[0])
-            if min_thousandth_in is not None and min_thousandth_out is not None:
+            if CompareConst.N_A == min_thousandth_out:
+                change_percentage = GraphConst.MAX_INDEX_KEY
+            elif CompareConst.N_A == min_thousandth_in:
+                change_percentage = GraphConst.MIN_INDEX_KEY
+            elif min_thousandth_in is not None and min_thousandth_out is not None:
                 change_percentage = min_thousandth_in - min_thousandth_out
             else:
                 change_percentage = GraphConst.MIN_INDEX_KEY
