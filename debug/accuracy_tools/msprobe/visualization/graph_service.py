@@ -90,7 +90,7 @@ def _export_compare_graph_result(args, result):
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graphs[0], graphs[1], graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task,
-                                      args.overflow_check)
+                                      args.overflow_check, graph_comparator.ma.compare_mode)
     try:
         GraphBuilder.to_json(output_path, export_config)
         logger.info(f'Exporting compare graph result successfully, the result file is saved in {output_path}')
