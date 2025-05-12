@@ -97,8 +97,7 @@ class GraphComparator:
         遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
         这里采用先序遍历，好处在于当这个节点被比较时，他的先序已经被匹配，这可以为后续的模糊匹配提供重要信息
         """
-        def compare_single_node():
-            node = node_list.pop(0)
+        def compare_single_node(node):
             if self.layer_mapping:
                 node_b, ancestors_n, ancestors_b = Graph.mapping_match(node, self.graph_b, self.mapping_dict)
                 if node_b:
@@ -118,7 +117,7 @@ class GraphComparator:
 
         node_list = [node_n]
         while node_list:
-            compare_single_node()
+            compare_single_node(node_list.pop(0))
 
     def _parse_param(self, dump_path_param, output_path):
         self.dump_path_param = dump_path_param
