@@ -290,7 +290,7 @@ class CompareOps:
 
 
 def error_value_process(n_value):
-    if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE or n_value == CompareConst.NONE:
+    if n_value in [CompareConst.READ_NONE, CompareConst.UNREADABLE, CompareConst.NONE]:
         return CompareConst.UNSUPPORTED, ""
     if n_value == CompareConst.SHAPE_UNMATCH:
         return CompareConst.SHAPE_UNMATCH, ""
