@@ -17,7 +17,7 @@ import os
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import check_path_before_create, save_json, create_directory, remove_path, \
+from msprobe.core.common.file_utils import save_json, create_directory, remove_path, \
     check_file_or_directory_path, load_json
 
 
@@ -41,12 +41,7 @@ class AnomalyDataWriter:
 
     def init_detected_json(self):
         """初始化落盘文件"""
-        check_path_before_create(self.dump_path)
-        if not os.path.exists(self.dump_path):
-            create_directory(self.dump_path)
-
-        if not os.path.exists(self.dump_rank_dir):
-            create_directory(self.dump_rank_dir)
+        create_directory(self.dump_rank_dir)
 
         if os.path.exists(self.json_path):
             check_file_or_directory_path(self.json_path, isdir=False)
