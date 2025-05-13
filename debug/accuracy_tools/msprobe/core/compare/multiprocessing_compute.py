@@ -53,7 +53,7 @@ def _ms_graph_handle_multi_process(func, result_df, mode):
     def err_call(args):
         logger.error('multiprocess compare failed! Reason: {}'.format(args))
         try:
-            pool.terminate()
+            pool.close()
         except OSError as e:
             logger.error(f'pool terminate failed: {str(e)}')
 
@@ -268,7 +268,7 @@ class CompareRealData:
         def err_call(args):
             logger.error('multiprocess compare failed! Reason: {}'.format(args))
             try:
-                pool.terminate()
+                pool.close()
             except OSError:
                 logger.error("pool terminate failed")
 
