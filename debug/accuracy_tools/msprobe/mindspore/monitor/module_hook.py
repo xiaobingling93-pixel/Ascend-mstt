@@ -316,11 +316,11 @@ class TrainerMon:
                 )
             )
 
-        # 初始化anomaly detected文件目录
-        if self.anomaly_data_factory:
-            self.anomaly_data_writer = AnomalyDataWriter(os.path.join(self.output_base_dir, "anomaly_detected"),
-                                                         self.rank)
-            self.anomaly_data_writer.init_detected_json()
+            # 初始化anomaly detected文件目录
+            if self.anomaly_data_factory:
+                self.anomaly_data_writer = AnomalyDataWriter(os.path.join(self.output_base_dir, "anomaly_detected"),
+                                                             self.rank)
+                self.anomaly_data_writer.init_detected_json()
 
     def common_info(self):
         if not self.xy_distribution:
@@ -388,6 +388,7 @@ class TrainerMon:
                     if self.anomaly_data_factory:
                         self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
                     self.summary_writer.clear_anomalies()
+
                     self.call_id = 0
                     self.param_name_call_id.clear()
 
