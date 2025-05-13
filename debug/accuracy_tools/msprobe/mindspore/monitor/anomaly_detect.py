@@ -105,7 +105,7 @@ class AnomalyScanner:
     def scan(scan_rules: List[ScanRule], history, cur):
         anomaly = False
         for rule in scan_rules:
-            anomaly = rule.apply(history, cur)
+            anomaly = rule.apply(cur, history=history)
             if anomaly:
                 return anomaly, rule.name
         return anomaly, None
