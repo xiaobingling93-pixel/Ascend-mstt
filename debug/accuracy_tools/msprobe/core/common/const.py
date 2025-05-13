@@ -749,7 +749,7 @@ class MonitorConst:
         "DeepSpeedZeroOptimizer_Stage3"
     )
     DEEPSPEED_ZERO_OPT_FILTER = "DeepSpeedZeroOptimizer"
-    RULE_NAME = ['AnomalyTurbulence']
+    RULE_NAME = ['AnomalyTurbulence', 'AnomalyNan']
 
     SLICE_SIZE = 20480
     # used for name

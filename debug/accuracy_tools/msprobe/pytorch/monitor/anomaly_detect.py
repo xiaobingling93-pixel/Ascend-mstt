@@ -64,7 +64,6 @@ class AnomalyNan(ScanRule):
         return math.isnan(cur) or (self.threshold is not None and cur > self.threshold)
 
 
-
 class AnomalyScanner:
 
     @staticmethod
