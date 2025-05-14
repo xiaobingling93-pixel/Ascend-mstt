@@ -13,6 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+export interface NodeInfoResult {
+  success: boolean;
+  data?: {
+    'npu'?: {
+      name?: string;
+      inputData?: Record<string, unknown>;
+      outputData?: Record<string, unknown>;
+      stackData?: string;
+      suggestions?: Record<string, unknown>;
+    } | null,
+    'bench'?: {
+      name?: string;
+      inputData?: Record<string, unknown>;
+      outputData?: Record<string, unknown>;
+      stackData?: string;
+      suggestions?: Record<string, unknown>;
+    } | null
+  };
+  error?: string;
+}
 
-import './graph_ascend';
-import './index.css';
+export type NodeInfoType = NodeInfoResult['data']['npu']
