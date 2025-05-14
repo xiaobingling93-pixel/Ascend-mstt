@@ -13,6 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import * as d3 from 'd3';
+
+export function fetchPbTxt(filepath: string): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    fetch(filepath).then((res) => {
+      // Fetch does not reject for 400+.
+      if (res.ok) {
+        res.arrayBuffer().then(resolve, reject);
+      } else {
+        res.text().then(reject, reject);
+      }
+    });
+  });
+}
+
 
 const removePrototypePollution = (obj: any): void => {
   if (obj && typeof obj === 'object') {
@@ -35,3 +50,214 @@ export const safeJSONParse = (str: any, defaultValue: any = null): any => {
     return defaultValue;
   }
 };
+
+/**
+ * 根据文本内容、字体大小和最大宽度，判断是否需要截断文本
+ * @param text 文本内容
+ * @param fontSize 
+ * @param maxWidth 
+ * @returns 
+ */
+export function maybeTruncateString(text: string, fontSize: number, maxWidth: number): string {
+  if (!text) {
+    return '';
+  }
+  if (measureTextWidth(text, fontSize) <= maxWidth) {
+    return text;
+  }
+
+  let start = 0;
+  let end = text.length;
+  while (start < end) {
+    const middle = start + Math.round((end - start) / 2);
+    const substring = `${text.slice(0, middle)}…`;
+    if (measureTextWidth(substring, fontSize) <= maxWidth) {
+      start = middle;
+    } else {
+      end = middle - 1;
+    }
+  }
+  return start === 0 ? text[0] : `${text.slice(0, start)}…`;
+}
+/**
+* 计算文本宽度
+* @param text 文本内容
+* @param fontSize  字体大小
+* @returns 
+*/
+export function measureTextWidth(text: string, fontSize: number): number {
+  const canvas = document.createElement('canvas');
+  const measurerContext = canvas.getContext('2d');
+  if (measurerContext) {
+    measurerContext.font = `${fontSize}px Roboto, sans-serif`;
+  }
+  return measurerContext?.measureText(text).width as number;
+}
+/**
+ * 从 transform 字符串中解析出 x, y 和 scale 值
+ * @param transformStr 如 "translate(100,200) scale(1.5)" 或 "translate(50,60)"
+ * @returns 包含 x, y, scale 的对象，scale 默认为 1
+ */
+export function parseTransform(transformStr: string): { x: number; y: number; scale: number } {
+  // 默认值
+  const result = { x: 0, y: 0, scale: 1 };
+
+  if (!transformStr) return result;
+
+  // 匹配 translate(X,Y) 部分
+  const translateMatch = transformStr.match(/translate\(([^,]+),([^)]+)\)/);
+  if (translateMatch) {
+    result.x = parseFloat(translateMatch[1].trim());
+    result.y = parseFloat(translateMatch[2].trim());
+  }
+
+  // 匹配 scale(Z) 部分
+  const scaleMatch = transformStr.match(/scale\(([^)]+)\)/);
+  if (scaleMatch) {
+    result.scale = parseFloat(scaleMatch[1].trim());
+  }
+
+  return result;
+}
+
+/**
+ * 更改图形的位置
+ * @param element 
+ * @param x 
+ * @param y 
+ * @param scale 
+ * @param duration 
+ */
+
+export function changeGraphPosition(element: HTMLElement, x, y, scale, duration = 16) {
+  d3.select(element).transition().duration(duration).attr('transform', `translate(${x},${y}) scale(${scale})`);
+}
+
+export function darkenColor(color: string, amount: number): string {
+  // 统一提取 RGB(A) 分量
+  let r: number, g: number, b: number, a: number = 1;
+
+  // 处理十六进制格式
+  if (color.startsWith("#")) {
+    const hex = color.replace(/^#/, "");
+    const hexParts = hex.match(/[0-9a-f]{2}|[0-9a-f]{1,2}/gi) || [];
+
+    // 处理缩写格式 (#abc → #aabbcc)
+    const normalizedHex = hexParts
+      .map(p => p.length === 1 ? p + p : p)
+      .join("")
+      .padEnd(6, "0");
+
+    r = parseInt(normalizedHex.substring(0, 2), 16);
+    g = parseInt(normalizedHex.substring(2, 4), 16);
+    b = parseInt(normalizedHex.substring(4, 6), 16);
+
+    // 处理 Alpha 通道 (#aabbccdd)
+    if (normalizedHex.length >= 8) {
+      a = parseInt(normalizedHex.substring(6, 8), 16) / 255;
+    }
+  }
+  // 处理 RGB/RGBA 格式
+  else if (color.startsWith("rgb")) {
+    const match = color.match(/(\d*\.?\d+%?)/g) || [];
+    const components = match.map(parseComponent);
+
+    [r, g, b] = components.slice(0, 3).map(v => Math.min(255, v));
+    a = components[3] !== undefined ? components[3] : 1;
+  }
+  // 无效格式直接返回
+  else {
+    return color;
+  }
+
+  // 应用变暗逻辑（考虑 Alpha 通道）
+  const applyDarkening = (value: number) =>
+    Math.max(0, Math.floor(value * a - amount));
+
+  // 转换为十六进制
+  const toHex = (value: number) =>
+    Math.min(255, Math.max(0, value))
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${[
+    applyDarkening(r),
+    applyDarkening(g),
+    applyDarkening(b)
+  ].map(toHex).join("")}`;
+
+  // 辅助函数：解析 RGB 分量（支持百分比和数值）
+  function parseComponent(comp: string): number {
+    if (comp.includes("%")) {
+      return Math.round(parseFloat(comp) * 2.55);
+    }
+    return parseInt(comp, 10);
+  }
+}
+
+/**
+ * Compares tag names asciinumerically broken into components.
+ * <p>This is the comparison function used for sorting most string values in
+ * TensorBoard. Unlike the standard asciibetical comparator, this function
+ * knows that 'a10b' > 'a2b'. Fixed point and engineering notation are
+ * supported. This function also splits the input by slash and underscore to
+ * perform array comparison. Therefore it knows that 'a/a' < 'a+/a' even
+ * though '+' < '/' in the ASCII table.
+ */
+export function compareTagNames(a: string, b: string): number {
+  let ai = 0;
+  let bi = 0;
+  while (true) {
+    // Handle end of strings
+    if (ai === a.length) {
+      return bi === b.length ? 0 : -1;
+    }
+    if (bi === b.length) {
+      return 1;
+    }
+
+    // Check for digits
+    if (isDigit(a[ai]) && isDigit(b[bi])) {
+      const ais = ai;
+      const bis = bi;
+
+      // Consume all consecutive digits (simplified from original)
+      while (ai < a.length && isDigit(a[ai])) ai++;
+      while (bi < b.length && isDigit(b[bi])) bi++;
+
+      const an = parseInt(a.slice(ais, ai), 10);
+      const bn = parseInt(b.slice(bis, bi), 10);
+
+      if (an !== bn) {
+        return an - bn;
+      }
+      continue;
+    }
+
+    // Regular character comparison
+    if (a[ai] < b[bi]) {
+      return -1;
+    }
+    if (a[ai] > b[bi]) {
+      return 1;
+    }
+
+    ai++;
+    bi++;
+  }
+}
+
+// Simplified digit check
+function isDigit(c: string): boolean {
+  return c >= '0' && c <= '9';
+}
+
+export function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+
