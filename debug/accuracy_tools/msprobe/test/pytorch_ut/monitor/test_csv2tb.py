@@ -32,7 +32,6 @@ get_api_register().restore_all_api()
 base_dir = os.path.dirname(os.path.realpath(__file__))
 config_json_path = os.path.join(base_dir, "config", "all_config.json")
 monitor_output = os.path.join(base_dir, "./monitor_output_csv2tb")
-os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = monitor_output
 
 
 def seed_all(seed=1234, mode=False):
@@ -122,6 +121,10 @@ class TestGradMonitor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = monitor_output
+        if os.path.exists(monitor_output):
+            shutil.rmtree(monitor_output)
+
         loss_fun = nn.CrossEntropyLoss()
         test_module = MockModule()
         nn.init.constant_(test_module.linear.weight, 1.0)
@@ -143,13 +146,10 @@ class TestGradMonitor(unittest.TestCase):
         for dirname in os.listdir(monitor_output):
             if "csv2tensorboard" in dirname:
                 cls.csv2tb_dirpath = os.path.join(monitor_output, dirname, "rank0")
+        os.environ.pop(MonitorConst.MONITOR_OUTPUT_DIR)
 
     def setUp(self):
         self.maxDiff = None
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(monitor_output)
 
     def test_actv(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "actv_0-2.csv"))
