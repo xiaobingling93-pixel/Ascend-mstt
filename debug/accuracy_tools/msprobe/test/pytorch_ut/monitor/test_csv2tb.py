@@ -122,8 +122,6 @@ class TestGradMonitor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        shutil.rmtree(monitor_output)
-
         loss_fun = nn.CrossEntropyLoss()
         test_module = MockModule()
         nn.init.constant_(test_module.linear.weight, 1.0)
@@ -151,8 +149,7 @@ class TestGradMonitor(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # shutil.rmtree(monitor_output)
-        pass
+        shutil.rmtree(monitor_output)
 
     def test_actv(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "actv_0-2.csv"))
