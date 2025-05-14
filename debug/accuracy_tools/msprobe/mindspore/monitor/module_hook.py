@@ -35,6 +35,7 @@ from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
+from msprobe.mindspore.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
     get_process_group
 
@@ -315,6 +316,12 @@ class TrainerMon:
                 )
             )
 
+            # 初始化anomaly detected文件目录
+            if self.anomaly_data_factory:
+                self.anomaly_data_writer = AnomalyDataWriter(os.path.join(self.output_base_dir, "anomaly_detected"),
+                                                             self.rank)
+                self.anomaly_data_writer.init_detected_json()
+
     def common_info(self):
         if not self.xy_distribution:
             logger.info("> module input/output input_grad/output_grad is not monitored. ")
@@ -366,6 +373,9 @@ class TrainerMon:
                             context.step - self.start_step) % self.step_interval == 0)
                 if module_rank_valid and step_condition:
                     self.has_collect_times += 1
+
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_factory.set_call_id(self.param_name_call_id)
                     self.write_xy_tb(context.step)
                     self.write_grad_tb(context.step)
                     self.write_mv_tb(context)
@@ -375,7 +385,10 @@ class TrainerMon:
                         self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
                     context.metric_dict.clear()
 
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
                     self.summary_writer.clear_anomalies()
+
                     self.call_id = 0
                     self.param_name_call_id.clear()
 
