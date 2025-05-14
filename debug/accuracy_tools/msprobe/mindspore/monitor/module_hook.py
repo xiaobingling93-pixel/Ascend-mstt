@@ -550,7 +550,11 @@ class TrainerMon:
     def generate_param_metrics(self, opt_context, stage=MonitorConst.PRE_PARAM):
         if not self.param_distribution:
             return
-        tag2param = {self.name2tag.get(name, {}).get(stage): param for name, param in self.name2param.items() if param.numel() != 0}
+        tag2param = {
+            self.name2tag.get(name, {}).get(stage): param 
+            for name, param in self.name2param.items() 
+            if param.numel() != 0
+        }
         get_metrics(self.ops, tag2param, self.eps, opt_context.param_metric)
 
     def get_mv_for_ms(self, opt):
@@ -659,9 +663,15 @@ class TrainerMon:
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
-                keywords = [MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.PRE_PARAM, MonitorConst.POST_PARAM]
+                keywords = [
+                    MonitorConst.PRE_GRAD,
+                    MonitorConst.POST_GRAD,
+                    MonitorConst.PRE_PARAM,
+                    MonitorConst.POST_PARAM
+                ]
                 self.name2tag[name] = {
-                    k: get_summary_writer_tag_name(name, k, self.rank) for  k in keywords
+                    k: get_summary_writer_tag_name(name, k, self.rank) 
+                    for k in keywords
                 }
                 index += 1
 

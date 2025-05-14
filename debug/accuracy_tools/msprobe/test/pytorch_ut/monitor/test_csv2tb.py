@@ -480,7 +480,7 @@ class TestGradMonitor(unittest.TestCase):
 
     
     def test_param(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"param_0-2.csv"))
+        data = parse_step_fn(os.path.join(timestamp_dirpath,"param_origin_0-2.csv"))
         result = {
             'vp0:linear.bias': {
                 0: {'nans': 0.0, 'norm': 2.236068},
@@ -494,7 +494,7 @@ class TestGradMonitor(unittest.TestCase):
                 }
             }
         self.assertEqual(dict_equal(data, result), True)
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "param"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "param_origin"))
         tb_result = {
             'vp0:linear.weight/norm': [
                 (0, 7.071067810058594), 
