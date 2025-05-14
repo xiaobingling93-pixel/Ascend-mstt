@@ -15,6 +15,7 @@
 import datetime
 import os
 import re
+import time
 from multiprocessing import Process
 
 import pytz
@@ -113,6 +114,7 @@ def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
                 all_step_result = update_dict(all_step_result, parse_step_result)
             if all_step_result:
                 write_step(output_dirpath, all_step_result, rank, data_type)
+    time.sleep(1)
 
 
 def check_process_num(process_num):

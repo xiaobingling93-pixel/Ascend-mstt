@@ -17,7 +17,6 @@ import os
 import shutil
 import random
 import unittest
-import pytest
 import torch
 import numpy as np
 import torch.nn as nn
@@ -30,13 +29,10 @@ from msprobe.pytorch.hook_module.api_register import get_api_register
 
 get_api_register().restore_all_api()
 
-
 base_dir = os.path.dirname(os.path.realpath(__file__))
 config_json_path = os.path.join(base_dir, "config", "all_config.json")
 monitor_output = os.path.join(base_dir, "./monitor_output_csv2tb")
 os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = monitor_output
-timestamp_dirpath = None
-csv2tb_dirpath = None
 
 
 def seed_all(seed=1234, mode=False):
@@ -46,8 +42,8 @@ def seed_all(seed=1234, mode=False):
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(mode)
 
-seed_all()
 
+seed_all()
 
 inputs = [torch.rand(10, 10) for _ in range(10)]
 labels = [torch.randint(0, 5, (10,)) for _ in range(10)]
@@ -63,31 +59,6 @@ class MockModule(nn.Module):
         x1 = self.linear(x)
         x2 = self.relu(x1)
         return x2
-
-
-def data_collect():
-    loss_fun = nn.CrossEntropyLoss()
-    test_module = MockModule()
-    nn.init.constant_(test_module.linear.weight, 1.0)
-    nn.init.constant_(test_module.linear.bias, 1.0)
-    optimizer = torch.optim.Adam(test_module.parameters())
-
-    monitor = TrainerMon(config_json_path, params_have_main_grad=False)
-    monitor.set_monitor(test_module, grad_acc_steps=1, optimizer=optimizer)
-
-    for input_data, label in zip(inputs, labels):
-        output = test_module(input_data)
-        loss = loss_fun(output, label)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    global timestamp_dirpath, csv2tb_dirpath
-    timestamp_dirpath = os.path.join(monitor_output, os.listdir(monitor_output)[0])
-    csv2tensorboard_by_step(monitor_output)
-    for dirname in os.listdir(monitor_output):
-        if "csv2tensorboard" in dirname:
-            csv2tb_dirpath = os.path.join(monitor_output, dirname, "rank0")
 
 
 def extract_scalars_from_tensorboard(log_dir):
@@ -144,157 +115,84 @@ def compare_scalar_dicts(dict1, dict2):
     return True
 
 
-@pytest.fixture(scope="session")
-def setup_all():
-    data_collect()
-    yield
-    shutil.rmtree(monitor_output)
-
-@pytest.mark.usefixtures("setup_all")
 class TestGradMonitor(unittest.TestCase):
+    timestamp_dirpath = None
+    csv2tb_dirpath = None
+
+    @classmethod
+    def setUpClass(cls):
+
+        shutil.rmtree(monitor_output)
+
+        loss_fun = nn.CrossEntropyLoss()
+        test_module = MockModule()
+        nn.init.constant_(test_module.linear.weight, 1.0)
+        nn.init.constant_(test_module.linear.bias, 1.0)
+        optimizer = torch.optim.Adam(test_module.parameters())
+
+        monitor = TrainerMon(config_json_path, params_have_main_grad=False)
+        monitor.set_monitor(test_module, grad_acc_steps=1, optimizer=optimizer)
+
+        for input_data, label in zip(inputs, labels):
+            output = test_module(input_data)
+            loss = loss_fun(output, label)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        cls.timestamp_dirpath = os.path.join(monitor_output, os.listdir(monitor_output)[0])
+        csv2tensorboard_by_step(monitor_output)
+        for dirname in os.listdir(monitor_output):
+            if "csv2tensorboard" in dirname:
+                cls.csv2tb_dirpath = os.path.join(monitor_output, dirname, "rank0")
 
     def setUp(self):
         self.maxDiff = None
-    
+
+    @classmethod
+    def tearDownClass(cls):
+        # shutil.rmtree(monitor_output)
+        pass
+
     def test_actv(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"actv_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "actv_0-2.csv"))
         result = {
             'vp0:.input:micro0': {
-                0: {'nans': 0.0,'norm': 5.550016},
-                1: {'nans': 0.0,'norm': 5.975112},
-                2: {'nans': 0.0,'norm': 5.789881}
-                },
+                0: {'nans': 0.0, 'norm': 5.550016},
+                1: {'nans': 0.0, 'norm': 5.975112},
+                2: {'nans': 0.0, 'norm': 5.789881}
+            },
             'vp0:.output:micro0': {
-                0: {'nans': 0.0,'norm': 41.842655},
-                1: {'nans': 0.0,'norm': 44.40981},
-                2: {'nans': 0.0,'norm': 43.578354}
-                },
+                0: {'nans': 0.0, 'norm': 41.842655},
+                1: {'nans': 0.0, 'norm': 44.40981},
+                2: {'nans': 0.0, 'norm': 43.578354}
+            },
             'vp0:linear.input:micro0': {
-                0: {'nans': 0.0,'norm': 5.550016},
-                1: {'nans': 0.0,'norm': 5.975112},
-                2: {'nans': 0.0,'norm': 5.789881}
-                },
+                0: {'nans': 0.0, 'norm': 5.550016},
+                1: {'nans': 0.0, 'norm': 5.975112},
+                2: {'nans': 0.0, 'norm': 5.789881}
+            },
             'vp0:linear.output:micro0': {
-                0: {'nans': 0.0,'norm': 41.842655},
-                1: {'nans': 0.0,'norm': 44.40981},
-                2: {'nans': 0.0,'norm': 43.578354}
-                },
+                0: {'nans': 0.0, 'norm': 41.842655},
+                1: {'nans': 0.0, 'norm': 44.40981},
+                2: {'nans': 0.0, 'norm': 43.578354}
+            },
             'vp0:relu.input:micro0': {
-                0: {'nans': 0.0,'norm': 41.842655},
-                1: {'nans': 0.0,'norm': 44.40981},
-                2: {'nans': 0.0,'norm': 43.578354}
-                },
+                0: {'nans': 0.0, 'norm': 41.842655},
+                1: {'nans': 0.0, 'norm': 44.40981},
+                2: {'nans': 0.0, 'norm': 43.578354}
+            },
             'vp0:relu.output:micro0': {
-                0: {'nans': 0.0,'norm': 41.842655},
-                1: {'nans': 0.0,'norm': 44.40981},
-                2: {'nans': 0.0,'norm': 43.578354}
-                }
+                0: {'nans': 0.0, 'norm': 41.842655},
+                1: {'nans': 0.0, 'norm': 44.40981},
+                2: {'nans': 0.0, 'norm': 43.578354}
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "actv"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "actv"))
         print(tb_data)
         tb_result = {
             'vp0:.input:micro0/nans': [(0, 0.0),
-                                  (1, 0.0),
-                                  (2, 0.0),
-                                  (3, 0.0),
-                                  (4, 0.0),
-                                  (5, 0.0),
-                                  (6, 0.0),
-                                  (7, 0.0),
-                                  (8, 0.0),
-                                  (9, 0.0)],
-            'vp0:.input:micro0/norm': [(0, 5.550015926361084),
-                                  (1, 5.975111961364746),
-                                  (2, 5.789881229400635),
-                                  (3, 6.052319049835205),
-                                  (4, 5.573315143585205),
-                                  (5, 5.864360809326172),
-                                  (6, 5.292460918426514),
-                                  (7, 5.477899074554443),
-                                  (8, 5.884613990783691),
-                                  (9, 5.456457138061523)],
-            'vp0:.output:micro0/nans': [(0, 0.0),
-                                   (1, 0.0),
-                                   (2, 0.0),
-                                   (3, 0.0),
-                                   (4, 0.0),
-                                   (5, 0.0),
-                                   (6, 0.0),
-                                   (7, 0.0),
-                                   (8, 0.0),
-                                   (9, 0.0)],
-            'vp0:.output:micro0/norm': [(0, 41.842655181884766),
-                                   (1, 44.40980911254883),
-                                   (2, 43.57835388183594),
-                                   (3, 45.83631134033203),
-                                   (4, 42.0673828125),
-                                   (5, 43.46839141845703),
-                                   (6, 39.77947235107422),
-                                   (7, 40.200843811035156),
-                                   (8, 44.453147888183594),
-                                   (9, 40.841522216796875)],
-            'vp0:linear.input:micro0/nans': [(0, 0.0),
-                                        (1, 0.0),
-                                        (2, 0.0),
-                                        (3, 0.0),
-                                        (4, 0.0),
-                                        (5, 0.0),
-                                        (6, 0.0),
-                                        (7, 0.0),
-                                        (8, 0.0),
-                                        (9, 0.0)],
-            'vp0:linear.input:micro0/norm': [(0, 5.550015926361084),
-                                        (1, 5.975111961364746),
-                                        (2, 5.789881229400635),
-                                        (3, 6.052319049835205),
-                                        (4, 5.573315143585205),
-                                        (5, 5.864360809326172),
-                                        (6, 5.292460918426514),
-                                        (7, 5.477899074554443),
-                                        (8, 5.884613990783691),
-                                        (9, 5.456457138061523)],
-            'vp0:linear.output:micro0/nans': [(0, 0.0),
-                                         (1, 0.0),
-                                         (2, 0.0),
-                                         (3, 0.0),
-                                         (4, 0.0),
-                                         (5, 0.0),
-                                         (6, 0.0),
-                                         (7, 0.0),
-                                         (8, 0.0),
-                                         (9, 0.0)],
-            'vp0:linear.output:micro0/norm': [(0, 41.842655181884766),
-                                         (1, 44.40980911254883),
-                                         (2, 43.57835388183594),
-                                         (3, 45.83631134033203),
-                                         (4, 42.0673828125),
-                                         (5, 43.46839141845703),
-                                         (6, 39.77947235107422),
-                                         (7, 40.200843811035156),
-                                         (8, 44.453147888183594),
-                                         (9, 40.841522216796875)],
-            'vp0:relu.input:micro0/nans': [(0, 0.0),
-                                      (1, 0.0),
-                                      (2, 0.0),
-                                      (3, 0.0),
-                                      (4, 0.0),
-                                      (5, 0.0),
-                                      (6, 0.0),
-                                      (7, 0.0),
-                                      (8, 0.0),
-                                      (9, 0.0)],
-            'vp0:relu.input:micro0/norm': [(0, 41.842655181884766),
-                                      (1, 44.40980911254883),
-                                      (2, 43.57835388183594),
-                                      (3, 45.83631134033203),
-                                      (4, 42.0673828125),
-                                      (5, 43.46839141845703),
-                                      (6, 39.77947235107422),
-                                      (7, 40.200843811035156),
-                                      (8, 44.453147888183594),
-                                      (9, 40.841522216796875)],
-            'vp0:relu.output:micro0/nans': [(0, 0.0),
                                        (1, 0.0),
                                        (2, 0.0),
                                        (3, 0.0),
@@ -304,57 +202,156 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, 0.0),
                                        (8, 0.0),
                                        (9, 0.0)],
+            'vp0:.input:micro0/norm': [(0, 5.550015926361084),
+                                       (1, 5.975111961364746),
+                                       (2, 5.789881229400635),
+                                       (3, 6.052319049835205),
+                                       (4, 5.573315143585205),
+                                       (5, 5.864360809326172),
+                                       (6, 5.292460918426514),
+                                       (7, 5.477899074554443),
+                                       (8, 5.884613990783691),
+                                       (9, 5.456457138061523)],
+            'vp0:.output:micro0/nans': [(0, 0.0),
+                                        (1, 0.0),
+                                        (2, 0.0),
+                                        (3, 0.0),
+                                        (4, 0.0),
+                                        (5, 0.0),
+                                        (6, 0.0),
+                                        (7, 0.0),
+                                        (8, 0.0),
+                                        (9, 0.0)],
+            'vp0:.output:micro0/norm': [(0, 41.842655181884766),
+                                        (1, 44.40980911254883),
+                                        (2, 43.57835388183594),
+                                        (3, 45.83631134033203),
+                                        (4, 42.0673828125),
+                                        (5, 43.46839141845703),
+                                        (6, 39.77947235107422),
+                                        (7, 40.200843811035156),
+                                        (8, 44.453147888183594),
+                                        (9, 40.841522216796875)],
+            'vp0:linear.input:micro0/nans': [(0, 0.0),
+                                             (1, 0.0),
+                                             (2, 0.0),
+                                             (3, 0.0),
+                                             (4, 0.0),
+                                             (5, 0.0),
+                                             (6, 0.0),
+                                             (7, 0.0),
+                                             (8, 0.0),
+                                             (9, 0.0)],
+            'vp0:linear.input:micro0/norm': [(0, 5.550015926361084),
+                                             (1, 5.975111961364746),
+                                             (2, 5.789881229400635),
+                                             (3, 6.052319049835205),
+                                             (4, 5.573315143585205),
+                                             (5, 5.864360809326172),
+                                             (6, 5.292460918426514),
+                                             (7, 5.477899074554443),
+                                             (8, 5.884613990783691),
+                                             (9, 5.456457138061523)],
+            'vp0:linear.output:micro0/nans': [(0, 0.0),
+                                              (1, 0.0),
+                                              (2, 0.0),
+                                              (3, 0.0),
+                                              (4, 0.0),
+                                              (5, 0.0),
+                                              (6, 0.0),
+                                              (7, 0.0),
+                                              (8, 0.0),
+                                              (9, 0.0)],
+            'vp0:linear.output:micro0/norm': [(0, 41.842655181884766),
+                                              (1, 44.40980911254883),
+                                              (2, 43.57835388183594),
+                                              (3, 45.83631134033203),
+                                              (4, 42.0673828125),
+                                              (5, 43.46839141845703),
+                                              (6, 39.77947235107422),
+                                              (7, 40.200843811035156),
+                                              (8, 44.453147888183594),
+                                              (9, 40.841522216796875)],
+            'vp0:relu.input:micro0/nans': [(0, 0.0),
+                                           (1, 0.0),
+                                           (2, 0.0),
+                                           (3, 0.0),
+                                           (4, 0.0),
+                                           (5, 0.0),
+                                           (6, 0.0),
+                                           (7, 0.0),
+                                           (8, 0.0),
+                                           (9, 0.0)],
+            'vp0:relu.input:micro0/norm': [(0, 41.842655181884766),
+                                           (1, 44.40980911254883),
+                                           (2, 43.57835388183594),
+                                           (3, 45.83631134033203),
+                                           (4, 42.0673828125),
+                                           (5, 43.46839141845703),
+                                           (6, 39.77947235107422),
+                                           (7, 40.200843811035156),
+                                           (8, 44.453147888183594),
+                                           (9, 40.841522216796875)],
+            'vp0:relu.output:micro0/nans': [(0, 0.0),
+                                            (1, 0.0),
+                                            (2, 0.0),
+                                            (3, 0.0),
+                                            (4, 0.0),
+                                            (5, 0.0),
+                                            (6, 0.0),
+                                            (7, 0.0),
+                                            (8, 0.0),
+                                            (9, 0.0)],
             'vp0:relu.output:micro0/norm': [(0, 41.842655181884766),
-                                       (1, 44.40980911254883),
-                                       (2, 43.57835388183594),
-                                       (3, 45.83631134033203),
-                                       (4, 42.0673828125),
-                                       (5, 43.46839141845703),
-                                       (6, 39.77947235107422),
-                                       (7, 40.200843811035156),
-                                       (8, 44.453147888183594),
-                                       (9, 40.841522216796875)]}
+                                            (1, 44.40980911254883),
+                                            (2, 43.57835388183594),
+                                            (3, 45.83631134033203),
+                                            (4, 42.0673828125),
+                                            (5, 43.46839141845703),
+                                            (6, 39.77947235107422),
+                                            (7, 40.200843811035156),
+                                            (8, 44.453147888183594),
+                                            (9, 40.841522216796875)]}
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
-    
 
     def test_actv_grad(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"actv_grad_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "actv_grad_0-2.csv"))
         nan = np.nan
         result = {
             'vp0:.input:micro0': {
-                0: {'norm': nan, 'nans': nan}, 
-                1: {'norm': nan, 'nans': nan}, 
+                0: {'norm': nan, 'nans': nan},
+                1: {'norm': nan, 'nans': nan},
                 2: {'norm': nan, 'nans': nan}
-                }, 
+            },
             'vp0:.output:micro0': {
-                0: {'norm': 0.282843, 'nans': 0.0}, 
-                1: {'norm': 0.282617, 'nans': 0.0}, 
+                0: {'norm': 0.282843, 'nans': 0.0},
+                1: {'norm': 0.282617, 'nans': 0.0},
                 2: {'norm': 0.282655, 'nans': 0.0}
-                }, 
+            },
             'vp0:relu.input:micro0': {
-                0: {'norm': 0.282843, 'nans': 0.0}, 
-                1: {'norm': 0.282617, 'nans': 0.0}, 
+                0: {'norm': 0.282843, 'nans': 0.0},
+                1: {'norm': 0.282617, 'nans': 0.0},
                 2: {'norm': 0.282655, 'nans': 0.0}
-                }, 
+            },
             'vp0:relu.output:micro0': {
-                0: {'norm': 0.282843, 'nans': 0.0}, 
-                1: {'norm': 0.282617, 'nans': 0.0}, 
+                0: {'norm': 0.282843, 'nans': 0.0},
+                1: {'norm': 0.282617, 'nans': 0.0},
                 2: {'norm': 0.282655, 'nans': 0.0}
-                }, 
+            },
             'vp0:linear.input:micro0': {
-                0: {'norm': nan, 'nans': nan}, 
-                1: {'norm': nan, 'nans': nan}, 
+                0: {'norm': nan, 'nans': nan},
+                1: {'norm': nan, 'nans': nan},
                 2: {'norm': nan, 'nans': nan}
-                },
+            },
             'vp0:linear.output:micro0': {
-                0: {'norm': 0.282843, 'nans': 0.0}, 
-                1: {'norm': 0.282617, 'nans': 0.0}, 
+                0: {'norm': 0.282843, 'nans': 0.0},
+                1: {'norm': 0.282617, 'nans': 0.0},
                 2: {'norm': 0.282655, 'nans': 0.0}
-                }
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
-        
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "actv_grad"))
+
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "actv_grad"))
         tb_result = {
             'vp0:.input:micro0/nans': [(0, nan),
                                        (1, nan),
@@ -478,85 +475,86 @@ class TestGradMonitor(unittest.TestCase):
                                             (9, 0.2825529873371124)]}
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
 
-    
     def test_param(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"param_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "param_0-2.csv"))
         result = {
             'vp0:linear.bias': {
                 0: {'nans': 0.0, 'norm': 2.236068},
                 1: {'nans': 0.0, 'norm': 2.236198},
                 2: {'nans': 0.0, 'norm': 2.235769}
-                },
+            },
             'vp0:linear.weight': {
                 0: {'nans': 0.0, 'norm': 7.071068},
                 1: {'nans': 0.0, 'norm': 7.068808},
                 2: {'nans': 0.0, 'norm': 7.06771}
-                }
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "param"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "param"))
         tb_result = {
             'vp0:linear.weight/norm': [
-                (0, 7.071067810058594), 
-                (1, 7.068808078765869), 
-                (2, 7.067709922790527), 
-                (3, 7.0673418045043945), 
-                (4, 7.066926956176758), 
-                (5, 7.066311836242676), 
-                (6, 7.065629959106445), 
-                (7, 7.065262794494629), 
-                (8, 7.065001964569092), 
-                (9, 7.064840793609619)], 
+                (0, 7.071067810058594),
+                (1, 7.068808078765869),
+                (2, 7.067709922790527),
+                (3, 7.0673418045043945),
+                (4, 7.066926956176758),
+                (5, 7.066311836242676),
+                (6, 7.065629959106445),
+                (7, 7.065262794494629),
+                (8, 7.065001964569092),
+                (9, 7.064840793609619)],
             'vp0:linear.weight/nans': [
-                (0, 0.0), 
-                (1, 0.0), 
-                (2, 0.0), 
-                (3, 0.0), 
-                (4, 0.0), 
-                (5, 0.0), 
-                (6, 0.0), 
-                (7, 0.0), 
-                (8, 0.0), 
-                (9, 0.0)], 
+                (0, 0.0),
+                (1, 0.0),
+                (2, 0.0),
+                (3, 0.0),
+                (4, 0.0),
+                (5, 0.0),
+                (6, 0.0),
+                (7, 0.0),
+                (8, 0.0),
+                (9, 0.0)],
             'vp0:linear.bias/norm': [
-                (0, 2.2360680103302), 
-                (1, 2.2361979484558105), 
-                (2, 2.235769033432007), 
-                (3, 2.235903024673462), 
-                (4, 2.2360129356384277), 
-                (5, 2.2359039783477783), 
-                (6, 2.2357990741729736), 
-                (7, 2.2357349395751953), 
-                (8, 2.2356700897216797), 
-                (9, 2.235619068145752)], 
+                (0, 2.2360680103302),
+                (1, 2.2361979484558105),
+                (2, 2.235769033432007),
+                (3, 2.235903024673462),
+                (4, 2.2360129356384277),
+                (5, 2.2359039783477783),
+                (6, 2.2357990741729736),
+                (7, 2.2357349395751953),
+                (8, 2.2356700897216797),
+                (9, 2.235619068145752)
+            ],
             'vp0:linear.bias/nans': [
-                (0, 0.0), 
-                (1, 0.0), 
-                (2, 0.0), 
-                (3, 0.0), 
-                (4, 0.0), 
-                (5, 0.0), 
-                (6, 0.0), 
-                (7, 0.0), 
-                (8, 0.0), 
-                (9, 0.0)]
-            }
+                (0, 0.0),
+                (1, 0.0),
+                (2, 0.0),
+                (3, 0.0),
+                (4, 0.0),
+                (5, 0.0),
+                (6, 0.0),
+                (7, 0.0),
+                (8, 0.0),
+                (9, 0.0)
+            ]
+        }
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
 
     def test_exp_avg(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"exp_avg_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "exp_avg_0-2.csv"))
         result = {
             'vp0:linear.bias': {
                 1: {'nans': 0.0, 'norm': 0.024495},
                 2: {'nans': 0.0, 'norm': 0.052203}
-                },
+            },
             'vp0:linear.weight': {
                 1: {'nans': 0.0, 'norm': 0.052394},
                 2: {'nans': 0.0, 'norm': 0.099221}
-                }
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "exp_avg"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "exp_avg"))
         tb_result = {
             'vp0:linear.bias/nans': [(1, 0.0),
                                      (2, 0.0),
@@ -597,19 +595,19 @@ class TestGradMonitor(unittest.TestCase):
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
 
     def test_exp_avg_sq(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"exp_avg_sq_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "exp_avg_sq_0-2.csv"))
         result = {
             'vp0:linear.bias': {
                 1: {'nans': 0.0, 'norm': 4.2e-05},
                 2: {'nans': 0.0, 'norm': 9.6e-05}
-                },
+            },
             'vp0:linear.weight': {
                 1: {'nans': 0.0, 'norm': 6.7e-05},
                 2: {'nans': 0.0, 'norm': 0.000126}
-                }
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "exp_avg_sq"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "exp_avg_sq"))
         tb_result = {
             'vp0:linear.bias/nans': [(1, 0.0),
                                      (2, 0.0),
@@ -648,23 +646,23 @@ class TestGradMonitor(unittest.TestCase):
                                        (8, 0.00028700000257231295),
                                        (9, 0.0003060000017285347)]}
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
-    
+
     def test_grad_reduced(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"grad_reduced_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "grad_reduced_0-2.csv"))
         result = {
             'vp0:linear.bias': {
                 0: {'nans': 0.0, 'norm': 0.244949},
                 1: {'nans': 0.0, 'norm': 0.314345},
                 2: {'nans': 0.0, 'norm': 0.281475}
-                },
+            },
             'vp0:linear.weight': {
                 0: {'nans': 0.0, 'norm': 0.523935},
                 1: {'nans': 0.0, 'norm': 0.595672},
                 2: {'nans': 0.0, 'norm': 0.497603}
-                }
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "grad_reduced"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "grad_reduced"))
         tb_result = {
             'vp0:linear.bias/nans': [(0, 0.0),
                                      (1, 0.0),
@@ -707,24 +705,24 @@ class TestGradMonitor(unittest.TestCase):
                                        (8, 0.3234719932079315),
                                        (9, 0.32385098934173584)]}
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
-        
+
     def test_grad_unreduced(self):
-        data = parse_step_fn(os.path.join(timestamp_dirpath,"grad_unreduced_0-2.csv"))
+        data = parse_step_fn(os.path.join(self.timestamp_dirpath, "grad_unreduced_0-2.csv"))
         result = {
             'vp0:linear.bias': {
                 0: {'nans': 0.0, 'norm': 0.244949},
                 1: {'nans': 0.0, 'norm': 0.314345},
                 2: {'nans': 0.0, 'norm': 0.281475}
-                },
+            },
             'vp0:linear.weight': {
                 0: {'nans': 0.0, 'norm': 0.523935},
                 1: {'nans': 0.0, 'norm': 0.595672},
                 2: {'nans': 0.0, 'norm': 0.497603}
-                }
             }
+        }
         self.assertEqual(dict_equal(data, result), True)
 
-        tb_data = extract_scalars_from_tensorboard(os.path.join(csv2tb_dirpath, "grad_unreduced"))
+        tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "grad_unreduced"))
         tb_result = {
             'vp0:linear.bias/nans': [(0, 0.0),
                                      (1, 0.0),
@@ -767,3 +765,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (8, 0.3234719932079315),
                                        (9, 0.32385098934173584)]}
         self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+
+
+if __name__ == '__main__':
+    unittest.main()
