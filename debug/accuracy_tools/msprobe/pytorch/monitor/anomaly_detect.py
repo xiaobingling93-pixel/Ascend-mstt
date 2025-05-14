@@ -61,7 +61,7 @@ class AnomalyNan(ScanRule):
         self.threshold = threshold
 
     def apply(self, cur, history=None):
-        return math.isnan(cur) or (self.threshold is not None and cur > self.threshold)
+        return math.isnan(cur) or (self.threshold is not None and abs(cur) > self.threshold)
 
 
 class AnomalyScanner:
