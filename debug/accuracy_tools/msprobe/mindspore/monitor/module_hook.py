@@ -411,7 +411,10 @@ class TrainerMon:
                 return out
             return wrapper
         
-        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+        if self.is_mindtorch:
+            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+        else:
+            optimizer.__class__.construct = patch_step(optimizer.__class__.construct, optimizer)
 
         return
 
