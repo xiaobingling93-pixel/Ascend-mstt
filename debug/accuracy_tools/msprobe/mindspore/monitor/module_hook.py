@@ -189,7 +189,6 @@ class TrainerMon:
         self.config_file_path = config_file_path
         self.process_group = process_group
         self.params_have_main_grad = params_have_main_grad
-        self.origin_step_func = None
         self.is_mindtorch = is_mindtorch()
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
@@ -246,6 +245,8 @@ class TrainerMon:
         self.optimizer_hooked = False
         self.param_registered = False
         self.struct_printed = False
+        self.pre_step_hooks = []
+        self.post_step_hooks = []
 
         # 动静态区分
         self.dynamic_enable = os.getenv("DYNAMIC_MONITOR", 'False').lower() == 'true'
@@ -398,18 +399,23 @@ class TrainerMon:
             context.step += 1
             self.dynamic_monitor(optimizer)
 
+
+        def patch_step(func, optimizer):
+            def wrapper(*args, **kwargs):
+                for hook in self.pre_step_hooks:
+                    hook(optimizer, args, kwargs)
+                out = func(*args, **kwargs)
+                for hook in self.post_step_hooks:
+                    hook(optimizer, args, kwargs)
+                step_final_hook(optimizer, args, kwargs)
+                return out
+            return wrapper
+        
         if self.is_mindtorch:
-            def patch_step(func, optimizer):
-                def wrapper(*args, **kwargs):
-                    out = func(*args, **kwargs)
-                    step_final_hook(optimizer, args, kwargs)
-                    return out
-                return wrapper
             optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-            self.origin_step_func = optimizer.__class__.step
         else:
-            handle = optimizer.register_forward_hook(step_final_hook)
-            self.handles['step_final'].append(handle)
+            optimizer.__class__.construct = patch_step(optimizer.__class__.construct, optimizer)
+
         return
 
     def dynamic_monitor(self, optimizer):
@@ -497,7 +503,7 @@ class TrainerMon:
 
             self.generate_wgrad_metrics(grad_dict)
             self.generate_mv_metrics(context)
-            self.generate_param_metrics(context)
+            self.generate_param_metrics(context, MonitorConst.PRE_PARAM)
 
             metric_dict = {}
             for cc in self.cc_context.values():
@@ -510,20 +516,16 @@ class TrainerMon:
             context.metric_dict = metric_dict
             return
 
-        def patch_step(func, optimizer):
-            def wrapper(*args, **kwargs):
-                optimizer_pre_step_hook(optimizer, args, kwargs)
-                out = func(*args, **kwargs)
-                return out
-            return wrapper
+        def optimizer_post_step_hook(optimizer, args, kwargs):
+            context = self.optimizer_context[optimizer]
+            self.generate_param_metrics(context, MonitorConst.POST_PARAM)
+        
 
         if self.optimizer_hooked or not self.is_target_rank():
             return
-        if self.is_mindtorch:
-            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-        else:
-            handle = optimizer.register_forward_pre_hook(optimizer_pre_step_hook)
-            self.handles['optimizer'].append(handle)
+        
+        self.pre_step_hooks.append(optimizer_pre_step_hook)
+        self.post_step_hooks.append(optimizer_post_step_hook)
         self.optimizer_hooked = True
         return
 
@@ -548,11 +550,15 @@ class TrainerMon:
             metrics[key] = param_tensor[name]
         return metrics
 
-    def generate_param_metrics(self, opt_context):
+    def generate_param_metrics(self, opt_context, stage=MonitorConst.PRE_PARAM):
         if not self.param_distribution:
             return
-        name2param = {name: param for name, param in self.name2param.items() if param.numel() != 0}
-        get_metrics(self.ops, name2param, self.eps, opt_context.param_metric)
+        tag2param = {
+            self.name2tag.get(name, {}).get(stage): param 
+            for name, param in self.name2param.items() 
+            if param.numel() != 0
+        }
+        get_metrics(self.ops, tag2param, self.eps, opt_context.param_metric)
 
     def get_mv_for_ms(self, opt):
         if not self.mv_distribution:
@@ -597,7 +603,10 @@ class TrainerMon:
     def write_param_tb(self, opt_context):
         if not self.param_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, 'param')
+        param_metrics = {k: v for k, v in opt_context.param_metric.items() if MonitorConst.PRE_PARAM in k}
+        updated_param_metrics = {k: v for k, v in opt_context.param_metric.items() if MonitorConst.POST_PARAM in k}
+        self.summary_writer.write_metrics(self.ops, param_metrics, opt_context.step, MonitorConst.PRE_PARAM)
+        self.summary_writer.write_metrics(self.ops, updated_param_metrics, opt_context.step, MonitorConst.POST_PARAM)
 
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
@@ -657,9 +666,15 @@ class TrainerMon:
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
+                keywords = [
+                    MonitorConst.PRE_GRAD,
+                    MonitorConst.POST_GRAD,
+                    MonitorConst.PRE_PARAM,
+                    MonitorConst.POST_PARAM
+                ]
                 self.name2tag[name] = {
-                    MonitorConst.PRE_GRAD: get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank),
-                    MonitorConst.POST_GRAD: get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
+                    k: get_summary_writer_tag_name(name, k, self.rank) 
+                    for k in keywords
                 }
                 index += 1
 
@@ -865,11 +880,8 @@ class TrainerMon:
         self.weight_hooked = False
 
         if self.optimizer_hooked:
-            for handle in self.handles['optimizer']:
-                handle.remove()
-            self.handles['optimizer'].clear()
-            if self.is_mindtorch:
-                optimizer.__class__.step = self.origin_step_func
+            self.pre_step_hooks.clear()
+            self.post_step_hooks.clear()
         for _, context in self.optimizer_context.items():
             context.reset()
         self.optimizer_hooked = False

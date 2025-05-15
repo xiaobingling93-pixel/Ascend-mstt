@@ -766,12 +766,13 @@ class MonitorConst:
     ACTVGRAD = "actv_grad"
     POST_GRAD = "post_grad"
     PRE_GRAD = "pre_grad"
+    PRE_PARAM = "param_origin"
+    POST_PARAM = "param_updated"
     ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
-    PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
     CSV_HEADER_XY = ["vpp_stage", "name", "step", "micro_step"]
