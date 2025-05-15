@@ -69,7 +69,7 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_add_child_layer(graph_data, npu_node_name, bench_node_name, task):
-        if not graph_data or not npu_node_name or not bench_node_name or not task:
+        if not all([graph_data, npu_node_name, bench_node_name, task]):
             return {'success': False, 'error': '参数错误'}
         if not MatchNodesController.is_same_node_type:
             return {
@@ -111,8 +111,9 @@ class MatchNodesController:
             common_keys = npu_match_names.keys() & bench_match_names.keys()
             # 2.3 取名称交集，添加匹配关系
             for key in common_keys:
-                npu_subnode_list = npu_match_names[key]
-                bench_subnode_list = bench_match_names[key]
+                npu_subnode_list = npu_match_names.get(key, [])
+                bench_subnode_list = bench_match_names.get(key, [])
+                
                 # 多个节点可能有一个module name
                 for npu_subnode_name, bench_subnode_name in zip(npu_subnode_list, bench_subnode_list):
                     result = MatchNodesController.process_task_add(graph_data, npu_subnode_name, bench_subnode_name,
@@ -154,7 +155,7 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_delete_child_layer(graph_data, npu_node_name, bench_node_name, task):
-        if not graph_data or not npu_node_name or not bench_node_name or not task:
+        if not all([graph_data, npu_node_name, bench_node_name, task]):
             return {'success': False, 'error': '参数错误'}
 
         npu_nodes = graph_data.get('NPU', {}).get('node', {})

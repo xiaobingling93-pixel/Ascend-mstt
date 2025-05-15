@@ -27,6 +27,26 @@ MAX_PER_ROW = 5  # 横向每行最大数
 
 class Hierarchy:
 
+    @staticmethod
+    def measure_text_width(text):
+        return len(text) * 6  # 假设每个字符宽度为6
+
+    @staticmethod
+    def extract_label_name(node_name, node_type):
+        splited_subnode_name = node_name.split('.')
+        splited_label = []
+        if node_type == MODULE:
+            if len(splited_subnode_name) < 4:
+                return node_name
+            splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
+                -4].isdigit() else splited_subnode_name[-5:]
+        else:
+            if len(splited_subnode_name) < 2:
+                return node_name
+            splited_label = splited_subnode_name[-2:] if not splited_subnode_name[
+                -2].isdigit() else splited_subnode_name[-3:]
+        return ('.').join(splited_label)
+    
     def __init__(self, graph_type, graph, micro_step):
         root_node_name = graph.get('root')
         node_info = graph.get('node', {}).get(root_node_name, {})
@@ -56,8 +76,8 @@ class Hierarchy:
         target_node = self.current_hierarchy.get(node_name, {})
         target_node_children = target_node.get("children", [])
         if not target_node or not target_node_children:
-            return None, 'failed to update graph data, no target node or no children'
-        if (target_node.get('expand', False) == False):
+            return
+        if not target_node.get('expand', False):
             # 1.将target_node的expand置为true
             # 2.将node_name的子节点信息初始化，并添加到current_hierarchy中
             for subnode_name in target_node_children:
@@ -79,7 +99,11 @@ class Hierarchy:
                 node_info = graph.get('node', {}).get(parent_node_name)
                 render_info = self.get_basic_rende_info(parent_node_name, node_info)
                 self.current_hierarchy[parent_node_name] = render_info
-            self.process_click_expand(parent_node_name, graph)  # 展开父节点
+            try:
+                self.process_click_expand(parent_node_name, graph)  # 展开父节点
+            except Exception as e:
+                logger.error(f"Failed to expand parent node {parent_node_name}: {e}")
+                break
             if parent_node_name == self.root_name:
                 break
             parent_node_name = graph.get('node', {}).get(parent_node_name, {}).get("upnode")
@@ -102,7 +126,7 @@ class Hierarchy:
             return
         if not node.get('expand', False):
             # 未展开的父节点按文字宽度
-            node['width'] = self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
+            node['width'] = Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
             node['height'] = INNER_HIGHT
             return
         for child_name in node.get('children', []):
@@ -118,22 +142,25 @@ class Hierarchy:
                                           INNER_WIDTH * MAX_PER_ROW + (HORIZONTAL_SPACING * (MAX_PER_ROW - 1)))
                     total_height += ((INNER_HIGHT + VERTICAL_SPACING) * len(rows))
                 else:
-                    max_child_width = max(max_child_width, sum(
-                        self.current_hierarchy.get(child_name, {}).get('width') for child_name in
-                        children) + HORIZONTAL_SPACING * (len(children) - 1))
+                    child_total_width = sum(self.current_hierarchy.get(child, {}).get('width', 0) for child in children)
+                    spacing = HORIZONTAL_SPACING * (len(children) - 1)
+                    max_child_width = max(max_child_width, child_total_width + spacing)
                     total_height += (INNER_HIGHT + VERTICAL_SPACING)
 
             else:
                 # 纵向布局，计算子节点最大宽度
-                max_child_width = max(max_child_width,
-                                      max(self.current_hierarchy.get(child, {}).get('width') for child in children))
-                total_height += (sum(self.current_hierarchy.get(child_name, {}).get('height') for child_name in
-                                     children) + VERTICAL_SPACING * len(children))
+                # 更新 max_child_width：取所有子节点中最宽的一个
+                child_max_width = max(self.current_hierarchy.get(child, {}).get('width', 0) for child in children)
+                max_child_width = max(max_child_width, child_max_width)
+                # 累加 total_height：所有子节点高度 + 垂直间距（每个子节点之间都有间距，所以是 len(children) 个间距）
+                children_heights = sum(self.current_hierarchy.get(child, {}).get('height', 0) for child in children)
+                vertical_spacing = VERTICAL_SPACING * len(children)
+                total_height += (children_heights + vertical_spacing)
 
         # 最终尺寸计算
         node['width'] = max(
             max_child_width + HORIZONTAL_SPACING * 2,  # 子节点最大宽度 + 边距
-            self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
+            Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
         )
         node['height'] = total_height + VERTICAL_SPACING  # 总高度 + 边距
 
@@ -203,9 +230,6 @@ class Hierarchy:
             groups.append((current_type, current_group))
         return groups
 
-    def measure_text_width(self, text):
-        return len(text) * 6  # 假设每个字符宽度为6
-
     def get_basic_rende_info(self, node_name, node_info):
         if not node_info:
             return {}
@@ -224,11 +248,11 @@ class Hierarchy:
         else:
             children = node_info.get('subnodes', [])
         if node_info.get('upnode', '') != self.root_name:  # 首层节点不处理显示内容
-            label = self.extract_label_name(node_name, node_info.get('node_type'))
+            label = Hierarchy.extract_label_name(node_name, node_info.get('node_type'))
         render_info = {
             'x': 0,
             'y': 0,
-            'width': self.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
+            'width': Hierarchy.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
             'height': INNER_HIGHT,
             'expand': False,
             'isRoot': node_name == self.root_name,
@@ -245,25 +269,11 @@ class Hierarchy:
 
         return render_info
 
-    def extract_label_name(self, node_name, node_type):
-        splited_subnode_name = node_name.split('.')
-        splited_label = []
-        if node_type == MODULE:
-            if len(splited_subnode_name) < 4:
-                return node_name
-            splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
-                -4].isdigit() else splited_subnode_name[-5:]
-        else:
-            if len(splited_subnode_name) < 2:
-                return node_name
-            splited_label = splited_subnode_name[-2:] if not splited_subnode_name[
-                -2].isdigit() else splited_subnode_name[-3:]
-        return ('.').join(splited_label)
-
     # 获取连通图
     def get_connected_graph(self, name, result, new_hierarchy):
         node = self.current_hierarchy.get(name, {})
-        if (not node): return
+        if (not node): 
+            return
         filtered_value = {k: v for k, v in node.items() if k != "children"}
         result[name] = filtered_value
         new_hierarchy[name] = node
