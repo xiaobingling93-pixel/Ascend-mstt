@@ -78,7 +78,8 @@ class GraphService:
                 read_bytes += len(chunk)
                 buffer += chunk
                 current_progress = min(95, int((read_bytes / file_size) * 100))
-                yield f"data: {json.dumps({'progress': current_progress, 'status': 'reading', 'size': file_size, 'read': read_bytes})}\n\n"
+                reading_info = {'progress': current_progress, 'status': 'reading', 'size': file_size, 'read': read_bytes}
+                yield f"data: {json.dumps(reading_info)}\n\n"
                 time.sleep(0.01)  # 避免发送过快
 
         if json_data is None and buffer:  # 最终验证数据
@@ -155,8 +156,10 @@ class GraphService:
                 npu_node_name_list = list(npu_node.keys())
                 bench_node_name_list = list(bench_node.keys())
                 npu_unmatehed_name_list = [key for key, value in npu_node.items() if not value.get("matched_node_link")]
-                bench_unmatehed_name_list = [key for key, value in bench_node.items() if
-                                             not value.get("matched_node_link")]
+                bench_unmatehed_name_list = [
+                    key for key, value in bench_node.items() 
+                    if not value.get("matched_node_link")
+                ]
                 # 保存未匹配和已匹配的节点到全局变量
                 config_data['npuUnMatchNodes'] = npu_unmatehed_name_list
                 config_data['benchUnMatchNodes'] = bench_unmatehed_name_list
@@ -184,7 +187,6 @@ class GraphService:
         node_name = node_info.get('nodeName')
         micro_step = meta_data.get('microStep')
         try:
-            # TODO: 根节点不可折叠，默认展开
             # 单图
             if not graph_data.get(NPU):
                 hierarchy = LayoutHierarchyController.change_expand_state(node_name, SINGLE, graph_data, micro_step)
@@ -202,7 +204,8 @@ class GraphService:
         except Exception as e:
             logger.error('节点展开或收起发生错误:' + str(e))
             node_type_name = ""
-            if graph_data.get(NPU): node_type_name = '调试侧' if graph_type == NPU else '标杆侧'
+            if graph_data.get(NPU): 
+                node_type_name = '调试侧' if graph_type == NPU else '标杆侧'
             return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
 
     @staticmethod
@@ -267,15 +270,15 @@ class GraphService:
         if error:
             return {'success': False, 'error': '配置文件失败'}
         task = graph_data.get('task')
-        try:
-            # 根据任务类型计算误差
-            if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
-                return result
-            else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
-        except Exception as e:
-            return {'success': False, 'error': '操作失败', 'data': None}
+        # try:
+        # 根据任务类型计算误差
+        if task == 'md5' or task == 'summary':
+            result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
+            return result
+        else:
+            return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+        # except Exception as e:
+        #     return {'success': False, 'error': '操作失败', 'data': None}
 
     @staticmethod
     def delete_match_nodes(npu_node_name, bench_node_name, meta_data):

@@ -25,6 +25,7 @@ from ..service.graph_service import GraphService
 class GraphView:
 
     # 静态文件路由
+    @staticmethod
     @wrappers.Request.application
     def static_file_route(request):
         filename = os.path.basename(request.path)
@@ -45,6 +46,7 @@ class GraphView:
             raise exceptions.NotFound('404 Not Found') from e
         return Response(contents, content_type=mimetype, headers={"X-Content-Type-Options": "nosniff"})
 
+    @staticmethod
     @wrappers.Request.application
     def load_meta_dir(request):
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
@@ -103,7 +105,7 @@ class GraphView:
                          'error': 'GetNodeInfo failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             hierarchy = {'success': False, 'error': e}
-        return http_util.Respond(request, hierarchy, "application/json")
+        return http_util.Respond(request, json.dumps(hierarchy), "application/json")
 
     # 更新当前图节点信息
     @staticmethod
@@ -111,7 +113,7 @@ class GraphView:
     def update_hierarchy_data(request):
         graph_type = request.args.get("graphType")
         hierarchy = GraphService.update_hierarchy_data(graph_type)
-        return http_util.Respond(request, hierarchy, "application/json")
+        return http_util.Respond(request, json.dumps(hierarchy), "application/json")
 
     # 获取当前节点对应节点的信息看板数据
     @staticmethod
@@ -126,7 +128,7 @@ class GraphView:
                            'error': 'GetNodeInfo failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             node_detail = {'success': False, 'error': e}
-        return http_util.Respond(request, node_detail, "application/json")
+        return http_util.Respond(request, json.dumps(node_detail), "application/json")
 
     # 根据配置文件添加匹配节点
     @staticmethod
@@ -141,7 +143,7 @@ class GraphView:
                             'error': 'Matched failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             match_result = {'success': False, 'error': e}
-        return http_util.Respond(request, match_result, "application/json")
+        return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 添加匹配节点
     @staticmethod
@@ -157,7 +159,7 @@ class GraphView:
                             'error': 'AddMatchNodes failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             match_result = {'success': False, 'error': e}
-        return http_util.Respond(request, match_result, "application/json")
+        return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 取消节点匹配
     @staticmethod
@@ -173,7 +175,7 @@ class GraphView:
                             'error': 'DeleteMatchNodes failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             match_result = {'success': False, 'error': e}
-        return http_util.Respond(request, match_result, "application/json")
+        return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 保存匹配节点列表
     @staticmethod
@@ -187,7 +189,7 @@ class GraphView:
                            'error': 'SaveData failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             save_result = {'success': False, 'error': e}
-        return http_util.Respond(request, save_result, "application/json")
+        return http_util.Respond(request, json.dumps(save_result), "application/json")
 
     # 更新颜色信息
     @staticmethod
@@ -202,7 +204,7 @@ class GraphView:
                              'error': 'UpdateColors failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             update_result = {'success': False, 'error': e}
-        return http_util.Respond(request, update_result, "application/json")
+        return http_util.Respond(request, json.dumps(update_result), "application/json")
 
     # 保存匹配关系
     @staticmethod
@@ -216,4 +218,4 @@ class GraphView:
                            'error': 'SaveMatchedRelations failed: The query parameters are not in a legal JSON format.'}
         except Exception as e:
             save_result = {'success': False, 'error': e}
-        return http_util.Respond(request, save_result, "application/json")
+        return http_util.Respond(request, json.dumps(save_result), "application/json")

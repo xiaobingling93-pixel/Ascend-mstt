@@ -53,7 +53,8 @@ class GraphUtils:
             return None, 'Error: fail to get graph data'
 
     @staticmethod
-    def getNodeMatchedList(graph_data, node_name):
+    def get_parent_node_list(graph_data, node_name):
+        """获取父节点列表"""
         # 如果 graph_data 为空或 node_name 不存在，直接返回空列表
         if not graph_data or not node_name:
             return []
@@ -134,6 +135,7 @@ class GraphUtils:
         abs_base = os.path.abspath(base)
         return os.path.commonpath([abs_path, abs_base]) == str(abs_base)
 
+    @staticmethod
     def bytes_to_human_readable(size_bytes, decimal_places=2):
         """
         将字节大小转换为更易读的格式（如 KB、MB、GB 等）。
@@ -240,8 +242,10 @@ class GraphUtils:
                 raise PermissionError(f"File has no read permissions")
             # 文件大小验证
             if os.path.getsize(real_path) > MAX_FILE_SIZE:
+                file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(real_path))
+                max_size = GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE)
                 raise RuntimeError(
-                    f"File size exceeds limit ({GraphUtils.bytes_to_human_readable(os.path.getsize(real_path))} > {GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE / 1024)}MB)")
+                    f"File size exceeds limit ({file_size} > {max_size})")
             # 读取文件比较耗时，支持onlyCheck参数，仅进行安全校验
             if only_check:
                 return True, None
