@@ -78,7 +78,12 @@ class GraphService:
                 read_bytes += len(chunk)
                 buffer += chunk
                 current_progress = min(95, int((read_bytes / file_size) * 100))
-                reading_info = {'progress': current_progress, 'status': 'reading', 'size': file_size, 'read': read_bytes}
+                reading_info = {
+                    'progress': current_progress,
+                    'status': 'reading',
+                    'size': file_size,
+                    'read': read_bytes
+                }
                 yield f"data: {json.dumps(reading_info)}\n\n"
                 time.sleep(0.01)  # 避免发送过快
 
@@ -155,9 +160,14 @@ class GraphService:
                 bench_node = GraphUtils.split_graph_data_by_microstep(graph_data.get(BENCH), micro_step)
                 npu_node_name_list = list(npu_node.keys())
                 bench_node_name_list = list(bench_node.keys())
-                npu_unmatehed_name_list = [key for key, value in npu_node.items() if not value.get("matched_node_link")]
+                npu_unmatehed_name_list = [
+                    key 
+                    for key, value in npu_node.items() 
+                    if not value.get("matched_node_link")
+                ]
                 bench_unmatehed_name_list = [
-                    key for key, value in bench_node.items() 
+                    key 
+                    for key, value in bench_node.items() 
                     if not value.get("matched_node_link")
                 ]
                 # 保存未匹配和已匹配的节点到全局变量
@@ -270,15 +280,15 @@ class GraphService:
         if error:
             return {'success': False, 'error': '配置文件失败'}
         task = graph_data.get('task')
-        # try:
-        # 根据任务类型计算误差
-        if task == 'md5' or task == 'summary':
-            result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
-            return result
-        else:
-            return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
-        # except Exception as e:
-        #     return {'success': False, 'error': '操作失败', 'data': None}
+        try:
+            # 根据任务类型计算误差
+            if task == 'md5' or task == 'summary':
+                result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
+                return result
+            else:
+                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+        except Exception as e:
+            return {'success': False, 'error': '操作失败', 'data': None}
 
     @staticmethod
     def delete_match_nodes(npu_node_name, bench_node_name, meta_data):
