@@ -86,7 +86,8 @@ class ApiTemplate(HOOKCell):
         self.api_func = api_func
         self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
         super().__init__(hook_build_func)
-        if prefix == Const.MINT_DIST_API_TYPE_PREFIX:
+        distributed_prefix = Const.DIST_API_TYPE_PREFIX if is_mindtorch() else Const.MINT_DIST_API_TYPE_PREFIX
+        if prefix == distributed_prefix:
             self.op_is_distributed = True
 
     @staticmethod
