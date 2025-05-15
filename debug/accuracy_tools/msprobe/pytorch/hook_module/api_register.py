@@ -15,6 +15,7 @@
 
 import functools
 import os
+import inspect
 
 import torch
 import torch.distributed as dist
@@ -84,7 +85,8 @@ def tensor_module_forward(module, *args, **kwargs):
 
 def dist_module_forward(module, *args, **kwargs):
     handle = module.api_func(*args, **kwargs)
-    if kwargs.get("async_op") or module.api_name in ["isend", "irecv"]:
+    origin_key_args = [name for name, param in inspect.signature(module.api_func).parameters.items()]
+    if "async_op" in origin_key_args or module.api_name in ["isend", "irecv"]:
         if handle and hasattr(handle, 'wait'):
             handle.wait()
     if module.api_name == "batch_isend_irecv":

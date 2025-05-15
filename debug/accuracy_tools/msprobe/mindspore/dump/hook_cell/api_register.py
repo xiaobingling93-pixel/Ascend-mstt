@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import inspect
 
 from mindspore import Tensor, ops, mint
 from mindspore.mint import distributed
@@ -110,7 +111,8 @@ class ApiTemplate(HOOKCell):
         if self.prefix_api_name.startswith(
             (MsConst.DISTRIBUTED_DATA_PREFIX, Const.MINT_DIST_API_TYPE_PREFIX)
         ):
-            if kwargs.get("async_op") or self.api_name in ["isend", "irecv"]:
+            origin_key_args = [name for name, param in inspect.signature(self.api_func).parameters.items()]
+            if "async_op" in origin_key_args or self.api_name in ["isend", "irecv"]:
                 output = self.async_to_sync(output)
             if self.api_name == "batch_isend_irecv" and isinstance(output, list):
                 output = [self.async_to_sync(handle) for handle in output]
