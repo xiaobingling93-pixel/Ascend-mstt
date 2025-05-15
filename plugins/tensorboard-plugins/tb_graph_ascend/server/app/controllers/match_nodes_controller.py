@@ -206,8 +206,8 @@ class MatchNodesController:
         precision_output_error = MatchNodesController.calculate_md5_diff(npu_output_data, bench_output_data)
         precision_error = precision_input_error and precision_output_error
         # 在原始数据上，添加匹配节点，和匹配节点信息
-        npu_node_data['matched_node_link'] = GraphUtils.getNodeMatchedList(graph_data.get('Bench', {}), bench_node_name)
-        bench_node_data['matched_node_link'] = GraphUtils.getNodeMatchedList(graph_data.get('NPU', {}), npu_node_name)
+        npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(graph_data.get('Bench', {}), bench_node_name)
+        bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(graph_data.get('NPU', {}), npu_node_name)
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
         return {'success': True}
