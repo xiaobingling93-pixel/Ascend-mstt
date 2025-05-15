@@ -19,7 +19,7 @@ import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import useGraphAscend from './useGraphAscend';
-import { formatBytes } from '../utils';
+import { formatBytes, safeJSONParse } from '../utils';
 import '../graph_board/index'
 import '../graph_info_board/index'
 import '../graph_controls_board/index';
@@ -216,7 +216,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         }
         this.eventSource = new EventSource(`loadGraphData?run=${run}&tag=${tag}`);
         this.eventSource.onmessage = async (e) => {
-            const data = JSON.parse(e.data);
+            const data = safeJSONParse(e.data);
             if (data.error) {
                 this.progreesError('初始化图失败', data.error);
             }
@@ -228,15 +228,15 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 if (data.done) {
                     this.eventSource.close();
                     this.eventSource = null;
-                    // try {
-                    await Promise.all([this.loadGraphConfig(this.selection.run, this.selection.tag), this.loadGraphAllNodeList(this.selection.run, this.selection.tag, this.selection.microStep)])
-                    this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
-                    this.progreesLoading('初始化完成', '请稍后', data);
+                    try {
+                        await Promise.all([this.loadGraphConfig(this.selection.run, this.selection.tag), this.loadGraphAllNodeList(this.selection.run, this.selection.tag, this.selection.microStep)])
+                        this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
+                        this.progreesLoading('初始化完成', '请稍后', data);
 
-                    // } catch (error) {
+                    } catch (error) {
 
-                    //     this.progreesError('初始化图失败', error);
-                    // }
+                        this.progreesError('初始化图失败', error);
+                    }
                 } else {
                     this.progreesLoading('正在解析文件', '正在初始化模型，请稍后.', data);
                 }

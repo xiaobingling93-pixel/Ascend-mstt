@@ -55,7 +55,3 @@ export const NODE_TYPE_STYLES = { //节点样式
     [NODE_TYPE.API_LIST]: { strokeDasharray: '15,1', rx: '5', ry: '5' },
     [NODE_TYPE.MULTI_COLLECTION]: { strokeDasharray: '2,1', rx: '5', ry: '5' },
 };
-
-
-
-

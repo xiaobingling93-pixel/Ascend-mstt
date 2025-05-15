@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { fetchPbTxt } from "../../utils";
+import { fetchPbTxt, safeJSONParse } from "../../utils";
 
 const useNodeInfoDomain = (): { getMatchNodeInfo: (nodeInfo: any, metaData: any) => Promise<any> } => {
   const getMatchNodeInfo = async (nodeInfo: any, metaData: any): Promise<any> => {
@@ -26,7 +26,7 @@ const useNodeInfoDomain = (): { getMatchNodeInfo: (nodeInfo: any, metaData: any)
     const decoder = new TextDecoder();
     const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
     // 接口返回
-    const mactchResult = JSON.parse(decodedStr.replace(/"None"/g, '{}'));
+    const mactchResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
     return mactchResult;
   };
 

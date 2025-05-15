@@ -51,7 +51,6 @@ const useGraphAscend = () => {
         loadGraphConfig,
         loadGraphAllNodeList,
         loadGraphFileInfoList,
-
     };
 }
 export default useGraphAscend;
