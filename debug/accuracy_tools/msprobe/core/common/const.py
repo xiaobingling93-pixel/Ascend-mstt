@@ -146,6 +146,7 @@ class Const:
 
     DUMP_JSON_FILE = "dump_json_file"
     DEBUG_JSON_FILE = "debug_json_file"
+    STACK_JSON_FILE = "stack_json_file"
 
     # struct json param
     ORIGIN_DATA = "origin_data"

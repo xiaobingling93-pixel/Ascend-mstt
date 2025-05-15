@@ -67,8 +67,13 @@ class Comparator:
         self.mapping_dict = MappingDict(mapping_config)
 
     @staticmethod
-    def process_output_file(output_path, suffix):
-        file_name = add_time_with_xlsx("compare_result" + suffix)
+    def process_output_file(output_path, suffix, compared_file_type):
+        file_name_prefix_mapping = {
+            Const.DUMP_JSON_FILE: "compare_result",
+            Const.DEBUG_JSON_FILE: "debug_compare_result"
+        }
+        file_name_prefix = file_name_prefix_mapping.get(compared_file_type, "compare_result")
+        file_name = add_time_with_xlsx(file_name_prefix + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         if os.path.exists(file_path):
             logger.warning(f"{file_path} will be deleted.")
@@ -98,7 +103,7 @@ class Comparator:
         suffix = kwargs.get('suffix', '')
 
         # process output file
-        file_path = self.process_output_file(output_path, suffix)
+        file_path = self.process_output_file(output_path, suffix, self.mode_config.compared_file_type)
 
         # initialize the compare result table and compare general data(name, dtype, shape, statistics/md5, etc.)
         npu_json = input_param.get("npu_json_path")
@@ -117,7 +122,8 @@ class Comparator:
         # highlight suspicious API
         highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         highlight = HighLight(self.mode_config)
-        highlight.find_compare_result_error_rows(result_df, highlight_dict)
+        if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+            highlight.find_compare_result_error_rows(result_df, highlight_dict)
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         # output compare analysis suggestions

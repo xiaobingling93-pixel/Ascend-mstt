@@ -271,6 +271,7 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                   'output_struct': [('torch.float32', [16, 1, 3, 3])],
                   'params_struct': [],
                   'params_grad_struct': [],
+                  'debug_struct': [],
                   'summary': [[0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275],
                               [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481,
                                0.02844562754034996],
@@ -294,6 +295,7 @@ result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.
                       'output_struct': [('torch.float32', [16, 1, 3, 3], 2)],
                       'params_struct': [],
                       'params_grad_struct': [],
+                      'debug_struct': [],
                       'summary': [
                           [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481, 0.02844562754034996],
                           [-0.1, -0.1, -0.1, -0.1],
@@ -305,7 +307,7 @@ base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_
 
 
 def create_json_files(base_dir):
-    file_names = ['dump.json', 'stack.json', 'construct.json']
+    file_names = ['dump.json', 'stack.json', 'construct.json', 'debug.json']
 
     for file_name in file_names:
         file_path = os.path.join(base_dir, file_name)
@@ -338,11 +340,14 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_extract_json_1(self):
         create_json_files(base_dir1)
-        result = extract_json(base_dir1, stack_json=False)
+        result = extract_json(base_dir1, Const.DUMP_JSON_FILE)
         self.assertEqual(result, os.path.join(base_dir1, 'dump.json'))
 
-        result = extract_json(base_dir1, stack_json=True)
+        result = extract_json(base_dir1, Const.STACK_JSON_FILE)
         self.assertEqual(result, os.path.join(base_dir1, 'stack.json'))
+
+        result = extract_json(base_dir1, Const.DEBUG_JSON_FILE)
+        self.assertEqual(result, os.path.join(base_dir1, 'debug.json'))
 
     def test_check_and_return_dir_contents(self):
         create_rank_dirs(base_dir2)

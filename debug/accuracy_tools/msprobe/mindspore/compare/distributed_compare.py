@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import os
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, Const
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
@@ -39,15 +39,19 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     for nr, br in zip(npu_ranks, bench_ranks):
         npu_data_dir = os.path.join(npu_dump_dir, nr)
         bench_data_dir = os.path.join(bench_dump_dir, br)
-        npu_path = extract_json(npu_data_dir, stack_json=False)
-        bench_path = extract_json(bench_data_dir, stack_json=False)
-
-        dump_result_param = {
-            'npu_json_path': npu_path,
-            'bench_json_path': bench_path,
-            'is_print_compare_log': is_print_compare_log
-        }
-        ms_compare(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)
+        for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
+            npu_path = extract_json(npu_data_dir, file_type)
+            bench_path = extract_json(bench_data_dir, file_type)
+            if npu_path == "" or bench_path == "":
+                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
+                    ' skip comparing.')
+                continue
+            dump_result_param = {
+                'npu_json_path': npu_path,
+                'bench_json_path': bench_path,
+                'is_print_compare_log': is_print_compare_log
+            }
+            ms_compare(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)
 
 
 def ms_graph_compare(inputs, outputs):

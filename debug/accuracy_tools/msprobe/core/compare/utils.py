@@ -26,28 +26,38 @@ from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
+json_file_mapping = {
+    Const.DUMP_JSON_FILE: "dump.json",
+    Const.DEBUG_JSON_FILE: "debug.json",
+    Const.STACK_JSON_FILE: "stack.json"
+}
 
-def extract_json(dirname, stack_json=False):
+def extract_json(dirname, json_file_type):
     json_path = ''
     for filename in os.listdir(dirname):
-        target_file_name = 'stack.json' if stack_json else 'dump.json'
+        target_file_name = json_file_mapping.get(json_file_type)
+        if target_file_name is None:
+            logger.error(f'extract_json failed, invalid json_file_type: {json_file_type}.')
+            raise CompareException(CompareException.INVALID_KEY_ERROR)
         if filename == target_file_name:
             json_path = os.path.join(dirname, filename)
             break
 
     # Provide robustness on invalid directory inputs
     if not json_path:
-        if stack_json:
+        if json_file_type == Const.STACK_JSON_FILE:
             logger.warning(f'stack.json is not found in dump dir {dirname}.')
-        else:
+        elif json_file_type == Const.DUMP_JSON_FILE:
             logger.error(f'dump.json is not found in dump dir {dirname}.')
-            raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
+        elif json_file_type == Const.DEBUG_JSON_FILE:
+            logger.error(f'debug.json is not found in dump dir {dirname}.')
+
     return json_path
 
 
 def set_stack_json_path(input_param):
     npu_data_dir = os.path.dirname(input_param.get("npu_json_path"))
-    stack_path = extract_json(npu_data_dir, stack_json=True)
+    stack_path = extract_json(npu_data_dir, json_file_type=Const.STACK_JSON_FILE)
     input_param["stack_json_path"] = stack_path if stack_path else None
     return bool(stack_path)
 

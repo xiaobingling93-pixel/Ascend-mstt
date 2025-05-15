@@ -248,17 +248,19 @@ def md5_find(data, json_type=Const.DUMP_JSON_FILE):
                 elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
                     return True
     elif json_type == Const.DEBUG_JSON_FILE:
-        for data_info in data:
-            if isinstance(data_info, dict):
-                if "md5" in data_info:
-                    return True
-                else:
+        if isinstance(data, dict):
+            if "md5" in data:
+                return True
+            else:
+                for _, data_info in data.items():
                     if md5_find(data_info, Const.DEBUG_JSON_FILE):
                         return True
-            elif isinstance(data_info, list):
-                for sub_data_info in data_info:
-                    if md5_find(sub_data_info, Const.DEBUG_JSON_FILE):
-                        return True
+        elif isinstance(data, list):
+            for data_info in data:
+                if md5_find(data_info, Const.DEBUG_JSON_FILE):
+                    return True
+        else:
+            return False
     return False
 
 
