@@ -58,26 +58,39 @@ export const safeJSONParse = (str: any, defaultValue: any = null): any => {
  * @param maxWidth 
  * @returns 
  */
-export function maybeTruncateString(text: string, fontSize: number, maxWidth: number): string {
-  if (!text) {
-    return '';
-  }
-  if (measureTextWidth(text, fontSize) <= maxWidth) {
-    return text;
+export function maybeTruncateString(
+  content: string,
+  fontSize: number,
+  containerWidth: number
+): string {
+  if (!content) return "";
+
+  // 提前处理无需截断的情况
+  if (measureTextWidth(content, fontSize) <= containerWidth) {
+    return content;
   }
 
-  let start = 0;
-  let end = text.length;
-  while (start < end) {
-    const middle = start + Math.round((end - start) / 2);
-    const substring = `${text.slice(0, middle)}…`;
-    if (measureTextWidth(substring, fontSize) <= maxWidth) {
-      start = middle;
+  let leftBound = 1;
+  let rightBound = content.length;
+  let optimalIndex = 0;
+
+  // 逆向二分查找定位截断点
+  while (leftBound <= rightBound) {
+    const currentIndex = Math.floor((leftBound + rightBound) / 2);
+    const testString = content.slice(0, currentIndex) + "…";
+
+    if (measureTextWidth(testString, fontSize) <= containerWidth) {
+      optimalIndex = currentIndex;
+      leftBound = currentIndex + 1;
     } else {
-      end = middle - 1;
+      rightBound = currentIndex - 1;
     }
   }
-  return start === 0 ? text[0] : `${text.slice(0, start)}…`;
+
+  // 边界条件处理
+  return optimalIndex > 0
+    ? content.substring(0, optimalIndex) + "…"
+    : content[0] + "…"; // 极端情况保留首字符
 }
 /**
 * 计算文本宽度
