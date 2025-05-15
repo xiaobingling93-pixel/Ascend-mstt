@@ -15,6 +15,7 @@
 
 import os
 import time
+from copy import deepcopy
 from multiprocessing import cpu_count, Pool
 from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
                                             check_file_or_directory_path, load_json)
@@ -258,8 +259,9 @@ def _get_compare_graph_results(input_param, serializable_args, step, pool, err_c
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
             output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
+            input_param_copy = deepcopy(input_param)
             mp_task_dict[output_file_name] = pool.apply_async(_run_build_graph_compare,
-                                                              args=(input_param, serializable_args, nr, br),
+                                                              args=(input_param_copy, serializable_args, nr, br),
                                                               error_callback=err_call)
 
         mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
@@ -271,8 +273,9 @@ def _get_compare_graph_results(input_param, serializable_args, step, pool, err_c
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
             output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
+            input_param_copy = deepcopy(input_param)
             compare_graph_tasks.append(pool.apply_async(_mp_compare,
-                                                        args=(input_param, serializable_args, output_file_name, nr,
+                                                        args=(input_param_copy, serializable_args, output_file_name, nr,
                                                               br),
                                                         error_callback=err_call))
         compare_graph_results = [task.get() for task in compare_graph_tasks]
