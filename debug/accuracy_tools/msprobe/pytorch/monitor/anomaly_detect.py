@@ -272,35 +272,30 @@ class BaseWriterWithAD:
         stack them separately, migrate xpu_group to cpu, and then restore in the order of input.
 
         :param tensor_list: [tensor(-1.6165), tensor(-1.0985), tensor(-1.7777), tensor(-1.8408, device='npu:0')]
-        :return: tensor: tensor([-1.6165, -1.0985, -1.7777, -1.8408], device='cpu')
+        :return: result: list of float
         """
         cpu_tensors = []
         xpu_tensors = []
 
-        # 将张量分别放入cpu_tensors和xpu_tensors列表
         for tensor in tensor_list:
-            if tensor.device.type == 'cpu':
-                cpu_tensors.append(tensor)
-            else:
+            if isinstance(tensor, torch.Tensor) and tensor.device.type != 'cpu':
+                # 将device上的tensor先stack后to cpu
                 xpu_tensors.append(tensor)
+            else:
+                cpu_tensors.append(tensor)
 
-        # 分别堆叠cpu_tensors和xpu_tensors
-        cpu_stack = torch.stack(cpu_tensors) if cpu_tensors else torch.tensor([])
         xpu_stack = torch.stack(xpu_tensors).cpu() if xpu_tensors else torch.tensor([])
 
         # 按照输入的顺序恢复
         result = []
         cpu_tensors_idx, xpu_tensors_idx = 0, 0
         for tensor in tensor_list:
-            if tensor.device.type == 'cpu':
-                result.append(cpu_stack[cpu_tensors_idx])
-                cpu_tensors_idx += 1
-            else:
+            if isinstance(tensor, torch.Tensor) and tensor.device.type != 'cpu':
                 result.append(xpu_stack[xpu_tensors_idx])
                 xpu_tensors_idx += 1
-
-        # 将结果堆叠成一个张量
-        result = torch.stack(result)
+            else:
+                result.append(cpu_tensors[cpu_tensors_idx])
+                cpu_tensors_idx += 1
 
         return result
 
