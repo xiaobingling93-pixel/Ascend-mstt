@@ -185,7 +185,7 @@ class TestGradMonitor(unittest.TestCase):
                 2: {'nans': 0.0, 'norm': 43.578354}
             }
         }
-        self.assertEqual(dict_equal(data, result), True)
+        self.assertDictEqual(data, result)
         tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "actv"))
         print(tb_data)
         tb_result = {
@@ -309,7 +309,7 @@ class TestGradMonitor(unittest.TestCase):
                                             (7, 40.200843811035156),
                                             (8, 44.453147888183594),
                                             (9, 40.841522216796875)]}
-        self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+        self.assertDictEqual(tb_data, tb_result)
 
     def test_actv_grad(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "actv_grad_0-2.csv"))
@@ -489,7 +489,7 @@ class TestGradMonitor(unittest.TestCase):
                 2: {'nans': 0.0, 'norm': 7.06771}
             }
         }
-        self.assertEqual(dict_equal(data, result), True)
+        self.assertDictEqual(data, result)
         tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "param_origin"))
         tb_result = {
             'vp0:linear.weight/norm': [
@@ -539,7 +539,7 @@ class TestGradMonitor(unittest.TestCase):
                 (9, 0.0)
             ]
         }
-        self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+        self.assertDictEqual(tb_data, tb_result)
 
     def test_exp_avg(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "exp_avg_0-2.csv"))
@@ -553,7 +553,7 @@ class TestGradMonitor(unittest.TestCase):
                 2: {'nans': 0.0, 'norm': 0.099221}
             }
         }
-        self.assertEqual(dict_equal(data, result), True)
+        self.assertDictEqual(data, result)
         tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "exp_avg"))
         tb_result = {
             'vp0:linear.bias/nans': [(1, 0.0),
@@ -592,7 +592,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, 0.11372199654579163),
                                        (8, 0.12264800071716309),
                                        (9, 0.09017200022935867)]}
-        self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+        self.assertDictEqual(tb_data, tb_result)
 
     def test_exp_avg_sq(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "exp_avg_sq_0-2.csv"))
@@ -606,7 +606,7 @@ class TestGradMonitor(unittest.TestCase):
                 2: {'nans': 0.0, 'norm': 0.000126}
             }
         }
-        self.assertEqual(dict_equal(data, result), True)
+        self.assertDictEqual(data, result)
         tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "exp_avg_sq"))
         tb_result = {
             'vp0:linear.bias/nans': [(1, 0.0),
@@ -645,7 +645,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, 0.00026000000070780516),
                                        (8, 0.00028700000257231295),
                                        (9, 0.0003060000017285347)]}
-        self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+        self.assertDictEqual(tb_data, tb_result)
 
     def test_grad_reduced(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "grad_reduced_0-2.csv"))
@@ -661,7 +661,7 @@ class TestGradMonitor(unittest.TestCase):
                 2: {'nans': 0.0, 'norm': 0.497603}
             }
         }
-        self.assertEqual(dict_equal(data, result), True)
+        self.assertDictEqual(data, result)
         tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "grad_reduced"))
         tb_result = {
             'vp0:linear.bias/nans': [(0, 0.0),
@@ -704,7 +704,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, 0.4831080138683319),
                                        (8, 0.3234719932079315),
                                        (9, 0.32385098934173584)]}
-        self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+        self.assertDictEqual(tb_data, tb_result)
 
     def test_grad_unreduced(self):
         data = parse_step_fn(os.path.join(self.timestamp_dirpath, "grad_unreduced_0-2.csv"))
@@ -720,7 +720,7 @@ class TestGradMonitor(unittest.TestCase):
                 2: {'nans': 0.0, 'norm': 0.497603}
             }
         }
-        self.assertEqual(dict_equal(data, result), True)
+        self.assertDictEqual(data, result)
 
         tb_data = extract_scalars_from_tensorboard(os.path.join(self.csv2tb_dirpath, "grad_unreduced"))
         tb_result = {
@@ -764,7 +764,7 @@ class TestGradMonitor(unittest.TestCase):
                                        (7, 0.4831080138683319),
                                        (8, 0.3234719932079315),
                                        (9, 0.32385098934173584)]}
-        self.assertEqual(compare_scalar_dicts(tb_data, tb_result), True)
+        self.assertDictEqual(tb_data, tb_result)
 
 
 if __name__ == '__main__':

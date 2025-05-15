@@ -80,6 +80,7 @@ def write_step(output_dirpath, parse_step_result, rank, data_type):
             for op, value in ops.items():
                 tag = f"{vpp_name}/{op}"
                 writer.add_scalar(tag, value, step)
+    writer.flush()
 
 
 @recursion_depth_decorator("update_dict", max_depth=50)
@@ -117,7 +118,6 @@ def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
                 all_step_result = update_dict(all_step_result, parse_step_result)
             if all_step_result:
                 write_step(output_dirpath, all_step_result, rank, data_type)
-    time.sleep(1)
 
 
 def check_process_num(process_num):
