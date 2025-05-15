@@ -148,7 +148,7 @@ class PrecisionDebugger:
         return is_graph
 
     @classmethod
-    def start(cls, model=None):
+    def start(cls, model=None, token_range=None):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
@@ -161,7 +161,7 @@ class PrecisionDebugger:
         if cls._need_service():
             if not instance.service:
                 instance.service = Service(instance.config)
-            instance.service.start(model)
+            instance.service.start(model, token_range)
         else:
             if not instance.first_start:
                 get_api_register().restore_all_api()

@@ -115,7 +115,7 @@ class PrecisionDebugger:
             )
 
     @classmethod
-    def start(cls, model=None):
+    def start(cls, model=None, token_range=None):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
@@ -125,7 +125,7 @@ class PrecisionDebugger:
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
-            instance.service.start(instance.model)
+            instance.service.start(instance.model, token_range)
 
     @classmethod
     def forward_backward_dump_end(cls):
