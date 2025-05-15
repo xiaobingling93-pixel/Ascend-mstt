@@ -21,6 +21,7 @@ from mindspore.mint import distributed
 from mindspore.mint.nn import functional
 from mindspore.communication import comm_func
 
+from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.api_registry import ApiRegistry
@@ -111,8 +112,15 @@ class ApiTemplate(HOOKCell):
         if self.prefix_api_name.startswith(
             (MsConst.DISTRIBUTED_DATA_PREFIX, Const.MINT_DIST_API_TYPE_PREFIX)
         ):
-            origin_key_args = [name for name, param in inspect.signature(self.api_func).parameters.items()]
-            if "async_op" in origin_key_args or self.api_name in ["isend", "irecv"]:
+            try:
+                bound = inspect.signature(self.api_func).bind(*args, **kwargs)
+                bound.apply_defaults()
+                use_asyn_op_flag = bound.arguments.get("asyn_op", False)
+            except Exception as e:
+                use_asyn_op_flag = False
+                logger.warning(f"fail to get dist api's func signature because {e}, set use_asyn_op_flag=False")
+
+            if use_asyn_op_flag or self.api_name in ["isend", "irecv"]:
                 output = self.async_to_sync(output)
             if self.api_name == "batch_isend_irecv" and isinstance(output, list):
                 output = [self.async_to_sync(handle) for handle in output]
