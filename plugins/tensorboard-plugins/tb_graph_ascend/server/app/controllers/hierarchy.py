@@ -26,6 +26,24 @@ MAX_PER_ROW = 5  # 横向每行最大数
 
 
 class Hierarchy:
+    
+    def __init__(self, graph_type, graph, micro_step):
+        root_node_name = graph.get('root')
+        node_info = graph.get('node', {}).get(root_node_name, {})
+        name_prefix = NPU_PREFIX if graph_type == NPU else BENCH_PREFIX
+        name_prefix = '' if graph_type == SINGLE else name_prefix
+        self.name_prefix = name_prefix
+        self.root_name = root_node_name
+        self.graph_type = graph_type
+        self.graph = graph
+        self.micro_step_id = micro_step
+        self.current_hierarchy = {
+            root_node_name: self.get_basic_rende_info(root_node_name, node_info)
+        }
+        # 默认展开根节点
+        self.update_graph_data(self.root_name, graph)
+        self.update_grpah_shape()
+        self.update_graph_position()
 
     @staticmethod
     def measure_text_width(text):
@@ -46,24 +64,6 @@ class Hierarchy:
             splited_label = splited_subnode_name[-2:] if not splited_subnode_name[
                 -2].isdigit() else splited_subnode_name[-3:]
         return ('.').join(splited_label)
-    
-    def __init__(self, graph_type, graph, micro_step):
-        root_node_name = graph.get('root')
-        node_info = graph.get('node', {}).get(root_node_name, {})
-        name_prefix = NPU_PREFIX if graph_type == NPU else BENCH_PREFIX
-        name_prefix = '' if graph_type == SINGLE else name_prefix
-        self.name_prefix = name_prefix
-        self.root_name = root_node_name
-        self.graph_type = graph_type
-        self.graph = graph
-        self.micro_step_id = micro_step
-        self.current_hierarchy = {
-            root_node_name: self.get_basic_rende_info(root_node_name, node_info)
-        }
-        # 默认展开根节点
-        self.update_graph_data(self.root_name, graph)
-        self.update_grpah_shape()
-        self.update_graph_position()
 
     def update_graph_data(self, node_name, graph):
         target_node = self.current_hierarchy.get(node_name, {})
