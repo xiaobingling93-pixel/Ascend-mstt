@@ -208,63 +208,6 @@ export function darkenColor(color: string, amount: number): string {
   }
 }
 
-/**
- * Compares tag names asciinumerically broken into components.
- * <p>This is the comparison function used for sorting most string values in
- * TensorBoard. Unlike the standard asciibetical comparator, this function
- * knows that 'a10b' > 'a2b'. Fixed point and engineering notation are
- * supported. This function also splits the input by slash and underscore to
- * perform array comparison. Therefore it knows that 'a/a' < 'a+/a' even
- * though '+' < '/' in the ASCII table.
- */
-export function compareTagNames(a: string, b: string): number {
-  let ai = 0;
-  let bi = 0;
-  while (true) {
-    // Handle end of strings
-    if (ai === a.length) {
-      return bi === b.length ? 0 : -1;
-    }
-    if (bi === b.length) {
-      return 1;
-    }
-
-    // Check for digits
-    if (isDigit(a[ai]) && isDigit(b[bi])) {
-      const ais = ai;
-      const bis = bi;
-
-      // Consume all consecutive digits (simplified from original)
-      while (ai < a.length && isDigit(a[ai])) ai++;
-      while (bi < b.length && isDigit(b[bi])) bi++;
-
-      const an = parseInt(a.slice(ais, ai), 10);
-      const bn = parseInt(b.slice(bis, bi), 10);
-
-      if (an !== bn) {
-        return an - bn;
-      }
-      continue;
-    }
-
-    // Regular character comparison
-    if (a[ai] < b[bi]) {
-      return -1;
-    }
-    if (a[ai] > b[bi]) {
-      return 1;
-    }
-
-    ai++;
-    bi++;
-  }
-}
-
-// Simplified digit check
-function isDigit(c: string): boolean {
-  return c >= '0' && c <= '9';
-}
-
 export function formatBytes(bytes) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
