@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+import inspect
 
 from mindspore import Tensor, ops, mint
 from mindspore.mint import distributed
@@ -23,6 +24,7 @@ from mindspore.communication import comm_func
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.api_registry import ApiRegistry
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -111,7 +113,15 @@ class ApiTemplate(HOOKCell):
         if self.prefix_api_name.startswith(
             (MsConst.DISTRIBUTED_DATA_PREFIX, Const.MINT_DIST_API_TYPE_PREFIX)
         ):
-            if kwargs.get("async_op") or self.api_name in ["isend", "irecv"]:
+            try:
+                bound = inspect.signature(self.api_func).bind(*args, **kwargs)
+                bound.apply_defaults()
+                use_asyn_op_flag = bound.arguments.get("asyn_op", False)
+            except Exception as e:
+                use_asyn_op_flag = False
+                logger.warning(f"fail to get dist api's func signature because {e}, no wait")
+
+            if use_asyn_op_flag or self.api_name in ["isend", "irecv"]:
                 output = self.async_to_sync(output)
             if self.api_name == "batch_isend_irecv" and isinstance(output, list):
                 output = [self.async_to_sync(handle) for handle in output]
