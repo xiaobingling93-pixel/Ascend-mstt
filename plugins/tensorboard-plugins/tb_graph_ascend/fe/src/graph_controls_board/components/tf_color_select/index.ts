@@ -18,7 +18,7 @@ import '@vaadin/combo-box';
 import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
-import { fetchPbTxt } from '../../../utils';
+import { fetchPbTxt, safeJSONParse } from '../../../utils';
 import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects } from '../../../common/constant';
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
@@ -757,7 +757,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const screenPath = `screen?${String(params)}`;
       try {
         const screenStr = fetchPbTxt(screenPath);
-        const precisionmenu = JSON.parse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
+        const precisionmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
         this.set('precisionmenu', precisionmenu);
       } catch (e) {
         console.error('Get precision menu failed, please check the toggleCheckbox and the data in vis file');
@@ -784,7 +784,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
       try {
         const screenStr = fetchPbTxt(screenPath);
-        this.overflowmenu = JSON.parse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
+        this.overflowmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
       } catch (e) {
         console.error('Get overflow menu failed, please check the toggleCheckbox and the data in vis file');
       }
