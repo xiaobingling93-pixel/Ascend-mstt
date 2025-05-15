@@ -92,6 +92,8 @@ msmonitor_plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用
 
 ## 使用方式
 
+- **说明**：**Profiler trace dump**功能和**NPU Monitor**功能**不能**同时开启。
+
 ### Profiler trace dump功能
 Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Torch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
 
@@ -281,3 +283,9 @@ Step6: 观测Prometheus上报数据
 # Prometheus默认端口为8080
 curl 127.0.0.1:8080/metrics
 ```
+
+## 附录
+
+[Mindspore框架下msMonitor的使用方法](./docs/mindspore_adapter.md)
+
+[安全声明](./docs/security_statement.md)

@@ -202,7 +202,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwarg
     if (args.IsNone() || kwargs.IsNone()) {
         if (!ignore) {
             PyErr_SetString(PyExc_TypeError, "Call python object with invalid parameters.");
-        } 
+        }
         return PythonObject();
     }
 

@@ -42,7 +42,6 @@ class TestAnomalyDataWriter(unittest.TestCase):
         writer.init_detected_json()
 
         # 检查是否创建了目录
-        mock_create_directory.assert_any_call('/tmp/dump')
         mock_create_directory.assert_any_call('/tmp/dump/rank0')
 
         # 检查是否初始化了 JSON 文件

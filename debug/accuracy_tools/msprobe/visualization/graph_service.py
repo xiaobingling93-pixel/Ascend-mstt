@@ -15,6 +15,7 @@
 
 import os
 import time
+from copy import deepcopy
 from multiprocessing import cpu_count, Pool
 from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
                                             check_file_or_directory_path, load_json)
@@ -90,7 +91,7 @@ def _export_compare_graph_result(args, result):
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graphs[0], graphs[1], graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task,
-                                      args.overflow_check)
+                                      args.overflow_check, graph_comparator.ma.compare_mode)
     try:
         GraphBuilder.to_json(output_path, export_config)
         logger.info(f'Exporting compare graph result successfully, the result file is saved in {output_path}')
@@ -214,7 +215,7 @@ def _compare_graph_ranks(input_param, args, step=None):
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
-                pool.terminate()
+                pool.close()
             except OSError as e:
                 logger.error(f'Error occurred while terminating the pool: {e}')
 
@@ -258,8 +259,9 @@ def _get_compare_graph_results(input_param, serializable_args, step, pool, err_c
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
             output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
+            input_param_copy = deepcopy(input_param)
             mp_task_dict[output_file_name] = pool.apply_async(_run_build_graph_compare,
-                                                              args=(input_param, serializable_args, nr, br),
+                                                              args=(input_param_copy, serializable_args, nr, br),
                                                               error_callback=err_call)
 
         mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
@@ -271,8 +273,9 @@ def _get_compare_graph_results(input_param, serializable_args, step, pool, err_c
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
             output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
+            input_param_copy = deepcopy(input_param)
             compare_graph_tasks.append(pool.apply_async(_mp_compare,
-                                                        args=(input_param, serializable_args, output_file_name, nr,
+                                                        args=(input_param_copy, serializable_args, output_file_name, nr,
                                                               br),
                                                         error_callback=err_call))
         compare_graph_results = [task.get() for task in compare_graph_tasks]
@@ -305,7 +308,7 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
             try:
-                pool.terminate()
+                pool.close()
             except OSError as e:
                 logger.error(f'Error occurred while terminating the pool: {e}')
 

@@ -31,7 +31,7 @@ namespace MindStudioDebugger {
 
 constexpr const char* ACL_DUMP_SCENE = "dump_scene";
 constexpr const char* SCENE_NORMAL = "normal";
-constexpr const char* SCENE_EXCEPTION ="lite_exception";
+constexpr const char* SCENE_EXCEPTION = "lite_exception";
 
 constexpr const char* ACL_DUMP_PATH = "dump_path";
 constexpr const char* ACL_DUMP_STEP = "dump_step";
@@ -430,7 +430,7 @@ void AclDumper::SetDump(uint32_t rank, uint32_t curStep, ExtArgs& args)
 
     if (!initialized) {
         ret = Initialize();
-        if(ret != DebuggerErrno::OK) {
+        if (ret != DebuggerErrno::OK) {
             LOG_ERROR(ret, "AclDumper initialization failed.");
             return;
         }
@@ -495,7 +495,7 @@ void AclDumper::FinalizeDump(ExtArgs& args)
     aclDumpHasSet = false;
 }
 
-void KernelInitDump() 
+void KernelInitDump()
 {
     if (AscendCLApi::LoadAclApi() != DebuggerErrno::OK) {
         return;
@@ -514,7 +514,7 @@ void KernelInitDump()
     }
 }
 
-void KernelSetDump(const std::string &filePath) 
+void KernelSetDump(const std::string &filePath)
 {
     std::string dumpPath = FileUtils::GetAbsPath(filePath);
     auto aclRet = CALL_ACL_API(AclmdlSetDump, dumpPath.c_str());
@@ -525,7 +525,7 @@ void KernelSetDump(const std::string &filePath)
     }
 }
 
-void KernelFinalizeDump() 
+void KernelFinalizeDump()
 {
     CALL_ACL_API(AclrtSynchronizeDevice);
     auto aclRet = CALL_ACL_API(AclmdlFinalizeDump);

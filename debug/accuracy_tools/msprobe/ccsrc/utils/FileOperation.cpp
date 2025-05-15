@@ -102,7 +102,8 @@ inline static std::vector<char> NpyLen2Bytes(size_t length, size_t lengthLen)
     return buff;
 }
 
-static std::string GenerateNpyHeader(const DataUtils::TensorShape &shape, DataUtils::DataType dt, bool fortranOrder=false)
+static std::string GenerateNpyHeader(const DataUtils::TensorShape &shape,
+    DataUtils::DataType dt, bool fortranOrder = false)
 {
     auto typeDesc = npyTypeDescMap.find(dt);
     if (typeDesc == npyTypeDescMap.end()) {

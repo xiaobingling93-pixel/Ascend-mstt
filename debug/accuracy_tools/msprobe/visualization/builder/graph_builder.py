@@ -63,10 +63,10 @@ class GraphBuilder:
         """
         result = {}
         if config.graph_b:
-            result[GraphConst.JSON_NPU_KEY] = config.graph_n.to_dict()
-            result[GraphConst.JSON_BENCH_KEY] = config.graph_b.to_dict()
+            result[GraphConst.JSON_NPU_KEY] = config.graph_n.to_dict(config.compare_mode)
+            result[GraphConst.JSON_BENCH_KEY] = config.graph_b.to_dict(config.compare_mode)
         else:
-            result = config.graph_n.to_dict()
+            result = config.graph_n.to_dict(config.compare_mode)
         if config.tool_tip:
             result[GraphConst.JSON_TIP_KEY] = config.tool_tip
         if config.node_colors:
@@ -279,7 +279,7 @@ class GraphBuilder:
 
 class GraphExportConfig:
     def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task='',
-                 overflow_check=False):
+                 overflow_check=False, compare_mode=None):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.tool_tip = tool_tip
@@ -287,6 +287,7 @@ class GraphExportConfig:
         self.micro_steps = micro_steps
         self.task = task
         self.overflow_check = overflow_check
+        self.compare_mode = compare_mode
 
 
 @dataclass

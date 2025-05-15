@@ -30,8 +30,8 @@ constexpr size_t MAX_DATA_LEN = 4ULL * 1024 * 1024 * 1024;
 
 class AclDumpDataProcessor {
 public:
-    AclDumpDataProcessor(const std::string& path, const std::vector<DebuggerSummaryOption>& opts) :
-        dumpPath{path}, hostAnalysisOpts{opts} {};
+    AclDumpDataProcessor(const std::string& path, const std::vector<DebuggerSummaryOption>& opts)
+        : dumpPath{path}, hostAnalysisOpts{opts} {};
     ~AclDumpDataProcessor();
 
     bool IsCompleted() const {return completed;}

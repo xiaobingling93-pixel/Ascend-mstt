@@ -69,7 +69,7 @@ inline std::string operator+(const AclTensorInfo& tensor, const std::string& s)
 }
 
 namespace AclTensor {
-size_t SizeOfTensor(const AclTensorInfo& tensor, bool host=true);
+size_t SizeOfTensor(const AclTensorInfo& tensor, bool host = true);
 template <typename T>
 AclTensorInfo ParseAttrsFromDumpData(const std::string &dumpPath, const uint8_t* data, const T& tensor,
                                      const std::string& io, uint32_t slot);

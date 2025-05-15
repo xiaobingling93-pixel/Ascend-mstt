@@ -24,11 +24,6 @@ bool DynoLogNpuMonitor::Init()
 
 ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
 {
-    if (cmd.monitorStart && !msptiMonitor_.IsStarted()) {
-        LOG(INFO) << "Start mspti monitor thread successfully";
-        msptiMonitor_.Start();
-    }
-
     if (cmd.monitorStop) {
         if (msptiMonitor_.IsStarted()) {
             LOG(INFO) << "Stop mspti monitor thread successfully";
@@ -37,7 +32,12 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
         return ErrCode::SUC;
     }
 
-    if (!cmd.enableActivities.empty()) {
+    if (cmd.monitorStart && !msptiMonitor_.IsStarted()) {
+        LOG(INFO) << "Start mspti monitor thread successfully";
+        msptiMonitor_.Start();
+    }
+
+    if (msptiMonitor_.IsStarted() && !cmd.enableActivities.empty()) {
         auto curActivities = msptiMonitor_.GetEnabledActivities();
         std::vector<msptiActivityKind> enableKinds, disableKinds;
         std::set_difference(cmd.enableActivities.begin(), cmd.enableActivities.end(), curActivities.begin(), curActivities.end(),
