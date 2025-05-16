@@ -99,11 +99,21 @@ if [ -z "$PACKAGE_TYPE" ]; then
     bash scripts/build.sh
     echo "Build dynolog success without packaging"
 elif [ "$PACKAGE_TYPE" = "deb" ]; then
+    ARCHITECTURE=$(uname -m)
+    CONTROL_FILE="scripts/debian/control"
+    ARCH="amd64"
+    if [[ "$ARCHITECTURE" == "aarch64" ]]; then
+        sed -i 's/^Architecture: .*/Architecture: arm64/' "$CONTROL_FILE"
+        ARCH="arm64"
+        echo "dpkg Architecture set to arm64"
+    fi
+    export ARCH=$ARCH
     bash scripts/debian/make_deb.sh
+    unset ARCH
     mv dynolog_*.deb ../../
     echo "Build dynolog deb package success"
 elif [ "$PACKAGE_TYPE" = "rpm" ]; then
     bash scripts/rpm/make_rpm.sh
-    mv dynolog_*.rpm ../../
+    mv dynolog-*.rpm ../../
     echo "Build dynolog rpm package success"
 fi
