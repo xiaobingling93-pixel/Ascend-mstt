@@ -26,6 +26,7 @@ from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_pa
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 device = collections.namedtuple('device', ['type', 'index'])
@@ -34,6 +35,7 @@ file_suffix_to_file_type = {
     "dump.json": Const.DUMP_JSON_FILE,
     "debug.json": Const.DEBUG_JSON_FILE,
 }
+
 
 class MsprobeBaseException(Exception):
     """
@@ -235,21 +237,22 @@ def format_value(value):
     return float('{:.12f}'.format(value))
 
 
+@recursion_depth_decorator('msprobe.core.common.utils.md5_find', max_depth=Const.DUMP_MAX_DEPTH)
 def md5_find(data, json_type=Const.DUMP_JSON_FILE):
     if json_type == Const.DUMP_JSON_FILE:
         for key_op in data:
             for api_info in data[key_op]:
                 if isinstance(data[key_op][api_info], list):
                     for data_detail in data[key_op][api_info]:
-                        if data_detail and 'md5' in data_detail:
+                        if data_detail and Const.MD5 in data_detail:
                             return True
                 if isinstance(data[key_op][api_info], bool):
                     continue
-                elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
+                elif data[key_op][api_info] and Const.MD5 in data[key_op][api_info]:
                     return True
     elif json_type == Const.DEBUG_JSON_FILE:
         if isinstance(data, dict):
-            if "md5" in data:
+            if Const.MD5 in data:
                 return True
             else:
                 for _, data_info in data.items():

@@ -32,6 +32,7 @@ json_file_mapping = {
     Const.STACK_JSON_FILE: "stack.json"
 }
 
+
 def extract_json(dirname, json_file_type):
     json_path = ''
     for filename in os.listdir(dirname):
