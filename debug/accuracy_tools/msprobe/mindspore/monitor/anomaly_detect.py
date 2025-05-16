@@ -428,9 +428,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
         super().write_metrics(op_list, metric_value, step, prefix='', need_explain=need_explain)
 
         if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD]:
-            self.header = MonitorConst.CSV_HEADER_XY + ops
+            self.header = MonitorConst.CSV_HEADER_XY + op_list
         else:
-            self.header = MonitorConst.CSV_HEADER + ops
+            self.header = MonitorConst.CSV_HEADER + op_list
         self.write_csv(prefix, step)
 
     def close(self):
