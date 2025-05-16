@@ -309,7 +309,7 @@ class Service:
 
         logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
 
-        self.cur_token_id = 0  # reset infer model token_id
+        self.cur_token_id = 0
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -318,13 +318,14 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
-            if token_range:  # do not register hook when cur_token_id < token_range[0]
-                self.register_infer_count_hook(model, token_range)
-            else:
-                self.register_primitive_hook()
-                if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
-                    self.cell_processor.register_cell_hook(self.model, self.build_hook)
-                self.first_start = False
+
+            self.register_primitive_hook()
+            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
+                self.cell_processor.register_cell_hook(self.model, self.build_hook)
+            self.first_start = False
+
+            if token_range:
+                self.register_infer_count_hook(self.model, token_range)
 
         self.api_register.register_all_api()
         if token_range is None:
@@ -450,24 +451,19 @@ class Service:
         param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
         return: None
         """
-        def infer_hook(model, input):
+        def infer_hook(model, args):
             if self.cur_token_id == token_range[0]:
-                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
-                self.register_primitive_hook()
-                if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
-                    self.cell_processor.register_cell_hook(self.model, self.build_hook)
-                self.first_start = False
                 self.switch = True
                 self.primitive_switch = True
                 JitDump.jit_dump_switch = True
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
             elif token_range[0] < self.cur_token_id <= token_range[1]:
-                logger.info(f"Current token id: {self.cur_token_id}")
+                logger.debug(f"Current token id: {self.cur_token_id}.")
             elif self.cur_token_id > token_range[1] and self.switch:
                 self.switch = False
                 self.primitive_switch = False
                 JitDump.jit_dump_switch = False
-                logger.info("infer_model exceed token_range, early stop dump infer token.")
-                print_tools_ends_info()
+                logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
             self.cur_token_id += 1
         if isinstance(root_model, list):
             root_model = root_model[0]

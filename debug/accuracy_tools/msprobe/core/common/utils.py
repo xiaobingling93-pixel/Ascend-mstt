@@ -437,6 +437,31 @@ def check_init_step(step):
                 f"{step} must be greater than or equal to 0")
 
 
+def check_token_range(token_range, model):
+    if token_range is None:
+        return
+    if not isinstance(token_range, (list, tuple)):
+        logger.error("Token_range must be a list or tuple.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if len(token_range) != 2:
+        logger.error("Token_range must contains exactly 2 elements.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+    start, end = token_range
+    if not isinstance(start, int) or not isinstance(end, int):
+        logger.error("Start and end in token_range must be integer.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if start > end:
+        logger.error("Start in token_range must less than the end.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if start < 0:
+        logger.error("Start in token_range must >= 0.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if not model:
+        logger.error("A non-empty model must be provided when passing the token_range.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+
 def check_seed_all(seed, mode, rm_dropout):
     if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:

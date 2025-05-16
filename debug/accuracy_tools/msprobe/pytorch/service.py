@@ -249,23 +249,15 @@ class Service:
         param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
         return: None
         """
-        def infer_hook(model, input):
+        def infer_hook(model, args):
             if self.cur_token_id == token_range[0]:
-                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
-                self.register_module_hook()
-                if self.config.level == Const.LEVEL_MIX:
-                    register_optimizer_hook(self.data_collector)
-                self.first_start = False
                 self.switch = True
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
             elif token_range[0] < self.cur_token_id <= token_range[1]:
-                logger.info(f"Current token id: {self.cur_token_id}")
+                logger.debug(f"Current token id: {self.cur_token_id}.")
             elif self.cur_token_id > token_range[1] and self.switch:
-                if self.config.online_run_ut:
-                    self.attl_stop()
                 self.switch = False
-                self.should_stop_service = True
-                logger.info("infer_model exceed token_range, early stop dump infer token.")
-                print_tools_ends_info()
+                logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
             self.cur_token_id += 1
         if isinstance(root_model, list):
             root_model = root_model[0]
@@ -281,7 +273,7 @@ class Service:
             return
 
         self.model = model
-        self.cur_token_id = 0  # reset infer model token_id
+        self.cur_token_id = 0
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -292,13 +284,14 @@ class Service:
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
 
-            if token_range:  # do not register hook when cur_token_id < token_range[0]
-                self.register_infer_count_hook(model, token_range)
-            else:
-                self.register_module_hook()
-                if self.config.level == Const.LEVEL_MIX:
-                    register_optimizer_hook(self.data_collector)
-                self.first_start = False
+            self.register_module_hook()
+            if self.config.level == Const.LEVEL_MIX:
+                register_optimizer_hook(self.data_collector)
+            self.first_start = False
+
+            if token_range:
+                self.register_infer_count_hook(self.model, token_range)
+
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
         if token_range is None:
