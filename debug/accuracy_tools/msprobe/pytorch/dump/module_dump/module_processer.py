@@ -161,6 +161,7 @@ class ModuleProcesser:
                 forward_hooks_dict = getattr(module, '_forward_hooks', OrderedDict())
                 handle = RemovableHandle(forward_hooks_dict)
                 forward_hooks_dict[handle.id] = forward_hook
+                forward_hooks_dict.move_to_end(handle.id, last=False)
                 if torch_version_above_or_equal_2:
                     forward_hooks_with_kwargs_dict = getattr(module, '_forward_hooks_with_kwargs', OrderedDict())
                     forward_hooks_with_kwargs_dict[handle.id] = True
