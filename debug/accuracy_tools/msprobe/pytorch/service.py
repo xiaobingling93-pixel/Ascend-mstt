@@ -244,21 +244,21 @@ class Service:
 
     def register_infer_count_hook(self, root_model, token_range):
         """
-        通过root_module执行的轮次来判断当前在第几个token
-        param root_module: 需要采集的推理模型
+        通过root_model执行的轮次来判断当前在第几个token
+        param root_model: 需要采集的推理模型
         param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
         return: None
         """
         def infer_hook(model, input):
             if self.cur_token_id == token_range[0]:
-                logger.info("Current token id: {self.cur_token_id}, start dump infer token.")
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
                 self.register_module_hook()
                 if self.config.level == Const.LEVEL_MIX:
                     register_optimizer_hook(self.data_collector)
                 self.first_start = False
                 self.switch = True
             elif token_range[0] < self.cur_token_id <= token_range[1]:
-                logger.info("Current token id: {self.cur_token_id}")
+                logger.info(f"Current token id: {self.cur_token_id}")
             elif self.cur_token_id > token_range[1] and self.switch:
                 if self.config.online_run_ut:
                     self.attl_stop()
@@ -267,7 +267,6 @@ class Service:
                 logger.info("infer_model exceed token_range, early stop dump infer token.")
                 print_tools_ends_info()
             self.cur_token_id += 1
-
         if isinstance(root_model, list):
             root_model = root_model[0]
             logger.warning("Infer model can only input one to support token_range, choose the first one.")
