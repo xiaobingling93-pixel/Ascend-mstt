@@ -126,6 +126,22 @@ class DebuggerConfig:
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
 
+    def check_token_range(self, token_range):
+        if token_range is None:
+            return
+        if not isinstance(token_range, (list, tuple)):
+            raise ValueError("传入token_range需为list或tuple")
+        if len(token_range) != 2:
+            raise ValueError("token_range必须包含2个元素")
+
+        start, end = token_range
+        if not isinstance(start, int) or not isinstance(end, int):
+            raise ValueError("token_range中的start和end必须是整数")
+        if start > end:
+            raise ValueError("token_range中的start必须小于end")
+        if start < 0:
+            raise ValueError("token_range中的start必须是非负整数")
+
     def _check_and_adjust_config_with_l2(self):
         if self.scope:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
