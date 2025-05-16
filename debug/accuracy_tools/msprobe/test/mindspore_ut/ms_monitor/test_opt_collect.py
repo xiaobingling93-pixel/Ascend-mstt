@@ -69,7 +69,7 @@ class TestOptimizerMon:
         assert len(result) == 1
         assert (result["test_tag"] == expected_grad).all()
 
-    def test_fetch_mv_in_adam_if_state_complete_then_return_correct_momentum_values(self):
+    def test_fetch_mv_if_state_complete_then_return_correct_momentum_values(self):
         # Setup
         param = MagicMock()
         params2name = {param: "test_param"}
@@ -88,7 +88,7 @@ class TestOptimizerMon:
         mon.fp16_to_fp32_param = {}
         
         # Execute
-        exp_avg, exp_avg_sq, update, ratio = mon._fetch_mv_in_adam(self.mock_monitor, params2name)
+        exp_avg, exp_avg_sq, update, ratio = mon.fetch_mv(self.mock_monitor, params2name)
         
         # Verify
         beta1, beta2 = optimizer.defaults['betas']
