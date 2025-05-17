@@ -40,7 +40,14 @@ const useGraph = (): useGraphType => {
         virtualNodes = [...new Set([...parentsVirtualNodes, ...virtualNodes])]; // 父节点放在前面，不然会覆盖子节点
         const renderData = virtualNodes.map((d) => {
             let precisionColor = isOverflowFilter ? getOverflowColor(d) : getPrecisionColor(d, colors, graphType);
-            let strokeColor = d.name === selectedNode ? SELECTED_STROKE_COLOR : graphType === 'NPU' || graphType === 'Single' ? darkenColor(precisionColor, 40) : BENCH_STROKE_COLOR;
+            let strokeColor;
+            if (d.name === selectedNode) {
+                strokeColor = SELECTED_STROKE_COLOR;
+            } else if (graphType === 'NPU' || graphType === 'Single') {
+                strokeColor = darkenColor(precisionColor, 40);
+            } else {
+                strokeColor = BENCH_STROKE_COLOR;
+            }
             if (d.nodeType === NODE_TYPE.API_LIST || d.nodeType === NODE_TYPE.MULTI_COLLECTION) {
                 precisionColor = 'white';
             }
@@ -77,7 +84,10 @@ const useGraph = (): useGraphType => {
         for (const [color, config] of Object.entries(colors)) {
             if (Array.isArray(config.value)) {
                 const [min, max] = config.value;
-                if (precisionValue >= min && precisionValue < max || max === 1 && precisionValue === 1 || min === 0 && precisionValue === 0) {
+                const isWithinRange = precisionValue >= min && precisionValue < max;
+                const isMaxRange = max === 1 && precisionValue === 1;
+                const isMinRange = min === 0 && precisionValue === 0;
+                if (isWithinRange || isMaxRange || isMinRange) {
                     return color; // 返回对应的填充颜色
                 }
             }

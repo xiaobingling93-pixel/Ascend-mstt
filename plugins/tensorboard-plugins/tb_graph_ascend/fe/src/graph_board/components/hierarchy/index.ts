@@ -26,7 +26,7 @@ import { NPU_PREFIX, BENCH_PREFIX, MOVE_STEP, SCALE_STEP, NODE_TYPE, MAX_SCALE, 
 import '../minimap/index'
 import '@vaadin/context-menu';
 import { Notification } from '@vaadin/notification';
-import type { useGraphType } from '../../type';
+import type { UseGraphType } from '../../type';
 import type { HierarchyNodeType, ContextMenuItem, PreProcessDataConfigType, GraphType } from '../../type';
 import type { ContextMenuItemSelectedEvent } from '@vaadin/context-menu';
 
@@ -146,21 +146,19 @@ class Hierarchy extends PolymerElement {
     @property({ type: Object })
     _zoomTransform: { x: number; y: number } | null = null;
 
-    @property({ type: Object })
-    minimapVis: true
+    @property({ type: Boolean })
+    minimapVis: boolean = true
 
     @property({ type: Object })
     contextMenuItems: Array<ContextMenuItem> = [];
 
     @property({ type: Object })
-    hightLightMatchedNode: (matchedNodes, graphType) => void;
-    useGraph: useGraphType = useGraph();
-    container: HTMLElement = null;
-    graph: HTMLElement = null;
+    hightLightMatchedNode: (matchedNodes, graphType) => void = (matchedNodes, graphType) => { };
+    useGraph: UseGraphType = useGraph();
+    container: HTMLElement | null | undefined;
+    graph: HTMLElement | null | undefined;
     minimap: minimap.Minimap;
-    cleanEventLisetener: () => void = null;
-
-
+    cleanEventLisetener: () => void = () => { };
 
     @observe('selectedNode')
     observeSelectNode() {
@@ -174,8 +172,8 @@ class Hierarchy extends PolymerElement {
 
     override ready(): void {
         super.ready();
-        this.graph = this.shadowRoot.querySelector('#graph'); // 获取svg元素
-        this.container = this.shadowRoot.querySelector('#root'); // 获取g元素
+        this.graph = this.shadowRoot?.querySelector('#graph'); // 获取svg元素
+        this.container = this.shadowRoot?.querySelector('#root'); // 获取g元素
     }
 
     async initHhierarchy(selectedNode) {
@@ -189,10 +187,12 @@ class Hierarchy extends PolymerElement {
             const hierarchyObject = data;
             const hierarchyData = Object.values(hierarchyObject) as Array<HierarchyNodeType>;
             // 清空container下面的所有子元素
-            this.container.innerHTML = '';
+            if (this.container) {
+                this.container.innerHTML = '';
+                d3.select(this.container as HTMLElement).attr('transform', 'translate(32,32) scale(1.8)');
+            }
             if (this.cleanEventLisetener) this.cleanEventLisetener();
             this.cleanEventLisetener = this.bindEventLisetener()
-            d3.select(this.container).attr('transform', 'translate(32,32) scale(1.8)');
             this.changeSelectNode(selectedNode); // 初始化选中节点,支持节点通信跳转
             this.set('rootName', Object.keys(hierarchyObject)[0]);
             this.set('hierarchyData', hierarchyData);
@@ -201,7 +201,7 @@ class Hierarchy extends PolymerElement {
         }
     }
     initMinimap = () => {
-        const minimap = this.shadowRoot.querySelector('#minimap') as HTMLElement;
+        const minimap = this.shadowRoot?.querySelector('#minimap') as HTMLElement;
         if (!this.container || !minimap) return;
         const transformStr = this.container.getAttribute('transform') || '';
         const initialTransform = parseTransform(transformStr);
@@ -213,7 +213,9 @@ class Hierarchy extends PolymerElement {
                 if (!this._zoomStartCoords) {
                     this._zoomStartCoords = this._zoomTransform;
                 }
-                d3.select(this.container).attr('transform', (d3 as any).event.transform.toString());
+                if (this.container) {
+                    d3.select(this.container as HTMLElement).attr('transform', (d3 as any).event.transform.toString());
+                }
                 this.renderGraph(this.hierarchyData, this.selectedNode);
                 this.minimap.zoom((d3 as any).event.transform);                // Notify the minimap.
             });
@@ -230,7 +232,7 @@ class Hierarchy extends PolymerElement {
 
     renderGraph(data, selectedNode, transform = this.getContainerTransform()) {
         if (!this.shadowRoot) return;
-        const container = d3.select(this.container);
+        const container = d3.select(this.container as HTMLElement);
         // 数据预处理
         const prefix = this.graphType === 'Single' ? '' : this.graphType === 'NPU' ? NPU_PREFIX : BENCH_PREFIX;
         selectedNode = selectedNode.startsWith(prefix) ? selectedNode : `${prefix}${selectedNode}`; // 加上前缀
@@ -302,7 +304,6 @@ class Hierarchy extends PolymerElement {
         const newTransform = d3.zoomIdentity.translate(0, 0).scale(1);
         this.minimap.zoom(newTransform);
         this.renderGraph(this.hierarchyData, this.selectedNode);
-
     }
     // 总绑定事件方法，管理所有事件的绑定和解绑
     bindEventLisetener = () => {
@@ -372,7 +373,7 @@ class Hierarchy extends PolymerElement {
     }
 
     bindContextMenuEvent() {
-        const contextMenu = this.shadowRoot.querySelector('#context-menu') as HTMLElement;
+        const contextMenu = this.shadowRoot?.querySelector('#context-menu') as HTMLElement;
         const onContextMenuItemSelectedEvent = (event: ContextMenuItemSelectedEvent) => {
             event.preventDefault();
             const item = event.detail.value as ContextMenuItem;
@@ -426,7 +427,7 @@ class Hierarchy extends PolymerElement {
                     type: EXPAND_MATCHED_NODE,
                 }]
                 const selectedNode = target.getAttribute('name');
-                const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
+                const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '') || '';
                 const nodeData = this.hierarchyObject[nodeName];
                 if (!isEmpty(nodeData?.matchedDistributed)) {
                     const matchedDistributed = nodeData?.matchedDistributed;
@@ -460,11 +461,11 @@ class Hierarchy extends PolymerElement {
         }
         const throttleContextMenuItemSelectedEvent = throttle(onContextMenuItemSelectedEvent, 16);
         const throttleContextMenuEvent = throttle(onContextmenuEvent, 16);
-        contextMenu.addEventListener('item-selected', throttleContextMenuItemSelectedEvent);
-        this.graph.addEventListener('contextmenu', throttleContextMenuEvent);
+        contextMenu.addEventListener('item-selected', throttleContextMenuItemSelectedEvent as any);
+        this.graph?.addEventListener('contextmenu', throttleContextMenuEvent);
         return () => {
-            contextMenu.removeEventListener('item-selected', throttleContextMenuItemSelectedEvent);
-            this.graph.removeEventListener('contextmenu', throttleContextMenuEvent);
+            contextMenu.removeEventListener('item-selected', throttleContextMenuItemSelectedEvent as any);
+            this.graph?.removeEventListener('contextmenu', throttleContextMenuEvent);
         }
     }
 
@@ -480,7 +481,7 @@ class Hierarchy extends PolymerElement {
                 nodeName,
                 nodeType: this.graphType,
             };
-            if (this.hierarchyObject[nodeInfo.nodeName]?.nodeType === NODE_TYPE.UNEXPAND_NODE) return;
+            if (this.hierarchyObject[nodeInfo.nodeName || '']?.nodeType === NODE_TYPE.EXPAND_NODEUNEXPAND_NODE) return;
             await this.changeNodeExpandState(nodeInfo);
             const transform = this.changeNodeCenter(nodeName);
             this.renderGraph(this.hierarchyData, this.selectedNode, transform);
@@ -490,15 +491,15 @@ class Hierarchy extends PolymerElement {
         }
         const throttleDoubleClickNodeEvent = throttle(onDoubleClickNodeEvent, 16);
         container.addEventListener('dblclick', throttleDoubleClickNodeEvent);
-        this.graph.addEventListener('dblclick', onDoubleClickGraphEvent);  // 防止双击选中文本
+        this.graph?.addEventListener('dblclick', onDoubleClickGraphEvent);  // 防止双击选中文本
         return () => {
             container.removeEventListener('dblclick', throttleDoubleClickNodeEvent);
-            this.graph.removeEventListener('dblclick', onDoubleClickGraphEvent);
+            this.graph?.removeEventListener('dblclick', onDoubleClickGraphEvent);
         }
     }
     bindWheelEvent() {
         const onwheelEvent = (event) => {
-            const transformStr = this.container.getAttribute('transform') || '';
+            const transformStr = this.container?.getAttribute('transform') || '';
             const transform = parseTransform(transformStr);
             const delta = event.deltaY > 0 ? -MOVE_STEP : MOVE_STEP;
             transform.y = transform.y + delta;
@@ -508,9 +509,9 @@ class Hierarchy extends PolymerElement {
             this.renderGraph(this.hierarchyData, this.selectedNode, { x: transform.x, y: transform.y, scale: transform.scale });
         }
         const throttleWheelEvent = throttle(onwheelEvent, 16);
-        this.graph.addEventListener('wheel', throttleWheelEvent);
+        this.graph?.addEventListener('wheel', throttleWheelEvent);
         return () => {
-            this.graph.removeEventListener('wheel', throttleWheelEvent);
+            this.graph?.removeEventListener('wheel', throttleWheelEvent);
         }
     }
     bindDragEvent(container) {
@@ -546,13 +547,13 @@ class Hierarchy extends PolymerElement {
             }
         };
         const throttledMouseMove = throttle(handleMouseMove, 16);
-        this.graph.addEventListener('mousedown', handleMouseDown);
+        this.graph?.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mousemove', throttledMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
 
         // 返回清理函数
         return () => {
-            this.graph.removeEventListener('mousedown', handleMouseDown);
+            this.graph?.removeEventListener('mousedown', handleMouseDown);
             document.removeEventListener('mousemove', throttledMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
@@ -608,14 +609,14 @@ class Hierarchy extends PolymerElement {
         // 使用 throttle 包装键盘事件处理函数
         const throttledHandleKeyDown = throttle(handleKeyDown, 16);
 
-        this.graph.addEventListener('mouseenter', handleMouseEnter);
-        this.graph.addEventListener('mouseleave', handleMouseLeave);
+        this.graph?.addEventListener('mouseenter', handleMouseEnter);
+        this.graph?.addEventListener('mouseleave', handleMouseLeave);
         document.addEventListener('keydown', throttledHandleKeyDown);
 
         // 返回清理函数
         return () => {
-            this.graph.removeEventListener('mouseenter', handleMouseEnter);
-            this.graph.removeEventListener('mouseleave', handleMouseLeave);
+            this.graph?.removeEventListener('mouseenter', handleMouseEnter);
+            this.graph?.removeEventListener('mouseleave', handleMouseLeave);
             document.removeEventListener('keydown', throttledHandleKeyDown);
         };
     }
@@ -630,10 +631,10 @@ class Hierarchy extends PolymerElement {
         nodeName = nodeName?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
         const selectedNode = this.hierarchyObject[nodeName]; // 获取当前节点
         if (!selectedNode) return this.getContainerTransform();
-        const transformStr = this.container.getAttribute('transform') || '';
+        const transformStr = this.container?.getAttribute('transform') || '';
         const initialTransform = parseTransform(transformStr); // 保存初始位置
-        const clientWidth = this.graph.clientWidth;
-        const clientHeight = this.graph.clientHeight;
+        const clientWidth = this.graph?.clientWidth || 0;
+        const clientHeight = this.graph?.clientHeight || 0;
         const root = this.hierarchyObject[this.rootName];
         const newX = clientWidth / 2 - root?.width * initialTransform.scale / 2;
         const newY = clientHeight / 2 - (selectedNode?.y * initialTransform.scale + 7.5) - 100;
