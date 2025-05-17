@@ -279,7 +279,7 @@ class BaseWriterWithAD:
         xpu_tensors = []
 
         for tensor in tensor_list:
-            if isinstance(tensor, Tensor) and tensor.device.type != 'cpu':
+            if isinstance(tensor, Tensor):
                 # 将device上的tensor先stack后to cpu
                 xpu_tensors.append(tensor)
             else:
@@ -291,7 +291,7 @@ class BaseWriterWithAD:
         result = []
         cpu_tensors_idx, xpu_tensors_idx = 0, 0
         for tensor in tensor_list:
-            if isinstance(tensor, Tensor) and tensor.device.type != 'cpu':
+            if isinstance(tensor, Tensor):
                 result.append(xpu_stack[xpu_tensors_idx])
                 xpu_tensors_idx += 1
             else:
