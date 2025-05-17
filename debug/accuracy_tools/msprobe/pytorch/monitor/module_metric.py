@@ -144,6 +144,20 @@ class IdentMetric(Metric):
         return tensor
 
 
+@register_config_metric("shape")
+class ShapeMetric(Metric):
+    @staticmethod
+    def get_metric_value(tensor, eps):
+        return tensor.shape
+
+
+@register_config_metric("dtype")
+class DtypeMetric(Metric):
+    @staticmethod
+    def get_metric_value(tensor, eps):
+        return tensor.dtype
+
+
 def get_metrics(ops, tag2tensor, eps, out_dict=None):
     """
     :param ops: ["op1", "op2"]

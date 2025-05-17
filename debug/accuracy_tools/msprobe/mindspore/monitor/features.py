@@ -56,10 +56,22 @@ def get_nans(t):
     return ops.isnan(t.astype(mstype.float32)).sum()
 
 
+@_no_grad()
+def get_shape(t):
+    return t.shape
+
+
+@_no_grad()
+def get_dtype(t):
+    return t.dtype
+
+
 FUNC_MAP = {"min"  : get_min,
             "max"  : get_max,
             "mean" : get_mean,
             "norm" : get_norm,
             "nans" : get_nans,
-            "zeros": get_zeros
+            "zeros": get_zeros,
+            "shape": get_shape,
+            "dtype": get_dtype
            }
