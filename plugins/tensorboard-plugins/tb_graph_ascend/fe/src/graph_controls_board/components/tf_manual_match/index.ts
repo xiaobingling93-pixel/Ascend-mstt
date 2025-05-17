@@ -482,7 +482,7 @@ class Legend extends PolymerElement {
       });
     }
     else {
-      Notification.show(`匹配失败`, {
+      Notification.show(`匹配失败:${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',

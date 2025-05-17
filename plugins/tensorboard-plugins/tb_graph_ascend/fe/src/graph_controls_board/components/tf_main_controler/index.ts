@@ -160,7 +160,7 @@ class MainController extends PolymerElement {
 
   _getTagChanged(event): void {
     const detail = event.detail;
-    if (detail?.rankId >= this.tags.length) {
+    if (!detail?.rankId || detail?.rankId >= this.tags.length) {
       Notification.show('提示：目标文件不存在', {
         position: 'middle',
         duration: 2000,

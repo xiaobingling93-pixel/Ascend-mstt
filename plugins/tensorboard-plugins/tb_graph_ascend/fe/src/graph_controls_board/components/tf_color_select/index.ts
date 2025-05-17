@@ -387,6 +387,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   @observe('colorset')
   _observeColorSet(): void {
+    if (_.isEmpty(this.colorset)) return; // 如果colorset为空，直接返回
     if (this.colorset.length !== 0) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
