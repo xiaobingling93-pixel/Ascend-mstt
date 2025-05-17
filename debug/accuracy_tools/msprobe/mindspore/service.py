@@ -44,7 +44,8 @@ from msprobe.mindspore.common.utils import (
     get_rank_if_initialized,
     clean_input_kwargs,
     is_mindtorch,
-    get_cells_and_names
+    get_cells_and_names,
+    has_kwargs_in_forward_hook
 )
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register, ApiTemplate
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
@@ -166,14 +167,19 @@ class Service:
                     # 记录当前模块的参数梯度信息已占位
                     self.params_grad_info[grad_name] = True
 
-        def forward_hook(api_or_cell_name, cell, input_data, output):
+        def forward_hook(api_or_cell_name, cell, args, kwargs_or_output, output_or_kwargs):
             if not self.should_execute_hook(target_type, cell, True):
                 clean_input_kwargs(cell)
                 return None
             with _no_grad():
                 self.inner_switch = True
-                kwargs = cell.msprobe_input_kwargs if hasattr(cell, 'msprobe_input_kwargs') else {}
-                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=kwargs, output=output)
+                if not has_kwargs_in_forward_hook() or target_type == BaseScope.Module_Type_API:
+                    kwargs = cell.msprobe_input_kwargs if hasattr(cell, 'msprobe_input_kwargs') else {}
+                    output = kwargs_or_output
+                else:
+                    kwargs = kwargs_or_output
+                    output = output_or_kwargs
+                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 if target_type == BaseScope.Module_Type_Module:
                     params_dict = {}
                     if self.config.task != Const.STRUCTURE:
@@ -250,8 +256,8 @@ class Service:
         def wrap_pre_forward_hook(cell, input_data):
             return pre_forward_hook(cell, input_data)
 
-        def wrap_forward_hook(cell, input_data, output_data):
-            return forward_hook(cell, input_data, output_data)
+        def wrap_forward_hook(cell, args, kwargs_or_output, output_or_kwargs=None):
+            return forward_hook(cell, args, kwargs_or_output, output_or_kwargs)
 
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
@@ -450,7 +456,6 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
 
-
     def save(self, variable, name, save_backward):
         '''
         Args:
@@ -493,7 +498,7 @@ class Service:
     def register_custom_api(self, module, api_name, api_prefix):
         self.ori_customer_func[str(module) + Const.SEP + api_name] = getattr(module, api_name)
         ApiRegistry.register_custom_api(module, api_name, api_prefix,
-                                          functools.partial(self.build_hook, BaseScope.Module_Type_API), ApiTemplate)
+                                        functools.partial(self.build_hook, BaseScope.Module_Type_API), ApiTemplate)
 
     def restore_custom_api(self, module, api):
         ori_func = self.ori_customer_func.get(str(module) + Const.SEP + api)
