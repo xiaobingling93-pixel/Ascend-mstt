@@ -35,7 +35,10 @@ def get_single_metrics(op_list, tag, tensor, output=None):
         if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
             statistic = float(statistic)
             statistic = Tensor(statistic)
-        output[tag][op] = statistic.astype(mstype.float32)
+        if isinstance(statistic, Tensor):
+            output[tag][op] = statistic.astype(mstype.float32)
+        else:
+            output[tag][op] = statistic
 
 
 def get_metrics(op_list, tag2tensor, eps, output=None):
@@ -91,6 +94,9 @@ def validate_ops(ops):
         default_op = MonitorConst.OP_LIST[0]
         valid_ops.append(default_op)
         logger.info(f"There is no valid ops, default op {default_op} is used")
+    # 增加默认shape和dtype参数
+    if "shape" not in valid_ops and "dtype" not in valid_ops:
+        valid_ops.extend(["shape", "dtype"])
     return valid_ops
 
 
