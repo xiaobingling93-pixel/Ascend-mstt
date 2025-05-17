@@ -15,7 +15,6 @@
 import datetime
 import os
 import re
-import time
 from multiprocessing import Process
 
 import pytz
