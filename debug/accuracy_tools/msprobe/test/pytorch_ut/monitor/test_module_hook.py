@@ -261,61 +261,6 @@ class TestParamIsDataParallelDuplicate(unittest.TestCase):
         self.assertFalse(result)
 
 
-class TestModuleHookContext(unittest.TestCase):
-    def setUp(self):
-        self.module_name = "test_module"
-        self.context = ModuleHookContext(self.module_name)
-        self.context.struct = {
-            Const.INPUT: {
-                "config": "tuple[1]",
-                "0": "size=(2, 784), dtype=torch.float32",
-            },
-            Const.OUTPUT: {
-                "config": "tensor",
-                "tensor": "size=(2, 10), dtype=torch.float32"
-            },
-            MonitorConst.INPUT_GRAD: {
-                "config": "tuple[1]",
-                "0": "size=(2, 784), dtype=torch.float32"
-            },
-            MonitorConst.OUTPUT_GRAD: {
-                "config": "tuple[1]",
-                "0": "size=(2, 10), dtype=torch.float32"
-            }
-        }
-        self.target_config = {
-            self.module_name: {
-                Const.INPUT: "tuple[1]:0",
-                Const.OUTPUT: "tensor",
-                MonitorConst.INPUT_GRAD: "tuple[1]:0"
-            }
-        }
-
-    def test_set_format_by_arg_module_name_in_target_config(self):
-        self.context.set_format_by_arg(Const.INPUT, self.target_config)
-        self.assertEqual(self.context.format_by_arg[Const.INPUT], "tuple[1]:0")
-        self.context.set_format_by_arg(Const.OUTPUT, self.target_config)
-        self.assertEqual(self.context.format_by_arg[Const.OUTPUT], "tensor")
-        self.context.set_format_by_arg(MonitorConst.INPUT_GRAD, self.target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.INPUT_GRAD], "tuple[1]:0")
-        self.context.set_format_by_arg(MonitorConst.OUTPUT_GRAD, self.target_config)
-        self.assertEqual(self.context.format_by_arg[MonitorConst.OUTPUT_GRAD], "tuple[1]")
-
-    def test_set_format_by_arg_module_name_not_in_target_config(self):
-        target_config = {}
-        self.context.set_format_by_arg(Const.INPUT, target_config)
-        self.assertEqual(self.context.format_by_arg[Const.INPUT], "tuple[1]")
-        self.context.set_format_by_arg(Const.OUTPUT, target_config)
-        self.assertEqual(self.context.format_by_arg[Const.OUTPUT], "tensor")
-
-    @patch('msprobe.pytorch.monitor.module_hook.logger')
-    def test_set_format_by_arg_target_module_config_error(self, mock_logger):
-        target_config = {self.module_name: {Const.INPUT: 123}}
-        self.context.set_format_by_arg(Const.INPUT, target_config)
-        self.assertIsNone(self.context.format_by_arg.get(Const.INPUT))
-        mock_logger.warning_on_rank_0.assert_called_once()
-
-
 class TestContext(unittest.TestCase):
     def test_communication_context(self):
         cc_ctx = CommunicationContext()

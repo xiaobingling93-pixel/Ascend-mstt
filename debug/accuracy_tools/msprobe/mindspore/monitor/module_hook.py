@@ -20,7 +20,6 @@ from collections import defaultdict
 from datetime import datetime
 
 import pytz
-import mindspore as ms
 from mindspore import Tensor, mint
 from mindspore import nn, _no_grad
 
@@ -31,13 +30,11 @@ from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
     is_skip_step, get_metrics, get_target_output_dir
-from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.anomaly_analyse import AnomalyDataWriter
-from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
-    get_process_group
+from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
 
 FORMAT_MAPPING = {
     MonitorConst.CSV: CSVWriterWithAD,
@@ -91,24 +88,6 @@ class ModuleHookContext:
         self.actvgrad = []
         self.module_name = module_name
         self.struct = {}
-        self.format_by_arg = {}
-        self.verified = False
-        self.focused_in_col = 0
-        self.focused_out_col = 0
-        self.ignore_in = False  # no need to care when no key 'input' or 'input_grad' found
-
-    def set_format_by_arg(self, key_name: str, target_config: dict):
-        cared = target_config.get(self.module_name, self.struct)
-        if key_name in cared:
-            if isinstance(cared[key_name], dict):
-                # current cared is self.struct
-                config = cared[key_name].get('config')
-                self.format_by_arg[key_name] = config
-            else:
-                # current cared is target_config[self.module_name]
-                self.format_by_arg[key_name] = cared[key_name]
-        elif key_name in ['input', 'input_grad']:
-            self.ignore_in = True
 
     def reset(self):
         self.actv.clear()
