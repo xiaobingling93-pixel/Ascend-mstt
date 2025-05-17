@@ -189,7 +189,7 @@ class TfGraphNodeInfo extends PolymerElement {
   `;
 
   @property({ type: String, notify: true })
-  selectedNode: string;
+  selectedNode: string = '';
 
   @property({ type: Object })
   selection: any;
@@ -251,7 +251,7 @@ class TfGraphNodeInfo extends PolymerElement {
     };
     const { success, data, error } = await this.useNodeInfo.getNodeInfo(nodeInfo, this.selection);
     if (success) {
-      return { npuNode: data.npu, benchNode: data.bench };
+      return { npuNode: data?.npu, benchNode: data?.bench };
     } else {
       Notification.show(`获取节点信息失败：${error}`, {
         position: 'middle',

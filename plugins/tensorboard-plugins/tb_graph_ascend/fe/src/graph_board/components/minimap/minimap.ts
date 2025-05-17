@@ -32,7 +32,7 @@ export class Minimap {
    * in the constructor. The minimap maintains the same aspect ratio as the
    * original svg.
    */
-  private scaleMinimap: number;
+  private scaleMinimap: number = 1;
   /** The main svg element. */
   private svg: SVGSVGElement;
   /** The svg group used for panning and zooming the main svg. */
@@ -42,9 +42,9 @@ export class Minimap {
   /** The maximum width and height for the minimap. */
   private maxWandH: number;
   /** The last translation vector used in the main svg. */
-  private translate: [number, number];
+  private translate: [number, number] = [0, 0];
   /** The last scaling factor used in the main svg. */
-  private scaleMain: number;
+  private scaleMain: number = 1;
   /** The coordinates of the viewpoint rectangle. */
   private viewpointCoord: {
     x: number;
@@ -54,7 +54,8 @@ export class Minimap {
   private minimapSize: {
     width: number;
     height: number;
-  };
+  } = { width: 150, height: 150 }
+    ;
   /** Padding (px) due to the main labels of the graph. */
   private labelPadding: number;
   /**
@@ -93,7 +94,7 @@ export class Minimap {
     };
     this.viewpointCoord = { x: 0, y: 0 };
     let drag = d3.drag().subject(Object).on('drag', dragmove);
-    $viewpoint.datum(this.viewpointCoord as any).call(drag);
+    $viewpoint.datum(this.viewpointCoord as any).call(drag as any);
     // Make the minimap clickable.
     $minimapSvg.on('click', (): void => {
       if ((<Event>(d3 as any).event).defaultPrevented) {

@@ -5,6 +5,9 @@ export const BENCH_PREFIX = 'B___';
 // 未匹配节点颜色
 export const UNMATCHED_COLOR = '#C7C7C7';
 
+//双图下单个图形的最小宽度
+export const MIN_GRAPG_WIDTH = 200;
+
 // 预设颜色
 export const defaultColorSetting = [
     { key: '#FFFCF3', values: [0, 0.2] },
@@ -43,10 +46,10 @@ export const MIN_SCALE = 1; // 最小缩放
 
 //溢出检测颜色
 export enum OVERFLOW_COLOR {
-    'medium' = ' #B6C7FC',
-    'high' = ' #7E96F0',
-    'critical' = ' #4668B8',
-    'default' = 'rgb(199, 199, 199)'
+    medium = ' #B6C7FC',
+    high = ' #7E96F0',
+    critical = ' #4668B8',
+    default = 'rgb(199, 199, 199)'
 }
 
 export const NODE_TYPE_STYLES = { //节点样式

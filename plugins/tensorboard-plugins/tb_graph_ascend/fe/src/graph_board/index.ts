@@ -18,6 +18,7 @@ import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
 import './components/legend/index';
 import './components/hierarchy/index'
+import { MIN_GRAPG_WIDTH } from '../common/constant';
 @customElement('graph-board')
 class MainGraph extends PolymerElement {
     static readonly template = html`
@@ -91,16 +92,16 @@ class MainGraph extends PolymerElement {
     }
 
     initGraphHierarchy = (selectedNode) => {
-        const npuhGraph = this.shadowRoot.querySelector('#NPU') as any;
+        const npuhGraph = this.shadowRoot?.querySelector('#NPU') as any;
         npuhGraph.initHhierarchy(selectedNode);
         if (!this.isSingleGraph) {
-            const benchGraph = this.shadowRoot.querySelector('#Bench') as any;
-            benchGraph.initHhierarchy(selectedNode);
+            const benchGraph = this.shadowRoot?.querySelector('#Bench') as any;
+            benchGraph?.initHhierarchy(selectedNode);
         }
     }
 
     fitScreen = () => {
-        const hierarchy = this.shadowRoot.querySelectorAll('.graph-hierarchy') as any;
+        const hierarchy = this.shadowRoot?.querySelectorAll('.graph-hierarchy') as any;
         if (!hierarchy) return;
         hierarchy.forEach((item) => {
             item.fitScreen();
@@ -108,12 +109,12 @@ class MainGraph extends PolymerElement {
     }
     hightLightMatchedNode = (matchedNodes: Array<string>, graphType: string) => {
         if (graphType === 'NPU') {
-            const benchGraph = this.shadowRoot.querySelector('#Bench') as any;
-            benchGraph.hightLightNode?.(matchedNodes)
+            const benchGraph = this.shadowRoot?.querySelector('#Bench') as any;
+            benchGraph?.hightLightNode?.(matchedNodes)
 
         } else if (graphType === 'Bench') {
-            const npuhGraph = this.shadowRoot.querySelector('#NPU') as any;
-            npuhGraph.hightLightNode?.(matchedNodes)
+            const npuhGraph = this.shadowRoot?.querySelector('#NPU') as any;
+            npuhGraph?.hightLightNode?.(matchedNodes)
         }
     }
     bindSpliterEvent = () => {
@@ -123,7 +124,7 @@ class MainGraph extends PolymerElement {
         const NPU = this.shadowRoot.querySelector('#NPU') as HTMLElement;
         let isDragging = false;
         // 鼠标按下时开始拖动
-        spliter.addEventListener('mousedown', (e) => {
+        spliter?.addEventListener('mousedown', (e) => {
             e.preventDefault(); // 防止默认行为（如文本选中）
             isDragging = true;
             // 添加全局监听器以处理鼠标移动和释放
@@ -135,10 +136,11 @@ class MainGraph extends PolymerElement {
         function onMouseMove(e) {
             if (!isDragging) return;
             // 获取鼠标相对于容器的位置
-            const containerRect = container.getBoundingClientRect();
+            const containerRect = container?.getBoundingClientRect();
+            if (!containerRect) return;
             const newWidth = e.clientX - containerRect.left;
             // 限制最小宽度
-            if (newWidth > 320 && newWidth < containerRect.width - 320) {
+            if (newWidth > MIN_GRAPG_WIDTH && newWidth < containerRect.width - MIN_GRAPG_WIDTH) {
                 NPU.style.flex = `0 0 ${newWidth}px`; // 设置固定宽度
             }
         }

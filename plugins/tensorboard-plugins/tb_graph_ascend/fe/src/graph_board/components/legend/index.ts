@@ -125,18 +125,18 @@ class Legend extends PolymerElement {
           <span class="legend-item-value">Api List</span>
           <div class="legend-item-value legend-clarifier">
             <paper-tooltip animation-delay="0" position="right" offset="0">
-              <div class="custom-tooltip">Apis between modules</div>
+               <div class="custom-tooltip">Apis between modules</div>
             </paper-tooltip>
           </div>
         </div>
         <div class="legend-item">
           <svg class='fusion-node'>
-                <rect width="46" height="18" rx='5' ry='5' x='2' y='4' />
+               <rect width="46" height="18" rx='5' ry='5' x='2' y='4' />
           </svg>
           <span class="legend-item-value">Multi Collection</span>
           <div class="legend-item-value legend-clarifier">
             <paper-tooltip animation-delay="0" position="right" offset="0">
-              <div class="custom-tooltip">Fusion node Collection</div>
+                <div class="custom-tooltip">Fusion node Collection</div>
             </paper-tooltip>
           </div>
         </div>

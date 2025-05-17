@@ -16,7 +16,7 @@
     "noImplicitReturns": true,
     "noImplicitOverride": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "noImplicitAny": false,
     "target": "es2018"
   }

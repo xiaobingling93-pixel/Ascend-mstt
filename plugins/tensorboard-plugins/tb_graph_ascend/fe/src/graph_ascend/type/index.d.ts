@@ -1,7 +1,7 @@
 export interface ProgressType {
     progress?: number;
     progressValue?: number;
-    size?: boolean;
+    size?: number;
     read?: number;
     done?: boolean;
 }
@@ -15,11 +15,11 @@ export interface SelectionType {
 
 export interface GraphConfigType {
     tooltips: string;
-    colors: object;
+    colors: { string: { value: number[], color: string } },
     overflowCheck: boolean;
     microSteps: number;
     isSingleGraph: boolean;
-    matchedConfigFiles: Array<string>;
+    matchedConfigFiles: string[];
 }
 
 export interface GraphAllNodeType {

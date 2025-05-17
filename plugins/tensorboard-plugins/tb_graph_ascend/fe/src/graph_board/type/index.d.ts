@@ -41,14 +41,14 @@ export interface ContextMenuItem {
 }
 
 export interface PreProcessDataConfigType {
-    colors: { string: { value: Array<number>, color: string } },
+    colors: { string: { value: number[], color: string } },
     isOverflowFilter: boolean,
     graphType: GraphType,
 }
 
 export type GraphType = 'NPU' | 'Bench' | 'Single'
 
-export interface useGraphType {
+export interface UseGraphType {
     bindInnerRect: (
         container: any,
         data: any,
@@ -61,7 +61,7 @@ export interface useGraphType {
         container: any,
         data: any,
     ) => void;
-    preProcessData: (data: Array<any>, selectedNode: string, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => Array<any>;
+    preProcessData: (data: any[], selectedNode: string, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => Array<any>;
     changeNodeExpandState: (nodeInfo: any, metaData: any) => Promise<any>
     createComponent: (text, precision, colors: PreProcessDataConfigType['colors']) => any
     updateHierarchyData: (graphType: string) => Promise<any>

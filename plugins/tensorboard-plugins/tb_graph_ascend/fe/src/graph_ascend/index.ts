@@ -132,10 +132,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
   `;
 
     @property({ type: Array })
-    metaDir: {};
+    metaDir: {} = {};
 
     @property({ type: Object, notify: true })
-    selection: SelectionType;
+    selection: SelectionType | null = null;
 
     @property({ type: Object, notify: true })
     nodelist: any;
@@ -147,10 +147,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     matchedlist: any;
 
     @property({ type: String, notify: true })
-    selectedNode: string;
+    selectedNode: string = '';
 
     @property({ type: String, notify: true })
-    jumpToNode: string;
+    jumpToNode: string = '';
 
     @property({ type: Object, notify: true })
     colors: any;
@@ -162,7 +162,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     progressData: ProgressType = { progress: 0, progressValue: 0, done: false };
 
     @property({ type: Boolean })
-    isSingleGraph: boolean;
+    isSingleGraph: boolean = false;
 
     @property({ type: Object })
     microsteps: any;
@@ -171,23 +171,23 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     overflowcheck;
 
     @property({ type: Object })
-    tooltips: object;
+    tooltips: object = {};
 
     @property({ type: Object })
-    colorset: object;
+    colorset: object = {};
 
     @property({ type: Object })
-    npuMatchNodes: object;
+    npuMatchNodes: object = {};
 
     @property({ type: Object })
-    benchMatchNodes: object;
+    benchMatchNodes: object = {};
 
     @property({ type: Object })
-    matchedConfigFiles: Array<String>;
+    matchedConfigFiles: string[] = [];
 
-    private currentSelection: SelectionType;
+    private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
-    private eventSource: EventSource;
+    private eventSource: EventSource | null = null;
 
     override async ready(): Promise<void> {
         super.ready();
@@ -198,7 +198,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     @observe('selection')
     updateGraphData = () => {
-        if (!this.selection.run || !this.selection.tag) return;
+        if (!this.selection?.run || !this.selection?.tag) return;
         if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
             this.loadGraphData(this.selection.run, this.selection.tag);
         } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
@@ -226,10 +226,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             if (data.status === 'loading') {
 
                 if (data.done) {
-                    this.eventSource.close();
+                    this.eventSource?.close();
                     this.eventSource = null;
                     try {
-                        await Promise.all([this.loadGraphConfig(this.selection.run, this.selection.tag), this.loadGraphAllNodeList(this.selection.run, this.selection.tag, this.selection.microStep)])
+                        await Promise.all([this.loadGraphConfig(this.selection?.run, this.selection?.tag), this.loadGraphAllNodeList(this.selection?.run, this.selection?.tag, this.selection?.microStep)])
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
                         this.progreesLoading('初始化完成', '请稍后', data);
 
@@ -247,7 +247,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             if (!this.progressData || !this.progressData.done) {
                 this.progreesError('连接中断', '请检查网络连接');
             }
-            this.eventSource.close();
+            this.eventSource?.close();
         };
     }
 
@@ -297,7 +297,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     }
 
     initGraphBoard = () => {
-        (this.shadowRoot.querySelector('#graph-board') as any)?.initGraphHierarchy(this.jumpToNode);
+        (this.shadowRoot?.querySelector('#graph-board') as any)?.initGraphHierarchy(this.jumpToNode);
         if (this.jumpToNode) {
             this.set('selectedNode', this.jumpToNode);
             this.set('jumpToNode', '');
@@ -305,7 +305,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     }
 
     onFitTap(): void {
-        (this.shadowRoot.querySelector('#graph-board') as any).fitScreen();
+        (this.shadowRoot?.querySelector('#graph-board') as any).fitScreen();
     }
 
     progressReading = (title, data) => {
