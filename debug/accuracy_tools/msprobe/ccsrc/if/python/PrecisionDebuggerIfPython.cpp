@@ -113,8 +113,8 @@ PyDoc_STRVAR(StepDoc,
 
 static PyMethodDef PrecisionDebuggerMethods[] = {
     {"start", reinterpret_cast<PyCFunction>(PrecisionDebuggerStart), METH_NOARGS, StartDoc},
-    {"stop", reinterpret_cast<PyCFunction>(PrecisionDebuggerStop), METH_NOARGS, StartDoc},
-    {"step", reinterpret_cast<PyCFunction>(PrecisionDebuggerStep), METH_NOARGS, StartDoc},
+    {"stop", reinterpret_cast<PyCFunction>(PrecisionDebuggerStop), METH_NOARGS, StopDoc},
+    {"step", reinterpret_cast<PyCFunction>(PrecisionDebuggerStep), METH_NOARGS, StepDoc},
     {nullptr, nullptr, 0, nullptr}
 };
 

@@ -23,17 +23,12 @@ namespace MindStudioDebugger {
 
 bool MindSporeTrigger::stepBeginFlag = false;
 
-void MindSporeTrigger::TriggerOnStepBegin(uint32_t device, uint32_t curStep, ExtArgs& args)
+void MindSporeTrigger::TriggerOnStepBegin(uint32_t device, uint32_t /* curStep */, ExtArgs& args)
 {
     DEBUG_FUNC_TRACE();
     CleanErrorInfoCache();
     
-    auto& dumper = MSAclDumper::GetInstance();
-    dumper.OnStepBegin(
-        device,
-        dumper.GetMsprobeStep(),
-        args
-    );
+    MSAclDumper::GetInstance().OnStepBegin(device, args);
 
     stepBeginFlag = true;
 

@@ -19,6 +19,7 @@
 #include "base/ErrorInfosManager.h"
 #include "base/DebuggerConfig.h"
 #include "third_party/ACL/AclApi.h"
+#include "core/mindspore/MSAclDumper.h"
 #include "PrecisionDebugger.h"
 
 namespace MindStudioDebugger {

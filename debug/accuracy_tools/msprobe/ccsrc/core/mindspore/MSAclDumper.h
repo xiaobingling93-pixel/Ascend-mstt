@@ -17,7 +17,6 @@
 #pragma once
 
 #include <string>
-#include <mutex>
 
 #include "include/ExtArgs.h"
 #include "core/PrecisionDebugger.h"
@@ -26,7 +25,6 @@ namespace MindStudioDebugger {
 
 class MSAclDumper : public PrecisionDbgTaskBase {
 public:
-    uint32_t GetMsprobeStep() const {return msprobeStep;} 
     static MSAclDumper& GetInstance() 
     {
         static MSAclDumper dumperInstance;
@@ -40,7 +38,7 @@ public:
                cfg.GetDebugLevel() == DebuggerLevel::L2;
     }
 
-    void OnStepBegin(uint32_t device, uint32_t curStep, ExtArgs& args);
+    void OnStepBegin(uint32_t device, ExtArgs& args);
     void OnStepEnd(ExtArgs& args);
     void Step();
 
@@ -52,7 +50,6 @@ private:
     explicit MSAclDumper(MSAclDumper &&obj) = delete;
     MSAclDumper& operator=(MSAclDumper &&obj) = delete;
     uint32_t msprobeStep{0};
-    mutable std::mutex mutex_;
 };
 
 }

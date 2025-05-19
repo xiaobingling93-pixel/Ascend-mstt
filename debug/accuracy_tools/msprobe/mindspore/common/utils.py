@@ -30,9 +30,9 @@ from msprobe.core.common.utils import CompareException, check_seed_all, is_save_
 try:
     from mindspore._c_expression import _set_init_iter
 except ImportError:
-    dynamic_set_dump = False
+    enable_dynamic_kbyk_dump = False
 else:
-    dynamic_set_dump = True
+    enable_dynamic_kbyk_dump = True
 
 
 
@@ -43,7 +43,7 @@ class MsprobeStep(ms.train.Callback):
     
     def on_train_begin(self, run_context):
         self.debugger.start()
-        if dynamic_set_dump:
+        if enable_dynamic_kbyk_dump:
             _set_init_iter(0)
 
     def on_train_step_begin(self, run_context):

@@ -38,9 +38,9 @@ from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 try:
     from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
 except ImportError:
-    dynamic_set_dump = False
+    enable_dynamic_kbyk_dump = False
 else:
-    dynamic_set_dump = True
+    enable_dynamic_kbyk_dump = True
 
 try:
     from msprobe.lib import _msprobe_c
@@ -102,7 +102,7 @@ class PrecisionDebugger:
 
         Runtime.step_count = 0
         Runtime.is_running = False
-        if dynamic_set_dump:
+        if enable_dynamic_kbyk_dump:
             _dump_set_dynamic()
 
 
@@ -177,12 +177,12 @@ class PrecisionDebugger:
                 get_api_register().restore_all_api()
                 handler = TaskHandlerFactory.create(instance.config)
                 handler.handle()
-                if dynamic_set_dump:
+                if enable_dynamic_kbyk_dump:
                     _set_init_iter(0)
-            if dynamic_set_dump:
-                valid_rank = (not instance.config.rank or Runtime.rank_id in instance.config.rank)
-                valid_step = (not instance.config.step or Runtime.step_count in instance.config.step)
-                if valid_rank and valid_step:
+            if enable_dynamic_kbyk_dump:
+                is_valid_rank = (not instance.config.rank or Runtime.rank_id in instance.config.rank)
+                is_valid_step = (not instance.config.step or Runtime.step_count in instance.config.step)
+                if is_valid_rank and is_valid_step:
                     _dump_start()
 
         instance.first_start = True
@@ -204,8 +204,10 @@ class PrecisionDebugger:
             return
         if instance.service:
             instance.service.stop()
-        if dynamic_set_dump:
+        if enable_dynamic_kbyk_dump:
             _dump_stop()
+        if cls._need_msprobe_c() and _msprobe_c:
+            _msprobe_c._PrecisionDebugger().stop()
         Runtime.is_running = False
 
     @classmethod
@@ -221,8 +223,10 @@ class PrecisionDebugger:
         CellProcessor.reset_cell_stats()
 
         Runtime.step_count += 1
-        if dynamic_set_dump:
+        if enable_dynamic_kbyk_dump:
             _dump_step(1)
+        if cls._need_msprobe_c() and _msprobe_c:
+            _msprobe_c._PrecisionDebugger().step()
 
     @classmethod
     def monitor(cls, opt):
