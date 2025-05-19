@@ -56,12 +56,10 @@ def get_nans(t):
     return ops.isnan(t.astype(mstype.float32)).sum()
 
 
-@_no_grad()
 def get_shape(t):
     return t.shape
 
 
-@_no_grad()
 def get_dtype(t):
     return t.dtype
 
