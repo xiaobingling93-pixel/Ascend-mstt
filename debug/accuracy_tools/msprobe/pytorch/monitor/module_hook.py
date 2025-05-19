@@ -37,7 +37,6 @@ from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, c
 from msprobe.pytorch.monitor.features import get_sign_matches
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name, \
     TensorMetrics, squash_param_name
-from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
@@ -72,36 +71,6 @@ class ModuleHookContext:
         self.actvgrad = []
         self.module_name = module_name
         self.struct = {}
-        self.format_by_arg = {}
-        self.verified = False
-        self.focused_in_col = 0
-        self.focused_out_col = 0
-
-    def set_format_by_arg(self, key_name: str, target_config: dict):
-        """ 按照监控对象配置format_by_arg
-        1) module_name 在 target 中配置监控对象
-        2) module_name 未在 targets 中配置，且 all_xy 全量监控
-        3) module_name 未在 targets 中配置，且 all_xy 未全量监控
-
-        :param key_name: str, one of [input, output, input_grad, output_grad]
-        :param target_config: target obj in config json.
-        :return:
-        """
-        cared = target_config.get(self.module_name, self.struct)
-        if key_name in cared:
-            target_module_config = cared[key_name]
-            if isinstance(target_module_config, dict):
-                # current cared is self.struct, monitor all data for module_name
-                self.format_by_arg[key_name] = target_module_config.get('config')
-            elif isinstance(target_module_config, str):
-                # current cared is target_config[self.module_name]
-                self.format_by_arg[key_name] = target_module_config
-            else:
-                logger.warning_on_rank_0(f"target module config error, result maybe empty."
-                                         f"module_name: {self.module_name}, key_name: {key_name}")
-                self.format_by_arg[key_name] = None
-        else:
-            self.format_by_arg[key_name] = self.struct.get(key_name).get('config')
 
     def reset(self):
         self.actv.clear()
