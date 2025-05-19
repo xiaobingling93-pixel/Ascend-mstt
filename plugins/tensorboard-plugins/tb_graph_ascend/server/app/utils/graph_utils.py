@@ -262,7 +262,7 @@ class GraphUtils:
     @staticmethod
     def find_config_files(run_name):
         """
-        在指定目录下查找所有以 .config 结尾的文件（不包括子目录）
+        在指定目录下查找所有以 .vis.config 结尾的文件（不包括子目录）
         :param directory: 要搜索的目标目录路径
         :return: 包含所有匹配文件路径的列表
         """
