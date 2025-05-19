@@ -133,6 +133,10 @@ class DebuggerConfig:
         if not self.list or len(self.list) != 1:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the list must be configured as a list with one api name.")
+        if self.task != Const.TENSOR:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the task must be set to tensor.")
+
         api_name = self.list[0]
         if api_name.endswith(Const.BACKWARD):
             self.is_backward_kernel_dump = True
