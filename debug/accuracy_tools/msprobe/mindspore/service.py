@@ -459,7 +459,7 @@ class Service:
                 logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
             elif token_range[0] < self.cur_token_id <= token_range[1]:
                 logger.debug(f"Current token id: {self.cur_token_id}.")
-            elif self.cur_token_id > token_range[1] and self.switch:
+            elif self.cur_token_id == token_range[1] + 1:
                 self.switch = False
                 self.primitive_switch = False
                 JitDump.jit_dump_switch = False

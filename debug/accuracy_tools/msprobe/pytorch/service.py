@@ -255,7 +255,7 @@ class Service:
                 logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
             elif token_range[0] < self.cur_token_id <= token_range[1]:
                 logger.debug(f"Current token id: {self.cur_token_id}.")
-            elif self.cur_token_id > token_range[1] and self.switch:
+            elif self.cur_token_id == token_range[1] + 1:
                 self.switch = False
                 logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
             self.cur_token_id += 1
