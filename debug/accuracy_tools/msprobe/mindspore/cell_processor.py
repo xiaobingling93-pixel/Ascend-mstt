@@ -24,7 +24,11 @@ from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope, BaseScope
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.common.utils import is_mindtorch, get_cells_and_names
+from msprobe.mindspore.common.utils import (
+    is_mindtorch,
+    get_cells_and_names,
+    has_kwargs_in_forward_hook
+)
 
 
 def get_cell_construct(construct):
@@ -81,11 +85,12 @@ class CellProcessor:
                 if cell == model:
                     continue
 
-                if not hasattr(cell.__class__, 'msprobe_construct'):
-                    setattr(cell.__class__, 'msprobe_construct', True)
-                    if hasattr(cell.__class__, construct_name):
-                        setattr(cell.__class__, construct_name,
-                                get_cell_construct(getattr(cell.__class__, construct_name)))
+                if not has_kwargs_in_forward_hook():
+                    if not hasattr(cell.__class__, 'msprobe_construct'):
+                        setattr(cell.__class__, 'msprobe_construct', True)
+                        if hasattr(cell.__class__, construct_name):
+                            setattr(cell.__class__, construct_name,
+                                    get_cell_construct(getattr(cell.__class__, construct_name)))
                 setattr(cell, 'msprobe_hook', True)
 
                 cell_index = (index + Const.SEP) if index != "-1" else ""
@@ -108,10 +113,15 @@ class CellProcessor:
 
             if not hasattr(cell, 'msprobe_forward_hook'):
                 if is_mindtorch():
-                    cell.register_forward_hook(forward_hook, prepend=True)
+                    cell.register_forward_hook(forward_hook, prepend=True, with_kwargs=True)
                 else:
                     forward_hook_dict = getattr(cell, '_forward_hook', OrderedDict())
-                    handle = HookHandle(forward_hook_dict)
+                    if has_kwargs_in_forward_hook():
+                        forward_hook_with_kwargs_dict = getattr(cell, '_forward_hook_with_kwargs', OrderedDict())
+                        handle = HookHandle(forward_hook_dict, extra_dict=forward_hook_with_kwargs_dict)
+                        forward_hook_with_kwargs_dict[handle.handle_id] = True
+                    else:
+                        handle = HookHandle(forward_hook_dict)
                     forward_hook_dict[handle.handle_id] = forward_hook
                     forward_hook_dict.move_to_end(handle.handle_id, last=False)
 
@@ -142,18 +152,20 @@ class CellProcessor:
 
             return args
 
-        def forward_hook(cell, args, outputs):
+        def forward_hook(cell, args, kwargs_or_output, output_or_kwargs=None):
             index = CellProcessor.cell_count.get(cell_name, 0)
             full_forward_name = f'{cell_name}{Const.FORWARD}{Const.SEP}{index}'
             full_backward_name = f'{cell_name}{Const.BACKWARD}{Const.SEP}{index}'
 
-            _, forward_data_hook, backward_data_hook, _ = build_data_hook(BaseScope.Module_Type_Module,
-                                                                          full_forward_name)
-            hook_result = forward_data_hook(cell, args, outputs)
             self.set_construct_info_in_hook(full_forward_name)
 
+            _, forward_data_hook, backward_data_hook, _ = build_data_hook(BaseScope.Module_Type_Module,
+                                                                          full_forward_name)
+            hook_result = forward_data_hook(cell, args, kwargs_or_output, output_or_kwargs)
             if hook_result is not None:
                 outputs = hook_result
+            else:
+                outputs = output_or_kwargs if has_kwargs_in_forward_hook() else kwargs_or_output
 
             bw_hook = CellProcessor.cell_bw_hook_kernels.get(full_forward_name)
             if bw_hook:

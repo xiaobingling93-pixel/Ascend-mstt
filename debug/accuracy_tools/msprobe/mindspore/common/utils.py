@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import os
 import random
 
@@ -26,6 +27,11 @@ from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_ex
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
+
+
+mindtorch_check_result = None
+register_backward_hook_functions = {}
+kwargs_exist_in_forward_hook = None
 
 
 class MsprobeStep(ms.train.Callback):
@@ -152,9 +158,6 @@ def remove_dropout():
     nn.functional.dropout = dropout_ext
 
 
-mindtorch_check_result = None
-
-
 def is_mindtorch():
     global mindtorch_check_result
     if mindtorch_check_result is None:
@@ -169,11 +172,11 @@ def is_mindtorch():
     return mindtorch_check_result
 
 
-register_backward_hook_functions = {}
-
-
 def set_register_backward_hook_functions():
     global register_backward_hook_functions
+    if register_backward_hook_functions:
+        return
+
     if is_mindtorch():
         import torch
         from msprobe.mindspore.mindtorch import (_call_impl,
@@ -223,3 +226,20 @@ def get_cells_and_names(models):
     else:
         cells_and_names_with_index["-1"] = get_cell_or_module(models)
     return cells_and_names_with_index
+
+
+def has_kwargs_in_forward_hook():
+    global kwargs_exist_in_forward_hook
+
+    if kwargs_exist_in_forward_hook is None:
+        if is_mindtorch():
+            kwargs_exist_in_forward_hook = True
+            return kwargs_exist_in_forward_hook
+
+        try:
+            func_params = inspect.signature(nn.Cell.register_forward_hook).parameters
+            kwargs_exist_in_forward_hook = 'with_kwargs' in func_params
+        except Exception:
+            kwargs_exist_in_forward_hook = False
+
+    return kwargs_exist_in_forward_hook
