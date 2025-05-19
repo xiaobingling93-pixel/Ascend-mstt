@@ -77,6 +77,28 @@ int32_t GetProcessId()
     return static_cast<int32_t>(getpid());
 }
 
+bool ParseProcStat(const std::string& line, std::string& command, int& parentPid)
+{
+    size_t lparen = line.find('(');
+    size_t rparen = line.rfind(')');
+    if (lparen == std::string::npos || rparen == std::string::npos || rparen <= lparen + 1) {
+        LOG(WARNING) << "cannot find command name: " << line;
+        return false;
+    }
+    command = line.substr(lparen + 1, rparen - lparen - 1);
+
+    std::string afterCmd = line.substr(rparen + 1);
+    std::istringstream iss(afterCmd);
+    std::string state;
+    int ppid;
+    if (!(iss >> state >> ppid)) {
+        LOG(WARNING) << "Failed to parse state/ppid from: " << afterCmd;
+        return false;
+    }
+    parentPid = ppid;
+    return true;
+}
+
 std::pair<int32_t, std::string> GetParentPidAndCommand(int32_t pid)
 {
     std::string fileName = "/proc/" + std::to_string(pid) + "/stat";
@@ -88,8 +110,8 @@ std::pair<int32_t, std::string> GetParentPidAndCommand(int32_t pid)
     std::string command;
     std::string line;
     if (std::getline(statFile, line)) {
-        int ret = sscanf(line.c_str(), "%*d (%[^)]) %*c %d", command.data(), &parentPid);
-        if (ret == 2) { // 2: 接收到2个字符
+        bool ret = ParseProcStat(line, command, parentPid);
+        if (ret) {
             return std::make_pair(parentPid, command);
         }
     }

@@ -182,7 +182,7 @@ protected:
     auto BuildNpuCtxt_(const std::vector<NpuPayLoad> &npuPayLoad, unsigned numFileDes)
     {
         auto ctxt = std::make_unique<Ctxt>(npuPayLoad.size());
-        std::memset(&ctxt->msghdr, 0, sizeof(ctxt->msghdr));
+        std::fill_n(ReinterpretConvert<char *>(&ctxt->msghdr), sizeof(msghdr), 0);
         for (size_t i = 0; i < npuPayLoad.size(); i++) {
             ctxt->iov[i] = {npuPayLoad[i].data, npuPayLoad[i].size};
         }
