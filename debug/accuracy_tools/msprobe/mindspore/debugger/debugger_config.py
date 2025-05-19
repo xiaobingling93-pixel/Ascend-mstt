@@ -42,6 +42,10 @@ class DebuggerConfig:
         self.framework = Const.MS_FRAMEWORK
         self.summary_mode = task_config.summary_mode
         self.async_dump = common_config.async_dump if common_config.async_dump else False
+        if hasattr(task_config, 'td_config_path'):
+            self.td_config_path = "" if not task_config.td_config_path else task_config.td_config_path
+        else:
+            self.td_config_path = ""
         self.check()
         self._check_statistics_config(task_config)
         create_directory(self.dump_path)

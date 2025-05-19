@@ -29,11 +29,14 @@ class TaskHandlerFactory:
     }
 
     @staticmethod
-    def create(config: DebuggerConfig):
+    def create(config: DebuggerConfig, model=None):
         task = TaskHandlerFactory.tasks.get(config.task)
         if not task:
             raise Exception("Valid task is needed.")
-        handler = task.create(config)
+        if task == DumpToolFactory:
+            handler = task.create(config, model)
+        else:
+            handler = task.create(config)
         if not handler:
             raise Exception("Can not find task handler")
         return handler
