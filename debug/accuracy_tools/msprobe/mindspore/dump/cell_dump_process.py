@@ -15,7 +15,6 @@
 import os
 import time
 import re
-import json
 import atexit
 from multiprocessing import Pool
 
@@ -95,7 +94,7 @@ def clip_gradient(dump_path, cell_prefix, index, io_type, dx):
     if io_type == KEY_OUTPUT:
         temp = td(gen_file_path(dump_path, cell_prefix, KEY_BACKWARD, io_type, index), dx)
         dx = ops.depend(dx, temp)
-    if io_type == KEY_INPUT:
+    elif io_type == KEY_INPUT:
         temp = td_in(gen_file_path(dump_path, cell_prefix, KEY_BACKWARD, io_type, index), dx)
         dx = ops.depend(dx, temp)
     return dx
@@ -112,24 +111,24 @@ def cell_construct_wrapper(func, self):
 
         index = 0
         item = None
+        backward_or_all = True if self.data_mode in ["backward", "all"] else False
+        forward_or_all = True if self.data_mode in ["forward", "all"] else False
         # The inputs of the cell.
         for index, item in enumerate(args):
-            if self.data_mode == "backward" or self.data_mode == "all":
-                if ops.is_tensor(item):
-                    item = self.output_clips[index](item)
-            if self.data_mode == "forward" or self.data_mode == "all":
-                if ops.is_tensor(item):
-                    if need_tensordump_in(self, 'input_dump_mode'):
-                        temp = td_in(
-                            gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_INPUT, index),
-                            item
-                        )
-                    else:
-                        temp = td(
-                            gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_INPUT, index),
-                            item
-                        )
-                    item = ops.depend(item, temp)
+            if backward_or_all and ops.is_tensor(item):
+                item = self.output_clips[index](item)
+            if forward_or_all and ops.is_tensor(item):
+                if need_tensordump_in(self, 'input_dump_mode'):
+                    temp = td_in(
+                        gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_INPUT, index),
+                        item
+                    )
+                else:
+                    temp = td(
+                        gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_INPUT, index),
+                        item
+                    )
+                item = ops.depend(item, temp)
             new_args.append(item)
 
         out = func(*new_args, **kwargs)
@@ -137,43 +136,40 @@ def cell_construct_wrapper(func, self):
         # The outputs of the cell.
         if isinstance(out, tuple):
             for index, item in enumerate(out):
-                if self.data_mode == "backward" or self.data_mode == "all":
-                    if ops.is_tensor(item):
-                        item = self.input_clips[index](item)
-                if self.data_mode == "forward" or self.data_mode == "all":
-                    if ops.is_tensor(item):
-                        if need_tensordump_in(self, 'output_dump_mode'):
-                            temp = td_in(
-                                gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, index),
-                                item
-                            )
-                        else:
-                            temp = td(
-                                gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, index),
-                                item
-                            )
-                        item = ops.depend(item, temp)
-                        out_list.append(item)
-                    else:
-                        out_list.append(item)
-            out_list = tuple(out_list)
-            return out_list
-        else:
-            if self.data_mode == "backward" or self.data_mode == "all":
-                out = self.input_clips[0](out)
-            if self.data_mode == "forward" or self.data_mode == "all":
-                if ops.is_tensor(out):
+                if backward_or_all and ops.is_tensor(item):
+                    item = self.input_clips[index](item)
+                if forward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode'):
                         temp = td_in(
-                            gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, 0),
-                            out
+                            gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, index),
+                            item
                         )
                     else:
                         temp = td(
-                            gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, 0),
-                            out
+                            gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, index),
+                            item
                         )
-                    out = ops.depend(out, temp)
+                    item = ops.depend(item, temp)
+                    out_list.append(item)
+                elif forward_or_all and not ops.is_tensor(item):
+                    out_list.append(item)
+            out_list = tuple(out_list)
+            return out_list
+        else:
+            if backward_or_all:
+                out = self.input_clips[0](out)
+            if forward_or_all and ops.is_tensor(out):
+                if need_tensordump_in(self, 'output_dump_mode'):
+                    temp = td_in(
+                        gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, 0),
+                        out
+                    )
+                else:
+                    temp = td(
+                        gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, 0),
+                        out
+                    )
+                out = ops.depend(out, temp)
             return out
 
     return new_construct.__get__(self, type(self))
@@ -258,16 +254,17 @@ def get_data_mode(str):
 def check_relation(cell_name, parent_cell_name):
     layers_pattern = rf"{CoreConst.SEP}{KEY_LAYERS}{CoreConst.SEP}\d+$"
     last_dot_index = cell_name.rfind(CoreConst.SEP)
-    if last_dot_index != -1:
-        # 如果cell_name最后一个'.'之前的字段等于parent_cell_name，则判定存在父子关系
-        sub_cell_name = cell_name[:last_dot_index]
+    if last_dot_index == -1:
+        return False
+    # 如果cell_name最后一个'.'之前的字段等于parent_cell_name，则判定存在父子关系
+    sub_cell_name = cell_name[:last_dot_index]
+    if sub_cell_name == parent_cell_name:
+        return True
+    elif re.search(layers_pattern, cell_name):
+        # 如果cell_name以".layer.{layer_id}"结尾，且去掉该字段后等于parent_cell_name，则判定存在父子关系
+        sub_cell_name = re.sub(layers_pattern, '', cell_name)
         if sub_cell_name == parent_cell_name:
             return True
-        elif re.search(layers_pattern, cell_name):
-            # 如果cell_name以".layer.{layer_id}"结尾，且去掉该字段后等于parent_cell_name，则判定存在父子关系
-            sub_cell_name = re.sub(layers_pattern, '', cell_name)
-            if sub_cell_name == parent_cell_name:
-                return True
     return False
 
 
