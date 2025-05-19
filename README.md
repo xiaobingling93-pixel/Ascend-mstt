@@ -14,6 +14,7 @@
 
 ## [模型训练开发全流程](https://www.hiascend.com/software/mindstudio/training)
 ![training_process](debug/resources/training_process.png)
+mstt包括精度工具（msprobe）和性能工具（msprof-analyze），分析迁移工具请参见[昇腾社区](https://www.hiascend.com/software/mindstudio/training)。
 
 # 使用说明
 
