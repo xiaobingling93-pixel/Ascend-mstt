@@ -16,7 +16,7 @@
 
 mstt包括精度工具（msprobe）和性能工具（msprof-analyze），分析迁移工具请参见[昇腾社区](https://www.hiascend.com/software/mindstudio/training)。
 
-![training_process](debug/resources/training_process2.png)
+![training_process](debug/resources/training_process.png)
 
 # 使用说明
 
