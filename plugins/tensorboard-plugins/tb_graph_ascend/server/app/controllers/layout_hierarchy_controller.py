@@ -34,7 +34,7 @@ class LayoutHierarchyController:
             LayoutHierarchyController.hierarchy[graph_type] = Hierarchy(graph_type, graph, micro_step)
         elif LayoutHierarchyController.hierarchy[graph_type]:
             LayoutHierarchyController.hierarchy[graph_type].update_graph_data(node_name, graph)
-            LayoutHierarchyController.hierarchy[graph_type].update_grpah_shape()
+            LayoutHierarchyController.hierarchy[graph_type].update_graph_shape()
             LayoutHierarchyController.hierarchy[graph_type].update_graph_position()
         else:
             return {}

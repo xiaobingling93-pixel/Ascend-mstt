@@ -42,22 +42,27 @@ class Hierarchy:
         }
         # 默认展开根节点
         self.update_graph_data(self.root_name, graph)
-        self.update_grpah_shape()
+        self.update_graph_shape()
         self.update_graph_position()
 
     @staticmethod
     def measure_text_width(text):
         return len(text) * 6  # 假设每个字符宽度为6
 
+
     @staticmethod
     def extract_label_name(node_name, node_type):
         splited_subnode_name = node_name.split('.')
         splited_label = []
+        # Module.layer1.1.relu.ReLU.forward.1 =>relu.ReLU.forward.1
+        # Module.layer1.1.relu.ReLU.forward.1 =>relu.ReLU.forward.1
         if node_type == MODULE:
             if len(splited_subnode_name) < 4:
                 return node_name
             splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
                 -4].isdigit() else splited_subnode_name[-5:]
+        # Module.layer1.1.ApiList.1 =>ApiList.1
+        # Module.layer1.1.ApiList.0.1 =>ApiList.0.1
         else:
             if len(splited_subnode_name) < 2:
                 return node_name
@@ -109,7 +114,7 @@ class Hierarchy:
             parent_node_name = graph.get('node', {}).get(parent_node_name, {}).get("upnode")
             parent_node = self.current_hierarchy.get(parent_node_name)
 
-    def update_grpah_shape(self):
+    def update_graph_shape(self):
         self.resize_hierarchy(self.root_name)
 
     def update_graph_position(self):
