@@ -238,7 +238,7 @@ def handle_multi_process(func, func_args, lock):
     def err_call(args):
         logger.error('Multiprocess merge result failed! Reason: {}'.format(args))
         try:
-            pool.terminate()
+            pool.close()
         except OSError:
             logger.error("Pool terminate failed")
 

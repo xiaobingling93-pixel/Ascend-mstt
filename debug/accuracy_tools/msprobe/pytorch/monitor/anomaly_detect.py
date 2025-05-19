@@ -14,6 +14,7 @@
 # limitations under the License.
 import itertools
 import os
+import math
 import statistics as st
 import sys
 from abc import ABC
@@ -33,7 +34,7 @@ from msprobe.pytorch.common.log import logger
 class ScanRule(ABC):
     name = "ScanRule"
 
-    def apply(self, history, cur):
+    def apply(self, cur, history=None):
         raise NotImplementedError("abstract method apply is not implemented")
 
 
@@ -43,7 +44,7 @@ class AnomalyTurbulence(ScanRule):
     def __init__(self, threshold) -> None:
         self.threshold = threshold
 
-    def apply(self, history, cur):
+    def apply(self, cur, history=None):
         baseline = st.mean(history) if isinstance(history, list) else history
 
         up_bound = baseline + baseline * self.threshold
@@ -51,6 +52,16 @@ class AnomalyTurbulence(ScanRule):
             return cur > up_bound
         else:
             return cur < up_bound
+
+
+class AnomalyNan(ScanRule):
+    name = "AnomalyNan"
+
+    def __init__(self, threshold=None) -> None:
+        self.threshold = threshold
+
+    def apply(self, cur, history=None):
+        return math.isnan(cur) or (self.threshold is not None and abs(cur) > self.threshold)
 
 
 class AnomalyScanner:
@@ -69,7 +80,7 @@ class AnomalyScanner:
             rule_args = spec.get("args")
 
             # 检查必要的键是否存在
-            if rule_cls_name is None or rule_args is None:
+            if rule_cls_name is None or (rule_cls_name == "AnomalyTurbulence" and rule_args is None):
                 logger.warning(f"Spec is missing required keys: {spec}")
                 continue
 
@@ -81,7 +92,7 @@ class AnomalyScanner:
                 continue
 
             try:
-                rule_instance = rule_cls(**rule_args)
+                rule_instance = rule_cls(**rule_args) if rule_args is not None else rule_cls()
                 alert_rules.append(rule_instance)
             except Exception as e:
                 logger.error(f"Error creating instance of rule '{rule_cls_name}': {e}")
@@ -93,7 +104,7 @@ class AnomalyScanner:
     def scan(scan_rules: List[ScanRule], history, cur):
         anomaly = False
         for rule in scan_rules:
-            anomaly = rule.apply(history, cur)
+            anomaly = rule.apply(cur, history=history)
             if anomaly:
                 return anomaly, rule.name
         return anomaly, None
@@ -254,6 +265,40 @@ class BaseWriterWithAD:
         self.anomalies = []
         self.ndigits = writer_input.ndigits
 
+    @staticmethod
+    def stack_tensors(tensor_list):
+        """
+        Torch not support stack cpu and xpu tensors. Group the tensors into cpu_group and xpu_group,
+        stack them separately, migrate xpu_group to cpu, and then restore in the order of input.
+
+        :param tensor_list: [tensor(-1.6165), tensor(-1.0985), tensor(-1.7777), tensor(-1.8408, device='npu:0')]
+        :return: result: list of float
+        """
+        cpu_tensors = []
+        xpu_tensors = []
+
+        for tensor in tensor_list:
+            if isinstance(tensor, torch.Tensor) and tensor.device.type != 'cpu':
+                # 将device上的tensor先stack后to cpu
+                xpu_tensors.append(tensor)
+            else:
+                cpu_tensors.append(tensor)
+
+        xpu_stack = torch.stack(xpu_tensors).cpu() if xpu_tensors else torch.tensor([])
+
+        # 按照输入的顺序恢复
+        result = []
+        cpu_tensors_idx, xpu_tensors_idx = 0, 0
+        for tensor in tensor_list:
+            if isinstance(tensor, torch.Tensor) and tensor.device.type != 'cpu':
+                result.append(xpu_stack[xpu_tensors_idx])
+                xpu_tensors_idx += 1
+            else:
+                result.append(cpu_tensors[cpu_tensors_idx])
+                cpu_tensors_idx += 1
+
+        return result
+
     def get_anomalies(self):
         """返回已检测到的异常列表
         """
@@ -299,7 +344,7 @@ class BaseWriterWithAD:
                 end = (i+1) * MonitorConst.SLICE_SIZE
                 if begin == len(tensors):
                     continue
-                metric_list = torch.stack(tensors[begin:end]).cpu()
+                metric_list = self.stack_tensors(tensors[begin:end])
                 for tag, metric in zip(tags[begin:end], metric_list):
                     self.add_scalar(tag, metric, step)
 

@@ -87,15 +87,15 @@ class BaseNode:
         self.matched_node_link = ancestors
         node.matched_node_link = ancestors
 
-    def to_dict(self):
+    def to_dict(self, compare_mode=None):
         """
         输出数据
         """
         result = {
             'id': self.id,
             'node_type': self.op.value,
-            'output_data': format_node_data(self.output_data, self.id),
-            'input_data': format_node_data(self.input_data, self.id),
+            'output_data': format_node_data(self.output_data, self.id, compare_mode),
+            'input_data': format_node_data(self.input_data, self.id, compare_mode),
             'upnode': self.upnode.id if self.upnode else 'None',
             'subnodes': [node.id for node in self.subnodes],
             'matched_node_link': self.matched_node_link,

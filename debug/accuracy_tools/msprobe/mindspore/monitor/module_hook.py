@@ -25,16 +25,17 @@ from mindspore import Tensor, mint
 from mindspore import nn, _no_grad
 
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
-    is_skip_step, get_metrics, get_single_metrics, get_target_output_dir
+    is_skip_step, get_metrics, get_target_output_dir
 from msprobe.mindspore.monitor.module_spec_verifier import validate_config_spec
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
+from msprobe.mindspore.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
     get_process_group
 
@@ -188,7 +189,6 @@ class TrainerMon:
         self.config_file_path = config_file_path
         self.process_group = process_group
         self.params_have_main_grad = params_have_main_grad
-        self.origin_step_func = None
         self.is_mindtorch = is_mindtorch()
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
@@ -245,6 +245,8 @@ class TrainerMon:
         self.optimizer_hooked = False
         self.param_registered = False
         self.struct_printed = False
+        self.pre_step_hooks = []
+        self.post_step_hooks = []
 
         # 动静态区分
         self.dynamic_enable = os.getenv("DYNAMIC_MONITOR", 'False').lower() == 'true'
@@ -315,6 +317,12 @@ class TrainerMon:
                 )
             )
 
+            # 初始化anomaly detected文件目录
+            if self.anomaly_data_factory:
+                self.anomaly_data_writer = AnomalyDataWriter(os.path.join(self.output_base_dir, "anomaly_detected"),
+                                                             self.rank)
+                self.anomaly_data_writer.init_detected_json()
+
     def common_info(self):
         if not self.xy_distribution:
             logger.info("> module input/output input_grad/output_grad is not monitored. ")
@@ -366,6 +374,9 @@ class TrainerMon:
                             context.step - self.start_step) % self.step_interval == 0)
                 if module_rank_valid and step_condition:
                     self.has_collect_times += 1
+
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_factory.set_call_id(self.param_name_call_id)
                     self.write_xy_tb(context.step)
                     self.write_grad_tb(context.step)
                     self.write_mv_tb(context)
@@ -375,7 +386,10 @@ class TrainerMon:
                         self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
                     context.metric_dict.clear()
 
+                    if self.anomaly_data_factory:
+                        self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
                     self.summary_writer.clear_anomalies()
+
                     self.call_id = 0
                     self.param_name_call_id.clear()
 
@@ -385,18 +399,23 @@ class TrainerMon:
             context.step += 1
             self.dynamic_monitor(optimizer)
 
+
+        def patch_step(func, optimizer):
+            def wrapper(*args, **kwargs):
+                for hook in self.pre_step_hooks:
+                    hook(optimizer, args, kwargs)
+                out = func(*args, **kwargs)
+                for hook in self.post_step_hooks:
+                    hook(optimizer, args, kwargs)
+                step_final_hook(optimizer, args, kwargs)
+                return out
+            return wrapper
+        
         if self.is_mindtorch:
-            def patch_step(func, optimizer):
-                def wrapper(*args, **kwargs):
-                    out = func(*args, **kwargs)
-                    step_final_hook(optimizer, args, kwargs)
-                    return out
-                return wrapper
             optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-            self.origin_step_func = optimizer.__class__.step
         else:
-            handle = optimizer.register_forward_hook(step_final_hook)
-            self.handles['step_final'].append(handle)
+            optimizer.__class__.construct = patch_step(optimizer.__class__.construct, optimizer)
+
         return
 
     def dynamic_monitor(self, optimizer):
@@ -484,7 +503,7 @@ class TrainerMon:
 
             self.generate_wgrad_metrics(grad_dict)
             self.generate_mv_metrics(context)
-            self.generate_param_metrics(context)
+            self.generate_param_metrics(context, MonitorConst.PRE_PARAM)
 
             metric_dict = {}
             for cc in self.cc_context.values():
@@ -497,20 +516,16 @@ class TrainerMon:
             context.metric_dict = metric_dict
             return
 
-        def patch_step(func, optimizer):
-            def wrapper(*args, **kwargs):
-                optimizer_pre_step_hook(optimizer, args, kwargs)
-                out = func(*args, **kwargs)
-                return out
-            return wrapper
+        def optimizer_post_step_hook(optimizer, args, kwargs):
+            context = self.optimizer_context[optimizer]
+            self.generate_param_metrics(context, MonitorConst.POST_PARAM)
+        
 
         if self.optimizer_hooked or not self.is_target_rank():
             return
-        if self.is_mindtorch:
-            optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-        else:
-            handle = optimizer.register_forward_pre_hook(optimizer_pre_step_hook)
-            self.handles['optimizer'].append(handle)
+        
+        self.pre_step_hooks.append(optimizer_pre_step_hook)
+        self.post_step_hooks.append(optimizer_post_step_hook)
         self.optimizer_hooked = True
         return
 
@@ -535,11 +550,15 @@ class TrainerMon:
             metrics[key] = param_tensor[name]
         return metrics
 
-    def generate_param_metrics(self, opt_context):
+    def generate_param_metrics(self, opt_context, stage=MonitorConst.PRE_PARAM):
         if not self.param_distribution:
             return
-        name2param = {name: param for name, param in self.name2param.items() if param.numel() != 0}
-        get_metrics(self.ops, name2param, self.eps, opt_context.param_metric)
+        tag2param = {
+            self.name2tag.get(name, {}).get(stage): param 
+            for name, param in self.name2param.items() 
+            if param.numel() != 0
+        }
+        get_metrics(self.ops, tag2param, self.eps, opt_context.param_metric)
 
     def get_mv_for_ms(self, opt):
         if not self.mv_distribution:
@@ -576,21 +595,25 @@ class TrainerMon:
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if len(fwd_context.actv) == 0:
                 continue
-            self.summary_writer.write_metrics(self.ops, fwd_context.actv, step, 'actv')
+            self.summary_writer.write_metrics(self.ops, fwd_context.actv, step, MonitorConst.ACTV)
             fwd_context.actv.clear()
         if self.grad_context.actv:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, 'actv_grad')
+            self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, MonitorConst.ACTVGRAD)
 
     def write_param_tb(self, opt_context):
         if not self.param_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, 'param')
+        param_metrics = {k: v for k, v in opt_context.param_metric.items() if MonitorConst.PRE_PARAM in k}
+        updated_param_metrics = {k: v for k, v in opt_context.param_metric.items() if MonitorConst.POST_PARAM in k}
+        self.summary_writer.write_metrics(self.ops, param_metrics, opt_context.step, MonitorConst.PRE_PARAM)
+        self.summary_writer.write_metrics(self.ops, updated_param_metrics, opt_context.step, MonitorConst.POST_PARAM)
 
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, opt_context.step, 'exp_avg')
-        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step, 'exp_avg_sq')
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_metric, opt_context.step, MonitorConst.EXP_AVG)
+        self.summary_writer.write_metrics(self.ops, opt_context.exp_avg_sq_metric, opt_context.step,
+                                          MonitorConst.EXP_AVG_SQ)
 
     def write_grad_tb(self, step):
         if not self.wg_distribution:
@@ -604,13 +627,28 @@ class TrainerMon:
             return False
         return True
 
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        metrics = {}
-        key = get_summary_writer_tag_name(module_name, tag, str(self.rank))
+    def build_tbtag_tensor_map(self, module_name, suffix, tag, tensor):
+        """
+        :param module_name: str of module name
+        :param suffix:
+        :param tag:
+        :param tensor: torch.tensor or tuple/list of torch.tensor
+        :return: tensor_map
+        """
+        tensor_map = {}
         if isinstance(tensor, Tensor):
-            self.register_param_call_id("_hook_module", key)
-            metrics[key] = tensor
-        return metrics
+            tensor = [tensor]
+        if isinstance(tensor, tuple) or isinstance(tensor, list):
+            if len(tensor) == 1:
+                key = get_summary_writer_tag_name(module_name + suffix, tag, self.rank)
+                self.register_param_call_id("_hook_module", key)
+                tensor_map[key] = tensor[0]
+            else:
+                for i, tensor_i in enumerate(tensor):
+                    key = get_summary_writer_tag_name(module_name + f"_{i}" + suffix, tag, self.rank)
+                    self.register_param_call_id("_hook_module", key)
+                    tensor_map[key] = tensor_i
+        return tensor_map
 
     def register_param_call_id(self, hook_name: str, key: str):
         """
@@ -644,9 +682,15 @@ class TrainerMon:
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
+                keywords = [
+                    MonitorConst.PRE_GRAD,
+                    MonitorConst.POST_GRAD,
+                    MonitorConst.PRE_PARAM,
+                    MonitorConst.POST_PARAM
+                ]
                 self.name2tag[name] = {
-                    MonitorConst.PRE_GRAD: get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank),
-                    MonitorConst.POST_GRAD: get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
+                    k: get_summary_writer_tag_name(name, k, self.rank) 
+                    for k in keywords
                 }
                 index += 1
 
@@ -655,14 +699,20 @@ class TrainerMon:
             # nothing to hook
             return 0
 
-        def fwd_hook_fun(module, module_input, module_output, name):
+        def fwd_hook_fun(module, args, kwargs, module_output, name):
+
+            module_input = [tensor for tensor in args if isinstance(tensor, Tensor)]
+            if kwargs:
+                kwargs_tensors = [tensor for tensor in kwargs.values() if isinstance(tensor, Tensor)]
+                module_input.extend(kwargs_tensors)
+
             if module not in self.module_fwd_hook_context_by_module:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
                 context.struct = {
-                    MonitorConst.ACTV_IN: get_param_struct(module_input),
-                    MonitorConst.ACTV_OUT: get_param_struct(module_output)
+                    Const.INPUT: get_param_struct(module_input),
+                    Const.OUTPUT: get_param_struct(module_output)
                 }
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
@@ -673,31 +723,16 @@ class TrainerMon:
                             self.collect_times):
                 step_accumulates_one(context, self.micro_batch_number)
                 return
-            if not context.format_by_arg:
-                context.set_format_by_arg(MonitorConst.ACTV_IN, self.targets)
-                context.set_format_by_arg(MonitorConst.ACTV_OUT, self.targets)
-            if not context.format_by_arg:
-                return
-            if not context.verified:
-                if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_IN],
-                                                                  module_input, context.module_name,
-                                                                  MonitorConst.ACTV_IN)
-                context.focused_out_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTV_OUT],
-                                                               module_output, context.module_name,
-                                                               MonitorConst.ACTV_OUT)
-                context.verified = True
 
             tbtag_tensor_map = {}
-            if not context.ignore_in:
-                cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
-                tbtag_tensor_map.update(
-                    self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_IN,
-                                                cared_input))
-            cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_OUT,
-                                            cared_output))
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, module_input))
+            tbtag_tensor_map.update(
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, module_output))
             try:
                 get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             except Exception as e:
@@ -722,31 +757,16 @@ class TrainerMon:
                 step_accumulates_one(context, self.micro_batch_number)
                 return
 
-            if not context.format_by_arg:
-                context.set_format_by_arg(MonitorConst.ACTVGRAD_IN, self.targets)
-                context.set_format_by_arg(MonitorConst.ACTVGRAD_OUT, self.targets)
-            if not context.format_by_arg:
-                return
-            if not context.verified:
-                if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_IN],
-                                                                  input_grad, context.module_name,
-                                                                  MonitorConst.ACTVGRAD_IN)
-                context.focused_out_col = validate_config_spec(context.format_by_arg[MonitorConst.ACTVGRAD_OUT],
-                                                               output_grad, context.module_name,
-                                                               MonitorConst.ACTVGRAD_OUT)
-                context.verified = True
-
             tbtag_tensor_map = {}
-            if not context.ignore_in:
-                cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
-                tbtag_tensor_map.update(
-                    self.build_tbtag_tensor_map(
-                        f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_IN, cared_input_grad))
-            cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_OUT,
-                                            cared_output_grad))
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, input_grad))
+
+            tbtag_tensor_map.update(
+                self.build_tbtag_tensor_map(
+                    f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, output_grad))
 
             if context.micro_step == 0 and context.actvgrad:
                 logger.warning(f"actvgrad context of {context.module_name} is not empty when first micro_step, "
@@ -761,8 +781,8 @@ class TrainerMon:
             return
 
         def fwd_hook_fun_wrapper(fwd_hook_fun, name):
-            def wrapper(module, module_input, module_output):
-                return fwd_hook_fun(module, module_input, module_output, name)
+            def wrapper(module, args, kwargs, module_output):
+                return fwd_hook_fun(module, args, kwargs, module_output, name)
             return wrapper
 
         if self.backward_only and self.forward_only:
@@ -774,7 +794,8 @@ class TrainerMon:
                 if not name:
                     continue
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name))
+                    handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name),
+                                                             with_kwargs=True)
                     self.handles['xy'].append(handle)
                 if not self.forward_only:
                     handle = submodule.register_backward_hook(bwd_hook_fun)
@@ -852,11 +873,8 @@ class TrainerMon:
         self.weight_hooked = False
 
         if self.optimizer_hooked:
-            for handle in self.handles['optimizer']:
-                handle.remove()
-            self.handles['optimizer'].clear()
-            if self.is_mindtorch:
-                optimizer.__class__.step = self.origin_step_func
+            self.pre_step_hooks.clear()
+            self.post_step_hooks.clear()
         for _, context in self.optimizer_context.items():
             context.reset()
         self.optimizer_hooked = False

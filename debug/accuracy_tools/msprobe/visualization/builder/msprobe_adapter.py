@@ -121,11 +121,13 @@ def compare_data_fuzzy(data_dict_list1, data_dict_list2):
     return True
 
 
-def format_node_data(data_dict, node_id=None):
+def format_node_data(data_dict, node_id=None, compare_mode=None):
     """
     删除节点数据中不需要展示的字段
     """
     del_list = ['requires_grad', 'full_op_name']
+    if GraphConst.MD5_COMPARE != compare_mode:
+        del_list.append(Const.MD5)
     if node_id and GraphConst.BATCH_P2P in node_id:
         del_list.extend(['op', 'peer', 'tag', 'group_id'])
     for _, value in data_dict.items():

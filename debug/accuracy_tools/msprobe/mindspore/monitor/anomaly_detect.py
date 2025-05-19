@@ -16,6 +16,7 @@
 import itertools
 import os
 import sys
+import math
 import statistics as st
 from abc import ABC
 from dataclasses import dataclass, field
@@ -25,6 +26,7 @@ from collections import defaultdict
 import pandas as pd
 
 from mindspore import ops
+from mindspore import Tensor
 from mindspore import _no_grad
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import change_mode, create_directory, write_df_to_csv
@@ -34,7 +36,7 @@ from msprobe.core.common.const import FileCheckConst, MonitorConst
 class ScanRule(ABC):
     name = "ScanRule"
 
-    def apply(self, history, cur):
+    def apply(self, cur, history=None):
         raise NotImplementedError("abstract method apply is not implemented")
 
 
@@ -44,7 +46,7 @@ class AnomalyTurbulence(ScanRule):
     def __init__(self, threshold) -> None:
         self.threshold = threshold
 
-    def apply(self, history, cur):
+    def apply(self, cur, history=None):
         baseline = st.mean(history) if isinstance(history, list) else history
 
         up_bound = baseline + baseline * self.threshold
@@ -52,6 +54,16 @@ class AnomalyTurbulence(ScanRule):
             return cur > up_bound
         else:
             return cur < up_bound
+
+
+class AnomalyNan(ScanRule):
+    name = "AnomalyNan"
+
+    def __init__(self, threshold=None) -> None:
+        self.threshold = threshold
+
+    def apply(self, cur, history=None):
+        return math.isnan(cur) or (self.threshold is not None and abs(cur) > self.threshold)
 
 
 class AnomalyScanner:
@@ -70,7 +82,7 @@ class AnomalyScanner:
             rule_args = spec.get("args")
 
             # 检查必要的键是否存在
-            if rule_cls_name is None or rule_args is None:
+            if rule_cls_name is None or (rule_cls_name == "AnomalyTurbulence" and rule_args is None):
                 logger.warning(f"Spec is missing required keys: {spec}")
                 continue
 
@@ -82,7 +94,7 @@ class AnomalyScanner:
                 continue
 
             try:
-                rule_instance = rule_cls(**rule_args)
+                rule_instance = rule_cls(**rule_args) if rule_args is not None else rule_cls()
                 alert_rules.append(rule_instance)
             except Exception as e:
                 logger.error(f"Error creating instance of rule '{rule_cls_name}': {e}")
@@ -94,7 +106,7 @@ class AnomalyScanner:
     def scan(scan_rules: List[ScanRule], history, cur):
         anomaly = False
         for rule in scan_rules:
-            anomaly = rule.apply(history, cur)
+            anomaly = rule.apply(cur, history=history)
             if anomaly:
                 return anomaly, rule.name
         return anomaly, None
@@ -162,9 +174,8 @@ class TrainStage:
     OPTIMIZER_STAGE = 2
 
 
-FORWARD_KEY = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
-BACKWARD_KEY = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT,
-                MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
+FORWARD_KEY = [MonitorConst.ACTV]
+BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
 OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
 TRAIN_STAGE = {
     **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
@@ -222,7 +233,7 @@ class GradAnomalyData:
     @staticmethod
     def get_train_stage(tag_name):
         """
-        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq"
+        :param tag_name: "0:fc2.input:0/rank0/actv", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq"
         :return: int, if forward return 0; if backward return 1; if optimizer return 2
         """
         key_ = tag_name.split("/")[-1]
@@ -254,6 +265,40 @@ class BaseWriterWithAD:
         self.anomaly_factory = writer_input.anomaly_factory
         self.anomalies = []
         self.ndigits = writer_input.ndigits
+
+    @staticmethod
+    def stack_tensors(tensor_list):
+        """
+        Torch not support stack cpu and xpu tensors. Group the tensors into cpu_group and xpu_group,
+        stack them separately, migrate xpu_group to cpu, and then restore in the order of input.
+
+        :param tensor_list: [tensor(-1.6165), tensor(-1.0985), tensor(-1.7777), tensor(-1.8408, device='npu:0')]
+        :return: result: list of float
+        """
+        cpu_tensors = []
+        xpu_tensors = []
+
+        for tensor in tensor_list:
+            if isinstance(tensor, Tensor):
+                # 将device上的tensor先stack后to cpu
+                xpu_tensors.append(tensor)
+            else:
+                cpu_tensors.append(tensor)
+
+        xpu_stack = ops.stack(xpu_tensors).tolist() if xpu_tensors else ops.tensor([])
+
+        # 按照输入的顺序恢复
+        result = []
+        cpu_tensors_idx, xpu_tensors_idx = 0, 0
+        for tensor in tensor_list:
+            if isinstance(tensor, Tensor):
+                result.append(xpu_stack[xpu_tensors_idx])
+                xpu_tensors_idx += 1
+            else:
+                result.append(cpu_tensors[cpu_tensors_idx])
+                cpu_tensors_idx += 1
+
+        return result
 
     def get_anomalies(self):
         """返回已检测到的异常列表
@@ -290,8 +335,12 @@ class BaseWriterWithAD:
         tags = list(itertools.product(metric_value.keys(), op_list))
         for op2tensor in metric_value.values():
             tensors.extend(op2tensor.values())
+
+        if not tensors:
+            return
+
         with _no_grad():
-            metric_list = ops.stack(tensors).tolist() if tensors else []
+            metric_list = self.stack_tensors(tensors)
         for tag, metric in zip(tags, metric_list):
             self.add_scalar(tag, metric, step, need_explain)
 
@@ -353,10 +402,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
 
         new_data = []
         for name, metric_value in self.context_dict.items():
-            if MonitorConst.NAME_SEP not in name:
-                new_data.append([name] + [step] + metric_value)
-            else:
-                new_data.append(name.split(MonitorConst.NAME_SEP) + [step] + metric_value)
+            new_line = name.split(MonitorConst.NAME_SEP) + metric_value
+            new_line.insert(2, step)
+            new_data.append(new_line)
         new_data = pd.DataFrame(new_data).round(self.ndigits)
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
@@ -379,26 +427,11 @@ class CSVWriterWithAD(BaseWriterWithAD):
         need_explain = prefix == 'other'
         super().write_metrics(op_list, metric_value, step, prefix='', need_explain=need_explain)
 
-        # generate csv headers
-        # set hashmap to reduce the number of headers generated.
-        # 前向的norm用input.ops_和output.ops_，反向的用input_grad.ops_和output_grad.ops_
-        if prefix in {"actv", "actv_grad"}:
-            if prefix == "actv":
-                input_and_output = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
-            else:
-                input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
-            ops_ = [MonitorConst.DOT.join(i) for i in itertools.product(input_and_output, op_list)]
-            csv_header = ["module_name", "step", *ops_]
+        if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD]:
+            self.header = MonitorConst.CSV_HEADER_XY + op_list
         else:
-            csv_header = ["param_name", "step", *op_list]
-
-        keys = list(metric_value.keys())
-        if keys and MonitorConst.NAME_SEP in keys[0]:
-            csv_header.insert(0, "vpp_stage")
-
-        self.header = csv_header
+            self.header = MonitorConst.CSV_HEADER + op_list
         self.write_csv(prefix, step)
-        self.header = []
 
     def close(self):
         pass

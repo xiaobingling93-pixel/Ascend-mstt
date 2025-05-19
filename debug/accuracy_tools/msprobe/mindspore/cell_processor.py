@@ -108,11 +108,12 @@ class CellProcessor:
 
             if not hasattr(cell, 'msprobe_forward_hook'):
                 if is_mindtorch():
-                    cell.register_forward_hook(forward_hook)
+                    cell.register_forward_hook(forward_hook, prepend=True)
                 else:
                     forward_hook_dict = getattr(cell, '_forward_hook', OrderedDict())
                     handle = HookHandle(forward_hook_dict)
                     forward_hook_dict[handle.handle_id] = forward_hook
+                    forward_hook_dict.move_to_end(handle.handle_id, last=False)
 
                 setattr(cell, 'msprobe_forward_hook', True)
 
