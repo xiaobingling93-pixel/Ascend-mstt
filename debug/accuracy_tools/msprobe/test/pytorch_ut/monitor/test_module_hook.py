@@ -90,13 +90,13 @@ class TestModuleHook(unittest.TestCase):
         self.assertTrue(os.path.exists(actv_grad_0_csv))
         # validate columns and lines
         actv_0 = pd.read_csv(actv_0_csv)
-        expect_columns = ['vpp_stage', 'name', 'step', 'micro_step', 'norm', 'nans']
+        expect_columns = ['vpp_stage', 'name', 'step', 'micro_step', 'norm', 'nans', "shape", "dtype"]
         self.assertListEqual(list(actv_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([6, 6]))
+        self.assertEqual(actv_0.shape, tuple([6, 8]))
         actv_grad_0 = pd.read_csv(actv_grad_0_csv)
-        expect_columns = ['vpp_stage', 'name', 'step', 'micro_step', 'norm', 'nans']
+        expect_columns = ['vpp_stage', 'name', 'step', 'micro_step', 'norm', 'nans', "shape", "dtype"]
         self.assertListEqual(list(actv_grad_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([6, 6]))
+        self.assertEqual(actv_0.shape, tuple([6, 8]))
 
     def test_wg_distribution(self):
         self.get_dist_mock(False)
@@ -113,13 +113,13 @@ class TestModuleHook(unittest.TestCase):
         self.assertTrue(os.path.exists(grad_reduced_0_csv))
         self.assertTrue(os.path.exists(grad_unreduced_0_csv))
         # validate columns and lines
-        expect_columns = ["vpp_stage", "name", "step", "norm"]
+        expect_columns = ["vpp_stage", "name", "step", "norm", "shape", "dtype"]
         grad_reduced_0 = pd.read_csv(grad_reduced_0_csv)
         self.assertListEqual(list(grad_reduced_0.columns), expect_columns)
-        self.assertEqual(grad_reduced_0.shape, tuple([2, 4]))
+        self.assertEqual(grad_reduced_0.shape, tuple([2, 6]))
         grad_unreduced_0 = pd.read_csv(grad_unreduced_0_csv)
         self.assertListEqual(list(grad_unreduced_0.columns), expect_columns)
-        self.assertEqual(grad_unreduced_0.shape, tuple([2, 4]))
+        self.assertEqual(grad_unreduced_0.shape, tuple([2, 6]))
 
     def test_mv_distribution(self):
         self.get_dist_mock(False)
@@ -136,13 +136,13 @@ class TestModuleHook(unittest.TestCase):
         self.assertTrue(os.path.exists(exp_avg_1_csv))
         self.assertTrue(os.path.exists(exp_avg_sq_1_csv))
         # validate columns and lines
-        expect_columns = ["vpp_stage", "name", "step", "norm"]
+        expect_columns = ["vpp_stage", "name", "step", "norm", "shape", "dtype"]
         exp_avg_1 = pd.read_csv(exp_avg_1_csv)
         self.assertListEqual(list(exp_avg_1.columns), expect_columns)
-        self.assertEqual(exp_avg_1.shape, tuple([2, 4]))
+        self.assertEqual(exp_avg_1.shape, tuple([2, 6]))
         exp_avg_sq_1 = pd.read_csv(exp_avg_sq_1_csv)
         self.assertListEqual(list(exp_avg_sq_1.columns), expect_columns)
-        self.assertEqual(exp_avg_sq_1.shape, tuple([2, 4]))
+        self.assertEqual(exp_avg_sq_1.shape, tuple([2, 6]))
 
     def test_ur_distribution(self):
         self.get_dist_mock(False)

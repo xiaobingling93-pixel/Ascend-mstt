@@ -421,7 +421,13 @@ class CSVWriterWithAD(BaseWriterWithAD):
         super().add_scalar(tag, scalar_value, global_step)
 
         name = tag[0].split('/')[0]
-        self.context_dict[name].append(scalar_value.item())
+        if isinstance(scalar_value, torch.Tensor):
+            value = scalar_value.item()
+        elif isinstance(scalar_value, torch.Size):
+            value = list(scalar_value)
+        else:
+            value = scalar_value
+        self.context_dict[name].append(value)
 
     def write_metrics(self, ops, metric_value, step, prefix=''):
         super().write_metrics(ops, metric_value, step, prefix='')
