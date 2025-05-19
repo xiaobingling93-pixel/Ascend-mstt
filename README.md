@@ -12,19 +12,10 @@
 ![Commit Activity](https://img.shields.io/badge/commit%20activity-high-red)
 ![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
 
-## [分析迁移工具](https://gitee.com/ascend/mstt/wikis/工具介绍/分析迁移工具/分析迁移工具介绍)
+## [模型训练开发全流程](https://www.hiascend.com/software/mindstudio/training)
+![training_process](debug/resources/training_process.png)
 
-1. [脚本分析工具](https://gitee.com/ascend/mstt/wikis/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D/%E5%88%86%E6%9E%90%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7/%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%8C%87%E5%AF%BC)
-
-   脚本分析工具可以帮助用户在执行迁移操作前，分析基于 GPU 平台的 PyTorch 训练脚本中算子、三方库套件、API 亲和性以及动态 shape 的支持情况。
-
-2. [（推荐）自动迁移工具](https://gitee.com/ascend/mstt/wikis/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D/%E5%88%86%E6%9E%90%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7/%E8%87%AA%E5%8A%A8%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%8C%87%E5%AF%BC)
-
-   自动迁移工具只需在训练脚本中导入库代码即可完成模型脚本的迁移，使用方式简单，且修改内容少。
-
-3. [脚本迁移工具](https://gitee.com/ascend/mstt/wikis/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D/%E5%88%86%E6%9E%90%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7/%E8%84%9A%E6%9C%AC%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%8C%87%E5%AF%BC)
-
-   脚本迁移工具通过后端命令行，将 GPU 上训练的 PyTorch 脚本迁移至 NPU 上，得到新的训练脚本用于训练。
+# 使用说明
 
 ## [精度工具](./debug/accuracy_tools/)
 
