@@ -81,7 +81,7 @@ def gen_file_path(dump_path, cell_prefix, suffix, io_type, index):
     step_path = os.path.join(dump_path, "{step}")
     rank_path = os.path.join(step_path, "{rank}")
     data_path = os.path.join(rank_path, CoreConst.DUMP_TENSOR_DATA)
-    file_name = CoreConst.SEP.join([cell_prefix, suffix, io_type, str(index)])
+    file_name = cell_prefix + CoreConst.SEP + suffix + CoreConst.SEP + io_type + CoreConst.SEP + str(index)
     return os.path.join(data_path, file_name)
 
 

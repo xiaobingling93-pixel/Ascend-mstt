@@ -25,7 +25,7 @@ class DumpToolFactory:
     tools = {
         Const.CELL: {
             Const.GRAPH_KBYK_MODE: GraphModeCellDump,
-            Const.GRAPH_GE_MODE: GraphModeCellDump,
+            Const.GRAPH_GE_MODE: None,
             Const.PYNATIVE_MODE: None
         },
         Const.API: {
