@@ -228,9 +228,11 @@ def rename_filename(path):
         # 修改文件名，增加重复调用Cell的序号
         if CoreConst.FORWARD_PATTERN in filename:
             #Format: Cell.{cell_name}.{class_name}.{forward/backward}.{number}.{input/output}.{index}_{dtype}_{id}.npy
-            newFileName = filename.replace(CoreConst.FORWARD_PATTERN, CoreConst.FORWARD_PATTERN + str(cell_index) + CoreConst.SEP)
+            newFileName = filename.replace(CoreConst.FORWARD_PATTERN,
+                                           CoreConst.FORWARD_PATTERN + str(cell_index) + CoreConst.SEP)
         if CoreConst.BACKWARD_PATTERN in filename:
-            newFileName = filename.replace(CoreConst.BACKWARD_PATTERN, CoreConst.BACKWARD_PATTERN + str(cell_index) + CoreConst.SEP)
+            newFileName = filename.replace(CoreConst.BACKWARD_PATTERN,
+                                           CoreConst.BACKWARD_PATTERN + str(cell_index) + CoreConst.SEP)
         os.rename(os.path.join(path, filename), os.path.join(path, newFileName))
     logger.info(f"==========The rename_filename phase is Finished!==========")
 
