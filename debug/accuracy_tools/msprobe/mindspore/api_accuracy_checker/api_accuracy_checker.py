@@ -207,7 +207,6 @@ class ApiAccuracyChecker:
         """
         # get output
         if global_context.get_is_constructed():
-            print(f"forward_or_backward:{forward_or_backward}")
             if forward_or_backward == Const.FORWARD:
                 tested_outputs, inputs, kwargs, forward_result_tuple = api_runner(api_input_aggregation, api_name_str,
                                                                                   forward_or_backward,
@@ -248,11 +247,13 @@ class ApiAccuracyChecker:
                     compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
                 status = CompareConst.PASS
                 err_msg = ""
-                if forward_or_backward == Const.FORWARD and self.save_error_data and global_context.get_is_constructed():
+                if forward_or_backward == Const.FORWARD and self.save_error_data \
+                        and global_context.get_is_constructed():
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
                     self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
 
-                if forward_or_backward == Const.BACKWARD and self.save_error_data and global_context.get_is_constructed():
+                if forward_or_backward == Const.BACKWARD and self.save_error_data \
+                        and global_context.get_is_constructed():
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
                     self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
 
@@ -396,4 +397,3 @@ class ApiAccuracyChecker:
                 self.data_manager.record_exception_skip(api_name_str, Const.BACKWARD, process_result_packet.err_msg)
 
             self.data_manager.save_results(api_name_str)
-s
