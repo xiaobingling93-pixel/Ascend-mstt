@@ -40,7 +40,7 @@ def find_with_prefix(directory, prefix):
 
 
 class Args:
-    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None):
+    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None， save_error_data=False):
         self.api_info_file = api_info_file if api_info_file is not None else os.path.join(directory, "files", "api_info_statistics.json")
         self.out_path = out_path if out_path is not None else os.path.join(directory, "files")
         self.result_csv_path = result_csv_path if result_csv_path is not None else ""
@@ -53,7 +53,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         result_directory = os.path.join(directory, "files")
 
         # 初始化 Args 类，提供三个路径参数
-        args = Args(api_info_file=api_info_statistics_path, out_path=result_directory, save_error_data=save_error_data)  # 在这里传入自定义的路径参数
+        args = Args(api_info_file=api_info_statistics_path, out_path=result_directory)  # 在这里传入自定义的路径参数
 
         delete_files_with_prefix(result_directory, "accuracy_checking")
         api_accuracy_checker = ApiAccuracyChecker(args)
@@ -75,7 +75,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         delete_files_with_prefix(result_directory, "accuracy_checking")
         modify_tensor_api_info_json(api_info_tensor_path, result_directory)
 
-        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory, save_error_data=False)
+        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory)
 
         api_accuracy_checker = ApiAccuracyChecker(args)
         api_accuracy_checker.parse(api_info_tensor_path)
