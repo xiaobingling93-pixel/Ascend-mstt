@@ -225,6 +225,7 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    DATA_NAME = 'data_name'
     TENSOR_STAT_INDEX = 'tensor_stat_index'
 
     CODE_STACK = 'Code Stack'
@@ -237,6 +238,9 @@ class Const:
     # 分隔符常量
     SCOPE_SEPARATOR = "/"
     REPLACEMENT_CHARACTER = "_"
+
+    FORWARD_PATTERN = SEP + FORWARD + SEP
+    BACKWARD_PATTERN = SEP + BACKWARD + SEP
 
     OPTIMIZER = "optimizer"
     CLIP_GRAD = "clip_grad"

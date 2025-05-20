@@ -62,6 +62,7 @@ class Const:
     DROPOUT_API_NAME_PREFIX = "dropout"
 
     GRAPH_DATA_MODE_LIST = [CoreConst.ALL, CoreConst.INPUT, CoreConst.OUTPUT]
+    GRAPH_CELL_DUMP_DATA_MODE_LIST = [CoreConst.ALL, CoreConst.FORWARD, CoreConst.BACKWARD]
 
     HOOK_MS_PREFIX_DICT = {
         OPS_DATA_PREFIX: OPS_PREFIX,
