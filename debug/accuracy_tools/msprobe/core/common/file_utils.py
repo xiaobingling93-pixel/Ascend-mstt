@@ -174,6 +174,12 @@ def check_path_exists(path):
     if not os.path.exists(path):
         logger.error('The file path %s does not exist.' % path)
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
+    
+
+def check_path_not_exists(path):
+    if os.path.exists(path):
+        logger.error('The file path %s already exist.' % path)
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_readability(path):

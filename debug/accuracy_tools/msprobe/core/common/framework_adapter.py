@@ -14,6 +14,7 @@
 # limitations under the License.import functools
 import functools
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
 class FrameworkDescriptor:
@@ -138,3 +139,17 @@ class FmkAdp:
                 return original_construct(*args, **kwargs)
 
             module.construct = new_construct
+
+    @classmethod
+    def load_checkpoint(cls, path, to_cpu=True, weights_only=True):
+        if cls.fmk == Const.PT_FRAMEWORK:
+            from msprobe.pytorch.common.utils import load_pt
+            return load_pt(path, to_cpu=to_cpu, weights_only=weights_only)
+        check_file_or_directory_path(path)
+        return mindspore.load_checkpoint(path)
+    
+    @classmethod
+    def asnumpy(cls, tensor):
+        if cls.fmk == Const.PT_FRAMEWORK:
+            return tensor.float().numpy()
+        return tensor.float().asnumpy()

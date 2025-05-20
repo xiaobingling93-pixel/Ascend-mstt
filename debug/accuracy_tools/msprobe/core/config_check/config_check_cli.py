@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from msprobe.core.config_check.config_checker import ConfigChecker
+from msprobe.core.config_check.ckpt_compare.ckpt_comparator import compare_checkpoints
 from msprobe.core.common.log import logger
 
 
@@ -27,7 +28,7 @@ def compare(bench_zip_path, cmp_zip_path, output_path, framework):
 
 def _config_checking_parser(parser):
     parser.add_argument('-d', '--dump', nargs='*', help='Collect the train config into a zip file')
-    parser.add_argument('-c', '--compare', nargs=2, help='Compare two zip files')
+    parser.add_argument('-c', '--compare', nargs=2, help='Compare two zip files or checkpoints')
     parser.add_argument('-o', '--output', help='output path, default is current directory')
 
 
@@ -36,8 +37,15 @@ def _run_config_checking_command(args):
         output_dirpath = args.output if args.output else "./config_check_pack.zip"
         pack(args.dump, output_dirpath, args.framework)
     elif args.compare:
-        output_dirpath = args.output if args.output else "./config_check_result"
-        compare(args.compare[0], args.compare[1], output_dirpath, args.framework)
+        if args.compare[0].endswith('zip'):
+            logger.info('The input paths is zip files, comparing packed config.')
+            output_dirpath = args.output if args.output else "./config_check_result"
+            compare(args.compare[0], args.compare[1], output_dirpath, args.framework)
+        else:
+            logger.info('Comparing model checkpoint.')
+            output_dirpath = args.output if args.output else "./ckpt_similarity.json"
+            compare_checkpoints(args.compare[0], args.compare[1], output_dirpath)
+
     else:
         logger.error("The param is not correct, you need to give '-d' for dump or '-c' for compare.")
         raise Exception("The param is not correct, you need to give '-d' for dump or '-c' for compare.")

@@ -316,14 +316,14 @@ def print_rank_0(message):
         logger.info(message)
 
 
-def load_pt(pt_path, to_cpu=False):
+def load_pt(pt_path, to_cpu=False, weights_only=True):
     pt_path = os.path.realpath(pt_path)
     check_file_or_directory_path(pt_path)
     try:
         if to_cpu:
-            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=True)
+            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=weights_only)
         else:
-            pt = torch.load(pt_path, weights_only=True)
+            pt = torch.load(pt_path, weights_only=weights_only)
     except Exception as e:
         raise RuntimeError(f"load pt file {pt_path} failed") from e
     return pt
