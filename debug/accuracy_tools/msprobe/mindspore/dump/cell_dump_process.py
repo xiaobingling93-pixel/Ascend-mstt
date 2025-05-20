@@ -45,8 +45,7 @@ if (ms.__version__ >= "2.5.0"):
     td_in = ops.TensorDump("in")
 else:
     td_in = ops.TensorDump()
-gd = ops._DumpGradient('out')
-gd_in = ops._DumpGradient('in')
+gd = ops.DumpGradient()
 td.add_prim_attr(KEY_SIDE_EFFECT, False)
 td_in.add_prim_attr(KEY_SIDE_EFFECT, False)
 np_ms_dtype_dict = {
@@ -92,7 +91,6 @@ def need_tensordump_in(cell_obj, attr, index):
         return False
     attr_values = getattr(cell_obj, attr)
     if index >= len(attr_values):
-        logger.warning(f"The index {index} is out of the range of the configured parameter list.")
         return False
     return attr_values[index] == "in"
 
@@ -110,9 +108,11 @@ def cell_construct_wrapper(func, self):
         for index, item in enumerate(args):
             if backward_or_all and ops.is_tensor(item):
                 if need_tensordump_in(self, 'input_dump_mode', index):
-                    item = gd_in(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index), item)
+                    item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
+                              item, "in")
                 else:
-                    item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index), item)
+                    item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
+                              item, "out")
             if forward_or_all and ops.is_tensor(item):
                 if need_tensordump_in(self, 'input_dump_mode', index):
                     temp = td_in(
@@ -134,10 +134,11 @@ def cell_construct_wrapper(func, self):
             for index, item in enumerate(out):
                 if backward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode', index):
-                        item = gd_in(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
-                                     item)
+                        item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
+                                  item, "in")
                     else:
-                        item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index), item)
+                        item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
+                                  item, "out")
                 if forward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode', index):
                         temp = td_in(
@@ -158,9 +159,11 @@ def cell_construct_wrapper(func, self):
         else:
             if backward_or_all:
                 if need_tensordump_in(self, 'output_dump_mode', index):
-                    out = gd_in(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0), out)
+                    out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
+                             out, "in")
                 else:
-                    out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0), out)
+                    out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
+                             out, "out")
             if forward_or_all and ops.is_tensor(out):
                 if need_tensordump_in(self, 'output_dump_mode', index):
                     temp = td_in(
@@ -351,7 +354,7 @@ def process_file(file_path):
             pre_parts = CoreConst.SEP.join(parts[:-2])
             new_file_name = pre_parts + CoreConst.SEP + param_index + CoreConst.NUMPY_SUFFIX
             os.rename(os.path.join(data_file_dir, data_file_name), os.path.join(data_file_dir, new_file_name))
-            logger.info(f"{data_file_name} is renamed to {new_file_name}")
+            logger.debug(f"{data_file_name} is renamed to {new_file_name}")
         else:
             logger.warning(f"Failed to rename {data_file_name}.")
             new_file_name = data_file_name
@@ -496,6 +499,13 @@ def process(dump_path):
         generate_construct(npy_path)
         generate_dump_info(npy_path)
         generate_stack_info(npy_path)
+        if rank_id is None:
+            new_rank_path = os.path.join(step_path, CoreConst.RANK)
+            try:
+                os.rename(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
+            except Exception as e:
+                logger.error(f"Error renamed to {new_rank_path}: {e}")
         logger.info(f"==========JSON file generation completed!==========")
 
 
