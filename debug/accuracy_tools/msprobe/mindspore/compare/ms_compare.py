@@ -16,12 +16,12 @@
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 from msprobe.mindspore.compare.utils import read_npy_data, check_cross_framework
-from msprobe.pytorch.compare.utils import read_pt_data
 
 
 def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, cross_frame) -> tuple:
     n_value = read_npy_data(npu_dir, npu_data_name)
     if cross_frame:
+        from msprobe.pytorch.compare.utils import read_pt_data
         b_value = read_pt_data(bench_dir, bench_data_name)
     else:
         b_value = read_npy_data(bench_dir, bench_data_name)
