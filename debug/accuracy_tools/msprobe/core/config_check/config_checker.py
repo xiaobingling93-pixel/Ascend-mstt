@@ -19,7 +19,7 @@ import shutil
 import pandas as pd
 
 from msprobe.core.common.file_utils import save_excel, split_zip_file_path, \
-    create_directory, extract_zip, make_dir
+    create_directory, extract_zip
 from msprobe.core.common.framework_adapter import FmkAdp
 from msprobe.core.config_check.checkers.base_checker import PackInput
 from msprobe.core.config_check.utils.utils import config_checking_print
