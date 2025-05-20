@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 import mindspore as ms
 from mindspore.ops.primitive import _run_op
 from mindspore import hal, ops
+
+from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 import msprobe.mindspore.dump.cell_dump_process as cellDumper
 from msprobe.mindspore.common.const import Const
 
@@ -53,11 +54,11 @@ class GraphModeCellDump:
         ops.tensordump(step_flag, temp_tensor)
 
     def check_config(self):
-        if self.rank != []:
+        if self.rank:
             raise Exception("In graph mode, cell dump does not currently support specifying rank.")
-        if self.scope != []:
+        if self.scope:
             raise Exception("In graph mode, cell dump does not currently support specifying scope.")
-        if self.list != []:
+        if self.list:
             raise Exception("In graph mode, cell dump does not currently support specifying list.")
         if len(self.data_mode) != 1 or self.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
             raise Exception("In graph mode and cell dump, data_mode must be one of all, forword, backword.")

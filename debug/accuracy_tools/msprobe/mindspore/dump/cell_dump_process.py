@@ -111,8 +111,8 @@ def cell_construct_wrapper(func, self):
 
         index = 0
         item = None
-        backward_or_all = True if self.data_mode in ["backward", "all"] else False
-        forward_or_all = True if self.data_mode in ["forward", "all"] else False
+        backward_or_all = self.data_mode in ["backward", "all"]
+        forward_or_all = self.data_mode in ["forward", "all"]
         # The inputs of the cell.
         for index, item in enumerate(args):
             if backward_or_all and ops.is_tensor(item):
