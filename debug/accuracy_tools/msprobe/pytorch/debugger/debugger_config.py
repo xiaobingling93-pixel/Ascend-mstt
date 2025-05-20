@@ -101,7 +101,8 @@ class DebuggerConfig:
         if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX] and token_range is None:
             if instance.model is not None:
                 logger.info_on_rank_0(
-                    f"The current level is not L0 or mix level, so the model parameters will not be used")
+                    f"The current level is not L0 or mix level and token_range is None, "
+                    f"so the model parameter will not be used")
             return
 
         if instance.model is None:
