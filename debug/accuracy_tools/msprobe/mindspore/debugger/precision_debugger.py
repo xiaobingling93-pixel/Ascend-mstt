@@ -156,7 +156,7 @@ class PrecisionDebugger:
             _msprobe_c._PrecisionDebugger().start()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
-        check_token_range(token_range, model)
+        check_token_range(token_range)
         instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
             if not instance.service:

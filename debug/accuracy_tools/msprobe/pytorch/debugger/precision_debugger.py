@@ -121,8 +121,10 @@ class PrecisionDebugger:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
-        instance.config.check_model(instance, model)
-        check_token_range(token_range, instance.model)
+
+        check_token_range(token_range)
+        instance.config.check_model(instance, model, token_range)
+
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:

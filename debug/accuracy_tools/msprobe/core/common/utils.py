@@ -437,7 +437,7 @@ def check_init_step(step):
                 f"{step} must be greater than or equal to 0")
 
 
-def check_token_range(token_range, model):
+def check_token_range(token_range):
     if token_range is None:
         return
     if not isinstance(token_range, (list, tuple)):
@@ -456,9 +456,6 @@ def check_token_range(token_range, model):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if start < 0:
         logger.error("Start in token_range must >= 0.")
-        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
-    if not model:
-        logger.error("A non-empty model must be provided when passing the token_range.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
 

@@ -86,7 +86,11 @@ class Service:
         self.ori_customer_func = {}
 
     @staticmethod
-    def check_model_valid(models):
+    def check_model_valid(models, token_range):
+        if token_range and not models:
+            error_info = "The 'model' parameter must be provided when token_range is not None"
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
+
         target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
         if models is None or isinstance(models, target_module_type[0]):
             return models
@@ -305,7 +309,7 @@ class Service:
         if self.config.step and self.current_iter not in self.config.step:
             JitDump.jit_dump_switch = False
             return
-        self.model = self.check_model_valid(model)
+        self.model = self.check_model_valid(model, token_range)
 
         logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
 
