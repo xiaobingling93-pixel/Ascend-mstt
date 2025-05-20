@@ -20,6 +20,7 @@ from collections import defaultdict
 from datetime import datetime
 
 import pytz
+import pandas as pd
 from mindspore import Tensor, mint
 from mindspore import nn, _no_grad
 
@@ -35,6 +36,8 @@ from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyData
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
+from msprobe.core.common.file_utils import write_df_to_csv
+from msprobe.core.common.utils import analyze_api_call_stack
 
 FORMAT_MAPPING = {
     MonitorConst.CSV: CSVWriterWithAD,
@@ -88,6 +91,7 @@ class ModuleHookContext:
         self.actvgrad = []
         self.module_name = module_name
         self.struct = {}
+        self.stack = ""
 
     def reset(self):
         self.actv.clear()
@@ -262,6 +266,7 @@ class TrainerMon:
         self.param_distribution = self.config.get("param_distribution", False)
         self.mg_direction = self.config.get('mg_direction', False)  # main grad direction
         self.cc_distribution = self.config.get("cc_distribution", {})  # communication ops
+        self.stack_info = self.config.get('stack_info', False)
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
         else:
@@ -360,6 +365,12 @@ class TrainerMon:
                     self.write_grad_tb(context.step)
                     self.write_mv_tb(context)
                     self.write_param_tb(context)
+                    if self.stack_info:
+                        self.write_stack_info()
+                        self.stack_info = False
+                        for handle in self.handles["stack"]:
+                            handle.remove()
+                        self.handles["stack"].clear()
 
                     if context.metric_dict:
                         self.summary_writer.write_metrics(self.ops, context.metric_dict, context.step, 'other')
@@ -389,7 +400,7 @@ class TrainerMon:
                 step_final_hook(optimizer, args, kwargs)
                 return out
             return wrapper
-        
+
         if self.is_mindtorch:
             optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
         else:
@@ -498,11 +509,11 @@ class TrainerMon:
         def optimizer_post_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
             self.generate_param_metrics(context, MonitorConst.POST_PARAM)
-        
+
 
         if self.optimizer_hooked or not self.is_target_rank():
             return
-        
+
         self.pre_step_hooks.append(optimizer_pre_step_hook)
         self.post_step_hooks.append(optimizer_post_step_hook)
         self.optimizer_hooked = True
@@ -533,8 +544,8 @@ class TrainerMon:
         if not self.param_distribution:
             return
         tag2param = {
-            self.name2tag.get(name, {}).get(stage): param 
-            for name, param in self.name2param.items() 
+            self.name2tag.get(name, {}).get(stage): param
+            for name, param in self.name2param.items()
             if param.numel() != 0
         }
         get_metrics(self.ops, tag2param, self.eps, opt_context.param_metric)
@@ -567,6 +578,16 @@ class TrainerMon:
         get_metrics(self.ops, m_tag_tensor_map, self.eps, opt_context.exp_avg_metric)
         get_metrics(self.ops, v_tag_tensor_map, self.eps, opt_context.exp_avg_sq_metric)
 
+    def write_stack_info(self):
+        stack_data = []
+        header = ["module_name", "stack_info"]
+        stack_data.append(header)
+        for _, fwd_context in self.module_fwd_hook_context_by_module.items():
+            stack_data.append([fwd_context.module_name, fwd_context.stack])
+        filepath = os.path.join(self.tensorboard_dir, f'stack_info.csv')
+        if not os.path.exists(filepath):
+            data_frame = pd.DataFrame(columns=stack_data)
+            write_df_to_csv(data_frame, filepath)
 
     def write_xy_tb(self, step):
         if not self.xy_distribution:
@@ -668,7 +689,7 @@ class TrainerMon:
                     MonitorConst.POST_PARAM
                 ]
                 self.name2tag[name] = {
-                    k: get_summary_writer_tag_name(name, k, self.rank) 
+                    k: get_summary_writer_tag_name(name, k, self.rank)
                     for k in keywords
                 }
                 index += 1
@@ -764,14 +785,26 @@ class TrainerMon:
                 return fwd_hook_fun(module, args, kwargs, module_output, name)
             return wrapper
 
+        def stack_hook(module, args, kwargs, module_output, name):
+            if module not in self.module_fwd_hook_context_by_module:
+                self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
+            context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
+            context.stack = analyze_api_call_stack(name)
+            return
+
         if self.backward_only and self.forward_only:
             logger.warning('not enable backward_only and forward_only simultaneously')
         hooked_count = 0
-        if self.xy_distribution or self.print_struct:
-            for module_name, submodule in get_submodules(module):
-                name = self._is_target_module(module_name, target_names, vpp_stage)
-                if not name:
-                    continue
+
+        for module_name, submodule in get_submodules(module):
+            if self.stack_info:
+                name = vpp_stage + squash_param_name(module_name)
+                handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(stack_hook, name=name), with_kwargs=True)
+                self.handles["stack"].append(handle)
+            name = self._is_target_module(module_name, target_names, vpp_stage)
+            if not name:
+                continue
+            if self.xy_distribution or self.print_struct:
                 if not self.backward_only:
                     handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name),
                                                              with_kwargs=True)

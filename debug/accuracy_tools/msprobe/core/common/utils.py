@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import time
+import inspect
 from datetime import datetime, timezone
 
 import numpy as np
@@ -531,3 +532,21 @@ def load_stack_json(stack_path):
         for api_name in api_list:
             new_stack_dict.update({api_name: stack_str})
     return new_stack_dict
+
+
+def analyze_api_call_stack(name):
+    try:
+        api_stack = inspect.stack()[2:]
+    except Exception as e:
+        logger.warning(f"The call stack of {name} failed to retrieve, {e}.")
+        api_stack = None
+    stack_str = []
+    if api_stack:
+        for (_, path, line, func, code, _) in api_stack:
+            if not code:
+                continue
+            stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()} \n"
+            stack_str.append(stack_line)
+    else:
+        stack_str.append(Const.WITHOUT_CALL_STACK)
+    return "".join(stack_str)

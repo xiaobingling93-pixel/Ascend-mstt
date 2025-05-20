@@ -22,6 +22,7 @@ from functools import partial
 import pytz
 import torch
 import torch.distributed as dist
+import pandas as pd
 from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import MonitorConst, Const
@@ -41,6 +42,8 @@ from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
+from msprobe.core.common.file_utils import write_df_to_csv
+from msprobe.core.common.utils import analyze_api_call_stack
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
@@ -71,6 +74,7 @@ class ModuleHookContext:
         self.actvgrad = []
         self.module_name = module_name
         self.struct = {}
+        self.stack = ""
 
     def reset(self):
         self.actv.clear()
@@ -287,6 +291,7 @@ class TrainerMon:
         self.param_distribution = self.config.get("param_distribution", False)
         self.mg_direction = self.config.get('mg_direction', False)
         self.cc_distribution = self.config.get("cc_distribution", {})
+        self.stack_info = self.config.get('stack_info', False)
 
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
@@ -447,8 +452,8 @@ class TrainerMon:
         if not self.param_distribution:
             return
         tag2param = {
-            self.name2tag.get(name, {}).get(stage): param 
-            for name, param in self.name2param.items() 
+            self.name2tag.get(name, {}).get(stage): param
+            for name, param in self.name2param.items()
             if param.numel() != 0
         }
         get_metrics(self.ops, tag2param, self.eps, opt_context.param_metric)
@@ -501,6 +506,17 @@ class TrainerMon:
 
     def write_adhoc_check(self, step):
         self.tensor_metrics.flush(self.summary_writer)
+
+    def write_stack_info(self):
+        stack_data = []
+        header = ["module_name", "stack_info"]
+        stack_data.append(header)
+        for _, fwd_context in self.module_fwd_hook_context_by_module.items():
+            stack_data.append([fwd_context.module_name, fwd_context.stack])
+        filepath = os.path.join(self.tensorboard_dir, f'stack_info.csv')
+        if not os.path.exists(filepath):
+            data_frame = pd.DataFrame(columns=stack_data)
+            write_df_to_csv(data_frame, filepath)
 
     def write_xy_tb(self, step):
         if not self.xy_distribution:
@@ -562,7 +578,7 @@ class TrainerMon:
             grad_dict = {}
             if self.wg_distribution:
                 grad_dict = self.optimizer_mon.fetch_grad(self, self.param2name)
-            
+
             mv_result = None
             if self.mv_distribution or self.ur_distribution or self.mg_direction:
                 mv_result = self.optimizer_mon.fetch_mv(self, self.param2name)
@@ -670,6 +686,12 @@ class TrainerMon:
                     self.write_mv_tb(context)
                     self.write_param_tb(context)
                     self.write_adhoc_check(context.step)
+                    if self.stack_info:
+                        self.write_stack_info()
+                        self.stack_info = False
+                        for handle in self.handles["stack"]:
+                            handle.remove()
+                        self.handles["stack"].clear()
 
                     if self.ur_distribution:
                         for param_name, _ in context.param_adam_update.items():
@@ -754,7 +776,7 @@ class TrainerMon:
         BackwardHook.setup_input_hook = wrap_hook_setup(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = wrap_hook_setup(BackwardHook.setup_output_hook)
         return
-    
+
     def register_param_call_id(self, hook_name: str, key: str):
         """
         :param hook_name:
@@ -891,7 +913,7 @@ class TrainerMon:
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
-                
+
                 keywords = [
                     MonitorConst.PRE_GRAD,
                     MonitorConst.POST_GRAD,
@@ -899,7 +921,7 @@ class TrainerMon:
                     MonitorConst.POST_PARAM
                 ]
                 self.name2tag[name] = {
-                    k: get_summary_writer_tag_name(name, k, self.rank) 
+                    k: get_summary_writer_tag_name(name, k, self.rank)
                     for k in keywords
                 }
 
@@ -943,6 +965,7 @@ class TrainerMon:
                     Const.INPUT: get_param_struct(module_input),
                     Const.OUTPUT: get_param_struct(module_output)
                 }
+
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
@@ -997,17 +1020,28 @@ class TrainerMon:
                 context.micro_step = 0
             return
 
+        def stack_hook(module, args, kwargs, module_output, name):
+            if module not in self.module_fwd_hook_context_by_module:
+                self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
+            context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
+            context.stack = analyze_api_call_stack(name)
+            return
+
         if self.backward_only and self.forward_only:
             logger.warning('not enable backward_only and forward_only simultaneously')
 
         hooked_count = 0
-        if self.xy_distribution or self.print_struct:
-            for module_name, submodule in module.named_modules():
-                name = self._is_target_module(module_name, target_names, vpp_stage)
-                if not name:
-                    continue
-                if submodule.__class__.__name__ == "FullyShardedDataParallel":
-                    continue
+        for module_name, submodule in module.named_modules():
+            if self.stack_info:
+                name = vpp_stage + squash_param_name(module_name, self.squash_name)
+                handle = submodule.register_forward_hook(partial(stack_hook, name=name), with_kwargs=True)
+                self.handles['stack'].append(handle)
+            name = self._is_target_module(module_name, target_names, vpp_stage)
+            if not name:
+                continue
+            if submodule.__class__.__name__ == "FullyShardedDataParallel":
+                continue
+            if self.xy_distribution or self.print_struct:
                 if not self.backward_only:
                     handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name), with_kwargs=True)
                     self.handles['xy'].append(handle)

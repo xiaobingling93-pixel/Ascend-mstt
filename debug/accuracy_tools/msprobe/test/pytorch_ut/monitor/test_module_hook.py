@@ -167,6 +167,18 @@ class TestModuleHook(unittest.TestCase):
         )
         self.assertIsNotNone(hooker)
 
+    def test_stack_collect(self):
+        self.get_dist_mock(False)
+        stack_monitor_output = "./test_stack_info"
+        clean_output(stack_monitor_output)
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = stack_monitor_output
+        stack_config = os.path.join(base_dir, "config/stack_config.json")
+        monitor_demo(stack_config)
+        output_dir_list = os.listdir(stack_monitor_output)
+        self.assertEqual(len(output_dir_list), 1)
+        stack_csv_path = os.path.join(stack_monitor_output, output_dir_list[0], "stack_info.csv")
+        self.assertTrue(os.path.exists(stack_csv_path))
+
     def test_adhoc_check(self):
         # mock dist
         self.get_dist_mock(True)
