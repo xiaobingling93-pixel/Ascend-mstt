@@ -21,40 +21,16 @@ import mindspore as ms
 from mindspore import ops
 
 from msprobe.core.common.const import Const as CoreConst
-from msprobe.mindspore.dump.cell_dump_process import generate_file_path
 from msprobe.mindspore.dump.cell_dump_process import cell_construct_wrapper
 from msprobe.mindspore.dump.cell_dump_process import rename_filename, sort_filenames, del_same_file
 from msprobe.mindspore.dump.cell_dump_process import check_relation
 
 
-class TestGenerateFilePath(unittest.TestCase):
-    def setUp(self):
-        self.dump_path = "/path"
-        self.cell_prefix = "Cell.network._backbone.LlamaForCausalLM"
-        self.suffix = "forward"
-        self.io_type = "input"
-        self.index = 0
-
-    def test_generate_file_path(self):
-        expected_path = os.path.join(
-            self.dump_path,
-            "{step}",
-            "{rank}",
-            CoreConst.DUMP_TENSOR_DATA,
-            CoreConst.SEP.join([self.cell_prefix, self.suffix, self.io_type, str(self.index)])
-        )
-        result = generate_file_path(self.dump_path, self.cell_prefix, self.suffix, self.io_type, self.index)
-        self.assertEqual(result, expected_path)
-
-
 class TestCellWrapperProcess(unittest.TestCase):
 
-    @patch('msprobe.mindspore.dump.cell_dump_process.generate_file_path')
     @patch('msprobe.mindspore.dump.cell_dump_process.td')
     @patch('msprobe.mindspore.dump.cell_dump_process.td_in')
-    def test_cell_construct_wrapper(self, mock_td_in, mock_td, mock_generate_file_path):
-        # Mock the generate_file_path function
-        mock_generate_file_path.return_value = "mock_path"
+    def test_cell_construct_wrapper(self, mock_td_in, mock_td):
 
         # Mock the TensorDump operations
         mock_td.return_value = MagicMock()
@@ -87,12 +63,9 @@ class TestCellWrapperProcess(unittest.TestCase):
         mock_td_in.assert_called()
         mock_td.assert_called()
 
-    @patch('msprobe.mindspore.dump.cell_dump_process.generate_file_path')
     @patch('msprobe.mindspore.dump.cell_dump_process.td')
     @patch('msprobe.mindspore.dump.cell_dump_process.td_in')
-    def test_cell_construct_wrapper_with_tuple_output(self, mock_td_in, mock_td, mock_generate_file_path):
-        # Mock the generate_file_path function
-        mock_generate_file_path.return_value = "mock_path"
+    def test_cell_construct_wrapper_with_tuple_output(self, mock_td_in, mock_td):
 
         # Mock the TensorDump operations
         mock_td.return_value = MagicMock()
