@@ -247,6 +247,11 @@ class ApiAccuracyChecker:
                     compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
                 status = CompareConst.PASS
                 err_msg = ""
+
+            else:
+                status = CompareConst.ERROR
+                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
+                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
                 if forward_or_backward == Const.FORWARD and self.save_error_data \
                         and global_context.get_is_constructed():
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
@@ -256,11 +261,6 @@ class ApiAccuracyChecker:
                         and global_context.get_is_constructed():
                     api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
                     self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
-
-            else:
-                status = CompareConst.ERROR
-                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
-                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
 
             basic_info_status = \
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
