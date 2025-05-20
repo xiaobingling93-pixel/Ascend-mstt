@@ -42,6 +42,7 @@ def add_api_accuracy_checker_argument(parser):
     parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",
                         help="<optional> Save compare failed api output.", required=False)
 
+
 def multi_add_api_accuracy_checker_argument(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,
                         help="<Required> The api param tool result file: generate from api param tool, "

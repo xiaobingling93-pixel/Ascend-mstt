@@ -41,6 +41,7 @@ from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 
+
 class MultiApiAccuracyChecker(ApiAccuracyChecker):
     def __init__(self, args):
         # 可以添加 MultiApiAccuracyChecker 特有的属性或方法

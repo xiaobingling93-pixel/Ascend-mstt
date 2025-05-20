@@ -94,6 +94,80 @@ class ApiAccuracyChecker:
             self.data_collector = build_data_collector(config)
             self.data_collector.update_dump_paths(dump_path_aggregation)
 
+    @staticmethod
+    def init_save_error_data(args):
+        config = Config(
+            execution_mode="pynative",
+            dump_path=f"{args.out_path}",
+            dump_tensor_data_dir=f"{args.out_path}",
+            task="tensor",  # 任务类型,模拟保存tensor数据
+            level="L1",  # 级别
+            scope=None,  # 作用域 (None)
+            list=None,  # API 列表 (None)
+            framework=Const.MS_FRAMEWORK,  # 框架类型
+            data_mode="all",
+            file_format="npy",
+            async_dump=False
+        )
+
+        dump_dir = f"{args.out_path}"
+        dump_data_dir = os.path.join(dump_dir, "error_data")
+        create_directory(dump_data_dir)
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        return config, dump_path_aggregation
+
+    @staticmethod
+    def prepare_api_input_aggregation(api_info, forward_or_backward=Const.FORWARD):
+        """
+        Args:
+            api_info: ApiInfo
+            forward_or_backward: str
+        Returns:
+            ApiInputAggregation
+        """
+        forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
+        kwargs = api_info.get_kwargs()
+        if forward_or_backward == Const.FORWARD:
+            gradient_inputs = None
+        else:
+            gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
+        return ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
+
+    @staticmethod
+    def is_api_checkable(api_name_str):
+        '''
+        Args:
+            api_name_str: str, e.g. "MintFunctional.relu.0.forward", key in data field of api_info.json
+        Returns:
+            is_checkable: bool
+        Description:
+            tell whether this api is checkable based on the key in "data" dict in api_info.json
+        '''
+        api_name_str_list = api_name_str.split(Const.SEP)
+        if len(api_name_str_list) < MsCompareConst.API_NAME_STR_LENGTH:
+            return False
+        api_type_str = api_name_str_list[0]
+        real_api_str = Const.SEP.join(api_name_str_list[1:-2])
+        api_list = load_yaml(yaml_path)
+        supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
+        supported_fusion_api_list = MsCompareConst.SUPPORTED_FUSION_LIST
+        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
+            return True
+        if api_type_str in MsCompareConst.MT_VALID_API_TYPES \
+                and global_context.get_framework() == Const.MT_FRAMEWORK:
+            return True
+        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
+            return True
+        if api_type_str == MsCompareConst.FUNCTIONAL_API and real_api_str in supported_fusion_api_list \
+                and global_context.get_framework() == Const.MS_FRAMEWORK:
+            return True
+        return False
+
     def post_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs, output):
         self.data_collector.update_api_or_module_name(api_or_module_name)
         module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
@@ -191,80 +265,6 @@ class ApiAccuracyChecker:
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
         return output_list
-
-    @staticmethod
-    def init_save_error_data(args):
-        config = Config(
-            execution_mode="pynative",
-            dump_path=f"{args.out_path}",
-            dump_tensor_data_dir=f"{args.out_path}",
-            task="tensor",  # 任务类型,模拟保存tensor数据
-            level="L1",  # 级别
-            scope=None,  # 作用域 (None)
-            list=None,  # API 列表 (None)
-            framework="mindspore",  # 框架类型
-            data_mode="all",
-            file_format="npy",
-            async_dump=False
-        )
-
-        dump_dir = f"{args.out_path}"
-        dump_data_dir = os.path.join(dump_dir, "error_data")
-        create_directory(dump_data_dir)
-        dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
-        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        return config, dump_path_aggregation
-
-    @staticmethod
-    def prepare_api_input_aggregation(api_info, forward_or_backward=Const.FORWARD):
-        """
-        Args:
-            api_info: ApiInfo
-            forward_or_backward: str
-        Returns:
-            ApiInputAggregation
-        """
-        forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
-        kwargs = api_info.get_kwargs()
-        if forward_or_backward == Const.FORWARD:
-            gradient_inputs = None
-        else:
-            gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
-        return ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
-
-    @staticmethod
-    def is_api_checkable(api_name_str):
-        '''
-        Args:
-            api_name_str: str, e.g. "MintFunctional.relu.0.forward", key in data field of api_info.json
-        Returns:
-            is_checkable: bool
-        Description:
-            tell whether this api is checkable based on the key in "data" dict in api_info.json
-        '''
-        api_name_str_list = api_name_str.split(Const.SEP)
-        if len(api_name_str_list) < MsCompareConst.API_NAME_STR_LENGTH:
-            return False
-        api_type_str = api_name_str_list[0]
-        real_api_str = Const.SEP.join(api_name_str_list[1:-2])
-        api_list = load_yaml(yaml_path)
-        supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
-        supported_fusion_api_list = MsCompareConst.SUPPORTED_FUSION_LIST
-        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL) \
-                and global_context.get_framework() == Const.MS_FRAMEWORK:
-            return True
-        if api_type_str in MsCompareConst.MT_VALID_API_TYPES \
-                and global_context.get_framework() == Const.MT_FRAMEWORK:
-            return True
-        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list \
-                and global_context.get_framework() == Const.MS_FRAMEWORK:
-            return True
-        if api_type_str == MsCompareConst.FUNCTIONAL_API and real_api_str in supported_fusion_api_list \
-                and global_context.get_framework() == Const.MS_FRAMEWORK:
-            return True
-        return False
 
     def parse(self, api_info_path):
 
@@ -396,3 +396,4 @@ class ApiAccuracyChecker:
                 self.data_manager.record_exception_skip(api_name_str, Const.BACKWARD, process_result_packet.err_msg)
 
             self.data_manager.save_results(api_name_str)
+s

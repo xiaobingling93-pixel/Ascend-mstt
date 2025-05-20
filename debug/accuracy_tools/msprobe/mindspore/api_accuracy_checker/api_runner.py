@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import numpy as np
 import mindspore
 from mindspore import ops
 from msprobe.core.common.const import Const
@@ -36,9 +38,6 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
 else:
     import torch
-
-import numpy as np
-import os
 
 
 class ApiInputAggregation:
@@ -192,7 +191,7 @@ class ApiRunner:
             forward_result_tuple = convert_to_tuple(forward_result)
             res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in forward_result_tuple]
             if api_platform == Const.MS_FRAMEWORK or api_platform == Const.MT_FRAMEWORK:
-                return res_compute_element_list, inputs, kwargs,  forward_result_tuple
+                return res_compute_element_list, inputs, kwargs, forward_result_tuple
         else:
             if gradient_inputs is None:
                 err_msg = f"ApiRunner.run_api failed: run backward api but gradient_inputs is missing"
