@@ -104,11 +104,7 @@ class TCPClient:
         self.factory = MessageClientFactory()
         self.factory.protocol = cur_protocol
         if self.tls_path:
-            from twisted.internet import ssl
-            client_key = os.path.join(self.tls_path, "client.key")
-            client_crt = os.path.join(self.tls_path, "client.crt")
-            client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt)
-            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
+            endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         else:
             endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         d = endpoint.connect(self.factory)
