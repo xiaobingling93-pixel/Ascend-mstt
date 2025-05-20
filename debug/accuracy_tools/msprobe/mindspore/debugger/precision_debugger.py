@@ -30,11 +30,10 @@ from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
-from msprobe.mindspore.ms_config import parse_json_config, TensorConfig, TaskDict
+from msprobe.mindspore.ms_config import parse_json_config
 from msprobe.mindspore.runtime import Runtime
 from msprobe.mindspore.service import Service
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
-from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
 
 try:
