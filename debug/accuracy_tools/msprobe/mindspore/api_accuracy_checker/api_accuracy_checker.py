@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import os
+from dataclasses import dataclass
+from typing import Any, Optional
 from tqdm import tqdm
 import numpy as np
 from msprobe.core.common.const import Const, CompareConst
@@ -35,7 +37,6 @@ from msprobe.core.common.file_utils import create_directory
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
-
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
@@ -67,21 +68,20 @@ class ProcessResultPacket:
         self.err_msg = err_msg
 
 
+@dataclass
 class Config:
-    def __init__(self, execution_mode, dump_path, task, level, scope, list, framework, data_mode, file_format,
-                 dump_tensor_data_dir, async_dump):
-        self.execution_mode = execution_mode
-        self.dump_path = dump_path
-        self.file_format = file_format
-        self.dump_tensor_data_dir = dump_tensor_data_dir
-        self.task = task
-        self.level = level
-        self.scope = scope
-        self.list = list
-        self.framework = framework
-        self.data_mode = data_mode
-        self.async_dump = async_dump
-        self.summary_mode = None
+    execution_mode: str
+    dump_path: str
+    task: str
+    level: str
+    scope: Optional[Any]
+    list: Optional[Any]
+    framework: str
+    data_mode: str
+    file_format: str
+    dump_tensor_data_dir: str
+    async_dump: bool
+    summary_mode: Optional[Any] = None
 
 
 class ApiAccuracyChecker:
@@ -94,32 +94,21 @@ class ApiAccuracyChecker:
             self.data_collector = build_data_collector(config)
             self.data_collector.update_dump_paths(dump_path_aggregation)
 
-    def pre_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs):
+    def post_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs, output):
         self.data_collector.update_api_or_module_name(api_or_module_name)
-        module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
-        self.data_collector.forward_input_data_collect(
+        module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+        self.data_collector.forward_data_collect_only_tensor(
             api_or_module_name,
             primitive_instance,
             os.getpid(),
             module_input_output
         )
 
-    def post_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs, output):
-        self.data_collector.update_api_or_module_name(api_or_module_name)
-        module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
-        self.data_collector.forward_output_data_collect(
-            api_or_module_name,
-            primitive_instance,
-            os.getpid(),
-            module_input_output,
-            need_stack=False
-        )
-
     def backward_hook(self, api_or_module_name, module, grad_input, grad_output):
         self.data_collector.update_api_or_module_name(api_or_module_name)
 
         module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
-        self.data_collector.backward_data_collect(
+        self.data_collector.backward_data_collect_only_tensor(
             api_or_module_name,
             module,
             os.getpid(),
@@ -144,6 +133,7 @@ class ApiAccuracyChecker:
         """
         # get output
         if global_context.get_is_constructed():
+            print(f"forward_or_backward:{forward_or_backward}")
             if forward_or_backward == Const.FORWARD:
                 tested_outputs, inputs, kwargs, forward_result_tuple = api_runner(api_input_aggregation, api_name_str,
                                                                                   forward_or_backward,
@@ -184,21 +174,18 @@ class ApiAccuracyChecker:
                     compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
                 status = CompareConst.PASS
                 err_msg = ""
+                if forward_or_backward == Const.FORWARD and self.save_error_data and global_context.get_is_constructed():
+                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
+                    self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
+
+                if forward_or_backward == Const.BACKWARD and self.save_error_data and global_context.get_is_constructed():
+                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
+                    self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
 
             else:
                 status = CompareConst.ERROR
                 err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
                            compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
-
-                if forward_or_backward == Const.FORWARD and self.save_error_data:
-                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
-                    self.pre_forward_hook(api_name_str_backward, None, inputs, kwargs)
-                    self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
-                    self.data_collector.write_json()
-                if forward_or_backward == Const.BACKWARD and self.save_error_data:
-                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
-                    self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
-                    self.data_collector.write_json()
 
             basic_info_status = \
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
