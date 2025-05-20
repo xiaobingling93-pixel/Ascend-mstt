@@ -41,6 +41,7 @@ try:
 except ImportError:
     _msprobe_c = None
 
+
 ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task", "dump_path", "level"])
 
 
