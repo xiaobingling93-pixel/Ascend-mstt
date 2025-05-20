@@ -41,7 +41,6 @@ class GraphModeCellDump:
         self.list = config.list
         self.data_mode = config.data_mode
         self.file_format = config.file_format
-        self.td_config_path = config.td_config_path
         self.check_config()
         self.set_step()
 
@@ -82,6 +81,5 @@ class GraphModeCellDump:
         cellDumper.start(
             net=self.net,
             dump_path=self.dump_path,
-            data_mode=self.data_mode[0],
-            td_config_path=self.td_config_path
+            data_mode=self.data_mode[0]
         )
