@@ -104,7 +104,7 @@ class DebuggerConfig:
             if instance.model is not None:
                 logger.info_on_rank_0(
                     f"The current model is not L0 or mix level, so the model parameters will not be used")
-                return
+            return
 
         if instance.model is None:
             logger.error_on_rank_0(
