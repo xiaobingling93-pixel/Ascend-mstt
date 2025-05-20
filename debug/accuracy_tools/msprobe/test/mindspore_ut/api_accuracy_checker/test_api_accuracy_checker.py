@@ -53,7 +53,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         result_directory = os.path.join(directory, "files")
 
         # 初始化 Args 类，提供三个路径参数
-        args = Args(api_info_file=api_info_statistics_path, out_path=result_directory)  # 在这里传入自定义的路径参数
+        args = Args(api_info_file=api_info_statistics_path, out_path=result_directory, save_error_data=save_error_data)  # 在这里传入自定义的路径参数
 
         delete_files_with_prefix(result_directory, "accuracy_checking")
         api_accuracy_checker = ApiAccuracyChecker(args)
@@ -75,7 +75,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         delete_files_with_prefix(result_directory, "accuracy_checking")
         modify_tensor_api_info_json(api_info_tensor_path, result_directory)
 
-        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory)
+        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory, save_error_data=False)
 
         api_accuracy_checker = ApiAccuracyChecker(args)
         api_accuracy_checker.parse(api_info_tensor_path)
