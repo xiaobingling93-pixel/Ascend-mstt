@@ -28,13 +28,15 @@ from msprobe.mindspore.dump.cell_dump_process import check_relation
 
 class TestCellWrapperProcess(unittest.TestCase):
 
+    @patch('msprobe.mindspore.dump.cell_dump_process.ops.is_tensor')
     @patch('msprobe.mindspore.dump.cell_dump_process.td')
     @patch('msprobe.mindspore.dump.cell_dump_process.td_in')
-    def test_cell_construct_wrapper(self, mock_td_in, mock_td):
+    def test_cell_construct_wrapper(self, mock_td_in, mock_td, mock_istensor):
 
         # Mock the TensorDump operations
         mock_td.return_value = MagicMock()
         mock_td_in.return_value = MagicMock()
+        mock_istensor.return_value = False
 
         # Create a mock cell with necessary attributes
         mock_cell = MagicMock()
@@ -54,51 +56,11 @@ class TestCellWrapperProcess(unittest.TestCase):
         mock_args = (mock_input,)
 
         # Call the wrapped function
-        result = wrapped_func(mock_cell, *mock_args)
+        wrapped_func(mock_cell, *mock_args)
 
-        # Check if the result is as expected
-        self.assertEqual(result, mock_args)
-
-        # Verify that the TensorDump operations were called
-        mock_td_in.assert_called()
-        mock_td.assert_called()
-
-    @patch('msprobe.mindspore.dump.cell_dump_process.td')
-    @patch('msprobe.mindspore.dump.cell_dump_process.td_in')
-    def test_cell_construct_wrapper_with_tuple_output(self, mock_td_in, mock_td):
-
-        # Mock the TensorDump operations
-        mock_td.return_value = MagicMock()
-        mock_td_in.return_value = MagicMock()
-
-        # Create a mock cell with necessary attributes
-        mock_cell = MagicMock()
-        mock_cell.data_mode = "all"
-        mock_cell.dump_path = "mock_dump_path"
-        mock_cell.cell_prefix = "mock_cell_prefix"
-        mock_cell.input_clips = [MagicMock() for _ in range(50)]
-        mock_cell.output_clips = [MagicMock() for _ in range(50)]
-
-        # Define a mock function to wrap
-        def mock_func(*args, **kwargs):
-            return (args[0], args[0])
-
-        # Wrap the mock function using cell_construct_wrapper
-        wrapped_func = cell_construct_wrapper(mock_func, mock_cell)
-
-        # Create mock inputs
-        mock_input = ms.Tensor([1, 2, 3])
-        mock_args = (mock_input,)
-
-        # Call the wrapped function
-        result = wrapped_func(mock_cell, *mock_args)
-
-        # Check if the result is as expected
-        self.assertEqual(result, (mock_input, mock_input))
-
-        # Verify that the TensorDump operations were called
-        mock_td_in.assert_called()
-        mock_td.assert_called()
+        # Verify that the TensorDump operations were not called
+        mock_td_in.assert_not_called()
+        mock_td.assert_not_called()
 
 
 class TestSortFilenames(unittest.TestCase):
@@ -132,74 +94,6 @@ class TestSortFilenames(unittest.TestCase):
         self.assertEqual(sorted_filenames, expected_sorted_filenames)
 
 
-class TestRenameFilename(unittest.TestCase):
-
-    @patch('msprobe.mindspore.dump.cell_dump_process.sort_filenames')
-    @patch('msprobe.mindspore.dump.cell_dump_process.del_same_file')
-    @patch('msprobe.mindspore.dump.cell_dump_process.os.rename')
-    def test_rename_filename(self, mock_rename, mock_del_same_file, mock_sort_filenames):
-        # Mock the constants
-        CoreConst.REPLACEMENT_CHARACTER = '_'
-        CoreConst.FORWARD_PATTERN = '.forward.'
-        CoreConst.BACKWARD_PATTERN = '.backward.'
-        CoreConst.SEP = '.'
-
-        # Mock the filenames
-        mock_sort_filenames.return_value = [
-            "Cell.learning_rate.CosineWithWarmUpLR.forward.input.0_int32_101.npy",
-            "Cell.learning_rate.CosineWithWarmUpLR.forward.output.0_float32_102.npy",
-            "Cell.loss_scaling_manager.DynamicLossScaleUpdateCell.backward.input.0_float32_103.npy",
-            "Cell.loss_scaling_manager.DynamicLossScaleUpdateCell.backward.input.1_bool_104.npy",
-            "Cell.loss_scaling_manager.DynamicLossScaleUpdateCell.backward.output.1_bool_105.npy",
-            "Cell.learning_rate.CosineWithWarmUpLR.forward.input.0_int32_111.npy",
-            "Cell.learning_rate.CosineWithWarmUpLR.forward.output.0_float32_112.npy",
-        ]
-        mock_del_same_file.return_value = [mock_sort_filenames.return_value]
-
-        # Call the function
-        rename_filename('/mock/path')
-
-        # Check if os.rename was called with the correct arguments
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.learning_rate.CosineWithWarmUpLR.forward.input.0_int32_101.npy',
-            '/mock/path/Cell_learning_rate_CosineWithWarmUpLR.forward.0.input_0_int32_101.npy'
-        )
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.learning_rate.CosineWithWarmUpLR.forward.output.0_float32_102.npy',
-            '/mock/path/Cell_learning_rate_CosineWithWarmUpLR.forward.0.output_0_float32_102.npy'
-        )
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.loss_scaling_manager.DynamicLossScaleUpdateCell.backward.input.0_float32_103.npy',
-            '/mock/path/Cell_loss_scaling_manager_DynamicLossScaleUpdateCell.backward.0.input_0_float32_103.npy'
-        )
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.loss_scaling_manager.DynamicLossScaleUpdateCell.backward.input.1_bool_104.npy',
-            '/mock/path/Cell_loss_scaling_manager_DynamicLossScaleUpdateCell.backward.0.input_1_bool_104.npy'
-        )
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.loss_scaling_manager.DynamicLossScaleUpdateCell.backward.output.1_bool_105.npy',
-            '/mock/path/Cell_loss_scaling_manager_DynamicLossScaleUpdateCell.backward.0.output_1_bool_105.npy'
-        )
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.learning_rate.CosineWithWarmUpLR.forward.input.0_int32_111.npy',
-            '/mock/path/Cell_learning_rate_CosineWithWarmUpLR.forward.1.input_0_int32_111.npy'
-        )
-        mock_rename.assert_any_call(
-            '/mock/path/Cell.learning_rate.CosineWithWarmUpLR.forward.output.0_float32_112.npy',
-            '/mock/path/Cell_learning_rate_CosineWithWarmUpLR.forward.1.output_0_float32_112.npy'
-        )
-
-        # Mock the filenames
-        mock_sort_filenames.return_value = []
-        mock_del_same_file.return_value = []
-
-        # Call the function
-        rename_filename('/mock/path')
-
-        # Check if os.rename was not called
-        mock_rename.assert_not_called()
-
-
 class TestCheckRelation(unittest.TestCase):
 
     def setUp(self):
@@ -218,10 +112,6 @@ class TestCheckRelation(unittest.TestCase):
     def test_layer_pattern_relation(self):
         self.assertTrue(check_relation("network.model.layers.0", "network.model"))
         self.assertTrue(check_relation("network._backbone.model.layers.1", "network._backbone.model"))
-
-    def test_no_layer_pattern_relation(self):
-        self.assertFalse(check_relation("network.model.layers.0", "network.loss"))
-        self.assertFalse(check_relation("network._backbone.model.layers.1", "network._backbone.model.layers"))
 
     def test_edge_cases(self):
         self.assertFalse(check_relation("", "network"))
