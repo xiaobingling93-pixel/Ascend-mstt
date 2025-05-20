@@ -1,0 +1,215 @@
+import os
+import re
+import stat
+import time
+from enum import Enum, auto
+from abc import ABC, abstractmethod
+import csv
+
+import gc
+import sys
+from pathlib import Path
+import mindspore
+from mindspore import ops
+
+
+from tabulate import tabulate
+
+import logging
+
+import traceback
+
+
+
+def error_log_with_exp(self, msg: str, exp: Exception):
+    """
+    msg: 你的错误提示
+    exp: 你要记录的 Exception 实例
+    """
+    # 将 Exception 的类型、消息和 traceback 通过 exc_info 参数一并传给 .error()
+    self.error(msg, exc_info=(type(exp), exp, exp.__traceback__))
+
+# 把它挂到 Logger 上
+logging.Logger.error_log_with_exp = error_log_with_exp
+
+
+
+# 1. 基本配置：设置日志级别为 INFO，默认输出到控制台
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s [%(levelname)s] %(message)s',
+                    datefmt='%H:%M:%S')
+
+logger = logging.getLogger()
+
+
+# ======= 常数类 =======
+
+class CodedException(Exception):
+    def __init__(self, code, error_info=''):
+        super().__init__()
+        self.code = code
+        self.error_info = self.err_strs.get(code) + error_info
+
+    def __str__(self):
+        return self.error_info
+
+
+class ApiAccuracyCheckerException(CodedException):
+    ParseJsonFailed = 0
+    UnsupportType = 1
+    WrongValue = 2
+    ApiWrong = 3
+    err_strs = {
+        ParseJsonFailed: "[msprobe] Api Accuracy Checker parse json failed: ",
+        UnsupportType: "[msprobe] Api Accuracy Checker get unsupported type: ",
+        WrongValue: "[msprobe] Api Accuracy Checker get wrong value: ",
+        ApiWrong: "[msprobe] Api Accuracy Checker something wrong with api: ",
+    }
+
+
+class FileCheckConst:
+    """
+    Class for file check const
+    """
+    READ_ABLE = "read"
+    WRITE_ABLE = "write"
+    READ_WRITE_ABLE = "read and write"
+    DIRECTORY_LENGTH = 4096
+    FILE_NAME_LENGTH = 255
+    FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    PKL_SUFFIX = ".pkl"
+    NUMPY_SUFFIX = ".npy"
+    JSON_SUFFIX = ".json"
+    PT_SUFFIX = ".pt"
+    CSV_SUFFIX = ".csv"
+    XLSX_SUFFIX = ".xlsx"
+    YAML_SUFFIX = ".yaml"
+    IR_SUFFIX = ".ir"
+    ZIP_SUFFIX = ".zip"
+    SHELL_SUFFIX = ".sh"
+    MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_ZIP_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_FILE_IN_ZIP_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
+    DIR = "dir"
+    FILE = "file"
+    DATA_DIR_AUTHORITY = 0o750
+    DATA_FILE_AUTHORITY = 0o640
+    FILE_SIZE_DICT = {
+        PKL_SUFFIX: MAX_PKL_SIZE,
+        NUMPY_SUFFIX: MAX_NUMPY_SIZE,
+        JSON_SUFFIX: MAX_JSON_SIZE,
+        PT_SUFFIX: MAX_PT_SIZE,
+        CSV_SUFFIX: MAX_CSV_SIZE,
+        XLSX_SUFFIX: MAX_XLSX_SIZE,
+        YAML_SUFFIX: MAX_YAML_SIZE,
+        IR_SUFFIX: MAX_IR_SIZE,
+        ZIP_SUFFIX: MAX_ZIP_SIZE
+    }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
+
+class Const:
+    MAX_DEPTH = 10
+    PT_FRAMEWORK = "pytorch"
+    MS_FRAMEWORK = "mindspore"
+    MT_FRAMEWORK = "mindtorch"
+    SEP = "."
+    KWARGS = 'kwargs'
+    INPUT = 'input'
+    OUTPUT = 'output'
+    INPUT_ARGS = 'input_args'
+    INPUT_KWARGS = 'input_kwargs'
+    GRAD_INPUT = 'grad_input'
+    GRAD_OUTPUT = 'grad_output'
+    BACKWARD = 'backward'
+    FORWARD = 'forward'
+
+
+class CompareConst:
+    # compare result data
+    PASS = 'pass'
+    WARNING = 'Warning'
+    ERROR = 'error'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
+    SKIP = 'SKIP'
+
+    # compare result column name
+    COSINE = "Cosine"
+    EUC_DIST = "EucDist"
+    MAX_ABS_ERR = "MaxAbsErr"
+    MAX_RELATIVE_ERR = "MaxRelativeErr"
+    MIN_RELATIVE_ERR = "MinRelativeErr"
+    MEAN_RELATIVE_ERR = "MeanRelativeErr"
+    NORM_RELATIVE_ERR = "NormRelativeErr"
+
+    # accuracy standards
+    COS_THRESHOLD = 0.99
+    MAX_ABS_ERR_THRESHOLD = 0.001
+    MAX_RELATIVE_ERR_THRESHOLD = 0.001
+    COS_MAX_THRESHOLD = 0.9
+    MAX_ABS_ERR_MAX_THRESHOLD = 1
+
+class MsCompareConst:
+    # api_info field
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+    FUNCTIONAL_API = "Functional"
+    FUSION_API = "FUSION"
+
+    API_NAME_STR_LENGTH = 4
+    MAX_RECURSION_DEPTH = 20
+
+    # Mindtorch api_info field
+    MINDTORCH_TENSOR = "Tensor"
+    MINDTORCH = "Torch"
+    MINDTORCH_FUNC = "Functional"
+    MINDTORCH_NPU = "NPU"
+    MINDTORCH_DIST = "Distributed"
+
+    MT_VALID_API_TYPES = [
+        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
+    ]
+    SUPPORTED_FUSION_LIST = ["flash_attention_score"]
+
+    TASK_FIELD = "task"
+    STATISTICS_TASK = "statistics"
+    FRAMEWORK = "framework"
+    TENSOR_TASK = "tensor"
+    DUMP_DATA_DIR_FIELD = "dump_data_dir"
+    DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
+
+    # detail_csv
+    DETAIL_CSV_API_NAME = "API Name"
+    DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
+    DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
+    DETAIL_CSV_SHAPE = "Shape"
+    DETAIL_CSV_PASS_STATUS = "Status"
+    DETAIL_CSV_MESSAGE = "Message"
+    DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
+
+    # result_csv
+    RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
+    RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
+    RESULT_CSV_FILE_NAME = "accuracy_checking_result"
+
+    EPSILON = 1e-8
+
+    class ProcessStatus:
+        SUCCESS = "success"
+        API_NOT_FOUND = "api_not_found"
+        EXCEPTION_SKIP = "exception_skip"
+
