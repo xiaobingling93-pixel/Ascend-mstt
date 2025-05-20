@@ -225,6 +225,7 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    DATA_NAME = 'data_name'
     TENSOR_STAT_INDEX = 'tensor_stat_index'
 
     CODE_STACK = 'Code Stack'
@@ -237,6 +238,9 @@ class Const:
     # 分隔符常量
     SCOPE_SEPARATOR = "/"
     REPLACEMENT_CHARACTER = "_"
+
+    FORWARD_PATTERN = SEP + FORWARD + SEP
+    BACKWARD_PATTERN = SEP + BACKWARD + SEP
 
     OPTIMIZER = "optimizer"
     CLIP_GRAD = "clip_grad"
@@ -749,7 +753,7 @@ class MonitorConst:
         "DeepSpeedZeroOptimizer_Stage3"
     )
     DEEPSPEED_ZERO_OPT_FILTER = "DeepSpeedZeroOptimizer"
-    RULE_NAME = ['AnomalyTurbulence']
+    RULE_NAME = ['AnomalyTurbulence', 'AnomalyNan']
 
     SLICE_SIZE = 20480
     # used for name
@@ -766,12 +770,13 @@ class MonitorConst:
     ACTVGRAD = "actv_grad"
     POST_GRAD = "post_grad"
     PRE_GRAD = "pre_grad"
+    PRE_PARAM = "param_origin"
+    POST_PARAM = "param_updated"
     ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
-    PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
     CSV_HEADER_XY = ["vpp_stage", "name", "step", "micro_step"]

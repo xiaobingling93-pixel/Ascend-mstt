@@ -56,7 +56,7 @@ class ShellParser(Parser):
                         script_content_list.append(line)
         script_content = ''.join(script_content_list)
 
-        command_line = re.search(r'msrun\s[^|]*|torchrun\s[^|]*|python -m torch.distributed.launch\s[^|]*',
+        command_line = re.search(r'msrun\s[^|]*|torchrun\s[^|]*|python\d? -m torch.distributed.launch\s[^|]*',
                                  script_content,
                                  re.DOTALL)
         if command_line:

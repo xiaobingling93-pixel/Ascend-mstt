@@ -31,11 +31,25 @@ class OptimizerMon(object):
         return flatten_state
 
     def fetch_grad(self, monitor, params2name):
+        if not self.fp16_to_fp32_param:
+            self.map_fp16_to_fp32_param(self.torch_opt)
+
         grad_dict = {}
+        first_param = True
         for param, name in params2name.items():
             if monitor.duplicate_param.get(name, False):
                 continue
+            if self.fp16_to_fp32_param and param not in self.fp16_to_fp32_param:
+                continue
             grad = param.main_grad if monitor.params_have_main_grad else param.grad
+            element_in_cur_partition = self.fp16_to_fp32_param.get(param, param).numel()
+            if param.numel() != element_in_cur_partition:
+                if first_param:
+                    grad = grad.flatten()[-element_in_cur_partition:]
+                else: # supposed to be the last one
+                    grad = grad.flatten()[:element_in_cur_partition]
+            first_param = False
+
             if grad is None:
                 if not monitor.fsdp_wrapped_module:
                     logger.warning(f"grad is None: {name}, maybe something wrong happened.")
@@ -47,14 +61,11 @@ class OptimizerMon(object):
     
     def map_fp16_to_fp32_param(self, torch_opt):
         pass
-    
+
     def fetch_mv(self, monitor, params2name):
         if not self.fp16_to_fp32_param:
             self.map_fp16_to_fp32_param(self.torch_opt)
 
-        return self._fetch_mv_in_adam(monitor, params2name) 
-
-    def _fetch_mv_in_adam(self, monitor, params2name):
         exp_avg_dict = {}
         exp_avg_sq_dict = {}
         update_dict = {}

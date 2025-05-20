@@ -37,7 +37,6 @@ from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, c
 from msprobe.pytorch.monitor.features import get_sign_matches
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name, \
     TensorMetrics, squash_param_name
-from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
@@ -72,36 +71,6 @@ class ModuleHookContext:
         self.actvgrad = []
         self.module_name = module_name
         self.struct = {}
-        self.format_by_arg = {}
-        self.verified = False
-        self.focused_in_col = 0
-        self.focused_out_col = 0
-
-    def set_format_by_arg(self, key_name: str, target_config: dict):
-        """ 按照监控对象配置format_by_arg
-        1) module_name 在 target 中配置监控对象
-        2) module_name 未在 targets 中配置，且 all_xy 全量监控
-        3) module_name 未在 targets 中配置，且 all_xy 未全量监控
-
-        :param key_name: str, one of [input, output, input_grad, output_grad]
-        :param target_config: target obj in config json.
-        :return:
-        """
-        cared = target_config.get(self.module_name, self.struct)
-        if key_name in cared:
-            target_module_config = cared[key_name]
-            if isinstance(target_module_config, dict):
-                # current cared is self.struct, monitor all data for module_name
-                self.format_by_arg[key_name] = target_module_config.get('config')
-            elif isinstance(target_module_config, str):
-                # current cared is target_config[self.module_name]
-                self.format_by_arg[key_name] = target_module_config
-            else:
-                logger.warning_on_rank_0(f"target module config error, result maybe empty."
-                                         f"module_name: {self.module_name}, key_name: {key_name}")
-                self.format_by_arg[key_name] = None
-        else:
-            self.format_by_arg[key_name] = self.struct.get(key_name).get('config')
 
     def reset(self):
         self.actv.clear()
@@ -185,7 +154,6 @@ class TrainerMon:
         self.params_have_main_grad = params_have_main_grad
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
-        self.origin_step_func = None
         self.origin_start_grad_sync = None
         self.fsdp_post_backward_hook = None
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
@@ -247,6 +215,8 @@ class TrainerMon:
         self.optimizer_hooked = False
         self.param_registered = False
         self.struct_printed = False
+        self.pre_step_hooks = []
+        self.post_step_hooks = []
 
         # 动静态区分
         self.dynamic_enable = os.getenv("DYNAMIC_MONITOR", 'False').lower() == 'true'
@@ -440,10 +410,28 @@ class TrainerMon:
                 return
         self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
 
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        self.register_param_call_id("_hook_module", key)
-        return {key: tensor}
+    def build_tbtag_tensor_map(self, module_name, suffix, tag, tensor):
+        """
+        :param module_name: str of module name
+        :param suffix:
+        :param tag:
+        :param tensor: torch.tensor or tuple/list of torch.tensor
+        :return: tensor_map
+        """
+        tensor_map = {}
+        if isinstance(tensor, torch.Tensor):
+            tensor = [tensor]
+        if isinstance(tensor, tuple) or isinstance(tensor, list):
+            if len(tensor) == 1:
+                key = get_summary_writer_tag_name(module_name + suffix, tag, self.rank)
+                self.register_param_call_id("_hook_module", key)
+                tensor_map[key] = tensor[0]
+            else:
+                for i, tensor_i in enumerate(tensor):
+                    key = get_summary_writer_tag_name(module_name + f"_{i}" + suffix, tag, self.rank)
+                    self.register_param_call_id("_hook_module", key)
+                    tensor_map[key] = tensor_i
+        return tensor_map
 
     def generate_param_map(self, tag, param_tensor):
         metrics = {}
@@ -455,11 +443,15 @@ class TrainerMon:
             metrics[key] = param_tensor[name]
         return metrics
 
-    def generate_param_metrics(self, opt_context):
+    def generate_param_metrics(self, opt_context, stage=MonitorConst.PRE_PARAM):
         if not self.param_distribution:
             return
-        name2param = {name: param for name, param in self.name2param.items() if param.numel() != 0}
-        get_metrics(self.ops, name2param, self.eps, opt_context.param_metric)
+        tag2param = {
+            self.name2tag.get(name, {}).get(stage): param 
+            for name, param in self.name2param.items() 
+            if param.numel() != 0
+        }
+        get_metrics(self.ops, tag2param, self.eps, opt_context.param_metric)
 
     def generate_mv_metrics(self, opt_context):
         if not self.mv_distribution:
@@ -524,7 +516,10 @@ class TrainerMon:
     def write_param_tb(self, opt_context):
         if not self.param_distribution:
             return
-        self.summary_writer.write_metrics(self.ops, opt_context.param_metric, opt_context.step, MonitorConst.PARAM)
+        param_metrics = {k: v for k, v in opt_context.param_metric.items() if MonitorConst.PRE_PARAM in k}
+        updated_param_metrics = {k: v for k, v in opt_context.param_metric.items() if MonitorConst.POST_PARAM in k}
+        self.summary_writer.write_metrics(self.ops, param_metrics, opt_context.step, MonitorConst.PRE_PARAM)
+        self.summary_writer.write_metrics(self.ops, updated_param_metrics, opt_context.step, MonitorConst.POST_PARAM)
 
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
@@ -579,7 +574,7 @@ class TrainerMon:
 
             self.generate_wgrad_metrics(grad_dict)
             self.generate_mv_metrics(context)
-            self.generate_param_metrics(context)
+            self.generate_param_metrics(context, MonitorConst.PRE_PARAM)
 
             tbtag_tensor_map = {}
             if self.mg_direction:
@@ -607,17 +602,15 @@ class TrainerMon:
             context.metric_dict = metric_dict
             return
 
-        def patch_step(func, optimizer):
-            def wrapper(*args, **kwargs):
-                optimizer_pre_step_hook(optimizer, args, kwargs)
-                out = func(*args, **kwargs)
-                return out
-            return wrapper
+        def optimizer_post_step_hook(optimizer, args, kwargs):
+            context = self.optimizer_context[optimizer]
+            self.generate_param_metrics(context, MonitorConst.POST_PARAM)
 
         if self.optimizer_hooked:
             return
 
-        optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
+        self.pre_step_hooks.append(optimizer_pre_step_hook)
+        self.post_step_hooks.append(optimizer_post_step_hook)
 
         self.optimizer_hooked = True
         return
@@ -709,13 +702,16 @@ class TrainerMon:
 
         def patch_step(func, optimizer):
             def wrapper(*args, **kwargs):
+                for hook in self.pre_step_hooks:
+                    hook(optimizer, args, kwargs)
                 out = func(*args, **kwargs)
+                for hook in self.post_step_hooks:
+                    hook(optimizer, args, kwargs)
                 step_final_hook(optimizer, args, kwargs)
                 return out
             return wrapper
 
         optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
-        self.origin_step_func = optimizer.__class__.step
         return
 
     def hook_modules(self):
@@ -804,7 +800,8 @@ class TrainerMon:
             self.weight_hooked = False
 
         if self.optimizer_hooked:
-            optimizer.__class__.step = self.origin_step_func
+            self.pre_step_hooks.clear()
+            self.post_step_hooks.clear()
 
         for _, context in self.optimizer_context.items():
             context.reset()
@@ -894,9 +891,16 @@ class TrainerMon:
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
+                
+                keywords = [
+                    MonitorConst.PRE_GRAD,
+                    MonitorConst.POST_GRAD,
+                    MonitorConst.PRE_PARAM,
+                    MonitorConst.POST_PARAM
+                ]
                 self.name2tag[name] = {
-                    MonitorConst.PRE_GRAD: get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank),
-                    MonitorConst.POST_GRAD: get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
+                    k: get_summary_writer_tag_name(name, k, self.rank) 
+                    for k in keywords
                 }
 
     def _register_param_name(self):
@@ -920,11 +924,17 @@ class TrainerMon:
             # nothing to hook
             return 0
 
-        def fwd_hook_fun(module, module_input, module_output, name):
+        def fwd_hook_fun(module, args, kwargs, module_output, name):
             if not module.training or is_recomputation():
                 # 1 only monitor training stage.
                 # 2 when open recompute, skip recomputed forward stage.
                 return
+
+            module_input = [tensor for tensor in args if torch.is_tensor(tensor)]
+            if kwargs:
+                kwargs_tensors = [tensor for tensor in kwargs.values() if torch.is_tensor(tensor)]
+                module_input.extend(kwargs_tensors)
+
             if module not in self.module_fwd_hook_context_by_module:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
@@ -936,31 +946,16 @@ class TrainerMon:
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
-            if not context.format_by_arg:
-                context.set_format_by_arg(Const.INPUT, self.config['targets'])
-                context.set_format_by_arg(Const.OUTPUT, self.config['targets'])
-            if not context.format_by_arg:
-                return
-            if not context.verified:
-                context.focused_in_col = validate_config_spec(context.format_by_arg[Const.INPUT],
-                                                              module_input, context.module_name,
-                                                              Const.INPUT)
-                context.focused_out_col = validate_config_spec(context.format_by_arg[Const.OUTPUT],
-                                                               module_output, context.module_name,
-                                                               Const.OUTPUT)
-                context.verified = True
-            # expect output be tensor type
+
             tbtag_tensor_map = {}
-            cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
-                    f'{context.module_name}.{Const.INPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTV, cared_input))
-            cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
+                    f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, module_input))
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
-                    f'{context.module_name}.{Const.OUTPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTV, cared_output))
+                    f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, module_output))
 
             get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             context.micro_step += 1
@@ -978,31 +973,17 @@ class TrainerMon:
             if self.print_struct:
                 self.module_struct[context.module_name].update(context.struct)
                 return
-            if not context.format_by_arg:
-                context.set_format_by_arg(MonitorConst.INPUT_GRAD, self.config['targets'])
-                context.set_format_by_arg(MonitorConst.OUTPUT_GRAD, self.config['targets'])
-            if not context.format_by_arg:
-                return
-            if not context.verified:
-                context.focused_in_col = validate_config_spec(
-                    context.format_by_arg[MonitorConst.INPUT_GRAD],
-                    input_grad, context.module_name, MonitorConst.INPUT_GRAD)
-                context.focused_out_col = validate_config_spec(
-                    context.format_by_arg[MonitorConst.OUTPUT_GRAD],
-                    output_grad, context.module_name, MonitorConst.OUTPUT_GRAD)
-                context.verified = True
 
             tbtag_tensor_map = {}
-            cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
-                    f'{context.module_name}.{Const.INPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTV, cared_input_grad))
-            cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
+                    f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, input_grad))
+
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
-                    f'{context.module_name}.{Const.OUTPUT}{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTV, cared_output_grad))
+                    f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
+                    MonitorConst.ACTV, output_grad))
 
             if context.micro_step == 0 and context.actvgrad:
                 logger.warning(f"actvgrad context of {context.module_name} is not empty when first micro_step, "
@@ -1028,7 +1009,7 @@ class TrainerMon:
                 if submodule.__class__.__name__ == "FullyShardedDataParallel":
                     continue
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name))
+                    handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name), with_kwargs=True)
                     self.handles['xy'].append(handle)
                 if not self.forward_only and not self.has_register_backward_hook(name, submodule):
                     handle = submodule.register_full_backward_hook(bwd_hook_fun)

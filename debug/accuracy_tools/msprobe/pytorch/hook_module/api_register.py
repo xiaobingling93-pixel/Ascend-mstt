@@ -15,12 +15,14 @@
 
 import functools
 import os
+import inspect
 
 import torch
 import torch.distributed as dist
 
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.api_registry import ApiRegistry
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import (
     torch_without_guard_version, is_gpu, torch_device_guard, parameter_adapter
 )
@@ -84,7 +86,15 @@ def tensor_module_forward(module, *args, **kwargs):
 
 def dist_module_forward(module, *args, **kwargs):
     handle = module.api_func(*args, **kwargs)
-    if kwargs.get("async_op") or module.api_name in ["isend", "irecv"]:
+    try:
+        bound = inspect.signature(module.api_func).bind(*args, **kwargs)
+        bound.apply_defaults()
+        use_asyn_op_flag = bound.arguments.get("asyn_op", False)
+    except Exception as e:
+        use_asyn_op_flag = False
+        logger.warning(f"fail to get dist api's func signature because {e}, no wait")
+
+    if use_asyn_op_flag or module.api_name in ["isend", "irecv"]:
         if handle and hasattr(handle, 'wait'):
             handle.wait()
     if module.api_name == "batch_isend_irecv":

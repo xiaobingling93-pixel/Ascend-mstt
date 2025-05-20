@@ -92,6 +92,7 @@ class BaseProfilingParser(ABC):
         self._enable_communication_compare = args.enable_communication_compare
         self._enable_api_compare = args.enable_api_compare
         self._enable_kernel_compare = args.enable_kernel_compare
+        self._step_id = step_id
         self._dispatch_func = self._get_dispatch_func()
         self._result_data = ProfilingResult(self._profiling_type)
         self._memory_events = []
@@ -104,7 +105,6 @@ class BaseProfilingParser(ABC):
         self._categorize_performance_index = 0
         self._cpu_cube_op = None
         self._bwd_tid = None
-        self._step_id = step_id
         self._step_range = None
 
     @property
@@ -123,11 +123,18 @@ class BaseProfilingParser(ABC):
         self._step_range = []
         if self._step_id == Constant.VOID_STEP:
             return self._step_range
-        for event in self._result_data.torch_op_data:
+        step_list = []
+        events = self._result_data.torch_op_data or self._trace_event_generator(self._profiling_type)
+        for event in events:
             if event.is_step_profiler():
-                if int(event.name.split("#")[-1]) == int(self._step_id):
+                step_id = event.name.split("#")[-1]
+                step_list.append(step_id)
+                if int(step_id) == int(self._step_id):
                     self._step_range = [event.start_time, event.end_time]
                     break
+        if not self._step_range:
+            valid_step = ", ".join(step_list)
+            raise RuntimeError(f"Invalid step id: {self._step_id},  please choose from the valid steps: {valid_step}")
         return self._step_range
 
     @abstractmethod
@@ -357,7 +364,7 @@ class BaseProfilingParser(ABC):
             name_list = communication_op.lower_name.split("_")
             if len(name_list) < 2:
                 continue
-            comm_name = name_list[1]
+            comm_name = name_list[1] if name_list[0] == "hcom" else name_list[0]
             self._result_data.update_communication_dict(comm_name, communication_op.dur)
             while task_index < len(comm_task_list):
                 task_event = comm_task_list[task_index]

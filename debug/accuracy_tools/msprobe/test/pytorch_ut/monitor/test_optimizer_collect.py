@@ -60,7 +60,7 @@ class TestOptimizerMon(unittest.TestCase):
         res = optimizer_mon.fetch_mv(None, {})
         self.assertEqual(res.exp_avg, {})
 
-    def test_fetch_mv_in_adam(self):
+    def test_fetch_mv(self):
         self.torch_opt = Mock()
         self.torch_opt.state = {
             'param1': {'exp_avg': torch.tensor(0.1), 'exp_avg_sq': torch.tensor(0.2), 'step': torch.tensor(10)},
@@ -71,7 +71,7 @@ class TestOptimizerMon(unittest.TestCase):
         self.params2name = {'param1': 'param1', 'param2': 'param2'}
 
         self.optimizer_mon = OptimizerMon(None)
-        result = self.optimizer_mon._fetch_mv_in_adam(self.monitor, self.params2name)
+        result = self.optimizer_mon.fetch_mv(self.monitor, self.params2name)
         self.assertIsInstance(result, MVResult)
 
 
@@ -87,13 +87,13 @@ class TestMixPrecisionOptimizerMon(unittest.TestCase):
         self.optimizer = MixPrecisionOptimizerMon(self.torch_opt)
         self.optimizer.fp16_to_fp32_param = {}
 
-        # Mock _fetch_mv_in_adam method and set a fixed return value
+        # Mock fetch_mv method and set a fixed return value
         mv_result = MVResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={})
-        self.mock_fetch_mv_in_adam = MagicMock(return_value=mv_result)
-        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+        self.mock_fetch_mv = MagicMock(return_value=mv_result)
+        self.optimizer.fetch_mv = self.mock_fetch_mv
 
         res = self.optimizer.fetch_mv(self.monitor, self.params2name)
-        self.mock_fetch_mv_in_adam.assert_called_once_with(self.monitor, self.params2name)
+        self.mock_fetch_mv.assert_called_once_with(self.monitor, self.params2name)
         self.assertIsInstance(res, MVResult)
 
 
@@ -109,13 +109,13 @@ class TestChainedMixPrecisionOptimizerMon(unittest.TestCase):
         self.optimizer.optimizer = [MagicMock(), MagicMock()]
         self.optimizer.fp16_to_fp32_param = {}
 
-        # Mock _fetch_mv_in_adam method and set a fixed return value
+        # Mock fetch_mv method and set a fixed return value
         mv_result = MVResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={})
-        self.mock_fetch_mv_in_adam = MagicMock(return_value=mv_result)
-        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+        self.mock_fetch_mv = MagicMock(return_value=mv_result)
+        self.optimizer.fetch_mv = self.mock_fetch_mv
 
         res = self.optimizer.fetch_mv(self.monitor, self.params2name)
-        self.mock_fetch_mv_in_adam.assert_called_once_with(self.monitor, self.params2name)
+        self.mock_fetch_mv.assert_called_once_with(self.monitor, self.params2name)
         self.assertIsInstance(res, MVResult)
 
 
@@ -126,14 +126,14 @@ class TestMegatronChainedDistributedOptimizerMon(unittest.TestCase):
         self.params2name = MagicMock()
         self.torch_opt.chained_optimizers = [MagicMock(), MagicMock()]
         mv_result = MVResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={})
-        self.mock_fetch_mv_in_adam = MagicMock(return_value=mv_result)
+        self.mock_fetch_mv = MagicMock(return_value=mv_result)
         self.optimizer = MegatronChainedDistributedOptimizerMon(self.torch_opt)
 
     def test_fetch_mv_with_valid_optimizer(self):
         for opt in self.torch_opt.chained_optimizers:
             opt.model_float16_groups = [MagicMock()]
             opt.shard_fp32_from_float16_groups = [MagicMock()]
-        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+        self.optimizer.fetch_mv = self.mock_fetch_mv
 
         res = self.optimizer.fetch_mv(self.monitor, self.params2name)
         self.assertIsInstance(res, MVResult)
@@ -142,7 +142,6 @@ class TestMegatronChainedDistributedOptimizerMon(unittest.TestCase):
         for opt in self.torch_opt.chained_optimizers:
             del opt.model_float16_groups
             del opt.shard_fp32_from_float16_groups
-        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
 
         with self.assertRaises(Exception):
             self.optimizer.fetch_mv(self.monitor, self.params2name)
@@ -154,13 +153,13 @@ class TestMegatronDistributedOptimizerMon(unittest.TestCase):
         self.torch_opt = MagicMock()
         self.params2name = MagicMock()
         mv_result = MVResult(exp_avg={}, exp_avg_sq={}, update={}, ratio={})
-        self.mock_fetch_mv_in_adam = MagicMock(return_value=mv_result)
+        self.mock_fetch_mv = MagicMock(return_value=mv_result)
         self.optimizer = MegatronDistributedOptimizerMon(self.torch_opt)
 
     def test_fetch_mv_with_valid_optimizer(self):
         self.torch_opt.model_float16_groups = [MagicMock()]
         self.torch_opt.shard_fp32_from_float16_groups = [MagicMock()]
-        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
+        self.optimizer.fetch_mv = self.mock_fetch_mv
 
         res = self.optimizer.fetch_mv(self.monitor, self.params2name)
         self.assertIsInstance(res, MVResult)
@@ -168,7 +167,6 @@ class TestMegatronDistributedOptimizerMon(unittest.TestCase):
     def test_fetch_mv_with_invalid_optimizer(self):
         self.torch_opt.model_float16_groups = None
         self.torch_opt.shard_fp32_from_float16_groups = None
-        self.optimizer._fetch_mv_in_adam = self.mock_fetch_mv_in_adam
 
         with self.assertRaises(Exception):
             self.optimizer.fetch_mv(self.monitor, self.params2name)

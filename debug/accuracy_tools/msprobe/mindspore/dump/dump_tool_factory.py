@@ -18,12 +18,13 @@ from msprobe.core.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
+from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
 
 
 class DumpToolFactory:
     tools = {
         Const.CELL: {
-            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_KBYK_MODE: GraphModeCellDump,
             Const.GRAPH_GE_MODE: None,
             Const.PYNATIVE_MODE: None
         },
@@ -40,9 +41,13 @@ class DumpToolFactory:
     }
 
     @staticmethod
-    def create(config: DebuggerConfig):
-        if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
-            raise Exception("data_mode must be one of all, input, output.")
+    def create(config: DebuggerConfig, model=None):
+        if config.level == Const.CELL:
+            if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
+                raise Exception("data_mode must be one of all, forward, backward.")
+        else:
+            if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
+                raise Exception("data_mode must be one of all, input, output.")
         tool = DumpToolFactory.tools.get(config.level)
         if not tool:
             raise Exception("Valid level is needed.")
@@ -51,4 +56,4 @@ class DumpToolFactory:
             logger.error(f"Data dump is not supported in {config.execution_mode} mode "
                          f"when dump level is {config.level}.")
             raise ValueError
-        return tool(config)
+        return tool(config, model) if tool == GraphModeCellDump else tool(config)

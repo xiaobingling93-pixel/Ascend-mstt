@@ -35,6 +35,7 @@ from msprobe.mindspore.runtime import Runtime
 from msprobe.mindspore.service import Service
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 from msprobe.core.common_config import BaseConfig, CommonConfig
+from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
 
 try:
     from msprobe.lib import _msprobe_c
@@ -165,7 +166,7 @@ class PrecisionDebugger:
         else:
             if not instance.first_start:
                 get_api_register().restore_all_api()
-                handler = TaskHandlerFactory.create(instance.config)
+                handler = TaskHandlerFactory.create(instance.config, model)
                 handler.handle()
 
         instance.first_start = True
@@ -195,6 +196,9 @@ class PrecisionDebugger:
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.task_not_need_service:
+            return
+        if instance.config.execution_mode != MsConst.PYNATIVE_MODE and instance.config.level == MsConst.CELL:
+            GraphModeCellDump.step()
             return
         if instance.service:
             instance.service.step()
