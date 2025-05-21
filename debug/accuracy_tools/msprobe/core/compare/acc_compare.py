@@ -218,7 +218,7 @@ class ParseData:
                     struct = merge_list[CompareConst.PARAMS_STRUCT].pop(0)
                 elif CompareConst.PARAMS_GRAD_STRUCT in op_name:
                     struct = merge_list[CompareConst.PARAMS_GRAD_STRUCT].pop(0)
-                else:
+                elif CompareConst.DEBUG_STRUCT in op_name:
                     struct = merge_list[CompareConst.DEBUG_STRUCT].pop(0)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])

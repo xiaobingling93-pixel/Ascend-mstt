@@ -51,7 +51,7 @@ def extract_json(dirname, json_file_type):
         elif json_file_type == Const.DUMP_JSON_FILE:
             logger.error(f'dump.json is not found in dump dir {dirname}.')
         elif json_file_type == Const.DEBUG_JSON_FILE:
-            logger.error(f'debug.json is not found in dump dir {dirname}.')
+            logger.warning(f'debug.json is not found in dump dir {dirname}.')
 
     return json_path
 
