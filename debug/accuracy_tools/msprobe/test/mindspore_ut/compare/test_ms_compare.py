@@ -1,11 +1,18 @@
 # coding=utf-8
-
+import os
+import shutil
 import random
 import unittest
 from unittest.mock import patch
 
-from msprobe.mindspore.compare.ms_compare import check_cross_framework
+import torch
+import numpy as np
+
+from msprobe.mindspore.compare.ms_compare import check_cross_framework, read_real_data, ms_compare
 from msprobe.core.common.const import Const
+from msprobe.test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
+from msprobe.core.common.utils import CompareException
+
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                         'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
@@ -165,6 +172,10 @@ json_data_template = {
     'data': {}
 }
 
+base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_ms_compare1')
+np.save(os.path.join(base_dir1, 'numpy_data.npy'), np.array([1, 2, 3]))
+torch.save(torch.tensor([1, 2, 3]), os.path.join(base_dir1, 'torch_data.pt'))
+
 
 def gen_data(is_ms=True):
     type_value = 'mindspore.Tensor' if is_ms else 'torch.Tensor'
@@ -182,6 +193,13 @@ def gen_data(is_ms=True):
 
 class TestUtilsMethods(unittest.TestCase):
 
+    def setUp(self):
+        os.makedirs(base_dir1, mode=0o750, exist_ok=True)
+
+    def tearDown(self):
+        if os.path.exists(base_dir1):
+            shutil.rmtree(base_dir1)
+
     @patch('msprobe.mindspore.compare.utils.detect_framework_by_dump_json')
     def test_check_cross_framework_valid_pytorch(self, mock_detect_framework):
         mock_detect_framework.return_value = Const.PT_FRAMEWORK
@@ -197,3 +215,36 @@ class TestUtilsMethods(unittest.TestCase):
         result = check_cross_framework("dummy_path")
 
         self.assertFalse(result)
+
+    def test_read_real_data_ms(self):
+        n_value, b_value = read_real_data(base_dir1, 'numpy_data.npy', base_dir1, 'numpy_data.npy', False)
+        self.assertEqual(n_value, np.array([1, 2, 3]))
+
+    def test_read_real_data_cross_frame(self):
+        n_value, b_value = read_real_data(base_dir1, 'numpy_data.npy', base_dir1, 'torch_data.pt', True)
+
+    def test_ms_compare(self):
+        generate_dump_json(base_dir1)
+        generate_stack_json(base_dir1)
+
+        dump_path = os.path.join(base_dir1, 'dump.json')
+
+        input_param = {
+            'npu_json_path': dump_path,
+            'bench_json_path': dump_path,
+            'is_print_compare_log': True
+        }
+        output_path = base_dir1
+
+        ms_compare(input_param, output_path)
+        output_files = os.listdir(output_path)
+        self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
+
+        input_param2 = {
+            'npu_json_path': '',
+            'bench_json_path': dump_path,
+            'is_print_compare_log': True
+        }
+        with self.assertRaises(CompareException) as context:
+            ms_compare(input_param2, output_path)
+        self.assertEqual(context.exception.code, 1)
