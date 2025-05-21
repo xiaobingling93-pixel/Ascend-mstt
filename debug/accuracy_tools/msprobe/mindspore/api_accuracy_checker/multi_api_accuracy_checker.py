@@ -33,13 +33,8 @@ from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataM
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.const import MsCompareConst
 
-from msprobe.mindspore import PrecisionDebugger
-from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputs, ModuleBackwardOutputs,
-                                                        ModuleForwardInputsOutputs)
-from msprobe.core.common.file_utils import create_directory
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
-from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 
 
 class MultiApiAccuracyChecker(ApiAccuracyChecker):

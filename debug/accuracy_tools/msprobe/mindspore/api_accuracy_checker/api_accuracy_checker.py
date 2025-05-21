@@ -30,10 +30,6 @@ from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_jso
 from msprobe.mindspore.common.const import MsCompareConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
-from msprobe.mindspore import PrecisionDebugger
-from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputs, ModuleBackwardOutputs,
-                                                        ModuleForwardInputsOutputs)
-from msprobe.core.common.file_utils import create_directory
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
