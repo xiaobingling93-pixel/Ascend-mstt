@@ -102,23 +102,26 @@ class TestCellProcessor(unittest.TestCase):
 
     def test_register_cell_hook(self):
         with self.assertRaises(MsprobeException) as context:
-            self.processor.register_cell_hook([], None)
+            self.processor.register_cell_hook([], None, 'config')
         self.assertEqual(str(context.exception), '[msprobe] 无效参数：The model cannot be None, when level is "L0" or "mix"')
 
         with patch('msprobe.mindspore.cell_processor.is_mindtorch') as mock_is_mindtorch, \
-             patch('msprobe.mindspore.cell_processor.get_cells_and_names') as mock_get_cells_and_names, \
+             patch('msprobe.mindspore.cell_processor.get_cells_and_names_with_index') as mock_get_cells_and_names, \
              patch('msprobe.mindspore.cell_processor.CellProcessor.build_cell_hook') as mock_build_cell_hook, \
              patch('msprobe.mindspore.cell_processor.get_cell_construct') as mock_get_cell_construct, \
+             patch('msprobe.mindspore.cell_processor.is_graph_mode_cell_dump_allowed') \
+             as mock_is_graph_mode_cell_dump_allowed, \
              patch.object(logger, 'info') as mock_logger_info:
             mock_cell = MagicMock()
             mock_sub_cell = MagicMock()
-            mock_get_cells_and_names.return_value = {'-1': [('cell', mock_cell), ('sub_cell', mock_sub_cell)]}
+            mock_get_cells_and_names.return_value = ({'-1': [('cell', mock_cell), ('sub_cell', mock_sub_cell)]}, {})
             mock_build_cell_hook.return_value = 'forward_pre_hook'
             mock_get_cell_construct.return_value = '_construct'
+            mock_is_graph_mode_cell_dump_allowed.return_value = False
 
             mock_is_mindtorch.return_value = False
             setattr(MagicMock, '_run_construct', '_run_construct')
-            self.processor.register_cell_hook(mock_cell, None)
+            self.processor.register_cell_hook(mock_cell, None, 'config')
             self.assertTrue(mock_sub_cell.__class__.msprobe_construct)
             mock_get_cell_construct.assert_called_with('_run_construct')
             self.assertEqual(mock_sub_cell.__class__._run_construct, '_construct')
@@ -136,9 +139,11 @@ class TestCellProcessor(unittest.TestCase):
             mock_get_cell_construct.reset_mock()
             mock_another_sub_cell = MagicMock()
             setattr(mock_another_sub_cell.__class__, 'msprobe_construct', True)
-            mock_get_cells_and_names.return_value = {'-1': [('cell', mock_cell),
-                                                            ('another_sub_cell', mock_another_sub_cell)]}
-            self.processor.register_cell_hook(mock_cell, None)
+            mock_get_cells_and_names.return_value = (
+                {'-1': [('cell', mock_cell), ('another_sub_cell', mock_another_sub_cell)]},
+                {}
+            )
+            self.processor.register_cell_hook(mock_cell, None, 'config')
             mock_get_cell_construct.assert_not_called()
             mock_another_sub_cell.register_forward_pre_hook.assert_called_with('forward_pre_hook')
             mock_another_sub_cell.register_forward_hook.assert_not_called()
@@ -150,7 +155,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_another_sub_cell.reset_mock()
             setattr(MagicMock, '_call_impl', '_call_impl')
             mock_is_mindtorch.return_value = True
-            self.processor.register_cell_hook(mock_cell, None)
+            self.processor.register_cell_hook(mock_cell, None, 'config')
             self.assertTrue(mock_another_sub_cell.__class__.msprobe_construct)
             mock_get_cell_construct.assert_called_with('_call_impl')
             mock_build_cell_hook.assert_called_with('Module.another_sub_cell.MagicMock.', None)

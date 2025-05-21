@@ -26,9 +26,13 @@ from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (
     is_mindtorch,
-    get_cells_and_names,
-    has_kwargs_in_forward_hook
+    get_cells_and_names_with_index,
+    has_kwargs_in_forward_hook,
+    is_graph_mode_cell_dump_allowed
 )
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
+from msprobe.mindspore.runtime import Runtime
 
 
 def get_cell_construct(construct):
@@ -69,17 +73,17 @@ class CellProcessor:
         cls.cell_backward_pre_hook = []
         cls.cell_backward_hook = []
 
-    def register_cell_hook(self, models, build_hook):
+    def register_cell_hook(self, models, build_hook, config: DebuggerConfig):
         if not models:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    'The model cannot be None, when level is "L0" or "mix"')
 
         is_registered = False
         model_type = Const.MODULE if is_mindtorch() else Const.CELL
-        cells_and_names_with_index = get_cells_and_names(models)
+        cells_with_index_in_pynative_mode, cells_with_index_in_graph_mode = get_cells_and_names_with_index(models)
         construct_name = '_call_impl' if is_mindtorch() else '_run_construct'
 
-        for index, cells_and_names in cells_and_names_with_index.items():
+        for index, cells_and_names in cells_with_index_in_pynative_mode.items():
             model = models if index == "-1" else models[int(index)]
             for name, cell in cells_and_names:
                 if cell == model:
@@ -102,6 +106,20 @@ class CellProcessor:
                 if not is_registered:
                     logger.info("The cell hook function is successfully mounted to the model.")
                 is_registered = True
+
+        if is_graph_mode_cell_dump_allowed(config):
+            cells_and_names_in_graph_mode = []
+            for index, cells_and_names in cells_with_index_in_graph_mode.items():
+                model = models if index == "-1" else models[int(index)]
+                for name, cell in cells_and_names:
+                    if cell == model:
+                        continue
+                    cell_index = (index + Const.SEP) if index != "-1" else ""
+                    cells_and_names_in_graph_mode.append((f'{cell_index}{name}', cell))
+
+            if cells_and_names_in_graph_mode:
+                Runtime.run_mode = MsConst.PYNATIVE_GRAPH_MODE
+                GraphModeCellDump(config, cells_and_names_in_graph_mode, strict=False).handle()
 
     def build_cell_hook(self, cell_name, build_data_hook):
         def forward_pre_hook(cell, args):
