@@ -44,7 +44,7 @@
     npm run buildLinux
     ```
 
-    **注意**: 此步骤需要安装 [Node.js](https://nodejs.org/zh-cn/download) 环境
+    **注意**: 此步骤需要安装 Node.js 环境
 
 4. 回到上级目录直接安装:
     ```
