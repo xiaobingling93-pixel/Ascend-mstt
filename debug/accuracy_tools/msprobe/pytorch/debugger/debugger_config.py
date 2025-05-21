@@ -96,7 +96,7 @@ class DebuggerConfig:
         self.check_kwargs()
         return True
 
-    def check_model(self, instance, start_model, token_range):
+    def check_model(self, instance, start_model, token_range=None):
         instance.model = start_model if start_model is not None else instance.model
         if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX] and token_range is None:
             if instance.model is not None:
