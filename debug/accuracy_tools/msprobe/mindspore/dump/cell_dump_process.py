@@ -330,7 +330,7 @@ def process_file(file_path):
     try:
         # 读取.npy文件内容
         npy_content = load_npy(file_path)
-        logger.info(f"Loaded {file_path}: shape is {npy_content.shape}, dtype is {npy_content.dtype}")
+        logger.debug(f"Loaded {file_path}: shape is {npy_content.shape}, dtype is {npy_content.dtype}")
 
         # 文件名举例:Cell.network._backbone.loss.CrossEntropyLoss.forward.0.input.0_float32_165.npy
         parts = os.path.basename(file_path).split(CoreConst.SEP)
