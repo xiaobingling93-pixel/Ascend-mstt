@@ -71,6 +71,27 @@ fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
     Ok(src.to_string())
 }
 
+const ALLOWED_HOST_SYSTEM_VALUES: &[&str] = &["cpu", "mem", "disk", "network", "osrt"];
+
+fn parse_host_sys(src: &str) -> Result<String, String>{
+    if src == "None" {
+        return Ok(src.to_string());
+    }
+
+    let allowed_host_sys_values: HashSet<&str> = ALLOWED_HOST_SYSTEM_VALUES.iter().cloned().collect();
+
+    let host_systems: Vec<&str> = src.split(',').map(|s| s.trim()).collect();
+
+    for host_system in &host_systems {
+        if !allowed_host_sys_values.contains(host_system) {
+            return Err(format!("Invalid NPU Trace host system: {}, Possible values: {:?}.]", host_system,
+            allowed_host_sys_values));
+        }
+    }
+    let result = host_systems.join(",");
+    Ok(result)
+}
+
 #[derive(Debug, Parser)]
 enum Command {
     /// Check the status of a dynolog process
@@ -191,6 +212,21 @@ enum Command {
         /// Types of data exported by the profiler.
         #[clap(long, value_parser = ["Text", "Db"], default_value = "Text")]
         export_type: String,
+        /// Obtain the system data on the host side.
+        #[clap(long, value_parser = parse_host_sys, default_value = "None")]
+        host_sys: String,
+        /// Whether to enable sys io.
+        #[clap(long, action)]
+        sys_io: bool,
+        /// Whether to enable sys interconnection.
+        #[clap(long, action)]
+        sys_interconnection: bool,
+        /// The domain that needs to be enabled in mstx mode.
+        #[clap(long)]
+        mstx_domain_include: Option<String>,
+        /// Domains that do not need to be enabled in mstx mode.
+        #[clap(long)]
+        mstx_domain_exclude: Option<String>,
     },
     /// Ascend MSPTI Monitor
     NpuMonitor {
@@ -373,6 +409,11 @@ fn main() -> Result<()> {
             gc_detect_threshold,
             data_simplification,
             export_type,
+            host_sys,
+            sys_io,
+            sys_interconnection,
+            mstx_domain_include,
+            mstx_domain_exclude,
         } => {
             let trigger_config = if iterations > 0 {
                 NpuTraceTriggerConfig::IterationBased {
@@ -402,6 +443,11 @@ fn main() -> Result<()> {
                 gc_detect_threshold,
                 data_simplification,
                 export_type,
+                host_sys,
+                sys_io,
+                sys_interconnection,
+                mstx_domain_include,
+                mstx_domain_exclude,
             };
             let trace_config = NpuTraceConfig {
                 log_file,
