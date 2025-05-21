@@ -17,7 +17,6 @@ import time
 import re
 import atexit
 from multiprocessing import Pool
-from pathlib import Path
 
 import numpy as np
 import mindspore as ms
