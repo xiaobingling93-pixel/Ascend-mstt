@@ -12,21 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import time
-import re
+
 import atexit
 from multiprocessing import Pool
+import os
+import re
+import time
 
 import numpy as np
 import mindspore as ms
 from mindspore import nn, ops
 
-from msprobe.mindspore.common.log import logger
 from msprobe.core.common.const import Const as CoreConst
-from msprobe.core.common.file_utils import load_npy, save_json, remove_path, load_yaml
 from msprobe.core.common.const import FileCheckConst
-
+from msprobe.core.common.file_utils import load_npy, save_json, remove_path, load_yaml
+from msprobe.mindspore.common.log import logger
 
 CONSTRUCT_FILE_NAME = "construct.json"
 DEFAULT_RANK_DIR = "rank0"
@@ -44,7 +44,10 @@ if (ms.__version__ >= "2.5.0"):
     td_in = ops.TensorDump("in")
 else:
     td_in = ops.TensorDump()
-gd = ops.DumpGradient()
+dump_gradient_op_existed = False
+if hasattr(ops, 'DumpGradient'):
+    gd = ops.DumpGradient()
+    dump_gradient_op_existed = True
 td.add_prim_attr(KEY_SIDE_EFFECT, False)
 td_in.add_prim_attr(KEY_SIDE_EFFECT, False)
 np_ms_dtype_dict = {
@@ -229,12 +232,14 @@ def rename_filename(path):
 
         # 修改文件名，增加重复调用Cell的序号
         if CoreConst.FORWARD_PATTERN in filename:
-            #Format: Cell.{cell_name}.{class_name}.{forward/backward}.{number}.{input/output}.{index}_{dtype}_{id}.npy
-            newFileName = filename.replace(CoreConst.FORWARD_PATTERN, CoreConst.FORWARD_PATTERN + str(cell_index) + CoreConst.SEP)
+            # Format: Cell.{cell_name}.{class_name}.{forward/backward}.{number}.{input/output}.{index}_{dtype}_{id}.npy
+            new_file_name = filename.replace(CoreConst.FORWARD_PATTERN,
+                                             CoreConst.FORWARD_PATTERN + str(cell_index) + CoreConst.SEP)
         if CoreConst.BACKWARD_PATTERN in filename:
-            newFileName = filename.replace(CoreConst.BACKWARD_PATTERN, CoreConst.BACKWARD_PATTERN + str(cell_index) + CoreConst.SEP)
-        os.rename(os.path.join(path, filename), os.path.join(path, newFileName))
-    logger.info(f"==========The rename_filename phase is Finished!==========")
+            new_file_name = filename.replace(CoreConst.BACKWARD_PATTERN,
+                                             CoreConst.BACKWARD_PATTERN + str(cell_index) + CoreConst.SEP)
+        os.rename(os.path.join(path, filename), os.path.join(path, new_file_name))
+    logger.info("==========The rename_filename phase is Finished!==========")
 
 
 # Extract the field between the first "." and the third to last ".", i.e. {cell_name}
@@ -344,7 +349,7 @@ def process_file(file_path):
         if ms_dtype is None:
             logger.warning(f"Get dtype None from file {file_path}")
 
-        #修改落盘文件名字，去掉TensorDump自带的数据类型和自增id字段
+        # 修改落盘文件名字，去掉TensorDump自带的数据类型和自增id字段
         data_file_name = os.path.basename(file_path)
         data_file_dir = os.path.dirname(file_path)
         parts = data_file_name.split(CoreConst.SEP)
@@ -489,11 +494,11 @@ def process(dump_path):
         while True:
             is_finished = is_download_finished(npy_path)
             if not is_finished:
-                logger.info(f"There is data being downloaded in the specified directory, continue checking...")
+                logger.info("There is data being downloaded in the specified directory, continue checking...")
             else:
-                logger.info(f"There is no data being downloaded in the specified directory, Stop checking.")
+                logger.info("There is no data being downloaded in the specified directory, Stop checking.")
                 break
-        logger.info(f"==========Start processing data that has already been stored on the disk!==========")
+        logger.info("==========Start processing data that has already been stored on the disk!==========")
         rename_filename(npy_path)
         generate_construct(npy_path)
         generate_dump_info(npy_path)
@@ -502,10 +507,10 @@ def process(dump_path):
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
                 os.rename(rank_path, new_rank_path)
-                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
+                logger.info("Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.error(f"Error renamed to {new_rank_path}: {e}")
-        logger.info(f"==========JSON file generation completed!==========")
+        logger.info("==========JSON file generation completed!==========")
 
 
 def get_yaml_keys(yaml_data):
@@ -552,8 +557,11 @@ def set_tensordump_mode(cell, input_str):
 
 
 def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
-    if net is None:
+    if not dump_gradient_op_existed or net is None:
         return
+
+    if isinstance(net, nn.Cell):
+        net = (('', net),)
 
     td_config_path = ""
     try:
@@ -571,36 +579,38 @@ def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
     first_layer_key = get_yaml_keys(yaml_data)
 
     black_list = ["grad_reducer", ""]
-    for name, cell in net.cells_and_names():
-        class_name = cell.__class__.__name__
-        # 跳过黑名单cell
-        if name in black_list:
-            logger.info(f"Cell {name}.{class_name} is skipped!")
-            continue
-        # 跳过框架内部的cell
-        if class_name.startswith(CoreConst.REPLACEMENT_CHARACTER):
-            logger.info(f"Cell {name}.{class_name} is skipped!")
-            continue
-        else:
-            #Format: Cell.{cell_name}.{class_name}
-            cell.cell_prefix = CoreConst.SEP.join([CoreConst.CELL, name, cell.__class__.__name__])
 
-        # 根据yaml配置文件设置cell的TensorDump模式
-        if class_name in first_layer_key:
-            layer_data = yaml_data.get(class_name)
-            if layer_data:
-                for child_name, child_cell in cell.cells_and_names():
-                    if child_name in layer_data:
-                        set_tensordump_mode(child_cell, layer_data[child_name])
-        top_layer_data = yaml_data.get(KEY_TOPLAYER)
-        if top_layer_data and name in top_layer_data:
-            set_tensordump_mode(cell, top_layer_data[name])
+    for name_and_model in net:
+        for name, cell in name_and_model[1].cells_and_names(name_prefix=name_and_model[0]):
+            class_name = cell.__class__.__name__
+            # 跳过黑名单cell
+            if name in black_list:
+                logger.info(f"Cell {name}.{class_name} is skipped!")
+                continue
+            # 跳过框架内部的cell
+            if class_name.startswith(CoreConst.REPLACEMENT_CHARACTER):
+                logger.info(f"Cell {name}.{class_name} is skipped!")
+                continue
+            else:
+                # Format: Cell.{cell_name}.{class_name}
+                cell.cell_prefix = CoreConst.SEP.join([CoreConst.CELL, name, cell.__class__.__name__])
 
-        # 替换construct函数
-        cell.construct = cell_construct_wrapper(cell.construct, cell)
-        logger.info(f"Cell {name}: construct function is wrapped!")
-        cell.dump_path = dump_path
-        cell.data_mode = data_mode
+            # 根据yaml配置文件设置cell的TensorDump模式
+            if class_name in first_layer_key:
+                layer_data = yaml_data.get(class_name)
+                if layer_data:
+                    for child_name, child_cell in cell.cells_and_names():
+                        if child_name in layer_data:
+                            set_tensordump_mode(child_cell, layer_data[child_name])
+            top_layer_data = yaml_data.get(KEY_TOPLAYER)
+            if top_layer_data and name in top_layer_data:
+                set_tensordump_mode(cell, top_layer_data[name])
 
-    logger.info(f"==========The cell_dump_process_start phase is Finished!==========")
+            # 替换construct函数
+            cell.construct = cell_construct_wrapper(cell.construct, cell)
+            logger.info(f"Cell {name}: construct function is wrapped!")
+            cell.dump_path = dump_path
+            cell.data_mode = data_mode
+
+    logger.info("==========The cell_dump_process_start phase is Finished!==========")
     atexit.register(process, dump_path=dump_path)

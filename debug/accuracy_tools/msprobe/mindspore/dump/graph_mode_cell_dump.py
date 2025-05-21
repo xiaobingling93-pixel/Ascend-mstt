@@ -12,15 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import mindspore as ms
-from mindspore.ops.primitive import _run_op
-from mindspore import hal, ops
 
+import os
+
+import mindspore as ms
+from mindspore import hal, ops
+from mindspore.ops.primitive import _run_op
+
+from msprobe.core.common.const import Const as CoreConst
+from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 import msprobe.mindspore.dump.cell_dump_process as cellDumper
-from msprobe.mindspore.common.const import Const
+from msprobe.mindspore.runtime import Runtime
 
 tensordump_flag = True
 try:
@@ -30,7 +34,7 @@ except ImportError:
 
 
 class GraphModeCellDump:
-    def __init__(self, config: DebuggerConfig, model):
+    def __init__(self, config: DebuggerConfig, model, strict=True):
         self.net = model
         self.white_list = []
         self.black_list = []
@@ -41,7 +45,7 @@ class GraphModeCellDump:
         self.list = config.list
         self.data_mode = config.data_mode
         self.file_format = config.file_format
-        self.check_config()
+        self.check_config(strict)
         self.set_step()
 
     @staticmethod
@@ -52,19 +56,30 @@ class GraphModeCellDump:
         _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
         ops.tensordump(step_flag, temp_tensor)
 
-    def check_config(self):
-        if self.rank:
-            raise Exception("In graph mode, cell dump does not currently support specifying rank.")
-        if self.scope:
-            raise Exception("In graph mode, cell dump does not currently support specifying scope.")
-        if self.list:
-            raise Exception("In graph mode, cell dump does not currently support specifying list.")
-        if len(self.data_mode) != 1 or self.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
-            raise Exception("In graph mode and cell dump, data_mode must be one of all, forword, backword.")
-        if self.file_format != []:
-            logger.warning("In graph mode, cell dump does not currently support specifying file_format. The file will be stored in npy format.")
+    def check_config(self, strict):
         if not self.net:
             raise Exception("The model is empty and cell dump is not enabled.")
+
+        if strict:
+            if self.rank:
+                raise Exception("In graph mode, cell dump does not currently support specifying rank.")
+            if self.scope:
+                raise Exception("In graph mode, cell dump does not currently support specifying scope.")
+            if self.list:
+                raise Exception("In graph mode, cell dump does not currently support specifying list.")
+            if len(self.data_mode) != 1 or self.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
+                raise Exception("In graph mode and cell dump, data_mode must be one of all, forword, backword.")
+            if self.file_format != []:
+                logger.warning("In graph mode, cell dump does not currently support specifying file_format."
+                               " The file will be stored in npy format.")
+        else:
+            self.rank = []
+            self.scope = []
+            self.list = []
+            self.file_format = []
+            if len(self.data_mode) != 1 or self.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
+                self.data_mode = [CoreConst.ALL]
+
         return True
 
     def set_step(self):
@@ -78,8 +93,14 @@ class GraphModeCellDump:
 
     def handle(self):
         os.environ['MS_JIT_MODULES'] = 'msprobe'
+
+        if Runtime.run_mode == Const.PYNATIVE_GRAPH_MODE:
+            dump_path = os.path.join(self.dump_path, Const.GRAPH_MODE)
+        else:
+            dump_path = self.dump_path
+
         cellDumper.start(
             net=self.net,
-            dump_path=self.dump_path,
+            dump_path=dump_path,
             data_mode=self.data_mode[0]
         )
