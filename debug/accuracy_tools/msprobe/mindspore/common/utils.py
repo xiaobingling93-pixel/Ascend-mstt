@@ -16,17 +16,20 @@
 import inspect
 import os
 import random
+import types
 
 import mindspore as ms
-
 from mindspore import ops
+from mindspore.common.jit_config import JitConfig
 from mindspore.mint import nn
 
+from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const
 from msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
+from msprobe.mindspore.common.const import Const as MsConst
 
 try:
     from mindspore._c_expression import _set_init_iter
@@ -34,8 +37,6 @@ except ImportError:
     enable_dynamic_kbyk_dump = False
 else:
     enable_dynamic_kbyk_dump = True
-
-
 
 mindtorch_check_result = None
 register_backward_hook_functions = {}
@@ -46,7 +47,7 @@ class MsprobeStep(ms.train.Callback):
     def __init__(self, debugger):
         super(MsprobeStep, self).__init__()
         self.debugger = debugger
-    
+
     def on_train_begin(self, run_context):
         self.debugger.start()
         if enable_dynamic_kbyk_dump:
@@ -227,18 +228,86 @@ def check_save_param(variable, name, save_backward):
         raise ValueError
 
 
-def get_cells_and_names(models):
-    cells_and_names_with_index = {}
+def is_graph_mode_cell_dump_allowed(config):
+    if config.task not in [Const.TENSOR] or is_mindtorch() or not hasattr(ops, 'DumpGradient'):
+        return False
+    valid_mix_level = [MsConst.CELL_AND_API, Const.LEVEL_MIX]
+    if config.level in valid_mix_level and config.execution_mode == MsConst.PYNATIVE_MODE:
+        return True
+    return config.level == MsConst.CELL or config.level == Const.LEVEL_L0
 
-    def get_cell_or_module(model):
-        return model.named_modules() if is_mindtorch() else model.cells_and_names()
 
-    if isinstance(models, (list, tuple)):
-        for index, model in enumerate(models):
-            cells_and_names_with_index[str(index)] = get_cell_or_module(model)
+@recursion_depth_decorator('msprobe.mindspore.common.utils.is_decorated_by_jit')
+def is_decorated_by_jit(func):
+    closure = getattr(func, '__closure__', [])
+    if closure:
+        for obj in closure:
+            if isinstance(obj.cell_contents, JitConfig):
+                return True
+            elif isinstance(obj.cell_contents, types.FunctionType) and hasattr(obj.cell_contents, '__closure__'):
+                if is_decorated_by_jit(obj.cell_contents):
+                    return True
+    return False
+
+
+@recursion_depth_decorator('msprobe.mindspore.common.utils.get_cells_and_names')
+def get_cells_and_names(model, cells_set=None, name_prefix=''):
+    cells_set = cells_set if cells_set else set()
+    if model in cells_set:
+        return
+
+    cells_set.add(model)
+    jit_decorated = is_decorated_by_jit(model.construct)
+    yield name_prefix, model, jit_decorated
+    if jit_decorated:
+        return
+
+    children_cells = getattr(model, '_cells')
+    for name, cell in children_cells.items():
+        if cell:
+            cells_name_prefix = f'{name_prefix}{Const.SEP}{name}' if name_prefix else name
+            jit_decorated = is_decorated_by_jit(model.construct)
+            if jit_decorated:
+                yield cells_name_prefix, cell, jit_decorated
+            else:
+                for ele in get_cells_and_names(cell, cells_set, cells_name_prefix):
+                    yield ele
+
+
+def get_cells_and_names_with_index(models):
+    cells_with_index_in_pynative_mode = {}
+    cells_with_index_in_graph_mode = {}
+
+    def distinguish_cells(cells):
+        cells_in_pynative_mode = []
+        cells_in_graph_mode = []
+        for name, cell, jit_decorated in cells:
+            if jit_decorated:
+                cells_in_graph_mode.append((name, cell))
+            else:
+                cells_in_pynative_mode.append((name, cell))
+        return cells_in_pynative_mode, cells_in_graph_mode
+
+    if is_mindtorch():
+        if isinstance(models, (list, tuple)):
+            for index, model in enumerate(models):
+                cells_with_index_in_pynative_mode[str(index)] = model.named_modules()
+        else:
+            cells_with_index_in_pynative_mode["-1"] = models.named_modules()
     else:
-        cells_and_names_with_index["-1"] = get_cell_or_module(models)
-    return cells_and_names_with_index
+        if isinstance(models, (list, tuple)):
+            for index, model in enumerate(models):
+                cells = get_cells_and_names(model)
+                cells_in_pynative_mode, cells_in_graph_mode = distinguish_cells(cells)
+                cells_with_index_in_pynative_mode[str(index)] = cells_in_pynative_mode
+                cells_with_index_in_graph_mode[str(index)] = cells_in_graph_mode
+        else:
+            cells = get_cells_and_names(models)
+            cells_in_pynative_mode, cells_in_graph_mode = distinguish_cells(cells)
+            cells_with_index_in_pynative_mode["-1"] = cells_in_pynative_mode
+            cells_with_index_in_graph_mode["-1"] = cells_in_graph_mode
+
+    return cells_with_index_in_pynative_mode, cells_with_index_in_graph_mode
 
 
 def has_kwargs_in_forward_hook():

@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from collections import defaultdict
+import os
+import types
 
 import mindspore
+from mindspore import nn
 from mindspore._c_expression import PyNativeExecutor_
 try:
     from mindspore.common.api import _MindsporeFunctionExecutor
@@ -26,7 +28,9 @@ except ImportError:
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
+from msprobe.mindspore.runtime import Runtime
 
 
 _api_register = get_api_register()
@@ -34,24 +38,20 @@ _api_register = get_api_register()
 
 def dump_jit(name, in_feat, out_feat, is_forward):
     pid = os.getpid()
-    ori_args = str(name)
-    index = ori_args.find("<")
-    if index != 0 and index != -1:
-        result = ori_args[0:index]
-    elif name is not None and "<" not in str(name):
-        result = str(name)
-    else:
-        result = "JitFunction"
+    name = name if name else "JitFunction"
     if JitDump.need_dump():
         if is_forward:
-            JitDump.jit_count[result] += 1
-            name_template = (Const.JIT + Const.SEP + result + Const.SEP +
-                             str(JitDump.jit_count[result]) + Const.SEP + Const.FORWARD)
+            if name in JitDump.jit_count:
+                JitDump.jit_count[name] += 1
+            else:
+                JitDump.jit_count[name] = 0
+            name_template = (Const.JIT + Const.SEP + name + Const.SEP +
+                             str(JitDump.jit_count[name]) + Const.SEP + Const.FORWARD)
             JitDump.data_collector.update_api_or_module_name(name_template)
             module_input_output = ModuleForwardInputsOutputs(args=in_feat, kwargs={}, output=out_feat)
             JitDump.data_collector.forward_data_collect(name_template, None, pid, module_input_output)
         else:
-            name_template = Const.JIT + Const.SEP + result + Const.SEP + str(JitDump.jit_count[result]) + Const.SEP + \
+            name_template = Const.JIT + Const.SEP + name + Const.SEP + str(JitDump.jit_count[name]) + Const.SEP + \
                             Const.BACKWARD
             JitDump.data_collector.update_api_or_module_name(name_template)
             module_input_output = ModuleBackwardInputsOutputs(grad_input=in_feat, grad_output=out_feat)
@@ -74,11 +74,11 @@ class JitDump(_MindsporeFunctionExecutor):
     def __call__(self, *args, **kwargs):
         _api_register.restore_all_api()
         out = super().__call__(*args, **kwargs)
-        if JitDump.jit_dump_switch and len(args) > 0:
-            if self.name and self.name != "construct":
+        if JitDump.jit_dump_switch and len(args) > 0 and self.name:
+            if self.name != "construct":
                 dump_jit(self.name, args, out, True)
-            else:
-                dump_jit(args[0], args, out, True)
+            elif Runtime.run_mode != MsConst.PYNATIVE_GRAPH_MODE and isinstance(args[0], nn.Cell):
+                dump_jit(args[0].__class__.__name__, args, out, True)
             JitDump.jit_enable = True
         elif len(args) == 0:
             logger.warning(f"The jit function {self.name} has no input arguments, nothing will be dumped.")
@@ -109,6 +109,9 @@ class JitDump(_MindsporeFunctionExecutor):
         else:
             output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
         if JitDump.jit_dump_switch and JitDump.jit_enable:
-            dump_jit(obj, args, None, False)
+            if isinstance(obj, types.FunctionType):
+                dump_jit(obj.__name__, args, None, False)
+            elif Runtime.run_mode != MsConst.PYNATIVE_GRAPH_MODE and isinstance(obj, nn.Cell):
+                dump_jit(obj.__class__.__name__, args, None, False)
             _api_register.register_all_api()
         return output

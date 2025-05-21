@@ -39,12 +39,13 @@ from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutp
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.mindspore.cell_processor import CellProcessor
+from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (
     get_rank_if_initialized,
     clean_input_kwargs,
     is_mindtorch,
-    get_cells_and_names,
+    get_cells_and_names_with_index,
     has_kwargs_in_forward_hook
 )
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register, ApiTemplate
@@ -52,6 +53,7 @@ from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookServic
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.kernel_dump.kernel_config import create_kernel_config_json
+from msprobe.mindspore.runtime import Runtime
 
 if is_mindtorch():
     import torch
@@ -288,7 +290,7 @@ class Service:
 
     def start(self, model=None, token_range=None):
         if self.current_iter == 0:
-            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
+            if not is_mindtorch() and self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
                 JitDump.set_data_collector(self.data_collector)
                 if hasattr(ms.common.api, "_MindsporeFunctionExecutor"):
@@ -331,7 +333,7 @@ class Service:
 
             self.register_primitive_hook()
             if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
-                self.cell_processor.register_cell_hook(self.model, self.build_hook)
+                self.cell_processor.register_cell_hook(self.model, self.build_hook, self.config)
             self.first_start = False
 
             if token_range:
@@ -392,7 +394,11 @@ class Service:
 
     def create_dirs(self):
         create_directory(self.config.dump_path)
-        self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
+        if Runtime.run_mode == MsConst.PYNATIVE_GRAPH_MODE:
+            self.dump_iter_dir = os.path.join(self.config.dump_path, MsConst.PYNATIVE_MODE, f"step{self.current_iter}")
+        else:
+            self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
+
         cur_rank = self.current_rank if self.current_rank is not None else ''
         if self.config.level == Const.LEVEL_L2:
             create_directory(self.dump_iter_dir)
@@ -439,7 +445,7 @@ class Service:
             return
 
         primitive_set = set()
-        cells_and_names_with_index = get_cells_and_names(self.model)
+        cells_and_names_with_index, _ = get_cells_and_names_with_index(self.model)
         for cells_and_names in cells_and_names_with_index.values():
             for _, cell in cells_and_names:
                 for attribute, value in vars(cell).items():

@@ -99,9 +99,9 @@ class TestDebuggerConfig(unittest.TestCase):
         config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
         instance = MagicMock()
         instance.model = MagicMock()
-        config.check_model(instance, None)
+        config.check_model(instance, None, None)
         mock_logger.info_on_rank_0.assert_called_once_with(
-            "The current level is not L0 or mix level, so the model parameters will not be used."
+            "The current level is not L0 or mix level and token_range is None, so the model parameter will not be used"
         )
 
     def test_check_model_with_model_is_none(self):
@@ -110,7 +110,7 @@ class TestDebuggerConfig(unittest.TestCase):
         instance.model = None
         config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
         with self.assertRaises(MsprobeException) as context:
-            config.check_model(instance, None)
+            config.check_model(instance, None, None)
         self.assertIn("missing the parameter 'model'", str(context.exception))
 
     def test_check_model_with_single_model(self):
@@ -121,7 +121,7 @@ class TestDebuggerConfig(unittest.TestCase):
         instance = MagicMock()
         instance.model = model1
         config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
-        config.check_model(instance, model2)
+        config.check_model(instance, model2, None)
 
         self.assertEqual(instance.model, model2)
 
@@ -134,7 +134,7 @@ class TestDebuggerConfig(unittest.TestCase):
         instance.model = model1
         config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
         with self.assertRaises(MsprobeException) as context:
-            config.check_model(instance, model2)
+            config.check_model(instance, model2, None)
         self.assertIn("must be a torch.nn.Module or list[torch.nn.Module]", str(context.exception))
 
     def test_check_and_adjust_config_with_l2_scope_not_empty(self):
