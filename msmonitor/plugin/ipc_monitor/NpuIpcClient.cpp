@@ -3,6 +3,11 @@
 
 namespace dynolog_npu {
 namespace ipc_monitor {
+bool IpcClient::Init()
+{
+    pids_ = GetPids();
+    return true;
+}
 
 bool IpcClient::RegisterInstance(int32_t id)
 {

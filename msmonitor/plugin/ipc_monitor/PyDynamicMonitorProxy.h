@@ -14,17 +14,6 @@ public:
     bool InitDyno(int npuId)
     {
         try {
-            if (!google::IsGoogleLoggingInitialized()) {
-                std::string logPath;
-                if (CreateMsmonitorLogPath(logPath)) {
-                    logPath = logPath + "/msmonitor_";
-                    google::InitGoogleLogging("MsMonitor");
-                    google::SetLogDestination(google::GLOG_INFO, logPath.c_str());
-                    google::SetLogFilenameExtension(".log");
-                } else {
-                    fprintf(stderr, "Failed to create log path, log will not record\n");
-                }
-            }
             monitor_ = DynoLogNpuMonitor::GetInstance();
             monitor_->SetNpuId(npuId);
             bool res = monitor_->Init();

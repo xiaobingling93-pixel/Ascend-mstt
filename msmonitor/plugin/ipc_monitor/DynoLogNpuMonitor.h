@@ -14,7 +14,7 @@ class DynoLogNpuMonitor : public MonitorBase, public Singleton<DynoLogNpuMonitor
     friend class Singleton<DynoLogNpuMonitor>;
 
 public:
-    DynoLogNpuMonitor() = default;
+    DynoLogNpuMonitor();
     bool Init() override;
     ErrCode DealMonitorReq(const MsptiMonitorCfg& cmd);
     std::string Poll() override;
