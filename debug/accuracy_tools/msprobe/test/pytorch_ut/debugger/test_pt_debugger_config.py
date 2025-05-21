@@ -101,7 +101,8 @@ class TestDebuggerConfig(unittest.TestCase):
         instance.model = MagicMock()
         config.check_model(instance, None)
         mock_logger.info_on_rank_0.assert_called_once_with(
-            "The current level is not L0 or mix level, so the model parameters will not be used."
+            f"The current level is not L0 or mix level and token_range is None, "
+            f"so the model parameter will not be used"
         )
 
     def test_check_model_with_model_is_none(self):
