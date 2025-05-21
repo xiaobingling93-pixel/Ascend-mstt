@@ -1,6 +1,11 @@
 import os
+import glob
+import re
+import shutil
 import unittest
 import numpy as np
+
+
 import mindspore as ms
 from mindspore import Tensor, ops, nn, grad
 
@@ -16,44 +21,48 @@ class TestDumpFunctions(unittest.TestCase):
 
     def tearDown(self):
         # 清理测试目录
-        for root, _, files in os.walk(self.dump_dir):
-            for f in files:
-                os.remove(os.path.join(root, f))
-        os.removedirs(self.dump_dir)
+        if os.path.exists(self.dump_dir):
+            shutil.rmtree(self.dump_dir)
 
-    def _assert_file_exists(self, path):
-        self.assertTrue(os.path.exists(path), f"File {path} not found")
+    def _assert_file_pattern_exists(self, dir_path, pattern):
+        """
+        检查目录下是否存在符合模式的文件
+        :param pattern: 支持通配符的模式（如 'x_float32_*.npy'）
+        """
+        matches = glob.glob(os.path.join(dir_path, pattern))
+        self.assertTrue(len(matches) > 0, 
+                    f"No file matching {pattern} in {dir_path}. Found: {os.listdir(dir_path)}")
 
     def test_save_when_net_then_dump_data_in_dir(self):
         """测试正向保存+反向梯度保存的完整流程"""
         # Cell object to be differentiated
         class Net(nn.Cell):
             def construct(self, x, y, z):
-                save(self.dump_dir, 'x', x)
+                save("./test_dump", 'x', x)
                 return x * y * z
-        x = Tensor([1, 2], mindspore.float32)
-        y = Tensor([-2, 3], mindspore.float32)
-        z = Tensor([0, 3], mindspore.float32)
+        x = Tensor([1, 2], ms.float32)
+        y = Tensor([-2, 3], ms.float32)
+        z = Tensor([0, 3], ms.float32)
         net = Net()
         output = grad(net, grad_position=(1, 2))(x, y, z)
 
 
         # 验证dump文件生成
-        step_dir = os.path.join(self.dump_dir, "step0", "rank0")
-        self._assert_file_exists(os.path.join(step_dir, "x_float32_0.npy"))
+        step_dir = os.path.join("./test_dump", "step0", "rank0")
+        self._assert_file_pattern_exists(step_dir, "x_float32_.*.npy")
 
     def test_save_grad_when_net_then_dump_in_dir(self):
-        """测试控制流中的梯度保存"""
+        """测试梯度保存"""
         class Net(nn.Cell):
             def construct(self, x, y, z):
-                save_grad(self.dump_dir, 'z', z)
+                z = save_grad("./test_dump", 'z', z)
                 return x * y * z
-        x = Tensor([1, 2], mindspore.float32)
-        y = Tensor([-2, 3], mindspore.float32)
-        z = Tensor([0, 3], mindspore.float32)
+        x = Tensor([1, 2], ms.float32)
+        y = Tensor([-2, 3], ms.float32)
+        z = Tensor([0, 3], ms.float32)
         net = Net()
         output = grad(net, grad_position=(1, 2))(x, y, z)
 
         # 验证dump文件生成
-        step_dir = os.path.join(self.dump_dir, "step0", "rank0")
-        self._assert_file_exists(os.path.join(step_dir, "z_grad_float32_0.npy"))
+        step_dir = os.path.join("./test_dump", "step0", "rank0")
+        self._assert_file_pattern_exists(step_dir, "z_grad_.*.npy")
