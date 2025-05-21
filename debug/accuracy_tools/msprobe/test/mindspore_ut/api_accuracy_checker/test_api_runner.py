@@ -123,6 +123,7 @@ class TestApiRunner(unittest.TestCase):
             api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
             first_real, *rest = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward,
                                                     api_platform)
+
             first_target = results_target[0]
             assert (abs(first_real.get_parameter() - first_target.get_parameter(tensor_platform=api_platform)) < 1e-5).all()
 
@@ -142,3 +143,4 @@ class TestApiRunner(unittest.TestCase):
         api_type_str, api_sub_name = api_runner.get_info_from_name(api_name_str=api_name)
         assert api_type_str == "MintFunctional"
         assert api_sub_name == "relu"
+        
