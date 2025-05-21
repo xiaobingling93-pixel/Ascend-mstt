@@ -44,7 +44,14 @@ class TCPServer:
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
-            endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
+            from OpenSSL import SSL
+            from twisted.internet import ssl
+            server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
+            server_context_ = server_context_factory.getContext()
+            server_context_.set_cipher_list(cipher_list)
+            server_context_.set_options(SSL.OP_NO_RENEGOTIATION)
+            server_context_.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT)
+            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, server_context_factory)
         else:
             endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
         endpoint.listen(self.factory)
