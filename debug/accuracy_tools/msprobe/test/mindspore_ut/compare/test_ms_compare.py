@@ -173,8 +173,6 @@ json_data_template = {
 }
 
 base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_ms_compare1')
-np.save(os.path.join(base_dir1, 'numpy_data.npy'), np.array([1, 2, 3]))
-torch.save(torch.tensor([1, 2, 3]), os.path.join(base_dir1, 'torch_data.pt'))
 
 
 def gen_data(is_ms=True):
@@ -195,6 +193,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def setUp(self):
         os.makedirs(base_dir1, mode=0o750, exist_ok=True)
+        np.save(os.path.join(base_dir1, 'numpy_data.npy'), np.array([1, 2, 3]))
+        torch.save(torch.tensor([2, 3, 4]), os.path.join(base_dir1, 'torch_data.pt'))
 
     def tearDown(self):
         if os.path.exists(base_dir1):
@@ -218,10 +218,13 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_read_real_data_ms(self):
         n_value, b_value = read_real_data(base_dir1, 'numpy_data.npy', base_dir1, 'numpy_data.npy', False)
-        self.assertEqual(n_value, np.array([1, 2, 3]))
+        self.assertTrue(np.array_equal(n_value, np.array([1, 2, 3])))
+        self.assertTrue(np.array_equal(b_value, np.array([1, 2, 3])))
 
     def test_read_real_data_cross_frame(self):
         n_value, b_value = read_real_data(base_dir1, 'numpy_data.npy', base_dir1, 'torch_data.pt', True)
+        self.assertTrue(np.array_equal(n_value, np.array([1, 2, 3])))
+        self.assertTrue(np.array_equal(b_value, np.array([2, 3, 4])))
 
     def test_ms_compare(self):
         generate_dump_json(base_dir1)
