@@ -121,9 +121,8 @@ class TestApiRunner(unittest.TestCase):
         ]
         for test_case in test_cases:
             api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
-            real_list, *rest = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward,
+            first_real, *rest = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward,
                                                     api_platform)
-            first_real = real_list[0]
             first_target = results_target[0]
             assert (abs(first_real.get_parameter() - first_target.get_parameter(tensor_platform=api_platform)) < 1e-5).all()
 
