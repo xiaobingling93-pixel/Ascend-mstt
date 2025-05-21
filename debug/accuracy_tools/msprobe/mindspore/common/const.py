@@ -24,14 +24,20 @@ class Const:
     CELL = "cell"
     API = "api"
     KERNEL = "kernel"
+    CELL_AND_API = 'cell_and_api'
     TOOL_LEVEL_DICT = {
         CoreConst.LEVEL_L0: CELL,
         CoreConst.LEVEL_L1: API,
-        CoreConst.LEVEL_L2: KERNEL
+        CoreConst.LEVEL_L2: KERNEL,
+        CoreConst.LEVEL_MIX: CELL_AND_API
     }
+
     PYNATIVE_MODE = "pynative"
+    GRAPH_MODE = "graph"
     GRAPH_GE_MODE = "graph_ge"
     GRAPH_KBYK_MODE = "graph_kbyk"
+    PYNATIVE_GRAPH_MODE = 'pynative_graph'
+
     JIT_LEVEL = "jit_level"
     JIT_LEVEL_O0 = "O0"
     JIT_LEVEL_O1 = "O1"

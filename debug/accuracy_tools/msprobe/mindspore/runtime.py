@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from msprobe.mindspore.common.const import Const
+
+
 class Runtime:
     step_count: int = 0
     rank_id: int = -1
     is_running: bool = False
+    run_mode: str = Const.PYNATIVE_MODE

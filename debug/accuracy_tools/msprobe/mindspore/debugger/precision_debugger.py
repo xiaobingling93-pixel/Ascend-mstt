@@ -25,7 +25,11 @@ from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, check_token_range
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
-from msprobe.mindspore.common.utils import set_register_backward_hook_functions, check_save_param
+from msprobe.mindspore.common.utils import (
+    set_register_backward_hook_functions,
+    check_save_param,
+    is_graph_mode_cell_dump_allowed
+)
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -106,13 +110,12 @@ class PrecisionDebugger:
         if enable_dynamic_kbyk_dump:
             _dump_set_dynamic()
 
-
     @staticmethod
     def check_input_params(args):
         if args.config_path is not None:
             if not isinstance(args.config_path, str):
                 raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string")
+                    MsprobeException.INVALID_PARAM_ERROR, "config_path must be a string")
             file_checker = FileChecker(
                 file_path=args.config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
             file_checker.common_check()
@@ -124,7 +127,7 @@ class PrecisionDebugger:
         if args.dump_path is not None:
             if not isinstance(args.dump_path, str):
                 raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string")
+                    MsprobeException.INVALID_PARAM_ERROR, "dump_path must be a string")
 
         if args.level is not None and args.level not in Const.LEVEL_LIST:
             raise MsprobeException(
@@ -149,7 +152,7 @@ class PrecisionDebugger:
             return MsConst.PYNATIVE_MODE
 
     @staticmethod
-    def _is_graph_dump(config):
+    def _is_graph_dump(config: DebuggerConfig):
         if config.level != MsConst.KERNEL:
             return False
         if not config.list:
@@ -214,23 +217,24 @@ class PrecisionDebugger:
     @classmethod
     def step(cls):
         instance = cls._instance
+
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
-        if instance.config.execution_mode != MsConst.PYNATIVE_MODE and instance.config.level == MsConst.CELL:
-            GraphModeCellDump.step()
-            return
+
         if instance.service:
             instance.service.step()
-        HOOKCell.cell_count = defaultdict(int)
-        CellProcessor.reset_cell_stats()
-
-        Runtime.step_count += 1
+        if is_graph_mode_cell_dump_allowed(instance.config):
+            GraphModeCellDump.step()
         if enable_dynamic_kbyk_dump:
             _dump_step(1)
         if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().step()
+
+        HOOKCell.cell_count = defaultdict(int)
+        CellProcessor.reset_cell_stats()
+        Runtime.step_count += 1
 
     @classmethod
     def monitor(cls, opt):
@@ -302,7 +306,7 @@ class PrecisionDebugger:
             return False
         else:
             return instance.config.task != Const.FREE_BENCHMARK and not instance._is_graph_dump(instance.config)
-    
+
     @classmethod
     def _need_msprobe_c(cls):
         instance = cls._instance
