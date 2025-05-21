@@ -561,7 +561,6 @@ def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
         import mindformers
         mindformers_file = mindformers.__file__
         mindformers_dir = os.path.dirname(mindformers_file)
-        mindformers_dir = Path(mindformers_dir).resolve()
         td_config_path = os.path.join(mindformers_dir, "configuration", "layer_mapping.yaml")
     except ImportError:
         logger.warning("The configuration file in mindformers was not loaded, the default mode will be used.")
