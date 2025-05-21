@@ -13,7 +13,7 @@ from msprobe.mindspore import save, save_grad
 @pytest.fixture(autouse=True)
 def setup_teardown():
     # Setup
-    ms.set_context(mode=ms.GRAPH_MODE, jit_config={'jit_level': "O2"}, device_target="Ascend")
+    ms.set_context(mode=ms.GRAPH_MODE, jit_config={'jit_level': "O2"}, device_target="CPU")
     dump_dir = "./test_dump"
     os.makedirs(dump_dir, exist_ok=True)
     
