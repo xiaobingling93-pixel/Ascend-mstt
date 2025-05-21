@@ -20,11 +20,13 @@ from msprobe.core.common.file_utils import load_yaml
 
 
 class ModeConfig:
-    def __init__(self, stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=Const.SUMMARY):
+    def __init__(self, stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=Const.SUMMARY,
+                 compared_file_type=Const.DUMP_JSON_FILE):
         self.stack_mode = stack_mode
         self.auto_analyze = auto_analyze
         self.fuzzy_match = fuzzy_match
         self.dump_mode = dump_mode
+        self.compared_file_type = compared_file_type
 
 
 class MappingConfig:

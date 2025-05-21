@@ -26,28 +26,39 @@ from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
+json_file_mapping = {
+    Const.DUMP_JSON_FILE: "dump.json",
+    Const.DEBUG_JSON_FILE: "debug.json",
+    Const.STACK_JSON_FILE: "stack.json"
+}
 
-def extract_json(dirname, stack_json=False):
+
+def extract_json(dirname, json_file_type):
     json_path = ''
     for filename in os.listdir(dirname):
-        target_file_name = 'stack.json' if stack_json else 'dump.json'
+        target_file_name = json_file_mapping.get(json_file_type)
+        if target_file_name is None:
+            logger.error(f'extract_json failed, invalid json_file_type: {json_file_type}.')
+            raise CompareException(CompareException.INVALID_KEY_ERROR)
         if filename == target_file_name:
             json_path = os.path.join(dirname, filename)
             break
 
     # Provide robustness on invalid directory inputs
     if not json_path:
-        if stack_json:
+        if json_file_type == Const.STACK_JSON_FILE:
             logger.warning(f'stack.json is not found in dump dir {dirname}.')
-        else:
+        elif json_file_type == Const.DUMP_JSON_FILE:
             logger.error(f'dump.json is not found in dump dir {dirname}.')
-            raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
+        elif json_file_type == Const.DEBUG_JSON_FILE:
+            logger.warning(f'debug.json is not found in dump dir {dirname}.')
+
     return json_path
 
 
 def set_stack_json_path(input_param):
     npu_data_dir = os.path.dirname(input_param.get("npu_json_path"))
-    stack_path = extract_json(npu_data_dir, stack_json=True)
+    stack_path = extract_json(npu_data_dir, json_file_type=Const.STACK_JSON_FILE)
     input_param["stack_json_path"] = stack_path if stack_path else None
     return bool(stack_path)
 
@@ -83,7 +94,9 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 
 def read_op(op_data, op_name):
-    if Const.PARAMS_GRAD in op_name.split(Const.SEP):
+    split_name = op_name.split(Const.SEP)
+    if Const.DEBUG in split_name or \
+        Const.PARAMS_GRAD in split_name:
         op_parsed_list = op_item_parse(op_data, op_name)
     else:
         op_parsed_list = []
@@ -191,6 +204,7 @@ def merge_tensor(tensor_list, dump_mode):
         CompareConst.OUTPUT_STRUCT,
         CompareConst.PARAMS_STRUCT,
         CompareConst.PARAMS_GRAD_STRUCT,
+        CompareConst.DEBUG_STRUCT,
         Const.SUMMARY,
         Const.STACK_INFO
     ]
@@ -254,12 +268,17 @@ def get_name_and_state(name):
     name = 'Functional.pad.0.backward.output.0'
     return: ('Functional.pad.0.backward.', 'output')
 
-    state type: input, output, kwargs, parameters, parameters_grad
+    name = 'x_tensor.0.debug.{index}'
+    return: ('x_tensor.0.', 'debug')
+
+    state type: input, output, kwargs, parameters, parameters_grad, debug
     """
     if not isinstance(name, str):
         logger.error(f'Invalid name: {name}, type should be string, please check.')
         raise CompareException(CompareException.INVALID_API_NAME_ERROR)
 
+    if Const.DEBUG in name.split(Const.SEP):
+        return name.split(Const.DEBUG)[0], Const.DEBUG
     if Const.PARAMS_GRAD in name.split(Const.SEP):
         return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
 
@@ -542,3 +561,34 @@ def _compare_parser(parser):
                         help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)
+
+
+def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
+    if kwargs.get('suffix'):
+        logger.error("Argument 'suffix' is not supported for compare_distributed.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    is_print_compare_log = kwargs.get('is_print_compare_log', True)
+    # get the ranks and match by order
+    npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
+    bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
+    if len(npu_ranks) != len(bench_ranks):
+        logger.error('The number of ranks in the two runs are different. '
+                     'Unable to match the ranks. Please use another folder to compare '
+                     'or use compare() api and manually match the ranks.')
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    for nr, br in zip(npu_ranks, bench_ranks):
+        npu_data_dir = os.path.join(npu_dump_dir, nr)
+        bench_data_dir = os.path.join(bench_dump_dir, br)
+        for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
+            npu_path = extract_json(npu_data_dir, file_type)
+            bench_path = extract_json(bench_data_dir, file_type)
+            if npu_path == "" or bench_path == "":
+                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
+                    ' skip comparing.')
+                continue
+            dump_result_param = {
+                'npu_json_path': npu_path,
+                'bench_json_path': bench_path,
+                'is_print_compare_log': is_print_compare_log
+            }
+            compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)

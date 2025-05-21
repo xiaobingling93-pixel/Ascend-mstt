@@ -56,7 +56,8 @@ from msprobe.core.common.utils import (CompareException,
                                        check_str_param,
                                        is_json_file,
                                        detect_framework_by_dump_json,
-                                       is_save_variable_valid)
+                                       is_save_variable_valid,
+                                       get_file_type)
 from msprobe.core.common.decorator import recursion_depth_decorator
 
 
@@ -222,22 +223,48 @@ class TestUtils(TestCase):
         }
 
         input_param["npu_json_path"] = "npu_path"
-        with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
+                patch("msprobe.core.common.utils.get_file_type", return_value=Const.DUMP_JSON_FILE):
             dump_mode = get_dump_mode(input_param)
         self.assertEqual(dump_mode, Const.ALL)
 
         npu_json["task"] = Const.STATISTICS
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
-                patch("msprobe.core.common.utils.md5_find", return_value=True):
+                patch("msprobe.core.common.utils.md5_find", return_value=True), \
+                patch("msprobe.core.common.utils.get_file_type", return_value=Const.DUMP_JSON_FILE):
             dump_mode = get_dump_mode(input_param)
         self.assertEqual(dump_mode, Const.MD5)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
-        with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
+                patch("msprobe.core.common.utils.get_file_type", return_value=Const.DUMP_JSON_FILE):
             with self.assertRaises(CompareException) as context:
                 dump_mode = get_dump_mode(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare applies only to task is tensor or statistics")
+
+    def test_get_file_type(self):
+        # 测试有效的 file_path (dump.json)
+        file_path = 'path/to/dump.json'
+        expected_file_type = Const.DUMP_JSON_FILE
+        self.assertEqual(get_file_type(file_path), expected_file_type)
+
+        # 测试有效的 file_path (debug.json)
+        file_path = 'path/to/debug.json'
+        expected_file_type = Const.DEBUG_JSON_FILE
+        self.assertEqual(get_file_type(file_path), expected_file_type)
+
+        # 测试无效的 file_path
+        file_path = 'path/to/unknown.json'
+        with self.assertRaises(CompareException) as context:
+            get_file_type(file_path)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+
+        # 测试非字符串类型的 file_path
+        file_path = 12345  # 非字符串类型
+        with self.assertRaises(CompareException) as context:
+            get_file_type(file_path)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
 
     @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
