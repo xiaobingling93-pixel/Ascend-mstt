@@ -180,7 +180,7 @@ class TestService(unittest.TestCase):
         mock_check_model_valid.return_value = self.service.model
         self.should_stop_service = False
         self.service.start(self.service.model)
-        mock_check_model_valid.assert_called_with(self.service.model)
+        mock_check_model_valid.assert_called_with(self.service.model, None)
         self.assertTrue(self.service.switch)
         self.service.stop()
         self.assertFalse(self.service.switch)

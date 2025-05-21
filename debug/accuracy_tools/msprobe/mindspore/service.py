@@ -86,7 +86,7 @@ class Service:
         self.ori_customer_func = {}
 
     @staticmethod
-    def check_model_valid(models, token_range):
+    def check_model_valid(models, token_range=None):
         if token_range and not models:
             error_info = "The 'model' parameter must be provided when token_range is not None"
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
