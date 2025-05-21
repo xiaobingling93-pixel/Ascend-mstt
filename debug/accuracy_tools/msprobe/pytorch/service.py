@@ -53,6 +53,7 @@ class Service:
         self.current_iter = 0
         self.loop = 0
         self.init_step = 0
+        self.cur_token_id = 0
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
@@ -241,7 +242,29 @@ class Service:
 
         return pre_forward_hook_fn, forward_hook_fn, backward_hook_fn
 
-    def start(self, model):
+    def register_infer_count_hook(self, root_model, token_range):
+        """
+        通过root_model执行的轮次来判断当前在第几个token
+        param root_model: 需要采集的推理模型
+        param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
+        return: None
+        """
+        def infer_hook(model, args):
+            if self.cur_token_id == token_range[0]:
+                self.switch = True
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
+            elif token_range[0] < self.cur_token_id <= token_range[1]:
+                logger.debug(f"Current token id: {self.cur_token_id}.")
+            elif self.cur_token_id == token_range[1] + 1:
+                self.switch = False
+                logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
+            self.cur_token_id += 1
+        if isinstance(root_model, list):
+            root_model = root_model[0]
+            logger.warning("Infer model can only input one to support token_range, choose the first one.")
+        root_model.register_forward_pre_hook(infer_hook)
+
+    def start(self, model, token_range=None):
         self.current_iter = self.loop + self.init_step
         self.data_collector.update_iter(self.current_iter)
         if self.config.level == Const.LEVEL_DEBUG:
@@ -250,6 +273,7 @@ class Service:
             return
 
         self.model = model
+        self.cur_token_id = 0
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -259,13 +283,19 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
+
             self.register_module_hook()
             if self.config.level == Const.LEVEL_MIX:
                 register_optimizer_hook(self.data_collector)
             self.first_start = False
+
+            if token_range:
+                self.register_infer_count_hook(self.model, token_range)
+
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
-        self.switch = True
+        if token_range is None:
+            self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if not self.config.online_run_ut:
             self.create_dirs()

@@ -157,11 +157,17 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [MSAdapter 场景的溢出检测](./docs/30.overflow_check_MSAdapter.md)
 
-### 13 训练前配置检查
+### 13 训练检查
 
-该工具主要适用于对比两个环境下可能影响训练精度的配置差异， 推荐在精度对比前使用。
+该工具主要包括：
+
+训练前或精度比对前，对比两个环境下可能影响训练精度的配置差异。
 
 [PyTorch 训练前配置检查](./docs/31.config_check.md)
+
+训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
+
+[checkpoint比对](./docs/32.ckpt_compare.md)
 
 ## 📑 补充材料
 

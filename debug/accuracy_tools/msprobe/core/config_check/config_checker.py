@@ -19,7 +19,7 @@ import shutil
 import pandas as pd
 
 from msprobe.core.common.file_utils import save_excel, split_zip_file_path, \
-    create_directory, extract_zip, make_dir
+    create_directory, extract_zip
 from msprobe.core.common.framework_adapter import FmkAdp
 from msprobe.core.config_check.checkers.base_checker import PackInput
 from msprobe.core.config_check.utils.utils import config_checking_print
@@ -39,11 +39,7 @@ class ConfigChecker:
         file_path, file_name = split_zip_file_path(self.pack_input.output_zip_path)
         if not os.path.exists(file_path):
             create_directory(file_path)
-            self.pack()
-        else:
-            if os.path.exists(self.pack_input.output_zip_path):
-                raise Exception("The output file path already exist!")
-            self.pack()
+        self.pack()
 
     @staticmethod
     def compare(bench_zip_path, cmp_zip_path, output_path, fmk=Const.PT_FRAMEWORK):
