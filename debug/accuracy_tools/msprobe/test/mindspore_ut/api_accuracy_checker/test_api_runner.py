@@ -121,10 +121,20 @@ class TestApiRunner(unittest.TestCase):
         ]
         for test_case in test_cases:
             api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
-            results_real = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
-            for res_real, res_target in zip(results_real, results_target):
-                assert (abs(res_real.get_parameter() - res_target.get_parameter(tensor_platform=api_platform)) < 1e-5).all()
+            output = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward,
+                                                    api_platform)
 
+            # 如果返回的是 tuple，就拿第一个元素；否则直接当 list 用
+            if isinstance(output, tuple):
+                results_real = output[0]
+            else:
+                results_real = output
+            # 下面跟原来测试逻辑一模一样
+            for res_real, res_target in zip(results_real, results_target):
+                assert (abs(
+                    res_real.get_parameter()
+                    - res_target.get_parameter(tensor_platform=api_platform)
+                ) < 1e-5).all()
 
     def test_get_api_instance(self):
         #api_type_str, api_sub_name, api_platform, result_api
