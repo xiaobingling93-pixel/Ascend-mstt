@@ -44,6 +44,7 @@ if (ms.__version__ >= "2.5.0"):
     td_in = ops.TensorDump("in")
 else:
     td_in = ops.TensorDump()
+gd = ops.DumpGradient()
 td.add_prim_attr(KEY_SIDE_EFFECT, False)
 td_in.add_prim_attr(KEY_SIDE_EFFECT, False)
 np_ms_dtype_dict = {
@@ -84,24 +85,13 @@ def gen_file_path(dump_path, cell_prefix, suffix, io_type, index):
     return os.path.join(data_path, file_name)
 
 
-def partial_func(func, dump_path, cell_prefix, index, io_type):
-    def newfunc(*args, **kwargs):
-        return func(dump_path, cell_prefix, index, io_type, *args, **kwargs)
-    return newfunc
-
-
-def clip_gradient(dump_path, cell_prefix, index, io_type, dx):
-    if io_type == KEY_OUTPUT:
-        temp = td(gen_file_path(dump_path, cell_prefix, KEY_BACKWARD, io_type, index), dx)
-        dx = ops.depend(dx, temp)
-    elif io_type == KEY_INPUT:
-        temp = td_in(gen_file_path(dump_path, cell_prefix, KEY_BACKWARD, io_type, index), dx)
-        dx = ops.depend(dx, temp)
-    return dx
-
-
-def need_tensordump_in(cell_obj, attr):
-    return hasattr(cell_obj, attr) and getattr(cell_obj, attr) == "in"
+def need_tensordump_in(cell_obj, attr, index):
+    if not hasattr(cell_obj, attr):
+        return False
+    attr_values = getattr(cell_obj, attr)
+    if index >= len(attr_values):
+        return False
+    return attr_values[index] == "in"
 
 
 def cell_construct_wrapper(func, self):
@@ -116,9 +106,14 @@ def cell_construct_wrapper(func, self):
         # The inputs of the cell.
         for index, item in enumerate(args):
             if backward_or_all and ops.is_tensor(item):
-                item = self.output_clips[index](item)
+                if need_tensordump_in(self, 'input_dump_mode', index):
+                    item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
+                              item, "in")
+                else:
+                    item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
+                              item, "out")
             if forward_or_all and ops.is_tensor(item):
-                if need_tensordump_in(self, 'input_dump_mode'):
+                if need_tensordump_in(self, 'input_dump_mode', index):
                     temp = td_in(
                         gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_INPUT, index),
                         item
@@ -137,9 +132,14 @@ def cell_construct_wrapper(func, self):
         if isinstance(out, tuple):
             for index, item in enumerate(out):
                 if backward_or_all and ops.is_tensor(item):
-                    item = self.input_clips[index](item)
+                    if need_tensordump_in(self, 'output_dump_mode', index):
+                        item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
+                                  item, "in")
+                    else:
+                        item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
+                                  item, "out")
                 if forward_or_all and ops.is_tensor(item):
-                    if need_tensordump_in(self, 'output_dump_mode'):
+                    if need_tensordump_in(self, 'output_dump_mode', index):
                         temp = td_in(
                             gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, index),
                             item
@@ -157,9 +157,14 @@ def cell_construct_wrapper(func, self):
             return out_list
         else:
             if backward_or_all:
-                out = self.input_clips[0](out)
+                if need_tensordump_in(self, 'output_dump_mode', index):
+                    out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
+                             out, "in")
+                else:
+                    out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
+                             out, "out")
             if forward_or_all and ops.is_tensor(out):
-                if need_tensordump_in(self, 'output_dump_mode'):
+                if need_tensordump_in(self, 'output_dump_mode', index):
                     temp = td_in(
                         gen_file_path(self.dump_path, self.cell_prefix, KEY_FORWARD, KEY_OUTPUT, 0),
                         out
@@ -219,7 +224,7 @@ def rename_filename(path):
             filename_dict[name_field] += 1
         else:
             filename_dict[name_field] = 0
-  
+
         cell_index = filename_dict[name_field]
 
         # 修改文件名，增加重复调用Cell的序号
@@ -324,7 +329,7 @@ def process_file(file_path):
     try:
         # 读取.npy文件内容
         npy_content = load_npy(file_path)
-        logger.info(f"Loaded {file_path}: shape is {npy_content.shape}, dtype is {npy_content.dtype}")
+        logger.debug(f"Loaded {file_path}: shape is {npy_content.shape}, dtype is {npy_content.dtype}")
 
         # 文件名举例:Cell.network._backbone.loss.CrossEntropyLoss.forward.0.input.0_float32_165.npy
         parts = os.path.basename(file_path).split(CoreConst.SEP)
@@ -348,7 +353,7 @@ def process_file(file_path):
             pre_parts = CoreConst.SEP.join(parts[:-2])
             new_file_name = pre_parts + CoreConst.SEP + param_index + CoreConst.NUMPY_SUFFIX
             os.rename(os.path.join(data_file_dir, data_file_name), os.path.join(data_file_dir, new_file_name))
-            logger.info(f"{data_file_name} is renamed to {new_file_name}")
+            logger.debug(f"{data_file_name} is renamed to {new_file_name}")
         else:
             logger.warning(f"Failed to rename {data_file_name}.")
             new_file_name = data_file_name
@@ -493,6 +498,13 @@ def process(dump_path):
         generate_construct(npy_path)
         generate_dump_info(npy_path)
         generate_stack_info(npy_path)
+        if rank_id is None:
+            new_rank_path = os.path.join(step_path, CoreConst.RANK)
+            try:
+                os.rename(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
+            except Exception as e:
+                logger.error(f"Error renamed to {new_rank_path}: {e}")
         logger.info(f"==========JSON file generation completed!==========")
 
 
@@ -520,16 +532,37 @@ def get_tensordump_mode(input_str):
     return None, None
 
 
+def str_to_list(input_str):
+    # 去除首尾的方括号
+    input_str = input_str.strip('[]')
+    # 按逗号分割并去除元素两端的空格
+    return [item.strip() for item in input_str.split(',')]
+
+
 def set_tensordump_mode(cell, input_str):
     first_str, second_str = get_tensordump_mode(input_str)
+    inputs_mode = []
+    outputs_mode = []
     if first_str and second_str:
-        cell.input_dump_mode = first_str
-        cell.output_dump_mode = second_str
+        inputs_mode = str_to_list(first_str)
+        outputs_mode = str_to_list(second_str)
+    if inputs_mode and outputs_mode:
+        cell.input_dump_mode = inputs_mode
+        cell.output_dump_mode = outputs_mode
 
 
-def start(net=None, dump_path="./", data_mode=CoreConst.ALL, td_config_path=''):
+def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
     if net is None:
         return
+
+    td_config_path = ""
+    try:
+        import mindformers
+        mindformers_file = mindformers.__file__
+        mindformers_dir = os.path.dirname(mindformers_file)
+        td_config_path = os.path.join(mindformers_dir, "configuration", "layer_mapping.yaml")
+    except ImportError:
+        logger.warning("The configuration file in mindformers was not loaded, the default mode will be used.")
 
     if td_config_path == "":
         yaml_data = {}
@@ -568,16 +601,6 @@ def start(net=None, dump_path="./", data_mode=CoreConst.ALL, td_config_path=''):
         logger.info(f"Cell {name}: construct function is wrapped!")
         cell.dump_path = dump_path
         cell.data_mode = data_mode
-        cell.input_clips = []
-        cell.output_clips = []
-        # It is assumed that each cell has a maximum of 50 outputs and 50 inputs.
-        for i in range(50):
-            cell.input_clips.append(
-                ops.InsertGradientOf(partial_func(clip_gradient, cell.dump_path, cell.cell_prefix, i, KEY_INPUT))
-            )
-            cell.output_clips.append(
-                ops.InsertGradientOf(partial_func(clip_gradient, cell.dump_path, cell.cell_prefix, i, KEY_OUTPUT))
-            )
 
     logger.info(f"==========The cell_dump_process_start phase is Finished!==========")
     atexit.register(process, dump_path=dump_path)

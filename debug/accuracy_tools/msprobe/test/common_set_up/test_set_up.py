@@ -25,6 +25,11 @@ except ImportError:
     distributed = MagicMock()
     setattr(mint, 'distributed', distributed)
 
+from mindspore import ops
+if not hasattr(ops, 'DumpGradient'):
+    DumpGradient = MagicMock()
+    setattr(ops, 'DumpGradient', DumpGradient)
+
 # ensure not to import torch_npu
 from msprobe.mindspore import service
 from msprobe.mindspore.monitor import common_func
