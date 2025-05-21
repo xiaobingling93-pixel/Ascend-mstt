@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import numpy as np
 
+from msprobe.pytorch.compare import utils
 from msprobe.pytorch.compare.utils import read_pt_data
 from msprobe.test.core_ut.compare.test_acc_compare import generate_pt
 from msprobe.core.common.utils import CompareException
@@ -40,32 +41,32 @@ class TestReadPtData(unittest.TestCase):
         result = read_pt_data(pt_dir, None)
         self.assertEqual(result, None)
 
-    @patch("your_module.load_pt")
-    @patch("your_module.FileChecker")
+    @patch.object(utils, 'load_pt')
+    @patch.object(utils, 'FileChecker')
     def test_read_pt_data_runtime_error(self, mock_file_checker_class, mock_load_pt):
         mock_file_checker = mock.Mock()
-        mock_file_checker.common_check.return_value = "fake/path/file.pt"
+        mock_file_checker.common_check.return_value = 'fake/path/file.pt'
         mock_file_checker_class.return_value = mock_file_checker
 
-        mock_load_pt.side_effect = RuntimeError("failed to load")
+        mock_load_pt.side_effect = RuntimeError('failed to load')
 
         with self.assertRaises(CompareException) as context:
-            read_pt_data("fake/path", "file.pt")
-        assert self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
+            read_pt_data('fake/path', 'file.pt')
+        self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
 
-    @patch("your_module.load_pt")
-    @patch("your_module.FileChecker")
+    @patch.object(utils, 'load_pt')
+    @patch.object(utils, 'FileChecker')
     def test_read_pt_data_attribute_error(self, mock_file_checker_class, mock_load_pt):
         mock_file_checker = mock.Mock()
-        mock_file_checker.common_check.return_value = "fake/path/file.pt"
+        mock_file_checker.common_check.return_value = 'fake/path/file.pt'
         mock_file_checker_class.return_value = mock_file_checker
 
         class FakeTensor:
             def detach(self):
-                raise AttributeError("no detach")
+                raise AttributeError('no detach')
 
         mock_load_pt.return_value = FakeTensor()
 
         with self.assertRaises(CompareException) as context:
-            read_pt_data("fake/path", "file.pt")
-        assert self.assertEqual(context.exception.code, CompareException.DETACH_ERROR)
+            read_pt_data('fake/path', 'file.pt')
+        self.assertEqual(context.exception.code, CompareException.DETACH_ERROR)
