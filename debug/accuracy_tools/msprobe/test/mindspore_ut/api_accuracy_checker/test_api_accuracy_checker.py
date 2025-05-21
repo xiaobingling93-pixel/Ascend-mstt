@@ -44,7 +44,7 @@ class Args:
         self.api_info_file = api_info_file if api_info_file is not None else os.path.join(directory, "files", "api_info_statistics.json")
         self.out_path = out_path if out_path is not None else os.path.join(directory, "files")
         self.result_csv_path = result_csv_path if result_csv_path is not None else ""
-
+        self.save_error_data = save_error_data 
 
 class TestApiAccuracyChecker(unittest.TestCase):
 
