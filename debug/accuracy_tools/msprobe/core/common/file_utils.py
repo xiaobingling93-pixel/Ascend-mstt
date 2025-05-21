@@ -784,16 +784,17 @@ def create_file_in_zip(zip_file_path, file_name, content):
     if zip_size + sys.getsizeof(content) > FileCheckConst.MAX_ZIP_SIZE:
         raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
     try:
-        proc_lock.acquire()
-        with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
-            zip_info = zipfile.ZipInfo(file_name)
-            zip_info.compress_type = zipfile.ZIP_DEFLATED
-            zip_file.writestr(zip_info, content)
+        with open(zip_file_path, 'a+') as f:  # 必须用 'a+' 模式才能 flock
+            # 2. 获取排他锁（阻塞直到成功）
+            fcntl.flock(f, fcntl.LOCK_EX)  # LOCK_EX: 独占锁
+            with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
+                zip_info = zipfile.ZipInfo(file_name)
+                zip_info.compress_type = zipfile.ZIP_DEFLATED
+                zip_file.writestr(zip_info, content)
+            fcntl.flock(f, fcntl.LOCK_UN)
     except Exception as e:
         logger.error(f'Save content to file "{os.path.basename(zip_file_path)}" failed.')
         raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
-    finally:
-        proc_lock.release()
     change_mode(zip_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 

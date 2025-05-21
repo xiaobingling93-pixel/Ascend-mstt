@@ -180,7 +180,7 @@ class TestService(unittest.TestCase):
         mock_check_model_valid.return_value = self.service.model
         self.should_stop_service = False
         self.service.start(self.service.model)
-        mock_check_model_valid.assert_called_with(self.service.model)
+        mock_check_model_valid.assert_called_with(self.service.model, None)
         self.assertTrue(self.service.switch)
         self.service.stop()
         self.assertFalse(self.service.switch)
@@ -338,8 +338,8 @@ class TestService(unittest.TestCase):
         cell_mock.primitive_api = primitive_attr
         primitive_combined_name = primitive_name + Const.SEP + primitive_attr.__class__.__name__
         self.service.model = mock_model
-        with patch('msprobe.mindspore.service.get_cells_and_names') as mock_get_cells_and_names:
-            mock_get_cells_and_names.return_value = {'-1': [("cell_name", cell_mock)]}
+        with patch('msprobe.mindspore.service.get_cells_and_names_with_index') as mock_get_cells_and_names:
+            mock_get_cells_and_names.return_value = ({'-1': [("cell_name", cell_mock)]}, {})
             self.service.register_primitive_hook()
         self.assertTrue(hasattr(primitive_attr.__class__, '__call__'))
         self.assertEqual(self.service.primitive_hook_service.wrap_primitive.call_args[0][1],

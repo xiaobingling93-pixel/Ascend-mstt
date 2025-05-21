@@ -39,11 +39,7 @@ class ConfigChecker:
         file_path, file_name = split_zip_file_path(self.pack_input.output_zip_path)
         if not os.path.exists(file_path):
             create_directory(file_path)
-            self.pack()
-        else:
-            if os.path.exists(self.pack_input.output_zip_path):
-                raise Exception("The output file path already exist!")
-            self.pack()
+        self.pack()
 
     @staticmethod
     def compare(bench_zip_path, cmp_zip_path, output_path, fmk=Const.PT_FRAMEWORK):

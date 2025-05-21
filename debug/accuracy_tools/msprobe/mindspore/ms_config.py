@@ -28,7 +28,6 @@ class TensorConfig(BaseConfig):
         super().__init__(json_config)
         self.check_mode = None
         self.file_format = json_config.get("file_format")
-        self.td_config_path = json_config.get("td_config_path")
         self.check_config()
         self._check_summary_mode()
         self._check_config()

@@ -1,0 +1,1185 @@
+import os
+import re
+import stat
+import time
+from enum import Enum, auto
+from abc import ABC, abstractmethod
+import csv
+
+import gc
+import sys
+from pathlib import Path
+import mindspore
+from mindspore import ops
+
+
+from tabulate import tabulate
+
+import logging
+
+import traceback
+
+
+
+def error_log_with_exp(self, msg: str, exp: Exception):
+    """
+    msg: 你的错误提示
+    exp: 你要记录的 Exception 实例
+    """
+    # 将 Exception 的类型、消息和 traceback 通过 exc_info 参数一并传给 .error()
+    self.error(msg, exc_info=(type(exp), exp, exp.__traceback__))
+
+# 把它挂到 Logger 上
+logging.Logger.error_log_with_exp = error_log_with_exp
+
+
+
+# 1. 基本配置：设置日志级别为 INFO，默认输出到控制台
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s [%(levelname)s] %(message)s',
+                    datefmt='%H:%M:%S')
+
+logger = logging.getLogger()
+
+
+# ======= 常数类 =======
+
+class CodedException(Exception):
+    def __init__(self, code, error_info=''):
+        super().__init__()
+        self.code = code
+        self.error_info = self.err_strs.get(code) + error_info
+
+    def __str__(self):
+        return self.error_info
+
+
+class ApiAccuracyCheckerException(CodedException):
+    ParseJsonFailed = 0
+    UnsupportType = 1
+    WrongValue = 2
+    ApiWrong = 3
+    err_strs = {
+        ParseJsonFailed: "[msprobe] Api Accuracy Checker parse json failed: ",
+        UnsupportType: "[msprobe] Api Accuracy Checker get unsupported type: ",
+        WrongValue: "[msprobe] Api Accuracy Checker get wrong value: ",
+        ApiWrong: "[msprobe] Api Accuracy Checker something wrong with api: ",
+    }
+
+
+class FileCheckConst:
+    """
+    Class for file check const
+    """
+    READ_ABLE = "read"
+    WRITE_ABLE = "write"
+    READ_WRITE_ABLE = "read and write"
+    DIRECTORY_LENGTH = 4096
+    FILE_NAME_LENGTH = 255
+    FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    PKL_SUFFIX = ".pkl"
+    NUMPY_SUFFIX = ".npy"
+    JSON_SUFFIX = ".json"
+    PT_SUFFIX = ".pt"
+    CSV_SUFFIX = ".csv"
+    XLSX_SUFFIX = ".xlsx"
+    YAML_SUFFIX = ".yaml"
+    IR_SUFFIX = ".ir"
+    ZIP_SUFFIX = ".zip"
+    SHELL_SUFFIX = ".sh"
+    MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_ZIP_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_FILE_IN_ZIP_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
+    DIR = "dir"
+    FILE = "file"
+    DATA_DIR_AUTHORITY = 0o750
+    DATA_FILE_AUTHORITY = 0o640
+    FILE_SIZE_DICT = {
+        PKL_SUFFIX: MAX_PKL_SIZE,
+        NUMPY_SUFFIX: MAX_NUMPY_SIZE,
+        JSON_SUFFIX: MAX_JSON_SIZE,
+        PT_SUFFIX: MAX_PT_SIZE,
+        CSV_SUFFIX: MAX_CSV_SIZE,
+        XLSX_SUFFIX: MAX_XLSX_SIZE,
+        YAML_SUFFIX: MAX_YAML_SIZE,
+        IR_SUFFIX: MAX_IR_SIZE,
+        ZIP_SUFFIX: MAX_ZIP_SIZE
+    }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
+
+class Const:
+    MAX_DEPTH = 10
+    PT_FRAMEWORK = "pytorch"
+    MS_FRAMEWORK = "mindspore"
+    MT_FRAMEWORK = "mindtorch"
+    SEP = "."
+    KWARGS = 'kwargs'
+    INPUT = 'input'
+    OUTPUT = 'output'
+    INPUT_ARGS = 'input_args'
+    INPUT_KWARGS = 'input_kwargs'
+    GRAD_INPUT = 'grad_input'
+    GRAD_OUTPUT = 'grad_output'
+    BACKWARD = 'backward'
+    FORWARD = 'forward'
+
+
+class CompareConst:
+    # compare result data
+    PASS = 'pass'
+    WARNING = 'Warning'
+    ERROR = 'error'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
+    SKIP = 'SKIP'
+
+    # compare result column name
+    COSINE = "Cosine"
+    EUC_DIST = "EucDist"
+    MAX_ABS_ERR = "MaxAbsErr"
+    MAX_RELATIVE_ERR = "MaxRelativeErr"
+    MIN_RELATIVE_ERR = "MinRelativeErr"
+    MEAN_RELATIVE_ERR = "MeanRelativeErr"
+    NORM_RELATIVE_ERR = "NormRelativeErr"
+
+    # accuracy standards
+    COS_THRESHOLD = 0.99
+    MAX_ABS_ERR_THRESHOLD = 0.001
+    MAX_RELATIVE_ERR_THRESHOLD = 0.001
+    COS_MAX_THRESHOLD = 0.9
+    MAX_ABS_ERR_MAX_THRESHOLD = 1
+
+class MsCompareConst:
+    # api_info field
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+    FUNCTIONAL_API = "Functional"
+    FUSION_API = "FUSION"
+
+    API_NAME_STR_LENGTH = 4
+    MAX_RECURSION_DEPTH = 20
+
+    # Mindtorch api_info field
+    MINDTORCH_TENSOR = "Tensor"
+    MINDTORCH = "Torch"
+    MINDTORCH_FUNC = "Functional"
+    MINDTORCH_NPU = "NPU"
+    MINDTORCH_DIST = "Distributed"
+
+    MT_VALID_API_TYPES = [
+        MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
+    ]
+    SUPPORTED_FUSION_LIST = ["flash_attention_score"]
+
+    TASK_FIELD = "task"
+    STATISTICS_TASK = "statistics"
+    FRAMEWORK = "framework"
+    TENSOR_TASK = "tensor"
+    DUMP_DATA_DIR_FIELD = "dump_data_dir"
+    DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
+
+    # detail_csv
+    DETAIL_CSV_API_NAME = "API Name"
+    DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
+    DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
+    DETAIL_CSV_SHAPE = "Shape"
+    DETAIL_CSV_PASS_STATUS = "Status"
+    DETAIL_CSV_MESSAGE = "Message"
+    DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
+
+    # result_csv
+    RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
+    RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
+    RESULT_CSV_FILE_NAME = "accuracy_checking_result"
+
+    EPSILON = 1e-8
+
+    class ProcessStatus:
+        SUCCESS = "success"
+        API_NOT_FOUND = "api_not_found"
+        EXCEPTION_SKIP = "exception_skip"
+
+# ======= mindtorch支持 ========
+import torch as mindtorch
+from torch import Tensor as mindtorch_tensor
+import torch.nn.functional as mindtorch_func
+import torch.distributed as mindtorch_dist
+
+is_valid_pt_mt_env = True
+
+
+def is_mindtorch():
+    mindtorch_check_result = False
+    try:
+        import torch as test_torch
+        from mindspore import Tensor as MindsporeTensor
+    except ImportError:
+        return mindtorch_check_result
+    tensor = test_torch.tensor(0.0)
+    if isinstance(tensor, MindsporeTensor):
+        mindtorch_check_result = True
+
+    return mindtorch_check_result
+
+
+def remove_torch_related_paths():
+    removed_paths = []
+    if not is_mindtorch():
+        return
+    try:
+        import torch as remove_torch
+        torch_file = remove_torch.__file__
+    except ImportError:
+        return
+
+    torch_dir = os.path.dirname(torch_file)
+
+    torch_dir_path = Path(torch_dir).resolve()
+    parent_dir = torch_dir_path.parent
+
+    paths_to_remove = [str(parent_dir)]
+
+    for path in paths_to_remove:
+        try:
+            path_resolved = str(Path(path).resolve())
+        except Exception as error:
+            logger.debug(f"Failed to resolve path {path}: {error}")
+
+
+        if path_resolved in sys.path:
+            index = sys.path.index(path_resolved)
+            removed_paths.append((path_resolved, index))
+            sys.path.pop(index)
+
+    return
+
+
+def clear_torch_from_sys_modules():
+    modules_to_remove = []
+    for module in sys.modules:
+        if module == "torch" or module.startswith("torch."):
+            modules_to_remove.append(module)
+
+    for module in modules_to_remove:
+        del sys.modules[module]
+
+
+def set_pt_mt_env_invalid():
+    global is_valid_pt_mt_env
+    is_valid_pt_mt_env = False
+
+
+def delete_torch_paths():
+
+    if not is_mindtorch():
+        set_pt_mt_env_invalid()
+
+    clear_torch_from_sys_modules()
+
+    for count_delete_env_path in range(MsCompareConst.MAX_RECURSION_DEPTH):
+        if not is_mindtorch():
+            break
+
+        remove_torch_related_paths()
+
+        clear_torch_from_sys_modules()
+
+        if count_delete_env_path >= MsCompareConst.MAX_RECURSION_DEPTH - 1:
+            raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment, and ensure "
+                            f"the PYTHONPATH environment variable depth does not exceed {Const.MAX_RECURSION_DEPTH}.")
+
+
+if not is_mindtorch():
+    set_pt_mt_env_invalid()
+
+else:
+    initial_sys_path = sys.path.copy()
+    delete_torch_paths()
+
+    gc.collect()
+
+    import torch
+
+    if is_mindtorch():
+        set_pt_mt_env_invalid()
+
+    sys.path = initial_sys_path
+
+
+
+if not is_valid_pt_mt_env:
+    import torch
+
+
+
+# ======= 常数类 =======
+import numpy as np
+from mindspore._c_expression import typing
+from mindspore.common import dtype as mstype
+
+
+TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
+TORCH_BOOL_TYPE = ["torch.bool"]
+TORCH_INT_TYPE = ["torch.uint8", "torch.int8", "torch.int16", "torch.short", "torch.int32", "torch.int",
+                  "torch.int64", "torch.long"]
+TORCH_FLOAT_TYPE = ["torch.float16", "torch.half", "torch.bfloat16", "torch.float32", "torch.float",
+                    "torch.float64", "torch.double"]
+TORCH_COMPLEX_TYPE = ["torch.complex32", "torch.chalf", "torch.complex64", "torch.cfloat", "torch.complex128", "torch.cdouble"]
+RAISE_PRECISION = {{
+    "torch.float16": torch.float32,
+    "torch.half": torch.float32,
+    "torch.bfloat16": torch.float32,
+    "torch.float32": torch.float64,
+    "torch.float": torch.float64
+}}
+THOUSANDTH_THRESHOLDING = 0.001
+BACKWARD = 'backward'
+DIR = "dir"
+FILE = "file"
+READ_ABLE = "read"
+WRITE_ABLE = "write"
+READ_WRITE_ABLE = "read and write"
+DIRECTORY_LENGTH = 4096
+FILE_NAME_LENGTH = 255
+SOFT_LINK_ERROR = "检测到软链接"
+FILE_PERMISSION_ERROR = "文件权限错误"
+INVALID_FILE_ERROR = "无效文件"
+ILLEGAL_PATH_ERROR = "非法文件路径"
+ILLEGAL_PARAM_ERROR = "非法打开方式"
+FILE_TOO_LARGE_ERROR = "文件过大"
+FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+FILE_SIZE_DICT = {{
+    ".pkl": 1073741824,  # 1 * 1024 * 1024 * 1024
+    ".npy": 10737418240,  # 10 * 1024 * 1024 * 1024
+    ".json": 1073741824,  # 1 * 1024 * 1024 * 1024
+    ".pt": 10737418240,  # 10 * 1024 * 1024 * 1024
+    ".csv": 1073741824,  # 1 * 1024 * 1024 * 1024
+    ".xlsx": 1073741824,  # 1 * 1024 * 1024 * 1024
+    ".yaml": 1073741824,  # 1 * 1024 * 1024 * 1024
+    ".ir": 1073741824  # 1 * 1024 * 1024 * 1024
+}}
+COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
+
+
+INT8 = "Int8"
+UINT8 = "UInt8"
+INT16 = "Int16"
+UINT16 = "UInt16"
+INT32 = "Int32"
+UINT32 = "UInt32"
+INT64 = "Int64"
+UINT64 = "UInt64"
+FLOAT16 = "Float16"
+FLOAT32 = "Float32"
+FLOAT64 = "Float64"
+BOOL = "Bool"
+BFLOAT16 = "BFloat16"
+INT4 = "Int4"
+
+dtype_str_to_ms_dtype = {
+    INT8: mstype.int8,
+    UINT8: mstype.uint8,
+    INT16: mstype.int16,
+    UINT16: mstype.uint16,
+    INT32: mstype.int32,
+    UINT32: mstype.uint32,
+    INT64: mstype.int64,
+    UINT64: mstype.uint64,
+    FLOAT16: mstype.float16,
+    FLOAT32: mstype.float32,
+    FLOAT64: mstype.float64,
+    BOOL: mstype.bool_,
+    BFLOAT16: mstype.bfloat16,
+    INT4: mstype.qint4x2
+}
+ms_dtype_to_dtype_str = {value: key for key, value in dtype_str_to_ms_dtype.items()}
+
+dtype_str_to_np_dtype = {
+    INT8: np.int8,
+    UINT8: np.uint8,
+    INT16: np.int16,
+    UINT16: np.uint16,
+    INT32: np.int32,
+    UINT32: np.uint32,
+    INT64: np.int64,
+    UINT64: np.uint64,
+    FLOAT16: np.float16,
+    FLOAT32: np.float32,
+    FLOAT64: np.float64,
+    BOOL: np.bool_
+}
+np_dtype_to_dtype_str = {value: key for key, value in dtype_str_to_np_dtype.items()}
+
+dtype_str_to_torch_dtype = {
+    INT8: torch.int8,
+    UINT8: torch.uint8,
+    INT16: torch.int16,
+    INT32: torch.int32,
+    INT64: torch.int64,
+    FLOAT16: torch.float16,
+    FLOAT32: torch.float32,
+    FLOAT64: torch.float64,
+    BOOL: torch.bool,
+    BFLOAT16: torch.bfloat16,
+}
+torch_dtype_to_dtype_str = {value: key for key, value in dtype_str_to_torch_dtype.items()}
+
+
+dtype_str_to_mindtorch_dtype = {
+    INT8: mindtorch.int8,
+    UINT8: mindtorch.uint8,
+    INT16: mindtorch.int16,
+    INT32: mindtorch.int32,
+    INT64: mindtorch.int64,
+    FLOAT16: mindtorch.float16,
+    FLOAT32: mindtorch.float32,
+    FLOAT64: mindtorch.float64,
+    BOOL: mindtorch.bool,
+    BFLOAT16: mindtorch.bfloat16,
+}
+mindtorch_dtype_to_dtype_str = {value: key for key, value in dtype_str_to_mindtorch_dtype.items()}
+
+MINDSPORE_TENSOR_TYPE_STR = "mindspore.Tensor"
+BOOL_TYPE_STR = "bool"
+INT_TYPE_STR = "int"
+FLOAT_TYPE_STR = "float"
+SLICE_TYPE_STR = "slice"
+TUPLE_TYPE_STR = "tuple"
+STR_TYPE_STR = "str"
+MINDSPORE_DTYPE_TYPE_STR = "mindspore.dtype"
+TORCH_DTYPE_TYPE_STR = "torch.dtype"
+
+api_info_type_str_to_type = {
+    MINDSPORE_TENSOR_TYPE_STR: mindspore.Tensor,
+    BOOL_TYPE_STR: bool,
+    INT_TYPE_STR: int,
+    FLOAT_TYPE_STR: float,
+    SLICE_TYPE_STR: slice,
+    STR_TYPE_STR: str,
+    MINDSPORE_DTYPE_TYPE_STR: typing.Type,
+}
+type_to_api_info_type_str = {value: key for key, value in api_info_type_str_to_type.items()}
+
+DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE = np.float64
+DEFAULT_CONSTRUCT_NP_INT_DTYPE = np.float64
+DEFAULT_CONSTRUCT_NP_UINT_DTYPE = np.float64
+
+float_dtype_str_list = [
+    FLOAT16,
+    FLOAT32,
+    FLOAT64,
+    BFLOAT16,
+]
+
+int_dtype_str_list = [
+    INT8,
+    INT16,
+    INT32,
+    INT64,
+    BOOL,
+    INT4,
+]
+
+uint_dtype_str_list = [
+    UINT8,
+    UINT16,
+    UINT32,
+    UINT64,
+]
+
+
+
+
+
+# ======= 比对类 =======
+
+
+
+class CompareResult:
+    def __init__(self, compare_value, pass_status, err_msg):
+        self.compare_value = compare_value
+        self.pass_status = pass_status
+        self.err_msg = err_msg
+
+
+class BaseCompareAlgorithm(ABC):
+    def __init__(self) -> None:
+        super().__init__()
+        self.compare_algorithm_name = None
+        self.err_msg_mapping = {
+            CompareConst.COSINE: {
+                CompareConst.PASS: "",
+                CompareConst.ERROR: f"cosine similarity is less than threshold: {CompareConst.COS_THRESHOLD} ",
+                CompareConst.SKIP: "two inputs are not valid for computing cosine similarity, skip comparing ",
+            },
+            CompareConst.MAX_ABS_ERR: {
+                CompareConst.PASS: "",
+                CompareConst.ERROR: "max absolute difference is greater than " \
+                                    f"threshold: {CompareConst.MAX_ABS_ERR_THRESHOLD} ",
+                CompareConst.SKIP: "two inputs are not valid for computing max absolute difference, skip comparing ",
+            },
+            CompareConst.MAX_RELATIVE_ERR: {
+                CompareConst.PASS: "",
+                CompareConst.ERROR: "",
+                CompareConst.SKIP: "",
+            },
+        }
+
+    def __call__(self, bench_compute_element, tested_compute_element):
+        '''
+        Args:
+            bench_compute_element: ComputeElement
+            tested_compute_element: ComputeElement
+
+        Return:
+            compare_result: CompareResult
+        '''
+        if self.check_validity(bench_compute_element, tested_compute_element):
+            compare_value = self.run_compare(bench_compute_element, tested_compute_element)
+            pass_status = self.check_pass(compare_value)
+        else:
+            logger.warning(f"not suitable for computing {self.compare_algorithm_name}, skip this.")
+            compare_value = None
+            pass_status = CompareConst.SKIP
+
+        err_msg = self.err_msg_mapping.get(self.compare_algorithm_name).get(pass_status)
+
+        compare_result = CompareResult(compare_value, pass_status, err_msg)
+        return compare_result
+
+    @staticmethod
+    def convert_to_np_float64_ndarray(tensor):
+        if isinstance(tensor, mindspore.Tensor):
+            ndarray = tensor.astype(mindspore.float64).numpy()
+        elif isinstance(tensor, torch.Tensor):
+            ndarray = tensor.to(torch.float64, copy=True).numpy()
+        else:
+            err_msg = "BaseCompareAlgorithm.convert_to_np_float64_ndarray failed: " \
+                      "input is not mindspore.Tensor or torch.Tensor"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+        return ndarray
+
+    @staticmethod
+    def check_two_tensor(bench_compute_element, tested_compute_element):
+        bench_parameter = bench_compute_element.get_parameter()
+        tested_parameter = tested_compute_element.get_parameter()
+
+        bench_is_tensor = isinstance(bench_parameter, (mindspore.Tensor, torch.Tensor))
+        tested_is_tensor = isinstance(tested_parameter, (mindspore.Tensor, torch.Tensor))
+        shape_same = bench_compute_element.get_shape() == tested_compute_element.get_shape()
+        return bench_is_tensor and tested_is_tensor and shape_same
+
+    @abstractmethod
+    def check_validity(self, bench_compute_element, tested_compute_element):
+        '''
+        Args:
+            bench_compute_element: ComputeElement
+            tested_compute_element: ComputeElement
+
+        Return:
+            check_res: boolean
+        '''
+        raise NotImplementedError
+
+    @abstractmethod
+    def run_compare(self, bench_compute_element, tested_compute_element):
+        '''
+        Args:
+            bench_compute_element: ComputeElement
+            tested_compute_element: ComputeElement
+
+        Return:
+            compare_value: float/int
+        '''
+        raise NotImplementedError
+
+    @abstractmethod
+    def check_pass(self, compare_value):
+        '''
+        Args:
+            compare_value: float/int
+
+        Return:
+            pass_status: str
+        '''
+        raise NotImplementedError
+
+
+class CosineSimilarityCompareAlgorithm(BaseCompareAlgorithm):
+    def __init__(self) -> None:
+        super().__init__()
+        self.compare_algorithm_name = CompareConst.COSINE
+
+    def check_validity(self, bench_compute_element, tested_compute_element):
+        return self.check_two_tensor(bench_compute_element, tested_compute_element)
+
+    def run_compare(self, bench_compute_element, tested_compute_element):
+        bench_ndarray = self.convert_to_np_float64_ndarray(bench_compute_element.get_parameter())
+        tested_ndarray = self.convert_to_np_float64_ndarray(tested_compute_element.get_parameter())
+
+        bench_norm = np.linalg.norm(bench_ndarray)
+        tested_norm = np.linalg.norm(tested_ndarray)
+        dot_product = np.dot(bench_ndarray.flatten(), tested_ndarray.flatten())
+        cosine_similarity = (MsCompareConst.EPSILON + dot_product) / (MsCompareConst.EPSILON + bench_norm * tested_norm)
+        return cosine_similarity
+
+    def check_pass(self, compare_value):
+        if compare_value > CompareConst.COS_THRESHOLD:
+            return CompareConst.PASS
+        else:
+            return CompareConst.ERROR
+
+
+class MaxAbsoluteDiffCompareAlgorithm(BaseCompareAlgorithm):
+    def __init__(self) -> None:
+        super().__init__()
+        self.compare_algorithm_name = CompareConst.MAX_ABS_ERR
+
+    def check_validity(self, bench_compute_element, tested_compute_element):
+        return self.check_two_tensor(bench_compute_element, tested_compute_element)
+
+    def run_compare(self, bench_compute_element, tested_compute_element):
+        bench_ndarray = self.convert_to_np_float64_ndarray(bench_compute_element.get_parameter())
+        tested_ndarray = self.convert_to_np_float64_ndarray(tested_compute_element.get_parameter())
+
+        max_absolute_diff = np.max(np.abs(bench_ndarray - tested_ndarray))
+        return max_absolute_diff
+
+    def check_pass(self, compare_value):
+        if compare_value < CompareConst.MAX_ABS_ERR_THRESHOLD:
+            return CompareConst.PASS
+        else:
+            return CompareConst.ERROR
+
+
+class MaxRelativeDiffCompareAlgorithm(BaseCompareAlgorithm):
+    def __init__(self) -> None:
+        super().__init__()
+        self.compare_algorithm_name = CompareConst.MAX_RELATIVE_ERR
+
+    def check_validity(self, bench_compute_element, tested_compute_element):
+        return self.check_two_tensor(bench_compute_element, tested_compute_element)
+
+    def run_compare(self, bench_compute_element, tested_compute_element):
+        bench_ndarray = self.convert_to_np_float64_ndarray(bench_compute_element.get_parameter())
+        tested_ndarray = self.convert_to_np_float64_ndarray(tested_compute_element.get_parameter())
+
+        abs_diff = np.abs(bench_ndarray - tested_ndarray)
+        bench_ndarray_nonzero = np.abs(bench_ndarray) + (bench_ndarray == 0) * MsCompareConst.EPSILON
+        max_relative_diff = np.max(abs_diff / bench_ndarray_nonzero)
+        return max_relative_diff
+
+    def check_pass(self, compare_value):
+        if compare_value < CompareConst.MAX_RELATIVE_ERR_THRESHOLD:
+            return CompareConst.PASS
+        else:
+            return CompareConst.ERROR
+
+
+compare_algorithms = {
+    CompareConst.COSINE: CosineSimilarityCompareAlgorithm(),
+    CompareConst.MAX_ABS_ERR: MaxAbsoluteDiffCompareAlgorithm(),
+    CompareConst.MAX_RELATIVE_ERR: MaxRelativeDiffCompareAlgorithm(),
+}
+
+
+
+class CompareStandard(Enum):
+    BINARY_EQUALITY_STANDARD = auto()
+    ABSOLUTE_THRESHOLD_STANDARD = auto()
+    ULP_ERROR_STANDARD = auto()
+    BENCHMARK_STANDARD = auto()
+    THOUSANDTH_STANDARD = auto()
+
+
+class CompareStandard(Enum):
+    BINARY_EQUALITY_STANDARD = auto()
+    ABSOLUTE_THRESHOLD_STANDARD = auto()
+    ULP_ERROR_STANDARD = auto()
+    BENCHMARK_STANDARD = auto()
+    THOUSANDTH_STANDARD = auto()
+
+
+# ========  文件操作类 ==========
+
+from collections import defaultdict
+from functools import wraps
+
+
+def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_type=None, accepted_value=None):
+    '''
+    Args:
+        dict_instance: dict, dict parsed from input json
+        key: str
+        key_description: str
+        accepted_type: tuple
+        accepted_value: Union[tuple, list]
+
+    Return:
+        value, the corresponding value of "key" in "dict_instance"
+
+    Exception:
+        raise ApiAccuracyCheckerException.ParseJsonFailed error when
+        1. dict_instance is not a dict
+        2. value is None
+        3. value is not accepted type
+        4. value is not accepted value
+    '''
+    if not isinstance(dict_instance, dict):
+        error_info = "check_and_get_from_json_dict failed: input is not a dict"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
+    value = dict_instance.get(key)
+    if value is None:
+        error_info = f"check_and_get_from_json_dict failed: {key_description} is missing"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
+    elif accepted_type is not None and not isinstance(value, accepted_type):
+        error_info = f"check_and_get_from_json_dict failed: {key_description} is not accepted type: {accepted_type}"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
+    elif accepted_value is not None and value not in accepted_value:
+        error_info = f"check_and_get_from_json_dict failed: {key_description} is not accepted value: {accepted_value}"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
+    return value
+
+
+def convert_to_tuple(args):
+    if isinstance(args, (tuple, list)):
+        return tuple(args)
+    else:
+        input_list = [args]
+        return tuple(input_list)
+
+
+def trim_output_compute_element_list(compute_element_list, forward_or_backward):
+    '''
+    Args:
+        compute_element_list: List[ComputeElement]
+        forward_or_backward: str, Union["forward", "backward"]
+    '''
+    trimmed_list = []
+    for compute_element in compute_element_list:
+        if compute_element.get_parameter() is None or \
+                (forward_or_backward == Const.BACKWARD and compute_element.get_dtype() not in float_dtype_str_list):
+            # trim case: 1. parameter is None. 2. backward output has non float parameter
+            continue
+        trimmed_list.append(compute_element)
+    return trimmed_list
+
+
+
+
+# 记录工具函数递归的深度
+recursion_depth = defaultdict(int)
+
+
+def recursion_depth_decorator(func_info, max_depth=Const.MAX_DEPTH):
+    """装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            func_id = id(func)
+            recursion_depth[func_id] += 1
+
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                recursion_depth[func_id] -= 1
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+
+class FileChecker:
+    """
+    The class for check file.
+
+    Attributes:
+        file_path: The file or dictionary path to be verified.
+        path_type: file or dictionary
+        ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
+        file_type(str): The correct file type for file
+    """
+
+    def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
+        self.file_path = file_path
+        self.path_type = self._check_path_type(path_type)
+        self.ability = ability
+        self.file_type = file_type
+        self.is_script = is_script
+
+    @staticmethod
+    def _check_path_type(path_type):
+        if path_type not in [FileCheckConst.DIR, FileCheckConst.FILE]:
+            logger.error(f'The path_type must be {FileCheckConst.DIR} or {FileCheckConst.FILE}.')
+            raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
+        return path_type
+
+    def common_check(self):
+        """
+        功能：用户校验基本文件权限：软连接、文件长度、是否存在、读写权限、文件属组、文件特殊字符
+        注意：文件后缀的合法性，非通用操作，可使用其他独立接口实现
+        """
+        check_path_exists(self.file_path)
+        check_link(self.file_path)
+        self.file_path = os.path.realpath(self.file_path)
+        check_path_length(self.file_path)
+        check_path_type(self.file_path, self.path_type)
+        self.check_path_ability()
+        if self.is_script:
+            check_path_owner_consistent(self.file_path)
+        check_path_pattern_valid(self.file_path)
+        check_common_file_size(self.file_path)
+        check_file_suffix(self.file_path, self.file_type)
+        if self.path_type == FileCheckConst.FILE:
+            check_dirpath_before_read(self.file_path)
+        return self.file_path
+
+    def check_path_ability(self):
+        if self.ability == FileCheckConst.WRITE_ABLE:
+            check_path_writability(self.file_path)
+        if self.ability == FileCheckConst.READ_ABLE:
+            check_path_readability(self.file_path)
+        if self.ability == FileCheckConst.READ_WRITE_ABLE:
+            check_path_readability(self.file_path)
+            check_path_writability(self.file_path)
+
+
+class FileOpen:
+    """
+    The class for open file by a safe way.
+
+    Attributes:
+        file_path: The file or dictionary path to be opened.
+        mode(str): The file open mode
+    """
+    SUPPORT_READ_MODE = ["r", "rb"]
+    SUPPORT_WRITE_MODE = ["w", "wb", "a", "ab"]
+    SUPPORT_READ_WRITE_MODE = ["r+", "rb+", "w+", "wb+", "a+", "ab+"]
+
+    def __init__(self, file_path, mode, encoding='utf-8'):
+        self.file_path = file_path
+        self.mode = mode
+        self.encoding = encoding
+        self._handle = None
+
+    def __enter__(self):
+        self.check_file_path()
+        binary_mode = "b"
+        if binary_mode not in self.mode:
+            self._handle = open(self.file_path, self.mode, encoding=self.encoding)
+        else:
+            self._handle = open(self.file_path, self.mode)
+        return self._handle
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._handle:
+            self._handle.close()
+
+    def check_file_path(self):
+        support_mode = self.SUPPORT_READ_MODE + self.SUPPORT_WRITE_MODE + self.SUPPORT_READ_WRITE_MODE
+        if self.mode not in support_mode:
+            logger.error("File open not support %s mode" % self.mode)
+            raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
+        check_link(self.file_path)
+        self.file_path = os.path.realpath(self.file_path)
+        check_path_length(self.file_path)
+        self.check_ability_and_owner()
+        check_path_pattern_valid(self.file_path)
+        if os.path.exists(self.file_path):
+            check_common_file_size(self.file_path)
+            check_dirpath_before_read(self.file_path)
+
+    def check_ability_and_owner(self):
+        if self.mode in self.SUPPORT_READ_MODE:
+            check_path_exists(self.file_path)
+            check_path_readability(self.file_path)
+            check_path_owner_consistent(self.file_path)
+        if self.mode in self.SUPPORT_WRITE_MODE and os.path.exists(self.file_path):
+            check_path_writability(self.file_path)
+            check_path_owner_consistent(self.file_path)
+        if self.mode in self.SUPPORT_READ_WRITE_MODE and os.path.exists(self.file_path):
+            check_path_readability(self.file_path)
+            check_path_writability(self.file_path)
+            check_path_owner_consistent(self.file_path)
+
+
+def check_link(path):
+    abs_path = os.path.abspath(path)
+    if os.path.islink(abs_path):
+        logger.error('The file path {} is a soft link.'.format(path))
+        raise FileCheckException(FileCheckException.SOFT_LINK_ERROR)
+
+
+def check_path_length(path, name_length=None):
+    file_max_name_length = name_length if name_length else FileCheckConst.FILE_NAME_LENGTH
+    if len(path) > FileCheckConst.DIRECTORY_LENGTH or \
+            len(os.path.basename(path)) > file_max_name_length:
+        logger.error('The file path length exceeds limit.')
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
+
+
+def check_path_exists(path):
+    if not os.path.exists(path):
+        logger.error('The file path %s does not exist.' % path)
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
+
+
+def check_path_readability(path):
+    if not os.access(path, os.R_OK):
+        logger.error('The file path %s is not readable.' % path)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
+
+
+def check_path_writability(path):
+    if not os.access(path, os.W_OK):
+        logger.error('The file path %s is not writable.' % path)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
+
+
+def check_path_executable(path):
+    if not os.access(path, os.X_OK):
+        logger.error('The file path %s is not executable.' % path)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
+
+
+def check_other_user_writable(path):
+    st = os.stat(path)
+    if st.st_mode & 0o002:
+        logger.error('The file path %s may be insecure because other users have write permissions. ' % path)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
+
+
+def check_path_owner_consistent(path):
+    file_owner = os.stat(path).st_uid
+    if file_owner != os.getuid() and os.getuid() != 0:
+        logger.error('The file path %s may be insecure because is does not belong to you.' % path)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
+
+
+def check_path_pattern_valid(path):
+    if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
+        logger.error('The file path %s contains special characters.' % (path))
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
+
+
+def check_file_size(file_path, max_size):
+    try:
+        file_size = os.path.getsize(file_path)
+    except OSError as os_error:
+        logger.error(f'Failed to open "{file_path}". {str(os_error)}')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from os_error
+    if file_size >= max_size:
+        logger.error(f'The size ({file_size}) of {file_path} exceeds ({max_size}) bytes, tools not support.')
+        raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)
+
+
+def check_common_file_size(file_path):
+    if os.path.isfile(file_path):
+        for suffix, max_size in FileCheckConst.FILE_SIZE_DICT.items():
+            if file_path.endswith(suffix):
+                check_file_size(file_path, max_size)
+                return
+        check_file_size(file_path, FileCheckConst.COMMOM_FILE_SIZE)
+
+
+def check_file_suffix(file_path, file_suffix):
+    if file_suffix:
+        if not file_path.endswith(file_suffix):
+            logger.error(f"The {file_path} should be a {file_suffix} file!")
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+
+
+def check_path_type(file_path, file_type):
+    if file_type == FileCheckConst.FILE:
+        if not os.path.isfile(file_path):
+            logger.error(f"The {file_path} should be a file!")
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+    if file_type == FileCheckConst.DIR:
+        if not os.path.isdir(file_path):
+            logger.error(f"The {file_path} should be a dictionary!")
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+
+def make_dir(dir_path):
+    check_path_before_create(dir_path)
+    dir_path = os.path.realpath(dir_path)
+    if os.path.isdir(dir_path):
+        return
+    try:
+        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+    except OSError as ex:
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
+                                 f"Failed to create {dir_path}. "
+                                 f"Please check the path permission or disk space. {str(ex)}") from ex
+    file_check = FileChecker(dir_path, FileCheckConst.DIR)
+    file_check.common_check()
+
+
+
+
+@recursion_depth_decorator('msprobe.core.common.file_utils.create_directory', max_depth=16)
+def create_directory(dir_path):
+    """
+    Function Description:
+        creating a safe directory with specified permissions
+    Parameter:
+        dir_path: directory path
+    Exception Description:
+        when invalid data throw exception
+    """
+    check_link(dir_path)
+    check_path_before_create(dir_path)
+    dir_path = os.path.realpath(dir_path)
+    parent_dir = os.path.dirname(dir_path)
+    if not os.path.isdir(parent_dir):
+        create_directory(parent_dir)
+    make_dir(dir_path)
+
+
+def check_path_before_create(path):
+    check_link(path)
+    if path_len_exceeds_limit(path):
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
+
+    if not re.match(FileCheckConst.FILE_PATTERN, os.path.realpath(path)):
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
+                                 'The file path {} contains special characters.'.format(path))
+
+
+def check_dirpath_before_read(path):
+    path = os.path.realpath(path)
+    dirpath = os.path.dirname(path)
+
+
+def check_file_or_directory_path(path, isdir=False):
+    """
+    Function Description:
+        check whether the path is valid
+    Parameter:
+        path: the path to check
+        isdir: the path is dir or file
+    Exception Description:
+        when invalid data throw exception
+    """
+    if isdir:
+        path_checker = FileChecker(path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
+    else:
+        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
+    path_checker.common_check()
+
+
+def change_mode(path, mode):
+    if not os.path.exists(path) or os.path.islink(path):
+        return
+    try:
+        os.chmod(path, mode)
+    except PermissionError as ex:
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR,
+                                 'Failed to change {} authority. {}'.format(path, str(ex))) from ex
+
+
+def path_len_exceeds_limit(file_path):
+    return len(os.path.realpath(file_path)) > FileCheckConst.DIRECTORY_LENGTH or \
+        len(os.path.basename(file_path)) > FileCheckConst.FILE_NAME_LENGTH
+
+def load_npy(filepath):
+    check_file_or_directory_path(filepath)
+    try:
+        npy = np.load(filepath, allow_pickle=False)
+    except Exception as e:
+        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
+    return npy
+
+def write_csv(data, filepath, mode="a+", malicious_check=False):
+    def csv_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be considered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    if malicious_check:
+        for row in data:
+            for cell in row:
+                if not csv_value_is_valid(cell):
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed "
+                                       f"to be written into the csv: {filepath}.")
+
+    check_path_before_create(filepath)
+    file_path = os.path.realpath(filepath)
+    try:
+        with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+    except Exception as e:
+        logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save csv file {file_path} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+    print(f"file_path:{file_path}")
+
+
+
+def write_csv_header(csv_path, header_func):
+    """如果是第一次写入，则写入 CSV 表头"""
+    header = header_func()  # 获取表头
+    logger.debug(f"Writing CSV header: {header}")
+    write_csv([header], csv_path, mode="a+")
+
+
+def get_result_csv_header():
+    """获取结果 CSV 文件的表头"""
+    return [
+        MsCompareConst.DETAIL_CSV_API_NAME,
+        MsCompareConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
+        MsCompareConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
+        MsCompareConst.DETAIL_CSV_MESSAGE,
+    ]
+
+
+def get_detail_csv_header():
+    """获取详细 CSV 文件的表头"""
+    detail_csv_header_basic_info = [
+        MsCompareConst.DETAIL_CSV_API_NAME,
+        MsCompareConst.DETAIL_CSV_BENCH_DTYPE,
+        MsCompareConst.DETAIL_CSV_TESTED_DTYPE,
+        MsCompareConst.DETAIL_CSV_SHAPE,
+    ]
+    detail_csv_header_compare_result = list(compare_algorithms.keys())
+    detail_csv_header_status = [
+        MsCompareConst.DETAIL_CSV_PASS_STATUS,
+        MsCompareConst.DETAIL_CSV_MESSAGE,
+    ]
+    return detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
+
+
+def check_csv_header(headers, required_constants, csv_path):
+    """校验 CSV 文件表头是否包含所有必需的常量"""
+    missing_constants = [const for const in required_constants if not any(const in header for header in headers)]
+
+    if missing_constants:
+        raise MsprobeBaseException(
+            MsprobeBaseException.MISSING_HEADER_ERROR,
+            f"{csv_path} 缺少以下必需的表头字段: {missing_constants}"
+        )
+def add_time_as_suffix(name):
+    return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))

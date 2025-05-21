@@ -96,18 +96,21 @@ class DebuggerConfig:
         self.check_kwargs()
         return True
 
-    def check_model(self, instance, start_model):
-        if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
-            if instance.model is not None or start_model is not None:
+    def check_model(self, instance, start_model, token_range):
+        instance.model = start_model if start_model is not None else instance.model
+        if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX] and token_range is None:
+            if instance.model is not None:
                 logger.info_on_rank_0(
-                    f"The current level is not L0 or mix level, so the model parameters will not be used.")
+                    f"The current level is not L0 or mix level and token_range is None, "
+                    f"so the model parameter will not be used")
             return
-        if start_model is None and instance.model is None:
+
+        if instance.model is None:
             logger.error_on_rank_0(
-                f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' parameter.")
+                f"For level {self.level} or non-empty token_range, "
+                f"PrecisionDebugger or start interface must receive a 'model' parameter.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
 
-        instance.model = start_model if start_model is not None else instance.model
         if is_torch_nn_module(instance.model):
             return
 
