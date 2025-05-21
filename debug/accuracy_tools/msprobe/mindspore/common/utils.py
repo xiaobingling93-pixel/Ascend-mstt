@@ -28,6 +28,14 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
 
+try:
+    from mindspore._c_expression import _set_init_iter
+except ImportError:
+    enable_dynamic_kbyk_dump = False
+else:
+    enable_dynamic_kbyk_dump = True
+
+
 
 mindtorch_check_result = None
 register_backward_hook_functions = {}
@@ -38,6 +46,11 @@ class MsprobeStep(ms.train.Callback):
     def __init__(self, debugger):
         super(MsprobeStep, self).__init__()
         self.debugger = debugger
+    
+    def on_train_begin(self, run_context):
+        self.debugger.start()
+        if enable_dynamic_kbyk_dump:
+            _set_init_iter(0)
 
     def on_train_step_begin(self, run_context):
         self.debugger.start()
