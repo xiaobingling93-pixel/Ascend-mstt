@@ -71,6 +71,7 @@ class Service:
         self.current_iter = 0
         self.loop = 0
         self.init_step = 0
+        self.cur_token_id = 0
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
@@ -86,7 +87,11 @@ class Service:
         self.ori_customer_func = {}
 
     @staticmethod
-    def check_model_valid(models):
+    def check_model_valid(models, token_range=None):
+        if token_range and not models:
+            error_info = "The 'model' parameter must be provided when token_range is not None"
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
+
         target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
         if models is None or isinstance(models, target_module_type[0]):
             return models
@@ -281,7 +286,7 @@ class Service:
         self.loop += 1
         self.reset_status()
 
-    def start(self, model=None):
+    def start(self, model=None, token_range=None):
         if self.current_iter == 0:
             if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
@@ -310,10 +315,11 @@ class Service:
         if self.config.step and self.current_iter not in self.config.step:
             JitDump.jit_dump_switch = False
             return
-        self.model = self.check_model_valid(model)
+        self.model = self.check_model_valid(model, token_range)
 
         logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
 
+        self.cur_token_id = 0
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -322,18 +328,23 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
+
             self.register_primitive_hook()
             if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
                 self.cell_processor.register_cell_hook(self.model, self.build_hook)
             self.first_start = False
 
+            if token_range:
+                self.register_infer_count_hook(self.model, token_range)
+
         self.api_register.register_all_api()
-        self.switch = True
-        self.primitive_switch = True
+        if token_range is None:
+            self.switch = True
+            self.primitive_switch = True
+            JitDump.jit_dump_switch = True
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
-        JitDump.jit_dump_switch = True
 
     def stop(self):
         if self.config.level == Const.LEVEL_DEBUG:
@@ -442,6 +453,32 @@ class Service:
                                  {'__call__': self.primitive_hook_service.wrap_primitive(primitive.__call__,
                                                                                          primitive_combined_name)})
             primitive.__class__ = new_primitive
+
+    def register_infer_count_hook(self, root_model, token_range):
+        """
+        通过root_model执行的轮次来判断当前在第几个token
+        param root_model: 需要采集的推理模型
+        param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
+        return: None
+        """
+        def infer_hook(model, args):
+            if self.cur_token_id == token_range[0]:
+                self.switch = True
+                self.primitive_switch = True
+                JitDump.jit_dump_switch = True
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
+            elif token_range[0] < self.cur_token_id <= token_range[1]:
+                logger.debug(f"Current token id: {self.cur_token_id}.")
+            elif self.cur_token_id == token_range[1] + 1:
+                self.switch = False
+                self.primitive_switch = False
+                JitDump.jit_dump_switch = False
+                logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
+            self.cur_token_id += 1
+        if isinstance(root_model, list):
+            root_model = root_model[0]
+            logger.warning("Infer model can only input one to support token_range, choose the first one.")
+        root_model.register_forward_pre_hook(infer_hook)
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()

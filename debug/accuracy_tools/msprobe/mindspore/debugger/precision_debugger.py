@@ -22,7 +22,7 @@ from mindspore._c_expression import MSContext
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, check_token_range
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import set_register_backward_hook_functions, check_save_param
@@ -149,7 +149,7 @@ class PrecisionDebugger:
         return is_graph
 
     @classmethod
-    def start(cls, model=None):
+    def start(cls, model=None, token_range=None):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
@@ -157,12 +157,12 @@ class PrecisionDebugger:
             _msprobe_c._PrecisionDebugger().start()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
-
+        check_token_range(token_range)
         instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
             if not instance.service:
                 instance.service = Service(instance.config)
-            instance.service.start(model)
+            instance.service.start(model, token_range)
         else:
             if not instance.first_start:
                 get_api_register().restore_all_api()

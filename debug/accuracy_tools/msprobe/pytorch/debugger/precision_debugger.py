@@ -20,7 +20,7 @@ from torch.utils.data import dataloader
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, check_token_range
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import check_save_param, is_torch_nn_module
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
@@ -115,17 +115,20 @@ class PrecisionDebugger:
             )
 
     @classmethod
-    def start(cls, model=None):
+    def start(cls, model=None, token_range=None):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
-        instance.config.check_model(instance, model)
+
+        check_token_range(token_range)
+        instance.config.check_model(instance, model, token_range)
+
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
-            instance.service.start(instance.model)
+            instance.service.start(instance.model, token_range)
 
     @classmethod
     def forward_backward_dump_end(cls):
