@@ -94,9 +94,9 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 
 def read_op(op_data, op_name):
-    if Const.DEBUG in op_name.split(Const.SEP):
-        op_parsed_list = op_item_parse(op_data, op_name)
-    elif Const.PARAMS_GRAD in op_name.split(Const.SEP):
+    split_name = op_name.split(Const.SEP)
+    if Const.DEBUG in split_name or \
+        Const.PARAMS_GRAD in split_name:
         op_parsed_list = op_item_parse(op_data, op_name)
     else:
         op_parsed_list = []
@@ -561,3 +561,34 @@ def _compare_parser(parser):
                         help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)
+
+
+def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
+    if kwargs.get('suffix'):
+        logger.error("Argument 'suffix' is not supported for compare_distributed.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    is_print_compare_log = kwargs.get('is_print_compare_log', True)
+    # get the ranks and match by order
+    npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
+    bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
+    if len(npu_ranks) != len(bench_ranks):
+        logger.error('The number of ranks in the two runs are different. '
+                     'Unable to match the ranks. Please use another folder to compare '
+                     'or use compare() api and manually match the ranks.')
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    for nr, br in zip(npu_ranks, bench_ranks):
+        npu_data_dir = os.path.join(npu_dump_dir, nr)
+        bench_data_dir = os.path.join(bench_dump_dir, br)
+        for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
+            npu_path = extract_json(npu_data_dir, file_type)
+            bench_path = extract_json(bench_data_dir, file_type)
+            if npu_path == "" or bench_path == "":
+                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
+                    ' skip comparing.')
+                continue
+            dump_result_param = {
+                'npu_json_path': npu_path,
+                'bench_json_path': bench_path,
+                'is_print_compare_log': is_print_compare_log
+            }
+            compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)

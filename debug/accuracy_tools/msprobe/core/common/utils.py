@@ -314,11 +314,11 @@ def set_dump_path(input_param):
 
 def get_file_type(file_path):
     if not isinstance(file_path, str):
-        logger.error(f"get_file_type failed, check the type of file_path.")
+        logger.error("get_file_type failed, check the type of file_path.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     file_type = file_suffix_to_file_type.get(file_path.split(Const.SCOPE_SEPARATOR)[-1])
     if file_type is None:
-        logger.error(f"get_file_type failed, file_path is neither dump.json nor debug.json.")
+        logger.error("get_file_type failed, file_path is neither dump.json nor debug.json.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     return file_type
 

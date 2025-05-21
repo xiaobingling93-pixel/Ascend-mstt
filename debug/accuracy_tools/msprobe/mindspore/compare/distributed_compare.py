@@ -19,39 +19,12 @@ from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.compare.ms_compare import ms_compare
-from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
+from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, compare_distributed_inner
 from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
 
 
 def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
-    if kwargs.get('suffix'):
-        logger.error("Argument 'suffix' is not supported for compare_distributed.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    is_print_compare_log = kwargs.get('is_print_compare_log', True)
-    # get the ranks and match by order
-    npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
-    bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
-    if len(npu_ranks) != len(bench_ranks):
-        logger.error('The number of ranks in the two runs are different. '
-                     'Unable to match the ranks. Please use another folder to compare '
-                     'or use compare() api and manually match the ranks.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-    for nr, br in zip(npu_ranks, bench_ranks):
-        npu_data_dir = os.path.join(npu_dump_dir, nr)
-        bench_data_dir = os.path.join(bench_dump_dir, br)
-        for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
-            npu_path = extract_json(npu_data_dir, file_type)
-            bench_path = extract_json(bench_data_dir, file_type)
-            if npu_path == "" or bench_path == "":
-                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
-                    ' skip comparing.')
-                continue
-            dump_result_param = {
-                'npu_json_path': npu_path,
-                'bench_json_path': bench_path,
-                'is_print_compare_log': is_print_compare_log
-            }
-            ms_compare(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)
+    compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, ms_compare, **kwargs)
 
 
 def ms_graph_compare(inputs, outputs):

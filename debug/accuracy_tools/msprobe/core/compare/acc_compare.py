@@ -29,8 +29,7 @@ from msprobe.core.common.file_utils import load_json, remove_path, create_direct
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
     set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type
-from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
-    check_debug_json_str
+from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
@@ -239,8 +238,6 @@ class ParseData:
         op_data = json_data['data'][op_name]
         if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
             check_dump_json_str(op_data, op_name)
-        elif self.mode_config.compared_file_type == Const.DEBUG_JSON_FILE:
-            check_debug_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
 
         if self.mode_config.stack_mode:

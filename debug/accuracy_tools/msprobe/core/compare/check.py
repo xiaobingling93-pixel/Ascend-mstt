@@ -73,10 +73,6 @@ def check_dump_json_str(op_data, op_name):
                 check_json_key_value(ele, op_name)
 
 
-def check_debug_json_str(op_data, op_name):
-    pass
-
-
 def check_json_key_value(input_output, op_name, depth=0):
     if depth > Const.MAX_DEPTH:
         logger.error(f"string check of data info of {op_name} exceeds the recursion limit.")
