@@ -123,8 +123,16 @@ class TestApiRunner(unittest.TestCase):
             api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
             first_real, *rest = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward,
                                                     api_platform)
+            print("\n[DEBUG] raw_result =", first_real)
+            print("[DEBUG] raw_result type =", type(first_real))
 
             first_target = results_target[0]
+
+            print(f"[DEBUG] first_real 的类型: {type(first_real)}")
+            print(f"[DEBUG] hasattr(first_real, 'get_parameter') = {hasattr(first_real, 'get_parameter')}")
+            print(f"[DEBUG] first_target 的类型: {type(first_target)}")
+            print(f"[DEBUG] hasattr(first_target, 'get_parameter') = {hasattr(first_target, 'get_parameter')}")
+
             a = first_real.get_parameter()
             b = first_target.get_parameter(tensor_platform=api_platform)
             assert (abs(first_real.get_parameter() - first_target.get_parameter(tensor_platform=api_platform)) < 1e-5).all()
