@@ -60,6 +60,11 @@ pub struct NpuTraceOptions {
     pub gc_detect_threshold: Option<f32>,
     pub data_simplification: String,
     pub export_type: String,
+    pub host_sys: String,
+    pub sys_io: bool,
+    pub sys_interconnection: bool,
+    pub mstx_domain_include: Option<String>,
+    pub mstx_domain_exclude: Option<String>,
 }
 
 impl NpuTraceOptions {
@@ -80,7 +85,12 @@ PROFILE_OP_ATTR={}
 PROFILE_MSPROF_TX={}
 PROFILE_GC_DETECT_THRESHOLD={}
 PROFILE_DATA_SIMPLIFICATION={}
-PROFILE_EXPORT_TYPE={}"#,
+PROFILE_EXPORT_TYPE={}
+PROFILE_HOST_SYS={}
+PROFILE_SYS_IO={}
+PROFILE_SYS_INTERCONNECTION={}
+PROFILE_MSTX_DOMAIN_INCLUDE={}
+PROFILE_MSTX_DOMAIN_EXCLUDE={}"#,
             self.record_shapes,
             self.profile_memory,
             self.with_stack,
@@ -95,7 +105,12 @@ PROFILE_EXPORT_TYPE={}"#,
             self.msprof_tx,
             self.gc_detect_threshold.map_or("None".to_string(), |v| v.to_string()),
             self.data_simplification,
-            self.export_type
+            self.export_type,
+            self.host_sys,
+            self.sys_io,
+            self.sys_interconnection,
+            self.mstx_domain_include.clone().map_or("None".to_string(), |v| v.to_string()),
+            self.mstx_domain_exclude.clone().map_or("None".to_string(), |v| v.to_string())
         )
     }
 }
@@ -221,6 +236,11 @@ ACTIVITIES_ITERATIONS=1000"#
                 gc_detect_threshold: 0.1,
                 data_simplification: "true",
                 export_type: "Text".to_string(),
+                host_sys: "cpu".to_string(),
+                sys_io: true,
+                sys_interconnection: true,
+                mstx_domain_include: "domain1".to_string(),
+                mstx_domain_exclude: "domain2".to_string(),
             },
         };
         assert_eq!(
@@ -242,7 +262,12 @@ PROFILE_OP_ATTR=true
 PROFILE_MSPROF_TX=true
 PROFILE_GC_DETECT_THRESHOLD=0.1
 PROFILE_DATA_SIMPLIFICATION=true
-PROFILE_EXPORT_TYPE=Text"#
+PROFILE_EXPORT_TYPE=Text
+PROFILE_HOST_SYS=cpu
+PROFILE_SYS_IO=true
+PROFILE_SYS_INTERCONNECTION=true
+PROFILE_MSTX_DOMAIN_INCLUDE=domain1
+PROFILE_MSTX_DOMAIN_EXCLUDE=domain2"#
         );
     }
 }
