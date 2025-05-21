@@ -45,13 +45,14 @@ class AnomalyTurbulence(ScanRule):
         self.threshold = threshold
 
     def apply(self, cur, history=None):
+        """
+        :param cur: float, current metric value
+        :param history: float, history weighted average
+        :return: bool, whether the current value deviates from the historical average value of current metric
+        """
         baseline = st.mean(history) if isinstance(history, list) else history
-
-        up_bound = baseline + baseline * self.threshold
-        if baseline > 0:
-            return cur > up_bound
-        else:
-            return cur < up_bound
+        up_bound = baseline * (1 + self.threshold)
+        return abs(cur) > up_bound
 
 
 class AnomalyNan(ScanRule):
@@ -173,7 +174,7 @@ class TrainStage:
 
 
 FORWARD_KEY = [MonitorConst.ACTV]
-BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD, 
+BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD,
                 MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
 OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
 TRAIN_STAGE = {
@@ -264,6 +265,7 @@ class BaseWriterWithAD:
         self.anomaly_factory = writer_input.anomaly_factory
         self.anomalies = []
         self.ndigits = writer_input.ndigits
+        self.beta = 0.99
 
     @staticmethod
     def stack_tensors(tensor_list):
@@ -316,12 +318,17 @@ class BaseWriterWithAD:
         Returns:
             None
         """
-        detected = False
-        if self.ad_rules:
-            avg = self._update_tag2scalars(tag, scalar_value)
-            detected, rule_name = self._ad(scalar_value, history=avg)
+        if not self.ad_rules or tag[-1] in ["shape", "dtype"]:
+            return
+        if isinstance(scalar_value, torch.Tensor):
+            scalar_value = scalar_value.item()
+        avg = self._update_tag2scalars(tag, scalar_value)
+        detected, rule_name = self._ad(scalar_value, history=avg)
         if detected:
-            exception_message = f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}."
+            if rule_name == AnomalyTurbulence.name and tag[-1] not in ["norm", "mean"]:
+                return
+            exception_message = (f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}, "
+                                 f"current value {scalar_value}, history mean {avg}.")
             logger.info(f"{BCOLORS.WARNING}> {exception_message}{BCOLORS.ENDC}")
             # append to self.anomalies for dump
             if self.anomaly_factory:
@@ -336,12 +343,12 @@ class BaseWriterWithAD:
             tensors.extend(op2tensor.values())
         if not tensors:
             return
-        
+
         n_slices = len(tensors) // MonitorConst.SLICE_SIZE
         with torch.no_grad():
             for i in range(n_slices + 1):
                 begin = i * MonitorConst.SLICE_SIZE
-                end = (i+1) * MonitorConst.SLICE_SIZE
+                end = (i + 1) * MonitorConst.SLICE_SIZE
                 if begin == len(tensors):
                     continue
                 metric_list = self.stack_tensors(tensors[begin:end])
@@ -364,11 +371,11 @@ class BaseWriterWithAD:
         Returns:
             float: The average value before update.
         """
+        abs_scalar_value = abs(scalar_value)
         if tag not in self.tag2scalars:
-            self.tag2scalars[tag] = {'avg': scalar_value, 'count': 0}
+            self.tag2scalars[tag] = {'avg': abs_scalar_value, 'count': 0}
         avg = self.tag2scalars[tag]['avg']
-        new_avg = (avg * self.tag2scalars[tag]['count'] + scalar_value) / (self.tag2scalars[tag]['count'] + 1)
-        self.tag2scalars[tag]['avg'] = new_avg
+        self.tag2scalars[tag]['avg'] = self.beta * avg + (1 - self.beta) * abs_scalar_value
         self.tag2scalars[tag]['count'] += 1
         return avg
 
