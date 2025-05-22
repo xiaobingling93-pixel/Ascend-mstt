@@ -14,9 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+from dataclasses import dataclass
 from unittest import TestCase
-from msprobe.core.compare.layer_mapping.postprocess_pass import extract_next_item_last_number
-from msprobe.core.compare.layer_mapping.postprocess_pass import replace_next_item_index
+from msprobe.core.compare.layer_mapping.postprocess_pass import extract_next_item_last_number, \
+    replace_next_item_index, renumber_index_pass
+
+
+@dataclass
+class DataItem:
+    """Class for keeping track of an item in inventory"""
+    type_name: str
+    full_scope: str
+    layer_scope: str
 
 
 class TestPostProcessPass(TestCase):
@@ -46,3 +55,12 @@ class TestPostProcessPass(TestCase):
         replace_result = replace_next_item_index(input_data, prefix, inf_value)
         self.assertEqual(replace_result, input_data)
 
+    def test_renumber_index_pass(self):
+        a = DataItem("ParallelTransformer", "fake_data.layers.10", "fake_data.layers")
+        b = DataItem("ParallelTransformer", "fake_data.layers.12", "fake_data.layers")
+        c = DataItem("FakeLayer", "fake_data.layers.10.a.b.c", "fake_data.layers.a.b")
+        data_items = [a, b, c]
+        renumber_index_pass(data_items, "ParallelTransformer")
+        self.assertEqual(a.full_scope, "fake_data.layers.0")
+        self.assertEqual(b.full_scope, "fake_data.layers.2")
+        self.assertEqual(c.full_scope, "fake_data.layers.0.a.b.c")
