@@ -15,6 +15,7 @@
 import functools
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import save_npy
 
 
 class FrameworkDescriptor:
@@ -102,6 +103,14 @@ class FmkAdp:
     @classmethod
     def tensor_norm(cls, tensor):
         return cls.process_tensor(tensor, lambda x: x.norm())
+    
+    @classmethod
+    def save_tensor(cls, tensor, filepath):
+        if cls.fmk == Const.PT_FRAMEWORK:
+            tensor_npy = tensor.cpu().detach().float().numpy()
+        else:
+            tensor_npy = tensor.asnumpy()
+        save_npy(tensor_npy, filepath)
 
     @classmethod
     def dtype(cls, dtype_str):

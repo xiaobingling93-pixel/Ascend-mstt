@@ -177,7 +177,7 @@ def validate_alert(alert):
             args = rule.get("args")
             if args and isinstance(args, dict):
                 threshold = args.get("threshold")
-                if not isinstance(threshold, float) or threshold < 0:
+                if not isinstance(threshold, (float, int)) or threshold < 0:
                     raise TypeError('threshold must be float and not less than 0')
     dump = alert.get('dump')
     if dump and not isinstance(dump, bool):

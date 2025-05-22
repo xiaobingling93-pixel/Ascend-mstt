@@ -40,11 +40,11 @@ def find_with_prefix(directory, prefix):
 
 
 class Args:
-    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None):
+    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None, save_error_data=False):
         self.api_info_file = api_info_file if api_info_file is not None else os.path.join(directory, "files", "api_info_statistics.json")
         self.out_path = out_path if out_path is not None else os.path.join(directory, "files")
         self.result_csv_path = result_csv_path if result_csv_path is not None else ""
-
+        self.save_error_data = save_error_data 
 
 class TestApiAccuracyChecker(unittest.TestCase):
 

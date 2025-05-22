@@ -294,8 +294,9 @@ class TestBaseWriterWithAD(TestCase):
     def test_add_scalar(self, mock_logger):
         AnomalyTurbulence_obj = AnomalyTurbulence(0.2)
         self.BaseWriter.ad_rules = [AnomalyTurbulence_obj]
-        self.BaseWriter.tag2scalars = {'tag': {'avg': 1.0, 'count': 1}}
-        self.BaseWriter.add_scalar('tag', 2.0)
+        tag = ('0:1.post_attention_norm.weight/rank0/pre_grad', 'mean')
+        self.BaseWriter.tag2scalars = {tag: {'avg': 1.0, 'count': 1}}
+        self.BaseWriter.add_scalar(tag, 2.0)
 
         mock_logger.info.assert_called_once()
 
@@ -311,7 +312,7 @@ class TestBaseWriterWithAD(TestCase):
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.0)
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['count'], 1)
         self.BaseWriter._update_tag2scalars('tag1', 2.0)
-        self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.5)
+        self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.01)
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['count'], 2)
 
 

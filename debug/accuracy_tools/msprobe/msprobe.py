@@ -95,6 +95,10 @@ def main():
 
         _ms_graph_service_parser(graph_service_cmd_parser)
 
+        from msprobe.mindspore.api_accuracy_checker.generate_op_script.op_generator import _op_generator_parser, \
+            _run_operator_generate_commond
+        _op_generator_parser(op_generate_cmd_parser)
+
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[2] == Const.PT_FRAMEWORK:
         if not is_torch_available:
@@ -140,6 +144,8 @@ def main():
             mul_api_checker_main(args)
         elif sys.argv[3] == "graph":
             _ms_graph_service_command(args)
+        elif sys.argv[3] == 'op_generate':
+            _run_operator_generate_commond(args)
         elif sys.argv[3] == "code_mapping":
             from msprobe.mindspore.code_mapping.main import code_mapping_main
             code_mapping_main(args)

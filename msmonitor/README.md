@@ -58,13 +58,19 @@ sudo apt-get install -y openssl
 # centos
 sudo yum install -y openssl
 ```
-dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynlog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称：
-
+dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynlog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
+**用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。**
+服务端证书目录结构：
 ```bash  
-rpc_certs
+server_certs
 ├── ca.crt
 ├── server.crt
-├── server.key
+└── server.key
+```
+客户端证书目录结构：
+```bash  
+client_certs
+├── ca.crt
 ├── client.crt
 └── client.key
 ```
@@ -169,7 +175,7 @@ echo "--enable_ipc_monitor" | sudo tee -a /etc/dynolog.gflags
 sudo systemctl start dynolog
 
 # 方法2：命令行执行
-dynolog --enable-ipc-monitor --certs-dir /home/rpc_certs
+dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 
 #dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
@@ -188,16 +194,16 @@ bash train.sh
 Step 4：使用dyno CLI动态触发trace dump
 ```bash
 # 示例1：从第10个step开始采集，采集2个step，采集框架、CANN和device数据，同时采集完后自动解析以及解析完成不做数据精简，落盘路径为/tmp/profile_data
-dyno --certs-dir /home/rpc_certs nputrace --start-step 10 --iterations 2 --activities CPU,NPU --analyse --data-simplification false --log-file /tmp/profile_data
+dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --activities CPU,NPU --analyse --data-simplification false --log-file /tmp/profile_data
 
 # 示例2：从第10个step开始采集，采集2个step，只采集CANN和device数据，同时采集完后自动解析以及解析完成后开启数据精简，落盘路径为/tmp/profile_data
-dyno --certs-dir /home/rpc_certs nputrace --start-step 10 --iterations 2 --activities NPU --analyse --data-simplification true --log-file /tmp/profile_data
+dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --activities NPU --analyse --data-simplification true --log-file /tmp/profile_data
 
 # 示例3：从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
-dyno --certs-dir /home/rpc_certs nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
+dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
 
 # 示例4：多机场景下向特定机器x.x.x.x发送参数信息，参数表示从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
-dyno --certs-dir /home/rpc_certs --hostname x.x.x.x nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
+dyno --certs-dir /home/client_certs --hostname x.x.x.x nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
 ```
 
 ### NPU Monitor功能
@@ -233,7 +239,7 @@ echo "--enable_ipc_monitor" | sudo tee -a /etc/dynolog.gflags
 sudo systemctl start dynolog
 
 # 方法2：命令行执行
-dynolog --enable-ipc-monitor --certs-dir /home/rpc_certs
+dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 
 # 使用Prometheus上报数据需要指定参数：--use_prometheus
 # dynolog daemon的日志路径为：/var/log/dynolog.log
@@ -264,22 +270,22 @@ bash train.sh
 Step 5：使用dyno CLI使能npu-monitor
 ```bash
 # 示例1：开启性能监控，使用默认配置
-dyno --certs-dir /home/rpc_certs npu-monitor --npu-monitor-start
+dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start
 
 # 示例2：暂停性能监控
-dyno --certs-dir /home/rpc_certs npu-monitor --npu-monitor-stop
+dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-stop
 
 # 示例3：性能监控过程中修改配置
 # 上报周期30s, 上报数据类型Marker和Kernel
-dyno --certs-dir /home/rpc_certs npu-monitor --report-interval-s 30 --mspti-activity-kind Marker,Kernel
+dyno --certs-dir /home/client_certs npu-monitor --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 
 # 示例4：性能监控开启时修改配置
 # 上报周期30s, 上报数据类型Marker和Kernel
-dyno --certs-dir /home/rpc_certs npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
+dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 
 # 示例5：多机场景下性能监控开启时修改配置
 # 多机场景下向特定机器x.x.x.x发送参数信息，参数表示上报周期30s, 上报数据类型Marker和Kernel
-dyno --certs-dir /home/rpc_certs --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
+dyno --certs-dir /home/client_certs --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 ```
 
 Step6: 观测Prometheus上报数据

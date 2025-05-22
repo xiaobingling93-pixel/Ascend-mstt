@@ -44,7 +44,8 @@ def collect_pip_data():
     result = ""
     packages = metadata.distributions()
     for pkg in packages:
-        result += f"{pkg.metadata['Name']}={pkg.version}\n"
+        if pkg.metadata:
+            result += f"{pkg.metadata.get('Name')}={pkg.version}\n"
     return result
 
 
