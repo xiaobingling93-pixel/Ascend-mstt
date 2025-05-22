@@ -92,16 +92,16 @@ bash scripts/build.sh -t deb
 bash scripts/build.sh -t rpm
 ```
 
-- msmonitor_plugin wheel包编译
+- msmonitor-plugin wheel包编译
 
-msmonitor_plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npu-monitor功能前必须安装该wheel包，具体编译安装指导可参考msmonitor\plugin\README.md。
+msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npu-monitor功能前必须安装该wheel包，具体编译安装指导可参考[msmonitor-plugin编包指导](./plugin/README.md)。
 
 ## 使用方式
 
 - **说明**：**Profiler trace dump**功能和**NPU Monitor**功能**不能**同时开启。
 
 ### Profiler trace dump功能
-Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Torch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
+Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Pytorch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
 
 - 查看dyno支持的命令和帮助
 
@@ -126,7 +126,7 @@ dyno nputrace --help
 - nputrace使用方式
 
 ```bash
-dyno nputrace [SUBCOMMANDS] --log-file <LOG_FILE>
+dyno --certs-dir <CERT_DIR> nputrace [SUBCOMMANDS] --log-file <LOG_FILE>
 ```
 
 nputrace子命令支持的参数选项
@@ -138,12 +138,12 @@ nputrace子命令支持的参数选项
 | process-limit       | u64 | 最大采集进程的数量，默认值3，dynolog原生参数                                                                                                                                                                                                                                     |     N     |      N      |
 | profile-start-time  | u64 | 用于同步采集的Unix时间戳，单位毫秒，默认值0，dynolog原生参数                                                                                                                                                                                                                           |     N     |      N      |
 | duration-ms         | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数                                                                                                                                                                                                                                  |     N     |      N      |
-| iterations          | i64 | 采集总迭代数，默认值-1，dynolog原生参数                                                                                                                                                                                                                                       |     Y     |      Y      |
+| iterations          | i64 | 采集总迭代数，默认值-1，dynolog原生参数，必选参数，需与start-step参数同时指定                                                                                                                                                                                                                                     |     Y     |      Y      |
 | log-file            | String | 采集落盘的路径，必选值                                                                                                                                                                                                                                                    |     Y     |      Y      |
 | start-step          | u64 | 开始采集的迭代数，默认值0                                                                                                                                                                                                                                                  |     Y     |      Y      |
 | record-shapes       | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集                                                                                                                                                                                                                     |     Y     |      Y      |
 | profile-memory      | action | 是否采集算子内存信息，设置参数采集，默认不采集                                                                                                                                                                                                                                        |     Y     |      Y      |
-| with-stack          | action | 是否采集Python调用栈，设置参数采集，默认不采集，当前MindSpore和PyTorch框架都支持                                                                                                                                                                                                            |     Y     |      Y      |
+| with-stack          | action | 是否采集Python调用栈，设置参数采集，默认不采集                                                                                                                                |     Y     |      Y      |
 | with-flops          | action | 是否采集算子flops，设置参数采集，默认不采集                                                                                                                                                                                                                                       |     Y     |      N      |
 | with-modules        | action | 是否采集modules层级的Python调用栈，设置参数采集，默认不采集                                                                                                                                                                                                                           |     Y     |      N      |
 | analyse             | action | 采集后是否自动解析，设置参数解析，默认不解析                                                                                                                                                                                                                                         |     Y     |      Y      |
@@ -164,9 +164,9 @@ nputrace子命令支持的参数选项
 
 - nputrace使用方法
 
-Step0: 参考`3.编译`章节完成dynolog的编译，以及dynolog_npu_plugin wheel包的编译和安装。
+Step 0: 参考[3.编译](./README.md#3-编译)章节完成dynolog的编译，以及dynolog_npu_plugin wheel包的编译和安装。
 
-Step1：拉起dynolog daemon进程
+Step 1：拉起dynolog daemon进程
 ```bash
 # 方法1和方法2 二选一
 # 方法1：使用systemd拉起service
@@ -180,7 +180,7 @@ dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 #dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
 
-Step 2：使能dynolog trace dump环境变量
+Step 2：在训练任务拉起窗口使能dynolog环境变量
 ```bash
 export KINETO_USE_DAEMON=1
 ```
@@ -207,7 +207,9 @@ dyno --certs-dir /home/client_certs --hostname x.x.x.x nputrace --start-step 10 
 ```
 
 ### NPU Monitor功能
-NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
+NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。 
+
+**注意**：NPU Monitor功能开启时，不能同时开启Profiler trace dump功能。
 
 ```bash
 dyno npu-monitor --help
@@ -216,7 +218,7 @@ dyno npu-monitor --help
 - npu-monitor使用方式
 
 ```bash
-dyno npu-monitor [SUBCOMMANDS]
+dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 ```
 
 npu-monitor子命令支持的参数选项
@@ -230,7 +232,7 @@ npu-monitor子命令支持的参数选项
 
 - npu-monitor使用方法
 
-Step1： 拉起dynolog daemon进程
+Step 1： 拉起dynolog daemon进程
 ```bash
 # 方法1和方法2 二选一
 # 方法1：使用systemd拉起service
@@ -245,7 +247,7 @@ dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 # dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
 
-Step 2：使能dynolog环境变量
+Step 2：在训练任务拉起窗口使能dynolog环境变量
 ```bash
 export KINETO_USE_DAEMON=1
 ```

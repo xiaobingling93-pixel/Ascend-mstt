@@ -10,7 +10,7 @@
 __PyDynamicMonitorProxy__:
 * `init_dyno` 向dynolog daemon发送注册请求
   * input: npuId(int)
-  * return： None
+  * return：None
 * `poll_dyno` 向dynolog daemon获取Profiler控制参数
   * input: None
   * return: str, 返回控制参数
@@ -34,7 +34,7 @@ pip install pybind11
 ```
 python3 setup.py bdist_wheel
 ```
-以上命令执行完成后在plugn/dist目录下生成msMonitor插件whl安装包msmonitor-plugin-{version}.whl
+以上命令执行完成后在dist目录下生成msMonitor插件whl安装包msmonitor-plugin-{version}.whl
 * 安装
 ```
 pip install dist/{msmonitor-plugin-{version}.whl}
