@@ -99,13 +99,14 @@ public:
     IpcClient(const IpcClient &) = delete;
     IpcClient &operator = (const IpcClient &) = delete;
     IpcClient() = default;
+    bool Init();
     bool RegisterInstance(int32_t npu);
     std::string IpcClientNpuConfig();
     bool SyncSendMessage(const Message &message, const std::string &destName, int numRetry = 10,
         int seepTimeUs = 10000);
 
 private:
-    std::vector<int32_t> pids_ = GetPids();
+    std::vector<int32_t> pids_;
     NpuIpcEndPoint<0> ep_{ "dynoconfigclient" + GenerateUuidV4() };
     std::mutex dequeLock_;
     std::deque<std::unique_ptr<Message>> msgDynoDeque_;

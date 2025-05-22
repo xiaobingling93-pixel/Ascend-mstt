@@ -6,13 +6,32 @@
 
 namespace dynolog_npu {
 namespace ipc_monitor {
+DynoLogNpuMonitor::DynoLogNpuMonitor()
+{
+    // init glog
+    if (!google::IsGoogleLoggingInitialized()) {
+        std::string logPath;
+        if (CreateMsmonitorLogPath(logPath)) {
+            fprintf(stderr, "[INFO] [%d] Msmonitor log will record to %s\n", GetProcessId(), logPath.c_str());
+            logPath = logPath + "/msmonitor_";
+            google::InitGoogleLogging("MsMonitor");
+            google::SetLogDestination(google::GLOG_INFO, logPath.c_str());
+            google::SetLogFilenameExtension(".log");
+        } else {
+            fprintf(stderr, "Failed to create log path, log will not record\n");
+        }
+    }
+}
 
 bool DynoLogNpuMonitor::Init()
 {
-
     if (isInitialized_) {
         LOG(WARNING) << "DynoLog npu monitor already initialized";
         return true;
+    }
+    if (!ipcClient_.Init()) {
+        LOG(ERROR) << "DynoLog npu monitor ipcClient init failed";
+        return false;
     }
     bool res = ipcClient_.RegisterInstance(npuId_);
     if (res) {

@@ -414,7 +414,6 @@ bool CreateMsmonitorLogPath(std::string& path)
         std::string realPath = PathUtils::RealPath(absPath);
         if (PathUtils::CreateDir(realPath)) {
             path = realPath;
-            fprintf(stderr, "[INFO] Msmonitor log will record to %s.\n", realPath.c_str());
             return true;
         }
         fprintf(stderr, "[ERROR] Create LOG_PATH: %s failed.\n", realPath.c_str());
