@@ -48,6 +48,8 @@ dump_gradient_op_existed = False
 if hasattr(ops, 'DumpGradient'):
     gd = ops.DumpGradient()
     dump_gradient_op_existed = True
+else:
+    logger.warning('The operator "DumpGradient" does not exist. Cell dump can not work in graph mode.')
 td.add_prim_attr(KEY_SIDE_EFFECT, False)
 td_in.add_prim_attr(KEY_SIDE_EFFECT, False)
 np_ms_dtype_dict = {

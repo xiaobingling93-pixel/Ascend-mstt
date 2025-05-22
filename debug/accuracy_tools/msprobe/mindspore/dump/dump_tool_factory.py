@@ -15,6 +15,7 @@
 
 from msprobe.mindspore.common.const import Const
 from msprobe.core.common.log import logger
+from msprobe.mindspore.common.utils import is_graph_mode_cell_dump_allowed
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
@@ -43,6 +44,8 @@ class DumpToolFactory:
     @staticmethod
     def create(config: DebuggerConfig, model=None):
         if config.level == Const.CELL:
+            if not is_graph_mode_cell_dump_allowed(config):
+                raise Exception("Cell dump is not supported in graph mode.")
             if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
                 raise Exception("data_mode must be one of all, forward, backward.")
         else:
