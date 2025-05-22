@@ -13,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from msprobe.core.common.utils import CompareException, Const
-from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, compare_distributed_inner
-from msprobe.pytorch.common.log import logger
+from msprobe.core.compare.utils import compare_distributed_inner
 from msprobe.pytorch.compare.pt_compare import compare
 
 

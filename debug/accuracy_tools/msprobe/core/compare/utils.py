@@ -95,8 +95,7 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 def read_op(op_data, op_name):
     split_name = op_name.split(Const.SEP)
-    if Const.DEBUG in split_name or \
-        Const.PARAMS_GRAD in split_name:
+    if Const.DEBUG in split_name or Const.PARAMS_GRAD in split_name:
         op_parsed_list = op_item_parse(op_data, op_name)
     else:
         op_parsed_list = []
@@ -584,11 +583,11 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
             bench_path = extract_json(bench_data_dir, file_type)
             if npu_path == "" or bench_path == "":
                 logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
-                    ' skip comparing.')
+                             ' skip comparing.')
                 continue
             dump_result_param = {
                 'npu_json_path': npu_path,
                 'bench_json_path': bench_path,
                 'is_print_compare_log': is_print_compare_log
             }
-            compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)
+            compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}', **kwargs)

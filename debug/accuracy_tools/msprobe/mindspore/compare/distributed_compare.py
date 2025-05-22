@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from msprobe.core.common.utils import CompareException, Const
+from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.compare.ms_compare import ms_compare
-from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, compare_distributed_inner
+from msprobe.core.compare.utils import compare_distributed_inner
 from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
 
 
