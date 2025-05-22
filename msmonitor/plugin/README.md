@@ -32,6 +32,7 @@ pip install pybind11
 ```
 * 编译whl包
 ```
+bash ./stub/build_stub.sh
 python3 setup.py bdist_wheel
 ```
 以上命令执行完成后在plugn/dist目录下生成msMonitor插件whl安装包msmonitor-plugin-{version}.whl

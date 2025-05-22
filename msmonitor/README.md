@@ -79,7 +79,7 @@ rpc_certs
 # 编译dyno和dynolog二进制文件
 bash scripts/build.sh
 
-# 编译deb包, 当前支持amd64和aarch64平台, 默认为amd64, 编译aarch64平台需要修改third_party/dynolog/scripts/debian/control文件中的Architecture改为aarch64
+# 编译deb包, 当前支持amd64和aarch64平台, 默认为amd64, 编译aarch64平台需要修改third_party/dynolog/scripts/debian/control文件中的Architecture改为arm64
 bash scripts/build.sh -t deb
 
 # 编译rpm包, 当前只支持amd64平台
