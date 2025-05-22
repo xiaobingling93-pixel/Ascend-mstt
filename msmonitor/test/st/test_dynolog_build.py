@@ -18,14 +18,27 @@ import subprocess
 import unittest
 import time
 import shutil
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 
 def excute_cmd(cmd, timeout=30 * 60):
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    """执行命令并捕获输出"""
+    logging.info(f"执行命令: {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return result
 
 
 def kill_existing_dynolog_processes():
     """查找并杀死系统中已存在的dynolog进程"""
+    logging.info("清理已存在的dynolog进程")
+    
     try:
         current_pid = os.getpid()
         
@@ -36,16 +49,18 @@ def kill_existing_dynolog_processes():
                 # 跳过当前进程和父进程
                 if int(pid) == current_pid or int(pid) == os.getppid():
                     continue
-
+                
+                logging.info(f"终止dynolog进程 (PID: {pid})")
                 excute_cmd(["kill", pid])
-    except Exception:
-        # 静默处理异常，不中断测试流程
-        pass
+    except Exception as e:
+        logging.error(f"清理dynolog进程时出错: {str(e)}")
 
 
 class TestBuildDynolog(unittest.TestCase):
     def test_build_dynolog_bin_and_plugin_whl_should_success(self):
+        logging.info("构建dynolog二进制文件和插件")
         result = excute_cmd(["bash", "scripts/build.sh"])
+        
         self.assertEqual(
             result.returncode,
             0,
@@ -55,12 +70,16 @@ class TestBuildDynolog(unittest.TestCase):
         dyno_path = "third_party/dynolog/build/bin/dyno"
         dynolog_path = "third_party/dynolog/build/bin/dynolog"
 
+        logging.info(f"检查文件: {dyno_path}")
         self.assertTrue(os.path.exists(dyno_path), f"{dyno_path} does not exist")
+        logging.info(f"检查文件: {dynolog_path}")
         self.assertTrue(os.path.exists(dynolog_path), f"{dynolog_path} does not exist")
 
+        logging.info("构建插件wheel包")
         ori_dir = os.getcwd()
         os.chdir("plugin")
-        result = excute_cmd(["python3", "setup.py", "bdist_wheel"])
+        result = excute_cmd(["bash", "build.sh"])
+            
         self.assertEqual(
             result.returncode,
             0,
@@ -68,6 +87,7 @@ class TestBuildDynolog(unittest.TestCase):
         )
 
         plugin_whl_path = glob.glob("dist/msmonitor_plugin-*.whl")[0]
+        logging.info(f"检查wheel包: {plugin_whl_path}")
         self.assertTrue(
             os.path.exists(plugin_whl_path), f"{plugin_whl_path} does not exist"
         )
@@ -78,6 +98,7 @@ class TestBuildDynolog(unittest.TestCase):
         kill_existing_dynolog_processes()
         
         # 首先启动dynolog服务
+        logging.info("准备启动dynolog服务")
         dynolog_process = None
         current_dir = os.getcwd()
         cert_dir = os.path.join(current_dir, "temp_certs")
@@ -89,6 +110,7 @@ class TestBuildDynolog(unittest.TestCase):
             
             # 使用gen_tls_certs.sh脚本生成证书
             gen_certs_script = os.path.join(current_dir, "test/st/gen_tls_certs.sh")
+            logging.info("生成TLS证书")
             
             # 保存当前目录
             saved_dir = os.getcwd()
@@ -116,6 +138,7 @@ class TestBuildDynolog(unittest.TestCase):
             
             # 启动dynolog进程
             dynolog_cmd = ["third_party/dynolog/build/bin/dynolog", "--enable-ipc-monitor", "--certs-dir", cert_path]
+            logging.info("启动dynolog进程")
             dynolog_process = subprocess.Popen(
                 dynolog_cmd, 
                 stdout=subprocess.PIPE, 
@@ -123,18 +146,21 @@ class TestBuildDynolog(unittest.TestCase):
             )
 
             # 等待dynolog启动
-            time.sleep(2)
+            logging.info("等待dynolog启动")
+            time.sleep(5)
             
             # 验证dynolog进程是否正在运行
+            poll_result = dynolog_process.poll()
             self.assertIsNone(
-                dynolog_process.poll(), 
+                poll_result, 
                 "Dynolog process failed to start"
             )
             
             # 发送版本查询命令
+            logging.info("测试版本查询命令")
             version_cmd = ["third_party/dynolog/build/bin/dyno", "--certs-dir", cert_path, "version"]
             version_result = excute_cmd(version_cmd)
-            
+
             # 验证命令执行成功
             self.assertEqual(
                 version_result.returncode,
@@ -149,9 +175,10 @@ class TestBuildDynolog(unittest.TestCase):
             )
             
             # 发送状态查询命令
+            logging.info("测试状态查询命令")
             status_cmd = ["third_party/dynolog/build/bin/dyno", "--certs-dir", cert_path, "status"]
             status_result = excute_cmd(status_cmd)
-            
+
             # 验证命令执行成功
             self.assertEqual(
                 status_result.returncode,
@@ -166,10 +193,11 @@ class TestBuildDynolog(unittest.TestCase):
             )
             
             # 测试npu-monitor命令
+            logging.info("测试npu-monitor启动命令")
             npumonitor_cmd = ["third_party/dynolog/build/bin/dyno", "--certs-dir",
                               cert_path, "npu-monitor", "--npu-monitor-start"]
             npumonitor_result = excute_cmd(npumonitor_cmd)
-            
+
             # 验证命令执行成功
             self.assertEqual(
                 npumonitor_result.returncode,
@@ -179,10 +207,11 @@ class TestBuildDynolog(unittest.TestCase):
             )
             
             # 测试停止npu-monitor命令
+            logging.info("测试npu-monitor停止命令")
             npumonitor_stop_cmd = ["third_party/dynolog/build/bin/dyno", "--certs-dir",
                                    cert_path, "npu-monitor", "--npu-monitor-stop"]
             npumonitor_stop_result = excute_cmd(npumonitor_stop_cmd)
-            
+
             # 验证命令执行成功
             self.assertEqual(
                 npumonitor_stop_result.returncode,
@@ -196,6 +225,7 @@ class TestBuildDynolog(unittest.TestCase):
             trace_log_file = os.path.join(trace_log_dir, "test_trace.log")
             
             # 测试nputrace命令
+            logging.info("测试nputrace命令")
             nputrace_cmd = [
                 "third_party/dynolog/build/bin/dyno", 
                 "--certs-dir", cert_path, 
@@ -211,17 +241,20 @@ class TestBuildDynolog(unittest.TestCase):
             self.assertEqual(
                 nputrace_result.returncode,
                 0,
-                f"Dynolog nputrace command failed stdout: {nputrace_result.stdout}, stderr: {nputrace_result.stderr}",
+                "Dynolog nputrace command failed stdout: {}, stderr: {}".format(
+                    nputrace_result.stdout, nputrace_result.stderr)
             )
             
         finally:
             # 清理启动的dynolog进程
             if dynolog_process:
+                logging.info("终止dynolog进程")
                 dynolog_process.terminate()
                 dynolog_process.wait(timeout=5)
             
             # 清理临时证书目录
             if os.path.exists(cert_dir):
+                logging.info("清理临时目录")
                 shutil.rmtree(cert_dir)
                 
             # 清理临时日志目录
