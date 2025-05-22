@@ -35,7 +35,8 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
-        self.flush_size = 20000
+        self.flush_size = 1000
+        self.larger_flush_size = 20000
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
@@ -130,8 +131,20 @@ class DataWriter:
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
-        if dump_data and isinstance(dump_data, dict) and len(dump_data) % self.flush_size == 0:
-            self.write_json()
+
+        if not dump_data or not isinstance(dump_data, dict):
+            return
+
+        length = len(dump_data)
+
+        # 小于大阈值时，使用小阈值落盘
+        if length < self.large_flush_size:
+            if length % self.flush_size == 0:
+                self.write_json()
+        # 大于等于大阈值时，使用大阈值落盘
+        else:
+            if length % self.large_flush_size == 0:
+                self.write_json()
 
     def update_data(self, new_data):
         with lock:
