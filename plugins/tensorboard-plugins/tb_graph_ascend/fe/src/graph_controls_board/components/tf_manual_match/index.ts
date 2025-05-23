@@ -584,7 +584,7 @@ class Legend extends PolymerElement {
     const { success, data, error } = await this.useMatched.saveMatchedRelations(this.selection);
     if (success) {
       const configFile = data;
-      const matchedConfigFiles = [...new Set([configFile, ...this.matchedConfigFiles])];
+      const matchedConfigFiles = [...new Set(['未选择', configFile, ...this.matchedConfigFiles])];
       this.set('matchedConfigFiles', matchedConfigFiles);
       Notification.show(`操作成功:文件已生成到当前目录下，文件名称为${configFile}`, {
         position: 'middle',
