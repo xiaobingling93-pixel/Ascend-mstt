@@ -33,7 +33,7 @@ def check_compare_result_name(file_name):
     """
     check whether the compare result name is as expected
     """
-    single_rank_pattern = r"^compare_result_(rank|rank-rank)_\d{14}.xlsx$"
+    single_rank_pattern = r"^compare_result_(rank|rank-rank)_\d{14}\.xlsx$"
     multi_ranks_pattern = r"^compare_result_rank(\d+)(?:-rank\1)?_\d{14}\.xlsx$"
     if re.match(multi_ranks_pattern, file_name):
         return True
