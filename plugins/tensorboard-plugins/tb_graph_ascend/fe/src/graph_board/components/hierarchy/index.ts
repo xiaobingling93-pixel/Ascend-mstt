@@ -111,13 +111,13 @@ class Hierarchy extends PolymerElement {
   `;
 
     @property({ type: String })
-    graphType: GraphType;
+    graphType: GraphType = 'NPU';
 
     @property({ type: Boolean })
     loading: boolean = false;
 
     @property({ type: Object, notify: true })
-    colors: PreProcessDataConfigType['colors'];
+    colors: PreProcessDataConfigType['colors'] = {} as PreProcessDataConfigType['colors'];
 
     @property({ type: Boolean, notify: true })
     isOverflowFilter: boolean = false;
@@ -128,7 +128,7 @@ class Hierarchy extends PolymerElement {
     @property({ type: Boolean, notify: true })
     selectedNode = '';
 
-    @property({ type: Array<HierarchyNodeType> })
+    @property({ type: Object })
     hierarchyData: Array<HierarchyNodeType> = []
 
     @property({ type: Object })
@@ -157,7 +157,7 @@ class Hierarchy extends PolymerElement {
     useGraph: UseGraphType = useGraph();
     container: HTMLElement | null | undefined;
     graph: HTMLElement | null | undefined;
-    minimap: minimap.Minimap;
+    minimap: minimap.Minimap | null | undefined;
     cleanEventLisetener: () => void = () => { };
 
     @observe('selectedNode')
@@ -217,7 +217,7 @@ class Hierarchy extends PolymerElement {
                     d3.select(this.container as HTMLElement).attr('transform', (d3 as any).event.transform.toString());
                 }
                 this.renderGraph(this.hierarchyData, this.selectedNode);
-                this.minimap.zoom((d3 as any).event.transform);                // Notify the minimap.
+                this.minimap?.zoom((d3 as any).event.transform);                // Notify the minimap.
             });
 
         this.minimap = (minimap as any)?.init(
@@ -227,7 +227,7 @@ class Hierarchy extends PolymerElement {
             160,
             10,
         );
-        this.minimap.zoom(newTransform);
+        this.minimap?.zoom(newTransform);
     }
 
     renderGraph(data, selectedNode, transform = this.getContainerTransform()) {
@@ -241,7 +241,7 @@ class Hierarchy extends PolymerElement {
         this.useGraph.bindInnerRect(container, renderData);
         this.useGraph.bindOuterRect(container, renderData);
         this.useGraph.bindText(container, renderData);
-        if (this.minimap) setTimeout(() => this.minimap.update(), 500);
+        if (this.minimap) setTimeout(() => this.minimap?.update(), 500);
     }
 
 
@@ -302,7 +302,7 @@ class Hierarchy extends PolymerElement {
         if (!this.container) return;
         changeGraphPosition(this.container, 0, 0, 1, 350);
         const newTransform = d3.zoomIdentity.translate(0, 0).scale(1);
-        this.minimap.zoom(newTransform);
+        this.minimap?.zoom(newTransform);
         this.renderGraph(this.hierarchyData, this.selectedNode);
     }
     // 总绑定事件方法，管理所有事件的绑定和解绑
@@ -481,7 +481,7 @@ class Hierarchy extends PolymerElement {
                 nodeName,
                 nodeType: this.graphType,
             };
-            if (this.hierarchyObject[nodeInfo.nodeName || '']?.nodeType === NODE_TYPE.EXPAND_NODEUNEXPAND_NODE) return;
+            if (this.hierarchyObject[nodeInfo.nodeName || '']?.nodeType === NODE_TYPE.UNEXPAND_NODE) return;
             await this.changeNodeExpandState(nodeInfo);
             const transform = this.changeNodeCenter(nodeName);
             this.renderGraph(this.hierarchyData, this.selectedNode, transform);
@@ -503,9 +503,9 @@ class Hierarchy extends PolymerElement {
             const transform = parseTransform(transformStr);
             const delta = event.deltaY > 0 ? -MOVE_STEP : MOVE_STEP;
             transform.y = transform.y + delta;
-            changeGraphPosition(this.container, transform.x, transform.y, transform.scale);
+            changeGraphPosition(this.container as HTMLElement, transform.x, transform.y, transform.scale);
             const newTransform = d3.zoomIdentity.translate(transform.x, transform.y).scale(transform.scale);
-            this.minimap.zoom(newTransform);
+            this.minimap?.zoom(newTransform);
             this.renderGraph(this.hierarchyData, this.selectedNode, { x: transform.x, y: transform.y, scale: transform.scale });
         }
         const throttleWheelEvent = throttle(onwheelEvent, 16);
@@ -536,7 +536,7 @@ class Hierarchy extends PolymerElement {
                 const scale = initialTransform.scale;
                 changeGraphPosition(container, newX, newY, scale);
                 const newTransform = d3.zoomIdentity.translate(newX, newY).scale(scale);
-                this.minimap.zoom(newTransform);
+                this.minimap?.zoom(newTransform);
                 this.renderGraph(this.hierarchyData, this.selectedNode, { x: newX, y: newY, scale: scale });
 
             }
@@ -598,7 +598,7 @@ class Hierarchy extends PolymerElement {
             }
 
             // 更新图形位置
-            changeGraphPosition(this.container, transform.x, transform.y, transform.scale);
+            changeGraphPosition(this.container as HTMLElement, transform.x, transform.y, transform.scale);
 
             // 更新缩略图
             const newTransform = d3.zoomIdentity.translate(transform.x, transform.y).scale(transform.scale);
@@ -638,7 +638,7 @@ class Hierarchy extends PolymerElement {
         const root = this.hierarchyObject[this.rootName];
         const newX = clientWidth / 2 - root?.width * initialTransform.scale / 2;
         const newY = clientHeight / 2 - (selectedNode?.y * initialTransform.scale + 7.5) - 100;
-        changeGraphPosition(this.container, newX, newY, initialTransform.scale, 350);
+        changeGraphPosition(this.container as HTMLElement, newX, newY, initialTransform.scale, 350);
         const newTransform = d3.zoomIdentity.translate(newX, newY).scale(initialTransform.scale);
         this.minimap?.zoom(newTransform);
         return { x: newX, y: newY, scale: initialTransform.scale };
