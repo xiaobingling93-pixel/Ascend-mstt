@@ -455,15 +455,15 @@ class Legend extends PolymerElement {
     const { success, data, error } = await this.useMatched.addMatchedNodesLinkByConfigFile(this.selectedConfigFile, this.selection);
     this.set('matchConfigLoading', false);
     if (success) {
-      const matchReslut = data?.matchReslut;
+      const matchReslut = data?.matchReslut || [];
       const npuMatchNodes = data?.npuMatchNodes || {};
       const benchMatchNodes = data?.benchMatchNodes || {};
       const npuUnMatchNodes = data?.npuUnMatchNodes;
       const benchUnMatchNodes = data?.benchUnMatchNodes;
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = matchReslut?.length || 0;
-      const matchSuccessNum = matchReslut?.filter(Boolean).length || 0;
+      const porcessedNodeNum = matchReslut?.length;
+      const matchSuccessNum = matchReslut?.filter(Boolean).length;
       const matchFailedNum = porcessedNodeNum - matchSuccessNum;
       // 更新匹配关系   
       this.npuMatchedNodeList = npuMatchNodes;
@@ -519,11 +519,11 @@ class Legend extends PolymerElement {
     if (success) {
       const npuMatchNodes = data?.npuMatchNodes || {};
       const benchMatchNodes = data?.benchMatchNodes || {};
-      const npuUnMatchNodes = data?.npuUnMatchNodes;
-      const benchUnMatchNodes = data?.benchUnMatchNodes;
+      const npuUnMatchNodes = data?.npuUnMatchNodes || [];
+      const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length || 0 - this.npuUnMatchedNodes.length || 0);
+      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
       // 更新匹配关系   
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
