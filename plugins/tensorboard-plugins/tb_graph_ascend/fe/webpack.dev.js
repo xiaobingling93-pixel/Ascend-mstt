@@ -35,6 +35,7 @@ module.exports = {
         static: {
             directory: path.join(__dirname, 'dist'), // 服务资源目录
         },
+        compress: false,
         proxy: [
             {
                 context: (pathname) => {
@@ -71,7 +72,7 @@ module.exports = {
                 noInfo: true,
             },
         },
-        http2: true, // 推荐启用HTTP/2
+        http2: false, // 推荐启用HTTP/2
         https: false, // 根据实际需要配置
         hot: true, // 启用热模块替换
         liveReload: true, // 启用实时重新加载
