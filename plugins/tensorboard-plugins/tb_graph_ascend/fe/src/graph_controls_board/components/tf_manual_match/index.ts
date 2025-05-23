@@ -450,7 +450,6 @@ class Legend extends PolymerElement {
     if (!this.selectedConfigFile || this.selectedConfigFile == '未选择') {
       return;
     }
-    //Todo:读文件内容批量匹配
     this.set('matchConfigLoading', true);
     const { success, data, error } = await this.useMatched.addMatchedNodesLinkByConfigFile(this.selectedConfigFile, this.selection);
     this.set('matchConfigLoading', false);
