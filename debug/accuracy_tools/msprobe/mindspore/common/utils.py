@@ -229,7 +229,7 @@ def check_save_param(variable, name, save_backward):
 
 
 def is_graph_mode_cell_dump_allowed(config):
-    if config.task not in [Const.TENSOR] or is_mindtorch() or not hasattr(ops, 'DumpGradient'):
+    if config.task not in [Const.TENSOR, Const.STATISTICS] or is_mindtorch() or not hasattr(ops, 'DumpGradient'):
         return False
     valid_mix_level = [MsConst.CELL_AND_API, Const.LEVEL_MIX]
     if config.level in valid_mix_level and config.execution_mode == MsConst.PYNATIVE_MODE:
