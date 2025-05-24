@@ -38,16 +38,26 @@ std::vector<KernelMetric> MetricKernelProcess::AggregatedData()
     if (copyRecords.empty()) {
         return {};
     }
-    auto deviceId = copyRecords[0]->ds.deviceId;
-    KernelMetric kernelMetric{};
-    auto ans = std::accumulate(copyRecords.begin(), copyRecords.end(), 0ULL,
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityKernel>>> deviceId2KernelData = 
+        groupby(copyRecords, [](const std::shared_ptr<msptiActivityKernel>& data) -> std::uint32_t {
+            return data->ds.deviceId;
+        });
+    std::vector<KernelMetric> ans;
+    auto curTimestamp = getCurrentTimestamp64();
+    for (auto& pair: deviceId2KernelData) {
+        auto deviceId = pair.first;
+        auto& kernelDatas = pair.second;
+        KernelMetric kernelMetric{};
+        kernelMetric.duration = std::accumulate(kernelDatas.begin(), kernelDatas.end(), 0ULL,
             [](uint64_t acc, std::shared_ptr<msptiActivityKernel> kernel) {
                 return acc + kernel->end - kernel->start;
             });
-    kernelMetric.duration = ans;
-    kernelMetric.deviceId = deviceId;
-    kernelMetric.timestamp = getCurrentTimestamp64();
-    return {kernelMetric};
+        kernelMetric.deviceId = deviceId;
+        kernelMetric.timestamp = curTimestamp;
+        ans.emplace_back(kernelMetric);
+    }
+
+    return ans;
 }
 
 void MetricKernelProcess::SendProcessMessage()
