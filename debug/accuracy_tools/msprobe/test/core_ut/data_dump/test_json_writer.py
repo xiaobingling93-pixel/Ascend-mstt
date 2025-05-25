@@ -140,7 +140,6 @@ class TestDataWriter(unittest.TestCase):
     def test_flush_data_periodically(self, mock_write_json):
         self.data_writer.cache_data["data"] = {"Tensor.add": 1, "Tensor.mul": 2}
         self.data_writer.flush_size = 2
-        self.data_writer.larger_flush_size = 4
         self.data_writer.flush_data_periodically()
         mock_write_json.assert_called_once()
 
