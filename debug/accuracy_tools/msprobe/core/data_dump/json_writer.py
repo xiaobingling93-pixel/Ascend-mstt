@@ -138,12 +138,12 @@ class DataWriter:
         length = len(dump_data)
 
         # 小于大阈值时，使用小阈值落盘
-        if length < self.large_flush_size:
+        if length < self.larger_flush_size:
             if length % self.flush_size == 0:
                 self.write_json()
         # 大于等于大阈值时，使用大阈值落盘
         else:
-            if length % self.large_flush_size == 0:
+            if length % self.larger_flush_size == 0:
                 self.write_json()
 
     def update_data(self, new_data):
