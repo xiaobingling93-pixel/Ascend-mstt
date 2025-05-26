@@ -35,8 +35,6 @@ import './components/tf_color_select/index';
 import './components/tf_linkage_search_combox/index';
 import type { MetaDirType, MinimapVis } from './type'
 
-
-
 @customElement('graph-controls-board')
 class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   static readonly template = html`

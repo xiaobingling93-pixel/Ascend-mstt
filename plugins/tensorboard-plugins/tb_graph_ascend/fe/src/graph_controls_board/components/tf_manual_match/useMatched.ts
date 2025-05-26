@@ -30,7 +30,6 @@ const useMatched = (): UseMatchedType => {
     return mactchResult;
   };
 
-
   const requestDeleteMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
     const params = {
       'npuNodeName': npuNodeName,
@@ -40,8 +39,6 @@ const useMatched = (): UseMatchedType => {
     const mactchResult = await request({ url: 'deleteMatchNodes', method: 'GET', params: params });
     return mactchResult;
   };
-
-
 
   const saveMatchedNodesLink = async (selection: any): Promise<any> => {
     const metaData = {

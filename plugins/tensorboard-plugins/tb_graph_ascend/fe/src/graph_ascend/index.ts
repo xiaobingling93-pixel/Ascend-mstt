@@ -229,7 +229,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     this.eventSource?.close();
                     this.eventSource = null;
                     try {
-                        await Promise.all([this.loadGraphConfig(this.selection?.run, this.selection?.tag), this.loadGraphAllNodeList(this.selection?.run, this.selection?.tag, this.selection?.microStep)])
+                        await Promise.all([
+                            this.loadGraphConfig(this.selection?.run, this.selection?.tag),
+                            this.loadGraphAllNodeList(this.selection?.run, this.selection?.tag, this.selection?.microStep)
+                        ])
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
                         this.progreesLoading('初始化完成', '请稍后', data);
 

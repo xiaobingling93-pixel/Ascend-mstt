@@ -455,8 +455,6 @@ class Hierarchy extends PolymerElement {
                 this.set('needChangeNodeCenter', false); // 点击不需要改变中心节点
                 this.set('selectedNode', selectedNode);
                 this.set('contextMenuItems', contextMenuItems);
-
-
             }
         }
         const throttleContextMenuItemSelectedEvent = throttle(onContextMenuItemSelectedEvent, 16);
@@ -468,7 +466,6 @@ class Hierarchy extends PolymerElement {
             this.graph?.removeEventListener('contextmenu', throttleContextMenuEvent);
         }
     }
-
 
     bindChangeNodeExpandStateEvent(container) {
         const onDoubleClickNodeEvent = async (event) => {
@@ -642,7 +639,6 @@ class Hierarchy extends PolymerElement {
         const newTransform = d3.zoomIdentity.translate(newX, newY).scale(initialTransform.scale);
         this.minimap?.zoom(newTransform);
         return { x: newX, y: newY, scale: initialTransform.scale };
-
     }
 
     /**
@@ -669,7 +665,4 @@ class Hierarchy extends PolymerElement {
         }
         return { success, data, error };
     }
-
-
-
 }

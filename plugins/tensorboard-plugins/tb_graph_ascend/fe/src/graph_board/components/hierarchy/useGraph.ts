@@ -17,9 +17,9 @@ import * as d3 from 'd3';
 import { maybeTruncateString, darkenColor, safeJSONParse } from '../../../utils/index';
 import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
-import { HierarchyNodeType, PreProcessDataConfigType, GraphType } from '../../type';
+import { HierarchyNodeType, PreProcessDataConfigType, GraphType, TransformType } from '../../type';
 
-import { useGraphType } from '../../type';
+import { UseGraphType } from '../../type';
 import { DURATION_TIME, NODE_TYPE_STYLES, SELECTED_STROKE_COLOR, NO_MATCHED_NODE_COLOR, BENCH_NODE_COLOR, BENCH_STROKE_COLOR, BASE_NODE_COLOR, NPU_PREFIX, BENCH_PREFIX, NODE_TYPE, OVERFLOW_COLOR, STROKE_WIDTH, SELECTED_STROKE_WIDTH } from '../../../common/constant';
 const useGraph = (): useGraphType => {
     const preProcessData = (data: Array<HierarchyNodeType>, selectedNode, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => {
@@ -77,7 +77,6 @@ const useGraph = (): useGraphType => {
     };
 
     const calcClolorByPrecision = (precisionValue: number, colors: PreProcessDataConfigType['colors']) => {
-
         if (isNaN(precisionValue)) {
             return BASE_NODE_COLOR; // 默认返回灰色
         }
@@ -149,7 +148,6 @@ const useGraph = (): useGraphType => {
             .duration(DURATION_TIME + 60)
             .attr('opacity', 1)
 
-
         innnerReact.exit()
             .transition()
             .duration(DURATION_TIME - 60)
@@ -171,7 +169,6 @@ const useGraph = (): useGraphType => {
             .attr('stroke', (d: any) => d.stroke)
             .attr('stroke-width', (d: any) => d.strokeWidth)
 
-
         outerReact.enter()
             .append('rect')
             .attr('name', (d: any) => d.name)
@@ -190,7 +187,6 @@ const useGraph = (): useGraphType => {
             .duration(DURATION_TIME + 60)
             .attr('height', (d: any) => d.height)
             .attr('opacity', 1)
-
 
         outerReact.exit()
             .transition()
@@ -240,7 +236,6 @@ const useGraph = (): useGraphType => {
 
     const changeNodeExpandState = async (nodeInfo: any, metaData: any): Promise<any> => {
         try {
-
             metaData = safeJSONParse(JSON.stringify(metaData));
             const params = {
                 "nodeInfo": JSON.stringify(nodeInfo),
@@ -248,7 +243,6 @@ const useGraph = (): useGraphType => {
             };
             const result = await request({ url: 'changeNodeExpandState', method: 'GET', params: params, timeout: 10000 });
             return result;
-
         } catch (err) {
             return {
                 suucess: false,

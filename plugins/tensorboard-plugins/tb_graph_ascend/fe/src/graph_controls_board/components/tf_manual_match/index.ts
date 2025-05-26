@@ -316,8 +316,6 @@ class Legend extends PolymerElement {
     }
   }
 
-
-
   // 一定要写箭头函数，不然父子组件传值this指向有问题
   _changeNpuUnMatchedNode = (): void => {
     if (this.isCompareGraph) {

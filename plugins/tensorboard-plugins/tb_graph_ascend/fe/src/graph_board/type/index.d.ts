@@ -66,3 +66,9 @@ export interface UseGraphType {
     createComponent: (text, precision, colors: PreProcessDataConfigType['colors']) => any
     updateHierarchyData: (graphType: string) => Promise<any>
 }
+
+export type TransformType = {
+    x: number,
+    y: number,
+    scale: number,
+}
