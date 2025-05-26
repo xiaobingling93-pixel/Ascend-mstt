@@ -140,6 +140,8 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 单算子API自动生成脚本](./docs/23.generate_operator_PyTorch.md)
 
+[MindSpore 单算子API自动生成脚本](./docs/33.generate_operator_MindSpore.md)
+
 ### 11 数码关联
 
 该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
