@@ -1001,12 +1001,12 @@ class TrainerMon:
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTV, input_grad))
+                    MonitorConst.ACTVGRAD, input_grad))
 
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTV, output_grad))
+                    MonitorConst.ACTVGRAD, output_grad))
 
             if context.micro_step == 0 and context.actvgrad:
                 logger.warning(f"actvgrad context of {context.module_name} is not empty when first micro_step, "
