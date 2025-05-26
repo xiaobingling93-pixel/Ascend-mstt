@@ -523,9 +523,7 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.weight_hooked:
-            get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
-
+        get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
 
     def generate_param_map(self, tag, param_tensor):

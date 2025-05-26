@@ -292,6 +292,7 @@ class TrainerMon:
         self.mg_direction = self.config.get('mg_direction', False)
         self.cc_distribution = self.config.get("cc_distribution", {})
         self.stack_info = self.config.get('stack_info', False)
+        self.monitor_mbs_grad = self.config.get('monitor_mbs_grad', True)
 
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
@@ -477,10 +478,12 @@ class TrainerMon:
 
         get_metrics(self.ops, post_grad_dict, self.eps, self.grad_context.post)
         reduced_grad = self.grad_context.post
-        if self.enable_megatron or self.fsdp_wrapped_module:
-            unreduced_grad = self.grad_context.pre
-        else:
+
+        if self.weight_hooked:
             unreduced_grad = self.grad_context.acc_metric
+        else:
+            unreduced_grad = self.grad_context.pre
+
         return reduced_grad, unreduced_grad
 
     def generate_xy_metrics(self):
@@ -549,10 +552,10 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.enable_megatron or self.fsdp_wrapped_module:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
-        else:
+        if self.weight_hooked:
             self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
+        else:
+            self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
     def hook_optimizer(self, optimizer):
@@ -1143,6 +1146,9 @@ class TrainerMon:
             patch_post_backward_hook(torch.distributed.fsdp._runtime_utils._post_backward_hook)
 
     def _hook_weights(self):
+        """
+        遍历参数的梯度生成函数（grad_acc），并挂载hook，以便在该参数所有梯度计算后，采集通信聚合前梯度数据。
+        """
         context = self.grad_context
 
         @torch.no_grad
