@@ -41,6 +41,9 @@ class DebuggerConfig:
         self.check_mode = task_config.check_mode
         self.framework = Const.MS_FRAMEWORK
         self.summary_mode = task_config.summary_mode
+        self.stat_cal_mode = task_config.stat_cal_mode if hasattr(task_config, 'stat_cal_mode') else None
+        self.device_stat_precision_mode = task_config.device_stat_precision_mode \
+                                          if hasattr(task_config, 'device_stat_precision_mode') else None
         self.async_dump = common_config.async_dump if common_config.async_dump else False
         self.check()
         self._check_statistics_config(task_config)

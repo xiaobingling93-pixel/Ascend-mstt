@@ -47,6 +47,15 @@ class StatisticsConfig(BaseConfig):
 
         self.tensor_list = json_config.get("tensor_list", [])
         self._check_str_list_config(self.tensor_list, "tensor_list")
+        self.stat_cal_mode = json_config.get("device", "host")
+        self.device_stat_precision_mode = json_config.get("precision", "high")
+        self._check_stat_params()
+
+    def _check_stat_params(self):
+        if self.stat_cal_mode not in ["device", "host"]:
+            raise Exception("Config param [device] is invalid, expected from [\"device\", \"host\"]")
+        if self.device_stat_precision_mode not in ["high", "low"]:
+            raise Exception("Config param [precision] is invalid, expected from [\"high\", \"low\"]")
 
     def _check_summary_mode(self):
         muti_opt = ["md5", "max", "min", "mean", "l2norm"]
