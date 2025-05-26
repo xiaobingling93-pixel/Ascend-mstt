@@ -25,9 +25,9 @@ const useGraph = (): UseGraphType => {
     const preProcessData = (data: Array<HierarchyNodeType>, selectedNode, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => {
         // 遍历数据并应用样式
         const { colors, isOverflowFilter, graphType } = config;
-        //优化性能，渲染3屏节点上中下各1000的高度
+        // 优化性能，渲染3屏节点上中下各1000的高度
         let virtualNodes = data.filter((d) => d.y >= (-Number(transform.y) - 1000) / Number(transform.scale) && d.y <= (-Number(transform.y) + 2000) / Number(transform.scale));
-        //virtualNodes的父节点
+        // virtualNodes的父节点
         const parentsVirtualNodes: Array<HierarchyNodeType> = [];
         virtualNodes.forEach((d) => {
             let node: HierarchyNodeType | undefined = d;
@@ -222,7 +222,7 @@ const useGraph = (): UseGraphType => {
             .attr('text-anchor', 'middle')
             .text((d: any) => maybeTruncateString(d.label, 9, d.width))
             .each(function (d) {
-                //@ts-ignore
+                // @ts-ignore
                 d3.select(this)
                     .append('title')
                     .text(d.label);

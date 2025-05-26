@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
@@ -274,7 +273,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             }
         }
     }
-    //TODO:需要优化，慢接口
+
     loadGraphAllNodeList = async (run, tag, microStep) => {
         const { success, data } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
         const allNodeList = data as GraphAllNodeType;

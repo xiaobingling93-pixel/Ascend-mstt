@@ -264,7 +264,7 @@ class Hierarchy extends PolymerElement {
         const selectedNodeType = selectedNode.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench';
         if (this.graphType !== 'Single' && selectedNodeType !== this.graphType) return; // 如果选中的节点类型和当前图类型不一致，则不处理
         const nodeName = selectedNode.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
-        //如果选中节点是当前图节点图中不存在，则展开其父节点，直到图中存在
+        // 如果选中节点是当前图节点图中不存在，则展开其父节点，直到图中存在
         if (!this.hierarchyObject[nodeName]) {
             const nodeInfo = {
                 nodeName,
@@ -287,7 +287,7 @@ class Hierarchy extends PolymerElement {
         this.renderGraph(this.hierarchyData, selectedNode, transform);
     }
 
-    //父组件调用
+    // 父组件调用
     hightLightNode(nodeNames) {
         if (!Array.isArray(nodeNames) || isEmpty(nodeNames)) {
             this.renderGraph(this.hierarchyData, '');
@@ -297,7 +297,7 @@ class Hierarchy extends PolymerElement {
         this.renderGraph(this.hierarchyData, matchedNodeName);
     }
 
-    //父组件调用
+    // 父组件调用
     fitScreen() {
         if (!this.container) return;
         changeGraphPosition(this.container, 0, 0, 1, 350);
@@ -377,9 +377,9 @@ class Hierarchy extends PolymerElement {
         const onContextMenuItemSelectedEvent = (event: ContextMenuItemSelectedEvent) => {
             event.preventDefault();
             const item = event.detail.value as ContextMenuItem;
-            //展开匹配节点
+            // 展开匹配节点
             if (item.type === EXPAND_MATCHED_NODE) {
-                //如果当前节点未匹配，则找到其相邻的匹配父节点
+                // 如果当前节点未匹配，则找到其相邻的匹配父节点
                 const tempSelectedNode = this.selectedNode;
                 let nodeName = tempSelectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
                 let selectedNode = this.hierarchyObject[nodeName];
@@ -402,7 +402,7 @@ class Hierarchy extends PolymerElement {
                     });
                 }
             }
-            //数据通信节点右键菜单
+            // 数据通信节点右键菜单
             if (item.type === DATA_COMMUNICATION) {
                 const skipComunicaeRank = new CustomEvent('contextMenuTag-changed', {
                     detail: {
@@ -650,7 +650,6 @@ class Hierarchy extends PolymerElement {
      * @param nodeInfo 节点信息
      * @returns 
      */
-                   
     async changeNodeExpandState(nodeInfo) {
         this.set('loading', true);
         const { success, data, error } = await this.useGraph.changeNodeExpandState(nodeInfo, this.selection)
