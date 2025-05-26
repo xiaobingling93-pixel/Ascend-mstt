@@ -140,7 +140,7 @@ class TestModuleProcesser(unittest.TestCase):
         mock_model1 = MagicMock()
         mock_model2 = MagicMock()
         mock_model1.named_modules.return_value = [("layer1", "obj1")]
-        mock_model2.named_modules.return_value = [ ("layer2", "obj2")]
+        mock_model2.named_modules.return_value = [("layer2", "obj2")]
 
         result = ModuleProcesser.get_modules_and_names(
             (mock_model1, mock_model2),
