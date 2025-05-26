@@ -132,7 +132,6 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
 
   return result;
 }
-
 /**
  * 更改图形的位置
  * @param element 

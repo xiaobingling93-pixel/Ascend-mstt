@@ -650,7 +650,7 @@ class Hierarchy extends PolymerElement {
      * @param nodeInfo 节点信息
      * @returns 
      */
-
+                   
     async changeNodeExpandState(nodeInfo) {
         this.set('loading', true);
         const { success, data, error } = await this.useGraph.changeNodeExpandState(nodeInfo, this.selection)
