@@ -208,7 +208,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     </div>
   `;
   @property({ type: Object })
-  metaDir: MetaDirType;
+  metaDir: MetaDirType = {} as MetaDirType;
 
   @property({ type: Boolean, notify: true })
   isOverflowFilter: boolean = false;
@@ -217,11 +217,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   isSingleGraph = false;
 
   @property({ type: Object, notify: true, })
-  selection: Selection;
+  selection: Selection = {} as Selection;
 
-  //全量节点数据，支撑各种节点的搜索
+  // 全量节点数据，支撑各种节点的搜索
   @property({ type: Object })
-  nodelist: object;
+  nodelist: object = {};
 
   // 颜色图例
   @property({ type: Object })

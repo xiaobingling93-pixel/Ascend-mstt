@@ -356,4 +356,4 @@ class GraphService:
                 return {'success': False, 'error': error}
         except (ValueError, IOError, PermissionError) as e:
             return {'success': False, 'error': f"Error: {e}"}
-        return {'success': True, 'data': f"{tag}_matched.config"}
+        return {'success': True, 'data': f"{tag}.vis.config"}

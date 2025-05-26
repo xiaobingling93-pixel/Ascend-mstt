@@ -243,8 +243,10 @@ class MatchNodesController:
                 'error': '输出统计误差值为空，计算精度误差失败(Calculation of precision error failed)',
             }
         # 在原始数据上，添加匹配节点，和匹配节点信息
-        npu_node_data['matched_node_link'] = GraphUtils.getNodeMatchedList(graph_data.get('Bench', {}), bench_node_name)
-        bench_node_data['matched_node_link'] = GraphUtils.getNodeMatchedList(graph_data.get('NPU', {}), npu_node_name)
+        npu_graph_data = graph_data.get('NPU', {})
+        bench_graph_data = graph_data.get('Bench', {})
+        npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
+        bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
         MatchNodesController.update_graph_node_data(npu_node_data.get('input_data'), intput_statistical_diff)
         MatchNodesController.update_graph_node_data(npu_node_data.get('output_data'), output_statistical_diff)
