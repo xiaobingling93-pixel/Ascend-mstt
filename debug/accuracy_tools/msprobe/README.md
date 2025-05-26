@@ -139,6 +139,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 该功能将msprobe工具dump的精度数据进行解析，自动生成单API脚本，用于复现整网中出现的算子问题，降低用户复现问题的成本，供开发分析算子问题。
 
 [PyTorch 单算子API自动生成脚本](./docs/23.generate_operator_PyTorch.md)
+[MindSpore 单算子API自动生成脚本](./docs/33.generate_operator_MindSpore.md)
 
 ### 11 数码关联
 
