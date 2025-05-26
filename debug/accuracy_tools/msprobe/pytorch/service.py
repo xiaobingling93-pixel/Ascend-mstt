@@ -15,22 +15,24 @@
 
 import functools
 import os
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 
 import torch
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import print_tools_ends_info, DumpPathAggregation
+from msprobe.core.common.utils import print_tools_ends_info, DumpPathAggregation, replace_last_occurrence
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope
+from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized, is_recomputation
 from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
-from msprobe.pytorch.hook_module.api_register import get_api_register
+from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.hook_module.jit_script_wrapper import wrap_jit_script_func
 from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
@@ -38,8 +40,6 @@ from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimiz
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
     from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
-
-HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
 
 class Service:
@@ -53,6 +53,7 @@ class Service:
         self.current_iter = 0
         self.loop = 0
         self.init_step = 0
+        self.cur_token_id = 0
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
@@ -63,25 +64,27 @@ class Service:
         # 提前注册，确保注册尽可能多的API hook
         self.api_register = get_api_register()
         self.register_api_hook()
-        self.init_for_debug_level()
+        self.currrent_step_first_debug_save = True
+        self.debug_variable_counter = None
+        self.ori_customer_func = {}
 
     def build_hook(self, module_type, name):
-        def pre_hook(api_or_module_name, module, args, kwargs):
-            if not self.should_execute_hook(module_type, module, True):
-                return args, kwargs
+        def pre_hook(api_or_module_name, module, args, kwargs=None):
+            kwargs = {} if kwargs is None else kwargs
+
+            if module_type == BaseScope.Module_Type_Module or \
+                    not self.should_execute_hook(module_type, module, True):
+                return
             is_recompute = is_recomputation()
 
             self.inner_switch = True
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name[-1]
-            else:
-                module.forward_data_collected = True
-                HOOKModule.add_module_count(name)
+            module.forward_data_collected = True
+            HOOKModule.add_module_count(name)
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
                 self.inner_switch = False
-                return None, None
+                return
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.forward_input_data_collect(
@@ -93,7 +96,6 @@ class Service:
                 )
 
             self.inner_switch = False
-            return args, kwargs
 
         def grad_hook(module, ori_name, param_name):
             def hook_fn(grad):
@@ -140,10 +142,12 @@ class Service:
                     # 记录当前模块的参数梯度信息已占位
                     self.params_grad_info[grad_name] = True
 
-        def forward_hook(api_or_module_name, module, args, kwargs, output):
+        def forward_hook(api_or_module_name, module, args, kwargs_or_output, output_or_kwargs=None):
             if not self.should_execute_hook(module_type, module, True):
                 return None
             is_recompute = is_recomputation()
+            kwargs = kwargs_or_output if torch_version_above_or_equal_2 else {}
+            output = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
 
             self.inner_switch = True
             if self.config.online_run_ut:
@@ -163,9 +167,8 @@ class Service:
                 return None
 
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+            self.data_collector.update_api_or_module_name(api_or_module_name)
             if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name[-1]
-                self.data_collector.update_api_or_module_name(api_or_module_name)
                 params_dict = {}
                 if self.config.task != Const.STRUCTURE:
                     params_dict = {
@@ -189,7 +192,6 @@ class Service:
                 )
                 init_params_grad_info(module, params_dict)
             else:
-                self.data_collector.update_api_or_module_name(api_or_module_name)
                 self.data_collector.forward_output_data_collect(
                     api_or_module_name,
                     module,
@@ -205,17 +207,12 @@ class Service:
             self.inner_switch = False
             return output
 
-        def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
-            return forward_hook(api_or_module_name, module, args, {}, output)
-
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if not self.should_execute_hook(module_type, module, False):
                 return
             is_recompute = is_recomputation()
 
             self.inner_switch = True
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name[-1]
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
@@ -235,21 +232,39 @@ class Service:
             self.inner_switch = False
 
         pid = os.getpid()
-        full_forward_name = None
-        full_backward_name = None
+        full_forward_name = name
         if module_type == BaseScope.Module_Type_API:
             full_forward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.FORWARD
-            full_backward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.BACKWARD
+        full_backward_name = replace_last_occurrence(full_forward_name, Const.FORWARD, Const.BACKWARD)
         pre_forward_hook_fn = functools.partial(pre_hook, full_forward_name)
         forward_hook_fn = functools.partial(forward_hook, full_forward_name)
         backward_hook_fn = functools.partial(backward_hook, full_backward_name)
-        forward_hook_torch_version_below_2_fn = functools.partial(
-            forward_hook_torch_version_below_2,
-            full_forward_name
-        )
-        return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
-    def start(self, model):
+        return pre_forward_hook_fn, forward_hook_fn, backward_hook_fn
+
+    def register_infer_count_hook(self, root_model, token_range):
+        """
+        通过root_model执行的轮次来判断当前在第几个token
+        param root_model: 需要采集的推理模型
+        param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
+        return: None
+        """
+        def infer_hook(model, args):
+            if self.cur_token_id == token_range[0]:
+                self.switch = True
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
+            elif token_range[0] < self.cur_token_id <= token_range[1]:
+                logger.debug(f"Current token id: {self.cur_token_id}.")
+            elif self.cur_token_id == token_range[1] + 1:
+                self.switch = False
+                logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
+            self.cur_token_id += 1
+        if isinstance(root_model, list):
+            root_model = root_model[0]
+            logger.warning("Infer model can only input one to support token_range, choose the first one.")
+        root_model.register_forward_pre_hook(infer_hook)
+
+    def start(self, model, token_range=None):
         self.current_iter = self.loop + self.init_step
         self.data_collector.update_iter(self.current_iter)
         if self.config.level == Const.LEVEL_DEBUG:
@@ -258,6 +273,7 @@ class Service:
             return
 
         self.model = model
+        self.cur_token_id = 0
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -267,13 +283,19 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
+
             self.register_module_hook()
             if self.config.level == Const.LEVEL_MIX:
                 register_optimizer_hook(self.data_collector)
             self.first_start = False
+
+            if token_range:
+                self.register_infer_count_hook(self.model, token_range)
+
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
-        self.switch = True
+        if token_range is None:
+            self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if not self.config.online_run_ut:
             self.create_dirs()
@@ -294,23 +316,18 @@ class Service:
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, False, self.config.online_run_ut_recompute)
             return
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
 
     def step(self):
-        if self.config.level == Const.LEVEL_DEBUG:
-            return
         if self.should_stop_service:
             return
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         self.loop += 1
+        self.currrent_step_first_debug_save = True
         self.reset_status()
 
     def need_stop_service(self):
@@ -357,16 +374,20 @@ class Service:
 
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
+
+        dump_data_dir = None
+        if self.config.task in self.data_collector.tasks_need_tensor_data or (
+                self.config.task == Const.STATISTICS and self.config.tensor_list):
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
 
         dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
-        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        if self.config.level != Const.LEVEL_DEBUG:
+            dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+            dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+            dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        else:
+            dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")
         self.data_collector.update_dump_paths(dump_path_aggregation)
@@ -384,6 +405,7 @@ class Service:
     def register_module_hook(self):
         if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.info_on_rank_0(f"The module {self.config.task} hook function is successfully mounted to the model.")
+            ModuleProcesser.enable_module_dump = True
             self.module_processor.register_module_hook(self.model, self.build_hook)
 
     def attl_init(self):
@@ -431,36 +453,24 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
 
-    def init_for_debug_level(self):
-        if not (self.config.level == Const.LEVEL_DEBUG and self.config.task in [Const.TENSOR, Const.STATISTICS]):
-            return
-        try:
-            self.current_rank = get_rank_if_initialized()
-        except DistributedNotInitializedError:
-            self.current_rank = None
-
-        # dir: dump_path -- rank{} -- debug.json
-        self.dump_iter_dir = self.config.dump_path
-        cur_rank = self.current_rank if self.current_rank is not None else ''
-        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
-        create_directory(dump_dir)
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
-            dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
-            create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
-
-        dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
-        self.data_collector.update_dump_paths(dump_path_aggregation)
-        self.data_collector.initialize_json_file(framework=Const.PT_FRAMEWORK)
-
-        self.debug_variable_counter = defaultdict(int)
-
     def save(self, variable, name, save_backward):
         if self.config.level != Const.LEVEL_DEBUG:
             return
+
+        self.current_iter = self.loop + self.init_step
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+
+        if self.currrent_step_first_debug_save:
+            try:
+                self.current_rank = get_rank_if_initialized()
+            except DistributedNotInitializedError:
+                self.current_rank = None
+
+            self.create_dirs()
+            self.debug_variable_counter = defaultdict(int)
+            self.currrent_step_first_debug_save = False
+
         count = self.debug_variable_counter[name]
         self.debug_variable_counter[name] += 1
 
@@ -473,3 +483,13 @@ class Service:
         # backward save
         if save_backward:
             self.data_collector.debug_data_collect_backward(variable, grad_name_with_count)
+
+    def register_custom_api(self, module, api_name, api_prefix):
+        self.ori_customer_func[str(module) + Const.SEP + api_name] = getattr(module, api_name)
+        ApiRegistry.register_custom_api(module, api_name, api_prefix,
+                                          functools.partial(self.build_hook, BaseScope.Module_Type_API), ApiTemplate)
+
+    def restore_custom_api(self, module, api):
+        ori_func = self.ori_customer_func.get(str(module) + Const.SEP + api)
+        if ori_func:
+            setattr(module, api, ori_func)

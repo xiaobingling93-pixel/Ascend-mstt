@@ -32,20 +32,28 @@ else:
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
+from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation, replace_last_occurrence
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs,
                                                         ModuleBackwardInputs)
 from msprobe.core.data_dump.scope import BaseScope
+from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.mindspore.cell_processor import CellProcessor
+from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.common.utils import (get_rank_if_initialized, clean_input_kwargs,
-                                            is_mindtorch, register_backward_hook_functions)
-from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
+from msprobe.mindspore.common.utils import (
+    get_rank_if_initialized,
+    clean_input_kwargs,
+    is_mindtorch,
+    get_cells_and_names_with_index,
+    has_kwargs_in_forward_hook
+)
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register, ApiTemplate
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.kernel_dump.kernel_config import create_kernel_config_json
+from msprobe.mindspore.runtime import Runtime
 
 if is_mindtorch():
     import torch
@@ -65,6 +73,7 @@ class Service:
         self.current_iter = 0
         self.loop = 0
         self.init_step = 0
+        self.cur_token_id = 0
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
@@ -75,10 +84,16 @@ class Service:
         # 提前注册，确保注册尽可能多的API hook
         self.api_register = get_api_register()
         self.register_api_hook()
-        self.init_for_debug_level()
+        self.currrent_step_first_debug_save = True
+        self.debug_variable_counter = None
+        self.ori_customer_func = {}
 
     @staticmethod
-    def check_model_valid(models):
+    def check_model_valid(models, token_range=None):
+        if token_range and not models:
+            error_info = "The 'model' parameter must be provided when token_range is not None"
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
+
         target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
         if models is None or isinstance(models, target_module_type[0]):
             return models
@@ -98,32 +113,21 @@ class Service:
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
         return models
 
-    @staticmethod
-    def prepare_module_input_output(target_type, cell, input_data, output):
-        if target_type == BaseScope.Module_Type_Module:
-            module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
-        else:
-            module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs, output=output)
-        return module_input_output
-
     def build_hook(self, target_type, name):
         def pre_hook(api_or_cell_name, cell, input_data):
-            if not self.should_execute_hook(target_type, cell, True):
-                clean_input_kwargs(cell)
-                return None
+            if target_type == BaseScope.Module_Type_Module or \
+                    not self.should_execute_hook(target_type, cell, True):
+                return
 
             with _no_grad():
                 self.inner_switch = True
-                if target_type == BaseScope.Module_Type_Module:
-                    api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
-                else:
-                    cell.forward_data_collected = True
-                    HOOKCell.add_cell_count(name)
-                module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
+                cell.forward_data_collected = True
+                HOOKCell.add_cell_count(name)
+                kwargs = cell.msprobe_input_kwargs if hasattr(cell, 'msprobe_input_kwargs') else {}
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=kwargs, output=None)
                 self.data_collector.update_api_or_module_name(api_or_cell_name)
                 self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
                 self.inner_switch = False
-                return input_data
 
         def grad_hook(cell, ori_name, param_name):
             def hook_fn(grad):
@@ -170,15 +174,20 @@ class Service:
                     # 记录当前模块的参数梯度信息已占位
                     self.params_grad_info[grad_name] = True
 
-        def forward_hook(api_or_cell_name, cell, input_data, output):
+        def forward_hook(api_or_cell_name, cell, args, kwargs_or_output, output_or_kwargs):
             if not self.should_execute_hook(target_type, cell, True):
                 clean_input_kwargs(cell)
                 return None
             with _no_grad():
                 self.inner_switch = True
-                module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
+                if not has_kwargs_in_forward_hook() or target_type == BaseScope.Module_Type_API:
+                    kwargs = cell.msprobe_input_kwargs if hasattr(cell, 'msprobe_input_kwargs') else {}
+                    output = kwargs_or_output
+                else:
+                    kwargs = kwargs_or_output
+                    output = output_or_kwargs
+                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 if target_type == BaseScope.Module_Type_Module:
-                    api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                     params_dict = {}
                     if self.config.task != Const.STRUCTURE:
                         params_dict = {
@@ -200,11 +209,13 @@ class Service:
                     self.data_collector.update_api_or_module_name(api_or_cell_name)
                     self.data_collector.forward_output_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
+                clean_input_kwargs(cell)
+
                 if self.data_collector.if_return_forward_new_output():
                     forward_new_output = self.data_collector.get_forward_new_output()
                     self.inner_switch = False
                     return forward_new_output
-                clean_input_kwargs(cell)
+
                 self.inner_switch = False
                 return output
 
@@ -217,7 +228,6 @@ class Service:
             if target_type == BaseScope.Module_Type_Module:
                 if not hasattr(cell, 'has_pre_hook_called') or not cell.has_pre_hook_called:
                     need_exchange = False
-                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
 
             self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:
@@ -240,12 +250,11 @@ class Service:
             self.inner_switch = False
 
         pid = os.getpid()
-        if target_type == BaseScope.Module_Type_Module:
-            full_forward_name = name + Const.FORWARD
-            full_backward_name = name + Const.BACKWARD
-        else:
+        full_forward_name = name
+        if target_type == BaseScope.Module_Type_API:
             full_forward_name = name + str(HOOKCell.get_cell_count(name)) + Const.SEP + Const.FORWARD
-            full_backward_name = name + str(HOOKCell.get_cell_count(name)) + Const.SEP + Const.BACKWARD
+        full_backward_name = replace_last_occurrence(full_forward_name, Const.FORWARD, Const.BACKWARD)
+
         pre_forward_hook = functools.partial(pre_hook, full_forward_name)
         forward_hook = functools.partial(forward_hook, full_forward_name)
         backward_hook = functools.partial(backward_hook, full_backward_name)
@@ -254,8 +263,8 @@ class Service:
         def wrap_pre_forward_hook(cell, input_data):
             return pre_forward_hook(cell, input_data)
 
-        def wrap_forward_hook(cell, input_data, output_data):
-            return forward_hook(cell, input_data, output_data)
+        def wrap_forward_hook(cell, args, kwargs_or_output, output_or_kwargs=None):
+            return forward_hook(cell, args, kwargs_or_output, output_or_kwargs)
 
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
@@ -272,19 +281,16 @@ class Service:
             self.primitive_counters[primitive_name] += 1
 
     def step(self):
-        if self.config.level == Const.LEVEL_DEBUG:
-            return
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
+        self.currrent_step_first_debug_save = True
         self.loop += 1
         self.reset_status()
 
-    def start(self, model=None):
+    def start(self, model=None, token_range=None):
         if self.current_iter == 0:
-            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
+            if not is_mindtorch() and self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
                 JitDump.set_data_collector(self.data_collector)
                 if hasattr(ms.common.api, "_MindsporeFunctionExecutor"):
@@ -311,10 +317,11 @@ class Service:
         if self.config.step and self.current_iter not in self.config.step:
             JitDump.jit_dump_switch = False
             return
-        self.model = self.check_model_valid(model)
+        self.model = self.check_model_valid(model, token_range)
 
         logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
 
+        self.cur_token_id = 0
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -323,17 +330,23 @@ class Service:
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
+
             self.register_primitive_hook()
-            self.register_cell_hook()
+            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
+                self.cell_processor.register_cell_hook(self.model, self.build_hook, self.config)
             self.first_start = False
 
+            if token_range:
+                self.register_infer_count_hook(self.model, token_range)
+
         self.api_register.register_all_api()
-        self.switch = True
-        self.primitive_switch = True
+        if token_range is None:
+            self.switch = True
+            self.primitive_switch = True
+            JitDump.jit_dump_switch = True
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
-        JitDump.jit_dump_switch = True
 
     def stop(self):
         if self.config.level == Const.LEVEL_DEBUG:
@@ -352,10 +365,8 @@ class Service:
         self.switch = False
         self.primitive_switch = False
         self.start_call = False
-        if self.config.async_dump:
-            self.data_collector.fill_stack_tensor_data()
-            if self.config.task == Const.TENSOR:
-                self.data_collector.data_processor.dump_async_data()
+        if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
+            self.data_collector.data_processor.dump_async_data()
         self.data_collector.write_json()
         JitDump.jit_dump_switch = False
 
@@ -383,7 +394,11 @@ class Service:
 
     def create_dirs(self):
         create_directory(self.config.dump_path)
-        self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
+        if Runtime.run_mode == MsConst.PYNATIVE_GRAPH_MODE:
+            self.dump_iter_dir = os.path.join(self.config.dump_path, MsConst.PYNATIVE_MODE, f"step{self.current_iter}")
+        else:
+            self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
+
         cur_rank = self.current_rank if self.current_rank is not None else ''
         if self.config.level == Const.LEVEL_L2:
             create_directory(self.dump_iter_dir)
@@ -393,16 +408,20 @@ class Service:
 
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
+
+        dump_data_dir = None
+        if self.config.task in self.data_collector.tasks_need_tensor_data or (
+                self.config.task == Const.STATISTICS and self.config.tensor_list):
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
 
         dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
-        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
-        dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        if self.config.level != Const.LEVEL_DEBUG:
+            dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+            dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+            dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        else:
+            dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         self.data_collector.update_dump_paths(dump_path_aggregation)
 
@@ -419,19 +438,6 @@ class Service:
             self.api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             self.api_register.register_all_api()
 
-    def get_cells_and_names(self):
-        cells_and_names_with_index = {}
-
-        def get_cell_or_module(model):
-            return model.named_modules() if is_mindtorch() else model.cells_and_names()
-
-        if isinstance(self.model, (list, tuple)):
-            for index, model in enumerate(self.model):
-                cells_and_names_with_index[str(index)] = get_cell_or_module(model)
-        else:
-            cells_and_names_with_index["-1"] = get_cell_or_module(self.model)
-        return cells_and_names_with_index
-
     def register_primitive_hook(self):
         if self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L1]:
             return
@@ -439,7 +445,7 @@ class Service:
             return
 
         primitive_set = set()
-        cells_and_names_with_index = self.get_cells_and_names()
+        cells_and_names_with_index, _ = get_cells_and_names_with_index(self.model)
         for cells_and_names in cells_and_names_with_index.values():
             for _, cell in cells_and_names:
                 for attribute, value in vars(cell).items():
@@ -454,35 +460,31 @@ class Service:
                                                                                          primitive_combined_name)})
             primitive.__class__ = new_primitive
 
-    def register_cell_hook(self):
-        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
-            logger.info(f"The cell {self.config.task} hook function is successfully mounted to the model.")
-            if not self.model:
-                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                       f"The current level is {self.config.level}, the model cannot be None")
-            model_type = Const.MODULE if is_mindtorch() else Const.CELL
-            cells_and_names_with_index = self.get_cells_and_names()
-
-            for index, cells_and_names in cells_and_names_with_index.items():
-                model = self.model if index == "-1" else self.model[int(index)]
-                for name, cell in cells_and_names:
-                    if cell == model:
-                        continue
-                    cell_index = (index + Const.SEP) if index != "-1" else ""
-                    prefix = (model_type + Const.SEP + cell_index + name +
-                              Const.SEP + cell.__class__.__name__ + Const.SEP)
-                    _, forward_hook, backward_hook, _ = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                    cell.register_forward_hook(forward_hook)
-                    cell.register_forward_pre_hook(
-                        self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
-                    cell.register_forward_hook(
-                        self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-
-                    register_backward_hook_functions["full"](cell, backward_hook)
-                    register_backward_hook_functions["pre"](
-                        cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                    register_backward_hook_functions["full"](
-                        cell, self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+    def register_infer_count_hook(self, root_model, token_range):
+        """
+        通过root_model执行的轮次来判断当前在第几个token
+        param root_model: 需要采集的推理模型
+        param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
+        return: None
+        """
+        def infer_hook(model, args):
+            if self.cur_token_id == token_range[0]:
+                self.switch = True
+                self.primitive_switch = True
+                JitDump.jit_dump_switch = True
+                logger.info(f"Current token id: {self.cur_token_id}, start dump infer token.")
+            elif token_range[0] < self.cur_token_id <= token_range[1]:
+                logger.debug(f"Current token id: {self.cur_token_id}.")
+            elif self.cur_token_id == token_range[1] + 1:
+                self.switch = False
+                self.primitive_switch = False
+                JitDump.jit_dump_switch = False
+                logger.info(f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
+            self.cur_token_id += 1
+        if isinstance(root_model, list):
+            root_model = root_model[0]
+            logger.warning("Infer model can only input one to support token_range, choose the first one.")
+        root_model.register_forward_pre_hook(infer_hook)
 
     def reset_status(self):
         self.primitive_hook_service.primitive_counters.clear()
@@ -497,33 +499,6 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
 
-    def init_for_debug_level(self):
-        if not (self.config.level == Const.LEVEL_DEBUG and self.config.task in [Const.TENSOR, Const.STATISTICS]):
-            return
-        try:
-            self.current_rank = get_rank_if_initialized()
-        except DistributedNotInitializedError:
-            self.current_rank = None
-        # dir: dump_path -- rank{} -- debug.json
-        self.dump_iter_dir = self.config.dump_path
-        cur_rank = self.current_rank if self.current_rank is not None else ''
-        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
-        create_directory(dump_dir)
-        if self.config.task in self.data_collector.tasks_need_tensor_data:
-            dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
-            create_directory(dump_data_dir)
-        else:
-            dump_data_dir = None
-
-        dump_path_aggregation = DumpPathAggregation()
-        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
-        dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
-        self.data_collector.update_dump_paths(dump_path_aggregation)
-        self.data_collector.initialize_json_file(
-            framework=Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
-        )
-        self.debug_variable_counter = defaultdict(int)
-
     def save(self, variable, name, save_backward):
         '''
         Args:
@@ -535,6 +510,21 @@ class Service:
         '''
         if self.config.level != Const.LEVEL_DEBUG:
             return
+
+        self.current_iter = self.loop + self.init_step
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+
+        if self.currrent_step_first_debug_save:
+            try:
+                self.current_rank = get_rank_if_initialized()
+            except DistributedNotInitializedError:
+                self.current_rank = None
+
+            self.create_dirs()
+            self.debug_variable_counter = defaultdict(int)
+            self.currrent_step_first_debug_save = False
+
         count = self.debug_variable_counter[name]
         self.debug_variable_counter[name] += 1
 
@@ -547,3 +537,13 @@ class Service:
         # backward save
         if save_backward:
             self.data_collector.debug_data_collect_backward(variable, grad_name_with_count)
+
+    def register_custom_api(self, module, api_name, api_prefix):
+        self.ori_customer_func[str(module) + Const.SEP + api_name] = getattr(module, api_name)
+        ApiRegistry.register_custom_api(module, api_name, api_prefix,
+                                        functools.partial(self.build_hook, BaseScope.Module_Type_API), ApiTemplate)
+
+    def restore_custom_api(self, module, api):
+        ori_func = self.ori_customer_func.get(str(module) + Const.SEP + api)
+        if ori_func:
+            setattr(module, api, ori_func)

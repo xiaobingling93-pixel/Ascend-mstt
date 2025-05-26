@@ -39,6 +39,8 @@ def add_api_accuracy_checker_argument(parser):
                         help="<optional> The ut task result out path.")
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
+    parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",
+                        help="<optional> Save compare failed api output.", required=False)
 
 
 def multi_add_api_accuracy_checker_argument(parser):
@@ -49,6 +51,8 @@ def multi_add_api_accuracy_checker_argument(parser):
                         help="<optional> The ut task result out path.")
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
+    parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",
+                        help="<optional> Save compare failed api output.", required=False)
     #以下属于多线程参数
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
                         help="<optional> set device id to run ut, must be unique and in range 0-7",

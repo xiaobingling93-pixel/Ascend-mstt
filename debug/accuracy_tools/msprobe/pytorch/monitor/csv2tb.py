@@ -24,10 +24,14 @@ from tqdm import tqdm
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import read_csv, create_directory, remove_path, recursive_chmod
 from msprobe.core.common.utils import is_int
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import get_target_output_dir
 
-all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
+all_data_type_list = [
+    "actv", "actv_grad", "exp_avg", "exp_avg_sq",
+    "grad_unreduced", "grad_reduced", "param_origin", "param_updated"
+]
 CSV_FILE_SUFFIX = r"_\d+-\d+\.csv"
 MAX_PROCESS_NUM = 128
 
@@ -75,8 +79,10 @@ def write_step(output_dirpath, parse_step_result, rank, data_type):
             for op, value in ops.items():
                 tag = f"{vpp_name}/{op}"
                 writer.add_scalar(tag, value, step)
+    writer.flush()
 
 
+@recursion_depth_decorator("update_dict", max_depth=50)
 def update_dict(dict1, dict2):
     for key, value in dict2.items():
         if key in dict1:

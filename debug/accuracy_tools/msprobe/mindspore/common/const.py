@@ -15,6 +15,7 @@
 
 import numpy as np
 import mindspore as ms
+from mindspore import dtype as mstype
 
 from msprobe.core.common.const import Const as CoreConst
 
@@ -23,14 +24,20 @@ class Const:
     CELL = "cell"
     API = "api"
     KERNEL = "kernel"
+    CELL_AND_API = 'cell_and_api'
     TOOL_LEVEL_DICT = {
         CoreConst.LEVEL_L0: CELL,
         CoreConst.LEVEL_L1: API,
-        CoreConst.LEVEL_L2: KERNEL
+        CoreConst.LEVEL_L2: KERNEL,
+        CoreConst.LEVEL_MIX: CELL_AND_API
     }
+
     PYNATIVE_MODE = "pynative"
+    GRAPH_MODE = "graph"
     GRAPH_GE_MODE = "graph_ge"
     GRAPH_KBYK_MODE = "graph_kbyk"
+    PYNATIVE_GRAPH_MODE = 'pynative_graph'
+
     JIT_LEVEL = "jit_level"
     JIT_LEVEL_O0 = "O0"
     JIT_LEVEL_O1 = "O1"
@@ -61,6 +68,7 @@ class Const:
     DROPOUT_API_NAME_PREFIX = "dropout"
 
     GRAPH_DATA_MODE_LIST = [CoreConst.ALL, CoreConst.INPUT, CoreConst.OUTPUT]
+    GRAPH_CELL_DUMP_DATA_MODE_LIST = [CoreConst.ALL, CoreConst.FORWARD, CoreConst.BACKWARD]
 
     HOOK_MS_PREFIX_DICT = {
         OPS_DATA_PREFIX: OPS_PREFIX,
@@ -68,6 +76,13 @@ class Const:
         MINT_DATA_PREFIX: MINT_PREFIX,
         MINT_NN_FUNC_DATA_PREFIX: MINT_NN_FUNC_PREFIX
     }
+
+    NonDifferentiableType = (
+        mstype.bool_, mstype.int8, mstype.byte, mstype.uint8, mstype.ubyte,
+        mstype.int16, mstype.short, mstype.uint16, mstype.ushort,
+        mstype.int32, mstype.intc, mstype.uint32, mstype.uintc,
+        mstype.int64, mstype.intp, mstype.uint64, mstype.uintp
+    )
 
 
 class MsCompareConst:
@@ -88,13 +103,10 @@ class MsCompareConst:
     MINDTORCH_NPU = "NPU"
     MINDTORCH_DIST = "Distributed"
 
-
-
     MT_VALID_API_TYPES = [
         MINDTORCH, MINDTORCH_FUNC, MINDTORCH_TENSOR
     ]
     SUPPORTED_FUSION_LIST = ["flash_attention_score"]
-
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
@@ -127,8 +139,6 @@ class MsCompareConst:
         SUCCESS = "success"
         API_NOT_FOUND = "api_not_found"
         EXCEPTION_SKIP = "exception_skip"
-
-
 
 
 class FreeBenchmarkConst:

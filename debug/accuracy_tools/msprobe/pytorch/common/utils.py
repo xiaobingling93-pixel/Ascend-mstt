@@ -24,6 +24,7 @@ from functools import wraps
 import numpy as np
 import torch
 import torch.distributed as dist
+
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import (FileCheckConst, change_mode,
                                             check_file_or_directory_path, check_path_before_create, FileOpen)
@@ -38,7 +39,9 @@ except ImportError:
 else:
     is_gpu = False
 
+
 torch_without_guard_version = torch.__version__ >= '2.1'
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 if not is_gpu and not torch_without_guard_version:
     from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
@@ -313,14 +316,14 @@ def print_rank_0(message):
         logger.info(message)
 
 
-def load_pt(pt_path, to_cpu=False):
+def load_pt(pt_path, to_cpu=False, weights_only=True):
     pt_path = os.path.realpath(pt_path)
     check_file_or_directory_path(pt_path)
     try:
         if to_cpu:
-            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=True)
+            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=weights_only)
         else:
-            pt = torch.load(pt_path, weights_only=True)
+            pt = torch.load(pt_path, weights_only=weights_only)
     except Exception as e:
         raise RuntimeError(f"load pt file {pt_path} failed") from e
     return pt
@@ -395,7 +398,7 @@ def save_api_data(api_data):
         io_buff = io.BytesIO()
         torch.save(api_data, io_buff)
     except Exception as e:
-        raise RuntimeError(f"save api_data to io_buff failed") from e
+        raise RuntimeError("save api_data to io_buff failed") from e
     return io_buff
 
 
@@ -405,7 +408,7 @@ def load_api_data(api_data_bytes):
         buffer = io.BytesIO(api_data_bytes)
         buffer = torch.load(buffer, map_location="cpu")
     except Exception as e:
-        raise RuntimeError(f"load api_data from bytes failed") from e
+        raise RuntimeError("load api_data from bytes failed") from e
     return buffer
 
 
@@ -476,15 +479,6 @@ def check_save_param(variable, name, save_backward):
         raise ValueError
 
 
-def replace_last_occurrence(text, old, new):
-    if text is None:
-        return text
-    index = text.rfind(old)
-    if index != -1:
-        return text[:index] + text[index:].replace(old, new, 1)
-    return text
-
-
 def is_torch_nn_module(variable):
     return isinstance(variable, torch.nn.Module) and not isinstance(variable, torch.jit.ScriptModule)
 
@@ -499,3 +493,17 @@ def is_float8_tensor(tensor):
     if str(tensor.dtype) in [Const.FLOAT8_E5M2_TYPE, Const.FLOAT8_E4M3FN_TYPE]:
         return True
     return is_hifloat8_tensor(tensor)
+
+
+def register_forward_pre_hook(module, forward_pre_hook):
+    if torch_version_above_or_equal_2:
+        module.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
+    else:
+        module.register_forward_pre_hook(forward_pre_hook)
+
+
+def register_forward_hook(module, forward_hook):
+    if torch_version_above_or_equal_2:
+        module.register_forward_hook(forward_hook, with_kwargs=True)
+    else:
+        module.register_forward_hook(forward_hook)

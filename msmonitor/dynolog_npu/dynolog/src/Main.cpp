@@ -166,13 +166,16 @@ int main(int argc, char** argv) {
   std::shared_ptr<gpumon::DcgmGroupInfo> dcgm;
 
   std::unique_ptr<tracing::IPCMonitor> ipcmon;
-  std::unique_ptr<std::thread> ipcmon_thread, gpumon_thread, pm_thread;
+  std::unique_ptr<std::thread> ipcmon_thread, data_ipcmon_thread, gpumon_thread, pm_thread;
 
   if (FLAGS_enable_ipc_monitor) {
     LOG(INFO) << "Starting IPC Monitor";
     ipcmon = std::make_unique<tracing::IPCMonitor>();
+    ipcmon->setLogger(std::move(getLogger()));
     ipcmon_thread =
         std::make_unique<std::thread>([&ipcmon]() { ipcmon->loop(); });
+    data_ipcmon_thread =
+        std::make_unique<std::thread>([&ipcmon]() { ipcmon->dataLoop(); });
   }
 
   if (FLAGS_enable_gpu_monitor) {

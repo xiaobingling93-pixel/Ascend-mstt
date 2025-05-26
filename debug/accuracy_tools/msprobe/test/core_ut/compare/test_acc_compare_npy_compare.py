@@ -454,7 +454,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         result, err_msg = error_value_process(n_value)
 
-        self.assertEqual(result, 0)
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
         self.assertEqual(err_msg, "")
 
     def test_error_value_process_shape_unmatch(self):

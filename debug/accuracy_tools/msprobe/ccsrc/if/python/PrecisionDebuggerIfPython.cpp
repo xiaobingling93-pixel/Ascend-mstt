@@ -18,8 +18,8 @@
 #include <exception>
 #include <cstring>
 
-#include "utils/CPythonUtils.hpp"
-#include "core/PrecisionDebugger.hpp"
+#include "utils/CPythonUtils.h"
+#include "core/PrecisionDebugger.h"
 
 namespace MindStudioDebugger {
 
@@ -53,7 +53,6 @@ static int InitPrecisionDebugger(PyObject *self, PyObject *args, PyObject *kws)
     CPythonUtils::PythonDictObject kwArgs(kws);
     std::string framework = kwArgs.GetItem("framework");
     std::string cfgFile = kwArgs.GetItem("config_path");
-
     if (PrecisionDebugger::GetInstance().Initialize(framework, cfgFile) != 0) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to load config, read log for more details.");
         return -1;
@@ -99,20 +98,9 @@ static PyObject* PrecisionDebuggerStop(PyObject *self)
     Py_RETURN_NONE;
 }
 
-static PyObject* PrecisionDebuggerStep(PyObject *self, PyObject *args)
+static PyObject* PrecisionDebuggerStep(PyObject *self)
 {
-    if (args == nullptr || PyTuple_GET_SIZE(args) == 0) {
-        PrecisionDebugger::GetInstance().Step();
-        Py_RETURN_NONE;
-    }
-
-    PyObject* increment = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(increment)) {
-        PyErr_SetString(PyExc_TypeError, "\'step\' should be a int.");
-        Py_RETURN_NONE;
-    }
-
-    PrecisionDebugger::GetInstance().Step(PyLong_AsUnsignedLong(increment));
+    PrecisionDebugger::GetInstance().Step();
     Py_RETURN_NONE;
 }
 
@@ -125,6 +113,8 @@ PyDoc_STRVAR(StepDoc,
 
 static PyMethodDef PrecisionDebuggerMethods[] = {
     {"start", reinterpret_cast<PyCFunction>(PrecisionDebuggerStart), METH_NOARGS, StartDoc},
+    {"stop", reinterpret_cast<PyCFunction>(PrecisionDebuggerStop), METH_NOARGS, StopDoc},
+    {"step", reinterpret_cast<PyCFunction>(PrecisionDebuggerStep), METH_NOARGS, StepDoc},
     {nullptr, nullptr, 0, nullptr}
 };
 
@@ -182,5 +172,4 @@ PyTypeObject* GetPyPrecisionDebuggerType()
     }
     return &PyPrecisionDebuggerType;
 }
-
 }

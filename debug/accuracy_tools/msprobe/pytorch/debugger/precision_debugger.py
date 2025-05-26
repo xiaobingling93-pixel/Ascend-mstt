@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import functools
 from collections import namedtuple
 
 from torch.utils.data import dataloader
@@ -20,7 +20,7 @@ from torch.utils.data import dataloader
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, check_token_range
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import check_save_param, is_torch_nn_module
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
@@ -76,6 +76,7 @@ class PrecisionDebugger:
             self.service = Service(self.config)
             self.module_dumper = ModuleDumper(self.service)
             self.enable_dataloader = self.config.enable_dataloader
+            self.ori_customer_func = {}
             if self.enable_dataloader:
                 logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
@@ -114,17 +115,20 @@ class PrecisionDebugger:
             )
 
     @classmethod
-    def start(cls, model=None):
+    def start(cls, model=None, token_range=None):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
-        instance.config.check_model(instance, model)
+
+        check_token_range(token_range)
+        instance.config.check_model(instance, model, token_range)
+
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
-            instance.service.start(instance.model)
+            instance.service.start(instance.model, token_range)
 
     @classmethod
     def forward_backward_dump_end(cls):
@@ -180,6 +184,31 @@ class PrecisionDebugger:
         check_init_step(step)
         instance.service.init_step = step
         instance.service.loop = 0
+
+    @classmethod
+    def register_custom_api(cls, module, api, api_prefix=None):
+        if not api_prefix:
+            api_prefix = getattr(module, "__name__", "Custom")
+        if not isinstance(api_prefix, str):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, "api_prefix must be string")
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.register_custom_api(module, api, api_prefix)
+
+    @classmethod
+    def restore_custom_api(cls, module, api):
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.restore_custom_api(module, api)
 
 
 def module_dump(module, dump_name):

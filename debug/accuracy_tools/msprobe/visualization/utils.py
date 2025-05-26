@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -16,9 +16,10 @@
 import os
 import re
 import json
+import pickle
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.compare.acc_compare import Comparator, ModeConfig
+from msprobe.core.common.log import logger
 
 
 def load_json_file(file_path):
@@ -40,15 +41,6 @@ def load_data_json_file(file_path):
     加载dump.json中的data字段
     """
     return load_json_file(file_path).get(GraphConst.DATA_KEY, {})
-
-
-def get_csv_df(stack_mode, csv_data, compare_mode):
-    """
-    调用acc接口写入csv
-    """
-    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
-    mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=dump_mode)
-    return Comparator(mode_config).make_result_table(csv_data)
 
 
 def str2float(percentage_str):
@@ -192,3 +184,24 @@ class GraphConst:
     OP = 'op'
     PEER = 'peer'
     GROUP_ID = 'group_id'
+
+
+def is_serializable(obj):
+    """
+    Check if an object is serializable
+    """
+    try:
+        pickle.dumps(obj)
+        return True
+    except (pickle.PicklingError, AttributeError, TypeError):
+        return False
+    except Exception as e:
+        logger.error('Unexpected error occurred while pickling obj.')
+        raise RuntimeError('Unexpected error occurred while pickling obj.') from e
+
+
+class SerializableArgs:
+    def __init__(self, args):
+        for k, v in vars(args).items():
+            if is_serializable(v):
+                setattr(self, k, v)

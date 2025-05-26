@@ -18,35 +18,18 @@ limitations under the License.
  */
 
 import '@polymer/iron-collapse/iron-collapse';
-import '@polymer/iron-flex-layout/iron-flex-layout-classes';
 import '@polymer/iron-icon';
 import '@polymer/iron-icons/image-icons';
 import '@polymer/iron-icons/iron-icons';
 import '@polymer/iron-iconset-svg';
 import '@polymer/iron-list/iron-list';
-import '@polymer/iron-pages';
 import '@polymer/paper-button';
 import '@polymer/paper-checkbox';
 import '@polymer/paper-dialog';
-import '@polymer/paper-dialog-scrollable';
 import '@polymer/paper-dropdown-menu/paper-dropdown-menu';
-import '@polymer/paper-header-panel';
 import '@polymer/paper-icon-button/paper-icon-button';
-import '@polymer/paper-input/paper-input';
-import '@polymer/paper-input/paper-textarea';
 import '@polymer/paper-item';
 import '@polymer/paper-listbox';
-import '@polymer/paper-material';
-import '@polymer/paper-menu-button';
 import '@polymer/paper-progress';
-import '@polymer/paper-radio-button';
-import '@polymer/paper-radio-group';
-import '@polymer/paper-slider';
-import '@polymer/paper-spinner/paper-spinner';
-import '@polymer/paper-spinner/paper-spinner-lite';
-import '@polymer/paper-styles/paper-styles';
-import '@polymer/paper-tabs';
-import '@polymer/paper-toast';
-import '@polymer/paper-toggle-button';
-import '@polymer/paper-toolbar';
 import '@polymer/paper-tooltip/paper-tooltip';
+export { PaperCheckboxElement } from '@polymer/paper-checkbox';

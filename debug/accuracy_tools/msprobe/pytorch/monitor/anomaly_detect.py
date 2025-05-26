@@ -14,6 +14,7 @@
 # limitations under the License.
 import itertools
 import os
+import math
 import statistics as st
 import sys
 from abc import ABC
@@ -33,7 +34,7 @@ from msprobe.pytorch.common.log import logger
 class ScanRule(ABC):
     name = "ScanRule"
 
-    def apply(self, history, cur):
+    def apply(self, cur, history=None):
         raise NotImplementedError("abstract method apply is not implemented")
 
 
@@ -43,14 +44,25 @@ class AnomalyTurbulence(ScanRule):
     def __init__(self, threshold) -> None:
         self.threshold = threshold
 
-    def apply(self, history, cur):
+    def apply(self, cur, history=None):
+        """
+        :param cur: float, current metric value
+        :param history: float, history weighted average
+        :return: bool, whether the current value deviates from the historical average value of current metric
+        """
         baseline = st.mean(history) if isinstance(history, list) else history
+        up_bound = baseline * (1 + self.threshold)
+        return abs(cur) > up_bound
 
-        up_bound = baseline + baseline * self.threshold
-        if baseline > 0:
-            return cur > up_bound
-        else:
-            return cur < up_bound
+
+class AnomalyNan(ScanRule):
+    name = "AnomalyNan"
+
+    def __init__(self, threshold=None) -> None:
+        self.threshold = threshold
+
+    def apply(self, cur, history=None):
+        return math.isnan(cur) or (self.threshold is not None and abs(cur) > self.threshold)
 
 
 class AnomalyScanner:
@@ -69,7 +81,7 @@ class AnomalyScanner:
             rule_args = spec.get("args")
 
             # 检查必要的键是否存在
-            if rule_cls_name is None or rule_args is None:
+            if rule_cls_name is None or (rule_cls_name == "AnomalyTurbulence" and rule_args is None):
                 logger.warning(f"Spec is missing required keys: {spec}")
                 continue
 
@@ -81,7 +93,7 @@ class AnomalyScanner:
                 continue
 
             try:
-                rule_instance = rule_cls(**rule_args)
+                rule_instance = rule_cls(**rule_args) if rule_args is not None else rule_cls()
                 alert_rules.append(rule_instance)
             except Exception as e:
                 logger.error(f"Error creating instance of rule '{rule_cls_name}': {e}")
@@ -93,7 +105,7 @@ class AnomalyScanner:
     def scan(scan_rules: List[ScanRule], history, cur):
         anomaly = False
         for rule in scan_rules:
-            anomaly = rule.apply(history, cur)
+            anomaly = rule.apply(cur, history=history)
             if anomaly:
                 return anomaly, rule.name
         return anomaly, None
@@ -162,7 +174,7 @@ class TrainStage:
 
 
 FORWARD_KEY = [MonitorConst.ACTV]
-BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD, 
+BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD,
                 MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
 OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
 TRAIN_STAGE = {
@@ -253,6 +265,41 @@ class BaseWriterWithAD:
         self.anomaly_factory = writer_input.anomaly_factory
         self.anomalies = []
         self.ndigits = writer_input.ndigits
+        self.beta = 0.99
+
+    @staticmethod
+    def stack_tensors(tensor_list):
+        """
+        Torch not support stack cpu and xpu tensors. Group the tensors into cpu_group and xpu_group,
+        stack them separately, migrate xpu_group to cpu, and then restore in the order of input.
+
+        :param tensor_list: [tensor(-1.6165), tensor(-1.0985), tensor(-1.7777), tensor(-1.8408, device='npu:0')]
+        :return: result: list of float
+        """
+        cpu_tensors = []
+        xpu_tensors = []
+
+        for tensor in tensor_list:
+            if isinstance(tensor, torch.Tensor) and tensor.device.type != 'cpu':
+                # 将device上的tensor先stack后to cpu
+                xpu_tensors.append(tensor)
+            else:
+                cpu_tensors.append(tensor)
+
+        xpu_stack = torch.stack(xpu_tensors).cpu() if xpu_tensors else torch.tensor([])
+
+        # 按照输入的顺序恢复
+        result = []
+        cpu_tensors_idx, xpu_tensors_idx = 0, 0
+        for tensor in tensor_list:
+            if isinstance(tensor, torch.Tensor) and tensor.device.type != 'cpu':
+                result.append(xpu_stack[xpu_tensors_idx])
+                xpu_tensors_idx += 1
+            else:
+                result.append(cpu_tensors[cpu_tensors_idx])
+                cpu_tensors_idx += 1
+
+        return result
 
     def get_anomalies(self):
         """返回已检测到的异常列表
@@ -271,12 +318,17 @@ class BaseWriterWithAD:
         Returns:
             None
         """
-        detected = False
-        if self.ad_rules:
-            avg = self._update_tag2scalars(tag, scalar_value)
-            detected, rule_name = self._ad(scalar_value, history=avg)
+        if not self.ad_rules or tag[-1] in ["shape", "dtype"]:
+            return
+        if isinstance(scalar_value, torch.Tensor):
+            scalar_value = scalar_value.item()
+        avg = self._update_tag2scalars(tag, scalar_value)
+        detected, rule_name = self._ad(scalar_value, history=avg)
         if detected:
-            exception_message = f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}."
+            if rule_name == AnomalyTurbulence.name and tag[-1] not in ["norm", "mean"]:
+                return
+            exception_message = (f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}, "
+                                 f"current value {scalar_value}, history mean {avg}.")
             logger.info(f"{BCOLORS.WARNING}> {exception_message}{BCOLORS.ENDC}")
             # append to self.anomalies for dump
             if self.anomaly_factory:
@@ -291,15 +343,15 @@ class BaseWriterWithAD:
             tensors.extend(op2tensor.values())
         if not tensors:
             return
-        
+
         n_slices = len(tensors) // MonitorConst.SLICE_SIZE
         with torch.no_grad():
             for i in range(n_slices + 1):
                 begin = i * MonitorConst.SLICE_SIZE
-                end = (i+1) * MonitorConst.SLICE_SIZE
+                end = (i + 1) * MonitorConst.SLICE_SIZE
                 if begin == len(tensors):
                     continue
-                metric_list = torch.stack(tensors[begin:end]).cpu()
+                metric_list = self.stack_tensors(tensors[begin:end])
                 for tag, metric in zip(tags[begin:end], metric_list):
                     self.add_scalar(tag, metric, step)
 
@@ -319,11 +371,11 @@ class BaseWriterWithAD:
         Returns:
             float: The average value before update.
         """
+        abs_scalar_value = abs(scalar_value)
         if tag not in self.tag2scalars:
-            self.tag2scalars[tag] = {'avg': scalar_value, 'count': 0}
+            self.tag2scalars[tag] = {'avg': abs_scalar_value, 'count': 0}
         avg = self.tag2scalars[tag]['avg']
-        new_avg = (avg * self.tag2scalars[tag]['count'] + scalar_value) / (self.tag2scalars[tag]['count'] + 1)
-        self.tag2scalars[tag]['avg'] = new_avg
+        self.tag2scalars[tag]['avg'] = self.beta * avg + (1 - self.beta) * abs_scalar_value
         self.tag2scalars[tag]['count'] += 1
         return avg
 
@@ -376,7 +428,13 @@ class CSVWriterWithAD(BaseWriterWithAD):
         super().add_scalar(tag, scalar_value, global_step)
 
         name = tag[0].split('/')[0]
-        self.context_dict[name].append(scalar_value.item())
+        if isinstance(scalar_value, torch.Tensor):
+            value = scalar_value.item()
+        elif isinstance(scalar_value, torch.Size):
+            value = list(scalar_value)
+        else:
+            value = scalar_value
+        self.context_dict[name].append(value)
 
     def write_metrics(self, ops, metric_value, step, prefix=''):
         super().write_metrics(ops, metric_value, step, prefix='')

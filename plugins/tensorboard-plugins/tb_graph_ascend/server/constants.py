@@ -14,40 +14,5 @@
 # limitations under the License.
 # ==============================================================================
 
-MAX_FILE_SIZE = 1024 * 1024 * 1024
-PLUGIN_NAME = 'graph_ascend'
-PLUGIN_NAME_RUN_METADATA_WITH_GRAPH = 'graph_ascend_run_metadata_graph'
-SETS = {
-    'Bench': ('Bench', 'B___', 'N___'),
-    'NPU': ('NPU', 'N___', 'B___'),
-    'B___': ('Bench', 'N___'),
-    'N___': ('NPU', 'B___'),
-}
-NA_DATA = [
-    ['Max diff', 'N/A'],
-    ['Min diff', 'N/A'],
-    ['Mean diff', 'N/A'],
-    ['L2norm diff', 'N/A'],
-    ['MaxRelativeErr', 'N/A'],
-    ['MinRelativeErr', 'N/A'],
-    ['MeanRelativeErr', 'N/A'],
-    ['NormRelativeErr', 'N/A'],
-]
-PREFIX_MAP = {'N___': 'NPU', 'B___': 'Bench'}
-UNMATCH_NAME_SET = [
-    'Max diff',
-    'Min diff',
-    'Mean diff',
-    'L2norm diff',
-    'MaxRelativeErr',
-    'MinRelativeErr',
-    'MeanRelativeErr',
-    'NormRelativeErr',
-    'Cosine',
-    'MaxAbsErr',
-    'MaxRelativeErr',
-    'One Thousandth Err Ratio',
-    'Five Thousandth Err Ratio',
-]
 SCREEN_MAP = {'precision_index': 'precision_index', 'overflow_level': 'overflow_level'}
 UNMATCHED_NODE_NAME = '无匹配节点'

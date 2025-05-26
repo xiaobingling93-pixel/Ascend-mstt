@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -12,12 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import re
-from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
+
+from msprobe.core.compare.acc_compare import ModeConfig
+from msprobe.core.compare.multiprocessing_compute import CompareRealData
+from msprobe.core.compare.utils import read_op, merge_tensor, get_accuracy, make_result_table
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.const import Const
-from msprobe.core.compare.acc_compare import ModeConfig
+
 
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
@@ -53,13 +57,11 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
     mode_config = ModeConfig(stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=Const.ALL)
 
     if framework == Const.PT_FRAMEWORK:
-        from msprobe.pytorch.compare.pt_compare import PTComparator
-        return PTComparator(mode_config).do_multi_process(dump_path_param, csv_path)
+        from msprobe.pytorch.compare.pt_compare import read_real_data
+        return CompareRealData(read_real_data, mode_config, is_cross_frame).do_multi_process(dump_path_param, csv_path)
     else:
-        from msprobe.mindspore.compare.ms_compare import MSComparator, MappingConfig
-        ms_comparator = MSComparator(mode_config, MappingConfig())
-        ms_comparator.cross_frame = is_cross_frame
-        return ms_comparator.do_multi_process(dump_path_param, csv_path)
+        from msprobe.mindspore.compare.ms_compare import read_real_data
+        return CompareRealData(read_real_data, mode_config, is_cross_frame).do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):
@@ -119,11 +121,13 @@ def compare_data_fuzzy(data_dict_list1, data_dict_list2):
     return True
 
 
-def format_node_data(data_dict, node_id=None):
+def format_node_data(data_dict, node_id=None, compare_mode=None):
     """
     删除节点数据中不需要展示的字段
     """
     del_list = ['requires_grad', 'full_op_name']
+    if GraphConst.MD5_COMPARE != compare_mode:
+        del_list.append(Const.MD5)
     if node_id and GraphConst.BATCH_P2P in node_id:
         del_list.extend(['op', 'peer', 'tag', 'group_id'])
     for _, value in data_dict.items():
@@ -171,7 +175,7 @@ def _format_decimal_string(s):
     """
     使用正则表达式匹配包含数字、小数点和可选的百分号的字符串
     """
-    pattern = re.compile(r'\d{1,20}\.\d{1,20}%?')
+    pattern = re.compile(r'^\d{1,20}\.\d{1,20}%?$')
     matches = pattern.findall(s)
     for match in matches:
         is_percent = match.endswith('%')
@@ -226,3 +230,12 @@ def _format_data(data_dict):
     if all_null:
         data_dict.clear()
         data_dict[GraphConst.VALUE] = GraphConst.NULL
+
+
+def get_csv_df(stack_mode, csv_data, compare_mode):
+    """
+    调用acc接口写入csv
+    """
+
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
+    return make_result_table(csv_data, dump_mode, stack_mode)

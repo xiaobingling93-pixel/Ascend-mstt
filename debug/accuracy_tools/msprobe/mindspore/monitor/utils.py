@@ -35,7 +35,10 @@ def get_single_metrics(op_list, tag, tensor, output=None):
         if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
             statistic = float(statistic)
             statistic = Tensor(statistic)
-        output[tag][op] = statistic.astype(mstype.float32)
+        if isinstance(statistic, Tensor):
+            output[tag][op] = statistic.astype(mstype.float32)
+        else:
+            output[tag][op] = statistic
 
 
 def get_metrics(op_list, tag2tensor, eps, output=None):
@@ -91,6 +94,9 @@ def validate_ops(ops):
         default_op = MonitorConst.OP_LIST[0]
         valid_ops.append(default_op)
         logger.info(f"There is no valid ops, default op {default_op} is used")
+    # 增加默认shape和dtype参数
+    if "shape" not in valid_ops and "dtype" not in valid_ops:
+        valid_ops.extend(["shape", "dtype"])
     return valid_ops
 
 
@@ -171,7 +177,7 @@ def validate_alert(alert):
             args = rule.get("args")
             if args and isinstance(args, dict):
                 threshold = args.get("threshold")
-                if not isinstance(threshold, float) or threshold < 0:
+                if not isinstance(threshold, (float, int)) or threshold < 0:
                     raise TypeError('threshold must be float and not less than 0')
     dump = alert.get('dump')
     if dump and not isinstance(dump, bool):

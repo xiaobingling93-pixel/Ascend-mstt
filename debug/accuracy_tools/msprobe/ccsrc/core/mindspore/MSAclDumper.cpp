@@ -16,15 +16,15 @@
 
 #include <cstdlib>
 
-#include "base/ErrorInfos.hpp"
-#include "base/DebuggerConfig.hpp"
-#include "base/Environment.hpp"
-#include "core/AclDumper.hpp"
-#include "MSAclDumper.hpp"
+#include "base/ErrorInfosManager.h"
+#include "base/DebuggerConfig.h"
+#include "base/Environment.h"
+#include "core/AclDumper.h"
+#include "MSAclDumper.h"
 
 namespace MindStudioDebugger {
 
-void MSAclDumper::OnStepBegin(uint32_t device, uint32_t curStep, ExtArgs& args)
+void MSAclDumper::OnStepBegin(uint32_t device, ExtArgs& args)
 {
     DEBUG_FUNC_TRACE();
     if (!PrecisionDebugger::GetInstance().IsEnable()) {
@@ -41,7 +41,7 @@ void MSAclDumper::OnStepBegin(uint32_t device, uint32_t curStep, ExtArgs& args)
         rank = static_cast<int32_t>(device);
     }
 
-    AclDumper::GetInstance().SetDump(rank, curStep, args);
+    AclDumper::GetInstance().SetDump(rank, msprobeStep, args);
     return;
 }
 
@@ -49,6 +49,11 @@ void MSAclDumper::OnStepEnd(ExtArgs& args)
 {
     DEBUG_FUNC_TRACE();
     AclDumper::GetInstance().FinalizeDump(args);
+}
+
+void MSAclDumper::Step()
+{
+    msprobeStep++;
 }
 
 __attribute__((constructor)) void RegisterMSAclDumper()

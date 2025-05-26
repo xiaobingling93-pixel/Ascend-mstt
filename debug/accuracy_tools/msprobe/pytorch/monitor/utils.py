@@ -22,7 +22,7 @@ import re
 
 import torch
 
-from msprobe.core.common.const import MonitorConst, Const
+from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
@@ -43,7 +43,6 @@ DIRECTORY_MAX_LENGTH = 4096
 
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
-MVGradResult = namedtuple('MVGradResult', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
 
 
 class MsgConst:
@@ -102,6 +101,9 @@ def validate_ops(ops):
         default_op = MonitorConst.OP_LIST[0]
         valid_ops.append(default_op)
         logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
+    # 增加默认shape和dtype参数
+    if "shape" not in valid_ops and "dtype" not in valid_ops:
+        valid_ops.extend(["shape", "dtype"])
     return valid_ops
 
 
@@ -199,7 +201,7 @@ def validate_alert(alert):
             args = rule.get("args")
             if args and isinstance(args, dict):
                 threshold = args.get("threshold")
-                if not isinstance(threshold, float) or threshold < 0:
+                if not isinstance(threshold, (float, int)) or threshold < 0:
                     raise TypeError('threshold must be float and not less than 0')
     dump = alert.get('dump')
     if dump and not isinstance(dump, bool):

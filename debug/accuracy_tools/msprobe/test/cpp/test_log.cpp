@@ -2,7 +2,7 @@
 
 #include "gtest/gtest.h"
 #include "test_utils.hpp"
-#include "base/ErrorInfos.hpp"
+#include "base/ErrorInfosManager.h"
 
 using namespace MindStudioDebugger;
 

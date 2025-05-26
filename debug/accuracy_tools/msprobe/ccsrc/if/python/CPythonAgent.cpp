@@ -18,7 +18,7 @@
 #include <exception>
 #include <cstring>
 
-#include "utils/CPythonUtils.hpp"
+#include "utils/CPythonUtils.h"
 
 namespace MindStudioDebugger {
 
@@ -29,8 +29,12 @@ PyDoc_STRVAR(CPythonAgentModuleDoc,
 
 static PyObject* CPythonAgentRegister(PyObject *module, PyObject *args)
 {
+    if (args == nullptr || !PyTuple_Check(args)) {
+        PyErr_SetString(PyExc_TypeError, "Expect a tuple.");
+        Py_RETURN_NONE;
+    }
     /* 预期2个参数，name和obj */
-    if (args == nullptr || PyTuple_GET_SIZE(args) != 2) {
+    if (PyTuple_GET_SIZE(args) != 2) {
         PyErr_SetString(PyExc_TypeError, "\'register_context\' expects 2 arguments.");
         Py_RETURN_NONE;
     }
@@ -56,7 +60,7 @@ static PyObject* CPythonAgentRegister(PyObject *module, PyObject *args)
 static PyObject* CPythonAgentUnRegister(PyObject *module, PyObject *obj)
 {
     CPythonUtils::PythonStringObject name(obj);
-    if(name.IsNone()) {
+    if (name.IsNone()) {
         PyErr_SetString(PyExc_TypeError, "\"name\" should be a string.");
         Py_RETURN_NONE;
     }
@@ -68,7 +72,7 @@ static PyObject* CPythonAgentUnRegister(PyObject *module, PyObject *obj)
 static PyObject* CPythonAgentGetContext(PyObject *module, PyObject *obj)
 {
     CPythonUtils::PythonStringObject name(obj);
-    if(name.IsNone()) {
+    if (name.IsNone()) {
         PyErr_SetString(PyExc_TypeError, "\"name\" should be a string.");
         Py_RETURN_NONE;
     }

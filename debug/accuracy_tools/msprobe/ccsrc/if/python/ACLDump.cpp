@@ -18,37 +18,40 @@
 #include <exception>
 #include <stdexcept>
 
-#include "base/ErrorInfos.hpp"
-#include "core/AclDumper.hpp"
-#include "utils/CPythonUtils.hpp"
+#include "base/ErrorInfosManager.h"
+#include "core/AclDumper.h"
+#include "utils/CPythonUtils.h"
 
 namespace MindStudioDebugger {
 
-static PyObject *CPythonKernelInitDump(PyObject *module, PyObject *args) {
-  PyGILState_STATE gstate = PyGILState_Ensure();
-  KernelInitDump();
-  PyGILState_Release(gstate);
-  Py_RETURN_NONE;
+static PyObject *CPythonKernelInitDump(PyObject *module, PyObject *args) 
+{
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    KernelInitDump();
+    PyGILState_Release(gstate);
+    Py_RETURN_NONE;
 }
 
-static PyObject *CPythonKernelSetDump(PyObject *module, PyObject *args) {
-  const char *path;
-  if (!PyArg_ParseTuple(args, "s", &path)) {
+static PyObject *CPythonKernelSetDump(PyObject *module, PyObject *args) 
+{
+    const char *path;
+    if (!PyArg_ParseTuple(args, "s", &path)) {
     LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE,
               "npu set dump error, cfg_file must string");
     return nullptr;
-  }
-  PyGILState_STATE gstate = PyGILState_Ensure();
-  KernelSetDump(std::string(path));
-  PyGILState_Release(gstate);
-  Py_RETURN_NONE;
+    }
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    KernelSetDump(std::string(path));
+    PyGILState_Release(gstate);
+    Py_RETURN_NONE;
 }
 
-static PyObject *CPythonKernelFinalizeDump(PyObject *module, PyObject *args) {
-  PyGILState_STATE gstate = PyGILState_Ensure();
-  KernelFinalizeDump();
-  PyGILState_Release(gstate);
-  Py_RETURN_NONE;
+static PyObject *CPythonKernelFinalizeDump(PyObject *module, PyObject *args) 
+{
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    KernelFinalizeDump();
+    PyGILState_Release(gstate);
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef DumpMethods[] = {

@@ -18,7 +18,10 @@ dataset module
 """
 import logging
 import os
+import re
 
+from msprof_analyze.prof_common.constant import Constant
+from msprof_analyze.prof_common.file_manager import FileManager
 from msprof_analyze.advisor.config.config import Config
 
 logger = logging.getLogger()
@@ -29,12 +32,16 @@ class Dataset:
     :param collection_path: dataSet absolute path
     dataset base class
     """
+    PYTORCH_DB_PATTERN = re.compile(r'ascend_pytorch_profiler(?:_\d+)?\.db$')
+    MINDSPORE_DB_PATTERN = re.compile(r'ascend_mindspore_profiler(?:_\d+)?\.db$')
+    TRACE_VIEW_PATTERN = re.compile(r'trace_view\.json$')
 
     def __init__(self, collection_path, data=None, **kwargs) -> None:
         if data is None:
             data = {}
         self.collection_path = os.path.abspath(os.path.join(Config().work_path, collection_path))
         self.output_path = kwargs.get("output_path", None)
+        self.data_type = self.get_data_type()
         if not self.output_path:
             self.output_path = self.collection_path
         logger.debug("init %s with %s", self.__class__.__name__, self.collection_path)
@@ -55,3 +62,16 @@ class Dataset:
         :return: key
         """
         return cls.__name__.rsplit('.', maxsplit=1)[-1]
+
+    def get_data_type(self):
+        # 递归搜索ASCEND_PROFILER_PATH文件夹
+        for root, dirs, _ in os.walk(self.collection_path):
+            if Constant.ASCEND_PROFILER_OUTPUT in dirs:
+                profiler_dir = os.path.join(root, Constant.ASCEND_PROFILER_OUTPUT)
+
+                # 检查profiler目录下的文件
+                for file in os.listdir(profiler_dir):
+                    if self.PYTORCH_DB_PATTERN.match(file) or self.MINDSPORE_DB_PATTERN.match(file):
+                        return Constant.DB  # 找到任意一种.db文件即返回
+
+        return Constant.TEXT

@@ -37,6 +37,7 @@ from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import check_op_str_pattern_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 def check_tensor_overflow(x):
@@ -64,6 +65,7 @@ def check_tensor_overflow(x):
         return False
 
 
+@recursion_depth_decorator("check_data_overflow")
 def check_data_overflow(x, device):
     if isinstance(x, (tuple, list)):
         if not x:
@@ -76,6 +78,7 @@ def check_data_overflow(x, device):
             return torch_npu.npu.utils.npu_check_overflow(x)
 
 
+@recursion_depth_decorator("is_bool_output")
 def is_bool_output(x):
     if isinstance(x, (tuple, list)):
         if not x:

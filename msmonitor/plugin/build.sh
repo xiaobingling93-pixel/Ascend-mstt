@@ -3,6 +3,9 @@
 # install pybind11
 pip install pybind11
 
+# build stub
+sh ./stub/build_stub.sh
+
 # build msmonitor_plugin wheel
 python3 setup.py bdist_wheel
 

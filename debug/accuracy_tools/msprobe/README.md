@@ -157,6 +157,27 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [MSAdapter 场景的溢出检测](./docs/30.overflow_check_MSAdapter.md)
 
+### 13 训练检查
+
+该工具主要包括：
+
+训练前或精度比对前，对比两个环境下可能影响训练精度的配置差异。
+
+[PyTorch 训练前配置检查](./docs/31.config_check.md)
+
+训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
+
+[checkpoint比对](./docs/32.ckpt_compare.md)
+
+### 14 强化学习数据采集
+
+主要能力：
+
+灵活采集强化学习中重要关键过程数据，并支持比对。
+
+[强化学习数据采集](./docs/34.RL_collect.md)
+
+
 ## 📑 补充材料
 
 [无标杆比对功能在 PyTorch 场景的性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)

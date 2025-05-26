@@ -22,6 +22,7 @@ import mindspore as ms
 from mindspore import Tensor, ops, mint
 import numpy as np
 
+from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.data_dump.data_processor.mindspore_processor import (
     MindsporeDataProcessor,
@@ -76,11 +77,16 @@ class TestMindsporeDataProcessor(unittest.TestCase):
     def test_get_stat_info_float_async(self):
         self.config.async_dump = True
         tensor = ms.tensor([1.0, 2.0, 3.0])
-        result = self.processor.get_stat_info(tensor).stack_tensor_stat[1]
-        self.assertEqual(result[0].item(), 3.0)
-        self.assertEqual(result[1].item(), 1.0)
-        self.assertEqual(result[2].item(), 2.0)
-        self.assertEqual(result[3].item(), ms.ops.norm(tensor).item())
+        result = self.processor.get_stat_info(tensor)
+        result_max = result.max
+        result_min = result.min
+        result_mean = result.mean
+        result_norm = result.norm
+
+        self.assertEqual(result_max.item(), 3.0)
+        self.assertEqual(result_min.item(), 1.0)
+        self.assertEqual(result_mean.item(), 2.0)
+        self.assertEqual(result_norm.item(), ms.ops.norm(tensor).item())
 
     def test_get_stat_info_int(self):
         self.config.async_dump = False
@@ -94,9 +100,13 @@ class TestMindsporeDataProcessor(unittest.TestCase):
     def test_get_stat_info_int_async(self):
         self.config.async_dump = True
         tensor = ms.tensor([1, 2, 3])
-        result = self.processor.get_stat_info(tensor).stack_tensor_stat[1]
-        self.assertEqual(result[0].item(), 3.0)
-        self.assertEqual(result[1].item(), 1.0)
+        result = self.processor.get_stat_info(tensor)
+
+        result_max = result.max
+        result_min = result.min
+
+        self.assertEqual(result_max.item(), 3.0)
+        self.assertEqual(result_min.item(), 1.0)
 
     def test_get_stat_info_bool(self):
         self.config.async_dump = False
@@ -110,9 +120,13 @@ class TestMindsporeDataProcessor(unittest.TestCase):
     def test_get_stat_info_bool_async(self):
         self.config.async_dump = True
         tensor = ms.Tensor([True, False, True])
-        result = self.processor.get_stat_info(tensor).stack_tensor_stat[1]
-        self.assertEqual(result[0].item(), True)
-        self.assertEqual(result[1].item(), False)
+        result = self.processor.get_stat_info(tensor)
+
+        result_max = result.max
+        result_min = result.min
+
+        self.assertEqual(result_max.item(), True)
+        self.assertEqual(result_min.item(), False)
 
     @patch.object(MindsporeDataProcessor, 'get_md5_for_tensor')
     def test__analyze_tensor(self, get_md5_for_tensor):
@@ -125,13 +139,12 @@ class TestMindsporeDataProcessor(unittest.TestCase):
             'type': 'mindspore.Tensor',
             'dtype': 'Int32',
             'shape': (3,),
-            'Max': 3,
-            'Min': 1,
-            'Mean': 2,
-            'Norm': ms.ops.norm(tensor).item(),
             'md5': 'test_md5',
         }
         result = self.processor._analyze_tensor(tensor, suffix)
+        # 删除不必要的字段
+        result.pop('tensor_stat_index', None)
+
         self.assertEqual(result, expected_result)
 
 
@@ -157,12 +170,9 @@ class TestTensorDataProcessor(unittest.TestCase):
             'type': 'mindspore.Tensor',
             'dtype': str(tensor.dtype),
             'shape': tensor.shape,
-            'Max': 3.0,
-            'Min': 1.0,
-            'Mean': 2.0,
-            'Norm': ms.ops.norm(tensor).item(),
             'data_name': 'test_api.input.suffix.npy'
         }
+        result.pop('tensor_stat_index', None)
         self.assertEqual(expected, result)
 
 
@@ -171,6 +181,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         class Config:
             def __init__(self):
                 self.overflow_nums = 1
+
         self.data_processor = OverflowCheckDataProcessor(Config(), None)
 
     def test___init__(self):
@@ -181,6 +192,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
     def test_analyze_forward(self):
         def func(_):
             self.data_processor.has_overflow = True
+
         with patch.object(BaseDataProcessor, "analyze_forward", return_value={"min", 0}):
             with patch.object(OverflowCheckDataProcessor, "maybe_save_overflow_data"):
                 api_info = self.data_processor.analyze_forward("name", "module", "module_input_output")
@@ -194,6 +206,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
     def test_analyze_backward(self):
         def func(_):
             self.data_processor.has_overflow = True
+
         with patch.object(BaseDataProcessor, "analyze_backward", return_value={"min", 0}):
             with patch.object(OverflowCheckDataProcessor, "maybe_save_overflow_data"):
                 api_info = self.data_processor.analyze_backward("name", "module", "module_input_output")
@@ -225,33 +238,62 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.data_processor.overflow_nums = 3
         self.assertFalse(self.data_processor.is_terminated)
 
+        # from unittest.mock import MagicMock
+
     def test__analyze_maybe_overflow_tensor(self):
+        # Mock DataWriter 和相关方法
+        self.data_processor.data_writer = MagicMock()
+
+        tensor_json = {Const.TENSOR_STAT_INDEX: 1}  # 修正：添加正确的 tensor_stat_index
+
+        # 模拟返回值
+        self.data_processor.data_writer.get_buffer_values_max.return_value = 10
+        self.data_processor.data_writer.get_buffer_values_min.return_value = -10
+
         self.data_processor.has_overflow = False
-        tensor_json = {"Max": None, "Min": 0}
+        # 调用函数并检查没有溢出
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertFalse(self.data_processor.has_overflow)
-        tensor_json.update({"Max": -np.inf})
+
+        self.data_processor.has_overflow = False
+        # max 值为 -np.inf，应该触发溢出
+        self.data_processor.data_writer.get_buffer_values_max.return_value = -np.inf
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.data_processor.has_overflow)
+
         self.data_processor.has_overflow = False
-        tensor_json.update({"Max": np.inf})
+        # max 值为 np.inf，应该触发溢出
+        self.data_processor.data_writer.get_buffer_values_max.return_value = np.inf
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.data_processor.has_overflow)
+
         self.data_processor.has_overflow = False
-        tensor_json.update({"Max": np.nan})
+        # max 值为 np.nan，应该触发溢出
+        self.data_processor.data_writer.get_buffer_values_max.return_value = np.nan
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.data_processor.has_overflow)
-        tensor_json.update({"Max": 0})
+
         self.data_processor.has_overflow = False
-        tensor_json.update({"Min": -np.inf})
+        # max 值为 0，不会触发溢出
+        self.data_processor.data_writer.get_buffer_values_max.return_value = 0
+        self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
+        self.assertFalse(self.data_processor.has_overflow)
+
+        self.data_processor.has_overflow = False
+        # min 值为 -np.inf，应该触发溢出
+        self.data_processor.data_writer.get_buffer_values_min.return_value = -np.inf
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.data_processor.has_overflow)
+
         self.data_processor.has_overflow = False
-        tensor_json.update({"Min": np.inf})
+        # min 值为 np.inf，应该触发溢出
+        self.data_processor.data_writer.get_buffer_values_min.return_value = np.inf
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.data_processor.has_overflow)
+
         self.data_processor.has_overflow = False
-        tensor_json.update({"Min": np.nan})
+        # min 值为 np.nan，应该触发溢出
+        self.data_processor.data_writer.get_buffer_values_min.return_value = np.nan
         self.data_processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.data_processor.has_overflow)
 
@@ -267,7 +309,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
                    return_value=False):
             ret = self.data_processor._analyze_tensor("tensor", "suffix")
             self.assertEqual(self.data_processor.cached_tensors_and_file_paths, {"file_path": "tensor"})
-            mock_warning.assert_not_called()
+            mock_warning.assert_called_with("tensor_stat_index does not exist in tensor_json.")
             mock_super.assert_called_with("tensor", "suffix")
             self.assertEqual(ret.get("Max"), None)
             self.assertEqual(ret.get("data_name"), "dump_data_name")
@@ -275,7 +317,8 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         with patch("msprobe.core.data_dump.data_processor.mindspore_processor.path_len_exceeds_limit",
                    return_value=True):
             self.data_processor._analyze_tensor("tensor", "suffix")
-            mock_warning.assert_called_with("The file path file_path length exceeds limit.")
+            mock_warning.assert_called_with("tensor_stat_index does not exist in tensor_json.")
+
 
 class TestKernelDumpDataProcessor(unittest.TestCase):
     def setUp(self):
@@ -300,7 +343,8 @@ class TestKernelDumpDataProcessor(unittest.TestCase):
     def test_analyze_pre_forward_without_adump(self, mock_logger_warning):
         self.processor.enable_kernel_dump = True
         self.processor.analyze_forward_input("test_api_name", None, None)
-        mock_logger_warning.assert_called_with("The current msprobe package does not compile adump, and kernel dump cannot be used.")
+        mock_logger_warning.assert_called_with(
+            "The current msprobe package does not compile adump, and kernel dump cannot be used.")
         self.assertFalse(self.processor.enable_kernel_dump)
 
     @patch('msprobe.core.data_dump.data_processor.mindspore_processor.KernelDumpDataProcessor.stop_kernel_dump')
@@ -326,7 +370,8 @@ class TestKernelDumpDataProcessor(unittest.TestCase):
         self.processor.enable_kernel_dump = True
         self.processor.analyze_backward_input("test_api_name", None, None)
         self.assertFalse(self.processor.enable_kernel_dump)
-        mock_logger_warning.assert_called_with("The current msprobe package does not compile adump, and kernel dump cannot be used.")
+        mock_logger_warning.assert_called_with(
+            "The current msprobe package does not compile adump, and kernel dump cannot be used.")
 
     @patch('msprobe.core.data_dump.data_processor.mindspore_processor.KernelDumpDataProcessor.stop_kernel_dump')
     @patch.object(logger, 'info')

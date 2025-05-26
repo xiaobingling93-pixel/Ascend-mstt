@@ -64,9 +64,18 @@ class TestDumpToolFactory(TestCase):
 
         config.execution_mode = Const.GRAPH_GE_MODE
         config.level = Const.CELL
-        with self.assertRaises(ValueError):
-            DumpToolFactory.create(config)
-        mock_logger_error.assert_called_with("Data dump is not supported in graph_ge mode when dump level is cell.")
+        with patch('msprobe.mindspore.dump.dump_tool_factory.is_graph_mode_cell_dump_allowed') as \
+             mock_is_cell_dump_allowed:
+            mock_is_cell_dump_allowed.return_value = True
+            with self.assertRaises(ValueError):
+                DumpToolFactory.create(config)
+            mock_logger_error.assert_called_with("Data dump is not supported in graph_ge mode when dump level is cell.")
+            mock_logger_error.reset_mock()
+
+            mock_is_cell_dump_allowed.return_value = False
+            with self.assertRaises(Exception) as context:
+                DumpToolFactory.create(config)
+            self.assertEqual(str(context.exception), "Cell dump is not supported in graph mode.")
 
         config.execution_mode = Const.GRAPH_KBYK_MODE
         config.level = Const.KERNEL

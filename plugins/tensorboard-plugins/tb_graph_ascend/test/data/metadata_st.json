@@ -1,0 +1,237 @@
+{
+  "test_cases": [
+    {
+      "meta_data": {
+        "run": "data",
+        "tag": "compare_statis"
+      },
+      "operations": [
+        {
+          "type": "get_node_info",
+          "node_info": {
+            "nodeName": "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
+            "nodeType": "Bench"
+          },
+          "expected": {
+            "success": true,
+            "data": {
+              "matched_node_link": [],
+              "data": {},
+              "id": "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
+              "inputs": [],
+              "input_data": {
+                "Test.maxpoolMaxPool2.maxpoolpo.tt.ee.input_arg.0": {
+                  "longlonglonglonglonglongName": "hah",
+                  "type": "torch.Tensor",
+                  "dtype": "torch.float32",
+                  "shape": "[32, 512, 2, 2]",
+                  "Max": "548.2343242",
+                  "Min": "-234.124124234",
+                  "Mean": "-5.23432654",
+                  "Norm": "35555.3406",
+                  "error_key": [
+                    "type",
+                    "shape"
+                  ]
+                },
+                "Test.maxpoolMaxPool2.maxpoolpo.tt.ee.kwrag_arg.1": {
+                  "type": "torch.Tensor",
+                  "dtype": "torch.float32",
+                  "shape": [
+                    64,
+                    256,
+                    2,
+                    2
+                  ],
+                  "Max": "5348.2343242",
+                  "Min": "-2344.124124234",
+                  "Mean": "-51.23432654",
+                  "Norm": "355555.3406"
+                }
+              },
+              "is_forward": true,
+              "node_type": 0,
+              "outputs": [],
+              "output_data": {
+                "output.0": {
+                  "type": "torch.Tensor",
+                  "dtype": "torch.float32",
+                  "shape": [
+                    128,
+                    512,
+                    2,
+                    2
+                  ],
+                  "Max": "5038.2343242",
+                  "Min": "-1234.124124234",
+                  "Mean": "-410.23432654",
+                  "Norm": "3255.3406"
+                },
+                "output.1": {
+                  "type": "torch.Tensor",
+                  "dtype": "torch.float32",
+                  "shape": [
+                    16,
+                    256,
+                    2,
+                    2
+                  ],
+                  "Max": "538.2343242",
+                  "Min": "-234.124124234",
+                  "Mean": "-51.23432654",
+                  "Norm": "35555.3406"
+                }
+              },
+              "pair": "None",
+              "subnodes": [
+                "AddOne_0",
+                "AddOne_1"
+              ],
+              "type": "AddTwo",
+              "upnode": "AddThree_0"
+            }
+          }
+        },
+        {
+          "type": "add_match_nodes",
+          "npu_node_name": "AddOne_0",
+          "bench_node_name": "AddOne_0",
+          "expected": {
+            "success": true,
+            "data": {
+              "precision_error": 0.0,
+              "intput_statistical_diff": {
+                "AddOne_0.input_arg.0": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                },
+                "AddOne_0.input_arg.1": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                }
+              },
+              "output_statistical_diff": {
+                "AddOne_0.output_arg.0": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                },
+                "AddOne_0.output_arg.1": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "delete_match_nodes",
+          "npu_node_name": "AddOne_0",
+          "bench_node_name": "AddOne_0",
+          "expected": {
+            "success": true,
+            "data": {}
+          }
+        },
+        {
+          "type": "add_match_nodes",
+          "npu_node_name": "AddOne_0",
+          "bench_node_name": "AddOne_0",
+          "expected": {
+            "success": true,
+            "data": {
+              "precision_error": 0.0,
+              "intput_statistical_diff": {
+                "AddOne_0.input_arg.0": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                },
+                "AddOne_0.input_arg.1": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                }
+              },
+              "output_statistical_diff": {
+                "AddOne_0.output_arg.0": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                },
+                "AddOne_0.output_arg.1": {
+                  "MaxAbsErr": 0.0,
+                  "MinAbsErr": 0.0,
+                  "MeanAbsErr": 0.0,
+                  "NormAbsErr": 0.0,
+                  "MaxRelativeErr": "0.0000%",
+                  "MinRelativeErr": "0.0000%",
+                  "MeanRelativeErr": "0.0000%",
+                  "NormRelativeErr": "0.0000%"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "get_matched_state_list",
+          "expected": {
+            "success": true,
+            "data": {
+              "npu_match_nodes": {
+                "AddOne_0": "AddOne_0"
+              },
+              "bench_match_nodes": {
+                "AddOne_0": "AddOne_0"
+              }
+            }
+          }
+        },
+        {
+          "type": "save_data",
+          "expected": {
+            "success": true
+          }
+        }
+      ]
+    }
+  ]
+}

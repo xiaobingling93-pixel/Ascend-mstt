@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-import './tf_graph_dashboard/index';
+import './graph_ascend';
 import './index.css';

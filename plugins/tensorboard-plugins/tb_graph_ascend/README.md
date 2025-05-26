@@ -36,13 +36,15 @@
 
     ```
     cd fe
+    // 安装前端依赖
+    npm install --force
     // Windows系统
     npm run buildWin
     // 其他可使用cp指令的系统，如Linux或Mac
     npm run buildLinux
     ```
 
-    **注意**: 此步骤需要安装 Node.js 环境
+    **注意**: 此步骤需要安装 [Node.js](https://nodejs.org/zh-cn/download) 环境
 
 4. 回到上级目录直接安装:
     ```
@@ -60,7 +62,7 @@
 
 ### 3. 解析数据说明
 
-  将通过[msprobe](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe#10-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis 的模型结构文件（文件本身为 json 格式）放置于某个文件夹中，路径名称下文称之为 `out_path` 
+  将通过[msprobe](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe#10-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis 的模型结构文件（文件本身为 json 格式）放置于某个文件夹中，路径名称下文称之为 `output_path` 
   - E.g. \
   `---output_path` \
   `-----output.vis` \
@@ -74,13 +76,7 @@
    tensorboard --logdir output_path
    ```
 
-   如果网络浏览器与启动 TensorBoard 的机器不在同一台机器上，则需要在尾部加上`--bind_all`命令，如：
-
-   ```
-   tensorboard --logdir output_path --bind_all
-   ```
-
-   注意：确保默认端口 6006 对浏览器的主机打开。
+   注意：确保默认端口 6006 可连通。
 
    如果需要切换端口号需要在尾部加上指定的端口号，如`--port=6007`
 
@@ -91,9 +87,10 @@
 2. 在浏览器上打开 tensorboard
 
    在浏览器中打开 URL： `http://localhost:6006`。
-   如果 tensorboard 启动命令使用`--bind_all`, 则需将主机名由`localhost`替换为主机的 ip 地址。
 
    注意：如果`--logdir` 指定目录下的文件太大或太多，请等候，刷新浏览器查看加载结果。
+
+3. 建议在本地启动tensorboard，如果网络浏览器与启动 TensorBoard 的机器不在同一台机器上，需要远程启动，可参照[远程启动方式](#413-远程查看数据)，但需用户自行评估**安全风险**。
 
 ## 三、浏览器查看
 
@@ -123,12 +120,41 @@
 ![输入图片说明](./doc/images/vis_unmatch_info.png)
 ### 3.6 手动选择节点匹配
 可通过浏览器界面，通过鼠标选择两个待匹配的灰色节点进行匹配。当前暂不支持真实数据模式。<br>
+点击匹配后会将两个节点的子节点按照Module名称依次匹配，取消匹配后会将子节点的匹配关系清除。<br>
+注意：匹配结束之后，需要点击保存才能持久化到源文件里面
 
 ![输入图片说明](./doc/images/vis_match_info.png)
 
+### 3.7 生成匹配配置文件
+可保存已经已匹配节点的匹配关系到配置文件中，并支持读取配置文件中的数据，进行匹配操作。<br>
+默认保存在当前目录下，文件名为`[当前文件名].vis.config`，每次切换文件都会扫描当前录下的后缀名为.vis.config配置文件，并更新配置文件列表。
+注意：匹配结束之后，需要点击保存才能持久化到源文件里面
+![输入图片说明](./doc/images/vis_save_match_info.png)
 
 
-### 附录
 
+## 四、附录
+
+### 4.1 安全加固建议
+
+#### 4.1.1 免责声明
+本工具为基于 TensorBoard 底座开发的插件，使用本插件需要基于 TensorBoard 运行，请自行关注 TensorBoard 相关安全配置和安全风险。
+#### 4.1.2 TensorBoard版本说明
+满足[相关依赖](#1-相关依赖)中要求的 TensorBoard 版本皆可正常使用本插件功能，但为 TensorBoard 本身安全风险考虑，建议使用最新版本 TensorBoard 。
+#### 4.1.3 远程查看数据
+
+如果网络浏览器与启动 TensorBoard 的机器不在同一台机器上， TensorBoard 提供了远程查看数据的指令启动方式，但此种方式会将服务器对应端口在局域网内公开，请用户自行关注安全风险。
+
+  * 在启动指令尾部加上`--bind_all`或`--host={服务器IP}`参数启用远程查看方式，如：
+
+    ```
+    tensorboard --logdir output_path --port=6006 --host=xxx.xxx.xxx.xxx
+    或
+    tensorboard --logdir output_path --port=6006 --bind_all
+    ```
+
+  * 在打开浏览器访问界面时，需将 URL 内主机名由`localhost`替换为主机的 ip 地址，如`http://xxx.xxx.xxx.xxx:6006`
+
+### 4.2 公网地址说明
 [公网地址说明](./doc/公网地址说明.csv)
 

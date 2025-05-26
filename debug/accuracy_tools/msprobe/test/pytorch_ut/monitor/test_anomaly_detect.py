@@ -2,7 +2,7 @@ import unittest
 from unittest import TestCase
 from unittest.mock import patch
 
-from msprobe.pytorch.monitor.anomaly_detect import AnomalyTurbulence, AnomalyScanner, \
+from msprobe.pytorch.monitor.anomaly_detect import AnomalyTurbulence, AnomalyNan, AnomalyScanner, \
     AnomalyDataFactory, GradAnomalyData, BaseWriterWithAD, ScanRule, WriterInput
 
 
@@ -24,14 +24,42 @@ class TestAnomalyTurbulence(TestCase):
     def test_apply_with_positive_baseline(self):
         history = [10, 12, 14]
         cur = 16
-        result = self.rule.apply(history, cur)
+        result = self.rule.apply(cur, history=history)
         self.assertTrue(result)
 
     def test_apply_with_non_positive_baseline(self):
         history = [0, 0, 0]
         cur = -1
-        result = self.rule.apply(history, cur)
+        result = self.rule.apply(cur, history=history)
         self.assertTrue(result)
+
+    def test_apply_with_valid_value(self):
+        history = [0, 0, 0]
+        cur = 0
+        result = self.rule.apply(cur, history=history)
+        self.assertFalse(result)
+
+
+class TestAnomalyNan(TestCase):
+
+    def setUp(self) -> None:
+        self.threshold = 1e10
+        self.rule = AnomalyNan(self.threshold)
+
+    def test_apply_with_nan(self):
+        cur = float("nan")
+        result = self.rule.apply(cur)
+        self.assertTrue(result)
+
+    def test_apply_with_big_value(self):
+        cur = float("1e30")
+        result = self.rule.apply(cur)
+        self.assertTrue(result)
+
+    def test_apply_with_valid_value(self):
+        cur = 0.5
+        result = self.rule.apply(cur)
+        self.assertFalse(result)
 
 
 class TestAnomalyScanner(TestCase):
@@ -266,8 +294,9 @@ class TestBaseWriterWithAD(TestCase):
     def test_add_scalar(self, mock_logger):
         AnomalyTurbulence_obj = AnomalyTurbulence(0.2)
         self.BaseWriter.ad_rules = [AnomalyTurbulence_obj]
-        self.BaseWriter.tag2scalars = {'tag': {'avg': 1.0, 'count': 1}}
-        self.BaseWriter.add_scalar('tag', 2.0)
+        tag = ('0:1.post_attention_norm.weight/rank0/pre_grad', 'mean')
+        self.BaseWriter.tag2scalars = {tag: {'avg': 1.0, 'count': 1}}
+        self.BaseWriter.add_scalar(tag, 2.0)
 
         mock_logger.info.assert_called_once()
 
@@ -283,7 +312,7 @@ class TestBaseWriterWithAD(TestCase):
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.0)
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['count'], 1)
         self.BaseWriter._update_tag2scalars('tag1', 2.0)
-        self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.5)
+        self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.01)
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['count'], 2)
 
 

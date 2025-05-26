@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-#include "include/Macro.hpp"
-#include "base/ErrorInfos.hpp"
-#include "MindSporeTrigger.hpp"
-#include "MSAclDumper.hpp"
+#include "include/Macro.h"
+#include "base/ErrorInfosManager.h"
+#include "MSAclDumper.h"
+#include "MindSporeTrigger.h"
 
 namespace MindStudioDebugger {
 
 bool MindSporeTrigger::stepBeginFlag = false;
 
-void MindSporeTrigger::TriggerOnStepBegin(uint32_t device, uint32_t curStep, ExtArgs& args)
+void MindSporeTrigger::TriggerOnStepBegin(uint32_t device, uint32_t /* curStep */, ExtArgs& args)
 {
     DEBUG_FUNC_TRACE();
     CleanErrorInfoCache();
+    
+    MSAclDumper::GetInstance().OnStepBegin(device, args);
 
-    MSAclDumper::GetInstance().OnStepBegin(device, curStep, args);
     stepBeginFlag = true;
 
     CleanErrorInfoCache();

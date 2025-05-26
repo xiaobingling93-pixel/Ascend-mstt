@@ -70,7 +70,7 @@ class Const:
     SUMMARY = "summary"
     MD5 = "md5"
     VALUE = "value"
-    SUMMARY_MODE = [ALL, SUMMARY, MD5]
+    SUMMARY_MODE = ["statistics", "md5"]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -80,6 +80,8 @@ class Const:
     NUMPY_SUFFIX = ".npy"
     NUMPY_PATTERN = "*.npy"
     PT_SUFFIX = ".pt"
+    PY_SUFFIX = ".py"
+    INIT_PY = "init.py"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
     ONE_MB = 1048576  # 1 * 1024 * 1024
@@ -95,6 +97,7 @@ class Const:
     GRAD_OUTPUT = 'grad_output'
     PARAMS = 'parameters'
     PARAMS_GRAD = 'parameters_grad'
+    DEBUG = 'debug'
     START = "start"
     STOP = "stop"
     ENV_ENABLE = "1"
@@ -132,6 +135,7 @@ class Const:
     NPU = 'NPU'
     NPU_LOWERCASE = 'npu'
     CPU_LOWERCASE = 'cpu'
+    GPU_LOWERCASE = 'gpu'
     CUDA_LOWERCASE = 'cuda'
     DEVICE = 'device'
     DISTRIBUTED = 'Distributed'
@@ -139,6 +143,10 @@ class Const:
                    "Aten", "VF", "NPU", "Jit"]
     MODULE_PREFIX = ["Module", "Cell"]
     FORWARD_NAME_SUFFIX = ".forward"
+
+    DUMP_JSON_FILE = "dump_json_file"
+    DEBUG_JSON_FILE = "debug_json_file"
+    STACK_JSON_FILE = "stack_json_file"
 
     # struct json param
     ORIGIN_DATA = "origin_data"
@@ -191,7 +199,11 @@ class Const:
 
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
+
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
+    STACK_FILTER_KEYWORDS = ["msprobe/core", "msprobe/pytorch", "msprobe/mindspore"]
+    CALL_STACK_FLAG = "data_dump/api_registry"
+    NEW_STACK_FLAG = "0"
 
     STEP = "step"
     RANK = "rank"
@@ -209,12 +221,16 @@ class Const:
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
 
+    TYPE = 'type'
     DTYPE = 'dtype'
     SHAPE = 'shape'
+    STACK_INFO = 'stack_info'
     MAX = 'Max'
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    DATA_NAME = 'data_name'
+    TENSOR_STAT_INDEX = 'tensor_stat_index'
 
     CODE_STACK = 'Code Stack'
     OP_NAME = 'Op Name'
@@ -226,6 +242,9 @@ class Const:
     # 分隔符常量
     SCOPE_SEPARATOR = "/"
     REPLACEMENT_CHARACTER = "_"
+
+    FORWARD_PATTERN = SEP + FORWARD + SEP
+    BACKWARD_PATTERN = SEP + BACKWARD + SEP
 
     OPTIMIZER = "optimizer"
     CLIP_GRAD = "clip_grad"
@@ -243,6 +262,7 @@ class Const:
     PT_API_TYPE_ATEN = "aten"
     PT_API_TYPE_DIST = "distributed"
     PT_API_TYPE_NPU_DIST = "npu_distributed"
+    PT_API_TYPE_MINDSPEED = "mindspeed"
 
     MS_API_TYPE_OPS = "ops"
     MS_API_TYPE_TENSOR = "tensor"
@@ -250,6 +270,7 @@ class Const:
     MS_API_TYPE_MINT = "mint.ops"
     MS_API_TYPE_MINT_FUNC = "mint.nn.functional"
     MS_API_TYPE_COM = "communication.comm_func"
+    MS_API_TYPE_MINT_DIST = "mint.distributed"
 
     FUNCTIONAL_API_TYPE_PREFIX = "Functional"
     TENSOR_API_TYPE_PREFIX = "Tensor"
@@ -259,9 +280,11 @@ class Const:
     NPU_API_TYPE_PREFIX = "NPU"
     ATEN_API_TYPE_PREFIX = "Aten"
     VF_API_TYPE_PREFIX = "VF"
+    MINDSPEED_API_TYPE_PREFIX = "MindSpeed"
 
     MINT_API_TYPE_PREFIX = "Mint"
     MINT_FUNC_API_TYPE_PREFIX = "MintFunctional"
+    MINT_DIST_API_TYPE_PREFIX = "MintDistributed"
 
     SUPPORT_API_DICT_KEY_MAP = {
         PT_FRAMEWORK: {
@@ -272,7 +295,8 @@ class Const:
             PT_API_TYPE_NPU: PT_API_TYPE_NPU,
             PT_API_TYPE_ATEN: PT_API_TYPE_ATEN,
             PT_API_TYPE_DIST: PT_API_TYPE_DIST,
-            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST
+            PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST,
+            PT_API_TYPE_MINDSPEED: PT_API_TYPE_MINDSPEED
         },
         MS_FRAMEWORK: {
             MS_API_TYPE_OPS: MS_API_TYPE_OPS,
@@ -280,7 +304,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: MS_API_TYPE_TENSOR,
             MS_API_TYPE_MINT: MS_API_TYPE_MINT,
             MS_API_TYPE_MINT_FUNC: MS_API_TYPE_MINT_FUNC,
-            MS_API_TYPE_COM: MS_API_TYPE_COM
+            MS_API_TYPE_COM: MS_API_TYPE_COM,
+            MS_API_TYPE_MINT_DIST: MS_API_TYPE_MINT_DIST
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: PT_API_TYPE_FUNCTIONAL,
@@ -300,7 +325,8 @@ class Const:
             PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
             PT_API_TYPE_ATEN: ATEN_API_TYPE_PREFIX,
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX,
-            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX
+            PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX,
+            PT_API_TYPE_MINDSPEED: MINDSPEED_API_TYPE_PREFIX
         },
         MS_FRAMEWORK: {
             MS_API_TYPE_OPS: FUNCTIONAL_API_TYPE_PREFIX,
@@ -308,7 +334,8 @@ class Const:
             MS_API_TYPE_STUB_TENSOR: TENSOR_API_TYPE_PREFIX,
             MS_API_TYPE_MINT: MINT_API_TYPE_PREFIX,
             MS_API_TYPE_MINT_FUNC: MINT_FUNC_API_TYPE_PREFIX,
-            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX
+            MS_API_TYPE_COM: DIST_API_TYPE_PREFIX,
+            MS_API_TYPE_MINT_DIST: MINT_DIST_API_TYPE_PREFIX
         },
         MT_FRAMEWORK: {
             PT_API_TYPE_FUNCTIONAL: FUNCTIONAL_API_TYPE_PREFIX,
@@ -318,6 +345,35 @@ class Const:
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX
         }
     }
+
+    def _fused_adamw_(
+        self,
+        grads,
+        exp_avgs,
+        exp_avg_sqs,
+        max_exp_avg_sqs,
+        state_steps,
+        *,
+        lr,
+        beta1,
+        beta2,
+        weight_decay,
+        eps,
+        amsgrad,
+        maximize,
+        grad_scale=None,
+        found_inf=None
+    ):
+        pass
+
+    API_WITH_SELF_ARG = {
+        'Torch._fused_adamw_': _fused_adamw_
+    }
+
+    ASCEND = "ASCEND"
+    MATCH_MODE_NAME = "pure name"
+    MATCH_MODE_MAPPING = "mapping"
+    MATCH_MODE_SIMILARITY = "similarity"
 
 
 class CompareConst:
@@ -368,6 +424,7 @@ class CompareConst:
     OUTPUT_STRUCT = "output_struct"
     PARAMS_STRUCT = "params_struct"
     PARAMS_GRAD_STRUCT = "params_grad_struct"
+    DEBUG_STRUCT = "debug_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
@@ -474,15 +531,9 @@ class CompareConst:
         Const.KWARGS: INPUT_STRUCT,
         Const.OUTPUT: OUTPUT_STRUCT,
         Const.PARAMS: PARAMS_STRUCT,
-        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
+        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT,
+        Const.DEBUG: DEBUG_STRUCT
     }
-
-    STRUCT_COMPARE_KEY = [
-        INPUT_STRUCT,
-        OUTPUT_STRUCT,
-        PARAMS_STRUCT,
-        PARAMS_GRAD_STRUCT
-    ]
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -562,15 +613,35 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+
+    API_MAPPING_KEYS_TO_COMPARE = [
+        ('ms_args', 'pt_args'),
+        ('ms_outputs', 'pt_outputs'),
+        ('ms_parameters', 'pt_parameters'),
+        ('ms_parameters_grad', 'pt_parameters_grad')
+    ]
+
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
     KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     PARAMS_PATTERN = Const.SEP + Const.PARAMS + Const.SEP
     PARAMS_GRAD_PATTERN = Const.SEP + Const.PARAMS_GRAD + Const.SEP
-    COMPARE_KEY = 'compare_key'
-    COMPARE_SHAPE = 'compare_shape'
+
+    CMP_KEY = 'compare_key'
+    CMP_SHAPE = 'compare_shape'
+
+    OP_NAME_X = 'op_name_x'
+    MATCH_RESULT_COLUMNS = [
+        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        CMP_KEY, CMP_SHAPE,
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+    ]
+
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
     UNREADABLE = 'unreadable data'
+    NPU_DUMP_DATA_DIR = 'npu_dump_data_dir'
+    BENCH_DUMP_DATA_DIR = 'bench_dump_data_dir'
+    NO_REAL_DATA_FLAG = '-1'
 
 
 class FileCheckConst:
@@ -592,6 +663,8 @@ class FileCheckConst:
     XLSX_SUFFIX = ".xlsx"
     YAML_SUFFIX = ".yaml"
     IR_SUFFIX = ".ir"
+    ZIP_SUFFIX = ".zip"
+    SHELL_SUFFIX = ".sh"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -600,6 +673,8 @@ class FileCheckConst:
     MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_ZIP_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
+    MAX_FILE_IN_ZIP_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -613,7 +688,8 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         XLSX_SUFFIX: MAX_XLSX_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE,
-        IR_SUFFIX: MAX_IR_SIZE
+        IR_SUFFIX: MAX_IR_SIZE,
+        ZIP_SUFFIX: MAX_ZIP_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
@@ -683,7 +759,7 @@ class MonitorConst:
         "DeepSpeedZeroOptimizer_Stage3"
     )
     DEEPSPEED_ZERO_OPT_FILTER = "DeepSpeedZeroOptimizer"
-    RULE_NAME = ['AnomalyTurbulence']
+    RULE_NAME = ['AnomalyTurbulence', 'AnomalyNan']
 
     SLICE_SIZE = 20480
     # used for name
@@ -700,12 +776,13 @@ class MonitorConst:
     ACTVGRAD = "actv_grad"
     POST_GRAD = "post_grad"
     PRE_GRAD = "pre_grad"
+    PRE_PARAM = "param_origin"
+    POST_PARAM = "param_updated"
     ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
     EXP_AVG = "exp_avg"
     EXP_AVG_SQ = "exp_avg_sq"
-    PARAM = "param"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
     CSV_HEADER_XY = ["vpp_stage", "name", "step", "micro_step"]
