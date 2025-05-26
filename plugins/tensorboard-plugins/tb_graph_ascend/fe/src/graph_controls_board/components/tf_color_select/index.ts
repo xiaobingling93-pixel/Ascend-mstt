@@ -387,7 +387,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   @observe('colorset')
   _observeColorSet(): void {
-    if (_.isEmpty(this.colorset)) return; // 如果colorset为空，直接返回
+    if (_.isEmpty(this.colorset)) { return }; // 如果colorset为空，直接返回
     if (this.colorset.length !== 0) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
@@ -400,6 +400,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       return;
     }
   }
+
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor
   @observe('selection')
   _clearAllToggleCheckboxAndInputField(): void {
@@ -420,6 +421,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.set('selectedNode', '');
     this.updateColorSetting();
   }
+
   @observe('isSingleGraph', 'overflowcheck')
   updateColorSetting(): void {
     if (!this.isSingleGraph) {
@@ -811,5 +813,4 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const node = prefix + this.selectedOverflowNode;
     this.set('selectedNode', node);
   }
-
 }

@@ -348,7 +348,7 @@ class Legend extends PolymerElement {
       const node = NPU_PREFIX + this.selectedNpuMatchedNode;
       this.set('selectedBenchMatchedNode', this.npuMatchedNodeList[this.selectedNpuMatchedNode]);
       this.set('selectedNode', node);
-      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode);      // 展开对应侧节点
+      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode); // 展开对应侧节点
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -363,7 +363,7 @@ class Legend extends PolymerElement {
       const node = BENCH_PREFIX + this.selectedBenchMatchedNode;
       this.set('selectedNpuMatchedNode', this.benchMatchedNodeList[this.selectedBenchMatchedNode]);
       this.set('selectedNode', node);
-      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode);     // 展开对应侧节点
+      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode); // 展开对应侧节点
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -570,6 +570,7 @@ class Legend extends PolymerElement {
       });
     }
   }
+
   async _saveMatchedRelations(): Promise<void> {
     if (!this.isCompareGraph) {
       Notification.show('提示：单图节点不支持匹配', {
@@ -597,5 +598,4 @@ class Legend extends PolymerElement {
       });
     }
   }
-
 }

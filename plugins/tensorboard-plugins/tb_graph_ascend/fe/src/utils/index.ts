@@ -63,7 +63,7 @@ export function maybeTruncateString(
   fontSize: number,
   containerWidth: number
 ): string {
-  if (!content) return "";
+  if (!content) { return "" };
 
   // 提前处理无需截断的情况
   if (measureTextWidth(content, fontSize) <= containerWidth) {
@@ -115,7 +115,7 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
   // 默认值
   const result = { x: 0, y: 0, scale: 1 };
 
-  if (!transformStr) return result;
+  if (!transformStr) { return result };
 
   // 匹配 translate(X,Y) 部分
   const translateMatch = transformStr.match(/translate\(([^,]+),([^)]+)\)/);
@@ -139,7 +139,7 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
  * @param y 
  * @param scale 
  * @param duration 
- */ 
+ */
 export function changeGraphPosition(element: HTMLElement, x, y, scale, duration = 16) {
   d3.select(element).transition().duration(duration).attr('transform', `translate(${x},${y}) scale(${scale})`);
 }
@@ -207,7 +207,7 @@ export function darkenColor(color: string, amount: number): string {
 }
 
 export function formatBytes(bytes) {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) { return '0 Bytes' };
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));

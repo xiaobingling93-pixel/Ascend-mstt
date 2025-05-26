@@ -108,7 +108,7 @@ class MainController extends PolymerElement {
 
   @observe('metaDir')
   _metaDirChanged(): void {
-    if (isEmpty(this.metaDir)) return
+    if (isEmpty(this.metaDir)) { return }
     const runs = Object.keys(this.metaDir)
     this.set('runs', runs)
     this.set('selectedRun', runs[0])
@@ -116,7 +116,7 @@ class MainController extends PolymerElement {
 
   @observe('selectedRun')
   _selectedRunChanged(): void {
-    if (isEmpty(this.metaDir)) return
+    if (isEmpty(this.metaDir)) { return }
     const tags = this.metaDir[this.selectedRun]
     this.set('tags', tags)
     this.set('selectedTag', tags[0])
@@ -133,7 +133,7 @@ class MainController extends PolymerElement {
 
   @observe('selectedTag')
   _selectedTagChanged(): void {
-    if (isEmpty(this.metaDir)) return
+    if (isEmpty(this.metaDir)) { return }
     const selection = {
       ...this.selection,
       tag: this.selectedTag,
@@ -145,7 +145,7 @@ class MainController extends PolymerElement {
 
   @observe('selectedMicroStep')
   _selectedMicroStepChanged(): void {
-    if (isEmpty(this.metaDir)) return
+    if (isEmpty(this.metaDir)) { return }
     const selection = {
       ...this.selection,
       microStep: this.selectedMicroStep

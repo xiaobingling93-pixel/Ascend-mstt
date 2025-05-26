@@ -207,6 +207,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       ></tf-manual-match>
     </div>
   `;
+
   @property({ type: Object })
   metaDir: MetaDirType = {} as MetaDirType;
 
@@ -226,6 +227,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   // 颜色图例
   @property({ type: Object })
   colorset;
+  
   // 溢出检测标志
   @property({ type: Boolean })
   overflowcheck;
@@ -274,6 +276,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       selectedContent.classList.remove('hidden');
     }
   }
+
   // 使用示例
   _showNodeControls(): void {
     this._showTabContent('设置', 'nodes-content');
@@ -286,6 +289,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   _fit(): void {
     this.fire('fit-tap');
   }
+
   _toggleNpuMinimap(event: CustomEvent): void {
     const checkbox = event.target as PaperCheckboxElement;
     this.set('minimapVis.npu', checkbox.checked);

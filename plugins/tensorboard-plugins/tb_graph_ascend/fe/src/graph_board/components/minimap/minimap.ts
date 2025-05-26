@@ -50,12 +50,13 @@ export class Minimap {
     x: number;
     y: number;
   };
+
   /** The current size of the minimap */
   private minimapSize: {
     width: number;
     height: number;
-  } = { width: 150, height: 150 }
-    ;
+  } = { width: 150, height: 150 };
+  
   /** Padding (px) due to the main labels of the graph. */
   private labelPadding: number;
   /**
@@ -130,7 +131,6 @@ export class Minimap {
         return;
       }
     } catch (e) {
-
       return;
     }
     let $svg = d3.select(this.svg);

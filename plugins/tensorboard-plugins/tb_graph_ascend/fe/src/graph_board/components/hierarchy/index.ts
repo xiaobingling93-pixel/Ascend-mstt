@@ -39,7 +39,6 @@ const DATA_COMMUNICATION_TYEPE = {
 }
 @customElement('graph-hierarchy')
 class Hierarchy extends PolymerElement {
-
     static readonly template = html`
        <style>
         :host {
@@ -154,6 +153,7 @@ class Hierarchy extends PolymerElement {
 
     @property({ type: Object })
     hightLightMatchedNode: (matchedNodes, graphType) => void = (matchedNodes, graphType) => { };
+
     useGraph: UseGraphType = useGraph();
     container: HTMLElement | null | undefined;
     graph: HTMLElement | null | undefined;
@@ -164,6 +164,7 @@ class Hierarchy extends PolymerElement {
     observeSelectNode() {
         this.changeSelectNode(this.selectedNode)
     }
+
     // 颜色变化
     @observe('colors', 'isOverflowFilter')
     reRenderGraph() {
@@ -177,7 +178,7 @@ class Hierarchy extends PolymerElement {
     }
 
     async initHhierarchy(selectedNode) {
-        if (isEmpty(this.selection) || !this.graphType) return;
+        if (isEmpty(this.selection) || !this.graphType) { return };
         const nodeInfo = {
             nodeName: 'root', // 去掉前缀
             nodeType: this.graphType,
@@ -191,7 +192,7 @@ class Hierarchy extends PolymerElement {
                 this.container.innerHTML = '';
                 d3.select(this.container as HTMLElement).attr('transform', 'translate(32,32) scale(1.8)');
             }
-            if (this.cleanEventLisetener) this.cleanEventLisetener();
+            if (this.cleanEventLisetener) { this.cleanEventLisetener() };
             this.cleanEventLisetener = this.bindEventLisetener()
             this.changeSelectNode(selectedNode); // 初始化选中节点,支持节点通信跳转
             this.set('rootName', Object.keys(hierarchyObject)[0]);
@@ -200,9 +201,10 @@ class Hierarchy extends PolymerElement {
             setTimeout(this.initMinimap, 500); // container初始化后，初始化minimap
         }
     }
+
     initMinimap = () => {
         const minimap = this.shadowRoot?.querySelector('#minimap') as HTMLElement;
-        if (!this.container || !minimap) return;
+        if (!this.container || !minimap) { return };
         const transformStr = this.container.getAttribute('transform') || '';
         const initialTransform = parseTransform(transformStr);
         const newTransform = d3.zoomIdentity.translate(initialTransform.x, initialTransform.y).scale(initialTransform.scale);
@@ -217,7 +219,7 @@ class Hierarchy extends PolymerElement {
                     d3.select(this.container as HTMLElement).attr('transform', (d3 as any).event.transform.toString());
                 }
                 this.renderGraph(this.hierarchyData, this.selectedNode);
-                this.minimap?.zoom((d3 as any).event.transform);                // Notify the minimap.
+                this.minimap?.zoom((d3 as any).event.transform); // Notify the minimap.
             });
 
         this.minimap = (minimap as any)?.init(
@@ -231,7 +233,7 @@ class Hierarchy extends PolymerElement {
     }
 
     renderGraph(data, selectedNode, transform = this.getContainerTransform()) {
-        if (!this.shadowRoot) return;
+        if (!this.shadowRoot) { return };
         const container = d3.select(this.container as HTMLElement);
         // 数据预处理
         const prefix = this.graphType === 'Single' ? '' : this.graphType === 'NPU' ? NPU_PREFIX : BENCH_PREFIX;
@@ -241,7 +243,7 @@ class Hierarchy extends PolymerElement {
         this.useGraph.bindInnerRect(container, renderData);
         this.useGraph.bindOuterRect(container, renderData);
         this.useGraph.bindText(container, renderData);
-        if (this.minimap) setTimeout(() => this.minimap?.update(), 500);
+        if (this.minimap) { setTimeout(() => this.minimap?.update(), 500) };
     }
 
 
@@ -262,7 +264,7 @@ class Hierarchy extends PolymerElement {
             return;
         }
         const selectedNodeType = selectedNode.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench';
-        if (this.graphType !== 'Single' && selectedNodeType !== this.graphType) return; // 如果选中的节点类型和当前图类型不一致，则不处理
+        if (this.graphType !== 'Single' && selectedNodeType !== this.graphType) { return }; // 如果选中的节点类型和当前图类型不一致，则不处理
         const nodeName = selectedNode.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
         // 如果选中节点是当前图节点图中不存在，则展开其父节点，直到图中存在
         if (!this.hierarchyObject[nodeName]) {
@@ -299,12 +301,13 @@ class Hierarchy extends PolymerElement {
 
     // 父组件调用
     fitScreen() {
-        if (!this.container) return;
+        if (!this.container) { return };
         changeGraphPosition(this.container, 0, 0, 1, 350);
         const newTransform = d3.zoomIdentity.translate(0, 0).scale(1);
         this.minimap?.zoom(newTransform);
         this.renderGraph(this.hierarchyData, this.selectedNode);
     }
+
     // 总绑定事件方法，管理所有事件的绑定和解绑
     bindEventLisetener = () => {
         const cleanDragEvent = this.bindDragEvent(this.container);
@@ -351,7 +354,6 @@ class Hierarchy extends PolymerElement {
         document.addEventListener('updateHierarchyData', onUpdateHierarchyDataEvent);
         return () => {
             document.removeEventListener('updateHierarchyData', onUpdateHierarchyDataEvent);
-
         }
     }
 
@@ -473,12 +475,12 @@ class Hierarchy extends PolymerElement {
             const target: HTMLElement = event.target as HTMLElement;
             const selectedNode = target.getAttribute('name');
             const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
-            if (nodeName === this.rootName) return;
+            if (nodeName === this.rootName) { return };
             const nodeInfo = {
                 nodeName,
                 nodeType: this.graphType,
             };
-            if (this.hierarchyObject[nodeInfo.nodeName || '']?.nodeType === NODE_TYPE.UNEXPAND_NODE) return;
+            if (this.hierarchyObject[nodeInfo.nodeName || '']?.nodeType === NODE_TYPE.UNEXPAND_NODE) { return };
             await this.changeNodeExpandState(nodeInfo);
             const transform = this.changeNodeCenter(nodeName);
             this.renderGraph(this.hierarchyData, this.selectedNode, transform);
@@ -488,12 +490,13 @@ class Hierarchy extends PolymerElement {
         }
         const throttleDoubleClickNodeEvent = throttle(onDoubleClickNodeEvent, 16);
         container.addEventListener('dblclick', throttleDoubleClickNodeEvent);
-        this.graph?.addEventListener('dblclick', onDoubleClickGraphEvent);  // 防止双击选中文本
+        this.graph?.addEventListener('dblclick', onDoubleClickGraphEvent); // 防止双击选中文本
         return () => {
             container.removeEventListener('dblclick', throttleDoubleClickNodeEvent);
             this.graph?.removeEventListener('dblclick', onDoubleClickGraphEvent);
         }
     }
+
     bindWheelEvent() {
         const onwheelEvent = (event) => {
             const transformStr = this.container?.getAttribute('transform') || '';
@@ -511,6 +514,7 @@ class Hierarchy extends PolymerElement {
             this.graph?.removeEventListener('wheel', throttleWheelEvent);
         }
     }
+
     bindDragEvent(container) {
         let isDragging = false; // 是否正在拖拽
         let startX = 0; // 鼠标按下时的初始 X 坐标
@@ -547,7 +551,6 @@ class Hierarchy extends PolymerElement {
         this.graph?.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mousemove', throttledMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-
         // 返回清理函数
         return () => {
             this.graph?.removeEventListener('mousedown', handleMouseDown);
@@ -566,7 +569,7 @@ class Hierarchy extends PolymerElement {
             isMouseInside = false;
         };
         const handleKeyDown = (event) => {
-            if (!isMouseInside) return;
+            if (!isMouseInside) { return };
 
             const transformStr = container.getAttribute('transform') || '';
             const transform = parseTransform(transformStr);
@@ -575,12 +578,12 @@ class Hierarchy extends PolymerElement {
                 case 'w':
                 case 'W': // 放大
                     transform.scale += SCALE_STEP;
-                    if (transform.scale > MAX_SCALE) return;
+                    if (transform.scale > MAX_SCALE) { return };
                     break;
                 case 's':
                 case 'S': // 缩小
                     transform.scale -= SCALE_STEP;
-                    if (transform.scale < MIN_SCALE) return;
+                    if (transform.scale < MIN_SCALE) { return };
                     break;
                 case 'a':
                 case 'A': // 左移
@@ -591,7 +594,7 @@ class Hierarchy extends PolymerElement {
                     transform.x += MOVE_STEP;
                     break;
                 default:
-                    return; // 如果不是指定键，则退出
+                    { return }; // 如果不是指定键，则退出
             }
 
             // 更新图形位置
@@ -618,16 +621,15 @@ class Hierarchy extends PolymerElement {
         };
     }
 
-
     /**
      * 当前节点居中
      * @param nodeName 节点名称
      */
     changeNodeCenter(nodeName) {
-        if (!nodeName) return this.getContainerTransform();
+        if (!nodeName) { return this.getContainerTransform() };
         nodeName = nodeName?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
         const selectedNode = this.hierarchyObject[nodeName]; // 获取当前节点
-        if (!selectedNode) return this.getContainerTransform();
+        if (!selectedNode) { return this.getContainerTransform() };
         const transformStr = this.container?.getAttribute('transform') || '';
         const initialTransform = parseTransform(transformStr); // 保存初始位置
         const clientWidth = this.graph?.clientWidth || 0;

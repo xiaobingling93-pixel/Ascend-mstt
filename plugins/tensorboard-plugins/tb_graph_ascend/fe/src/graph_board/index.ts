@@ -71,6 +71,7 @@ class MainGraph extends PolymerElement {
         </template>
     </div>
   `;
+
     @property({ type: Boolean })
     isSingleGraph = false;
 
@@ -102,23 +103,24 @@ class MainGraph extends PolymerElement {
 
     fitScreen = () => {
         const hierarchy = this.shadowRoot?.querySelectorAll('.graph-hierarchy') as any;
-        if (!hierarchy) return;
+        if (!hierarchy) { return };
         hierarchy.forEach((item) => {
             item.fitScreen();
         })
     }
+
     hightLightMatchedNode = (matchedNodes: Array<string>, graphType: string) => {
         if (graphType === 'NPU') {
             const benchGraph = this.shadowRoot?.querySelector('#Bench') as any;
             benchGraph?.hightLightNode?.(matchedNodes)
-
         } else if (graphType === 'Bench') {
             const npuhGraph = this.shadowRoot?.querySelector('#NPU') as any;
             npuhGraph?.hightLightNode?.(matchedNodes)
         }
     }
+
     bindSpliterEvent = () => {
-        if (!this.shadowRoot || this.isSingleGraph) return;
+        if (!this.shadowRoot || this.isSingleGraph) { return };
         const spliter = this.shadowRoot.querySelector('#spliter');
         const container = this.shadowRoot.querySelector('#container');
         const NPU = this.shadowRoot.querySelector('#NPU') as HTMLElement;
@@ -134,10 +136,10 @@ class MainGraph extends PolymerElement {
 
         // 鼠标移动时调整宽度
         function onMouseMove(e) {
-            if (!isDragging) return;
+            if (!isDragging) { return };
             // 获取鼠标相对于容器的位置
             const containerRect = container?.getBoundingClientRect();
-            if (!containerRect) return;
+            if (!containerRect) { return };
             const newWidth = e.clientX - containerRect.left;
             // 限制最小宽度
             if (newWidth > MIN_GRAPG_WIDTH && newWidth < containerRect.width - MIN_GRAPG_WIDTH) {

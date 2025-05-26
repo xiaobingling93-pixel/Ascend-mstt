@@ -197,13 +197,12 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     @observe('selection')
     updateGraphData = () => {
-        if (!this.selection?.run || !this.selection?.tag) return;
+        if (!this.selection?.run || !this.selection?.tag) { return };
         if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
             this.loadGraphData(this.selection.run, this.selection.tag);
         } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
-            this.initGraphBoard();         // 只改变microsteps时，不重新加载图数据
+            this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
             this.loadGraphAllNodeList(this.selection.run, this.selection.tag, this.selection.microStep);
-
         }
         this.currentSelection = this.selection;
     }
@@ -223,7 +222,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 this.progressReading('正在读取文件', data);
             }
             if (data.status === 'loading') {
-
                 if (data.done) {
                     this.eventSource?.close();
                     this.eventSource = null;
@@ -234,9 +232,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                         ])
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
                         this.progreesLoading('初始化完成', '请稍后', data);
-
                     } catch (error) {
-
                         this.progreesError('初始化图失败', error);
                     }
                 } else {
