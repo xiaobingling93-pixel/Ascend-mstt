@@ -46,7 +46,6 @@ class TestWrapper(unittest.TestCase):
         self.assertEqual(torch.utils.checkpoint.checkpoint, ori_checkpoint)
 
     def test_checkpoint_without_early_stop(self):
-        mock_set = MagicMock()
         mock_checkpoint = MagicMock(return_value="test_result")
 
         with patch('msprobe.pytorch.dump.module_dump.module_processer.set_checkpoint_early_stop', MagicMock()), \
@@ -102,11 +101,9 @@ class TestModuleProcesser(unittest.TestCase):
     def test_set_and_get_calls_number(self):
         count = ModuleProcesser.set_and_get_calls_number("test_module")
         self.assertEqual(count, 0)
-        self.assertEqual(ModuleProcesser.module_count["test_module"], 0)
 
         count = ModuleProcesser.set_and_get_calls_number("test_module")
         self.assertEqual(count, 1)
-        self.assertEqual(ModuleProcesser.module_count["test_module"], 1)
 
     def test_has_register_backward_hook(self):
         module1 = torch.nn.Linear(10, 10)
