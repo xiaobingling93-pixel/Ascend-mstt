@@ -255,13 +255,13 @@ Step 3: 配置Msmonitor日志路径(可选，默认路径为当前目录下的ms
 export MSMONITOR_LOG_PATH=<LOG PATH>
 # 示例：
 export MSMONITOR_LOG_PATH=/tmp/msmonitor_log
-```  
+```
 
 Step 4: 拉起训练任务
 ```bash
 # 训练任务拉起前需要设置LD_PRELOAD
 # 示例：export LD_PRELOAD=/usr/local/Ascend/ascend-toolkit/latest/lib64/libmspti.so
-export LD_PRELOAD=<CANN toolkit安装路径>/ascend-tookit/latest/lib64/libmspti.so
+export LD_PRELOAD=<CANN toolkit安装路径>/ascend-toolkit/latest/lib64/libmspti.so
 
 # 训练任务中需要使用pytorch的优化器/继承原生优化器
 bash train.sh
