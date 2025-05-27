@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import { PolymerElement } from '@polymer/polymer';
+import { PolymerElement } from "@polymer/polymer";
 
 /**
  * Polymer mixin replacement for `:host-context(body.dark-mode)`.
@@ -26,7 +26,9 @@ import { PolymerElement } from '@polymer/polymer';
  * Unfortunately, due to our infamiliarity with mixins, our types are imperfect.
  *
  */
-export function DarkModeMixin<T extends PolymerElement>(Base: new () => PolymerElement): new () => T {
+export function DarkModeMixin<T extends PolymerElement>(
+  Base: new () => PolymerElement
+): new () => T {
   return class Foo extends Base {
     private observer?: MutationObserver;
 
@@ -36,7 +38,7 @@ export function DarkModeMixin<T extends PolymerElement>(Base: new () => PolymerE
 
       this.observer = new MutationObserver((mutations) => {
         const classChanged = mutations.some((mutation) => {
-          return mutation.attributeName === 'class';
+          return mutation.attributeName === "class";
         });
         if (classChanged) {
           this._maybeSetDarkMode();
@@ -51,7 +53,10 @@ export function DarkModeMixin<T extends PolymerElement>(Base: new () => PolymerE
     }
 
     private _maybeSetDarkMode(): void {
-      this.classList.toggle('dark-mode', document.body.classList.contains('dark-mode'));
+      this.classList.toggle(
+        "dark-mode",
+        document.body.classList.contains("dark-mode")
+      );
     }
   } as unknown as new () => T;
 }

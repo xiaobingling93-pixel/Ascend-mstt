@@ -13,28 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import '@vaadin/tabs';
-import '@vaadin/tabsheet';
-import { Notification } from '@vaadin/notification';
-import { PolymerElement, html } from '@polymer/polymer';
-import { observe, customElement, property } from '@polymer/decorators';
-import useNodeInfo from './useNodeInfo';
-import './components/tf_vaadin_table/index';
-import './components/tf_vaddin_text_table/index';
-import './components/tf_resize_height/index';
-import type { UseNodeInfoType } from './useNodeInfo';
-import type { NodeInfoType } from './type';
-import { BENCH_PREFIX, NPU_PREFIX } from '../common/constant';
+import "@vaadin/tabs";
+import "@vaadin/tabsheet";
+import { Notification } from "@vaadin/notification";
+import { PolymerElement, html } from "@polymer/polymer";
+import { observe, customElement, property } from "@polymer/decorators";
+import useNodeInfo from "./useNodeInfo";
+import "./components/tf_vaadin_table/index";
+import "./components/tf_vaddin_text_table/index";
+import "./components/tf_resize_height/index";
+import type { UseNodeInfoType } from "./useNodeInfo";
+import type { NodeInfoType } from "./type";
+import { BENCH_PREFIX, NPU_PREFIX } from "../common/constant";
 
-@customElement('graph-info-board')
+@customElement("graph-info-board")
 class TfGraphNodeInfo extends PolymerElement {
   static readonly template = html`
     <style>
       :host {
-        --selected-color: rgb(255, 255, 255); 
+        --selected-color: rgb(255, 255, 255);
         --matched-color: rgb(236, 235, 235);
       }
-      .tab-content-wrapper{
+      .tab-content-wrapper {
         height: 100%;
         display: flex;
         justify-content: space-between;
@@ -43,50 +43,49 @@ class TfGraphNodeInfo extends PolymerElement {
         width: 100%;
         height: 100%;
       }
-      .vaadin-tabs{
-        background-color:white;
+      .vaadin-tabs {
+        background-color: white;
       }
-      .vaadin-tab{
+      .vaadin-tab {
         font-size: 14px;
       }
-      .table-wrapper{
+      .table-wrapper {
         height: 100%;
         width: 100%;
         display: flex;
         flex-direction: column;
         overflow: hidden;
       }
-      .node-info-wrapper{
+      .node-info-wrapper {
         display: flex;
         justify-content: space-between;
-        background-color:rgb(199, 199, 199);
+        background-color: rgb(199, 199, 199);
       }
-      .node-info{
+      .node-info {
         font-family: Roboto, sans-serif;
         padding-left: 20px;
         display: flex;
         justify-content: flex-start;
         font-weight: 400;
         font-size: 14px;
-
       }
-      .node-info-item{
+      .node-info-item {
         margin-right: 20px;
         display: flex;
         align-items: center;
       }
-      .legend-wrapper{
+      .legend-wrapper {
         display: flex;
         align-items: center;
       }
-      .legend-selected{
+      .legend-selected {
         display: inline-block;
         width: 12px;
         height: 12px;
         background-color: var(--selected-color);
         margin-right: 5px;
       }
-      .legend-matched{
+      .legend-matched {
         display: inline-block;
         width: 12px;
         height: 12px;
@@ -94,14 +93,14 @@ class TfGraphNodeInfo extends PolymerElement {
         margin-right: 5px;
       }
       .matched-yes {
-          display: inline-block;
-          width: 10px;
-          height: 8px;
-          background: #52c41a;
-          padding-top: 2px;
-          margin-right: 5px;
-          border-radius: 50%;
-        }
+        display: inline-block;
+        width: 10px;
+        height: 8px;
+        background: #52c41a;
+        padding-top: 2px;
+        margin-right: 5px;
+        border-radius: 50%;
+      }
       .matched-no {
         display: inline-block;
         width: 10px;
@@ -116,68 +115,64 @@ class TfGraphNodeInfo extends PolymerElement {
       }
     </style>
     <vaadin-tabsheet>
-      <vaadin-tabs slot="tabs" class='vaadin-tabs'>
-        <vaadin-tab id="io-tab" class='vaadin-tab' >
-          <template is="dom-if" if="[[!isSingleGraph]]">
-            比对详情
-          </template>
-          <template is="dom-if" if="[[isSingleGraph]]">
-            节点详情
-          </template>
+      <vaadin-tabs slot="tabs" class="vaadin-tabs">
+        <vaadin-tab id="io-tab" class="vaadin-tab">
+          <template is="dom-if" if="[[!isSingleGraph]]"> 比对详情 </template>
+          <template is="dom-if" if="[[isSingleGraph]]"> 节点详情 </template>
         </vaadin-tab>
-        <vaadin-tab id="stack-info-tab" class='vaadin-tab'>节点信息</vaadin-tab>
+        <vaadin-tab id="stack-info-tab" class="vaadin-tab">节点信息</vaadin-tab>
       </vaadin-tabs>
-     
-      <div tab="io-tab" class='vaadin-tab-content'>
-        <tf-resize-height height="{{height}}">   
-          <div class='table-wrapper'>
-            <div class='node-info-wrapper'>
-              <div class='node-info'>
-              <template is="dom-if" if="[[npuNodeName]]">
-                <p class='node-info-item selected-node'>
-                  <span class='legend-selected'></span>
-                  目标节点：[[npuNodeName]]
-                </p>
+
+      <div tab="io-tab" class="vaadin-tab-content">
+        <tf-resize-height height="{{height}}">
+          <div class="table-wrapper">
+            <div class="node-info-wrapper">
+              <div class="node-info">
+                <template is="dom-if" if="[[npuNodeName]]">
+                  <p class="node-info-item selected-node">
+                    <span class="legend-selected"></span>
+                    目标节点：[[npuNodeName]]
+                  </p>
                 </template>
                 <template is="dom-if" if="[[benchNodeName]]">
-                  <p class='node-info-item match-node' >
-                    <span class='legend-matched'></span>
+                  <p class="node-info-item match-node">
+                    <span class="legend-matched"></span>
                     标杆节点：[[benchNodeName]]
                   </p>
                 </template>
               </div>
               <template is="dom-if" if="[[!isSingleGraph]]">
-                <div class='node-info'>
-                  <p class='node-info-item '>
-                    <span class='matched-yes'></span>
+                <div class="node-info">
+                  <p class="node-info-item ">
+                    <span class="matched-yes"></span>
                     已匹配
                   </p>
-                  <p class='node-info-item match-node' >
-                    <span class='matched-no'></span>
+                  <p class="node-info-item match-node">
+                    <span class="matched-no"></span>
                     未匹配
                   </p>
                 </div>
               </template>
             </div>
 
-              <tf-vaadin-table 
-                id='main-table' 
-                class='io-vaadin-table' 
-                io-dataset="[[ioDataset]]"
-                tooltips="[[tooltips]]"
-                handle-cell-click="[[handleGridCellClick]]"
-                is-single-graph-node="[[isSingleGraph]]"
-              >
-              </tf-vaadin-table>
+            <tf-vaadin-table
+              id="main-table"
+              class="io-vaadin-table"
+              io-dataset="[[ioDataset]]"
+              tooltips="[[tooltips]]"
+              handle-cell-click="[[handleGridCellClick]]"
+              is-single-graph-node="[[isSingleGraph]]"
+            >
+            </tf-vaadin-table>
           </div>
         </tf-resize-height>
       </div>
-      <div tab="stack-info-tab" class='vaadin-tab-content'>
-        <tf-resize-height height="{{height}}">   
-          <div class='table-wrapper'>
+      <div tab="stack-info-tab" class="vaadin-tab-content">
+        <tf-resize-height height="{{height}}">
+          <div class="table-wrapper">
             <tf-vaadin-text-table
-              id='main-table' 
-              class='io-vaadin-table' 
+              id="main-table"
+              class="io-vaadin-table"
               dataset="[[detailData]]"
               handle-cell-click="[[handleGridCellClick]]"
             >
@@ -189,7 +184,7 @@ class TfGraphNodeInfo extends PolymerElement {
   `;
 
   @property({ type: String, notify: true })
-  selectedNode: string = '';
+  selectedNode: string = "";
 
   @property({ type: Object })
   selection: any;
@@ -211,26 +206,33 @@ class TfGraphNodeInfo extends PolymerElement {
 
   useNodeInfo: UseNodeInfoType = useNodeInfo();
 
-  @observe('selectedNode')
-
+  @observe("selectedNode")
   observeToUpdateTableData() {
     this.updateTableData(this.selectedNode);
   }
 
   async updateTableData(selectedNode) {
     if (!selectedNode) {
-      this.set('ioDataset', []);
-      this.set('detailData', []);
-      this.set('npuNodeName', '');
-      this.set('benchNodeName', '');
+      this.set("ioDataset", []);
+      this.set("detailData", []);
+      this.set("npuNodeName", "");
+      this.set("benchNodeName", "");
       return;
     }
     const { npuNode, benchNode } = await this._updateNodeInfo(selectedNode);
     // 考虑选中的节点是匹配节点的情况
-    this.set('npuNodeName', npuNode?.name?.replace(NPU_PREFIX, ''));
-    this.set('benchNodeName', benchNode?.name?.replace(BENCH_PREFIX, ''));
-    const inputDataset = this.useNodeInfo.getIoDataSet(npuNode, benchNode, 'inputData');
-    const outputDataSet = this.useNodeInfo.getIoDataSet(npuNode, benchNode, 'outputData');
+    this.set("npuNodeName", npuNode?.name?.replace(NPU_PREFIX, ""));
+    this.set("benchNodeName", benchNode?.name?.replace(BENCH_PREFIX, ""));
+    const inputDataset = this.useNodeInfo.getIoDataSet(
+      npuNode,
+      benchNode,
+      "inputData"
+    );
+    const outputDataSet = this.useNodeInfo.getIoDataSet(
+      npuNode,
+      benchNode,
+      "outputData"
+    );
     const ioDataset = [
       ...inputDataset.matchedIoDataset,
       ...outputDataSet.matchedIoDataset,
@@ -239,24 +241,36 @@ class TfGraphNodeInfo extends PolymerElement {
       ...inputDataset.unMatchedBenchIoDataset,
       ...outputDataSet.unMatchedBenchIoDataset,
     ];
-    this.set('ioDataset', ioDataset);
+    this.set("ioDataset", ioDataset);
     const detailData = this.useNodeInfo.getDetailDataSet(npuNode, benchNode);
-    this.set('detailData', detailData);
+    this.set("detailData", detailData);
   }
 
-  async _updateNodeInfo(selectedNode: string): Promise<{ npuNode: NodeInfoType, benchNode: NodeInfoType }> {
+  async _updateNodeInfo(
+    selectedNode: string
+  ): Promise<{ npuNode: NodeInfoType; benchNode: NodeInfoType }> {
     const nodeInfo = {
-      nodeName: selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''), // 去掉前缀
-      nodeType: this.isSingleGraph ? 'Single' : this.selectedNode?.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench',
+      nodeName: selectedNode?.replace(
+        new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`),
+        ""
+      ), // 去掉前缀
+      nodeType: this.isSingleGraph
+        ? "Single"
+        : this.selectedNode?.startsWith(NPU_PREFIX)
+          ? "NPU"
+          : "Bench",
     };
-    const { success, data, error } = await this.useNodeInfo.getNodeInfo(nodeInfo, this.selection);
+    const { success, data, error } = await this.useNodeInfo.getNodeInfo(
+      nodeInfo,
+      this.selection
+    );
     if (success) {
       return { npuNode: data?.npu, benchNode: data?.bench };
     } else {
       Notification.show(`获取节点信息失败：${error}`, {
-        position: 'middle',
+        position: "middle",
         duration: 2000,
-        theme: 'error',
+        theme: "error",
       });
     }
     return { npuNode: null, benchNode: null };
@@ -265,17 +279,20 @@ class TfGraphNodeInfo extends PolymerElement {
   // 点击单元格高亮
   handleGridCellClick(e: MouseEvent, syncGrid: HTMLElement): void {
     const target = e.composedPath()[0] as HTMLElement; // 获取点击的目标元素
-    const slotValue = target.getAttribute('slot'); // 提取 slot 属性
-    if (!slotValue || !slotValue.startsWith('vaadin-grid-cell-content-')) {
+    const slotValue = target.getAttribute("slot"); // 提取 slot 属性
+    if (!slotValue || !slotValue.startsWith("vaadin-grid-cell-content-")) {
       return;
     }
-    const cellIndex = parseInt(slotValue.split('-').pop() || '0', 10);
+    const cellIndex = parseInt(slotValue.split("-").pop() || "0", 10);
     // 前8个元素是表头不可选中，所以跳过
     if (cellIndex <= 8) {
       return;
     }
-    const highlightedCells = this.shadowRoot?.querySelectorAll('.highlight-cell');
-    highlightedCells?.forEach((cell) => cell.classList.remove('highlight-cell')); // 清除所有高亮样式
-    target.classList.add('highlight-cell'); // 添加高亮样式到当前单元格
+    const highlightedCells =
+      this.shadowRoot?.querySelectorAll(".highlight-cell");
+    highlightedCells?.forEach((cell) =>
+      cell.classList.remove("highlight-cell")
+    ); // 清除所有高亮样式
+    target.classList.add("highlight-cell"); // 添加高亮样式到当前单元格
   }
 }

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { PolymerElement, html } from '@polymer/polymer';
-import { customElement, property, observe } from '@polymer/decorators';
+import { PolymerElement, html } from "@polymer/polymer";
+import { customElement, property, observe } from "@polymer/decorators";
 
-@customElement('tf-resize-height')
+@customElement("tf-resize-height")
 class ResizableTabsheet extends PolymerElement {
   static readonly template = html`
     <style>
@@ -64,9 +64,9 @@ class ResizableTabsheet extends PolymerElement {
   _resize: (event: MouseEvent) => void = () => {};
   _stopResize: (this: Document, ev: MouseEvent) => any = () => {};
 
-  @observe('height')
+  @observe("height")
   _updateHeight(newHeight): void {
-    this.updateStyles({ '--tabsheet-height': `${newHeight}px` });
+    this.updateStyles({ "--tabsheet-height": `${newHeight}px` });
   }
 
   override ready(): void {
@@ -83,13 +83,13 @@ class ResizableTabsheet extends PolymerElement {
     let startHeight = 0;
 
     // 开始拖拽
-    resizeHandle.addEventListener('mousedown', (event: MouseEvent) => {
+    resizeHandle.addEventListener("mousedown", (event: MouseEvent) => {
       isResizing = true;
       startY = event.clientY;
       startHeight = tabsheet.offsetHeight;
-      document.body.style.cursor = 'ns-resize';
-      document.addEventListener('mousemove', this._resize);
-      document.addEventListener('mouseup', this._stopResize);
+      document.body.style.cursor = "ns-resize";
+      document.addEventListener("mousemove", this._resize);
+      document.addEventListener("mouseup", this._stopResize);
     });
 
     // 拖拽过程
@@ -98,15 +98,15 @@ class ResizableTabsheet extends PolymerElement {
         return;
       }
       const deltaY = startY - event.clientY; // 向上拖拽为正
-      this.set('height', Math.max(10, startHeight + deltaY)); // 更新高度
+      this.set("height", Math.max(10, startHeight + deltaY)); // 更新高度
     };
 
     // 停止拖拽
     this._stopResize = (): void => {
       isResizing = false;
-      document.body.style.cursor = '';
-      document.removeEventListener('mousemove', this._resize);
-      document.removeEventListener('mouseup', this._stopResize);
+      document.body.style.cursor = "";
+      document.removeEventListener("mousemove", this._resize);
+      document.removeEventListener("mouseup", this._stopResize);
     };
   }
 }

@@ -13,11 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import { customElement } from '@polymer/decorators';
-import { html, PolymerElement } from '@polymer/polymer';
-import * as tf_scene_minimap from './minimap';
+import { customElement } from "@polymer/decorators";
+import { html, PolymerElement } from "@polymer/polymer";
+import * as tf_scene_minimap from "./minimap";
 
-@customElement('graph-minimap')
+@customElement("graph-minimap")
 export class TfGraphMinimap extends PolymerElement {
   static readonly template = html`
     <style>
@@ -53,7 +53,13 @@ export class TfGraphMinimap extends PolymerElement {
     </style>
     <svg>
       <defs>
-        <filter id="minimapDropShadow" x="-20%" y="-20%" width="150%" height="150%">
+        <filter
+          id="minimapDropShadow"
+          x="-20%"
+          y="-20%"
+          width="150%"
+          height="150%"
+        >
           <feOffset result="offOut" in="SourceGraphic" dx="1" dy="1"></feOffset>
           <feColorMatrix
             result="matrixOut"
@@ -61,7 +67,11 @@ export class TfGraphMinimap extends PolymerElement {
             type="matrix"
             values="0.1 0 0 0 0 0 0.1 0 0 0 0 0 0.1 0 0 0 0 0 0.5 0"
           ></feColorMatrix>
-          <feGaussianBlur result="blurOut" in="matrixOut" stdDeviation="2"></feGaussianBlur>
+          <feGaussianBlur
+            result="blurOut"
+            in="matrixOut"
+            stdDeviation="2"
+          ></feGaussianBlur>
           <feBlend in="SourceGraphic" in2="blurOut" mode="normal"></feBlend>
         </filter>
       </defs>
@@ -69,8 +79,8 @@ export class TfGraphMinimap extends PolymerElement {
     </svg>
     <canvas class="first"></canvas>
     <!-- Additional canvas to use as buffer to avoid flickering between updates -->
-    <canvas class="second" style='display: none'></canvas>
-    <canvas class="download" style='display: none'></canvas>
+    <canvas class="second" style="display: none"></canvas>
+    <canvas class="download" style="display: none"></canvas>
   `;
 
   /**
@@ -84,6 +94,13 @@ export class TfGraphMinimap extends PolymerElement {
    * @param labelPadding Padding in pixels due to the main graph labels.
    */
   init(svg, zoomG, mainZoom, maxWAndH, labelPadding): tf_scene_minimap.Minimap {
-    return new tf_scene_minimap.Minimap(svg, zoomG, mainZoom, this, maxWAndH, labelPadding);
+    return new tf_scene_minimap.Minimap(
+      svg,
+      zoomG,
+      mainZoom,
+      this,
+      maxWAndH,
+      labelPadding
+    );
   }
 }

@@ -14,61 +14,64 @@
  * limitations under the License.
  */
 export type HierarchyNodeType = {
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    expand: boolean,
-    parentNode: string,
-    label: string,
-    name: string,
-    isRoot: boolean,
-    children?: HierarchyNodeType[],
-    nodeType: number,
-    matchedNodeLink: string[],
-    matchedDistributed: { communications_type: 'send' | 'receive', nodes_info: { [string]: Array<string> } }
-    precisionIndex: string,
-    overflowLevel: string,
-}
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  expand: boolean;
+  parentNode: string;
+  label: string;
+  name: string;
+  isRoot: boolean;
+  children?: HierarchyNodeType[];
+  nodeType: number;
+  matchedNodeLink: string[];
+  matchedDistributed: {
+    communications_type: "send" | "receive";
+    nodes_info: { [string]: Array<string> };
+  };
+  precisionIndex: string;
+  overflowLevel: string;
+};
 
 export interface ContextMenuItem {
-    text?: string;
-    rankId?: number;
-    component?: any;
-    nodeName?: string;
-    type?: number;
-    children?: ContextMenuItem[];
+  text?: string;
+  rankId?: number;
+  component?: any;
+  nodeName?: string;
+  type?: number;
+  children?: ContextMenuItem[];
 }
 
 export interface PreProcessDataConfigType {
-    colors: { string: { value: number[], color: string } },
-    isOverflowFilter: boolean,
-    graphType: GraphType,
+  colors: { string: { value: number[]; color: string } };
+  isOverflowFilter: boolean;
+  graphType: GraphType;
 }
 
-export type GraphType = 'NPU' | 'Bench' | 'Single'
+export type GraphType = "NPU" | "Bench" | "Single";
 
 export interface UseGraphType {
-    bindInnerRect: (
-        container: any,
-        data: any,
-    ) => void;
-    bindOuterRect: (
-        container: any,
-        data: any,
-    ) => void;
-    bindText: (
-        container: any,
-        data: any,
-    ) => void;
-    preProcessData: (data: any[], selectedNode: string, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => Array<any>;
-    changeNodeExpandState: (nodeInfo: any, metaData: any) => Promise<any>
-    createComponent: (text, precision, colors: PreProcessDataConfigType['colors']) => any
-    updateHierarchyData: (graphType: string) => Promise<any>
+  bindInnerRect: (container: any, data: any) => void;
+  bindOuterRect: (container: any, data: any) => void;
+  bindText: (container: any, data: any) => void;
+  preProcessData: (
+    data: any[],
+    selectedNode: string,
+    config: PreProcessDataConfigType,
+    transform: { x: number; y: number; scale: number }
+  ) => Array<any>;
+  changeNodeExpandState: (nodeInfo: any, metaData: any) => Promise<any>;
+  createComponent: (
+    text,
+    precision,
+    colors: PreProcessDataConfigType["colors"]
+  ) => any;
+  updateHierarchyData: (graphType: string) => Promise<any>;
 }
 
 export type TransformType = {
-    x: number,
-    y: number,
-    scale: number,
-}
+  x: number;
+  y: number;
+  scale: number;
+};

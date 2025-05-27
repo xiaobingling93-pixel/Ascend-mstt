@@ -16,27 +16,29 @@ Copyright (c) 2025, Huawei Technologies.
 Adapt to the model hierarchical visualization data collected by the msprobe tool
 ==============================================================================*/
 
-import '@vaadin/icon';
-import '@vaadin/icons';
-import '@vaadin/select';
-import '@vaadin/button';
+import "@vaadin/icon";
+import "@vaadin/icons";
+import "@vaadin/select";
+import "@vaadin/button";
 
-import * as _ from 'lodash';
-import { customElement, property } from '@polymer/decorators';
-import { html, PolymerElement } from '@polymer/polymer';
-import { DarkModeMixin } from '../polymer/dark_mode_mixin';
-import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
-import { PaperCheckboxElement } from '../polymer/irons_and_papers';
-import '../polymer/irons_and_papers';
+import * as _ from "lodash";
+import { customElement, property } from "@polymer/decorators";
+import { html, PolymerElement } from "@polymer/polymer";
+import { DarkModeMixin } from "../polymer/dark_mode_mixin";
+import { LegacyElementMixin } from "../polymer/legacy_element_mixin";
+import { PaperCheckboxElement } from "../polymer/irons_and_papers";
+import "../polymer/irons_and_papers";
 
-import './components/tf_main_controler'
-import './components/tf_manual_match/index';
-import './components/tf_color_select/index';
-import './components/tf_linkage_search_combox/index';
-import type { MetaDirType, MinimapVis } from './type'
+import "./components/tf_main_controler";
+import "./components/tf_manual_match/index";
+import "./components/tf_color_select/index";
+import "./components/tf_linkage_search_combox/index";
+import type { MetaDirType, MinimapVis } from "./type";
 
-@customElement('graph-controls-board')
-class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
+@customElement("graph-controls-board")
+class TfGraphControls extends LegacyElementMixin(
+  DarkModeMixin(PolymerElement)
+) {
   static readonly template = html`
     <style>
       :host {
@@ -55,7 +57,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       }
 
       .holder {
-        background: rgb(246,246,246);
+        background: rgb(246, 246, 246);
         box-sizing: border-box;
         color: var(--tb-graph-controls-text-color);
         width: 100%;
@@ -70,7 +72,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         font-weight: normal;
       }
       .container-wrapper {
-        margin:10px 0 20px 0;
+        margin: 10px 0 20px 0;
         border-top: 1px #bfbfbf dashed;
       }
       .minimap-control {
@@ -82,7 +84,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         margin-left: 8px;
       }
 
-      .icon-button{
+      .icon-button {
         font-size: var(--tb-graph-controls-title-font-size);
       }
       .button-text {
@@ -115,7 +117,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       .tab-button {
         flex: 1;
         padding: 10px;
-        background:rgb(246, 246, 246);
+        background: rgb(246, 246, 246);
         border: none;
         cursor: pointer;
         border-bottom: 3px solid transparent; /* 初始状态下的底部线条透明 */
@@ -126,12 +128,12 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       }
 
       .tab-content {
-        background:rgb(255,255,255);
-        padding:0 20px;
+        background: rgb(255, 255, 255);
+        padding: 0 20px;
         flex-grow: 1;
         overflow-y: auto;
       }
-      .fit-screen{
+      .fit-screen {
         display: flex;
         align-items: center;
       }
@@ -156,24 +158,31 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       <button class="tab-button" on-tap="_showMatch">匹配</button>
     </div>
     <div id="nodes-content" class="tab-content">
-
-
-      <div class='fit-screen'>
+      <div class="fit-screen">
         <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
-        <vaadin-button theme="tertiary contrast" on-click="_fit">自适应屏幕</vaadin-button>
+        <vaadin-button theme="tertiary contrast" on-click="_fit"
+          >自适应屏幕</vaadin-button
+        >
       </div>
 
       <div class="minimap-control">
-        <paper-checkbox checked on-change="_toggleNpuMinimap">调试侧缩略图</paper-checkbox>
-        <template is='dom-if' if='[[!isSingleGraph]]'>
-          <paper-checkbox class="right-checkbox" checked on-click="_toggleBenchMinimap">标杆侧缩略图</paper-checkbox>
+        <paper-checkbox checked on-change="_toggleNpuMinimap"
+          >调试侧缩略图</paper-checkbox
+        >
+        <template is="dom-if" if="[[!isSingleGraph]]">
+          <paper-checkbox
+            class="right-checkbox"
+            checked
+            on-click="_toggleBenchMinimap"
+            >标杆侧缩略图</paper-checkbox
+          >
         </template>
       </div>
       <div class="container-wrapper">
         <tf-main-controler
-            meta-dir="[[metaDir]]"
-            selection="{{selection}}"
-            microsteps="[[microsteps]]"
+          meta-dir="[[metaDir]]"
+          selection="{{selection}}"
+          microsteps="[[microsteps]]"
         ></tf-main-controler>
       </div>
       <div class="container-wrapper">
@@ -217,7 +226,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   @property({ type: Boolean })
   isSingleGraph = false;
 
-  @property({ type: Object, notify: true, })
+  @property({ type: Object, notify: true })
   selection: Selection = {} as Selection;
 
   // 全量节点数据，支撑各种节点的搜索
@@ -227,7 +236,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   // 颜色图例
   @property({ type: Object })
   colorset;
-  
+
   // 溢出检测标志
   @property({ type: Boolean })
   overflowcheck;
@@ -248,55 +257,55 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   override ready(): void {
     super.ready();
-    this._showTabContent('设置', 'nodes-content');
+    this._showTabContent("设置", "nodes-content");
   }
 
   _showTabContent(buttonText, contentId): void {
     // Remove 'active' class from all buttons
-    this.shadowRoot?.querySelectorAll('.tab-button').forEach((button) => {
-      button.classList.remove('active');
+    this.shadowRoot?.querySelectorAll(".tab-button").forEach((button) => {
+      button.classList.remove("active");
     });
 
     // Add 'active' class to the clicked button
-    const buttons = this.shadowRoot?.querySelectorAll('.tab-button');
+    const buttons = this.shadowRoot?.querySelectorAll(".tab-button");
     buttons?.forEach((button) => {
       if ((button as HTMLElement).innerHTML === buttonText) {
-        button?.classList.add('active');
+        button?.classList.add("active");
       }
     });
 
     // Hide all content
-    this.shadowRoot?.querySelectorAll('.tab-content').forEach((content) => {
-      content.classList.add('hidden');
+    this.shadowRoot?.querySelectorAll(".tab-content").forEach((content) => {
+      content.classList.add("hidden");
     });
 
     // Show the selected content
     const selectedContent = this.shadowRoot?.getElementById(contentId);
     if (selectedContent) {
-      selectedContent.classList.remove('hidden');
+      selectedContent.classList.remove("hidden");
     }
   }
 
   // 使用示例
   _showNodeControls(): void {
-    this._showTabContent('设置', 'nodes-content');
+    this._showTabContent("设置", "nodes-content");
   }
 
   _showMatch(): void {
-    this._showTabContent('匹配', 'match-content');
+    this._showTabContent("匹配", "match-content");
   }
 
   _fit(): void {
-    this.fire('fit-tap');
+    this.fire("fit-tap");
   }
 
   _toggleNpuMinimap(event: CustomEvent): void {
     const checkbox = event.target as PaperCheckboxElement;
-    this.set('minimapVis.npu', checkbox.checked);
+    this.set("minimapVis.npu", checkbox.checked);
   }
 
   _toggleBenchMinimap(event: CustomEvent): void {
     const checkbox = event.target as PaperCheckboxElement;
-    this.set('minimapVis.bench', checkbox.checked);
+    this.set("minimapVis.bench", checkbox.checked);
   }
 }

@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-const style = document.createElement('style');
-style.setAttribute('is', 'custom-style');
+const style = document.createElement("style");
+style.setAttribute("is", "custom-style");
 style.textContent = `
   :root {
     --tb-orange-weak: #ffa726;

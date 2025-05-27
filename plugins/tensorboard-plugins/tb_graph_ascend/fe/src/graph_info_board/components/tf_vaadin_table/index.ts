@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { PolymerElement, html } from '@polymer/polymer';
-import { customElement, property, query } from '@polymer/decorators';
-import '@vaadin/grid'; // 引入新的 Vaadin Grid 组件
-import '@vaadin/tooltip';
-import type { GridEventContext } from '@vaadin/grid';
-@customElement('tf-vaadin-table')
+import { PolymerElement, html } from "@polymer/polymer";
+import { customElement, property, query } from "@polymer/decorators";
+import "@vaadin/grid"; // 引入新的 Vaadin Grid 组件
+import "@vaadin/tooltip";
+import type { GridEventContext } from "@vaadin/grid";
+@customElement("tf-vaadin-table")
 class TfVaadinTable extends PolymerElement {
   static readonly template = html`
     <style>
@@ -51,7 +51,7 @@ class TfVaadinTable extends PolymerElement {
         color: #999;
       }
       .avater-matched:before {
-        content: '';
+        content: "";
         display: inline-block;
         width: 10px;
         height: 8px;
@@ -61,7 +61,7 @@ class TfVaadinTable extends PolymerElement {
         border-radius: 50%;
       }
       .avater-unmatched:before {
-        content: '';
+        content: "";
         display: inline-block;
         width: 10px;
         height: 8px;
@@ -112,13 +112,13 @@ class TfVaadinTable extends PolymerElement {
 
   @property({
     type: Array,
-    computed: '_computeHeaders(ioDataset)',
+    computed: "_computeHeaders(ioDataset)",
   })
   headers!: any[];
 
   @property({
     type: Boolean,
-    computed: '_isEmptyGrid(ioDataset)',
+    computed: "_isEmptyGrid(ioDataset)",
   })
   isEmptyGrid!: false;
 
@@ -138,7 +138,7 @@ class TfVaadinTable extends PolymerElement {
     if (this._isEmptyGrid(data)) {
       return [];
     }
-    const ignoreDataIndex = ['data_name', 'isBench', 'isMatched', 'value'];
+    const ignoreDataIndex = ["data_name", "isBench", "isMatched", "value"];
     const headers = Array.from(
       data.reduce((keys, item) => {
         // 只取前5个数据项，避免性能问题
@@ -148,7 +148,7 @@ class TfVaadinTable extends PolymerElement {
           }
         });
         return keys;
-      }, new Set()),
+      }, new Set())
     );
     return headers;
   }
@@ -158,30 +158,32 @@ class TfVaadinTable extends PolymerElement {
   }
 
   _renderDefaultValue(root: HTMLElement, column: any, rowData: any): void {
-    const selectedColor = this._getCssVariable('--selected-color');
-    const matchedColor = this._getCssVariable('--matched-color');
-    const isBench = 'isBench';
-    const isMatched = 'isMatched';
-    root.classList.remove('splitter');
+    const selectedColor = this._getCssVariable("--selected-color");
+    const matchedColor = this._getCssVariable("--matched-color");
+    const isBench = "isBench";
+    const isMatched = "isMatched";
+    root.classList.remove("splitter");
     if (rowData.item[isBench]) {
       root.style.backgroundColor = matchedColor;
       if (rowData.item[isMatched]) {
-        root.classList.add('splitter');
+        root.classList.add("splitter");
       }
     } else {
       root.style.backgroundColor = selectedColor;
     }
-    if (column.path === 'name' && !this.isSingleGraphNode) {
-      const className = rowData.item[isMatched] ? 'avater-matched' : 'avater-unmatched';
+    if (column.path === "name" && !this.isSingleGraphNode) {
+      const className = rowData.item[isMatched]
+        ? "avater-matched"
+        : "avater-unmatched";
       root.innerHTML = `<span class='${className}'>${rowData.item[column.path]}</span>`;
       return;
     }
-    let tooltip = rowData.item[column.path] ?? '-';
+    let tooltip = rowData.item[column.path] ?? "-";
     if (this.tooltips?.[column.path]) {
       tooltip = `${this.tooltips[column.path]}:\n${tooltip}`;
     }
     root.title = tooltip;
-    root.textContent = rowData.item[column.path] ?? '-';
+    root.textContent = rowData.item[column.path] ?? "-";
   }
 
   handleGridClick(e: MouseEvent): void {

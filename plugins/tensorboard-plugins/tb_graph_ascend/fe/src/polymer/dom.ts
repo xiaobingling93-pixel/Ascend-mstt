@@ -13,4 +13,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-export * from '@polymer/polymer/lib/legacy/polymer.dom';
+export * from "@polymer/polymer/lib/legacy/polymer.dom";
