@@ -30,7 +30,9 @@ export interface SelectionType {
 
 export interface GraphConfigType {
     tooltips: string;
-    colors: { string: { value: number[], color: string } },
+    colors: Record<string, {
+        value: number[]; color: string
+    }>,
     overflowCheck: boolean;
     microSteps: number;
     isSingleGraph: boolean;

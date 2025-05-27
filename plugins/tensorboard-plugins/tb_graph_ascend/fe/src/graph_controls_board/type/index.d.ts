@@ -19,9 +19,7 @@ export interface MinimapVis {
 }
 export type Dataset = Array<RunItem>;
 
-export type MetaDirType = {
-  [key: string]: Array<string>;
-};
+export type MetaDirType = Record<string, Array<string>>;
 
 export interface UseMatchedType {
   saveMatchedNodesLink: (selection: any) => Promise<any>;
@@ -30,14 +28,14 @@ export interface UseMatchedType {
   saveMatchedRelations: (selection: any) => Promise<any>;
   addMatchedNodesLinkByConfigFile: (condfigFile: string, selection: any) => Promise<MatchResultType>;
 }
-export type MatchResultType = {
+export interface MatchResultType {
   success: boolean;
   error: string;
   data?: {
-    npuMatchNodes: { ['string']: string };
-    benchMatchNodes: { ['string']: string };
-    npuUnMatchNodes: Array<string>;
-    benchUnMatchNodes: Array<string>;
-    matchReslut?: Array<Boolean>;
+    npuMatchNodes: Record<string, string>;
+    benchMatchNodes: Record<string, string>;
+    npuUnMatchNodes: string[];
+    benchUnMatchNodes: string[];
+    matchReslut?: boolean[];
   };
 };

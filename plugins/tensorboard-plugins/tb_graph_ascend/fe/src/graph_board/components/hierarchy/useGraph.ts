@@ -36,7 +36,7 @@ import {
     SELECTED_STROKE_WIDTH,
 } from '../../../common/constant';
 const useGraph = (): UseGraphType => {
-    const preProcessData = (
+    const preProcessData: UseGraphType['preProcessData'] = (
         data: Array<HierarchyNodeType>,
         selectedNode,
         config: PreProcessDataConfigType,
@@ -101,7 +101,7 @@ const useGraph = (): UseGraphType => {
             return BENCH_NODE_COLOR;
         }
         if (isEmpty(node.matchedNodeLink)) {
-            return Object.keys(colors).find((color) => colors[color].value === '无匹配节点') || NO_MATCHED_NODE_COLOR;
+            return Object.keys(colors).find((color) => colors[color].value === '无匹配节点') ?? NO_MATCHED_NODE_COLOR;
         }
         const precisionValue = parseFloat(node.precisionIndex);
         return calcClolorByPrecision(precisionValue, colors);
@@ -126,7 +126,7 @@ const useGraph = (): UseGraphType => {
         return NO_MATCHED_NODE_COLOR;
     };
 
-    const createComponent = (text, precision, colors: PreProcessDataConfigType['colors']) => {
+    const createComponent: UseGraphType['createComponent'] = (text, precision, colors: PreProcessDataConfigType['colors']) => {
         const component = document.createElement('vaadin-context-menu-item');
         component.appendChild(document.createTextNode(text));
         component.style.background = calcClolorByPrecision(precision, colors);
@@ -151,7 +151,7 @@ const useGraph = (): UseGraphType => {
         }
     };
 
-    const bindInnerRect = (container, data) => {
+    const bindInnerRect: UseGraphType['bindInnerRect'] = (container, data) => {
         // 绑定数据到 innnerReact 元素
         const innnerReact = container.selectAll('.inner-rect').data(data, (d: any) => d.name);
         innnerReact
@@ -188,7 +188,7 @@ const useGraph = (): UseGraphType => {
             .remove();
     };
 
-    const bindOuterRect = (container, data) => {
+    const bindOuterRect: UseGraphType['bindOuterRect'] = (container, data): void => {
         // 绑定数据到 outerReact 元素
         const outerReact = container.selectAll('.outer-rect').data(data, (d: any) => d.name);
         outerReact
@@ -230,7 +230,7 @@ const useGraph = (): UseGraphType => {
             .remove();
     };
 
-    const bindText = (container, data) => {
+    const bindText: UseGraphType['bindText'] = (container, data) => {
         // 绑定文本数据
         const texts = container.selectAll('text').data(data, (d: any) => d.name);
         // 更新现有文本
@@ -270,7 +270,7 @@ const useGraph = (): UseGraphType => {
             .remove();
     };
 
-    const changeNodeExpandState = async (nodeInfo: any, metaData: any): Promise<any> => {
+    const changeNodeExpandState: UseGraphType['changeNodeExpandState'] = async (nodeInfo: any, metaData: any): Promise<any> => {
         try {
             const metaDataSafe = safeJSONParse(JSON.stringify(metaData));
             const params = {

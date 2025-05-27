@@ -128,7 +128,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     `;
 
     @property({ type: Array })
-    metaDir: {} = {};
+    metaDir: Record<string, string> = {};
 
     @property({ type: Object, notify: true })
     selection: SelectionType | null = null;
@@ -185,17 +185,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     private useGraphAscend = useGraphAscend();
     private eventSource: EventSource | null = null;
 
-    override async ready(): Promise<void> {
-        super.ready();
-        const metaDir = await this.useGraphAscend.loadGraphFileInfoList();
-        this.set('metaDir', metaDir);
-        document.addEventListener(
-            'contextMenuTag-changed',
-            (event: any) => this.set('jumpToNode', event.detail?.nodeName),
-            { passive: true },
-        );
-    }
-
     @observe('selection')
     updateGraphData = () => {
         if (!this.selection?.run || !this.selection?.tag) {
@@ -209,6 +198,17 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         }
         this.currentSelection = this.selection;
     };
+
+    override async ready(): Promise<void> {
+        super.ready();
+        const metaDir = await this.useGraphAscend.loadGraphFileInfoList();
+        this.set('metaDir', metaDir);
+        document.addEventListener(
+            'contextMenuTag-changed',
+            (event: any) => this.set('jumpToNode', event.detail?.nodeName),
+            { passive: true },
+        );
+    }
 
     loadGraphData = (run, tag) => {
         if (this.eventSource) {

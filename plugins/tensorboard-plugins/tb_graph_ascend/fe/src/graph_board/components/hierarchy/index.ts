@@ -161,7 +161,7 @@ class Hierarchy extends PolymerElement {
     contextMenuItems: Array<ContextMenuItem> = [];
 
     @property({ type: Object })
-    hightLightMatchedNode: (matchedNodes, graphType) => void = (matchedNodes, graphType) => { };
+    hightLightMatchedNode: ((matchedNodes, graphType) => void) | null = null;
 
     useGraph: UseGraphType = useGraph();
     container: HTMLElement | null | undefined;
@@ -298,7 +298,7 @@ class Hierarchy extends PolymerElement {
         // 高亮匹配的节点
         if (this.graphType !== 'Single') {
             const matchedNodes = this.hierarchyObject[nodeName]?.matchedNodeLink;
-            this.hightLightMatchedNode(matchedNodes, this.graphType);
+            this.hightLightMatchedNode?.(matchedNodes, this.graphType);
         }
         this.renderGraph(this.hierarchyData, selectedNode, transform);
     }
@@ -449,7 +449,7 @@ class Hierarchy extends PolymerElement {
                     },
                 ];
                 const selectedNode = target.getAttribute('name');
-                const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '') || '';
+                const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '') ?? '';
                 const nodeData = this.hierarchyObject[nodeName];
                 if (!isEmpty(nodeData?.matchedDistributed)) {
                     const matchedDistributed = nodeData?.matchedDistributed;

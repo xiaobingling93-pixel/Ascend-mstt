@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export type HierarchyNodeType = {
+export interface HierarchyNodeType {
     x: number;
     y: number;
     width: number;
@@ -63,7 +63,7 @@ export interface UseGraphType {
     updateHierarchyData: (graphType: string) => Promise<any>;
 }
 
-export type TransformType = {
+export interface TransformType {
     x: number;
     y: number;
     scale: number;
