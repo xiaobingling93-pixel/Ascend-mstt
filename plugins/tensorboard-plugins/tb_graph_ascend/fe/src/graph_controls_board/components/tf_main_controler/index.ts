@@ -28,7 +28,6 @@ class MainController extends PolymerElement {
   // 定义模板
   static readonly template = html`
     <style>
-
       vaadin-text-field input {
         min-height: 0;
       }
@@ -62,25 +61,11 @@ class MainController extends PolymerElement {
     </style>
 
     <div class="control-holder">
-      
-        <vaadin-combo-box
-          label="目录"
-          items="[[runs]]"
-          value="{{selectedRun}}"
-        ></vaadin-combo-box>
-        <vaadin-combo-box
-          label="文件"
-          items="[[tags]]"
-          value="{{selectedTag}}"
-        ></vaadin-combo-box>
-        <vaadin-combo-box
-          label="MicroStep"
-          items="[[microsteps]]"
-          value="{{selectedMicroStep}}"
-        ></vaadin-combo-box>
+      <vaadin-combo-box label="目录" items="[[runs]]" value="{{selectedRun}}"></vaadin-combo-box>
+      <vaadin-combo-box label="文件" items="[[tags]]" value="{{selectedTag}}"></vaadin-combo-box>
+      <vaadin-combo-box label="MicroStep" items="[[microsteps]]" value="{{selectedMicroStep}}"></vaadin-combo-box>
     </div>
   `;
-
 
   @property({ type: Object })
   metaDir: MetaDirType = {};
@@ -89,68 +74,76 @@ class MainController extends PolymerElement {
   selection: SelectionType = {} as SelectionType;
 
   @property({ type: Array })
-  runs = []
+  runs = [];
 
   @property({ type: Array })
-  tags = []
+  tags = [];
 
   @property({ type: Array })
-  microsteps = []
+  microsteps = [];
 
   @property({ type: String })
-  selectedRun = ''
+  selectedRun = '';
 
   @property({ type: String })
-  selectedTag = ''
+  selectedTag = '';
 
   @property({ type: Number })
-  selectedMicroStep = -1
+  selectedMicroStep = -1;
 
   @observe('metaDir')
   _metaDirChanged(): void {
-    if (isEmpty(this.metaDir)) { return }
-    const runs = Object.keys(this.metaDir)
-    this.set('runs', runs)
-    this.set('selectedRun', runs[0])
+    if (isEmpty(this.metaDir)) {
+      return;
+    }
+    const runs = Object.keys(this.metaDir);
+    this.set('runs', runs);
+    this.set('selectedRun', runs[0]);
   }
 
   @observe('selectedRun')
   _selectedRunChanged(): void {
-    if (isEmpty(this.metaDir)) { return }
-    const tags = this.metaDir[this.selectedRun]
-    this.set('tags', tags)
-    this.set('selectedTag', tags[0])
+    if (isEmpty(this.metaDir)) {
+      return;
+    }
+    const tags = this.metaDir[this.selectedRun];
+    this.set('tags', tags);
+    this.set('selectedTag', tags[0]);
     const selection = {
       ...this.selection,
       run: this.selectedRun,
       tag: tags[0],
-      microStep: -1
-    }
-    this.set('selectedTag', tags[0])
-    this.set('selectedMicroStep', -1)
-    this.set('selection', selection)
+      microStep: -1,
+    };
+    this.set('selectedTag', tags[0]);
+    this.set('selectedMicroStep', -1);
+    this.set('selection', selection);
   }
 
   @observe('selectedTag')
   _selectedTagChanged(): void {
-    if (isEmpty(this.metaDir)) { return }
+    if (isEmpty(this.metaDir)) {
+      return;
+    }
     const selection = {
       ...this.selection,
       tag: this.selectedTag,
-      microStep: -1
-    }
-    this.set('selectedMicroStep', -1)
-    this.set('selection', selection)
+      microStep: -1,
+    };
+    this.set('selectedMicroStep', -1);
+    this.set('selection', selection);
   }
 
   @observe('selectedMicroStep')
   _selectedMicroStepChanged(): void {
-    if (isEmpty(this.metaDir)) { return }
+    if (isEmpty(this.metaDir)) {
+      return;
+    }
     const selection = {
       ...this.selection,
-      microStep: this.selectedMicroStep
-    }
-    this.set('selection', selection)
+      microStep: this.selectedMicroStep,
+    };
+    this.set('selection', selection);
   }
 
   override ready(): void {

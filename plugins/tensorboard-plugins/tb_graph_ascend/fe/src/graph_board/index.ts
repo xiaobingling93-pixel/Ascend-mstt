@@ -17,60 +17,60 @@
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
 import './components/legend/index';
-import './components/hierarchy/index'
+import './components/hierarchy/index';
 import { MIN_GRAPG_WIDTH } from '../common/constant';
 @customElement('graph-board')
 class MainGraph extends PolymerElement {
     static readonly template = html`
-    <style>
-      #container {
-        width: 100%;
-        height: 100%;
-        background: white;
-        display: flex;
-      }
-      #spliter{
-        width: 6px;
-        height: 100%;
-        border-left: 2px dashed rgb(143, 143, 143);
-        cursor: ew-resize;
-      }
-      #spliter:hover {
-        border-left: 2px dashed hsl(214, 100%, 43%);
-      }
-      .graph-hierarchy{
-        min-width: 320px;
-      }
-    </style>
-    <scene-legend></scene-legend>
-    <div id="container">
-        <graph-hierarchy
-            id="NPU"
-            class="graph-hierarchy"
-            graph-type=[[mainGraphType]]
-            colors="{{colors}}"   
-            minimap-vis="[[minimapVis.npu]]"   
-            selection="[[selection]]"
-            selected-node="{{selectedNode}}"
-            is-overflow-filter="{{isOverflowFilter}}"
-            hight-light-matched-node="[[hightLightMatchedNode]]"
-        ></graph-hierarchy>
-        <template is="dom-if" if="[[!isSingleGraph]]">
-            <div id='spliter'></div>
+        <style>
+            #container {
+                width: 100%;
+                height: 100%;
+                background: white;
+                display: flex;
+            }
+            #spliter {
+                width: 6px;
+                height: 100%;
+                border-left: 2px dashed rgb(143, 143, 143);
+                cursor: ew-resize;
+            }
+            #spliter:hover {
+                border-left: 2px dashed hsl(214, 100%, 43%);
+            }
+            .graph-hierarchy {
+                min-width: 320px;
+            }
+        </style>
+        <scene-legend></scene-legend>
+        <div id="container">
             <graph-hierarchy
-                id="Bench"
+                id="NPU"
                 class="graph-hierarchy"
-                graph-type="Bench"
+                graph-type="[[mainGraphType]]"
                 colors="{{colors}}"
-                minimap-vis="[[minimapVis.bench]]"    
+                minimap-vis="[[minimapVis.npu]]"
                 selection="[[selection]]"
                 selected-node="{{selectedNode}}"
                 is-overflow-filter="{{isOverflowFilter}}"
                 hight-light-matched-node="[[hightLightMatchedNode]]"
             ></graph-hierarchy>
-        </template>
-    </div>
-  `;
+            <template is="dom-if" if="[[!isSingleGraph]]">
+                <div id="spliter"></div>
+                <graph-hierarchy
+                    id="Bench"
+                    class="graph-hierarchy"
+                    graph-type="Bench"
+                    colors="{{colors}}"
+                    minimap-vis="[[minimapVis.bench]]"
+                    selection="[[selection]]"
+                    selected-node="{{selectedNode}}"
+                    is-overflow-filter="{{isOverflowFilter}}"
+                    hight-light-matched-node="[[hightLightMatchedNode]]"
+                ></graph-hierarchy>
+            </template>
+        </div>
+    `;
 
     @property({ type: Boolean })
     isSingleGraph = false;
@@ -83,9 +83,9 @@ class MainGraph extends PolymerElement {
 
     @observe('isSingleGraph')
     computeMainGraphType = () => {
-        const mainGraphType = this.isSingleGraph ? "Single" : "NPU";
+        const mainGraphType = this.isSingleGraph ? 'Single' : 'NPU';
         this.set('mainGraphType', mainGraphType);
-    }
+    };
 
     override ready() {
         super.ready();
@@ -99,28 +99,32 @@ class MainGraph extends PolymerElement {
             const benchGraph = this.shadowRoot?.querySelector('#Bench') as any;
             benchGraph?.initHhierarchy(selectedNode);
         }
-    }
+    };
 
     fitScreen = () => {
         const hierarchy = this.shadowRoot?.querySelectorAll('.graph-hierarchy') as any;
-        if (!hierarchy) { return };
+        if (!hierarchy) {
+            return;
+        }
         hierarchy.forEach((item) => {
             item.fitScreen();
-        })
-    }
+        });
+    };
 
     hightLightMatchedNode = (matchedNodes: Array<string>, graphType: string) => {
         if (graphType === 'NPU') {
             const benchGraph = this.shadowRoot?.querySelector('#Bench') as any;
-            benchGraph?.hightLightNode?.(matchedNodes)
+            benchGraph?.hightLightNode?.(matchedNodes);
         } else if (graphType === 'Bench') {
             const npuhGraph = this.shadowRoot?.querySelector('#NPU') as any;
-            npuhGraph?.hightLightNode?.(matchedNodes)
+            npuhGraph?.hightLightNode?.(matchedNodes);
         }
-    }
+    };
 
     bindSpliterEvent = () => {
-        if (!this.shadowRoot || this.isSingleGraph) { return };
+        if (!this.shadowRoot || this.isSingleGraph) {
+            return;
+        }
         const spliter = this.shadowRoot.querySelector('#spliter');
         const container = this.shadowRoot.querySelector('#container');
         const NPU = this.shadowRoot.querySelector('#NPU') as HTMLElement;
@@ -136,10 +140,14 @@ class MainGraph extends PolymerElement {
 
         // 鼠标移动时调整宽度
         function onMouseMove(e) {
-            if (!isDragging) { return };
+            if (!isDragging) {
+                return;
+            }
             // 获取鼠标相对于容器的位置
             const containerRect = container?.getBoundingClientRect();
-            if (!containerRect) { return };
+            if (!containerRect) {
+                return;
+            }
             const newWidth = e.clientX - containerRect.left;
             // 限制最小宽度
             if (newWidth > MIN_GRAPG_WIDTH && newWidth < containerRect.width - MIN_GRAPG_WIDTH) {
@@ -153,5 +161,5 @@ class MainGraph extends PolymerElement {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         }
-    }
+    };
 }

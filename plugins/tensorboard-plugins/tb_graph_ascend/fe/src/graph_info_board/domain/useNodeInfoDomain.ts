@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { fetchPbTxt, safeJSONParse } from "../../utils";
+import { fetchPbTxt, safeJSONParse } from '../../utils';
 
 const useNodeInfoDomain = (): { getMatchNodeInfo: (nodeInfo: any, metaData: any) => Promise<any> } => {
   const getMatchNodeInfo = async (nodeInfo: any, metaData: any): Promise<any> => {
