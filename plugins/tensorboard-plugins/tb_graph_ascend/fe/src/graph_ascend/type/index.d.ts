@@ -31,7 +31,8 @@ export interface SelectionType {
 export interface GraphConfigType {
     tooltips: string;
     colors: Record<string, {
-        value: number[]; color: string
+        value: number[];
+        color: string;
     }>,
     overflowCheck: boolean;
     microSteps: number;
