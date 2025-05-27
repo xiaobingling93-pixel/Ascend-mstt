@@ -117,6 +117,12 @@ def fusion_attention_forward(forward_params):
     pse = forward_params.pse
     scale = forward_params.scale
     keep_prob = forward_params.keep_prob
+
+    # 除零风险拦截：keep_prob 为 0 时会导致除零错误
+    if keep_prob == 0:
+        raise ValueError("fusion_attention_forward: keep_prob cannot be zero to avoid division by zero.")
+
+
     qk = calculate_qk(q, k, atten_mask, pse, scale)
     softmax_res, softmax_max, softmax_sum = softmax_forward(qk)
     if drop_mask is None or len(drop_mask.shape) == 0:
@@ -137,6 +143,11 @@ def fusion_attention_backward(backward_params):
     pse = backward_params.pse
     scale = backward_params.scale
     keep_prob = backward_params.keep_prob
+
+    # 除零风险拦截：keep_prob 为 0 时会导致除零错误
+    if keep_prob == 0:
+        raise ValueError("fusion_attention_backward: keep_prob cannot be zero to avoid division by zero.")
+
     dp = torch.matmul(dx, v.permute(0, 1, 3, 2))
     if drop_mask is None or len(drop_mask.shape) == 0:
         drop_res = softmax_res.permute(0, 1, 3, 2)
@@ -164,23 +175,35 @@ def parse_bsnd_args(query, key, head_num, input_layout):
         if input_layout == "BSH":
             b, s1, h1 = query.shape
             _, s2, h2 = key.shape
+            if n1 == 0:
+                raise ValueError("parse_bsnd_args: head_num (n1) cannot be zero to avoid division by zero.")
             d = h1 // n1
+            if d == 0:
+                raise ValueError("parse_bsnd_args: computed head dimension (d) is zero, division by zero risk.")
             n2 = h2 // d
         elif input_layout == "SBH":
             s1, b, h1 = query.shape
             s2, _, h2 = key.shape
+            if n1 == 0:
+                raise ValueError("parse_bsnd_args: head_num (n1) cannot be zero to avoid division by zero.")
             d = h1 // n1
+            if d == 0:
+                raise ValueError("parse_bsnd_args: computed head dimension (d) is zero, division by zero risk.")
             n2 = h2 // d
         elif input_layout == "BSND":
             b, s1, n1, d = query.shape
             _, s2, n2, _ = key.shape
             h1 = n1 * d
             h2 = n2 * d
+            if d == 0:
+                raise ValueError("parse_bsnd_args: head dimension (d) is zero, division by zero risk.")
         elif input_layout == "BNSD":
             b, n1, s1, d = query.shape
             _, n2, s2, _ = key.shape
             h1 = n1 * d
             h2 = n2 * d
+            if d == 0:
+                raise ValueError("parse_bsnd_args: head dimension (d) is zero, division by zero risk.")
     except Exception as e:
         raise ValueError(f"query.shape: {query.shape}, key.shape: {key.shape}, parse_bsnd_args error: {e}") from e
 
@@ -446,6 +469,8 @@ def npu_fusion_attention_forward_patch(*args, **kwargs):
     input_layout = get_input_layout(*args, **kwargs)
 
     b, s1, s2, n1, n2, d, h1, h2, dtype = parse_bsnd_args(args[0], args[1], head_num, input_layout)
+    if d == 0:
+        raise ValueError("npu_fusion_attention_forward_patch: head dimension (d) is zero, division by zero risk.")
     if n1 == n2 and s1 == s2:
         logger.debug(f"running case : BNSD = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
@@ -478,6 +503,8 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
         raise ValueError(f"Unsupported npu_fusion_attention_grad args {args}.")
 
     b, s1, s2, n1, n2, d, h1, h2, dtype = parse_bsnd_args(args[0], args[1], args[4], args[5])
+    if d == 0:
+        raise ValueError("npu_fusion_attention_backward_patch: head dimension (d) is zero, division by zero risk.")
     if n1 == n2 and s1 == s2:
         logger.info(f"running case : bnsd = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
