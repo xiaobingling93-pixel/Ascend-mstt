@@ -436,11 +436,11 @@ class CSVWriterWithAD(BaseWriterWithAD):
             value = scalar_value
         self.context_dict[name].append(value)
 
-    def write_metrics(self, ops, metric_value, step, prefix=''):
+    def write_metrics(self, ops, metric_value, step, prefix='', **kwargs):
         super().write_metrics(ops, metric_value, step, prefix='')
 
-        if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD]:
-            self.header = MonitorConst.CSV_HEADER_XY + ops
+        if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD] or kwargs.get("micro_step"):
+            self.header = MonitorConst.CSV_HEADER_MICRO_STEP + ops
         else:
             self.header = MonitorConst.CSV_HEADER + ops
         self.write_csv(prefix, step)
