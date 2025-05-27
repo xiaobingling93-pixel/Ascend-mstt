@@ -17,6 +17,7 @@
 import '@vaadin/combo-box';
 import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
+import { Notification } from '@vaadin/notification';
 import { customElement, property, observe } from '@polymer/decorators';
 import { fetchPbTxt, safeJSONParse } from '../../../utils';
 import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects } from '../../../common/constant';
@@ -762,7 +763,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const precisionmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
         this.set('precisionmenu', precisionmenu);
       } catch (e) {
-        console.error('Get precision menu failed, please check the toggleCheckbox and the data in vis file');
+        Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+          position: 'middle',
+          duration: 4000,
+          theme: 'error',
+        });
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
@@ -788,7 +793,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const screenStr = fetchPbTxt(screenPath);
         this.overflowmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
       } catch (e) {
-        console.error('Get overflow menu failed, please check the toggleCheckbox and the data in vis file');
+        Notification.show(`获取溢出菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+          position: 'middle',
+          duration: 4000,
+          theme: 'error',
+        });
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);

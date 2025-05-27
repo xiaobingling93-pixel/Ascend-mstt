@@ -72,3 +72,9 @@ export const NODE_TYPE_STYLES = {
     [NODE_TYPE.API_LIST]: { strokeDasharray: '15,1', rx: '5', ry: '5' },
     [NODE_TYPE.MULTI_COLLECTION]: { strokeDasharray: '2,1', rx: '5', ry: '5' },
 };
+
+export const PREFIX_MAP = {
+  Single: '',
+  NPU: NPU_PREFIX,
+  Bench: BENCH_PREFIX
+};

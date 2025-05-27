@@ -23,7 +23,7 @@ import '../graph_board/index';
 import '../graph_info_board/index';
 import '../graph_controls_board/index';
 import '../common/graph-board-layout';
-import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType } from './type';
+import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
 
 @customElement('graph-ascend')
 class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
@@ -283,15 +283,15 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         const { success, data } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
         const allNodeList = data as GraphAllNodeType;
         if (success) {
-            const nodelist = {};
-            const unmatched = {};
+            const nodelist = {} as NodeListType;
+            const unmatched = {} as UnmatchedNodeType;
             if (this.isSingleGraph) {
-                nodelist['npu'] = allNodeList?.npuNodeList;
+                nodelist.npu = allNodeList?.npuNodeList;
             } else {
-                nodelist['npu'] = allNodeList?.npuNodeList;
-                nodelist['bench'] = allNodeList?.benchNodeList;
-                unmatched['npuNodeList'] = allNodeList?.npuUnMatchNodes;
-                unmatched['benchNodeList'] = allNodeList?.benchUnMatchNodes;
+                nodelist.npu = allNodeList?.npuNodeList;
+                nodelist.bench = allNodeList?.benchNodeList;
+                unmatched.npuNodeList = allNodeList?.npuUnMatchNodes;
+                unmatched.benchNodeList = allNodeList?.benchUnMatchNodes;
             }
             this.set('npuMatchNodes', allNodeList?.npuMatchNodes);
             this.set('benchMatchNodes', allNodeList?.benchMatchNodes);

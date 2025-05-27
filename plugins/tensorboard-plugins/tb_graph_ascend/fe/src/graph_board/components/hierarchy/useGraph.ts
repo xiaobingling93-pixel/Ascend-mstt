@@ -56,7 +56,7 @@ const useGraph = (): UseGraphType => {
             let node: HierarchyNodeType | undefined = d;
             while (node?.parentNode) {
                 const parent = data.find(
-                    (d) => node?.parentNode === d.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''),
+                    (dInner) => node?.parentNode === dInner.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''),
                 );
                 if (parent) {
                     parentsVirtualNodes.push(parent);
@@ -238,7 +238,7 @@ const useGraph = (): UseGraphType => {
             .transition()
             .duration(DURATION_TIME)
             .attr('opacity', 1)
-            .attr('x', (d: any) => d.x + d.width / 2)
+            .attr('x', (d: any) => d.x + (d.width / 2))
             .attr('y', (d: any) => d.y + 8);
 
         // 添加新文本
@@ -246,7 +246,7 @@ const useGraph = (): UseGraphType => {
             .enter()
             .append('text')
             .attr('name', (d: any) => d.name)
-            .attr('x', (d: any) => d.x + d.width / 2)
+            .attr('x', (d: any) => d.x + (d.width / 2))
             .attr('y', (d: any) => d.y + 8)
             .attr('dy', '0.35em')
             .attr('text-anchor', 'middle')
@@ -272,10 +272,10 @@ const useGraph = (): UseGraphType => {
 
     const changeNodeExpandState = async (nodeInfo: any, metaData: any): Promise<any> => {
         try {
-            metaData = safeJSONParse(JSON.stringify(metaData));
+            const metaDataSafe = safeJSONParse(JSON.stringify(metaData));
             const params = {
                 nodeInfo: JSON.stringify(nodeInfo),
-                metaData: JSON.stringify(metaData),
+                metaData: JSON.stringify(metaDataSafe),
             };
             const result = await request({
                 url: 'changeNodeExpandState',

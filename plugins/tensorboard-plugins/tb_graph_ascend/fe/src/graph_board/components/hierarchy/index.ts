@@ -30,6 +30,7 @@ import {
     NODE_TYPE,
     MAX_SCALE,
     MIN_SCALE,
+    PREFIX_MAP,
 } from '../../../common/constant';
 import '../minimap/index';
 import '@vaadin/context-menu';
@@ -160,13 +161,13 @@ class Hierarchy extends PolymerElement {
     contextMenuItems: Array<ContextMenuItem> = [];
 
     @property({ type: Object })
-    hightLightMatchedNode: (matchedNodes, graphType) => void = (matchedNodes, graphType) => {};
+    hightLightMatchedNode: (matchedNodes, graphType) => void = (matchedNodes, graphType) => { };
 
     useGraph: UseGraphType = useGraph();
     container: HTMLElement | null | undefined;
     graph: HTMLElement | null | undefined;
     minimap: minimap.Minimap | null | undefined;
-    cleanEventLisetener: () => void = () => {};
+    cleanEventLisetener: () => void = () => { };
 
     @observe('selectedNode')
     observeSelectNode() {
@@ -215,8 +216,8 @@ class Hierarchy extends PolymerElement {
     }
 
     initMinimap = () => {
-        const minimap = this.shadowRoot?.querySelector('#minimap') as HTMLElement;
-        if (!this.container || !minimap) {
+        const minimapEle = this.shadowRoot?.querySelector('#minimap') as HTMLElement;
+        if (!this.container || !minimapEle) {
             return;
         }
         const transformStr = this.container.getAttribute('transform') || '';
@@ -236,7 +237,7 @@ class Hierarchy extends PolymerElement {
             this.minimap?.zoom((d3 as any).event.transform); // Notify the minimap.
         });
 
-        this.minimap = (minimap as any)?.init(this.graph, this.container, mainZoom, 160, 10);
+        this.minimap = (minimapEle as any)?.init(this.graph, this.container, mainZoom, 160, 10);
         this.minimap?.zoom(newTransform);
     };
 
@@ -246,10 +247,10 @@ class Hierarchy extends PolymerElement {
         }
         const container = d3.select(this.container as HTMLElement);
         // 数据预处理
-        const prefix = this.graphType === 'Single' ? '' : this.graphType === 'NPU' ? NPU_PREFIX : BENCH_PREFIX;
-        selectedNode = selectedNode.startsWith(prefix) ? selectedNode : `${prefix}${selectedNode}`; // 加上前缀
+        const prefix = PREFIX_MAP[this.graphType]
+        const selectedNodeName = selectedNode.startsWith(prefix) ? selectedNode : `${prefix}${selectedNode}`; // 加上前缀
         const config = { colors: this.colors, isOverflowFilter: this.isOverflowFilter, graphType: this.graphType };
-        const renderData = this.useGraph.preProcessData(data, selectedNode, config, transform);
+        const renderData = this.useGraph.preProcessData(data, selectedNodeName, config, transform);
         this.useGraph.bindInnerRect(container, renderData);
         this.useGraph.bindOuterRect(container, renderData);
         this.useGraph.bindText(container, renderData);
@@ -412,7 +413,7 @@ class Hierarchy extends PolymerElement {
                         : matchedPrefix + matchedNodeName; // 加上前缀
                     this.set('selectedNode', matchedNodeName); // 选中对应测节点就能触发展开和选中
                     const transform = this.changeNodeCenter(selectedNode.name);
-                    this.renderGraph(this.hierarchyData, selectedNode.name, transform); //更新selectedNode 会导致当前节点失去高亮显示
+                    this.renderGraph(this.hierarchyData, selectedNode.name, transform); // 更新selectedNode 会导致当前节点失去高亮显示
                 } else {
                     Notification.show(`展开失败：当前节点及其父节点无匹配节点`, {
                         position: 'middle',
@@ -456,14 +457,13 @@ class Hierarchy extends PolymerElement {
                     const nodeInfo = matchedDistributed?.nodes_info || {};
                     const rankIds = Object.keys(nodeInfo);
                     const children = rankIds.map((rankId) => {
-                        const comunicate_node = nodeInfo[rankId];
-                        const precision_index = comunicate_node?.[0];
-                        const nodeName = comunicate_node?.[1];
-                        const prefix =
-                            this.graphType === 'Single' ? '' : this.graphType === 'NPU' ? NPU_PREFIX : BENCH_PREFIX;
+                        const comunicateNode = nodeInfo[rankId];
+                        const precision_index = comunicateNode?.[0];
+                        const comunicateNodeName = comunicateNode?.[1];
+                        const prefix = PREFIX_MAP[this.graphType]
                         return {
                             component: this.useGraph.createComponent(`rank${rankId}`, precision_index, this.colors),
-                            nodeName: `${prefix}${nodeName}`,
+                            nodeName: `${prefix}${comunicateNodeName}`,
                             rankId: Number(rankId),
                             type: DATA_COMMUNICATION,
                         };
@@ -667,8 +667,8 @@ class Hierarchy extends PolymerElement {
         if (!nodeName) {
             return this.getContainerTransform();
         }
-        nodeName = nodeName?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
-        const selectedNode = this.hierarchyObject[nodeName]; // 获取当前节点
+        const nodeNameReal = nodeName?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
+        const selectedNode = this.hierarchyObject[nodeNameReal]; // 获取当前节点
         if (!selectedNode) {
             return this.getContainerTransform();
         }
@@ -677,8 +677,8 @@ class Hierarchy extends PolymerElement {
         const clientWidth = this.graph?.clientWidth || 0;
         const clientHeight = this.graph?.clientHeight || 0;
         const root = this.hierarchyObject[this.rootName];
-        const newX = clientWidth / 2 - (root?.width * initialTransform.scale) / 2;
-        const newY = clientHeight / 2 - (selectedNode?.y * initialTransform.scale + 7.5) - 100;
+        const newX = (clientWidth / 2) - ((root?.width * initialTransform.scale) / 2);
+        const newY = (clientHeight / 2) - ((selectedNode?.y * initialTransform.scale) + 7.5) - 100;
         changeGraphPosition(this.container as HTMLElement, newX, newY, initialTransform.scale, 350);
         const newTransform = d3.zoomIdentity.translate(newX, newY).scale(initialTransform.scale);
         this.minimap?.zoom(newTransform);

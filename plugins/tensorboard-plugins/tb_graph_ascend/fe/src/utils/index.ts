@@ -74,8 +74,7 @@ export function maybeTruncateString(content: string, fontSize: number, container
   // 逆向二分查找定位截断点
   while (leftBound <= rightBound) {
     const currentIndex = Math.floor((leftBound + rightBound) / 2);
-    const testString = content.slice(0, currentIndex) + '…';
-
+    const testString = `${content.slice(0, currentIndex)}…`;
     if (measureTextWidth(testString, fontSize) <= containerWidth) {
       optimalIndex = currentIndex;
       leftBound = currentIndex + 1;
@@ -83,10 +82,10 @@ export function maybeTruncateString(content: string, fontSize: number, container
       rightBound = currentIndex - 1;
     }
   }
-
   // 边界条件处理
-  return optimalIndex > 0 ? content.substring(0, optimalIndex) + '…' : content[0] + '…'; // 极端情况保留首字符
+  return optimalIndex > 0 ? `${content.substring(0, optimalIndex)}…` : `${content[0]}…`; // 极端情况保留首字符
 }
+
 /**
  * 计算文本宽度
  * @param text 文本内容
@@ -115,17 +114,18 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
   }
 
   // 匹配 translate(X,Y) 部分
-  const translateMatch = transformStr.match(/translate\(([^,]+),([^)]+)\)/);
+  const translateMatch = transformStr.match(/translate\((?<x>[^,]+),(?<y>[^)]+)\)/);
   if (translateMatch) {
-    result.x = parseFloat(translateMatch[1].trim());
-    result.y = parseFloat(translateMatch[2].trim());
+    result.x = parseFloat(translateMatch.groups!.x.trim());
+    result.y = parseFloat(translateMatch.groups!.y.trim());
   }
 
   // 匹配 scale(Z) 部分
-  const scaleMatch = transformStr.match(/scale\(([^)]+)\)/);
+  const scaleMatch = transformStr.match(/scale\((?<scaleValue>[^)]+)\)/);
   if (scaleMatch) {
-    result.scale = parseFloat(scaleMatch[1].trim());
+    result.scale = parseFloat(scaleMatch.groups!.scaleValue.trim());
   }
+
 
   return result;
 }
@@ -143,10 +143,10 @@ export function changeGraphPosition(element: HTMLElement, x, y, scale, duration 
 
 export function darkenColor(color: string, amount: number): string {
   // 统一提取 RGB(A) 分量
-  let r: number,
-    g: number,
-    b: number,
-    a: number = 1;
+  let r: number;
+  let g: number;
+  let b: number;
+  let a: number = 1;
 
   // 处理十六进制格式
   if (color.startsWith('#')) {
@@ -182,7 +182,7 @@ export function darkenColor(color: string, amount: number): string {
   }
 
   // 应用变暗逻辑（考虑 Alpha 通道）
-  const applyDarkening = (value: number) => Math.max(0, Math.floor(value * a - amount));
+  const applyDarkening = (value: number) => Math.max(0, Math.floor((value * a) - amount));
 
   // 转换为十六进制
   const toHex = (value: number) => Math.min(255, Math.max(0, value)).toString(16).padStart(2, '0');
@@ -205,5 +205,5 @@ export function formatBytes(bytes) {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))}  ${sizes[i]}`;
 }

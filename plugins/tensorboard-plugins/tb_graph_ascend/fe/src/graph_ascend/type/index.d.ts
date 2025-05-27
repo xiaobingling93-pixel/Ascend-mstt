@@ -45,3 +45,13 @@ export interface GraphAllNodeType {
     npuMatchNodes: string[];
     benchMatchNodes: string[];
 }
+
+export interface NodeListType {
+    npu: string[];
+    bench: string[];
+}
+
+export interface UnmatchedNodeType {
+    npuNodeList: string[];
+    benchNodeList: string[];
+}

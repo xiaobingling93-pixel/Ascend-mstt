@@ -463,7 +463,7 @@ class Legend extends PolymerElement {
       });
       return;
     }
-    if (!this.selectedConfigFile || this.selectedConfigFile == '未选择') {
+    if (!this.selectedConfigFile || this.selectedConfigFile === '未选择') {
       return;
     }
     this.set('matchConfigLoading', true);
