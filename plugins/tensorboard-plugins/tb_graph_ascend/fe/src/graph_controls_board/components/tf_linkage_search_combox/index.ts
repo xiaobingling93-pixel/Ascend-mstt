@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import "@vaadin/button";
-import "@vaadin/details";
-import "@vaadin/combo-box";
-import "@vaadin/select";
-import "@vaadin/text-field";
-import { NPU_PREFIX, BENCH_PREFIX } from "../../../common/constant";
-import { PolymerElement, html } from "@polymer/polymer";
-import { customElement, property, observe } from "@polymer/decorators";
-import "@vaadin/progress-bar";
-import "../tf_search_combox/index";
-@customElement("tf-linkage-search-combox")
+import '@vaadin/button';
+import '@vaadin/details';
+import '@vaadin/combo-box';
+import '@vaadin/select';
+import '@vaadin/text-field';
+import { NPU_PREFIX, BENCH_PREFIX } from '../../../common/constant';
+import { PolymerElement, html } from '@polymer/polymer';
+import { customElement, property, observe } from '@polymer/decorators';
+import '@vaadin/progress-bar';
+import '../tf_search_combox/index';
+@customElement('tf-linkage-search-combox')
 class Legend extends PolymerElement {
   // 定义模板
   static readonly template = html`
@@ -112,7 +112,7 @@ class Legend extends PolymerElement {
   `;
 
   @property({ type: String, notify: true })
-  selectedNode = "";
+  selectedNode = '';
 
   @property({ type: Boolean })
   isCompareGraph: boolean = true;
@@ -121,71 +121,69 @@ class Legend extends PolymerElement {
   nodelist;
 
   @property({ type: String })
-  selectedMenuNode = "";
+  selectedMenuNode = '';
 
   @property({ type: Array })
   menuItem = [];
 
   @property({ type: String })
-  searchText = "";
+  searchText = '';
 
   @property({ type: String })
-  selectedSide = "npu";
+  selectedSide = 'npu';
 
   @property({ type: Array })
   menuSideItem = [
-    { label: "调试侧", value: "npu" },
-    { label: "标杆侧", value: "bench" },
+    { label: '调试侧', value: 'npu' },
+    { label: '标杆侧', value: 'bench' },
   ];
 
-  @observe("selectedSide")
+  @observe('selectedSide')
   _observeSelectSide(): void {
     if (this.nodelist) {
-      this.set("menuItem", this.nodelist[this.selectedSide] || []);
-      this.set("searchText", "");
-      this.set("selectedMenuNode", "");
+      this.set('menuItem', this.nodelist[this.selectedSide] || []);
+      this.set('searchText', '');
+      this.set('selectedMenuNode', '');
     }
   }
 
-  @observe("nodelist")
+  @observe('nodelist')
   _observeMenu(): void {
-    this.set("selectedMenuNode", "");
-    this.set("selectedSide", "npu");
-    this.set("searchText", "");
-    this.set("menuItem", this.nodelist[this.selectedSide] || []);
+    this.set('selectedMenuNode', '');
+    this.set('selectedSide', 'npu');
+    this.set('searchText', '');
+    this.set('menuItem', this.nodelist[this.selectedSide] || []);
   }
 
-  @observe("isCompareGraph")
+  @observe('isCompareGraph')
   _observeRenderHierarchy(): void {
-    this.updateStyles({
-      "--select-border-color": this.isCompareGraph ? "#0d0d0d" : "white",
-    });
+    this.updateStyles({ '--select-border-color': this.isCompareGraph ? '#0d0d0d' : 'white' });
   }
 
   _onSelectedMenuNode = (): void => {
-    let prefix = "";
+    let prefix = '';
     if (this.isCompareGraph) {
-      if (this.selectedSide === "npu") {
+      if (this.selectedSide === 'npu') {
         prefix = NPU_PREFIX;
       } else {
         prefix = BENCH_PREFIX;
       }
     }
     const node = prefix + this.selectedMenuNode;
-    this.set("selectedNode", node);
+    this.set('selectedNode', node);
   };
 
   _onChangeSearchText(): void {
     const allNodeItems = this.nodelist[this.selectedSide] as Array<string>;
     if (!this.searchText) {
-      this.set("menuItem", allNodeItems);
+      this.set('menuItem', allNodeItems);
       return;
     }
     const searchTextLower = this.searchText.trim().toLowerCase(); // 将搜索文本转换为小写
     const filterItem = allNodeItems?.filter((item: string) => {
       return item.toLowerCase().indexOf(searchTextLower) !== -1; // 将目标文本转换为小写
     });
-    this.set("selectedMenuNode", "");
-    this.set("menuItem", filterItem);
+    this.set('selectedMenuNode', '');
+    this.set('menuItem', filterItem);
   }
 }

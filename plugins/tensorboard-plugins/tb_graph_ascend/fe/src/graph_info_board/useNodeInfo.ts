@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { isEmpty, cloneDeep } from "lodash";
-import useNodeInfoDomain from "./domain/useNodeInfoDomain";
-import type { NodeInfoResult, NodeInfoType } from "./type";
-import { BENCH_PREFIX, NPU_PREFIX } from "../common/constant";
-import { safeJSONParse } from "../utils";
+import { isEmpty, cloneDeep } from 'lodash';
+import useNodeInfoDomain from './domain/useNodeInfoDomain';
+import type { NodeInfoResult, NodeInfoType } from './type';
+import { BENCH_PREFIX, NPU_PREFIX } from '../common/constant';
+import { safeJSONParse } from '../utils';
 
 export interface UseNodeInfoType {
   getNodeInfo: (
@@ -25,21 +25,18 @@ export interface UseNodeInfoType {
       nodeName: string;
       nodeType: string;
     },
-    metaData: any
+    metaData: any,
   ) => Promise<NodeInfoResult>;
   getIoDataSet: (
     npuNode: any,
     benchNode: any,
-    type: "inputData" | "outputData"
+    type: 'inputData' | 'outputData',
   ) => {
     matchedIoDataset: Array<Record<string, unknown>>;
     unMatchedNpuIoDataset: Array<Record<string, unknown>>;
     unMatchedBenchIoDataset: Array<Record<string, unknown>>;
   };
-  getDetailDataSet: (
-    npuNode: any,
-    benchNode: any
-  ) => Array<Record<string, unknown>>;
+  getDetailDataSet: (npuNode: any, benchNode: any) => Array<Record<string, unknown>>;
 }
 
 const useNodeInfo = (): UseNodeInfoType => {
@@ -53,12 +50,9 @@ const useNodeInfo = (): UseNodeInfoType => {
    */
   const getNodeInfo = async (
     nodeInfo: { nodeName: string; nodeType: string },
-    metaData: any
+    metaData: any,
   ): Promise<NodeInfoResult> => {
-    const mactchResult = await useNodeInfoService.getMatchNodeInfo(
-      nodeInfo,
-      metaData
-    );
+    const mactchResult = await useNodeInfoService.getMatchNodeInfo(nodeInfo, metaData);
     if (mactchResult.success && mactchResult.data) {
       mactchResult.data.npu = convertNodeInfo(mactchResult.data?.npu); // 提取有效数据，统一命名
       mactchResult.data.bench = convertNodeInfo(mactchResult.data?.bench); // 提取有效数据，统一命名
@@ -74,9 +68,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       name: nodeInfo.id,
       inputData: nodeInfo.input_data,
       outputData: nodeInfo.output_data,
-      stackData: !isEmpty(nodeInfo.stack_info)
-        ? JSON.stringify(nodeInfo.stack_info)
-        : "",
+      stackData: !isEmpty(nodeInfo.stack_info) ? JSON.stringify(nodeInfo.stack_info) : '',
       suggestions: nodeInfo.suggestions,
     };
   };
@@ -91,7 +83,7 @@ const useNodeInfo = (): UseNodeInfoType => {
   const getIoDataSet = (
     npuNode: any,
     benchNode: any,
-    type: "inputData" | "outputData"
+    type: 'inputData' | 'outputData',
   ): {
     matchedIoDataset: Array<Record<string, unknown>>;
     unMatchedNpuIoDataset: Array<Record<string, unknown>>;
@@ -104,14 +96,8 @@ const useNodeInfo = (): UseNodeInfoType => {
         unMatchedBenchIoDataset: [],
       };
     }
-    const npuNodeName = npuNode?.name?.replace(
-      new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`),
-      ""
-    );
-    const benchNodeName = benchNode?.name?.replace(
-      new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`),
-      ""
-    );
+    const npuNodeName = npuNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
+    const benchNodeName = benchNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
     const npuData = cloneDeep(npuNode?.[type]); // 获取当前节点的输入数据
     const benchData = cloneDeep(benchNode?.[type]); // 获取匹配节点的输入数据
 
@@ -125,12 +111,12 @@ const useNodeInfo = (): UseNodeInfoType => {
       const npuKey = npuKeys[i];
       const benchKey = benchKeys[i];
       matchedIoDataset.push({
-        name: npuKey.replace(`${npuNodeName}.`, ""),
+        name: npuKey.replace(`${npuNodeName}.`, ''),
         isMatched: true,
         ...npuData[npuKey],
       });
       matchedIoDataset.push({
-        name: benchKey.replace(`${benchNodeName}.`, ""),
+        name: benchKey.replace(`${benchNodeName}.`, ''),
         isBench: true,
         isMatched: true,
         ...benchData[benchKey],
@@ -139,17 +125,17 @@ const useNodeInfo = (): UseNodeInfoType => {
       delete benchData[benchKey];
     }
     Object.keys(npuData || {}).forEach((key) => {
-      if (npuData[key] !== "None") {
+      if (npuData[key] !== 'None') {
         unMatchedNpuIoDataset.push({
-          name: key.replace(`${npuNodeName}.`, ""),
+          name: key.replace(`${npuNodeName}.`, ''),
           ...npuData[key],
         });
       }
     });
     Object.keys(benchData || {}).forEach((key) => {
-      if (benchData[key] !== "None") {
+      if (benchData[key] !== 'None') {
         unMatchedBenchIoDataset.push({
-          name: key.replace(`${benchNodeName}.`, ""),
+          name: key.replace(`${benchNodeName}.`, ''),
           isBench: true,
           ...benchData[key],
         });
@@ -158,33 +144,26 @@ const useNodeInfo = (): UseNodeInfoType => {
     return { matchedIoDataset, unMatchedNpuIoDataset, unMatchedBenchIoDataset };
   };
 
-  const getDetailDataSet = (
-    npuNode: any,
-    benchNode: any
-  ): Array<Record<string, unknown>> => {
+  const getDetailDataSet = (npuNode: any, benchNode: any): Array<Record<string, unknown>> => {
     if (isEmpty(npuNode) && isEmpty(benchNode)) {
       return [];
     }
-    const nodeName = `NPU节点：${npuNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), "")}`;
-    const benchNodeName = `标杆节点：${benchNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), "")}`;
+    const nodeName = `NPU节点：${npuNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')}`;
+    const benchNodeName = `标杆节点：${benchNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')}`;
     const detailData: Array<Record<string, unknown>> = [];
     // 获取stackInfo
     const stackInfo: Record<string, unknown> = {};
     const npustackInfo = npuNode?.stackData;
     const benchstackInfo = benchNode?.stackData;
-    const title = "title";
+    const title = 'title';
     if (!isEmpty(npustackInfo)) {
-      stackInfo[nodeName] = safeJSONParse(
-        npustackInfo.replace(/'/g, '"')
-      )?.join("\n");
+      stackInfo[nodeName] = safeJSONParse(npustackInfo.replace(/'/g, '"'))?.join('\n');
     }
     if (!isEmpty(benchstackInfo)) {
-      stackInfo[benchNodeName] = safeJSONParse(
-        benchstackInfo.replace(/'/g, '"')
-      );
+      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"'));
     }
     if (!isEmpty(stackInfo)) {
-      stackInfo[title] = "stackInfo";
+      stackInfo[title] = 'stackInfo';
       detailData.push(stackInfo);
     }
     // 获取suggestions
@@ -198,7 +177,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       suggestion[benchNodeName] = converObjectToString(benchsuggestion);
     }
     if (!isEmpty(suggestion)) {
-      suggestion[title] = "suggestions";
+      suggestion[title] = 'suggestions';
       detailData.push(suggestion);
     }
     return detailData;
@@ -207,7 +186,7 @@ const useNodeInfo = (): UseNodeInfoType => {
   const converObjectToString = (obj: any): string => {
     return Object.entries(obj)
       .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
+      .join('\n');
   };
 
   return {

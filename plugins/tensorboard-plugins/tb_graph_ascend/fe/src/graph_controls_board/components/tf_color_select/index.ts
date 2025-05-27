@@ -14,23 +14,18 @@
  * limitations under the License.
  */
 
-import "@vaadin/combo-box";
-import * as _ from "lodash";
-import { PolymerElement, html } from "@polymer/polymer";
-import { customElement, property, observe } from "@polymer/decorators";
-import { fetchPbTxt, safeJSONParse } from "../../../utils";
-import {
-  NPU_PREFIX,
-  UNMATCHED_COLOR,
-  defaultColorSetting,
-  defaultColorSelects,
-} from "../../../common/constant";
-import request from "../../../utils/request";
-import { DarkModeMixin } from "../../../polymer/dark_mode_mixin";
-import { LegacyElementMixin } from "../../../polymer/legacy_element_mixin";
+import '@vaadin/combo-box';
+import * as _ from 'lodash';
+import { PolymerElement, html } from '@polymer/polymer';
+import { customElement, property, observe } from '@polymer/decorators';
+import { fetchPbTxt, safeJSONParse } from '../../../utils';
+import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects } from '../../../common/constant';
+import request from '../../../utils/request';
+import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
+import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
 
-const UNMATCHED_NODE_NAME = "无匹配节点";
-@customElement("tf-color-select")
+const UNMATCHED_NODE_NAME = '无匹配节点';
+@customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
   static readonly template = html`
@@ -310,6 +305,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       </template>
     `;
 
+
   @property({ type: Boolean })
   _colorSetting: boolean = true; // 颜色设置按钮
 
@@ -323,10 +319,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   selectColor: any = [];
 
   @property({ type: String, notify: true })
-  selectedPrecisionNode: string = "";
+  selectedPrecisionNode: string = '';
 
   @property({ type: String, notify: true })
-  selectedOverflowNode: string = "";
+  selectedOverflowNode: string = '';
 
   @property({ type: Object })
   precisionmenu: any = [];
@@ -341,22 +337,14 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 溢出图例默认数据
   @property({ type: Object })
   overFlowSet: any = [
-    ["#B6C7FC", "medium"],
-    ["#7E96F0", "high"],
-    ["#4668B8", "critical"],
+    ['#B6C7FC', 'medium'],
+    ['#7E96F0', 'high'],
+    ['#4668B8', 'critical'],
   ];
 
   // 自定义颜色设置
   @property({ type: Array })
-  standardColorList = [
-    "#FFFCF3",
-    "#FFEDBE",
-    "#FFDC7F",
-    "#FFC62E",
-    "#FF9B3D",
-    "#FF704D",
-    "#FF4118",
-  ];
+  standardColorList = ['#FFFCF3', '#FFEDBE', '#FFDC7F', '#FFC62E', '#FF9B3D', '#FF704D', '#FF4118'];
 
   @property({ type: Array })
   colorList = _.cloneDeep(this.standardColorList);
@@ -375,6 +363,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   @property({ type: String, notify: true })
   selectedNode: string | null = null;
+
 
   // 溢出筛选
   @property({ type: Array })
@@ -395,11 +384,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @property({ type: Object })
   selection: any = {};
 
-  @observe("colorset")
+
+  @observe('colorset')
   _observeColorSet(): void {
-    if (_.isEmpty(this.colorset)) {
-      return;
-    } // 如果colorset为空，直接返回
+    if (_.isEmpty(this.colorset)) { return }; // 如果colorset为空，直接返回
     if (this.colorset.length !== 0) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
@@ -414,10 +402,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
 
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor
-  @observe("selection")
+  @observe('selection')
   _clearAllToggleCheckboxAndInputField(): void {
-    this.set("selectedSide", "0");
-    const allCheckboxes = this.shadowRoot?.querySelectorAll("paper-checkbox");
+    this.set('selectedSide', '0');
+    const allCheckboxes = this.shadowRoot?.querySelectorAll('paper-checkbox');
     if (allCheckboxes) {
       allCheckboxes.forEach((checkbox) => {
         checkbox.checked = false; // 清空每个 checkbox 的选中状态
@@ -427,40 +415,40 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.precisionmenu = [];
     this.overflowLevel = [];
     // 清除精度筛选输入框
-    this.set("selectedPrecisionNode", "");
+    this.set('selectedPrecisionNode', '');
     // 清除精度溢出输入框
-    this.set("selectedOverflowNode", "");
-    this.set("selectedNode", "");
+    this.set('selectedOverflowNode', '');
+    this.set('selectedNode', '');
     this.updateColorSetting();
   }
 
-  @observe("isSingleGraph", "overflowcheck")
+  @observe('isSingleGraph', 'overflowcheck')
   updateColorSetting(): void {
     if (!this.isSingleGraph) {
-      this.set("enableConfig", true);
-      this.set("showSwitchIcon", !!this.overflowcheck);
-      this.set("isOverflowFilter", false);
+      this.set('enableConfig', true);
+      this.set('showSwitchIcon', !!this.overflowcheck);
+      this.set('isOverflowFilter', false);
     } else {
       if (this.overflowcheck) {
         this._selectedTabChanged();
-        this.set("enableConfig", true);
+        this.set('enableConfig', true);
         // 隐藏切换按钮
-        this.set("showSwitchIcon", false);
+        this.set('showSwitchIcon', false);
         // 切换至精度溢出，隐藏精度筛选
-        this.set("isOverflowFilter", true);
+        this.set('isOverflowFilter', true);
       } else {
-        this.set("enableConfig", false);
+        this.set('enableConfig', false);
       }
     }
   }
 
   toggleVisibility(): void {
-    this.set("_colorSetting", !this._colorSetting);
+    this.set('_colorSetting', !this._colorSetting);
   }
 
   _clickSetting(event): void {
     event.stopPropagation();
-    this.set("_colors", true);
+    this.set('_colors', true);
     this.toggleVisibility();
   }
 
@@ -480,7 +468,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const newColorsList = {};
     const len = this.colorSelects.length;
     if (len === 0) {
-      this.showDynamicDialog("配置失败，请添加配置项。");
+      this.showDynamicDialog('配置失败，请添加配置项。');
       return;
     }
 
@@ -490,35 +478,31 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const leftValue = this.colorSelects[i].values[0];
       const rightValue = this.colorSelects[i].values[1];
       // 检查每个组中的所有输入框是否都有值
-      if (isNaN(leftValue) || isNaN(rightValue) || color === "NaN") {
-        this.showDynamicDialog("配置失败，存在未配置项。");
+      if (isNaN(leftValue) || isNaN(rightValue) || color === 'NaN') {
+        this.showDynamicDialog('配置失败，存在未配置项。');
         return;
       }
       // 将每个 color 和其对应的 leftValue 和 rightValue 作为 value 数组，设置到 colors 对象中
       newColorsList[color] = {
         value: [leftValue, rightValue],
         description:
-          "此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|",
+          '此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|',
       };
     }
     // 无匹配节点图例一定存在
     newColorsList[UNMATCHED_COLOR] = {
       value: UNMATCHED_NODE_NAME,
-      description: "对比过程中节点未匹配上",
+      description: '对比过程中节点未匹配上',
     };
 
     const params = {
-      colors: JSON.stringify(newColorsList),
-      run: this.selection.run,
+      'colors': JSON.stringify(newColorsList),
+      'run': this.selection.run,
     };
-    const { success, data, error } = await request({
-      url: "updateColors",
-      method: "GET",
-      params: params,
-    });
+    const { success, data, error } = await request({ url: 'updateColors', method: 'GET', params: params });
     if (success) {
       // 更新颜色列表
-      this.set("colors", newColorsList);
+      this.set('colors', newColorsList);
       let newColorSetChanged: any[] = [];
       this.toggleVisibility();
       Object.entries(newColorsList).forEach(([color, details]) => {
@@ -526,14 +510,14 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const colorset: any[] = [color, detailsTyped];
         newColorSetChanged.push(colorset);
       });
-      this.set("colorSetChanged", newColorSetChanged);
+      this.set('colorSetChanged', newColorSetChanged);
     } else {
       this.showDynamicDialog(error);
     }
   }
 
   _toggleDropdown(event): void {
-    const selectBox = event.target.closest(".select-box"); // 获取最近的父元素 .select-box
+    const selectBox = event.target.closest('.select-box'); // 获取最近的父元素 .select-box
     const dropdown = selectBox.nextElementSibling; // 获取下一个兄弟元素，即 .dropdown
     dropdown.hidden = !dropdown.hidden;
     this.dropdownIndex = event.model.index;
@@ -542,39 +526,39 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         return;
       }
       dropdown.hidden = true;
-      document.body.removeEventListener("click", maybeCloseMenu, {
+      document.body.removeEventListener('click', maybeCloseMenu, {
         capture: true,
       });
     }
     if (!dropdown.hidden) {
-      document.body.addEventListener("click", maybeCloseMenu, {
+      document.body.addEventListener('click', maybeCloseMenu, {
         capture: true,
       });
     }
   }
 
   _onOptionHover(event): void {
-    event.target.style.border = "solid 1px black";
+    event.target.style.border = 'solid 1px black';
   }
 
   _outOptionHover(event): void {
-    event.target.style.border = "";
+    event.target.style.border = '';
   }
 
   _changeColor(event): void {
-    const dropdown = event.target.closest(".dropdown");
+    const dropdown = event.target.closest('.dropdown');
     const select = dropdown.previousElementSibling;
     dropdown.hidden = true;
     const selectedColor = event.target.value;
     select.style.backgroundColor = selectedColor;
     this.set(`colorSelects.${this.dropdownIndex}.key`, selectedColor);
-    this.notifyPath("colorSelects");
+    this.notifyPath('colorSelects');
     this._setColorList();
   }
 
   // 不显示NaN 而显示空
   _formatValue(value): string {
-    return isNaN(value) ? "" : value;
+    return isNaN(value) ? '' : value;
   }
 
   _validateInputs(event: any): void {
@@ -582,15 +566,13 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const { values } = this.colorSelects[index];
 
     // 显式定义 leftInputSet 和 rightInputSet 的类型为 number[]
-    const [leftInputSet, rightInputSet] = this.colorSelects.reduce<
-      [number[], number[]]
-    >(
+    const [leftInputSet, rightInputSet] = this.colorSelects.reduce<[number[], number[]]>(
       (acc, item) => {
         acc[0].push(item.values[0]);
         acc[1].push(item.values[1]);
         return acc;
       },
-      [[], []] // 初始值为两个空数组
+      [[], []], // 初始值为两个空数组
     );
 
     let value = parseFloat(event.target.value);
@@ -603,7 +585,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const valueStr = value.toString();
 
     // 检查是否存在小数点
-    const parts = valueStr.split(".");
+    const parts = valueStr.split('.');
 
     // 如果存在小数点且小数部分长度超过最大限制
     if (parts.length > 1 && parts[1].length > 5) {
@@ -611,7 +593,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       value = parseFloat(value.toFixed(5));
     }
 
-    const isLeftInput = event.target.id === "input-left";
+    const isLeftInput = event.target.id === 'input-left';
     const otherSide = isLeftInput ? values[1] : values[0];
     const [left, right] = isLeftInput ? [value, otherSide] : [otherSide, value];
 
@@ -633,14 +615,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
       const [leftInput, rightInput] = item.values;
       return (
-        (isLeftInput &&
-          left !== leftInput &&
-          left >= leftInput &&
-          left < rightInput) ||
-        (!isLeftInput &&
-          right !== rightInput &&
-          right > leftInput &&
-          right <= rightInput) ||
+        (isLeftInput && left !== leftInput && left >= leftInput && left < rightInput) ||
+        (!isLeftInput && right !== rightInput && right > leftInput && right <= rightInput) ||
         (isLeftInput && leftInputSet.includes(left)) ||
         (!isLeftInput && rightInputSet.includes(right))
       );
@@ -658,20 +634,17 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
 
   _clearInput(event: any, index: number): void {
-    event.target.value = ""; // 清空输入框
-    this.set(
-      `colorSelects.${index}.values.${event.target.id === "input-left" ? 0 : 1}`,
-      NaN
-    ); // 更新 colorSelects
+    event.target.value = ''; // 清空输入框
+    this.set(`colorSelects.${index}.values.${event.target.id === 'input-left' ? 0 : 1}`, NaN); // 更新 colorSelects
   }
 
   _addOption(): void {
     if (this.colorSelects.length < 5) {
       const obj = {
-        key: "NaN",
+        key: 'NaN',
         values: [NaN, NaN],
       };
-      this.push("colorSelects", obj);
+      this.push('colorSelects', obj);
     }
     // 确保它在当前同步操作this.push()之后才执行.
     this.async(() => {
@@ -683,7 +656,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const index = event.model.index;
 
     // 删除项
-    this.splice("colorSelects", index, 1);
+    this.splice('colorSelects', index, 1);
 
     // 恢复其他输入框的值
     this.colorSelects.forEach((item, i) => {
@@ -695,19 +668,15 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
 
   _setColorList(): void {
-    let colorSelectElements = this.shadowRoot?.querySelectorAll(
-      '[id^="color-select"]'
-    );
+    let colorSelectElements = this.shadowRoot?.querySelectorAll('[id^="color-select"]');
     let backgroundColors: string[] = [];
     this.colorSelects.forEach((item) => {
       // 获取计算后的背景色
       const backgroundColor = item.key;
       backgroundColors.push(backgroundColor);
     });
-    let newColorList = this.standardColorList.filter(
-      (color) => !backgroundColors.includes(color)
-    );
-    this.set("colorList", newColorList);
+    let newColorList = this.standardColorList.filter((color) => !backgroundColors.includes(color));
+    this.set('colorList', newColorList);
     // 清除选中，否则再次选中不同列表的同一顺位的值的时候不会触发on-change
     this.async(() => {
       colorSelectElements?.forEach((element) => {
@@ -719,32 +688,32 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
 
   _toggleOverflowLevelOpen(): void {
-    this.set("_overFlowLevel", !this._overFlowLevel);
+    this.set('_overFlowLevel', !this._overFlowLevel);
   }
 
   showDynamicDialog(message): void {
     // 检查是否已经有显示的对话框，避免重复添加
-    let existingDialog = this.shadowRoot?.querySelector("#dynamicDialog");
+    let existingDialog = this.shadowRoot?.querySelector('#dynamicDialog');
     if (existingDialog) {
       existingDialog.remove(); // 删除旧的对话框
     }
     // 创建新的对话框
-    const dialog = document.createElement("paper-dialog");
-    dialog.id = "dynamicDialog";
+    const dialog = document.createElement('paper-dialog');
+    dialog.id = 'dynamicDialog';
     // 添加标题
-    const title = document.createElement("h2");
-    title.textContent = "提示";
+    const title = document.createElement('h2');
+    title.textContent = '提示';
     dialog.appendChild(title);
     // 添加提示内容
-    const content = document.createElement("div");
+    const content = document.createElement('div');
     content.textContent = message;
     dialog.appendChild(content);
     // 添加按钮
-    const buttonContainer = document.createElement("div");
-    buttonContainer.classList.add("buttons");
-    const closeButton = document.createElement("paper-button");
-    closeButton.setAttribute("dialog-dismiss", "");
-    closeButton.textContent = "关闭";
+    const buttonContainer = document.createElement('div');
+    buttonContainer.classList.add('buttons');
+    const closeButton = document.createElement('paper-button');
+    closeButton.setAttribute('dialog-dismiss', '');
+    closeButton.textContent = '关闭';
     buttonContainer.appendChild(closeButton);
     dialog.appendChild(buttonContainer);
     // 添加到 shadow DOM
@@ -759,30 +728,25 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     let checkbox;
     let overflowCheckbox;
     if (item[1].value) {
-      checkbox = this.shadowRoot?.getElementById(
-        `checkbox-${event.model.index}`
-      ) as HTMLInputElement;
+      checkbox = this.shadowRoot?.getElementById(`checkbox-${event.model.index}`) as HTMLInputElement;
     } else {
-      overflowCheckbox = this.shadowRoot?.getElementById(
-        `overflowCheckbox-${event.model.index}`
-      ) as HTMLInputElement;
+      overflowCheckbox = this.shadowRoot?.getElementById(`overflowCheckbox-${event.model.index}`) as HTMLInputElement;
     }
     const params = new URLSearchParams();
     if (run) {
-      params.set("run", run);
+      params.set('run', run);
     }
     if (tag) {
-      params.set("tag", tag);
+      params.set('tag', tag);
     }
-    params.set("microStep", String(microStep));
+    params.set('microStep', String(microStep));
     // 更新 selectColor 数组
     if (checkbox) {
       if (checkbox.checked) {
         this.selectColor.push(item[1].value); // 添加选中的颜色
       } else {
         const index = this.selectColor.findIndex(
-          (color) =>
-            color[0] === item[1].value[0] && color[1] === item[1].value[1]
+          (color) => color[0] === item[1].value[0] && color[1] === item[1].value[1],
         );
         if (index !== -1) {
           this.selectColor.splice(index, 1); // 取消选中的颜色
@@ -792,30 +756,24 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.precisionmenu = [];
         return;
       }
-      params.set("precision_index", this.selectColor.join(","));
+      params.set('precision_index', this.selectColor.join(','));
       const screenPath = `screen?${String(params)}`;
       try {
         const screenStr = fetchPbTxt(screenPath);
-        const precisionmenu = safeJSONParse(
-          new TextDecoder().decode(await screenStr).replace(/'/g, '"')
-        ) as object;
-        this.set("precisionmenu", precisionmenu);
+        const precisionmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
+        this.set('precisionmenu', precisionmenu);
       } catch (e) {
-        console.error(
-          "Get precision menu failed, please check the toggleCheckbox and the data in vis file"
-        );
+        console.error('Get precision menu failed, please check the toggleCheckbox and the data in vis file');
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
       // 清除精度筛选输入框
-      this.set("selectedPrecisionNode", "");
+      this.set('selectedPrecisionNode', '');
     } else {
       if (overflowCheckbox.checked) {
         this.overflowLevel.push(item[1]); // 添加选中的颜色
       } else {
-        const index = this.overflowLevel.findIndex(
-          (overflow) => overflow === item[1]
-        );
+        const index = this.overflowLevel.findIndex((overflow) => overflow === item[1]);
         if (index !== -1) {
           this.overflowLevel.splice(index, 1); // 取消选中的颜色
         }
@@ -824,42 +782,35 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.overflowmenu = [];
         return;
       }
-      params.set("overflow_level", this.overflowLevel.join(","));
+      params.set('overflow_level', this.overflowLevel.join(','));
       const screenPath = `screen?${String(params)}`;
 
       try {
         const screenStr = fetchPbTxt(screenPath);
-        this.overflowmenu = safeJSONParse(
-          new TextDecoder().decode(await screenStr).replace(/'/g, '"')
-        ) as object;
+        this.overflowmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
       } catch (e) {
-        console.error(
-          "Get overflow menu failed, please check the toggleCheckbox and the data in vis file"
-        );
+        console.error('Get overflow menu failed, please check the toggleCheckbox and the data in vis file');
       }
       // 更新数据绑定
-      this.notifyPath(
-        `menu.${event.model.index}.checked`,
-        overflowCheckbox.checked
-      );
+      this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);
       // 清除精度溢出输入框
-      this.set("selectedOverflowNode", "");
+      this.set('selectedOverflowNode', '');
     }
   }
 
   _selectedTabChanged(): void {
-    this.set("isOverflowFilter", !this.isOverflowFilter);
+    this.set('isOverflowFilter', !this.isOverflowFilter);
   }
 
   _observePrecsionNode = () => {
     let prefix = NPU_PREFIX;
     const node = prefix + this.selectedPrecisionNode;
-    this.set("selectedNode", node);
-  };
+    this.set('selectedNode', node);
+  }
 
   _observeOverFlowNode = () => {
-    const prefix = this.isSingleGraph ? "" : NPU_PREFIX;
+    const prefix = this.isSingleGraph ? '' : NPU_PREFIX;
     const node = prefix + this.selectedOverflowNode;
-    this.set("selectedNode", node);
-  };
+    this.set('selectedNode', node);
+  }
 }

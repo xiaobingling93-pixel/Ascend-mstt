@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import "@vaadin/button";
-import "@vaadin/details";
-import "@vaadin/combo-box";
+import '@vaadin/button';
+import '@vaadin/details';
+import '@vaadin/combo-box';
 
-import { isEmpty } from "lodash";
-import { Notification } from "@vaadin/notification";
-import { PolymerElement, html } from "@polymer/polymer";
-import { customElement, property } from "@polymer/decorators";
-import "@vaadin/progress-bar";
-@customElement("tf-search-combox")
+import { isEmpty } from 'lodash';
+import { Notification } from '@vaadin/notification';
+import { PolymerElement, html } from '@polymer/polymer';
+import { customElement, property } from '@polymer/decorators';
+import '@vaadin/progress-bar';
+@customElement('tf-search-combox')
 class Legend extends PolymerElement {
   // 定义模板
   static readonly template = html`
@@ -34,8 +34,7 @@ class Legend extends PolymerElement {
         cursor: pointer;
         color: rgb(87, 86, 86);
         background: rgb(238, 238, 238);
-        border: 0.5px solid
-          var(--paper-input-container-color, var(--secondary-text-color));
+        border: 0.5px solid var(--paper-input-container-color, var(--secondary-text-color));
         padding: 2px 2px;
         height: 30px;
         width: 22px;
@@ -53,8 +52,7 @@ class Legend extends PolymerElement {
       }
       vaadin-combo-box::part(input-field) {
         height: 30px;
-        border: 1px solid
-          var(--paper-input-container-color, var(--secondary-text-color));
+        border: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
         background-color: white;
         font-size: 14px;
         border-radius: 0;
@@ -89,12 +87,12 @@ class Legend extends PolymerElement {
       ></vaadin-icon>
     </div>
   `;
-
+  
   @property({ type: Object })
   onSelectChange!: () => void;
 
   @property({ type: String, notify: true })
-  selectedValue: string = "";
+  selectedValue: string = '';
 
   @property({ type: Array })
   items: string[] = [];
@@ -109,37 +107,37 @@ class Legend extends PolymerElement {
   // 选择列表中的下一个节点
   _selectNext(): void {
     if (!this.isCompareGraph) {
-      Notification.show("提示：单图节点不支持匹配", {
-        position: "middle",
+      Notification.show('提示：单图节点不支持匹配', {
+        position: 'middle',
         duration: 2000,
-        theme: "contrast",
+        theme: 'contrast',
       });
       return;
     }
 
     if (isEmpty(this.items)) {
-      Notification.show("提示：列表为空", {
-        position: "middle",
+      Notification.show('提示：列表为空', {
+        position: 'middle',
         duration: 2000,
-        theme: "contrast",
+        theme: 'contrast',
       });
       return;
     }
     if (isEmpty(this.selectedValue)) {
-      this.set("selectedValue", this.items[0]);
+      this.set('selectedValue', this.items[0]);
       this.onSelectChange();
       return;
     }
     const index = this.items.indexOf(this.selectedValue);
     if (index + 1 >= this.items.length) {
-      Notification.show("提示：已到达列表底部", {
-        position: "middle",
+      Notification.show('提示：已到达列表底部', {
+        position: 'middle',
         duration: 2000,
-        theme: "contrast",
+        theme: 'contrast',
       });
       return;
     } else {
-      this.set("selectedValue", this.items[index + 1]);
+      this.set('selectedValue', this.items[index + 1]);
     }
     this.onSelectChange();
   }
@@ -147,37 +145,37 @@ class Legend extends PolymerElement {
   // 选择列表中的上一个节点
   _selectPrevious(): void {
     if (!this.isCompareGraph) {
-      Notification.show("提示：单图节点不支持匹配", {
-        position: "middle",
+      Notification.show('提示：单图节点不支持匹配', {
+        position: 'middle',
         duration: 2000,
-        theme: "contrast",
+        theme: 'contrast',
       });
       return;
     }
 
     if (isEmpty(this.items)) {
-      Notification.show("提示：列表为空", {
-        position: "middle",
+      Notification.show('提示：列表为空', {
+        position: 'middle',
         duration: 2000,
-        theme: "contrast",
+        theme: 'contrast',
       });
       return;
     }
     if (isEmpty(this.selectedValue)) {
-      this.set("selectedValue", this.items[0]);
+      this.set('selectedValue', this.items[0]);
       this.onSelectChange();
       return;
     }
     const index = this.items.indexOf(this.selectedValue);
     if (index - 1 < 0) {
-      Notification.show("提示：已到达列表顶部", {
-        position: "middle",
+      Notification.show('提示：已到达列表顶部', {
+        position: 'middle',
         duration: 2000,
-        theme: "contrast",
+        theme: 'contrast',
       });
       return;
     } else {
-      this.set("selectedValue", this.items[index - 1]);
+      this.set('selectedValue', this.items[index - 1]);
     }
     this.onSelectChange();
   }

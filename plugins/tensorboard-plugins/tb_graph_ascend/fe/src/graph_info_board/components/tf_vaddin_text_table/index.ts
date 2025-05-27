@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { PolymerElement, html } from "@polymer/polymer";
-import { customElement, property } from "@polymer/decorators";
-import "@vaadin/grid"; // 引入新的 Vaadin Grid 组件
-import "@vaadin/tooltip";
-import type { GridEventContext } from "@vaadin/grid";
-import { Notification } from "@vaadin/notification";
-@customElement("tf-vaadin-text-table")
+import { PolymerElement, html } from '@polymer/polymer';
+import { customElement, property } from '@polymer/decorators';
+import '@vaadin/grid'; // 引入新的 Vaadin Grid 组件
+import '@vaadin/tooltip';
+import type { GridEventContext } from '@vaadin/grid';
+import { Notification } from '@vaadin/notification';
+@customElement('tf-vaadin-text-table')
 class TfVaadinTable extends PolymerElement {
   static readonly template = html`
     <style>
@@ -77,27 +77,14 @@ class TfVaadinTable extends PolymerElement {
       }
     </style>
     <template is="dom-if" if="[[!isEmptyGrid]]">
-      <vaadin-grid
-        id="grid"
-        items="[[dataset]]"
-        class="vaadin-grid"
-        theme="force-outline"
-      >
+      <vaadin-grid id="grid" items="[[dataset]]" class="vaadin-grid" theme="force-outline">
         <!-- 动态生成列 -->
         <template is="dom-repeat" items="[[headers]]" as="header">
-          <vaadin-grid-column
-            path="[[header]]"
-            header="[[header]]"
-            resizable
-            renderer="[[renderDefaultValue]]"
-          >
+          <vaadin-grid-column path="[[header]]" header="[[header]]" resizable renderer="[[renderDefaultValue]]">
             <template> [[item[header]]] </template>
           </vaadin-grid-column>
         </template>
-        <vaadin-tooltip
-          slot="tooltip"
-          generator="[[tooltipGenerator]]"
-        ></vaadin-tooltip>
+        <vaadin-tooltip slot="tooltip" generator="[[tooltipGenerator]]"></vaadin-tooltip>
       </vaadin-grid>
     </template>
     <template is="dom-if" if="[[isEmptyGrid]]">
@@ -113,20 +100,18 @@ class TfVaadinTable extends PolymerElement {
 
   @property({
     type: Array,
-    computed: "_computeHeaders(dataset)",
+    computed: '_computeHeaders(dataset)',
   })
   headers: any[] = [];
 
   @property({
     type: Boolean,
-    computed: "_isEmptyGrid(dataset)",
+    computed: '_isEmptyGrid(dataset)',
   })
   isEmptyGrid: boolean = false;
 
   renderDefaultValue!: (root: HTMLElement, column: any, rowData: any) => void;
-  tooltipGenerator!: (
-    context: GridEventContext<Record<string, string>>
-  ) => string;
+  tooltipGenerator!: (context: GridEventContext<Record<string, string>>) => string;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -142,7 +127,7 @@ class TfVaadinTable extends PolymerElement {
     if (this._isEmptyGrid(data)) {
       return [];
     }
-    const ignoreDataIndex = ["title"];
+    const ignoreDataIndex = ['title'];
     const headers = Array.from(
       data.slice(0, 5).reduce((keys, item) => {
         // 只取前5个数据项，避免性能问题
@@ -152,7 +137,7 @@ class TfVaadinTable extends PolymerElement {
           }
         });
         return keys;
-      }, new Set())
+      }, new Set()),
     );
     return headers;
   }
@@ -166,77 +151,73 @@ class TfVaadinTable extends PolymerElement {
     const titleName = rowData.item.title;
     if (!root.firstElementChild) {
       switch (titleName) {
-        case "stackInfo":
-        case "suggestions":
+        case 'stackInfo':
+        case 'suggestions':
           this._createCopyableTextarea(root, propertyName, rowData);
           break;
         default:
-          root.style.fontWeight = "bold";
-          root.textContent = `${titleName}：${rowData.item[propertyName] || "null"}`;
+          root.style.fontWeight = 'bold';
+          root.textContent = `${titleName}：${rowData.item[propertyName] || 'null'}`;
           break;
       }
     } else {
       switch (titleName) {
-        case "stackInfo":
-        case "suggestions":
+        case 'stackInfo':
+        case 'suggestions':
           this._updateCopyableTextarea(root, propertyName, rowData);
           break;
         default:
-          root.textContent = `${titleName}：${rowData.item[propertyName] || "null"}`;
+          root.textContent = `${titleName}：${rowData.item[propertyName] || 'null'}`;
       }
     }
   }
 
-  _createCopyableTextarea(
-    root: HTMLElement,
-    propertyName: any,
-    rowData: any
-  ): void {
-    const container = document.createElement("div");
-    container.className = "copyable-input";
+  _createCopyableTextarea(root: HTMLElement, propertyName: any, rowData: any): void {
+    const container = document.createElement('div');
+    container.className = 'copyable-input';
 
-    const title = document.createElement("div");
-    const textTitle = "title";
-    title.className = "copyable-input-title";
-    title.style.fontWeight = "bold";
+    const title = document.createElement('div');
+    const textTitle = 'title';
+    title.className = 'copyable-input-title';
+    title.style.fontWeight = 'bold';
     title.textContent = `${rowData.item[textTitle]}:`;
     container.appendChild(title);
 
-    const textarea = document.createElement("textarea");
+    const textarea = document.createElement('textarea');
     textarea.readOnly = true;
     textarea.value = rowData.item[propertyName];
     textarea.onmouseenter = () => {
-      button.style.display = "unset";
+      button.style.display = 'unset';
     };
     textarea.onmouseleave = () => {
-      button.style.display = "none";
+      button.style.display = 'none';
     };
     container.appendChild(textarea);
 
-    const button = document.createElement("button");
-    button.className = "copy-button";
-    button.textContent = "复制";
-    button.style.display = "none";
+    const button = document.createElement('button');
+    button.className = 'copy-button';
+    button.textContent = '复制';
+    button.style.display = 'none';
     button.onmousemove = () => {
-      button.style.display = "unset";
+      button.style.display = 'unset';
     };
     button.onclick = () => {
       navigator.clipboard
         .writeText(textarea.value)
         .then(() => {
-          Notification.show("复制成功", {
-            position: "middle",
+          Notification.show('复制成功', {
+            position: 'middle',
             duration: 1000,
-            theme: "success",
+            theme: 'success',
           });
         })
         .catch((err) => {
-          Notification.show("复制失败，请重试", {
-            position: "middle",
+          Notification.show('复制失败，请重试', {
+            position: 'middle',
             duration: 1000,
-            theme: "error",
+            theme: 'error',
           });
-          console.error("Failed to copy text:", err);
+          console.error('Failed to copy text:', err);
         });
     };
     container.appendChild(button);
@@ -244,27 +225,21 @@ class TfVaadinTable extends PolymerElement {
     root.appendChild(container);
   }
 
-  _updateCopyableTextarea(
-    root: HTMLElement,
-    propertyName: any,
-    rowData: any
-  ): void {
-    const title = root.querySelector(".copyable-input-title");
-    const textTitle = "title";
+  _updateCopyableTextarea(root: HTMLElement, propertyName: any, rowData: any): void {
+    const title = root.querySelector('.copyable-input-title');
+    const textTitle = 'title';
     if (title) {
       title.textContent = `${rowData.item[textTitle]}:`;
     }
-    const textarea = root.querySelector("textarea");
+    const textarea = root.querySelector('textarea');
     if (textarea) {
       textarea.value = rowData.item[propertyName];
     }
   }
 
-  _tooltipGenerator = (
-    context: GridEventContext<Record<string, string>>
-  ): string => {
+  _tooltipGenerator = (context: GridEventContext<Record<string, string>>): string => {
     const { column, item } = context;
-    return item?.[column?.path || ""] || "";
+    return item?.[column?.path || ''] || '';
   };
 
   handleGridClick(e: MouseEvent): void {

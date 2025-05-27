@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import * as d3 from "d3";
+import * as d3 from 'd3';
 
 export function fetchPbTxt(filepath: string): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -28,12 +28,13 @@ export function fetchPbTxt(filepath: string): Promise<ArrayBuffer> {
   });
 }
 
+
 const removePrototypePollution = (obj: any): void => {
-  if (obj && typeof obj === "object") {
+  if (obj && typeof obj === 'object') {
     for (let key in obj) {
-      if (key === "__proto__" || key === "constructor") {
+      if (key === '__proto__' || key === 'constructor') {
         delete obj[key];
-      } else if (typeof obj[key] === "object") {
+      } else if (typeof obj[key] === 'object') {
         removePrototypePollution(obj[key]);
       }
     }
@@ -53,18 +54,16 @@ export const safeJSONParse = (str: any, defaultValue: any = null): any => {
 /**
  * 根据文本内容、字体大小和最大宽度，判断是否需要截断文本
  * @param text 文本内容
- * @param fontSize
- * @param maxWidth
- * @returns
+ * @param fontSize 
+ * @param maxWidth 
+ * @returns 
  */
 export function maybeTruncateString(
   content: string,
   fontSize: number,
   containerWidth: number
 ): string {
-  if (!content) {
-    return "";
-  }
+  if (!content) { return "" };
 
   // 提前处理无需截断的情况
   if (measureTextWidth(content, fontSize) <= containerWidth) {
@@ -94,14 +93,14 @@ export function maybeTruncateString(
     : content[0] + "…"; // 极端情况保留首字符
 }
 /**
- * 计算文本宽度
- * @param text 文本内容
- * @param fontSize  字体大小
- * @returns
- */
+* 计算文本宽度
+* @param text 文本内容
+* @param fontSize  字体大小
+* @returns 
+*/
 export function measureTextWidth(text: string, fontSize: number): number {
-  const canvas = document.createElement("canvas");
-  const measurerContext = canvas.getContext("2d");
+  const canvas = document.createElement('canvas');
+  const measurerContext = canvas.getContext('2d');
   if (measurerContext) {
     measurerContext.font = `${fontSize}px Roboto, sans-serif`;
   }
@@ -112,17 +111,11 @@ export function measureTextWidth(text: string, fontSize: number): number {
  * @param transformStr 如 "translate(100,200) scale(1.5)" 或 "translate(50,60)"
  * @returns 包含 x, y, scale 的对象，scale 默认为 1
  */
-export function parseTransform(transformStr: string): {
-  x: number;
-  y: number;
-  scale: number;
-} {
+export function parseTransform(transformStr: string): { x: number; y: number; scale: number } {
   // 默认值
   const result = { x: 0, y: 0, scale: 1 };
 
-  if (!transformStr) {
-    return result;
-  }
+  if (!transformStr) { return result };
 
   // 匹配 translate(X,Y) 部分
   const translateMatch = transformStr.match(/translate\(([^,]+),([^)]+)\)/);
@@ -141,31 +134,19 @@ export function parseTransform(transformStr: string): {
 }
 /**
  * 更改图形的位置
- * @param element
- * @param x
- * @param y
- * @param scale
- * @param duration
+ * @param element 
+ * @param x 
+ * @param y 
+ * @param scale 
+ * @param duration 
  */
-export function changeGraphPosition(
-  element: HTMLElement,
-  x,
-  y,
-  scale,
-  duration = 16
-) {
-  d3.select(element)
-    .transition()
-    .duration(duration)
-    .attr("transform", `translate(${x},${y}) scale(${scale})`);
+export function changeGraphPosition(element: HTMLElement, x, y, scale, duration = 16) {
+  d3.select(element).transition().duration(duration).attr('transform', `translate(${x},${y}) scale(${scale})`);
 }
 
 export function darkenColor(color: string, amount: number): string {
   // 统一提取 RGB(A) 分量
-  let r: number,
-    g: number,
-    b: number,
-    a: number = 1;
+  let r: number, g: number, b: number, a: number = 1;
 
   // 处理十六进制格式
   if (color.startsWith("#")) {
@@ -174,7 +155,7 @@ export function darkenColor(color: string, amount: number): string {
 
     // 处理缩写格式 (#abc → #aabbcc)
     const normalizedHex = hexParts
-      .map((p) => (p.length === 1 ? p + p : p))
+      .map(p => p.length === 1 ? p + p : p)
       .join("")
       .padEnd(6, "0");
 
@@ -192,7 +173,7 @@ export function darkenColor(color: string, amount: number): string {
     const match = color.match(/(\d*\.?\d+%?)/g) || [];
     const components = match.map(parseComponent);
 
-    [r, g, b] = components.slice(0, 3).map((v) => Math.min(255, v));
+    [r, g, b] = components.slice(0, 3).map(v => Math.min(255, v));
     a = components[3] !== undefined ? components[3] : 1;
   }
   // 无效格式直接返回
@@ -206,11 +187,15 @@ export function darkenColor(color: string, amount: number): string {
 
   // 转换为十六进制
   const toHex = (value: number) =>
-    Math.min(255, Math.max(0, value)).toString(16).padStart(2, "0");
+    Math.min(255, Math.max(0, value))
+      .toString(16)
+      .padStart(2, "0");
 
-  return `#${[applyDarkening(r), applyDarkening(g), applyDarkening(b)]
-    .map(toHex)
-    .join("")}`;
+  return `#${[
+    applyDarkening(r),
+    applyDarkening(g),
+    applyDarkening(b)
+  ].map(toHex).join("")}`;
 
   // 辅助函数：解析 RGB 分量（支持百分比和数值）
   function parseComponent(comp: string): number {
@@ -222,11 +207,11 @@ export function darkenColor(color: string, amount: number): string {
 }
 
 export function formatBytes(bytes) {
-  if (bytes === 0) {
-    return "0 Bytes";
-  }
+  if (bytes === 0) { return '0 Bytes' };
   const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+

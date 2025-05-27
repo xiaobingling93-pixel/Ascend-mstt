@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-import "./graph_ascend";
-import "./index.css";
+import './graph_ascend';
+import './index.css';

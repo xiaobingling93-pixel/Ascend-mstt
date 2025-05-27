@@ -13,12 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import { customElement } from "@polymer/decorators";
-import { html, PolymerElement } from "@polymer/polymer";
-import { DarkModeMixin } from "../../polymer/dark_mode_mixin";
-import "./tensorboardColor";
+import { customElement } from '@polymer/decorators';
+import { html, PolymerElement } from '@polymer/polymer';
+import { DarkModeMixin } from '../../polymer/dark_mode_mixin';
+import './tensorboardColor';
 
-@customElement("graph-board-layout")
+@customElement('graph-board-layout')
 class TfDashboardLayout extends DarkModeMixin(PolymerElement) {
   static readonly template = html`
   <div class='sidebar-container'>
@@ -157,12 +157,12 @@ class TfDashboardLayout extends DarkModeMixin(PolymerElement) {
 
   _toggleSidebar(): void {
     // 通过 ID 获取元素并隐藏
-    const sidebar = this.shadowRoot?.querySelector("#sidebar");
-    const sidebarToggle = this.shadowRoot?.querySelector("#sidebar-toggle");
+    const sidebar = this.shadowRoot?.querySelector('#sidebar');
+    const sidebarToggle = this.shadowRoot?.querySelector('#sidebar-toggle');
     // 检查并切换 display 样式
     if (sidebar) {
-      sidebar?.classList.toggle("sider-hidden"); // 改为显示
-      sidebarToggle?.classList.toggle("sidebar-toggle-fold"); // 改变箭头方向
+      sidebar?.classList.toggle('sider-hidden'); // 改为显示
+      sidebarToggle?.classList.toggle('sidebar-toggle-fold'); // 改变箭头方向
     }
   }
 }

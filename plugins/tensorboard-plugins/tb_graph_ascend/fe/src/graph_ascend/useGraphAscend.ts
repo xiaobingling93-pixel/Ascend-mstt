@@ -15,57 +15,42 @@
  */
 import request from "../utils/request";
 const useGraphAscend = () => {
-  const loadGraphFileInfoList = async (): Promise<any> => {
-    try {
-      const result = await request({ url: "load_meta_dir", method: "GET" });
-      return result;
-    } catch (err) {
-      return {
-        success: false,
-        error: "加载文件信息失败",
-      };
+    const loadGraphFileInfoList = async (): Promise<any> => {
+        try {
+            const result = await request({ url: 'load_meta_dir', method: 'GET' })
+            return result;
+        } catch (err) {
+            return {
+                success: false,
+                error: '加载文件信息失败'
+            }
+        }
+    };
+    const loadGraphConfig = async (runName: string, tagName: string): Promise<any> => {
+        const params = {
+            'run': runName,
+            'tag': tagName
+        };
+
+        const result = await request({ url: 'loadGraphConfigInfo', method: 'GET', params: params }); // 获取异步的 ArrayBuffer
+        return result;
     }
-  };
-  const loadGraphConfig = async (
-    runName: string,
-    tagName: string
-  ): Promise<any> => {
-    const params = {
-      run: runName,
-      tag: tagName,
+
+    const loadGraphAllNodeList = async (runName: string, tagName: string, microStep: number): Promise<any> => {
+        const params = {
+            'run': runName,
+            'tag': tagName,
+            'microStep': microStep
+        };
+
+        const result = await request({ url: 'loadGraphAllNodeList', method: 'GET', params: params }); // 获取异步的 ArrayBuffer
+        return result;
+    }
+
+    return {
+        loadGraphConfig,
+        loadGraphAllNodeList,
+        loadGraphFileInfoList,
     };
-
-    const result = await request({
-      url: "loadGraphConfigInfo",
-      method: "GET",
-      params: params,
-    }); // 获取异步的 ArrayBuffer
-    return result;
-  };
-
-  const loadGraphAllNodeList = async (
-    runName: string,
-    tagName: string,
-    microStep: number
-  ): Promise<any> => {
-    const params = {
-      run: runName,
-      tag: tagName,
-      microStep: microStep,
-    };
-
-    const result = await request({
-      url: "loadGraphAllNodeList",
-      method: "GET",
-      params: params,
-    }); // 获取异步的 ArrayBuffer
-    return result;
-  };
-
-  return {
-    loadGraphConfig,
-    loadGraphAllNodeList,
-    loadGraphFileInfoList,
-  };
-};
+}
 export default useGraphAscend;

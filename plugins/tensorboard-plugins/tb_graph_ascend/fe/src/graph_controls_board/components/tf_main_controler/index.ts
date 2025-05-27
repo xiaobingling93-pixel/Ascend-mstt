@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-import "@vaadin/button";
-import "@vaadin/combo-box";
-import "@vaadin/select";
-import { Notification } from "@vaadin/notification";
-import { PolymerElement, html } from "@polymer/polymer";
-import { customElement, property, observe } from "@polymer/decorators";
-import { isEmpty } from "lodash";
-import type { SelectionType } from "../../../graph_ascend/type";
-import type { MetaDirType } from "../../type";
-@customElement("tf-main-controler")
+import '@vaadin/button';
+import '@vaadin/combo-box';
+import '@vaadin/select';
+import { Notification } from '@vaadin/notification';
+import { PolymerElement, html } from '@polymer/polymer';
+import { customElement, property, observe } from '@polymer/decorators';
+import { isEmpty } from 'lodash';
+import type { SelectionType } from '../../../graph_ascend/type';
+import type { MetaDirType } from '../../type';
+@customElement('tf-main-controler')
 class MainController extends PolymerElement {
   // 定义模板
   static readonly template = html`
     <style>
+
       vaadin-text-field input {
         min-height: 0;
       }
@@ -50,8 +51,7 @@ class MainController extends PolymerElement {
       }
       vaadin-combo-box::part(input-field) {
         height: 30px;
-        border: 1px solid
-          var(--paper-input-container-color, var(--secondary-text-color));
+        border: 1px solid var(--paper-input-container-color, var(--secondary-text-color));
         background-color: white;
         font-size: 14px;
         border-radius: 0;
@@ -62,23 +62,25 @@ class MainController extends PolymerElement {
     </style>
 
     <div class="control-holder">
-      <vaadin-combo-box
-        label="目录"
-        items="[[runs]]"
-        value="{{selectedRun}}"
-      ></vaadin-combo-box>
-      <vaadin-combo-box
-        label="文件"
-        items="[[tags]]"
-        value="{{selectedTag}}"
-      ></vaadin-combo-box>
-      <vaadin-combo-box
-        label="MicroStep"
-        items="[[microsteps]]"
-        value="{{selectedMicroStep}}"
-      ></vaadin-combo-box>
+      
+        <vaadin-combo-box
+          label="目录"
+          items="[[runs]]"
+          value="{{selectedRun}}"
+        ></vaadin-combo-box>
+        <vaadin-combo-box
+          label="文件"
+          items="[[tags]]"
+          value="{{selectedTag}}"
+        ></vaadin-combo-box>
+        <vaadin-combo-box
+          label="MicroStep"
+          items="[[microsteps]]"
+          value="{{selectedMicroStep}}"
+        ></vaadin-combo-box>
     </div>
   `;
+
 
   @property({ type: Object })
   metaDir: MetaDirType = {};
@@ -87,97 +89,85 @@ class MainController extends PolymerElement {
   selection: SelectionType = {} as SelectionType;
 
   @property({ type: Array })
-  runs = [];
+  runs = []
 
   @property({ type: Array })
-  tags = [];
+  tags = []
 
   @property({ type: Array })
-  microsteps = [];
+  microsteps = []
 
   @property({ type: String })
-  selectedRun = "";
+  selectedRun = ''
 
   @property({ type: String })
-  selectedTag = "";
+  selectedTag = ''
 
   @property({ type: Number })
-  selectedMicroStep = -1;
+  selectedMicroStep = -1
 
-  @observe("metaDir")
+  @observe('metaDir')
   _metaDirChanged(): void {
-    if (isEmpty(this.metaDir)) {
-      return;
-    }
-    const runs = Object.keys(this.metaDir);
-    this.set("runs", runs);
-    this.set("selectedRun", runs[0]);
+    if (isEmpty(this.metaDir)) { return }
+    const runs = Object.keys(this.metaDir)
+    this.set('runs', runs)
+    this.set('selectedRun', runs[0])
   }
 
-  @observe("selectedRun")
+  @observe('selectedRun')
   _selectedRunChanged(): void {
-    if (isEmpty(this.metaDir)) {
-      return;
-    }
-    const tags = this.metaDir[this.selectedRun];
-    this.set("tags", tags);
-    this.set("selectedTag", tags[0]);
+    if (isEmpty(this.metaDir)) { return }
+    const tags = this.metaDir[this.selectedRun]
+    this.set('tags', tags)
+    this.set('selectedTag', tags[0])
     const selection = {
       ...this.selection,
       run: this.selectedRun,
       tag: tags[0],
-      microStep: -1,
-    };
-    this.set("selectedTag", tags[0]);
-    this.set("selectedMicroStep", -1);
-    this.set("selection", selection);
+      microStep: -1
+    }
+    this.set('selectedTag', tags[0])
+    this.set('selectedMicroStep', -1)
+    this.set('selection', selection)
   }
 
-  @observe("selectedTag")
+  @observe('selectedTag')
   _selectedTagChanged(): void {
-    if (isEmpty(this.metaDir)) {
-      return;
-    }
+    if (isEmpty(this.metaDir)) { return }
     const selection = {
       ...this.selection,
       tag: this.selectedTag,
-      microStep: -1,
-    };
-    this.set("selectedMicroStep", -1);
-    this.set("selection", selection);
+      microStep: -1
+    }
+    this.set('selectedMicroStep', -1)
+    this.set('selection', selection)
   }
 
-  @observe("selectedMicroStep")
+  @observe('selectedMicroStep')
   _selectedMicroStepChanged(): void {
-    if (isEmpty(this.metaDir)) {
-      return;
-    }
+    if (isEmpty(this.metaDir)) { return }
     const selection = {
       ...this.selection,
-      microStep: this.selectedMicroStep,
-    };
-    this.set("selection", selection);
+      microStep: this.selectedMicroStep
+    }
+    this.set('selection', selection)
   }
 
   override ready(): void {
     super.ready();
-    document.addEventListener(
-      "contextMenuTag-changed",
-      this._getTagChanged.bind(this),
-      { passive: true }
-    );
+    document.addEventListener('contextMenuTag-changed', this._getTagChanged.bind(this), { passive: true });
   }
 
   _getTagChanged(event): void {
     const detail = event.detail;
     if (!detail?.rankId || detail?.rankId >= this.tags.length) {
-      Notification.show("提示：目标文件不存在", {
-        position: "middle",
+      Notification.show('提示：目标文件不存在', {
+        position: 'middle',
         duration: 2000,
-        theme: "warning",
+        theme: 'warning',
       });
       return;
     }
-    this.set("selectedTag", this.tags[detail?.rankId]);
+    this.set('selectedTag', this.tags[detail?.rankId]);
   }
 }
