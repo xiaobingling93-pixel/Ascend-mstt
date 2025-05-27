@@ -132,7 +132,6 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
 
   return result;
 }
-
 /**
  * 更改图形的位置
  * @param element 
@@ -140,8 +139,7 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
  * @param y 
  * @param scale 
  * @param duration 
- */
-
+ */ 
 export function changeGraphPosition(element: HTMLElement, x, y, scale, duration = 16) {
   d3.select(element).transition().duration(duration).attr('transform', `translate(${x},${y}) scale(${scale})`);
 }

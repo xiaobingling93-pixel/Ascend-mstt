@@ -253,19 +253,19 @@ class Legend extends PolymerElement {
   unmatchLoading: boolean = false;
 
   @property({ type: Object })
-  colorset: object
+  colorset: object = {}
 
   @property({ type: Object })
-  npuMatchNodes: object;
+  npuMatchNodes: object = {};
 
   @property({ type: Object })
-  benchMatchNodes: object;
+  benchMatchNodes: object = {};
 
   @property({ type: Object })
   matchedConfigFiles: Array<string> = ['未选择'];
 
   @property({ type: String })
-  selectedConfigFile: string;
+  selectedConfigFile: string = "";
 
   useMatched: UseMatchedType = useMatched();
   npuMatchedNodeList = {};
@@ -307,12 +307,12 @@ class Legend extends PolymerElement {
       this.set('selectedNpuUnMatchedNode', this.selectedNode.replace(NPU_PREFIX, ''));
       const selectedNpuMatchedNode = this.selectedNode.replace(NPU_PREFIX, '')
       this.set('selectedNpuMatchedNode', selectedNpuMatchedNode);
-      this.set('selectedBenchMatchedNode', this.npuMatchedNodeList[selectedNpuMatchedNode]);
+      this.set('selectedBenchMatchedNode', this.npuMatchedNodeList?.[selectedNpuMatchedNode]);
     } else if (this.selectedNode.startsWith(BENCH_PREFIX)) {
       this.set('selectedBenchUnMatchedNode', this.selectedNode.replace(BENCH_PREFIX, ''));
       const selectedBenchMatchedNode = this.selectedNode.replace(BENCH_PREFIX, '')
       this.set('selectedBenchMatchedNode', selectedBenchMatchedNode);
-      this.set('selectedNpuMatchedNode', this.benchMatchedNodeList[selectedBenchMatchedNode]);
+      this.set('selectedNpuMatchedNode', this.benchMatchedNodeList?.[selectedBenchMatchedNode]);
     }
   }
 
@@ -450,20 +450,19 @@ class Legend extends PolymerElement {
     if (!this.selectedConfigFile || this.selectedConfigFile == '未选择') {
       return;
     }
-    //Todo:读文件内容批量匹配
     this.set('matchConfigLoading', true);
     const { success, data, error } = await this.useMatched.addMatchedNodesLinkByConfigFile(this.selectedConfigFile, this.selection);
     this.set('matchConfigLoading', false);
     if (success) {
-      const matchReslut = data?.matchReslut;
-      const npuMatchNodes = data?.npuMatchNodes;
-      const benchMatchNodes = data?.benchMatchNodes;
+      const matchReslut = data?.matchReslut || [];
+      const npuMatchNodes = data?.npuMatchNodes || {};
+      const benchMatchNodes = data?.benchMatchNodes || {};
       const npuUnMatchNodes = data?.npuUnMatchNodes;
       const benchUnMatchNodes = data?.benchUnMatchNodes;
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = matchReslut.length;
-      const matchSuccessNum = matchReslut.filter(Boolean).length;
+      const porcessedNodeNum = matchReslut?.length;
+      const matchSuccessNum = matchReslut?.filter(Boolean).length;
       const matchFailedNum = porcessedNodeNum - matchSuccessNum;
       // 更新匹配关系   
       this.npuMatchedNodeList = npuMatchNodes;
@@ -517,13 +516,13 @@ class Legend extends PolymerElement {
     );
     this.set('matchLoading', false);
     if (success) {
-      const npuMatchNodes = data?.npuMatchNodes;
-      const benchMatchNodes = data?.benchMatchNodes;
-      const npuUnMatchNodes = data?.npuUnMatchNodes;
-      const benchUnMatchNodes = data?.benchUnMatchNodes;
+      const npuMatchNodes = data?.npuMatchNodes || {};
+      const benchMatchNodes = data?.benchMatchNodes || {};
+      const npuUnMatchNodes = data?.npuUnMatchNodes || [];
+      const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = Math.abs(npuUnMatchNodes.length - this.npuUnMatchedNodes.length);
+      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
       // 更新匹配关系   
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
@@ -585,7 +584,7 @@ class Legend extends PolymerElement {
     const { success, data, error } = await this.useMatched.saveMatchedRelations(this.selection);
     if (success) {
       const configFile = data;
-      const matchedConfigFiles = [...new Set([configFile, ...this.matchedConfigFiles])];
+      const matchedConfigFiles = [...new Set(['未选择', configFile, ...this.matchedConfigFiles])];
       this.set('matchedConfigFiles', matchedConfigFiles);
       Notification.show(`操作成功:文件已生成到当前目录下，文件名称为${configFile}`, {
         position: 'middle',

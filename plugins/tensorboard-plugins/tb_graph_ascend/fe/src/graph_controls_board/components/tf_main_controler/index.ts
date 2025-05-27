@@ -83,10 +83,10 @@ class MainController extends PolymerElement {
 
 
   @property({ type: Object })
-  metaDir: MetaDirType;
+  metaDir: MetaDirType = {};
 
   @property({ type: Object, notify: true })
-  selection: SelectionType;
+  selection: SelectionType = {} as SelectionType;
 
   @property({ type: Array })
   runs = []

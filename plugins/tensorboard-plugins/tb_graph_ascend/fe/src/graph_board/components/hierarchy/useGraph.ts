@@ -19,21 +19,23 @@ import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
 import { HierarchyNodeType, PreProcessDataConfigType, GraphType } from '../../type';
 
-import { useGraphType } from '../../type';
+import { UseGraphType } from '../../type';
 import { DURATION_TIME, NODE_TYPE_STYLES, SELECTED_STROKE_COLOR, NO_MATCHED_NODE_COLOR, BENCH_NODE_COLOR, BENCH_STROKE_COLOR, BASE_NODE_COLOR, NPU_PREFIX, BENCH_PREFIX, NODE_TYPE, OVERFLOW_COLOR, STROKE_WIDTH, SELECTED_STROKE_WIDTH } from '../../../common/constant';
-const useGraph = (): useGraphType => {
+const useGraph = (): UseGraphType => {
     const preProcessData = (data: Array<HierarchyNodeType>, selectedNode, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => {
         // 遍历数据并应用样式
         const { colors, isOverflowFilter, graphType } = config;
-        //优化性能，渲染3屏节点上中下各1000的高度
+        // 优化性能，渲染3屏节点上中下各1000的高度
         let virtualNodes = data.filter((d) => d.y >= (-Number(transform.y) - 1000) / Number(transform.scale) && d.y <= (-Number(transform.y) + 2000) / Number(transform.scale));
-        //virtualNodes的父节点
-        const parentsVirtualNodes = [];
+        // virtualNodes的父节点
+        const parentsVirtualNodes: Array<HierarchyNodeType> = [];
         virtualNodes.forEach((d) => {
-            let node = d;
+            let node: HierarchyNodeType | undefined = d;
             while (node?.parentNode) {
-                const parent = data.find((d) => node.parentNode === d.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''));
-                if (parent) parentsVirtualNodes.push(parent);
+                const parent = data.find((d) => node?.parentNode === d.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''));
+                if (parent) {
+                    parentsVirtualNodes.push(parent);
+                }
                 node = parent;
             }
         })
@@ -220,6 +222,7 @@ const useGraph = (): useGraphType => {
             .attr('text-anchor', 'middle')
             .text((d: any) => maybeTruncateString(d.label, 9, d.width))
             .each(function (d) {
+                // @ts-ignore
                 d3.select(this)
                     .append('title')
                     .text(d.label);
