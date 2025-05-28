@@ -14,10 +14,10 @@
 # limitations under the License.
 import os
 
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker, load_json
-from msprobe.core.common.utils import get_real_step_or_rank
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
 from msprobe.core.common_config import CommonConfig
 
 
@@ -45,6 +45,54 @@ class BasePrecisionDebugger:
         self.task = self.common_config.task
         if step is not None:
             self.common_config.step = get_real_step_or_rank(step, Const.STEP)
+
+    @classmethod
+    def get_instance(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if instance.task in BasePrecisionDebugger.tasks_not_need_debugger:
+            instance = None
+        return instance
+
+    @classmethod
+    def forward_backward_dump_end(cls):
+        instance = cls._instance
+        instance.stop()
+
+    @classmethod
+    def set_init_step(cls, step):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        check_init_step(step)
+        instance.service.init_step = step
+        instance.service.loop = 0
+
+    @classmethod
+    def register_custom_api(cls, module, api, api_prefix=None):
+        if not api_prefix:
+            api_prefix = getattr(module, "__name__", "Custom")
+        if not isinstance(api_prefix, str):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, "api_prefix must be string")
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.register_custom_api(module, api, api_prefix)
+
+    @classmethod
+    def restore_custom_api(cls, module, api):
+        if not hasattr(module, api):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance.service.restore_custom_api(module, api)
 
     @staticmethod
     def check_input_params(config_path, task, dump_path, level):
