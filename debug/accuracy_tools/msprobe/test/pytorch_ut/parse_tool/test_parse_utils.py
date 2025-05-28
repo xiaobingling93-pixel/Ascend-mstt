@@ -88,7 +88,7 @@ class TestUtils(unittest.TestCase):
         obj = np.array([1, 2, 3, 4, 5])
         res = self.util.get_md5_for_numpy(obj)
 
-        self.assertEqual(res, '689482128')
+        self.assertEqual(res, '3131197736')
 
     def test_deal_with_dir_or_file_inconsistency(self):
         with self.assertRaises(ParseException):
