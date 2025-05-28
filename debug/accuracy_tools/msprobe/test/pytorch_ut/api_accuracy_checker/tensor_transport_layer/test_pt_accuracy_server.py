@@ -86,8 +86,8 @@ class TestServerProtocol(unittest.TestCase):
         ])
         self.server_protocol.transport.write.called_once_with(expected_value)
 
-    @patch("msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server.hashlib.md5")
-    def test_post_process_error(self, mock_hashlib_md5):
+    @patch("msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server.zlib.crc32")
+    def test_post_process_error(self, mock_zlib_crc32):
         self.shared_queue.maxsize = 1
         self.server_protocol.send_ack = MagicMock()
 
@@ -99,17 +99,18 @@ class TestServerProtocol(unittest.TestCase):
 
         self.server_protocol.send_ack.side_effect = [mock_send_ack_method1, mock_send_ack_method2]
         self.server_protocol.check_sum = True
-        mock_hashlib_md5.hexdiges.return_value = "123"
+        mock_zlib_crc32.return_value = 123
         self.server_protocol.rank = 0
         self.server_protocol.step = 0
         self.server_protocol.post_process()
-        mock_hashlib_md5.assert_called()
+        mock_zlib_crc32.assert_called()
         self.server_protocol.send_ack.assert_any_call(self.server_protocol.ACK_ERROR)
         self.assertEqual(self.server_protocol.rank, -1)
         self.assertEqual(self.server_protocol.step, -1)
 
-    @patch("msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server.hashlib.md5")
-    def test_post_process_success(self, _):
+    @patch("msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server.zlib.crc32")
+    def test_post_process_success(self, mock_zlib_crc32):
+        mock_zlib_crc32.return_value = 123
         self.shared_queue.maxsize = 1
         self.server_protocol.send_ack = MagicMock()
 
