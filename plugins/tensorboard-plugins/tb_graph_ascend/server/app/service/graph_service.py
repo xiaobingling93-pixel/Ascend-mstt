@@ -70,7 +70,7 @@ class GraphService:
         file_path = os.path.join(run, f"{tag}.vis")
         file_path = os.path.normpath(file_path)  # 标准化路径
         file_size = os.path.getsize(file_path)
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:          
             while True:
                 chunk = f.read(chunk_size)
                 if not chunk:
@@ -263,8 +263,7 @@ class GraphService:
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_add_child_layer(graph_data, npu_node_name, bench_node_name,
-                                                                           task)
+                result = MatchNodesController.process_task_add_child_layer(graph_data, npu_node_name, bench_node_name, task)
                 return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}

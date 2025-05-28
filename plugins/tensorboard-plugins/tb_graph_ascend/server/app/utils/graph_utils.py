@@ -41,7 +41,7 @@ class GraphUtils:
             if current_tag == tag and current_run == run:
                 return GraphState.get_global_value('current_file_data'), None  # 直接返回获取结果
             else:
-                json_data, error_message = GraphUtils.safe_load_data(run, f"{tag}.vis")
+                json_data, error_message = GraphUtils.safe_load_data(run, f"{tag}.vis", False, True)
                 if error_message:
                     return None, error_message
                 GraphState.set_global_value('current_file_data', json_data)
