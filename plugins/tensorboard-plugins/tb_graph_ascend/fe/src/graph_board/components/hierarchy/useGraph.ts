@@ -252,7 +252,7 @@ const useGraph = (): UseGraphType => {
             .attr('text-anchor', 'middle')
             .text((d: any) => maybeTruncateString(d.label, 9, d.width))
             .each(function (d) {
-                // @ts-ignore
+                // @ts-expect-error d3.select(this) this is a d3 selection
                 d3.select(this).append('title').text(d.label);
             })
             .style('font-size', (d) => `${d.fontSize}px`)

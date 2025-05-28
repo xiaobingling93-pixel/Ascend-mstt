@@ -116,17 +116,15 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
   // 匹配 translate(X,Y) 部分
   const translateMatch = transformStr.match(/translate\((?<x>[^,]+),(?<y>[^)]+)\)/);
   if (translateMatch) {
-    result.x = parseFloat(translateMatch.groups!.x.trim());
-    result.y = parseFloat(translateMatch.groups!.y.trim());
+    result.x = parseFloat(translateMatch.groups?.x.trim() ?? '0');
+    result.y = parseFloat(translateMatch.groups?.y.trim() ?? '0');
   }
 
   // 匹配 scale(Z) 部分
   const scaleMatch = transformStr.match(/scale\((?<scaleValue>[^)]+)\)/);
   if (scaleMatch) {
-    result.scale = parseFloat(scaleMatch.groups!.scaleValue.trim());
+    result.scale = parseFloat(scaleMatch.groups?.scaleValue.trim() ?? '0');
   }
-
-
   return result;
 }
 /**
@@ -172,7 +170,6 @@ export function darkenColor(color: string, amount: number): string {
   else if (color.startsWith('rgb')) {
     const match = color.match(/(\d*\.?\d+%?)/g) || [];
     const components = match.map(parseComponent);
-
     [r, g, b] = components.slice(0, 3).map((v) => Math.min(255, v));
     a = components[3] !== undefined ? components[3] : 1;
   }

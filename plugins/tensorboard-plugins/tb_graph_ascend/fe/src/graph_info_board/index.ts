@@ -239,7 +239,12 @@ class TfGraphNodeInfo extends PolymerElement {
   }
 
   async _updateNodeInfo(selectedNode: string): Promise<{ npuNode: NodeInfoType; benchNode: NodeInfoType }> {
-    const nodeType = this.isSingleGraph ? 'Single' : this.selectedNode?.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench';
+    let nodeType; // 节点类型
+    if (this.isSingleGraph) {
+      nodeType = 'Single';
+    } else {
+      nodeType = this.selectedNode?.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench';
+    }
     const nodeInfo = {
       nodeType,
       nodeName: selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''), // 去掉前缀

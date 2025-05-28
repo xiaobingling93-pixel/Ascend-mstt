@@ -33,7 +33,7 @@ export interface GraphConfigType {
     colors: Record<string, {
         value: number[];
         color: string;
-    }>,
+    }>;
     overflowCheck: boolean;
     microSteps: number;
     isSingleGraph: boolean;

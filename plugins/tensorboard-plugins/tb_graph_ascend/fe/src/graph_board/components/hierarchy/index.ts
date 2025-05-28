@@ -167,7 +167,7 @@ class Hierarchy extends PolymerElement {
     container: HTMLElement | null | undefined;
     graph: HTMLElement | null | undefined;
     minimap: minimap.Minimap | null | undefined;
-    cleanEventLisetener: () => void = () => { };
+    cleanEventLisetener: ((...args: any[]) => void) | null = null;
 
     @observe('selectedNode')
     observeSelectNode() {
@@ -247,7 +247,7 @@ class Hierarchy extends PolymerElement {
         }
         const container = d3.select(this.container as HTMLElement);
         // 数据预处理
-        const prefix = PREFIX_MAP[this.graphType]
+        const prefix = PREFIX_MAP[this.graphType];
         const selectedNodeName = selectedNode.startsWith(prefix) ? selectedNode : `${prefix}${selectedNode}`; // 加上前缀
         const config = { colors: this.colors, isOverflowFilter: this.isOverflowFilter, graphType: this.graphType };
         const renderData = this.useGraph.preProcessData(data, selectedNodeName, config, transform);
@@ -460,7 +460,7 @@ class Hierarchy extends PolymerElement {
                         const comunicateNode = nodeInfo[rankId];
                         const precision_index = comunicateNode?.[0];
                         const comunicateNodeName = comunicateNode?.[1];
-                        const prefix = PREFIX_MAP[this.graphType]
+                        const prefix = PREFIX_MAP[this.graphType];
                         return {
                             component: this.useGraph.createComponent(`rank${rankId}`, precision_index, this.colors),
                             nodeName: `${prefix}${comunicateNodeName}`,
