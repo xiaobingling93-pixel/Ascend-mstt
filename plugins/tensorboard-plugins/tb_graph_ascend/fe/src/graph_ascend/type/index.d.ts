@@ -30,7 +30,10 @@ export interface SelectionType {
 
 export interface GraphConfigType {
     tooltips: string;
-    colors: { string: { value: number[], color: string } },
+    colors: Record<string, {
+        value: number[];
+        color: string;
+    }>;
     overflowCheck: boolean;
     microSteps: number;
     isSingleGraph: boolean;
@@ -44,4 +47,14 @@ export interface GraphAllNodeType {
     benchUnMatchNodes: string[];
     npuMatchNodes: string[];
     benchMatchNodes: string[];
+}
+
+export interface NodeListType {
+    npu: string[];
+    bench: string[];
+}
+
+export interface UnmatchedNodeType {
+    npuNodeList: string[];
+    benchNodeList: string[];
 }

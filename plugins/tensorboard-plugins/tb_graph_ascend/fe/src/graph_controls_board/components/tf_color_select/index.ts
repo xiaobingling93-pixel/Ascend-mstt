@@ -17,6 +17,7 @@
 import '@vaadin/combo-box';
 import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
+import { Notification } from '@vaadin/notification';
 import { customElement, property, observe } from '@polymer/decorators';
 import { fetchPbTxt, safeJSONParse } from '../../../utils';
 import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects } from '../../../common/constant';
@@ -305,7 +306,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       </template>
     `;
 
-
   @property({ type: Boolean })
   _colorSetting: boolean = true; // 颜色设置按钮
 
@@ -364,7 +364,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @property({ type: String, notify: true })
   selectedNode: string | null = null;
 
-
   // 溢出筛选
   @property({ type: Array })
   overflowLevel: any = [];
@@ -384,10 +383,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @property({ type: Object })
   selection: any = {};
 
-
   @observe('colorset')
   _observeColorSet(): void {
-    if (_.isEmpty(this.colorset)) return; // 如果colorset为空，直接返回
+    if (_.isEmpty(this.colorset)) {
+      return;
+    } // 如果colorset为空，直接返回
     if (this.colorset.length !== 0) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
@@ -400,6 +400,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       return;
     }
   }
+
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor
   @observe('selection')
   _clearAllToggleCheckboxAndInputField(): void {
@@ -420,6 +421,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     this.set('selectedNode', '');
     this.updateColorSetting();
   }
+
   @observe('isSingleGraph', 'overflowcheck')
   updateColorSetting(): void {
     if (!this.isSingleGraph) {
@@ -494,8 +496,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     };
 
     const params = {
-      'colors': JSON.stringify(newColorsList),
-      'run': this.selection.run,
+      colors: JSON.stringify(newColorsList),
+      run: this.selection.run,
     };
     const { success, data, error } = await request({ url: 'updateColors', method: 'GET', params: params });
     if (success) {
@@ -761,7 +763,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const precisionmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
         this.set('precisionmenu', precisionmenu);
       } catch (e) {
-        console.error('Get precision menu failed, please check the toggleCheckbox and the data in vis file');
+        Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+          position: 'middle',
+          duration: 4000,
+          theme: 'error',
+        });
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
@@ -787,7 +793,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const screenStr = fetchPbTxt(screenPath);
         this.overflowmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
       } catch (e) {
-        console.error('Get overflow menu failed, please check the toggleCheckbox and the data in vis file');
+        Notification.show(`获取溢出菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+          position: 'middle',
+          duration: 4000,
+          theme: 'error',
+        });
       }
       // 更新数据绑定
       this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);
@@ -804,12 +814,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     let prefix = NPU_PREFIX;
     const node = prefix + this.selectedPrecisionNode;
     this.set('selectedNode', node);
-  }
+  };
 
   _observeOverFlowNode = () => {
     const prefix = this.isSingleGraph ? '' : NPU_PREFIX;
     const node = prefix + this.selectedOverflowNode;
     this.set('selectedNode', node);
-  }
-
+  };
 }

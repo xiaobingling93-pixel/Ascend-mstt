@@ -19,20 +19,19 @@ import { html, PolymerElement } from '@polymer/polymer';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import useGraphAscend from './useGraphAscend';
 import { formatBytes, safeJSONParse } from '../utils';
-import '../graph_board/index'
-import '../graph_info_board/index'
+import '../graph_board/index';
+import '../graph_info_board/index';
 import '../graph_controls_board/index';
 import '../common/graph-board-layout';
-import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType } from './type'
-
+import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
 
 @customElement('graph-ascend')
 class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     static readonly template = html`
-        <template is='dom-if' if='[[!progressData.done]]'>
-            <div class='progress-bar'>
+        <template is="dom-if" if="[[!progressData.done]]">
+            <div class="progress-bar">
                 <label class="text-secondary">[[progressData.title]] [[progressData.progress]] %</label>
-                <vaadin-progress-bar value=[[progressData.progressValue]] theme='success'></vaadin-progress-bar>
+                <vaadin-progress-bar value="[[progressData.progressValue]]" theme="success"></vaadin-progress-bar>
                 <span class="text-secondary text-xs">[[progressData.info]]</span>
             </div>
         </template>
@@ -60,7 +59,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 on-fit-tap="onFitTap"
             ></graph-controls-board>
             <div class="center" slot="center">
-                <div class='graph-board-wrapper'>
+                <div class="graph-board-wrapper">
                     <graph-board
                         id="graph-board"
                         colors="{{colors}}"
@@ -78,60 +77,58 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     tooltips="[[tooltips]]"
                     selection="[[selection]]"
                     is-single-graph="[[isSingleGraph]]"
-                    >
+                >
                 </graph-info-board>
             </div>
         </graph-board-layout>
-      
-    <style>
-      :host /deep/ {
-        font-family: 'Roboto', sans-serif;
-        position: relative;
-      }
-      
 
-      .sidebar {
-        display: flex;
-        height: 100%;
-      }
+        <style>
+            :host /deep/ {
+                font-family: 'Roboto', sans-serif;
+                position: relative;
+            }
 
-      .center {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      }
+            .sidebar {
+                display: flex;
+                height: 100%;
+            }
 
-      vaadin-progress-bar::part(value) {
-        background-color: var(--progress-background-color,rgb(21,132,67));
-        transition: width 0.2s  linear 0;
-      }
-      .progress-bar{
-        width: 100%;
-        height: 100%;
-        z-index: 999;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background-color:rgba(170, 170, 170, 0.74);
-        color: var(--progress-color,  #757575);;   
-        position: absolute;
-      } 
-      .graph-board-wrapper{
-        height: 80%;
-        position: relative;
-      }
+            .center {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
 
-      vaadin-progress-bar{
-        width: 80%;
-        height:14px;
-      }
+            vaadin-progress-bar::part(value) {
+                background-color: var(--progress-background-color, rgb(21, 132, 67));
+                transition: width 0.2s linear 0;
+            }
+            .progress-bar {
+                width: 100%;
+                height: 100%;
+                z-index: 999;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background-color: rgba(170, 170, 170, 0.74);
+                color: var(--progress-color, #757575);
+                position: absolute;
+            }
+            .graph-board-wrapper {
+                height: 80%;
+                position: relative;
+            }
 
-    </style>
-  `;
+            vaadin-progress-bar {
+                width: 80%;
+                height: 14px;
+            }
+        </style>
+    `;
 
     @property({ type: Array })
-    metaDir: {} = {};
+    metaDir: Record<string, string> = {};
 
     @property({ type: Object, notify: true })
     selection: SelectionType | null = null;
@@ -188,24 +185,29 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     private useGraphAscend = useGraphAscend();
     private eventSource: EventSource | null = null;
 
+    @observe('selection')
+    updateGraphData = () => {
+        if (!this.selection?.run || !this.selection?.tag) {
+            return;
+        }
+        if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
+            this.loadGraphData(this.selection.run, this.selection.tag);
+        } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
+            this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
+            this.loadGraphAllNodeList(this.selection.run, this.selection.tag, this.selection.microStep);
+        }
+        this.currentSelection = this.selection;
+    };
+
     override async ready(): Promise<void> {
         super.ready();
         const metaDir = await this.useGraphAscend.loadGraphFileInfoList();
         this.set('metaDir', metaDir);
-        document.addEventListener('contextMenuTag-changed', (event: any) => this.set('jumpToNode', event.detail?.nodeName), { passive: true });
-    }
-
-    @observe('selection')
-    updateGraphData = () => {
-        if (!this.selection?.run || !this.selection?.tag) return;
-        if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
-            this.loadGraphData(this.selection.run, this.selection.tag);
-        } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
-            this.initGraphBoard();         // 只改变microsteps时，不重新加载图数据
-            this.loadGraphAllNodeList(this.selection.run, this.selection.tag, this.selection.microStep);
-
-        }
-        this.currentSelection = this.selection;
+        document.addEventListener(
+            'contextMenuTag-changed',
+            (event: any) => this.set('jumpToNode', event.detail?.nodeName),
+            { passive: true },
+        );
     }
 
     loadGraphData = (run, tag) => {
@@ -223,17 +225,21 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 this.progressReading('正在读取文件', data);
             }
             if (data.status === 'loading') {
-
                 if (data.done) {
                     this.eventSource?.close();
                     this.eventSource = null;
                     try {
-                        await Promise.all([this.loadGraphConfig(this.selection?.run, this.selection?.tag), this.loadGraphAllNodeList(this.selection?.run, this.selection?.tag, this.selection?.microStep)])
+                        await Promise.all([
+                            this.loadGraphConfig(this.selection?.run, this.selection?.tag),
+                            this.loadGraphAllNodeList(
+                                this.selection?.run,
+                                this.selection?.tag,
+                                this.selection?.microStep,
+                            ),
+                        ]);
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
                         this.progreesLoading('初始化完成', '请稍后', data);
-
                     } catch (error) {
-
                         this.progreesError('初始化图失败', error);
                     }
                 } else {
@@ -248,8 +254,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             }
             this.eventSource?.close();
         };
-    }
-
+    };
 
     loadGraphConfig = async (run, tag) => {
         const { success, data } = await this.useGraphAscend.loadGraphConfig(run, tag);
@@ -272,28 +277,28 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 this.set('microsteps', []);
             }
         }
-    }
+    };
 
     loadGraphAllNodeList = async (run, tag, microStep) => {
         const { success, data } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
         const allNodeList = data as GraphAllNodeType;
         if (success) {
-            const nodelist = {}
-            const unmatched = {}
+            const nodelist = {} as NodeListType;
+            const unmatched = {} as UnmatchedNodeType;
             if (this.isSingleGraph) {
-                nodelist['npu'] = allNodeList?.npuNodeList;
+                nodelist.npu = allNodeList?.npuNodeList;
             } else {
-                nodelist['npu'] = allNodeList?.npuNodeList;
-                nodelist['bench'] = allNodeList?.benchNodeList;
-                unmatched['npuNodeList'] = allNodeList?.npuUnMatchNodes;
-                unmatched['benchNodeList'] = allNodeList?.benchUnMatchNodes;
+                nodelist.npu = allNodeList?.npuNodeList;
+                nodelist.bench = allNodeList?.benchNodeList;
+                unmatched.npuNodeList = allNodeList?.npuUnMatchNodes;
+                unmatched.benchNodeList = allNodeList?.benchUnMatchNodes;
             }
             this.set('npuMatchNodes', allNodeList?.npuMatchNodes);
             this.set('benchMatchNodes', allNodeList?.benchMatchNodes);
             this.set('nodelist', nodelist);
             this.set('unmatched', unmatched);
         }
-    }
+    };
 
     initGraphBoard = () => {
         (this.shadowRoot?.querySelector('#graph-board') as any)?.initGraphHierarchy(this.jumpToNode);
@@ -301,7 +306,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('selectedNode', this.jumpToNode);
             this.set('jumpToNode', '');
         }
-    }
+    };
 
     onFitTap(): void {
         (this.shadowRoot?.querySelector('#graph-board') as any).fitScreen();
@@ -314,28 +319,28 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         data.title = title;
         data.info = `文件大小: ${data.size}, 已读取: ${data.read}`;
         this.set('progressData', data);
-    }
+    };
 
     progreesLoading = (title, info, progressData) => {
         const data = {
             ...progressData,
             title,
             info,
-        }
+        };
         data.progressValue = progressData.done ? 1 : progressData.progress / 100.0;
         this.set('progressData', data);
-    }
+    };
 
     progreesError = (title, info) => {
         const data = {
             ...this.progressData,
             title,
             info,
-        }
+        };
         this.updateStyles({
             '--progress-background-color': 'red',
             '--progress-color': 'red',
         });
         this.set('progressData', data);
-    }
+    };
 }

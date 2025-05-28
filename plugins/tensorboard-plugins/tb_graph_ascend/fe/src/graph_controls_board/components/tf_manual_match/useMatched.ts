@@ -22,26 +22,23 @@ import { UseMatchedType, MatchResultType } from '../../type';
 const useMatched = (): UseMatchedType => {
   const requestAddMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
     const params = {
-      'npuNodeName': npuNodeName,
-      'benchNodeName': benchNodeName,
-      'metaData': JSON.stringify(metaData)
+      npuNodeName: npuNodeName,
+      benchNodeName: benchNodeName,
+      metaData: JSON.stringify(metaData),
     };
     const mactchResult = await request({ url: 'addMatchNodes', method: 'GET', params: params });
     return mactchResult;
   };
 
-
   const requestDeleteMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
     const params = {
-      'npuNodeName': npuNodeName,
-      'benchNodeName': benchNodeName,
-      'metaData': JSON.stringify(metaData)
+      npuNodeName: npuNodeName,
+      benchNodeName: benchNodeName,
+      metaData: JSON.stringify(metaData),
     };
     const mactchResult = await request({ url: 'deleteMatchNodes', method: 'GET', params: params });
     return mactchResult;
   };
-
-
 
   const saveMatchedNodesLink = async (selection: any): Promise<any> => {
     const metaData = {
@@ -70,7 +67,7 @@ const useMatched = (): UseMatchedType => {
     const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
     const saveResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
     return saveResult;
-  }
+  };
 
   const addMatchedNodesLinkByConfigFile = async (condfigFile: string, selection: any): Promise<MatchResultType> => {
     if (isEmpty(condfigFile)) {
@@ -80,14 +77,13 @@ const useMatched = (): UseMatchedType => {
       };
     }
     const params = {
-      'configFile': condfigFile,
-      'metaData': JSON.stringify(selection)
+      configFile: condfigFile,
+      metaData: JSON.stringify(selection),
     };
     const mactchResult = await request({ url: 'addMatchNodesByConfig', method: 'GET', params: params });
 
     return mactchResult as MatchResultType;
-
-  }
+  };
 
   const addMatchedNodesLink = async (
     npuNodeName: string,
@@ -108,11 +104,7 @@ const useMatched = (): UseMatchedType => {
     return matchResult;
   };
 
-  const deleteMatchedNodesLink = async (
-    npuNodeName: string,
-    benchNodeName: string,
-    selection: any,
-  ): Promise<any> => {
+  const deleteMatchedNodesLink = async (npuNodeName: string, benchNodeName: string, selection: any): Promise<any> => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
         success: false,
@@ -132,8 +124,7 @@ const useMatched = (): UseMatchedType => {
     addMatchedNodesLink,
     saveMatchedRelations,
     deleteMatchedNodesLink,
-    addMatchedNodesLinkByConfigFile
-
+    addMatchedNodesLinkByConfigFile,
   };
 };
 
