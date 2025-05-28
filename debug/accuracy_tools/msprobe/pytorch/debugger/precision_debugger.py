@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections import namedtuple
 
 from torch.utils.data import dataloader
 
@@ -51,6 +50,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.service = Service(self.config)
         self.module_dumper = ModuleDumper(self.service)
         self.ori_customer_func = {}
+        self.enable_dataloader = self.config.enable_dataloader
         self.param_warning()
 
     @property
@@ -119,7 +119,6 @@ class PrecisionDebugger(BasePrecisionDebugger):
                 "The 'model' parameter in the PrecisionDebugger will be deprecated in the future."
                 "It is recommended to pass the 'model' parameter in the start interface instead."
             )
-        self.enable_dataloader = self.config.enable_dataloader
         if self.enable_dataloader:
             logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
             dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)

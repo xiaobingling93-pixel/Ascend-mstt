@@ -30,6 +30,9 @@ class BasePrecisionDebugger:
             cls._instance = super(BasePrecisionDebugger, cls).__new__(cls)
             cls._instance.config = None
             cls._instance.enable_dataloader = False
+            cls._instance.initialized = False
+            cls.service = None
+            cls.first_start = False
         return cls._instance
 
     def __init__(
@@ -40,6 +43,9 @@ class BasePrecisionDebugger:
             level=None,
             step=None
     ):
+        if self.initialized:
+            return
+        self.initialized = True
         self.check_input_params(config_path, task, dump_path, level)
         self.common_config, self.task_config = self.parse_config_path(config_path, task)
         self.task = self.common_config.task

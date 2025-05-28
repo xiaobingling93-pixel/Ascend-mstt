@@ -19,10 +19,9 @@ from collections import defaultdict, namedtuple
 import mindspore as ms
 from mindspore._c_expression import MSContext
 
-from msprobe.core.common.const import Const, FileCheckConst, MsgConst
-from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, check_token_range
+from msprobe.core.common.const import Const, MsgConst
+from msprobe.core.common.utils import check_token_range
+from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import (
@@ -31,14 +30,14 @@ from msprobe.mindspore.common.utils import (
     is_graph_mode_cell_dump_allowed
 )
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
-from msprobe.mindspore.ms_config import parse_json_config
+from msprobe.mindspore.ms_config import parse_task_config
 from msprobe.mindspore.runtime import Runtime
 from msprobe.mindspore.service import Service
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
-from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
 
 try:
     from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
@@ -56,9 +55,7 @@ except ImportError:
 ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task", "dump_path", "level"])
 
 
-class PrecisionDebugger:
-    _instance = None
-    task_not_need_service = [Const.GRAD_PROBE]
+class PrecisionDebugger(BasePrecisionDebugger):
 
     def __new__(cls, config_path=None, task=None, dump_path=None,
                 level=None, step=None, opt=None):
@@ -72,29 +69,18 @@ class PrecisionDebugger:
 
     def __init__(self, config_path=None, task=None, dump_path=None,
                  level=None, step=None):
-        if self.initialized:
-            return
-        self.initialized = True
-
         set_register_backward_hook_functions()
+        super().__init__(config_path, task, dump_path, level, step)
+        self.config = DebuggerConfig(
+            self.common_config, self.task_config, task, dump_path, level
+        )
 
-        if not config_path:
-            config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
-
-        config_params = ConfigParameters(config_path, task, dump_path, level)
-        self.check_input_params(config_params)
-
-        common_config, task_config = parse_json_config(config_path)
-        common_config.task = task if task else common_config.task
-        self.task = common_config.task
         if self.task == Const.GRAD_PROBE:
-            self.gm = GradientMonitor(common_config, task_config)
+            self.gm = GradientMonitor(self.common_config, self.task_config)
             return
-        common_config.step = get_real_step_or_rank(
-            step, Const.STEP) if step is not None else common_config.step
-        common_config.level = level if level else common_config.level
-        common_config.dump_path = dump_path if dump_path else common_config.dump_path
-        self.config = DebuggerConfig(common_config, task_config)
+        self.common_config.level = level if level else self.common_config.level
+        self.common_config.dump_path = dump_path if dump_path else self.common_config.dump_path
+        self.config = DebuggerConfig(self.common_config, self.task_config)
 
         if self._need_msprobe_c() and _msprobe_c:
             os.environ["MS_HOOK_ENABLE"] = "on"
@@ -109,29 +95,6 @@ class PrecisionDebugger:
         Runtime.is_running = False
         if enable_dynamic_kbyk_dump:
             _dump_set_dynamic()
-
-    @staticmethod
-    def check_input_params(args):
-        if args.config_path is not None:
-            if not isinstance(args.config_path, str):
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, "config_path must be a string")
-            file_checker = FileChecker(
-                file_path=args.config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
-            file_checker.common_check()
-
-        if args.task is not None and args.task not in Const.TASK_LIST:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}")
-
-        if args.dump_path is not None:
-            if not isinstance(args.dump_path, str):
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, "dump_path must be a string")
-
-        if args.level is not None and args.level not in Const.LEVEL_LIST:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
 
     @staticmethod
     def _get_execution_mode():
@@ -163,13 +126,9 @@ class PrecisionDebugger:
 
     @classmethod
     def start(cls, model=None, token_range=None):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance = cls.get_instance()
         if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().start()
-        if instance.task in PrecisionDebugger.task_not_need_service:
-            return
         check_token_range(token_range)
         instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
@@ -193,19 +152,11 @@ class PrecisionDebugger:
         Runtime.is_running = True
 
     @classmethod
-    def forward_backward_dump_end(cls):
-        instance = cls._instance
-        instance.stop()
-
-    @classmethod
     def stop(cls):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        instance = cls.get_instance()
+
         if instance.task == Const.GRAD_PROBE:
             instance.gm.stop()
-        if instance.task in PrecisionDebugger.task_not_need_service:
-            return
         if instance.service:
             instance.service.stop()
         if enable_dynamic_kbyk_dump:
@@ -216,12 +167,7 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        instance = cls._instance
-
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if instance.task in PrecisionDebugger.task_not_need_service:
-            return
+        instance = cls.get_instance()
 
         if instance.service:
             instance.service.step()
@@ -263,39 +209,9 @@ class PrecisionDebugger:
                 instance.service = Service(instance.config)
             instance.service.save(variable, name, save_backward)
 
-    @classmethod
-    def set_init_step(cls, step):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        check_init_step(step)
-        instance.service.init_step = step
-        instance.service.loop = 0
-
-    @classmethod
-    def register_custom_api(cls, module, api_name, api_prefix=None):
-        if not api_prefix:
-            api_prefix = getattr(module, "__name__", "Custom")
-        if not isinstance(api_prefix, str):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, "api_prefix must be string")
-        if not hasattr(module, api_name):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api_name}")
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        instance.service.register_custom_api(module, api_name, api_prefix)
-
-    @classmethod
-    def restore_custom_api(cls, module, api):
-        if not hasattr(module, api):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        instance.service.restore_custom_api(module, api)
+    @staticmethod
+    def get_task_config(task, json_config):
+        return parse_task_config(task, json_config)
 
     @classmethod
     def _need_service(cls):
