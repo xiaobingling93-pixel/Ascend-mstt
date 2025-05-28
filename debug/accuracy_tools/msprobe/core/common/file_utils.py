@@ -859,12 +859,14 @@ class SharedDict:
             if self._changed:
                 data = pickle.dumps(self._dict)
                 global_lock.acquire()
-                self._shm.buf[0:len(data)] = bytearray(data)
-                global_lock.release()
+                try:
+                    self._shm.buf[0:len(data)] = bytearray(data)
+                finally:
+                    global_lock.release()
             self._shm.close()
         except FileNotFoundError:
             name = self.get_shared_memory_name()
-            logger.warning(f'close shared memory {name} failed, shared memory has already been destroyed.')
+            logger.debug(f'close shared memory {name} failed, shared memory has already been destroyed.')
 
     def __setitem__(self, key, value):
         self._dict[key] = value
@@ -883,7 +885,7 @@ class SharedDict:
                 shm.unlink()
                 logger.debug(f'destroy shared memory, name: {name}')
             except FileNotFoundError:
-                logger.warning(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
+                logger.debug(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
 
     @classmethod
     def get_shared_memory_name(cls):
@@ -913,7 +915,7 @@ class SharedDict:
             try:
                 self._dict = SafeUnpickler(buff).load()
             except Exception as e:
-                logger.warning(f'shared dict is unreadable, reason: {e}, create new dict.')
+                logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
                 self._dict = {}
                 self._changed = True
 
