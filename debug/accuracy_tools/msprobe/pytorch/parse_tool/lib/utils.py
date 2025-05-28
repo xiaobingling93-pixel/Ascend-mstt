@@ -115,7 +115,7 @@ class Util:
     def get_md5_for_numpy(obj):
         np_bytes = obj.tobytes()
         md5_crc = zlib.crc32(np_bytes)
-        return str(md5_crc)
+        return f"{md5_crc:08x}"
 
     @staticmethod
     def deal_with_dir_or_file_inconsistency(output_path):
