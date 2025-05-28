@@ -132,6 +132,7 @@ class BasePrecisionDebugger:
             task_config = self.get_task_config(common_config.task, json_config)
         return common_config, task_config
 
-    def get_task_config(self):
+    @staticmethod
+    def get_task_config(task, json_config):
         raise NotImplementedError("Subclass must implment get_task_config")
 
