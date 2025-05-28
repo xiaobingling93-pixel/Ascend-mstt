@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import os
 import re
 import subprocess
 import sys
 import time
+import zlib
 from collections import namedtuple
 
 import numpy as np
@@ -114,8 +114,8 @@ class Util:
     @staticmethod
     def get_md5_for_numpy(obj):
         np_bytes = obj.tobytes()
-        md5_hash = hashlib.md5(np_bytes)
-        return md5_hash.hexdigest()
+        md5_hash = zlib.crc32(np_bytes)
+        return md5_hash
 
     @staticmethod
     def deal_with_dir_or_file_inconsistency(output_path):
