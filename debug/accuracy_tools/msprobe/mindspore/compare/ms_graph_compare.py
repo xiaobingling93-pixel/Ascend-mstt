@@ -99,7 +99,11 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
             logger.warning(f"Data_path {statistic_file_path} has no key {key}.")
 
     for data in statistic_data_list:
-        if len(data) != 13:  # 13列分别是OpType, OpName, TaskId, StreamId, TimeStamp, IO, Slot, DataSize, DataType, Shape, MaxValue, MinValue, L2NormValue
+        '''
+        13列分别是OpType, OpName, TaskId, StreamId, TimeStamp, IO, Slot, DataSize, 
+        DataType, Shape, MaxValue, MinValue, L2NormValue
+        '''
+        if len(data) < 13:
             logger.error(f'Dump file {statistic_file_path} has been modified into incorrect format!')
             raise CompareException(f'Dump file {statistic_file_path} has been modified into incorrect format!')
         compare_key = f"{data[1]}.{data[2]}.{data[5]}.{data[6]}"  # OpName, TaskId, IO, Slot
