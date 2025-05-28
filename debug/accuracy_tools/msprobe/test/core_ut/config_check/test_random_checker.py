@@ -1,77 +1,72 @@
 import unittest
-import pandas as pd
-from unittest.mock import patch, MagicMock
 
-from msprobe.core.config_check.checkers.random_checker import compare_json_files, compare_random, get_file_and_line
+from msprobe.core.config_check.checkers.random_checker import stack_match
 
-
-class TestCompareRandom(unittest.TestCase):
-
-    @patch('os.listdir', return_value=['rank1.json', 'rank2.json'])
-    @patch('os.path.join', return_value='test_path')
-    @patch("msprobe.core.config_check.checkers.random_checker.load_json")
-    def test_compare_random_with_files(self, mock_load_json, mock_path, mock_listdir):
-        mock_load_json.return_value = {"op1": {"position1": 1}}
-        bench_dir = 'test_bench'
-        cmp_dir = 'test_cmp'
-        result = compare_random(bench_dir, cmp_dir)
-        self.assertEqual(isinstance(result, pd.DataFrame), True)
-
-    @patch('os.listdir', return_value=[])
-    @patch('os.path.join', return_value='test_path')
-    def test_compare_random_no_files(self, mock_path, mock_listdir):
-        bench_dir = 'test_bench'
-        cmp_dir = 'test_cmp'
-        result = compare_random(bench_dir, cmp_dir)
-        self.assertEqual(isinstance(result, pd.DataFrame), True)
-        self.assertEqual(len(result), 0)
-
-    def test_get_file_and_line_with_valid_input(self):
-        position = '/path/to/file.py:10'
-        result = get_file_and_line(position)
-        self.assertEqual(isinstance(result, str), True)
-        self.assertEqual(result, 'file.py:10')
-
-    def test_get_file_and_line_with_invalid_input(self):
-        position = 'invalid_position'
-        result = get_file_and_line(position)
-        self.assertEqual(isinstance(result, str), True)
-        self.assertEqual(result, 'invalid_position')
-
-    @patch('os.listdir', return_value=['rank1.json', 'rank2.json'])
-    @patch('os.path.join', return_value='test_path')
-    def test_compare_json_files_same_data(self, mock_path, mock_listdir):
-        bench_data = {"op1": {"position1:10": 1}}
-        cmp_data = {"op1": {"position1:10": 1}}
-        result = compare_json_files(bench_data, cmp_data)
-        self.assertEqual(isinstance(result, list), True)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][2], True)
-
-    @patch('os.listdir', return_value=['rank1.json', 'rank2.json'])
-    @patch('os.path.join', return_value='test_path')
-    def test_compare_json_files_different_data(self, mock_path, mock_listdir):
-        bench_data = {"op1": {"position1:10": 1}}
-        cmp_data = {"op1": {"position1:10": 2}}
-        result = compare_json_files(bench_data, cmp_data)
-        self.assertEqual(isinstance(result, list), True)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0][2], False)
-
-    @patch('os.listdir', return_value=['rank1.json', 'rank2.json'])
-    @patch('os.path.join', return_value='test_path')
-    def test_compare_json_files_missing_op_in_bench(self, mock_path, mock_listdir):
-        bench_data = {}
-        cmp_data = {"op1": {"position1:10": 1}}
-        result = compare_json_files(bench_data, cmp_data)
-        self.assertEqual(isinstance(result, list), True)
-        self.assertEqual(len(result), 1)
-
-    @patch('os.listdir', return_value=['rank1.json', 'rank2.json'])
-    @patch('os.path.join', return_value='test_path')
-    def test_compare_json_files_missing_op_in_cmp(self, mock_path, mock_listdir):
-        bench_data = {"op1": {"position1:10": 1}}
-        cmp_data = {}
-        result = compare_json_files(bench_data, cmp_data)
-        self.assertEqual(isinstance(result, list), True)
-        self.assertEqual(len(result), 1)
+class TestStackMatch(unittest.TestCase):
+    def test_identical_stacks(self):
+        stack1 = [
+            "File /project/utils/funcs.py, line 42, in calculate_sum, return a + b",
+            "File /project/main.py, line 15, in main, result = calculate_sum(1, 2)"
+        ]
+        stack2 = [
+            "File /project/utils/funcs.py, line 42, in calculate_sum, return a + b",
+            "File /project/main.py, line 15, in main, result = calculate_sum(1, 2)"
+        ]
+        self.assertTrue(stack_match(stack1, stack2))
+    
+    def test_different_paths_same_file(self):
+        stack1 = [
+            "File /user1/project/utils/funcs.py, line 42, in calculate_sum, return a + b"
+        ]
+        stack2 = [
+            "File /user2/another_project/utils/funcs.py, line 42, in calculate_sum, return a + b"
+        ]
+        # 文件名相同，函数名和代码行相同
+        self.assertTrue(stack_match(stack1, stack2))
+    
+    def test_different_filenames(self):
+        stack1 = [
+            "File /project/utils/funcs.py, line 42, in calculate_sum, return a + b"
+        ]
+        stack2 = [
+            "File /project/utils/other_funcs.py, line 42, in calculate_sum, return a + b"
+        ]
+        # 文件名不同
+        self.assertFalse(stack_match(stack1, stack2))
+    
+    def test_different_line_numbers(self):
+        stack1 = [
+            "File /project/utils/funcs.py, line 42, in calculate_sum, return a + b"
+        ]
+        stack2 = [
+            "File /project/utils/funcs.py, line 45, in calculate_sum, return a + b"
+        ]
+        self.assertTrue(stack_match(stack1, stack2))
+    
+    def test_different_functions(self):
+        stack1 = [
+            "File /project/utils/funcs.py, line 42, in calculate_sum, return a + b"
+        ]
+        stack2 = [
+            "File /project/utils/funcs.py, line 42, in multiply, return a * b"
+        ]
+        self.assertFalse(stack_match(stack1, stack2))
+    
+    def test_similar_code_different_variables(self):
+        stack1 = [
+            "File /project/main.py, line 15, in main, result = calculate_sum(a, b)"
+        ]
+        stack2 = [
+            "File /project/main.py, line 15, in main, result = calculate_sum(x, y)"
+        ]
+        # 代码行前缀和结构相似
+        self.assertTrue(stack_match(stack1, stack2))
+    
+    def test_different_code_structure(self):
+        stack1 = [
+            "File /project/main.py, line 15, in main, result = calculate_sum(a, b)"
+        ]
+        stack2 = [
+            "File /project/main.py, line 15, in main, print('Hello, world!')"
+        ]
+        self.assertFalse(stack_match(stack1, stack2))

@@ -160,7 +160,7 @@ class TestConfigChecker(unittest.TestCase):
         random_check_result = read_xlsx(os.path.join(compare_output_dir, ConfigChecker.result_filename),
                                         sheet_name=RandomChecker.target_name_in_zip)
         self.assertEqual(random_check_result.columns.tolist(), RandomChecker.result_header)
-        self.assertEqual(len(random_check_result), 5)
+        self.assertEqual(len(random_check_result), 7)
 
         dataset_check_result = read_xlsx(os.path.join(compare_output_dir, ConfigChecker.result_filename),
                                          sheet_name=DatasetChecker.target_name_in_zip)
