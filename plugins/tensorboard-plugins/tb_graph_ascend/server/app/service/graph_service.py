@@ -41,7 +41,7 @@ class GraphService:
                     run_abs = os.path.abspath(root)
                     run = os.path.basename(run_abs)  # 不允许同名目录，否则有问题
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
-                    _, error = GraphUtils.safe_load_data(run_abs, f"{tag}.vis", True, True)
+                    _, error = GraphUtils.safe_load_data(run_abs, f"{tag}.vis", True)
                     if error:
                         logger.error(f'Error: File run:"{run_abs},tag:{tag}" is not accessible. Error: {error}')
                         continue
@@ -70,7 +70,7 @@ class GraphService:
         file_path = os.path.join(run, f"{tag}.vis")
         file_path = os.path.normpath(file_path)  # 标准化路径
         file_size = os.path.getsize(file_path)
-        with open(file_path, 'r', encoding='utf-8') as f:          
+        with open(file_path, 'r', encoding='utf-8') as f: 
             while True:
                 chunk = f.read(chunk_size)
                 if not chunk:

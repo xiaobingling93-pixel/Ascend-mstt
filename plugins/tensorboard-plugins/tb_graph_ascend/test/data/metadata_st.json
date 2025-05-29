@@ -88,25 +88,8 @@
               "benchMatchNodes": {
                 "AddOne_0": "AddOne_0"
               },
-              "npuUnMatchNodes": [
-                "AddOne_1",
-                "Test.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.tt.ee",
-                "<a>add_51111</a>",
-                "add_1",
-                "add_4",
-                "add_2",
-                "arg0_1_0",
-                "output_0"
-              ],
-              "benchUnMatchNodes": [
-                "AddOne_1",
-                "Test.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.tt.ee",
-                "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
-                "add_1",
-                "add_2",
-                "arg0_1_0",
-                "output_0"
-              ]
+              "npuUnMatchNodes": [],
+              "benchUnMatchNodes": []
             }
           }
         },
@@ -116,7 +99,12 @@
           "bench_node_name": "AddOne_0",
           "expected": {
             "success": true,
-            "data": {}
+            "data": {
+              "npuMatchNodes": {},
+              "benchMatchNodes": {},
+              "npuUnMatchNodes": ["AddOne_0"],
+              "benchUnMatchNodes": ["AddOne_0"]
+            }
           }
         },
         {
@@ -126,65 +114,14 @@
           "expected": {
             "success": true,
             "data": {
-              "precision_error": 0.0,
-              "intput_statistical_diff": {
-                "AddOne_0.input_arg.0": {
-                  "MaxAbsErr": 0.0,
-                  "MinAbsErr": 0.0,
-                  "MeanAbsErr": 0.0,
-                  "NormAbsErr": 0.0,
-                  "MaxRelativeErr": "0.0000%",
-                  "MinRelativeErr": "0.0000%",
-                  "MeanRelativeErr": "0.0000%",
-                  "NormRelativeErr": "0.0000%"
-                },
-                "AddOne_0.input_arg.1": {
-                  "MaxAbsErr": 0.0,
-                  "MinAbsErr": 0.0,
-                  "MeanAbsErr": 0.0,
-                  "NormAbsErr": 0.0,
-                  "MaxRelativeErr": "0.0000%",
-                  "MinRelativeErr": "0.0000%",
-                  "MeanRelativeErr": "0.0000%",
-                  "NormRelativeErr": "0.0000%"
-                }
-              },
-              "output_statistical_diff": {
-                "AddOne_0.output_arg.0": {
-                  "MaxAbsErr": 0.0,
-                  "MinAbsErr": 0.0,
-                  "MeanAbsErr": 0.0,
-                  "NormAbsErr": 0.0,
-                  "MaxRelativeErr": "0.0000%",
-                  "MinRelativeErr": "0.0000%",
-                  "MeanRelativeErr": "0.0000%",
-                  "NormRelativeErr": "0.0000%"
-                },
-                "AddOne_0.output_arg.1": {
-                  "MaxAbsErr": 0.0,
-                  "MinAbsErr": 0.0,
-                  "MeanAbsErr": 0.0,
-                  "NormAbsErr": 0.0,
-                  "MaxRelativeErr": "0.0000%",
-                  "MinRelativeErr": "0.0000%",
-                  "MeanRelativeErr": "0.0000%",
-                  "NormRelativeErr": "0.0000%"
-                }
-              }
-            }
-          }
-        },
-        {
-          "type": "get_matched_state_list",
-          "expected": {
-            "success": true,
-            "data": {
-              "npu_match_nodes": {
+              "npuMatchNodes": {
                 "AddOne_0": "AddOne_0"
               },
-              "bench_match_nodes": {
+              "benchMatchNodes": {
                 "AddOne_0": "AddOne_0"
-              }
+              },
+              "npuUnMatchNodes": [],
+              "benchUnMatchNodes": []
             }
           }
         },

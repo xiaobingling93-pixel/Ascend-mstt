@@ -4,8 +4,15 @@
         "edge": [],
         "node": {
             "AddOne_0": {
-                "matched_node_link": [],
-                "data": {},
+                "matched_node_link": [
+                    "root",
+                    "AddThree_0",
+                    "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
+                    "AddOne_0"
+                ],
+                "data": {
+                    "precision_index": 0.0
+                },
                 "id": "AddOne_0",
                 "inputs": [],
                 "input_data": {
@@ -21,7 +28,15 @@
                         "Max": "5348.2343242",
                         "Min": "-2344.124124234",
                         "Mean": "-51.23432654",
-                        "Norm": "355555.3406"
+                        "Norm": "355555.3406",
+                        "MaxAbsErr": 0.0,
+                        "MinAbsErr": 0.0,
+                        "MeanAbsErr": 0.0,
+                        "NormAbsErr": 0.0,
+                        "MaxRelativeErr": "0.0000%",
+                        "MinRelativeErr": "0.0000%",
+                        "MeanRelativeErr": "0.0000%",
+                        "NormRelativeErr": "0.0000%"
                     },
                     "AddOne_0.input_arg.1": {
                         "type": "torch.Tensor",
@@ -35,7 +50,15 @@
                         "Max": "5348.2343242",
                         "Min": "-2344.124124234",
                         "Mean": "-51.23432654",
-                        "Norm": "355555.3406"
+                        "Norm": "355555.3406",
+                        "MaxAbsErr": 0.0,
+                        "MinAbsErr": 0.0,
+                        "MeanAbsErr": 0.0,
+                        "NormAbsErr": 0.0,
+                        "MaxRelativeErr": "0.0000%",
+                        "MinRelativeErr": "0.0000%",
+                        "MeanRelativeErr": "0.0000%",
+                        "NormRelativeErr": "0.0000%"
                     },
                     "AddOne_0.1": {},
                     "AddOne_0.2": {}
@@ -53,7 +76,15 @@
                         "Max": "5348.2343242",
                         "Min": "-2344.124124234",
                         "Mean": "-51.23432654",
-                        "Norm": "355555.3406"
+                        "Norm": "355555.3406",
+                        "MaxAbsErr": 0.0,
+                        "MinAbsErr": 0.0,
+                        "MeanAbsErr": 0.0,
+                        "NormAbsErr": 0.0,
+                        "MaxRelativeErr": "0.0000%",
+                        "MinRelativeErr": "0.0000%",
+                        "MeanRelativeErr": "0.0000%",
+                        "NormRelativeErr": "0.0000%"
                     },
                     "AddOne_0.output_arg.1": {
                         "type": "torch.Tensor",
@@ -67,7 +98,15 @@
                         "Max": "5348.2343242",
                         "Min": "-2344.124124234",
                         "Mean": "-51.23432654",
-                        "Norm": "355555.3406"
+                        "Norm": "355555.3406",
+                        "MaxAbsErr": 0.0,
+                        "MinAbsErr": 0.0,
+                        "MeanAbsErr": 0.0,
+                        "NormAbsErr": 0.0,
+                        "MaxRelativeErr": "0.0000%",
+                        "MinRelativeErr": "0.0000%",
+                        "MeanRelativeErr": "0.0000%",
+                        "NormRelativeErr": "0.0000%"
                     },
                     "AddOne_0.1": {},
                     "AddOne_0.2": {}
@@ -519,7 +558,12 @@
         "edge": [],
         "node": {
             "AddOne_0": {
-                "matched_node_link": [],
+                "matched_node_link": [
+                    "None",
+                    "AddThree_0",
+                    "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
+                    "AddOne_0"
+                ],
                 "data": {},
                 "id": "AddOne_0",
                 "inputs": [],
