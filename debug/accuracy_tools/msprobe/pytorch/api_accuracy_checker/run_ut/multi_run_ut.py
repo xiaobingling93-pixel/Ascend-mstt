@@ -129,7 +129,8 @@ def run_parallel_ut(config):
         except ValueError as e:
             logger.warning(f"An error occurred while reading subprocess output: {e}")
         finally:
-            process.stdout.close()
+            if process.poll() is None:
+                process.stdout.close()
 
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
