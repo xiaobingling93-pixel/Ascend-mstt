@@ -1,6 +1,6 @@
 html,
 body,
-graph-app {
+graph-ascend {
   height: 100%;
   margin: 0;
   font-family: Roboto, sans-serif;
@@ -13,5 +13,9 @@ vaadin-combo-box-scroller {
 
 vaadin-combo-box-item {
   overflow: unset;
+  font-size: 14px;
+}
+
+vaadin-select-item {
   font-size: 14px;
 }

@@ -20,6 +20,9 @@ if [[ $(basename $(pwd)) != "msmonitor" ]]; then
     fi
 fi
 
+# 设置必要的环境变量
+export LD_LIBRARY_PATH=third_party/dynolog/third_party/prometheus-cpp/_build/lib:$LD_LIBRARY_PATH
+
 echo "执行系统测试 (test/st 目录)"
 
 # 检查系统测试目录是否存在

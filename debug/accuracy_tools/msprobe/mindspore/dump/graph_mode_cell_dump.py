@@ -16,14 +16,15 @@
 import os
 
 import mindspore as ms
-from mindspore import hal, ops
+from mindspore import hal, ops, Tensor
 from mindspore.ops.primitive import _run_op
 
 from msprobe.core.common.const import Const as CoreConst
 from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-import msprobe.mindspore.dump.cell_dump_process as cellDumper
+import msprobe.mindspore.dump.cell_dump_process as cellDumperWithDumpGradient
+import msprobe.mindspore.dump.cell_dump_with_insert_gradient as cellDumperWithInsertGradient
 from msprobe.mindspore.runtime import Runtime
 
 tensordump_flag = True
@@ -38,6 +39,7 @@ class GraphModeCellDump:
         self.net = model
         self.white_list = []
         self.black_list = []
+        self.execution_mode = config.execution_mode
         self.dump_path = config.dump_path if config.dump_path else "./"
         self.rank = config.rank
         self.step = config.step
@@ -99,7 +101,20 @@ class GraphModeCellDump:
         else:
             dump_path = self.dump_path
 
-        cellDumper.start(
+        cell_dumper = cellDumperWithDumpGradient
+
+        if self.execution_mode == Const.PYNATIVE_MODE:
+            enable_dump_gradient = hasattr(ops, 'DumpGradient')
+            if hasattr(ops, 'DumpGradient'):
+                try:
+                    ops.DumpGradient()('grad.npy', Tensor([0], dtype=ms.float32), 'in')
+                except Exception:
+                    enable_dump_gradient = False
+                    logger.warning('the DumpGradient operator failed to execute.')
+            if not enable_dump_gradient:
+                cell_dumper = cellDumperWithInsertGradient
+
+        cell_dumper.start(
             net=self.net,
             dump_path=dump_path,
             data_mode=self.data_mode[0]

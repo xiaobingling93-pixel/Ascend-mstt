@@ -412,7 +412,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
             new_line = name.split(MonitorConst.NAME_SEP) + metric_value
             new_line.insert(2, step)
             new_data.append(new_line)
-        new_data = pd.DataFrame(new_data).round(self.ndigits)
+        new_data = pd.DataFrame(new_data).round(self.ndigits).fillna("nan")
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
 

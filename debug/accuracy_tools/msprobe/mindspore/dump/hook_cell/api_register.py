@@ -54,6 +54,7 @@ if not is_mindtorch():
         )
 
     _supported_api_list_path = (os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE),)
+    _backlist = []
 else:
     import torch
     import torch_npu
@@ -68,6 +69,7 @@ else:
     }
     _supported_api_list_path = (os.path.join(cur_path, '../../../pytorch/hook_module',
                                              MsConst.SUPPORTED_API_LIST_FILE),)
+    _backlist = [f'{Const.PT_API_TYPE_TENSOR}.__setitem__']
 
 _inner_used_api = {
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_OPS: (
@@ -154,9 +156,21 @@ def get_api_register(return_new=False):
         stub_tensor_set = True
 
     if return_new:
-        return ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
+        return ApiRegistry(
+            _api_types,
+            _inner_used_api,
+            _supported_api_list_path,
+            ApiTemplate,
+            _backlist
+        )
 
     global api_register
     if api_register is None:
-        api_register = ApiRegistry(_api_types, _inner_used_api, _supported_api_list_path, ApiTemplate)
+        api_register = ApiRegistry(
+            _api_types,
+            _inner_used_api,
+            _supported_api_list_path,
+            ApiTemplate,
+            _backlist
+        )
     return api_register
