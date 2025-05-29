@@ -19,20 +19,23 @@ std::string ApiMetric::seriesToJson()
     return jsonMsg.dump();
 }
 
-void MetricApiProcess::ConsumeMsptiData(msptiActivity *record) 
+void MetricApiProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityApi* apiData = ReinterpretConvert<msptiActivityApi*>(record);
-    msptiActivityApi* tmp = ReinterpretConvert<msptiActivityApi*>(MsptiMalloc(sizeof(msptiActivityApi), 8));
-    memcpy(tmp, apiData, sizeof(msptiActivityApi));
+    msptiActivityApi* tmp = ReinterpretConvert<msptiActivityApi*>(MsptiMalloc(sizeof(msptiActivityApi), ALIGN_SIZE));
+    if (memcpy_s(tmp, sizeof(msptiActivityApi), apiData, sizeof(msptiActivityApi)) != EOK) {
+        MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
+        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+        return;
+    }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
         records.emplace_back(tmp);
     }
-    
 }
 
 std::vector<ApiMetric> MetricApiProcess::AggregatedData()
-{   
+{
     std::vector<std::shared_ptr<msptiActivityApi>> copyRecords;
     {
         std::unique_lock<std::mutex> lock(dataMutex);

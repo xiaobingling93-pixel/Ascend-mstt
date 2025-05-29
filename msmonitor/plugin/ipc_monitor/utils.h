@@ -41,6 +41,7 @@ std::vector<std::string> split(const std::string& str, char delimiter);
 
 constexpr size_t ALIGN_SIZE = 8;
 void *MsptiMalloc(size_t size, size_t alignment);
+void MsptiFree(uint8_t *ptr);
 const mode_t DATA_FILE_AUTHORITY = 0640;
 const mode_t DATA_DIR_AUTHORITY = 0750;
 const int DEFAULT_FLUSH_INTERVAL = 60;

@@ -16,11 +16,15 @@ std::string MemSetMetric::seriesToJson()
     return jsonMsg.dump();
 }
 
-void MetricMemSetProcess::ConsumeMsptiData(msptiActivity *record) 
+void MetricMemSetProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityMemset* memSet = ReinterpretConvert<msptiActivityMemset*>(record);
     msptiActivityMemset* ptr = ReinterpretConvert<msptiActivityMemset*>(MsptiMalloc(sizeof(msptiActivityMemset), ALIGN_SIZE));
-    memcpy(ptr, memSet, sizeof(msptiActivityMemset));
+    if (memcpy_s(ptr, sizeof(msptiActivityMemset), memSet, sizeof(msptiActivityMemset)) != EOK) {
+        MsptiFree(ReinterpretConvert<uint8_t*>(ptr));
+        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+        return;
+    }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
         records.emplace_back(ptr);
@@ -38,7 +42,7 @@ std::vector<MemSetMetric> MetricMemSetProcess::AggregatedData()
     if (copyRecords.empty()) {
         return {};
     }
-    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityMemset>>> deviceId2MemsetData = 
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityMemset>>> deviceId2MemsetData =
     groupby(copyRecords, [](const std::shared_ptr<msptiActivityMemset>& data) -> std::uint32_t {
         return data->deviceId;
     });

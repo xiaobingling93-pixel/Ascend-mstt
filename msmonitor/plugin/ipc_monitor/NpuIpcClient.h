@@ -6,6 +6,7 @@
 #include <mutex>
 #include "NpuIpcEndPoint.h"
 #include "utils.h"
+#include "securec.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -48,19 +49,26 @@ struct Message {
         if (type.size() + 1 > sizeof(ipcNpuMessage->metadata.type)) {
             throw std::runtime_error("Type string is too long to fit in metadata.type" + IPC_ERROR(ErrCode::PARAM));
         }
-        memcpy(ipcNpuMessage->metadata.type, type.c_str(), type.size() + 1);
+        if (memcpy_s(ipcNpuMessage->metadata.type, sizeof(ipcNpuMessage->metadata.type),
+                     type.c_str(), type.size() + 1) != EOK) {
+            throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+        }
 #if __cplusplus >= 201703L
         if constexpr (std::is_same<std::string, T>::value == true) {
             ipcNpuMessage->metadata.size = data.size();
             ipcNpuMessage->buf = std::make_unique<unsigned char[]>(ipcNpuMessage->metadata.size);
-            memcpy(ipcNpuMessage->buf.get(), data.c_str(), sizeof(data));
+            if (memcpy_s(ipcNpuMessage->buf.get(), ipcNpuMessage->metadata.size, data.c_str(), data.size()) != EOK) {
+                throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+            }
             return ipcNpuMessage;
         }
 #endif
         static_assert(std::is_trivially_copyable<T>::value);
         ipcNpuMessage->metadata.size = sizeof(data);
         ipcNpuMessage->buf = std::make_unique<unsigned char[]>(ipcNpuMessage->metadata.size);
-        memcpy(ipcNpuMessage->buf.get(), &data, sizeof(data));
+        if (memcpy_s(ipcNpuMessage->buf.get(), ipcNpuMessage->metadata.size, &data, sizeof(data)) != EOK) {
+            throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+        }
         return ipcNpuMessage;
     }
 
@@ -71,12 +79,18 @@ struct Message {
         if (type.size() + 1 > sizeof(ipcNpuMessage->metadata.type)) {
             throw std::runtime_error("Type string is too long to fit in metadata.type" + IPC_ERROR(ErrCode::PARAM));
         }
-        memcpy(ipcNpuMessage->metadata.type, type.c_str(), type.size() + 1);
+        if (memcpy_s(ipcNpuMessage->metadata.type, sizeof(ipcNpuMessage->metadata.type),
+                     type.c_str(), type.size() + 1) != EOK) {
+            throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+        }
         static_assert(std::is_trivially_copyable<T>::value);
         static_assert(std::is_trivially_copyable<U>::value);
         ipcNpuMessage->metadata.size = sizeof(data) + sizeof(U) * n;
         ipcNpuMessage->buf = std::make_unique<unsigned char[]>(ipcNpuMessage->metadata.size);
-        memcpy(ipcNpuMessage->buf.get(), &data, ipcNpuMessage->metadata.size);
+        if (memcpy_s(ipcNpuMessage->buf.get(), ipcNpuMessage->metadata.size,
+                     &data, ipcNpuMessage->metadata.size) != EOK) {
+            throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+        }
         return ipcNpuMessage;
     }
 
@@ -86,10 +100,15 @@ struct Message {
         if (type.size() + 1 > sizeof(ipcNpuMessage->metadata.type)) {
             throw std::runtime_error("Type string is too long to fit in metadata.type" + IPC_ERROR(ErrCode::PARAM));
         }
-        memcpy(ipcNpuMessage->metadata.type, type.c_str(), type.size() + 1);
+        if (memcpy_s(ipcNpuMessage->metadata.type, sizeof(ipcNpuMessage->metadata.type),
+                     type.c_str(), type.size() + 1) != EOK) {
+            throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+        }
         ipcNpuMessage->metadata.size = data.size();
         ipcNpuMessage->buf = std::make_unique<unsigned char[]>(ipcNpuMessage->metadata.size);
-        memcpy(ipcNpuMessage->buf.get(), data.c_str(), ipcNpuMessage->metadata.size);
+        if (memcpy_s(ipcNpuMessage->buf.get(), ipcNpuMessage->metadata.size, data.c_str(), data.size()) != EOK) {
+            throw std::runtime_error("memcpy_s failed" + IPC_ERROR(ErrCode::MEMORY));
+        }
         return ipcNpuMessage;
     }
 };
