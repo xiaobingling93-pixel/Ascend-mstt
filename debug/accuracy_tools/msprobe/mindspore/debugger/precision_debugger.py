@@ -71,9 +71,6 @@ class PrecisionDebugger(BasePrecisionDebugger):
                  level=None, step=None):
         set_register_backward_hook_functions()
         super().__init__(config_path, task, dump_path, level, step)
-        self.config = DebuggerConfig(
-            self.common_config, self.task_config, task, dump_path, level
-        )
 
         if self.task == Const.GRAD_PROBE:
             self.gm = GradientMonitor(self.common_config, self.task_config)
@@ -127,6 +124,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
     @classmethod
     def start(cls, model=None, token_range=None):
         instance = cls.get_instance()
+        if instance is None:
+            return
         if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().start()
         check_token_range(token_range)
@@ -154,6 +153,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
     @classmethod
     def stop(cls):
         instance = cls.get_instance()
+        if instance is None:
+            return
 
         if instance.task == Const.GRAD_PROBE:
             instance.gm.stop()
@@ -168,6 +169,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
     @classmethod
     def step(cls):
         instance = cls.get_instance()
+        if instance is None:
+            return
 
         if instance.service:
             instance.service.step()
