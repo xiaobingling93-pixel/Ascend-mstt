@@ -50,7 +50,6 @@ module.exports = {
                 on: {
                     error: (err, req, res) => {
                         // 安全处理响应对象
-                        console.error(`[HPM] 代理错误: ${err.message}`);
                         if (res && !res.headersSent) {
                             res.writeHead(500, { 'Content-Type': 'text/plain' });
                             res.end('Proxy Error');
@@ -59,7 +58,7 @@ module.exports = {
                     proxyReqWs: (proxyReq, req, socket) => {
                         // WebSocket 错误专属处理
                         socket.on('error', (error) => {
-                            console.error('[HPM] WebSocket 错误:', error.message);
+
                         });
                     },
                 },
