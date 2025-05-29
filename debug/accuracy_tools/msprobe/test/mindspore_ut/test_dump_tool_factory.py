@@ -22,6 +22,7 @@ from msprobe.core.common.const import Const as CoreConst
 from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
+from msprobe.mindspore.ms_config import StatisticsConfig
 
 
 class TestDumpToolFactory(TestCase):
@@ -37,7 +38,7 @@ class TestDumpToolFactory(TestCase):
         }
 
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
 
         config.data_mode = [CoreConst.INPUT, CoreConst.OUTPUT]

@@ -28,6 +28,7 @@ from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
+from msprobe.mindspore.ms_config import StatisticsConfig
 
 
 class TestPrimitiveHookService(unittest.TestCase):
@@ -44,7 +45,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         }
 
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
 
         with patch('msprobe.mindspore.service.build_data_collector'), \

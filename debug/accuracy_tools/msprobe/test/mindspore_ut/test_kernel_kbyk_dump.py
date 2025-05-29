@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.ms_config import StatisticsConfig
 from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 
 
@@ -36,10 +37,142 @@ class TestKernelKbykDump(TestCase):
         }
 
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
         dumper = KernelKbykDump(config)
         self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+        if "MINDSPORE_DUMP_CONFIG" in os.environ:
+            del os.environ["MINDSPORE_DUMP_CONFIG"]
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_when_async_dump_then_pass(self, _):
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L2",
+            "async_dump": True
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = StatisticsConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["e2e_dump_settings"]["enable"], False)
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+        if "MINDSPORE_DUMP_CONFIG" in os.environ:
+            del os.environ["MINDSPORE_DUMP_CONFIG"]
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_when_device_then_pass(self, _):
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L2",
+            "statistics": {
+                "list": [],
+                "data_mode": ["all"],
+                "device": "device",
+                "summary_mode": "statistics"
+            }
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = StatisticsConfig(json_config["statistics"])
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["e2e_dump_settings"]["stat_calc_mode"], "device")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+        if "MINDSPORE_DUMP_CONFIG" in os.environ:
+            del os.environ["MINDSPORE_DUMP_CONFIG"]
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_when_precision_then_pass(self, _):
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L2",
+            "statistics": {
+                "list": [],
+                "data_mode": ["all"],
+                "precision": "low",
+                "summary_mode": "statistics"
+            }
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = StatisticsConfig(json_config["statistics"])
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["e2e_dump_settings"]["device_stat_precision_mode"], "low")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+        if "MINDSPORE_DUMP_CONFIG" in os.environ:
+            del os.environ["MINDSPORE_DUMP_CONFIG"]
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_when_default_then_pass(self, _):
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L2",
+            "statistics": {
+                "list": [],
+                "data_mode": ["all"],
+                "summary_mode": "statistics"
+            }
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = StatisticsConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["e2e_dump_settings"]["device_stat_precision_mode"], "high")
+        self.assertEqual(dumper.dump_json["e2e_dump_settings"]["stat_calc_mode"], "host")
+        self.assertEqual(dumper.dump_json["e2e_dump_settings"]["enable"], True)
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
         with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
