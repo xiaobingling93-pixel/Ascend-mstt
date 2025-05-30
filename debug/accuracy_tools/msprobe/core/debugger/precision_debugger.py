@@ -52,6 +52,35 @@ class BasePrecisionDebugger:
         if step is not None:
             self.common_config.step = get_real_step_or_rank(step, Const.STEP)
 
+    @staticmethod
+    def get_task_config(task, json_config):
+        raise NotImplementedError("Subclass must implment get_task_config")
+
+    @staticmethod
+    def check_input_params(config_path, task, dump_path, level):
+        if not config_path:
+            config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
+        if config_path is not None:
+            if not isinstance(config_path, str):
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string")
+            file_checker = FileChecker(
+                file_path=config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
+            file_checker.common_check()
+
+        if task is not None and task not in Const.TASK_LIST:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}")
+
+        if dump_path is not None:
+            if not isinstance(dump_path, str):
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string")
+
+        if level is not None and level not in Const.LEVEL_LIST:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
+
     @classmethod
     def get_instance(cls):
         instance = cls._instance
@@ -100,31 +129,6 @@ class BasePrecisionDebugger:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         instance.service.restore_custom_api(module, api)
 
-    @staticmethod
-    def check_input_params(config_path, task, dump_path, level):
-        if not config_path:
-            config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
-        if config_path is not None:
-            if not isinstance(config_path, str):
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string")
-            file_checker = FileChecker(
-                file_path=config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
-            file_checker.common_check()
-
-        if task is not None and task not in Const.TASK_LIST:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}")
-
-        if dump_path is not None:
-            if not isinstance(dump_path, str):
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string")
-
-        if level is not None and level not in Const.LEVEL_LIST:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
-
     def parse_config_path(self, json_file_path, task):
         if not json_file_path:
             raise Exception("json file path is None")
@@ -137,8 +141,3 @@ class BasePrecisionDebugger:
                 common_config.task = Const.STATISTICS
             task_config = self.get_task_config(common_config.task, json_config)
         return common_config, task_config
-
-    @staticmethod
-    def get_task_config(task, json_config):
-        raise NotImplementedError("Subclass must implment get_task_config")
-

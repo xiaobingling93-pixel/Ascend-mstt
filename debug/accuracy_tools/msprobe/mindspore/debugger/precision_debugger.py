@@ -121,6 +121,10 @@ class PrecisionDebugger(BasePrecisionDebugger):
         is_graph |= all("." not in item for item in config.list)
         return is_graph
 
+    @staticmethod
+    def get_task_config(task, json_config):
+        return parse_task_config(task, json_config)
+
     @classmethod
     def start(cls, model=None, token_range=None):
         instance = cls.get_instance()
@@ -211,10 +215,6 @@ class PrecisionDebugger(BasePrecisionDebugger):
             if not instance.service:
                 instance.service = Service(instance.config)
             instance.service.save(variable, name, save_backward)
-
-    @staticmethod
-    def get_task_config(task, json_config):
-        return parse_task_config(task, json_config)
 
     @classmethod
     def _need_service(cls):

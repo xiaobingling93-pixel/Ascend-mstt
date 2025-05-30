@@ -57,6 +57,10 @@ class PrecisionDebugger(BasePrecisionDebugger):
     def instance(self):
         return self._instance
 
+    @staticmethod
+    def get_task_config(task, json_config):
+        return parse_task_config(task, json_config)
+
     @classmethod
     def start(cls, model=None, token_range=None):
         instance = cls.get_instance()
@@ -108,10 +112,6 @@ class PrecisionDebugger(BasePrecisionDebugger):
         except ValueError:
             return
         instance.service.save(variable, name, save_backward)
-
-    @staticmethod
-    def get_task_config(task, json_config):
-        return parse_task_config(task, json_config)
 
     def param_warning(self):
         if self.model is not None:
