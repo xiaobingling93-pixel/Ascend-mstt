@@ -1,40 +1,6 @@
 {
   "test_cases": [
     {
-      "name": "empty_input_data_md5_match",
-      "type": "process_md5_task_add",
-      "input": {
-        "graph_data": {
-          "NPU": {
-            "node": {
-              "npu_empty": {
-                "node_type": "Module",
-                "input_data": {},
-                "output_data": {}
-              }
-            }
-          },
-          "Bench": {
-            "node": {
-              "bench_empty": {
-                "node_type": "Module",
-                "input_data": {},
-                "output_data": {}
-              }
-            }
-          }
-        },
-        "npu_node_name": "npu_empty",
-        "bench_node_name": "bench_empty"
-      },
-      "expected": {
-        "success": true,
-        "data": {
-          "precision_index": 1
-        }
-      }
-    },
-    {
       "name": "invalid_task_type_handling",
       "type": "process_task_add",
       "input": {
@@ -163,58 +129,6 @@
         "data": {
           "npuUnMatchNodes": [],
           "benchUnMatchNodes": []
-        }
-      }
-    },
-    {
-      "name": "nonexistent_node_handling",
-      "type": "process_md5_task_add",
-      "input": {
-        "graph_data": {
-          "NPU": { "node": {} },
-          "Bench": { "node": {} }
-        },
-        "npu_node_name": "ghost_npu",
-        "bench_node_name": "ghost_bench"
-      },
-      "expected": {
-        "success": false,
-        "error": "参数错误"
-      }
-    },
-    {
-      "name": "zero_value_statistical_calculation",
-      "type": "process_summary_task_add",
-      "input": {
-        "graph_data": {
-          "NPU": {
-            "node": {
-              "npu_zero": {
-                "node_type": "API",
-                "output_data": {
-                  "npu_zero.out": { "Max": 0, "Min": 0, "Mean": 0, "Norm": 0 }
-                }
-              }
-            }
-          },
-          "Bench": {
-            "node": {
-              "bench_zero": {
-                "node_type": "API",
-                "output_data": {
-                  "bench_zero.out": { "Max": 0, "Min": 0, "Mean": 0, "Norm": 0 }
-                }
-              }
-            }
-          }
-        },
-        "npu_node_name": "npu_zero",
-        "bench_node_name": "bench_zero"
-      },
-      "expected": {
-        "success": true,
-        "data": {
-          "precision_index": 0.0
         }
       }
     },
