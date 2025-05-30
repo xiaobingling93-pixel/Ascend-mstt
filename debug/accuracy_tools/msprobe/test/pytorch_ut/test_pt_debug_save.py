@@ -36,7 +36,7 @@ class TestPytorchDebuggerSave(TestCase):
         }
         common_config = CommonConfig(statistics_task_json)
         task_config = BaseConfig(statistics_task_json)
-        with patch("msprobe.pytorch.debugger.precision_debugger.parse_json_config",
+        with patch("msprobe.pytorch.debugger.precision_debugger.parse_config_path",
                    return_value=(common_config, task_config)):
             self.debugger = PrecisionDebugger()
 

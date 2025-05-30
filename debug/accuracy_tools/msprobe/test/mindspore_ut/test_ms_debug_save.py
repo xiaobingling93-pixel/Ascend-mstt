@@ -36,7 +36,7 @@ class TestMindsporeDebuggerSave(TestCase):
         }
         common_config = CommonConfig(statistics_task_json)
         task_config = BaseConfig(statistics_task_json)
-        with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", return_value=(common_config, task_config)), \
+        with patch("msprobe.mindspore.debugger.precision_debugger.parse_config_path", return_value=(common_config, task_config)), \
             patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             self.debugger = PrecisionDebugger()
 

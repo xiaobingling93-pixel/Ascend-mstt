@@ -38,27 +38,27 @@ class TestPrecisionDebugger(unittest.TestCase):
     def test_check_input_params(self):
         args = Args(config_path = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(config_path = "./")
         with self.assertRaises(FileCheckException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, FileCheckException.INVALID_FILE_ERROR)
 
         args = Args(task = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(dump_path = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(level = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(config_path = os.path.join(os.path.dirname(__file__), "../../../config.json"), 
@@ -66,7 +66,7 @@ class TestPrecisionDebugger(unittest.TestCase):
                     dump_path="./dump_path", 
                     level = Const.LEVEL_LIST[0], 
                     model = torch.nn.Module())
-        checked_input_params = PrecisionDebugger.check_input_params(args)
+        checked_input_params = PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertIsNone(checked_input_params)
 
     def test_start_grad_probe(self):
@@ -88,7 +88,7 @@ class TestPrecisionDebugger(unittest.TestCase):
         debugger.service.start.assert_called_once()
 
     def test_forward_backward_dump_end(self):
-        debugger = PrecisionDebugger(dump_path="./dump_path")
+        debugger = PrecisionDebugger(dump_path="./dump_path", task='statistics')
         debugger.service = MagicMock()
         debugger.config = MagicMock()
         debugger.task = 'statistics'
