@@ -27,7 +27,7 @@ from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
 from msprobe.pytorch.pt_config import parse_json_config
-from msprobe.pytorch.service import Service
+from msprobe.pytorch.pytorch_service import PytorchService
 
 ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task",
                                                    "dump_path", "level", "model"])
@@ -73,7 +73,7 @@ class PrecisionDebugger:
             self.config = DebuggerConfig(
                 common_config, task_config, task, dump_path, level
             )
-            self.service = Service(self.config)
+            self.service = PytorchService(self.config)
             self.module_dumper = ModuleDumper(self.service)
             self.enable_dataloader = self.config.enable_dataloader
             self.ori_customer_func = {}

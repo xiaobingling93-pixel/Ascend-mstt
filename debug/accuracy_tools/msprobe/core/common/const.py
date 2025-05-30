@@ -178,6 +178,10 @@ class Const:
     TOP_LAYER = "TopLayer"
     CELL = "Cell"
     MODULE = "Module"
+    API = "api"
+    PYNATIVE_MODE = "pynative"
+    PYNATIVE_GRAPH_MODE = "pynative_graph"
+
     FRAME_FILE_LIST = ["site-packages/torch", "package/torch", "site-packages/mindspore", "package/mindspore"]
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",

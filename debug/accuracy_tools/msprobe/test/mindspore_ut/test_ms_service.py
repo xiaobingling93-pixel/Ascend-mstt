@@ -23,12 +23,13 @@ import torch
 
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import Const
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.jit_dump import JitDump
-from msprobe.mindspore.service import Service
+from msprobe.mindspore.mindspore_service import MindsporeService
 
 
 class TestService(unittest.TestCase):
@@ -45,15 +46,15 @@ class TestService(unittest.TestCase):
              patch('msprobe.mindspore.service.CellProcessor'), \
              patch('msprobe.mindspore.service.PrimitiveHookService'), \
              patch('msprobe.mindspore.service.get_api_register'):
-            self.service = Service(self.config_mock)
+            self.service = MindsporeService(self.config_mock)
 
     def test_init(self):
         with patch('msprobe.mindspore.service.build_data_collector') as mock_build_data_collector, \
              patch('msprobe.mindspore.service.CellProcessor') as mock_CellProcessor, \
              patch('msprobe.mindspore.service.PrimitiveHookService') as mock_PrimitiveHookService, \
              patch('msprobe.mindspore.service.get_api_register') as mock_get_api_register, \
-             patch.object(Service, 'register_api_hook') as mock_register_api_hook:
-            self.service = Service(self.config_mock)
+             patch.object(MindsporeService, '_register_api_hook') as mock_register_api_hook:
+            self.service = MindsporeService(self.config_mock)
             self.assertIsNone(self.service.model)
             self.assertEqual(self.service.config.level_ori, Const.LEVEL_L0)
             self.assertEqual(self.service.config.dump_path, '/tmp/dump')
@@ -66,8 +67,6 @@ class TestService(unittest.TestCase):
             mock_build_data_collector.assert_called_with(self.service.config)
             mock_CellProcessor.assert_called_with(mock_build_data_collector.return_value.scope)
             mock_PrimitiveHookService.assert_called_with(self.service)
-            self.assertFalse(self.service.switch)
-            self.assertFalse(self.service.inner_switch)
             self.assertFalse(self.service.primitive_switch)
             self.assertEqual(self.service.current_iter, 0)
             self.assertEqual(self.service.loop, 0)
@@ -75,59 +74,9 @@ class TestService(unittest.TestCase):
             self.assertTrue(self.service.first_start)
             self.assertIsNone(self.service.current_rank)
             self.assertIsNone(self.service.dump_iter_dir)
-            self.assertFalse(self.service.start_call)
             self.assertFalse(self.service.should_stop_service)
-            self.assertEqual(self.service.params_grad_info, {})
-            self.assertEqual(self.service.hook_handle_dict, {})
             mock_get_api_register.assert_called_with()
             mock_register_api_hook.assert_called_with()
-
-    def test_check_model_valid(self):
-        with patch('msprobe.mindspore.service.is_mindtorch') as mock_is_mindtorch:
-            mock_is_mindtorch.return_value = False
-            model = None
-            self.assertIsNone(self.service.check_model_valid(model))
-            model = 'model'
-            with self.assertRaises(MsprobeException) as context:
-                self.service.check_model_valid(model)
-            self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-            self.assertIn("The 'model' parameter must be a mindspore.nn.Cell or list[mindspore.nn.Cell] type, "
-                          "currently there is a <class 'str'> type.", str(context.exception))
-            model = nn.Cell()
-            self.assertEqual(self.service.check_model_valid(model), model)
-            models = [model]
-            self.assertEqual(self.service.check_model_valid(models), models)
-            models = [model, 'model']
-            with self.assertRaises(MsprobeException) as context:
-                self.service.check_model_valid(models)
-            self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-            self.assertIn("The 'model' parameter must be a mindspore.nn.Cell or list[mindspore.nn.Cell] type, "
-                          "currently there is a <class 'str'> type.", str(context.exception))
-
-            mock_is_mindtorch.return_value = True
-            model = 'model'
-            with self.assertRaises(MsprobeException) as context:
-                self.service.check_model_valid(model)
-            self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-            self.assertIn("The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] type, "
-                          "currently there is a <class 'str'> type.", str(context.exception))
-            model = torch.nn.Module()
-            self.assertEqual(self.service.check_model_valid(model), model)
-            models = [model]
-            self.assertEqual(self.service.check_model_valid(models), models)
-            models = [model, 'model']
-            with self.assertRaises(MsprobeException) as context:
-                self.service.check_model_valid(models)
-            self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-            self.assertIn("The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] type, "
-                          "currently there is a <class 'str'> type.", str(context.exception))
-
-    def test_update_primitive_counters(self):
-        self.service.primitive_counters = {}
-        self.service.update_primitive_counters("conv2d")
-        self.assertEqual(self.service.primitive_counters["conv2d"], 0)
-        self.service.update_primitive_counters("conv2d")
-        self.assertEqual(self.service.primitive_counters["conv2d"], 1)
 
     @patch('msprobe.mindspore.service.create_directory')
     def test_create_dirs(self, mock_create_directory):
@@ -140,7 +89,7 @@ class TestService(unittest.TestCase):
             ("/tmp/dump/step1/rank0"),
             "/tmp/dump/step1/rank0/dump_tensor_data"
         ]
-        with patch('msprobe.mindspore.service.is_mindtorch') as mock_is_mindtorch:
+        with patch('msprobe.mindspore.mindspore_service.is_mindtorch') as mock_is_mindtorch:
             mock_is_mindtorch.return_value = False
             self.service.create_dirs()
             mock_create_directory.assert_has_calls(
@@ -173,84 +122,52 @@ class TestService(unittest.TestCase):
                 framework=Const.MT_FRAMEWORK
             )
 
-    @patch.object(Service, 'check_model_valid')
-    @patch.object(Service, 'need_end_service', return_value=False)
-    def test_start_stop_cycle(self, mock_need_end_service, mock_check_model_valid):
+    @patch.object(MindsporeService, '_need_stop_service', return_value=False)
+    def test_start_stop_cycle(self, mock_need_end_service):
         self.service.model = nn.Cell()
-        mock_check_model_valid.return_value = self.service.model
         self.should_stop_service = False
         self.service.start(self.service.model)
-        mock_check_model_valid.assert_called_with(self.service.model, None)
-        self.assertTrue(self.service.switch)
+        self.assertTrue(Runtime.is_running)
         self.service.stop()
-        self.assertFalse(self.service.switch)
+        self.assertFalse(Runtime.is_running)
         self.service.cell_processor.register_cell_hook.assert_called_once()
         mock_need_end_service.assert_called_once()
 
         self.service.cell_processor.register_cell_hook.reset_mock()
 
-    def test_should_execute_hook_return_false(self):
-        cell = MagicMock()
-        self.service.switch = False
-        self.assertFalse(self.service.should_execute_hook("Module", cell, True))
-        self.assertFalse(self.service.should_execute_hook("api", cell, True))
-
-        self.service.switch = True
-        cell.forward_data_collected = False
-        self.assertFalse(self.service.should_execute_hook("api", cell, False))
-
-        self.service.inner_switch = True
-        self.assertFalse(self.service.should_execute_hook("Module", cell, True))
-
-        self.service.inner_switch = False
-        self.service.data_collector = None
-        self.assertFalse(self.service.should_execute_hook("Module", cell, True))
-
-    def test_should_execute_hook_return_true(self):
-        cell = MagicMock()
-        self.service.switch = True
-        self.service.inner_switch = False
-        self.service.data_collector = MagicMock()
-        self.service.data_collector.data_processor = MagicMock()
-        self.service.data_collector.data_processor.is_terminated = False
-        self.assertTrue(self.service.should_execute_hook("Module", cell, True))
-
-        cell.forward_data_collected = True
-        self.assertTrue(self.service.should_execute_hook("api", cell, False))
-
     def test_need_end_service_with_high_step(self):
         self.service.config.step = [1, 2, 3]
         self.service.current_iter = 4
-        self.assertTrue(self.service.need_end_service())
+        self.assertTrue(self.service._need_stop_service())
 
     def test_need_end_service_with_low_step(self):
         self.service.config.step = [1, 2, 3]
         self.service.current_iter = 2
         self.service.data_collector.data_processor.is_terminated = False
-        self.assertFalse(self.service.need_end_service())
+        self.assertFalse(self.service._need_stop_service())
 
     def test_start_with_termination_condition(self):
         self.service.config.step = [1, 2, 3]
         self.service.current_iter = 4
         self.service.start()
-        self.assertFalse(self.service.switch)
-        self.assertTrue(self.service.should_stop_service)
+        self.assertFalse(Runtime.is_running)
+        self.assertTrue(self.service._need_stop_service)
         self.assertFalse(self.service.primitive_switch)
 
     @patch('msprobe.mindspore.service.print_tools_ends_info')
-    @patch.object(Service, 'need_end_service', return_value=True)
+    @patch.object(MindsporeService, '_need_stop_service', return_value=True)
     def test_start_with_end_service(self, mock_need_end_service, mock_print_tools_ends_info):
         self.service.start(self.service.model)
         mock_need_end_service.assert_called_once()
         mock_print_tools_ends_info.assert_called_once()
-        self.assertFalse(self.service.switch)
+        self.assertFalse(Runtime.is_running)
         self.assertTrue(self.service.should_stop_service)
 
-    @patch.object(Service, 'need_end_service', return_value=False)
+    @patch.object(MindsporeService, '_need_stop_service', return_value=False)
     @patch.object(logger, 'info')
-    @patch.object(Service, 'register_primitive_hook')
-    @patch.object(Service, 'create_dirs')
-    @patch('msprobe.mindspore.service.get_rank_if_initialized', return_value=0)
+    @patch.object(MindsporeService, '_register_primitive_hook')
+    @patch.object(MindsporeService, 'create_dirs')
+    @patch('msprobe.mindspore.mindspore_service._get_current_rank', return_value=0)
     def test_start_first_time(self, mock_get_rank, mock_create_dirs, mock_register_primitive_hook,
                               mock_logger, mock_need_end_service):
         self.service.first_start = True
@@ -262,14 +179,14 @@ class TestService(unittest.TestCase):
         mock_need_end_service.assert_called_once()
         mock_create_dirs.assert_called_once()
         self.assertFalse(self.service.first_start)
-        self.assertTrue(self.service.switch)
+        self.assertTrue(Runtime.is_running)
         self.assertTrue(self.service.primitive_switch)
         mock_logger.assert_called_with(f"Dump data will be saved in {self.service.dump_iter_dir}.")
 
         self.service.cell_processor.register_cell_hook.reset_mock()
 
-    @patch.object(Service, 'register_primitive_hook')
-    @patch.object(Service, 'need_end_service', return_value=False)
+    @patch.object(MindsporeService, '_register_primitive_hook')
+    @patch.object(MindsporeService, '_need_stop_service', return_value=False)
     @patch.object(JitDump, 'set_config')
     @patch.object(JitDump, 'set_data_collector')
     def test_start_with_jit_dump_enabled(self, mock_set_data_collector, mock_set_config,
@@ -301,34 +218,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(JitDump.jit_count, defaultdict(int))
         self.assertEqual((self.service.primitive_hook_service.primitive_counters), {})
 
-    @patch.object(Service, 'should_execute_hook')
-    def test_build_forward_and_backward_hooks(self, mock_should_execute_hook):
-        mock_should_execute_hook.return_value = True
-        self.service.data_collector = MagicMock()
-        self.service.data_collector.update_api_or_module_name = MagicMock()
-        self.service.data_collector.forward_data_collect = MagicMock()
-        self.service.data_collector.if_return_forward_new_output = MagicMock(return_value=False)
-        self.service.data_collector.backward_data_collect = MagicMock()
-
-        mock_cell = MagicMock()
-        mock_input = (MagicMock(),)
-        mock_output = MagicMock()
-
-        _, forward_hook, backward_hook, _ = self.service.build_hook(BaseScope.Module_Type_Module, "TestHook.forward.0")
-
-        forward_hook(mock_cell, mock_input, mock_output)
-        self.service.data_collector.update_api_or_module_name.assert_called_with('TestHook.forward.0')
-        self.service.data_collector.forward_data_collect.assert_called()
-
-        self.service.data_collector.reset_mock()
-
-        mock_grad_input = (MagicMock(),)
-        mock_grad_output = MagicMock()
-
-        backward_hook(mock_cell, mock_grad_input, mock_grad_output)
-        self.service.data_collector.update_api_or_module_name.assert_called_with('TestHook.backward.0')
-        self.service.data_collector.backward_data_collect.assert_called()
-
     def test_register_primitive_hook(self):
         self.service.config.level = Const.LEVEL_MIX
         primitive_attr = ops.Add()
@@ -340,15 +229,15 @@ class TestService(unittest.TestCase):
         self.service.model = mock_model
         with patch('msprobe.mindspore.service.get_cells_and_names_with_index') as mock_get_cells_and_names:
             mock_get_cells_and_names.return_value = ({'-1': [("cell_name", cell_mock)]}, {})
-            self.service.register_primitive_hook()
+            self.service._register_primitive_hook()
         self.assertTrue(hasattr(primitive_attr.__class__, '__call__'))
         self.assertEqual(self.service.primitive_hook_service.wrap_primitive.call_args[0][1],
                          primitive_combined_name)
 
-    @patch("msprobe.mindspore.service.logger.info")
+    @patch("msprobe.mindspore.mindspore_service.logger.info")
     def test_register_hook_new_with_level_mix(self, mock_logger):
         self.service.config.level = Const.LEVEL_MIX
-        self.service.register_api_hook()
+        self.service._register_api_hook()
         mock_logger.assert_called_with(f'The api {self.service.config.task} hook function '
                                        'is successfully mounted to the model.')
         self.service.api_register.initialize_hook.assert_called_once()

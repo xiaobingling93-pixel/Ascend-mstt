@@ -32,11 +32,11 @@ class Const:
         CoreConst.LEVEL_MIX: CELL_AND_API
     }
 
-    PYNATIVE_MODE = "pynative"
+    PYNATIVE_MODE = CoreConst.PYNATIVE_MODE
     GRAPH_MODE = "graph"
     GRAPH_GE_MODE = "graph_ge"
     GRAPH_KBYK_MODE = "graph_kbyk"
-    PYNATIVE_GRAPH_MODE = 'pynative_graph'
+    PYNATIVE_GRAPH_MODE = CoreConst.PYNATIVE_GRAPH_MODE
 
     JIT_LEVEL = "jit_level"
     JIT_LEVEL_O0 = "O0"
