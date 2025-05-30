@@ -15,7 +15,6 @@
 from abc import abstractmethod
 
 import torch
-import torch.distributed as dist
 
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import MVResult

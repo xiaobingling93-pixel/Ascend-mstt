@@ -81,6 +81,8 @@ class TestOptimizerMon:
                 "step": 10
             }
         }
+        del optimizer.chained_optimizers
+        del optimizer.param_to_cpu_states_map
         optimizer.defaults = {'betas': (0.9, 0.999), 'eps': 1e-8}
         optimizer.param_groups = [{}]
         

@@ -24,9 +24,17 @@ class OptimizerMon(object):
     def __init__(self, optim) -> None:
         self.fp16_to_fp32_param = {}
         self.optim = optim
+        self.state = {}
 
     def narrow_from_flatten(self, param, flatten_state):
         return flatten_state
+    
+    def get_state(self, optim):
+        if hasattr(optim, 'chained_optimizers'):
+            for opt in optim.chained_optimizers:
+                self._get_single_state(opt)
+        else:
+            self._get_single_state(optim)
 
     def fetch_grad(self, monitor, params2name):
         if not self.fp16_to_fp32_param:
@@ -56,20 +64,19 @@ class OptimizerMon(object):
     
     def map_fp16_to_fp32_param(self, optim):
         pass
-    
+
     def fetch_mv(self, monitor, params2name):
         if not self.fp16_to_fp32_param:
             self.map_fp16_to_fp32_param(self.optim)
+        if not self.state:
+            self.get_state(self.optim)
+
         exp_avg_dict = {}
         exp_avg_sq_dict = {}
         update_dict = {}
         ratio_dict = {}
 
-        if hasattr(self.optim, 'state'):
-            state = self.optim.state
-        elif hasattr(self.optim, 'optimizer') and hasattr(self.optim.optimizer, 'state'):
-            state = self.optim.optimizer.state
-        else:
+        if not self.state:
             logger.warning('optimizer state can not accessed')
             return exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict
 
@@ -79,8 +86,8 @@ class OptimizerMon(object):
             else:
                 hp_param = lp_param
 
-            if hp_param in state:
-                state_param = state.get(hp_param, None)
+            if hp_param in self.state:
+                state_param = self.state.get(hp_param, {})
                 exp_avg = self.narrow_from_flatten(lp_param, state_param.get("exp_avg", None))
                 exp_avg_sq = self.narrow_from_flatten(lp_param, state_param.get("exp_avg_sq", None))
                 if monitor.mv_distribution:
@@ -90,7 +97,7 @@ class OptimizerMon(object):
                     exp_avg_dict[name] = exp_avg
                 if monitor.ur_distribution:
                     if len(self.optim.param_groups) > 1:
-                        logger.info(f"the length of optimizer.param_groups is {len(self.optim.param_groups)}.")
+                        logger.info(f"the length of optim.param_groups is {len(self.optim.param_groups)}.")
                     if 'step' in state_param:
                         step = state_param['step']  # Optimizer from pytorch or FusedAdam from apex(used by megatron)
                     elif 'step' in self.optim.param_groups[0]:
@@ -106,6 +113,16 @@ class OptimizerMon(object):
                     monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
         return exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict
     
+    def _get_single_state(self, optim):
+        state = {}
+        if hasattr(optim, 'param_to_cpu_states_map'):
+            state = optim.param_to_cpu_states_map
+        elif hasattr(optim, 'state'):
+            state = optim.state
+        elif hasattr(optim, 'optimizer') and hasattr(optim.optimizer, 'state'):
+            state = optim.optimizer.state
+        self.state.update(state)
+
 
 class MixPrecisionOptimizerMon(OptimizerMon):
     """
@@ -136,21 +153,11 @@ class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
         for opt in optim.chained_optimizers:
             super().map_fp16_to_fp32_param(opt)
 
-        if not hasattr(self.optim, 'state'):
-            optim.state = {}
-            for opt in self.optim.chained_optimizers:
-                self.optim.state.update(opt.optimizer.state)
-
 
 class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
     def map_fp16_to_fp32_param(self, optim):
         for opt in optim.chained_optimizers:
             super().map_fp16_to_fp32_param(opt)
-
-        if not hasattr(self.optim, 'state'):
-            optim.state = {}
-            for opt in self.optim.chained_optimizers:
-                self.optim.state.update(opt.optimizer.state)
 
 
 class DeepSpeedZeroOptimizerMon(OptimizerMon):
@@ -302,7 +309,9 @@ class OptimizerMonFactory:
         "FP32Optimizer": OptimizerMon,
         "Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
         "DistributedOptimizer": MegatronDistributedOptimizerMon,
+        "SwapDistributedOptimizer": MegatronDistributedOptimizerMon,
         "ChainedDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
+        "ChainedSwapDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
         "ChainedFloat16OptimizerWithFloat16Params": MegatronChainedMixPrecisionOptimizerMon,
         "BF16_Optimizer": DeepSpeedZeroOptimizerStage0Mon,
         "DeepSpeedZeroOptimizer": DeepSpeedZeroOptimizerStage1or2Mon,
