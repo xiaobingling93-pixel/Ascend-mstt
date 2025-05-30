@@ -43,6 +43,7 @@ constexpr size_t ALIGN_SIZE = 8;
 void *MsptiMalloc(size_t size, size_t alignment);
 const mode_t DATA_FILE_AUTHORITY = 0640;
 const mode_t DATA_DIR_AUTHORITY = 0750;
+const int DEFAULT_FLUSH_INTERVAL = 60;
 
 enum class SubModule {
     IPC = 0
