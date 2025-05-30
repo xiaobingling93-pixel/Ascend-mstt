@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
+import zlib
 import io
 import struct
 import time
 import os
-import signal
 from queue import Queue
 from threading import Thread
 from typing import Union
@@ -300,12 +299,12 @@ class ClientProtocol(protocol.Protocol):
 
     def send_wrapped_data(self, data, sequence_number: int = 0, rank: int = 0, step: int = 0):
         length = len(data)
-        md5_hash = hashlib.md5(data).hexdigest() if self.check_sum else ""
+        data_crc = f"{zlib.crc32(data):08x}" if self.check_sum else ""
         data_meaasge = length.to_bytes(8, byteorder=bytes_order) + \
                        sequence_number.to_bytes(8, byteorder=bytes_order) + \
                        rank.to_bytes(8, byteorder=bytes_order) + \
                        step.to_bytes(8, byteorder=bytes_order) + \
-                       md5_hash.encode() + \
+                       data_crc.encode() + \
                        data
         logger.debug(f"send 流水号: {sequence_number}; RANK: {rank}; STEP: {step}; LENGTH: {length}")
 

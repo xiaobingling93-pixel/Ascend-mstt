@@ -69,8 +69,8 @@ export class TfGraphMinimap extends PolymerElement {
     </svg>
     <canvas class="first"></canvas>
     <!-- Additional canvas to use as buffer to avoid flickering between updates -->
-    <canvas class="second" style='display: none'></canvas>
-    <canvas class="download" style='display: none'></canvas>
+    <canvas class="second" style="display: none"></canvas>
+    <canvas class="download" style="display: none"></canvas>
   `;
 
   /**

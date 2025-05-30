@@ -557,8 +557,11 @@ def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
         mindformers_file = mindformers.__file__
         mindformers_dir = os.path.dirname(mindformers_file)
         td_config_path = os.path.join(mindformers_dir, "configuration", "layer_mapping.yaml")
+        if not os.path.exists(td_config_path):
+            td_config_path = ""
+            logger.warning("The configuration file in mindformers was not loaded, the default mode will be used.")
     except ImportError:
-        logger.warning("The configuration file in mindformers was not loaded, the default mode will be used.")
+        logger.warning("The mindFormers failed to load, the default mode will be used.")
 
     if td_config_path == "":
         yaml_data = {}

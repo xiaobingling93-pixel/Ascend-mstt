@@ -34,7 +34,9 @@ public:
     {
         std::unique_lock<std::mutex> lock(cv_mutex);
         manual_trigger = true;
-        cv.notify_one();
+        if (running.load()) {
+            cv.notify_one();
+        }
     }
 
     // 停止定时任务
@@ -78,7 +80,8 @@ private:
             }
             if (manual_trigger) {
                 manual_trigger = false;
-            } else if (running) {
+            }
+            if (running) {
                 ExecuteTask();
             }
         }
