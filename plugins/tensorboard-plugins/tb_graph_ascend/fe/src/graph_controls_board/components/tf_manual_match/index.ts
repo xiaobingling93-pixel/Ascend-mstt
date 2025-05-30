@@ -23,7 +23,7 @@ import { isEmpty } from 'lodash';
 import { Notification } from '@vaadin/notification';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
-import { NPU_PREFIX, BENCH_PREFIX } from '../../../common/constant'
+import { NPU_PREFIX, BENCH_PREFIX } from '../../../common/constant';
 import useMatched from './useMatched';
 import type { UseMatchedType } from '../../type';
 
@@ -88,18 +88,17 @@ class Legend extends PolymerElement {
         display: flex;
         align-items: center;
         font-size: 14px;
-        position:relative;
+        position: relative;
       }
       #question {
         cursor: pointer;
         position: absolute;
         font-size: 10px;
-        top:14px;
+        top: 14px;
         left: 122px;
-
       }
-      .button-wrapper{
-        position:relative;
+      .button-wrapper {
+        position: relative;
         margin-top: 30px;
       }
       .button-wrapper vaadin-button {
@@ -107,7 +106,7 @@ class Legend extends PolymerElement {
         font-weight: 600;
       }
       #match-config {
-        color:white;
+        color: white;
         position: absolute;
         top: 10px;
         left: 286px;
@@ -116,29 +115,32 @@ class Legend extends PolymerElement {
       }
 
       #match-save {
-        color:white;
+        color: white;
         position: absolute;
         top: 50px;
         left: 286px;
         font-size: 10px;
         cursor: pointer;
       }
-      
-      
     </style>
     <vaadin-details class="vaadin-details" summary="节点匹配" opened>
-
-
       <div class="warning">
         <vaadin-combo-box
-            label="选择匹配配置文件"
-            items="[[matchedConfigFiles]]"
-            value="{{selectedConfigFile}}"
-            on-change="_addMatchedNodesLinkByConfigFile"
+          label="选择匹配配置文件"
+          items="[[matchedConfigFiles]]"
+          value="{{selectedConfigFile}}"
+          on-change="_addMatchedNodesLinkByConfigFile"
         ></vaadin-combo-box>
-        <vaadin-icon  id="question" icon="vaadin:question-circle"></vaadin-icon>
-        <vaadin-tooltip for="question" text="选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。" position="end"></vaadin-tooltip>
+        <vaadin-icon id="question" icon="vaadin:question-circle"></vaadin-icon>
+        <vaadin-tooltip
+          for="question"
+          text="选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。"
+          position="end"
+        ></vaadin-tooltip>
       </div>
+      <template is="dom-if" if="[[matchConfigLoading]]">
+        <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+      </template>
       <div class="unmatched-node">
         <p class="vaadin-details-title">未匹配节点</p>
         <tf-search-combox
@@ -187,21 +189,37 @@ class Legend extends PolymerElement {
       </div>
 
       <div class="button-wrapper">
-        <vaadin-button class="save-button" theme="primary small" on-click="_saveMatchedRelations"  disabled="[[saveLoading]]">生成匹配配置文件</vaadin-button>
-        <vaadin-icon  id="match-config" icon="vaadin:question-circle"></vaadin-icon>
-        <vaadin-tooltip for="match-config" text="手动匹配结束后，点击保存匹配节点信息，会将已匹配的节点对应关系保存到配置文件中，不会持久原始文件，如果是初次保存，会新建一个文件，文件名称为：[当前文件名].vis.config。" position="end"></vaadin-tooltip>
-        <template is="dom-if" if="[[matchConfigLoading]]">
-          <vaadin-progress-bar indeterminate></vaadin-progress-bar>
-        </template>
-        <vaadin-button class="save-button" theme="primary contrast small" on-click="_saveMatchedNodesLink"  disabled="[[saveLoading]]">保存</vaadin-button>
-        <vaadin-icon  id="match-save" icon="vaadin:question-circle"></vaadin-icon>
-        <vaadin-tooltip for="match-save" text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效" position="end"></vaadin-tooltip>
+        <vaadin-button
+          class="save-button"
+          theme="primary small"
+          on-click="_saveMatchedRelations"
+          disabled="[[saveLoading]]"
+          >生成匹配配置文件</vaadin-button
+        >
+        <vaadin-icon id="match-config" icon="vaadin:question-circle"></vaadin-icon>
+        <vaadin-tooltip
+          for="match-config"
+          text="手动匹配结束后，点击保存匹配节点信息，会将已匹配的节点对应关系保存到配置文件中，不会持久原始文件，如果是初次保存，会新建一个文件，文件名称为：[当前文件名].vis.config。"
+          position="end"
+        ></vaadin-tooltip>
+        <vaadin-button
+          class="save-button"
+          theme="primary contrast small"
+          on-click="_saveMatchedNodesLink"
+          disabled="[[saveLoading]]"
+          >保存</vaadin-button
+        >
+        <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
+        <vaadin-tooltip
+          for="match-save"
+          text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效"
+          position="end"
+        ></vaadin-tooltip>
         <template is="dom-if" if="[[saveLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
       </div>
     </vaadin-details>
-
   `;
 
   @property({ type: Object })
@@ -253,7 +271,7 @@ class Legend extends PolymerElement {
   unmatchLoading: boolean = false;
 
   @property({ type: Object })
-  colorset: object = {}
+  colorset: object = {};
 
   @property({ type: Object })
   npuMatchNodes: object = {};
@@ -265,7 +283,7 @@ class Legend extends PolymerElement {
   matchedConfigFiles: Array<string> = ['未选择'];
 
   @property({ type: String })
-  selectedConfigFile: string = "";
+  selectedConfigFile: string = '';
 
   useMatched: UseMatchedType = useMatched();
   npuMatchedNodeList = {};
@@ -295,7 +313,7 @@ class Legend extends PolymerElement {
 
   @observe('matchedConfigFiles')
   _observeMatchedConfigFiles(): void {
-    this.set('selectedConfigFile', "未选择");
+    this.set('selectedConfigFile', '未选择');
   }
 
   @observe('selectedNode')
@@ -305,12 +323,12 @@ class Legend extends PolymerElement {
     }
     if (this.selectedNode.startsWith(NPU_PREFIX)) {
       this.set('selectedNpuUnMatchedNode', this.selectedNode.replace(NPU_PREFIX, ''));
-      const selectedNpuMatchedNode = this.selectedNode.replace(NPU_PREFIX, '')
+      const selectedNpuMatchedNode = this.selectedNode.replace(NPU_PREFIX, '');
       this.set('selectedNpuMatchedNode', selectedNpuMatchedNode);
       this.set('selectedBenchMatchedNode', this.npuMatchedNodeList?.[selectedNpuMatchedNode]);
     } else if (this.selectedNode.startsWith(BENCH_PREFIX)) {
       this.set('selectedBenchUnMatchedNode', this.selectedNode.replace(BENCH_PREFIX, ''));
-      const selectedBenchMatchedNode = this.selectedNode.replace(BENCH_PREFIX, '')
+      const selectedBenchMatchedNode = this.selectedNode.replace(BENCH_PREFIX, '');
       this.set('selectedBenchMatchedNode', selectedBenchMatchedNode);
       this.set('selectedNpuMatchedNode', this.benchMatchedNodeList?.[selectedBenchMatchedNode]);
     }
@@ -348,7 +366,7 @@ class Legend extends PolymerElement {
       const node = NPU_PREFIX + this.selectedNpuMatchedNode;
       this.set('selectedBenchMatchedNode', this.npuMatchedNodeList[this.selectedNpuMatchedNode]);
       this.set('selectedNode', node);
-      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode);      // 展开对应侧节点
+      this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode); // 展开对应侧节点
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -363,7 +381,7 @@ class Legend extends PolymerElement {
       const node = BENCH_PREFIX + this.selectedBenchMatchedNode;
       this.set('selectedNpuMatchedNode', this.benchMatchedNodeList[this.selectedBenchMatchedNode]);
       this.set('selectedNode', node);
-      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode);     // 展开对应侧节点
+      this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode); // 展开对应侧节点
     } else {
       Notification.show('提示：单图节点不支持匹配', {
         position: 'middle',
@@ -401,13 +419,13 @@ class Legend extends PolymerElement {
     if (success) {
       const npuMatchNodes = data?.npuMatchNodes || {};
       const benchMatchNodes = data?.benchMatchNodes || {};
-      const npuUnMatchNodes = data?.npuUnMatchNodes || []
-      const benchUnMatchNodes = data?.benchUnMatchNodes || []
+      const npuUnMatchNodes = data?.npuUnMatchNodes || [];
+      const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
-      const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true, });
+      const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
       const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes?.length);
       this.dispatchEvent(updateHierarchyData);
-      // 更新匹配关系   
+      // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
       // 未匹配列表更新
@@ -442,14 +460,17 @@ class Legend extends PolymerElement {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
-      })
+      });
       return;
     }
     if (!this.selectedConfigFile || this.selectedConfigFile == '未选择') {
       return;
     }
     this.set('matchConfigLoading', true);
-    const { success, data, error } = await this.useMatched.addMatchedNodesLinkByConfigFile(this.selectedConfigFile, this.selection);
+    const { success, data, error } = await this.useMatched.addMatchedNodesLinkByConfigFile(
+      this.selectedConfigFile,
+      this.selection,
+    );
     this.set('matchConfigLoading', false);
     if (success) {
       const matchReslut = data?.matchReslut || [];
@@ -462,7 +483,7 @@ class Legend extends PolymerElement {
       const porcessedNodeNum = matchReslut?.length;
       const matchSuccessNum = matchReslut?.filter(Boolean).length;
       const matchFailedNum = porcessedNodeNum - matchSuccessNum;
-      // 更新匹配关系   
+      // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
       this.dispatchEvent(updateHierarchyData);
@@ -472,20 +493,22 @@ class Legend extends PolymerElement {
       // 未匹配列表删除匹配成功的节点
       this.set('npuUnMatchedNodes', npuUnMatchNodes);
       this.set('benchUnMatchedNodes', benchUnMatchNodes);
-      Notification.show(`匹配成功：匹配节点数 ${porcessedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`, {
-        position: 'middle',
-        duration: 4000,
-        theme: 'success',
-      });
-    }
-    else {
+      Notification.show(
+        `匹配成功：匹配节点数 ${porcessedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`,
+        {
+          position: 'middle',
+          duration: 4000,
+          theme: 'success',
+        },
+      );
+    } else {
       Notification.show(`匹配失败:${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',
       });
     }
-  }
+  };
 
   // 匹配节点
   async _addMatchedNodesLink(): Promise<void> {
@@ -494,7 +517,7 @@ class Legend extends PolymerElement {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
-      })
+      });
       return;
     }
     if (!this.selectedNpuUnMatchedNode || !this.selectedBenchUnMatchedNode) {
@@ -502,7 +525,7 @@ class Legend extends PolymerElement {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
-      })
+      });
       return;
     }
 
@@ -510,7 +533,7 @@ class Legend extends PolymerElement {
     const { success, data, error } = await this.useMatched.addMatchedNodesLink(
       this.selectedNpuUnMatchedNode,
       this.selectedBenchUnMatchedNode,
-      this.selection
+      this.selection,
     );
     this.set('matchLoading', false);
     if (success) {
@@ -521,7 +544,7 @@ class Legend extends PolymerElement {
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
       const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
-      // 更新匹配关系   
+      // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
       this.dispatchEvent(updateHierarchyData);
@@ -576,10 +599,12 @@ class Legend extends PolymerElement {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
-      })
+      });
       return;
     }
+    this.set('saveLoading', true);
     const { success, data, error } = await this.useMatched.saveMatchedRelations(this.selection);
+    this.set('saveLoading', false);
     if (success) {
       const configFile = data;
       const matchedConfigFiles = [...new Set(['未选择', configFile, ...this.matchedConfigFiles])];
@@ -597,5 +622,4 @@ class Legend extends PolymerElement {
       });
     }
   }
-
 }

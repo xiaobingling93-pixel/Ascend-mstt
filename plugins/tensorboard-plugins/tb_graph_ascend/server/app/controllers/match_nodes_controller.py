@@ -408,7 +408,7 @@ class MatchNodesController:
         if npu_data == {} or bench_data == {}:
             return 0
         # 对比每个NPU和Bench所有数据md值，如果有一个不一样则返回0,否则返回1
-        for npu_key, bench_key in zip(npu_data, npu_data):
+        for npu_key, bench_key in zip(npu_data, bench_data):
             npu_md5 = npu_data[npu_key].get('md5', '')
             bench_md5 = bench_data[bench_key].get('md5', '')
             if npu_md5 != bench_md5:
