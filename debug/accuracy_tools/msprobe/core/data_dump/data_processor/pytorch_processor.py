@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import zlib
 from dataclasses import asdict
 from typing import List
@@ -172,8 +171,8 @@ class PytorchDataProcessor(BaseDataProcessor):
     @staticmethod
     def process_group_hash(arg):
         group_ranks = dist.get_process_group_ranks(arg)
-        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
-        return group_ranks_hash
+        group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
+        return f"{group_ranks_hash:08x}"
 
     @staticmethod
     def is_hookable_element(element):

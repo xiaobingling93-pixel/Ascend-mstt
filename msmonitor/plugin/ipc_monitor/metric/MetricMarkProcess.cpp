@@ -33,6 +33,7 @@ bool MetricMarkProcess::TransMarkData2Range(const std::vector<std::shared_ptr<ms
     for (auto& activityMarker: markDatas) {
         if (activityMarker->flag == MSPTI_ACTIVITY_FLAG_MARKER_START_WITH_DEVICE) {
             if (activityMarker->sourceKind == MSPTI_ACTIVITY_SOURCE_KIND_DEVICE) {
+                rangemarkData.deviceId = activityMarker->objectId.ds.deviceId;
                 rangemarkData.deviceStart = activityMarker->timestamp;
             } else {
                 rangemarkData.start = activityMarker->timestamp;
@@ -98,7 +99,7 @@ std::vector<MarkMetric> MetricMarkProcess::AggregatedData()
 
     std::unordered_map<std::string, std::vector<RangeMarkData>> domain2RangeData = 
         groupby(rangeDatas, [](const RangeMarkData& data) -> std::string {
-            return data.domain;
+            return data.domain + std::to_string(data.deviceId);
         });
     std::vector<MarkMetric> ans;
     for (auto& pair: domain2RangeData) {

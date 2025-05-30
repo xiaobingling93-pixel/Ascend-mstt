@@ -110,8 +110,11 @@ def dump_data(data, prefix, dump_path):
 def save_temp_summary(api_index, single_api_summary, path, lock):
     summary_path = os.path.join(path, f'summary.json')
     lock.acquire()
-    data = [api_index, single_api_summary]
-    save_json(summary_path, data, mode='a')
+    try:
+        data = [api_index, single_api_summary]
+        save_json(summary_path, data, mode='a')
+    finally:
+        lock.release()
 
 
 def dispatch_workflow(run_param: DispatchRunParam, data_info: DisPatchDataInfo):

@@ -223,7 +223,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         dist.init_process_group(backend='gloo', world_size=1, rank=0)
         process_group_element = dist.group.WORLD
         result = self.processor.process_group_hash(process_group_element)
-        expected = hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        expected = f"{zlib.crc32(str([0]).encode('utf-8')):08x}"
         self.assertEqual(result, expected)
 
     def test_analyze_torch_size(self):
@@ -249,7 +249,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         expected = {
             'type': 'torch.ProcessGroup',
             'group_ranks': [0],
-            'group_id': hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+            'group_id': f"{zlib.crc32(str([0]).encode('utf-8')):08x}"
         }
         self.assertEqual(result, expected)
 
