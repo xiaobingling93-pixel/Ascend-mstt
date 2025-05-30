@@ -14,20 +14,24 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/metric
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/mspti_monitor
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/securec/include
     ${DYNOLOG_PATH}/third_party/glog/src
     ${DYNOLOG_PATH}/build/third_party/glog
     ${DYNOLOG_PATH}/third_party/json/single_include
 )
 
-file(GLOB_RECURSE IPC_SOURCES 
+file(GLOB_RECURSE IPC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/metric/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/mspti_monitor/*.cpp
 )
 
+file(GLOB_RECURSE SECUREC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/third_party/securec/src/*.c)
+
 set(SOURCES
     bindings.cpp
     ${IPC_SOURCES}
+    ${SECUREC_SOURCES}
 )
 
 add_library(IPCMonitor MODULE ${SOURCES})
@@ -38,7 +42,7 @@ set_target_properties(IPCMonitor
     PREFIX  ""
 )
 
-target_link_libraries(IPCMonitor PRIVATE 
+target_link_libraries(IPCMonitor PRIVATE
     pybind11::module
     pthread
     ${CMAKE_CURRENT_SOURCE_DIR}/stub/libmspti.so

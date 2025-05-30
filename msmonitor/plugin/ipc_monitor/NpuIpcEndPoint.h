@@ -9,6 +9,7 @@
 #include <cerrno>
 #include <stdexcept>
 #include "utils.h"
+#include "securec.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -89,7 +90,11 @@ public:
                 throw std::runtime_error("Memcpy failed when fileDes size large than ctxt fileDesPtr " +
                     IPC_ERROR(ErrCode::PARAM));
             }
-            memcpy(ctxt->fileDesPtr, fileDes.data(), fileDes.size() * sizeof(fileDesT));
+            if (memcpy_s(ctxt->fileDesPtr, sizeof(ctxt->fileDesPtr),
+                         fileDes.data(), fileDes.size() * sizeof(fileDesT)) != EOK) {
+                throw std::runtime_error("Memcpy failed when fileDes size large than ctxt fileDesPtr " +
+                    IPC_ERROR(ErrCode::MEMORY));
+            }
         }
         return ctxt;
     }
@@ -182,7 +187,9 @@ protected:
     auto BuildNpuCtxt_(const std::vector<NpuPayLoad> &npuPayLoad, unsigned numFileDes)
     {
         auto ctxt = std::make_unique<Ctxt>(npuPayLoad.size());
-        std::fill_n(ReinterpretConvert<char *>(&ctxt->msghdr), sizeof(msghdr), 0);
+        if (memset_s(&ctxt->msghdr, sizeof(ctxt->msghdr), 0, sizeof(ctxt->msghdr)) != EOK) {
+            throw std::runtime_error("Memset failed when build ctxt " + IPC_ERROR(ErrCode::MEMORY));
+        }
         for (size_t i = 0; i < npuPayLoad.size(); i++) {
             ctxt->iov[i] = {npuPayLoad[i].data, npuPayLoad[i].size};
         }

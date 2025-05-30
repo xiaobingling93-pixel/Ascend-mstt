@@ -254,6 +254,13 @@ void *MsptiMalloc(size_t size, size_t alignment)
 #endif
 }
 
+void MsptiFree(uint8_t *ptr)
+{
+    if (ptr != nullptr) {
+        free(ptr);
+    }
+}
+
 bool PathUtils::IsFileExist(const std::string &path)
 {
     if (path.empty() || path.size() > PATH_MAX) {

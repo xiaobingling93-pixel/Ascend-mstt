@@ -24,7 +24,7 @@ std::string MarkMetric::seriesToJson()
     return jsonMsg.dump();
 }
 
-bool MetricMarkProcess::TransMarkData2Range(const std::vector<std::shared_ptr<msptiActivityMarker>>& markDatas, 
+bool MetricMarkProcess::TransMarkData2Range(const std::vector<std::shared_ptr<msptiActivityMarker>>& markDatas,
                          RangeMarkData& rangemarkData) {
     if(markDatas.size() != COMPLETE_RANGE_DATA_SIZE) {
         return false;
@@ -59,25 +59,29 @@ bool MetricMarkProcess::TransMarkData2Range(const std::vector<std::shared_ptr<ms
     return true;
 }
 
-void MetricMarkProcess::ConsumeMsptiData(msptiActivity *record) 
+void MetricMarkProcess::ConsumeMsptiData(msptiActivity *record)
 {
-    msptiActivityMarker* apiData = ReinterpretConvert<msptiActivityMarker*>(record);
+    msptiActivityMarker* markerData = ReinterpretConvert<msptiActivityMarker*>(record);
     msptiActivityMarker* tmp = ReinterpretConvert<msptiActivityMarker*>(MsptiMalloc(sizeof(msptiActivityMarker), ALIGN_SIZE));
-    memcpy(tmp, apiData, sizeof(msptiActivityMarker));
+    if (memcpy_s(tmp, sizeof(msptiActivityMarker), markerData, sizeof(msptiActivityMarker)) != EOK) {
+        MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
+        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+        return;
+    }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
         records.emplace_back(tmp);
-        if (apiData->flag == MSPTI_ACTIVITY_FLAG_MARKER_START_WITH_DEVICE &&
-            apiData->sourceKind == MSPTI_ACTIVITY_SOURCE_KIND_HOST) {
-            std::string domainStr = apiData->domain;
-            auto markId = apiData->id;
+        if (markerData->flag == MSPTI_ACTIVITY_FLAG_MARKER_START_WITH_DEVICE &&
+            markerData->sourceKind == MSPTI_ACTIVITY_SOURCE_KIND_HOST) {
+            std::string domainStr = markerData->domain;
+            auto markId = markerData->id;
             domainMsg.emplace(markId, std::make_shared<std::string>(domainStr));
         }
     }
 }
 
 std::vector<MarkMetric> MetricMarkProcess::AggregatedData()
-{   
+{
     std::vector<std::shared_ptr<msptiActivityMarker>> copyRecords;
     {
         std::unique_lock<std::mutex> lock(dataMutex);
@@ -97,7 +101,7 @@ std::vector<MarkMetric> MetricMarkProcess::AggregatedData()
         }
     }
 
-    std::unordered_map<std::string, std::vector<RangeMarkData>> domain2RangeData = 
+    std::unordered_map<std::string, std::vector<RangeMarkData>> domain2RangeData =
         groupby(rangeDatas, [](const RangeMarkData& data) -> std::string {
             return data.domain + std::to_string(data.deviceId);
         });
