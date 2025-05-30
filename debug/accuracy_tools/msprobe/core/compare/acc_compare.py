@@ -56,12 +56,7 @@ class Comparator:
         self.file_reader = file_reader
         self.mode_config = mode_config
         self.mapping_config = mapping_config
-
-        if self.mapping_config.data_mapping:
-            self.cross_frame = is_cross_framework
-        else:
-            self.cross_frame = (self.mapping_config.cell_mapping is not None or
-                                self.mapping_config.api_mapping is not None)
+        self.cross_frame = is_cross_framework
 
         self.mapping_dict = MappingDict(mapping_config)
 
