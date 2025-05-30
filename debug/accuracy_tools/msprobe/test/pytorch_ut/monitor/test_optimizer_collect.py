@@ -264,6 +264,8 @@ class TestDeepSpeedZeroOptimizerStage0Mon(unittest.TestCase):
             self.assertTrue(torch.equal(result[name], self.torch_opt.fp32_groups_gradient_dict[group_index][param_id]))
 
     def test_fetch_mv(self):
+        del self.torch_opt.chained_optimizers
+        del self.torch_opt.param_to_cpu_states_map
         result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt.param_names)
         for param, name in self.torch_opt.param_names.items():  
             self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
@@ -313,6 +315,8 @@ class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
             self.assertTrue(torch.equal(result[name], self.torch_opt.averaged_gradients[group_index][param_id]))
 
     def test_fetch_mv(self):
+        del self.torch_opt.chained_optimizers
+        del self.torch_opt.param_to_cpu_states_map
         result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt.param_names)
         for param, name in self.torch_opt.param_names.items():  
             self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
@@ -351,6 +355,8 @@ class TestDeepSpeedZeroOptimizerStage3Mon(unittest.TestCase):
             self.assertTrue(torch.equal(result[name], self.torch_opt.averaged_gradients[group_index][param_id]))
 
     def test_fetch_mv(self):
+        del self.torch_opt.chained_optimizers
+        del self.torch_opt.param_to_cpu_states_map
         result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt.param_names)
         for param, name in self.torch_opt.param_names.items():  
             self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
