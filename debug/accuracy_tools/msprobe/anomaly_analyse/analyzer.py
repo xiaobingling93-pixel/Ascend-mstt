@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import os
 import re
+from multiprocessing import Pool
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.file_utils import (load_json, check_file_or_directory_path, check_path_before_create, FileOpen,
                                             change_mode)
@@ -9,10 +10,27 @@ from msprobe.core.common.log import logger
 
 def nan_analyze(input_path, output_path):
     path_list = resolve_path(input_path)
-    rank_node_dict = {}
-    for path in path_list:
-        rank_node_dict[path.rank] = find_first_anomaly(path)
-    gen_analyze_info(rank_node_dict, output_path)
+    anomaly_nodes = pre_analyze(path_list) # todo:查找所有出现在通信节点前的异常节点
+    if anomaly_nodes:
+        gen_analyze_info(anomaly_nodes, output_path)
+        return
+    with Pool(processes=max(int((os.cpu_count() + 1) // 4), 1)) as pool:
+        def err_call(err):
+            logger.error(f'Error occurred while analyze ranks\' communication nodes: {err}')
+            try:
+                pool.close()
+            except OSError as e:
+                logger.error(f'Error occurred while terminating the pool: {e}')
+
+        rank_nodes_dict = {}
+        for path in path_list:
+            rank_nodes_dict[path.rank] = pool.appy_async(analyze_communication_nodes,
+                                                         args=(path,), error_callback=err_call)
+        rank_nodes_dict = {rank: result.get() for rank, result in rank_nodes_dict.items()}
+    connect_commu_nodes(rank_nodes_dict)
+    color_and_pruning(rank_nodes_dict)
+    anomaly_nodes = search_first_anomaly(rank_nodes_dict)
+    gen_analyze_info(anomaly_nodes, output_path)
 
 
 def resolve_path(step_path):
