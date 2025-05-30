@@ -28,7 +28,6 @@ struct RangeMarkData
     uint64_t end{0};
     uint64_t deviceStart{0};
     uint64_t deviceEnd{0};
-    msptiActivitySourceKind sourceKind;
     uint32_t deviceId;
 };
 

@@ -25,21 +25,20 @@ export const MIN_GRAPG_WIDTH = 200;
 
 // 预设颜色
 export const defaultColorSetting = [
-    { key: '#FFFCF3', values: [0, 0.2] },
-    { key: '#FFEDBE', values: [0.2, 0.4] },
-    { key: '#FFDC7F', values: [0.4, 0.6] },
-    { key: '#FFC62E', values: [0.6, 0.8] },
-    { key: '#ff704d', values: [0.8, 1] }
+  { key: '#FFFCF3', values: [0, 0.2] },
+  { key: '#FFEDBE', values: [0.2, 0.4] },
+  { key: '#FFDC7F', values: [0.4, 0.6] },
+  { key: '#FFC62E', values: [0.6, 0.8] },
+  { key: '#ff704d', values: [0.8, 1] },
 ];
 // 预设颜色设置项
 export const defaultColorSelects = [{ key: 'NaN', values: [NaN, NaN] }];
 
-
 export enum NODE_TYPE {
-    MODULE = 0, // 圆角矩形，有可展开，不可展开两种情况，可展开的宽度较宽，不可展开，宽度较窄
-    UNEXPAND_NODE = 1, // 椭圆形，不可展开,API 
-    API_LIST = 9, // API列表
-    MULTI_COLLECTION = 8, // 融合算子
+  MODULE = 0, // 圆角矩形，有可展开，不可展开两种情况，可展开的宽度较宽，不可展开，宽度较窄
+  UNEXPAND_NODE = 1, // 椭圆形，不可展开,API
+  API_LIST = 9, // API列表
+  MULTI_COLLECTION = 8, // 融合算子
 }
 
 // 渲染信息
@@ -58,18 +57,24 @@ export const SCALE_STEP = 0.2; // 缩放步长
 export const MAX_SCALE = 3; // 最大缩放
 export const MIN_SCALE = 1; // 最小缩放
 
-
 // 溢出检测颜色
 export enum OVERFLOW_COLOR {
-    medium = ' #B6C7FC',
-    high = ' #7E96F0',
-    critical = ' #4668B8',
-    default = 'rgb(199, 199, 199)'
+  medium = ' #B6C7FC',
+  high = ' #7E96F0',
+  critical = ' #4668B8',
+  default = 'rgb(199, 199, 199)',
 }
 
-export const NODE_TYPE_STYLES = { // 节点样式
-    [NODE_TYPE.MODULE]: { strokeDasharray: '20,0', rx: '5', ry: '5' },
-    [NODE_TYPE.UNEXPAND_NODE]: { strokeDasharray: '20,0', rx: '50%', ry: '50%', fontSize: 6 },
-    [NODE_TYPE.API_LIST]: { strokeDasharray: '15,1', rx: '5', ry: '5' },
-    [NODE_TYPE.MULTI_COLLECTION]: { strokeDasharray: '2,1', rx: '5', ry: '5' },
+export const NODE_TYPE_STYLES = {
+  // 节点样式
+  [NODE_TYPE.MODULE]: { strokeDasharray: '20,0', rx: '5', ry: '5' },
+  [NODE_TYPE.UNEXPAND_NODE]: { strokeDasharray: '20,0', rx: '50%', ry: '50%', fontSize: 6 },
+  [NODE_TYPE.API_LIST]: { strokeDasharray: '15,1', rx: '5', ry: '5' },
+  [NODE_TYPE.MULTI_COLLECTION]: { strokeDasharray: '2,1', rx: '5', ry: '5' },
+};
+
+export const PREFIX_MAP = {
+  Single: '',
+  NPU: NPU_PREFIX,
+  Bench: BENCH_PREFIX,
 };

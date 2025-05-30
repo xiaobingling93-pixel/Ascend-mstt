@@ -62,8 +62,8 @@ class MatchNodesController:
             'matchReslut': match_reslut,
             'npuMatchNodes': config_data.get('npuMatchNodes', {}),
             'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', {}),
-            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', {})
+            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
         }
         return result
 
@@ -148,8 +148,8 @@ class MatchNodesController:
             result['data'] = {
                 'npuMatchNodes': config_data.get('npuMatchNodes', {}),
                 'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', {}),
-                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', {})
+                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
             }
         return result
 
@@ -188,8 +188,8 @@ class MatchNodesController:
             result['data'] = {
                 'npuMatchNodes': config_data.get('npuMatchNodes', {}),
                 'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', {}),
-                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', {})
+                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
             }
         return result
 
@@ -309,8 +309,8 @@ class MatchNodesController:
         # 匹配列表和未匹配列表
         npu_match_nodes_list = config_data.get('npuMatchNodes', {})
         bench_match_nodes_list = config_data.get('benchMatchNodes', {})
-        npu_unmatehed_name_list = config_data.get('npuUnMatchNodes', {})
-        bench_unmatehed_name_list = config_data.get('benchUnMatchNodes', {})
+        npu_unmatehed_name_list = config_data.get('npuUnMatchNodes', [])
+        bench_unmatehed_name_list = config_data.get('benchUnMatchNodes', [])
         # 更新匹配列表和未匹配列表
         if str(npu_node_name) in npu_unmatehed_name_list:
             npu_unmatehed_name_list.remove(str(npu_node_name))
@@ -326,8 +326,8 @@ class MatchNodesController:
         # 匹配列表和未匹配列表
         npu_match_nodes_list = config_data.get('npuMatchNodes', {})
         bench_match_nodes_list = config_data.get('benchMatchNodes', {})
-        npu_unmatehed_name_list = config_data.get('npuUnMatchNodes', {})
-        bench_unmatehed_name_list = config_data.get('benchUnMatchNodes', {})
+        npu_unmatehed_name_list = config_data.get('npuUnMatchNodes', [])
+        bench_unmatehed_name_list = config_data.get('benchUnMatchNodes', [])
         # 更新匹配列表和未匹配列表
         if npu_node_name in npu_match_nodes_list:
             del npu_match_nodes_list[npu_node_name]

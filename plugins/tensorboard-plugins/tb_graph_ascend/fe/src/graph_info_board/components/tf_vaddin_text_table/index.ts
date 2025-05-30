@@ -217,11 +217,9 @@ class TfVaadinTable extends PolymerElement {
             duration: 1000,
             theme: 'error',
           });
-          console.error('Failed to copy text:', err);
         });
     };
     container.appendChild(button);
-
     root.appendChild(container);
   }
 

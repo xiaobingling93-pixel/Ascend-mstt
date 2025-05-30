@@ -16,22 +16,22 @@
 export interface NodeInfoResult {
   success: boolean;
   data?: {
-    'npu'?: {
+    npu?: {
       name?: string;
       inputData?: Record<string, unknown>;
       outputData?: Record<string, unknown>;
       stackData?: string;
       suggestions?: Record<string, unknown>;
-    } | null,
-    'bench'?: {
+    } | null;
+    bench?: {
       name?: string;
       inputData?: Record<string, unknown>;
       outputData?: Record<string, unknown>;
       stackData?: string;
       suggestions?: Record<string, unknown>;
-    } | null
+    } | null;
   };
   error?: string;
 }
 
-export type NodeInfoType = NodeInfoResult['data']['npu']
+export type NodeInfoType = NodeInfoResult['data']['npu'];

@@ -31,10 +31,10 @@ class TfGraphNodeInfo extends PolymerElement {
   static readonly template = html`
     <style>
       :host {
-        --selected-color: rgb(255, 255, 255); 
+        --selected-color: rgb(255, 255, 255);
         --matched-color: rgb(236, 235, 235);
       }
-      .tab-content-wrapper{
+      .tab-content-wrapper {
         height: 100%;
         display: flex;
         justify-content: space-between;
@@ -43,50 +43,49 @@ class TfGraphNodeInfo extends PolymerElement {
         width: 100%;
         height: 100%;
       }
-      .vaadin-tabs{
-        background-color:white;
+      .vaadin-tabs {
+        background-color: white;
       }
-      .vaadin-tab{
+      .vaadin-tab {
         font-size: 14px;
       }
-      .table-wrapper{
+      .table-wrapper {
         height: 100%;
         width: 100%;
         display: flex;
         flex-direction: column;
         overflow: hidden;
       }
-      .node-info-wrapper{
+      .node-info-wrapper {
         display: flex;
         justify-content: space-between;
-        background-color:rgb(199, 199, 199);
+        background-color: rgb(199, 199, 199);
       }
-      .node-info{
+      .node-info {
         font-family: Roboto, sans-serif;
         padding-left: 20px;
         display: flex;
         justify-content: flex-start;
         font-weight: 400;
         font-size: 14px;
-
       }
-      .node-info-item{
+      .node-info-item {
         margin-right: 20px;
         display: flex;
         align-items: center;
       }
-      .legend-wrapper{
+      .legend-wrapper {
         display: flex;
         align-items: center;
       }
-      .legend-selected{
+      .legend-selected {
         display: inline-block;
         width: 12px;
         height: 12px;
         background-color: var(--selected-color);
         margin-right: 5px;
       }
-      .legend-matched{
+      .legend-matched {
         display: inline-block;
         width: 12px;
         height: 12px;
@@ -94,14 +93,14 @@ class TfGraphNodeInfo extends PolymerElement {
         margin-right: 5px;
       }
       .matched-yes {
-          display: inline-block;
-          width: 10px;
-          height: 8px;
-          background: #52c41a;
-          padding-top: 2px;
-          margin-right: 5px;
-          border-radius: 50%;
-        }
+        display: inline-block;
+        width: 10px;
+        height: 8px;
+        background: #52c41a;
+        padding-top: 2px;
+        margin-right: 5px;
+        border-radius: 50%;
+      }
       .matched-no {
         display: inline-block;
         width: 10px;
@@ -116,68 +115,64 @@ class TfGraphNodeInfo extends PolymerElement {
       }
     </style>
     <vaadin-tabsheet>
-      <vaadin-tabs slot="tabs" class='vaadin-tabs'>
-        <vaadin-tab id="io-tab" class='vaadin-tab' >
-          <template is="dom-if" if="[[!isSingleGraph]]">
-            比对详情
-          </template>
-          <template is="dom-if" if="[[isSingleGraph]]">
-            节点详情
-          </template>
+      <vaadin-tabs slot="tabs" class="vaadin-tabs">
+        <vaadin-tab id="io-tab" class="vaadin-tab">
+          <template is="dom-if" if="[[!isSingleGraph]]"> 比对详情 </template>
+          <template is="dom-if" if="[[isSingleGraph]]"> 节点详情 </template>
         </vaadin-tab>
-        <vaadin-tab id="stack-info-tab" class='vaadin-tab'>节点信息</vaadin-tab>
+        <vaadin-tab id="stack-info-tab" class="vaadin-tab">节点信息</vaadin-tab>
       </vaadin-tabs>
-     
-      <div tab="io-tab" class='vaadin-tab-content'>
-        <tf-resize-height height="{{height}}">   
-          <div class='table-wrapper'>
-            <div class='node-info-wrapper'>
-              <div class='node-info'>
-              <template is="dom-if" if="[[npuNodeName]]">
-                <p class='node-info-item selected-node'>
-                  <span class='legend-selected'></span>
-                  目标节点：[[npuNodeName]]
-                </p>
+
+      <div tab="io-tab" class="vaadin-tab-content">
+        <tf-resize-height height="{{height}}">
+          <div class="table-wrapper">
+            <div class="node-info-wrapper">
+              <div class="node-info">
+                <template is="dom-if" if="[[npuNodeName]]">
+                  <p class="node-info-item selected-node">
+                    <span class="legend-selected"></span>
+                    目标节点：[[npuNodeName]]
+                  </p>
                 </template>
                 <template is="dom-if" if="[[benchNodeName]]">
-                  <p class='node-info-item match-node' >
-                    <span class='legend-matched'></span>
+                  <p class="node-info-item match-node">
+                    <span class="legend-matched"></span>
                     标杆节点：[[benchNodeName]]
                   </p>
                 </template>
               </div>
               <template is="dom-if" if="[[!isSingleGraph]]">
-                <div class='node-info'>
-                  <p class='node-info-item '>
-                    <span class='matched-yes'></span>
+                <div class="node-info">
+                  <p class="node-info-item ">
+                    <span class="matched-yes"></span>
                     已匹配
                   </p>
-                  <p class='node-info-item match-node' >
-                    <span class='matched-no'></span>
+                  <p class="node-info-item match-node">
+                    <span class="matched-no"></span>
                     未匹配
                   </p>
                 </div>
               </template>
             </div>
 
-              <tf-vaadin-table 
-                id='main-table' 
-                class='io-vaadin-table' 
-                io-dataset="[[ioDataset]]"
-                tooltips="[[tooltips]]"
-                handle-cell-click="[[handleGridCellClick]]"
-                is-single-graph-node="[[isSingleGraph]]"
-              >
-              </tf-vaadin-table>
+            <tf-vaadin-table
+              id="main-table"
+              class="io-vaadin-table"
+              io-dataset="[[ioDataset]]"
+              tooltips="[[tooltips]]"
+              handle-cell-click="[[handleGridCellClick]]"
+              is-single-graph-node="[[isSingleGraph]]"
+            >
+            </tf-vaadin-table>
           </div>
         </tf-resize-height>
       </div>
-      <div tab="stack-info-tab" class='vaadin-tab-content'>
-        <tf-resize-height height="{{height}}">   
-          <div class='table-wrapper'>
+      <div tab="stack-info-tab" class="vaadin-tab-content">
+        <tf-resize-height height="{{height}}">
+          <div class="table-wrapper">
             <tf-vaadin-text-table
-              id='main-table' 
-              class='io-vaadin-table' 
+              id="main-table"
+              class="io-vaadin-table"
               dataset="[[detailData]]"
               handle-cell-click="[[handleGridCellClick]]"
             >
@@ -212,7 +207,6 @@ class TfGraphNodeInfo extends PolymerElement {
   useNodeInfo: UseNodeInfoType = useNodeInfo();
 
   @observe('selectedNode')
-
   observeToUpdateTableData() {
     this.updateTableData(this.selectedNode);
   }
@@ -244,10 +238,16 @@ class TfGraphNodeInfo extends PolymerElement {
     this.set('detailData', detailData);
   }
 
-  async _updateNodeInfo(selectedNode: string): Promise<{ npuNode: NodeInfoType, benchNode: NodeInfoType }> {
+  async _updateNodeInfo(selectedNode: string): Promise<{ npuNode: NodeInfoType; benchNode: NodeInfoType }> {
+    let nodeType; // 节点类型
+    if (this.isSingleGraph) {
+      nodeType = 'Single';
+    } else {
+      nodeType = this.selectedNode?.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench';
+    }
     const nodeInfo = {
+      nodeType,
       nodeName: selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''), // 去掉前缀
-      nodeType: this.isSingleGraph ? 'Single' : this.selectedNode?.startsWith(NPU_PREFIX) ? 'NPU' : 'Bench',
     };
     const { success, data, error } = await this.useNodeInfo.getNodeInfo(nodeInfo, this.selection);
     if (success) {
