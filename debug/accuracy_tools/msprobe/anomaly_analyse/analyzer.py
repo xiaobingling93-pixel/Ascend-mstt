@@ -1,16 +1,23 @@
-from dataclasses import dataclass
 import os
 import re
 from multiprocessing import Pool
-from msprobe.core.common.const import Const, CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import (load_json, check_file_or_directory_path, check_path_before_create, FileOpen,
+from collections import defaultdict
+
+from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.file_utils import (check_file_or_directory_path, check_path_before_create, FileOpen,
                                             change_mode)
 from msprobe.core.common.log import logger
+
+from core.common.file_utils import save_json
+# from msprobe.anomaly_analyse.utils import RankPath, FileCache, is_communication_op, is_ignore_op
+from debug.accuracy_tools.msprobe.anomaly_analyse.utils import RankPath, FileCache, is_communication_op, is_ignore_op
+# from msprobe.anomaly_analyze.graph import DataNode, CommunicationNode
+from graph import DataNode, CommunicationNode
 
 
 def nan_analyze(input_path, output_path):
     path_list = resolve_path(input_path)
-    anomaly_nodes = pre_analyze(path_list) # todo:查找所有出现在通信节点前的异常节点
+    anomaly_nodes = pre_analyze(path_list) # 查找所有出现在通信节点前的异常节点
     if anomaly_nodes:
         gen_analyze_info(anomaly_nodes, output_path)
         return
@@ -27,7 +34,7 @@ def nan_analyze(input_path, output_path):
             rank_nodes_dict[path.rank] = pool.appy_async(analyze_communication_nodes,
                                                          args=(path,), error_callback=err_call)
         rank_nodes_dict = {rank: result.get() for rank, result in rank_nodes_dict.items()}
-    connect_commu_nodes(rank_nodes_dict)
+    connect_communication_nodes(rank_nodes_dict)
     color_and_pruning(rank_nodes_dict)
     anomaly_nodes = search_first_anomaly(rank_nodes_dict)
     gen_analyze_info(anomaly_nodes, output_path)
@@ -49,147 +56,63 @@ def resolve_path(step_path):
     return dump_path_list
 
 
-def find_first_anomaly(path):
+def pre_analyze(path_list):
     cache = FileCache()
-    dump_data = cache.load_json(path.dump_path).get('data')
-    if not dump_data:
-        return {}
-    anomaly_info_dict = {}
-    index = 0
-    for op_name, op_data in dump_data.items():
-        if is_communication_op(op_name) or is_ignore_op(op_name):
+    anomaly_nodes = []
+    for path in path_list:
+        dump_data = cache.load_json(path.dump_path).get('data')
+        if not dump_data:
+            logger.warning(f'Rank {path.rank} has no dump data!')
             continue
-        if is_anomaly(op_data):
-            anomaly_info = {'dump_info': op_data, 'path_info': path}
-            stack_info = cache.load_json(path.stack_path)
-            anomaly_info['stack_info'] = find_stack(stack_info, op_name)
-            construct_info = cache.load_json(path.construct_path)
-            anomaly_info['construct_info'] = find_complete_construct(construct_info, op_name)
-            anomaly_info_dict[index] = anomaly_info
-        index += 1
-    return anomaly_info_dict
+        for op_name, op_data in dump_data.items():
+            if is_communication_op(op_name):
+                break
+            data_node = DataNode(op_name, path, op_data)
+            if data_node.is_anomaly():
+                anomaly_nodes.append(data_node)
+    return anomaly_nodes
 
 
-def find_stack(stack_info, op_name):
-    for item in stack_info:
-        if op_name in item[0]:
-            return item[1]
-
-
-def find_complete_construct(construct_info, op_name):
-    construct = [op_name]
-    while 1:
-        op_name = construct_info.get(op_name)
-        if not op_name:
-            return construct
-        construct.insert(0, op_name)
-
-
-def is_communication_op(op_name):
-    # 定义通信算子的关键字，覆盖各种通信操作，如all_reduce, send, broadcast等
-    # 从wrap文件中读取，先硬编码在文件中
-    communication_keywords = [
-        'send',  # send 算子
-        'recv',  # recv 算子
-        'broadcast',  # broadcast 算子
-        'all_reduce',  # all_reduce 算子
-        'reduce',  # reduce 算子
-        'all_gather',  # all_gather 算子
-        'gather',  # gather 算子
-        'isend',  # isend 算子
-        'irecv',  # irecv 算子
-        'scatter',  # scatter 算子
-        'reduce_scatter',  # reduce_scatter 算子
-        '_reduce_scatter_base',  # _reduce_scatter_base 算子
-        '_all_gather_base',  # _all_gather_base 算子
-        'all_to_all_single',  # all_to_all_single 算子
-        'all_to_all',  # all_to_all 算子
-        'all_gather_into_tensor',  # all_gather_into_tensor 算子
-        'reduce_scatter_tensor'  # reduce_scatter_tensor 算子
-    ]
-    return op_name.startswith('Distributed.') and any(keyword in op_name for keyword in communication_keywords)
-
-
-def is_ignore_op(op_name):
-    ignore_keywords = [
-        'Torch.empty'
-    ]
-    return any(keyword in op_name for keyword in ignore_keywords)
-
-
-def is_anomaly(op_data):
-    input_args = op_data.get(Const.INPUT_ARGS, [])
-    input_kwargs = op_data.get(Const.INPUT_KWARGS, {})
-    input_data = op_data.get(Const.INPUT, [])
-    output = op_data.get(Const.OUTPUT, [])
-    return any(not has_anomaly(param) for param in [input_args, input_kwargs, input_data]) and has_anomaly(output)
-
-
-def has_anomaly(param):
-    def has_nan_inf(dict_obj, key):
-        return str(dict_obj.get(key)).lower() in CompareConst.OVERFLOW_LIST
-
-    items = []
-    if isinstance(param, list):
-        items = param
-    elif isinstance(param, dict):
-        items = param.values()
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        if has_nan_inf(item, 'Max') or has_nan_inf(item, 'Min'):
-            return True
-    return False
-
-
-def gen_analyze_info(rank_node_dict, output_path):
+def gen_analyze_info(anomaly_nodes, output_path):
     check_path_before_create(output_path)
     file_name = 'anomaly_analyze.txt'
     result_file = os.path.join(output_path, file_name)
-    try:
-        with FileOpen(result_file, 'w+') as output_file:
-            output_file.writelines(gen_analyze_content(rank_node_dict))
-        change_mode(result_file, FileCheckConst.DATA_FILE_AUTHORITY)
-    except IOError as io_error:
-        logger.error("Failed to save %s, the reason is %s." % (result_file, io_error))
-    else:
-        logger.info("The analyze result is saved in: %s" % result_file)
+    result_content = defaultdict(list)
+    for node in anomaly_nodes:
+        result_content[f'rank_{node.rank}'].append(node.gen_node_info())
+    save_json(output_path, result_content, 2)
+    logger.info("The analyze result is saved in: %s" % result_file)
 
 
-def gen_analyze_content(rank_node_dict):
-    result = []
-    for i in sorted(list(rank_node_dict.keys())):
-        rank_node_dict[i]
-    return result
+def analyze_communication_nodes(path: RankPath):
+    cache = FileCache()
+    data = cache.load_json(path.dump_path).get('data')
+    communication_nodes = []
+    skip_flag = True
+    compute_ops = []
+    for op_name, op_data in data.items():
+        if is_communication_op(op_name):
+            skip_flag = False
+            communication_nodes.append(CommunicationNode(f'{path.rank}.{op_name}', path.rank,
+                                                         DataNode(op_name, path, op_data)))
+            continue
+        if skip_flag:
+            continue
+        if is_communication_op(op_name):
+            comm_node = CommunicationNode(f'{path.rank}.{op_name}', path.rank, op_data)
+            comm_node.compute_ops = compute_ops
+            compute_ops = []
+            communication_nodes[-1].add_next(comm_node)
+            communication_nodes.append(comm_node)
+        elif not is_ignore_op(op_name):
+            data_node = DataNode(op_name, path, op_data)
+            if data_node.is_anomaly():
+                compute_ops.append(data_node)
+    return communication_nodes
 
 
-@dataclass
-class RankPath:
-    rank: int
-    dump_path: str
-    construct_path: str
-    stack_path: str
+def connect_communication_nodes(rank_nodes_dict):
+    for rank, nodes in rank_nodes_dict.items():
+        for node in nodes:
+            connected_nodes = node.find_connected_nodes()
 
-    def __init__(self, rank, dump_path, construct_path, stack_path):
-        self.rank = rank
-        check_file_or_directory_path(dump_path)
-        self.dump_path = dump_path
-        check_file_or_directory_path(construct_path)
-        self.construct_path = construct_path
-        check_file_or_directory_path(stack_path)
-        self.stack_path = stack_path
-
-
-class FileCache:
-    """
-    lazy load file
-    """
-    def __init__(self):
-        self._buffer = {}
-
-    def load_json(self, json_path):
-        if json_path in self._buffer:
-            return self._buffer.get(json_path)
-        content = load_json(json_path)
-        self._buffer[json_path] = content
-        return content
