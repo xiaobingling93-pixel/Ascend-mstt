@@ -119,15 +119,17 @@ def analyze_communication_nodes(path: RankPath):
 
 
 def connect_communication_nodes(rank_nodes_dict):
+    searched_ranks = set()
     for rank, nodes in rank_nodes_dict.items():
+        searched_ranks.add(rank)
         for node in nodes.values():
             connected_nodes = node.find_connected_nodes()
             if not connected_nodes.get('ranks'):
                 connected_nodes['ranks'] = rank_nodes_dict.keys()
             for connected_rank in connected_nodes['ranks']:
-                tar_node_id = f'{connected_rank}.{connected_nodes["api"]}'
-                if tar_node_id == node.node_id:
+                if connected_rank in searched_ranks:
                     continue
+                tar_node_id = f'{connected_rank}.{connected_nodes["api"]}'
                 connected_node = rank_nodes_dict[connected_rank].get(tar_node_id)
                 if connected_node.type == NanAnalyseConst.DST:
                     node.add_dst(connected_node)

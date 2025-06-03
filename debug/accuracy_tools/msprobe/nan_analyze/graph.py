@@ -120,7 +120,7 @@ class CommunicationNode:
 
     def find_connected_nodes(self):
         """
-        根据 api/类型/入参/调用次数 确定相连接的node所在rank/api/类型/调用次数
+        根据 api/类型/入参/调用次数 确定相连接的node的op_name
         """
         tar_api = NanAnalyseConst.P2P_API_MAPPING.get(self.api, self.api)
         ranks = []
