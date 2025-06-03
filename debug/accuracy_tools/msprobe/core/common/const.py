@@ -144,6 +144,10 @@ class Const:
     MODULE_PREFIX = ["Module", "Cell"]
     FORWARD_NAME_SUFFIX = ".forward"
 
+    DUMP_JSON_FILE = "dump_json_file"
+    DEBUG_JSON_FILE = "debug_json_file"
+    STACK_JSON_FILE = "stack_json_file"
+
     # struct json param
     ORIGIN_DATA = "origin_data"
     SCOPE = "scope"
@@ -424,6 +428,7 @@ class CompareConst:
     OUTPUT_STRUCT = "output_struct"
     PARAMS_STRUCT = "params_struct"
     PARAMS_GRAD_STRUCT = "params_grad_struct"
+    DEBUG_STRUCT = "debug_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
@@ -530,7 +535,8 @@ class CompareConst:
         Const.KWARGS: INPUT_STRUCT,
         Const.OUTPUT: OUTPUT_STRUCT,
         Const.PARAMS: PARAMS_STRUCT,
-        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT
+        Const.PARAMS_GRAD: PARAMS_GRAD_STRUCT,
+        Const.DEBUG: DEBUG_STRUCT
     }
 
     # compare standard

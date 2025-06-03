@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import re
 
-# 模块级全局变量
-
+# 全局常量
 ADD_MATCH_KEYS = [
     'MaxAbsErr',
     'MinAbsErr',
@@ -27,44 +25,65 @@ ADD_MATCH_KEYS = [
     'MeanRelativeErr',
     'NormRelativeErr',
 ]
+MAX_FILE_SIZE = 3 * 1024 * 1024 * 1024  # 最大文件大小限制
+NPU_PREFIX = 'N___'
+BENCH_PREFIX = 'B___'
 FILE_NAME_REGEX = r'^[a-zA-Z0-9_\-\.]+$'  # 文件名正则表达式
+# 图类型
+NPU = 'NPU'
+BENCH = 'Bench'
+SINGLE = 'Single'
+# 前端节点类型
+EXPAND_MODULE = 0
+UNEXPAND_NODE = 1
 
-_state = {'logdir': '', 'current_tag': '', 'current_run': '', 'current_file_path': '', 'current_file_data': {},
-          'runs': {}}
-
-
-def init_defaults():
-    """
-    初始化全局变量的默认值
-    """
-    global _state
-    _state = {'logdir': '', 'current_tag': '', 'current_run': '', 'current_file_path': '', 'current_file_data': {},
-              'runs': {}}
-
-
-def set_global_value(key, value, inner_key=None):
-    """
-    设置全局变量的值，
-    若inner_key不为空则更改_state中某个字典类型的变量中的某个字段值，若不存在则添加
-    """
-    if inner_key is None:
-        _state[key] = value
-    else:
-        if key in _state:
-            _state[key][inner_key] = value
-        else:
-            _state[key] = {inner_key: value}
+# 后端节点类型
+MODULE = 0
+API = 1
+MULTI_COLLECTION = 8
+API_LIST = 9
 
 
-def get_global_value(key, default=None):
-    """
-    获取全局变量的值
-    """
-    return _state.get(key, default)
+class GraphState:
+    # 模块级全局变量
+    _state = {
+        'logdir': '',
+        'current_tag': '',
+        'current_run': '',
+        'current_file_path': '',
+        'current_file_data': {},
+        'current_hierarchy': {},
+        'config_data': {},
+        'first_run_tags': {},
+        'runs': {},
+    }
 
+    @staticmethod
+    def init_defaults():
+        """
+        初始化全局变量的默认值
+        """
+        global _state
+        GraphState._state = {'logdir': '', "current_tag": '', 'current_run': '', "current_file_path": '',
+                             'current_file_data': {}}
 
-def reset_global_state():
-    """
-    重置所有全局变量为默认值
-    """
-    init_defaults()
+    @staticmethod
+    def set_global_value(key, value):
+        """
+        设置全局变量的值
+        """
+        GraphState._state[key] = value
+
+    @staticmethod
+    def get_global_value(key, default=None):
+        """
+        获取全局变量的值
+        """
+        return GraphState._state.get(key, default)
+
+    @staticmethod
+    def reset_global_state():
+        """
+        重置所有全局变量为默认值
+        """
+        GraphState.init_defaults()

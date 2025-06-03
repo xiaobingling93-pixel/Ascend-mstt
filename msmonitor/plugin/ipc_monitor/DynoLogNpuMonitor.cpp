@@ -6,13 +6,32 @@
 
 namespace dynolog_npu {
 namespace ipc_monitor {
+DynoLogNpuMonitor::DynoLogNpuMonitor()
+{
+    // init glog
+    if (!google::IsGoogleLoggingInitialized()) {
+        std::string logPath;
+        if (CreateMsmonitorLogPath(logPath)) {
+            fprintf(stderr, "[INFO] [%d] Msmonitor log will record to %s\n", GetProcessId(), logPath.c_str());
+            logPath = logPath + "/msmonitor_";
+            google::InitGoogleLogging("MsMonitor");
+            google::SetLogDestination(google::GLOG_INFO, logPath.c_str());
+            google::SetLogFilenameExtension(".log");
+        } else {
+            fprintf(stderr, "Failed to create log path, log will not record\n");
+        }
+    }
+}
 
 bool DynoLogNpuMonitor::Init()
 {
-
     if (isInitialized_) {
         LOG(WARNING) << "DynoLog npu monitor already initialized";
         return true;
+    }
+    if (!ipcClient_.Init()) {
+        LOG(ERROR) << "DynoLog npu monitor ipcClient init failed";
+        return false;
     }
     bool res = ipcClient_.RegisterInstance(npuId_);
     if (res) {
@@ -22,7 +41,7 @@ bool DynoLogNpuMonitor::Init()
     return res;
 }
 
-ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
+ErrCode DynoLogNpuMonitor::DealMonitorReq(MsptiMonitorCfg& cmd)
 {
     if (cmd.monitorStop) {
         if (msptiMonitor_.IsStarted()) {
@@ -30,6 +49,14 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
             msptiMonitor_.Stop();
         }
         return ErrCode::SUC;
+    }
+
+    if (cmd.reportIntervals <= 0) {
+        cmd.reportIntervals = DEFAULT_FLUSH_INTERVAL;
+        LOG(WARNING) << "Invalid report interval, set to 60";
+    }
+    if (cmd.reportIntervals != 0) {
+        msptiMonitor_.SetFlushInterval(cmd.reportIntervals);
     }
 
     if (cmd.monitorStart && !msptiMonitor_.IsStarted()) {
@@ -51,7 +78,6 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
             msptiMonitor_.DisableActivity(activity);
         }
     }
-    msptiMonitor_.SetFlushInterval(cmd.reportIntervals);
     return ErrCode::SUC;
 }
 

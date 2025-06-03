@@ -34,7 +34,8 @@ def _get_attr(module, attr_name):
 class ApiWrapper:
     def __init__(
         self, api_types: Dict[str, Dict[str, Any]],
-        api_list_paths: Union[str, List[str], Tuple[str]]
+        api_list_paths: Union[str, List[str], Tuple[str]],
+        backlist: Union[List[str], Tuple[str]] = None
     ):
         self.api_types = api_types
         if not isinstance(api_list_paths, (list, tuple)):
@@ -43,6 +44,7 @@ class ApiWrapper:
             raise RuntimeError("The number of api_list_paths must be equal to the number of frameworks in 'api_types', "
                                "when api_list_paths is a list or tuple.")
         self.api_list_paths = api_list_paths
+        self.backlist = backlist if backlist else []
         self.api_names = self._get_api_names()
         self.wrapped_api_functions = dict()
 
@@ -126,9 +128,12 @@ class ApiWrapper:
             api_list = load_yaml(self.api_list_paths[index])
             valid_names = dict()
             for api_type, api_modules in self.api_types.get(framework, {}).items():
-                api_from_file = api_list.get(Const.SUPPORT_API_DICT_KEY_MAP.get(framework, {}).get(api_type), [])
+                key_in_file = Const.SUPPORT_API_DICT_KEY_MAP.get(framework, {}).get(api_type)
+                api_from_file = api_list.get(key_in_file, [])
                 names = set()
                 for api_name in api_from_file:
+                    if f'{key_in_file}.{api_name}' in self.backlist:
+                        continue
                     target_attr = api_name
                     target_module = api_modules[0]
                     if Const.SEP in api_name:
@@ -147,7 +152,7 @@ class ApiRegistry:
     Base class for api registry.
     """
 
-    def __init__(self, api_types, inner_used_api, supported_api_list_path, api_templates):
+    def __init__(self, api_types, inner_used_api, supported_api_list_path, api_templates, backlist=None):
         self.ori_api_attr = dict()
         self.wrapped_api_attr = dict()
         self.inner_used_ori_attr = dict()
@@ -156,6 +161,7 @@ class ApiRegistry:
         self.inner_used_api = inner_used_api
         self.supported_api_list_path = supported_api_list_path
         self.api_templates = api_templates
+        self.backlist = backlist if backlist else []
         self.all_api_registered = False
 
     @staticmethod
@@ -211,7 +217,7 @@ class ApiRegistry:
             self.set_api_attr(self.inner_used_api.get(api_type)[0], self.inner_used_ori_attr.get(api_type, {}))
 
     def initialize_hook(self, hook_build_func):
-        api_wrapper = ApiWrapper(self.api_types, self.supported_api_list_path)
+        api_wrapper = ApiWrapper(self.api_types, self.supported_api_list_path, self.backlist)
         wrapped_api_functions = api_wrapper.wrap_api(self.api_templates, hook_build_func)
 
         for framework, api_types in self.api_types.items():

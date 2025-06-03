@@ -16,11 +16,15 @@ std::string MemCpyMetric::seriesToJson()
     return jsonMsg.dump();
 }
 
-void MetricMemCpyProcess::ConsumeMsptiData(msptiActivity *record) 
+void MetricMemCpyProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityMemcpy* kernel = ReinterpretConvert<msptiActivityMemcpy*>(record);
     msptiActivityMemcpy* ptr = ReinterpretConvert<msptiActivityMemcpy*>(MsptiMalloc(sizeof(msptiActivityMemcpy), ALIGN_SIZE));
-    memcpy(ptr, kernel, sizeof(msptiActivityMemcpy));
+    if (memcpy_s(ptr, sizeof(msptiActivityMemcpy), kernel, sizeof(msptiActivityMemcpy)) != EOK) {
+        MsptiFree(ReinterpretConvert<uint8_t*>(ptr));
+        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+        return;
+    }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
         records.emplace_back(ptr);
@@ -38,16 +42,25 @@ std::vector<MemCpyMetric> MetricMemCpyProcess::AggregatedData()
     if (copyRecords.empty()) {
         return {};
     }
-    auto deviceId = copyRecords[0]->deviceId;
-    MemCpyMetric memCpyMetric{};
-    auto ans = std::accumulate(copyRecords.begin(), copyRecords.end(), 0ULL,
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityMemcpy>>> deviceId2Memcpy =
+    groupby(copyRecords, [](const std::shared_ptr<msptiActivityMemcpy>& data) -> std::uint32_t {
+        return data->deviceId;
+    });
+    std::vector<MemCpyMetric> ans;
+    auto curTimestamp = getCurrentTimestamp64();
+    for (auto& pair: deviceId2Memcpy) {
+        auto deviceId = pair.first;
+        MemCpyMetric memCpyMetric{};
+        auto& memCpyDatas = pair.second;
+        memCpyMetric.duration = std::accumulate(memCpyDatas.begin(), memCpyDatas.end(), 0ULL,
             [](uint64_t acc, std::shared_ptr<msptiActivityMemcpy> memcpy) {
                 return acc + memcpy->end - memcpy->start;
             });
-    memCpyMetric.duration = ans;
-    memCpyMetric.deviceId = deviceId;
-    memCpyMetric.timestamp = getCurrentTimestamp64();
-    return {memCpyMetric};
+        memCpyMetric.deviceId = deviceId;
+        memCpyMetric.timestamp = curTimestamp;
+        ans.emplace_back(memCpyMetric);
+    }
+    return ans;
 }
 
 void MetricMemCpyProcess::SendProcessMessage()

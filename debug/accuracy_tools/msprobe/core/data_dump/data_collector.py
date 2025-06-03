@@ -130,6 +130,13 @@ class DataCollector:
         self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
+    def forward_data_collect_only_tensor(self, name, module, pid, module_input_output):
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        self.data_processor.analyze_forward(name, module, module_input_output)
+
+
     def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
@@ -141,6 +148,12 @@ class DataCollector:
         self.set_is_recomputable(data_info, is_recompute)
         self.call_stack_collect(name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
+
+    def backward_data_collect_only_tensor(self, name, module, pid, module_input_output, is_recompute=None):
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        self.data_processor.analyze_backward(name, module, module_input_output)
 
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         self.update_construct(name)

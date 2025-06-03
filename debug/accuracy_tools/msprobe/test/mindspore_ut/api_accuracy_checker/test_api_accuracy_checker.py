@@ -4,6 +4,9 @@ import logging
 import os
 import json
 import csv
+import tempfile
+import shutil
+
 
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker
 
@@ -40,13 +43,42 @@ def find_with_prefix(directory, prefix):
 
 
 class Args:
-    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None):
+    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None, save_error_data=False):
         self.api_info_file = api_info_file if api_info_file is not None else os.path.join(directory, "files", "api_info_statistics.json")
         self.out_path = out_path if out_path is not None else os.path.join(directory, "files")
         self.result_csv_path = result_csv_path if result_csv_path is not None else ""
+        self.save_error_data = save_error_data
 
 
 class TestApiAccuracyChecker(unittest.TestCase):
+    def test_init_save_error_data(self):
+        # 使用临时目录，不污染项目文件
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # 构造 args，只关注 out_path 和 save_error_data
+            args = Args(out_path=temp_dir, save_error_data=True)
+            config, dump_path_agg = ApiAccuracyChecker.init_save_error_data(args)
+
+            # 1. config 字段检查
+            self.assertEqual(config.execution_mode, "pynative")
+            self.assertEqual(config.task, "tensor")
+            self.assertEqual(config.dump_path, temp_dir)
+            self.assertEqual(config.dump_tensor_data_dir, temp_dir)
+            self.assertFalse(config.async_dump)
+            self.assertEqual(config.file_format, "npy")
+
+            # 2. error_data 目录已创建
+            error_dir = os.path.join(temp_dir, "error_data")
+            self.assertTrue(os.path.isdir(error_dir), f"{error_dir} should exist")
+
+            # 3. dump_path_agg 路径检查
+            self.assertEqual(dump_path_agg.dump_file_path, os.path.join(temp_dir, "dump.json"))
+            self.assertEqual(dump_path_agg.stack_file_path, os.path.join(temp_dir, "stack.json"))
+            self.assertEqual(dump_path_agg.dump_tensor_data_dir, error_dir)
+
+        finally:
+            # 清理临时目录
+            shutil.rmtree(temp_dir)
 
     def test_statistics_mode(self):
         api_info_statistics_path = os.path.join(directory, "files", "api_info_statistics.json")

@@ -140,6 +140,8 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 单算子API自动生成脚本](./docs/23.generate_operator_PyTorch.md)
 
+[MindSpore 单算子API自动生成脚本](./docs/33.generate_operator_MindSpore.md)
+
 ### 11 数码关联
 
 该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
@@ -168,6 +170,15 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
 
 [checkpoint比对](./docs/32.ckpt_compare.md)
+
+### 14 强化学习数据采集
+
+主要能力：
+
+灵活采集强化学习中重要关键过程数据，并支持比对。
+
+[强化学习数据采集](./docs/34.RL_collect.md)
+
 
 ## 📑 补充材料
 

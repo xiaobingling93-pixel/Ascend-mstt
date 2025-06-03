@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -17,7 +17,6 @@ import os
 import importlib
 import inspect
 
-from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml, check_link
 from msprobe.core.common.log import logger
 

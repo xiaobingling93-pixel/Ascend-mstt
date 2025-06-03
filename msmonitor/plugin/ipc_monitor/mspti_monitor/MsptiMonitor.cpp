@@ -13,13 +13,6 @@ namespace {
 constexpr size_t DEFAULT_BUFFER_SIZE = 8 * 1024 * 1024;
 constexpr size_t MAX_BUFFER_SIZE = 256 * 1024 * 1024;
 constexpr uint32_t MAX_ALLOC_CNT = MAX_BUFFER_SIZE / DEFAULT_BUFFER_SIZE;
-
-void MsptiFree(uint8_t *ptr)
-{
-    if (ptr != nullptr) {
-        free(ptr);
-    }
-}
 }
 
 namespace dynolog_npu {
@@ -109,7 +102,6 @@ void MsptiMonitor::SetFlushInterval(uint32_t interval)
         cv_.notify_one();
     }
     metric::MetricManager::GetInstance()->SetReportInterval(interval);
-    metric::MetricManager::GetInstance()->Trigger();
 }
 
 bool MsptiMonitor::IsStarted()

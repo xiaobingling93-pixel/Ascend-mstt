@@ -35,7 +35,8 @@ def ms_compare(input_param, output_path, **kwargs):
         config.data_mapping = generate_data_mapping_by_layer_mapping(input_param, config.layer_mapping, output_path)
 
     is_cross_framework = check_cross_framework(input_param.get('bench_json_path'))
-    mode_config = ModeConfig(config.stack_mode, config.auto_analyze, config.fuzzy_match, config.dump_mode)
+    mode_config = ModeConfig(config.stack_mode, config.auto_analyze, config.fuzzy_match,
+                             config.dump_mode, config.compared_file_type)
     mapping_config = MappingConfig(config.cell_mapping, config.api_mapping, config.data_mapping)
     ms_comparator = Comparator(read_real_data, mode_config, mapping_config, is_cross_framework)
     ms_comparator.compare_core(input_param, output_path, suffix=config.suffix)

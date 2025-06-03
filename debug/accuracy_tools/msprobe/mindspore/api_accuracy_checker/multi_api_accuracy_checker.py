@@ -33,6 +33,9 @@ from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataM
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.const import MsCompareConst
 
+from msprobe.core.data_dump.data_collector import build_data_collector
+from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
+
 
 class MultiApiAccuracyChecker(ApiAccuracyChecker):
     def __init__(self, args):
@@ -50,6 +53,12 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
         # 初始化一个属性来存储当前的设备ID（用于日志中显示）
         self.current_device_id = None
+
+        self.save_error_data = args.save_error_data
+        if self.save_error_data:
+            config, dump_path_aggregation = self.init_save_error_data(args)
+            self.data_collector = build_data_collector(config)
+            self.data_collector.update_dump_paths(dump_path_aggregation)
 
     def process_on_device(self, device_id, api_infos, progress_queue):
         """

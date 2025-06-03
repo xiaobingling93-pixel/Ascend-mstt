@@ -35,6 +35,7 @@ module.exports = {
         static: {
             directory: path.join(__dirname, 'dist'), // 服务资源目录
         },
+        compress: false,
         proxy: [
             {
                 context: (pathname) => {
@@ -49,7 +50,6 @@ module.exports = {
                 on: {
                     error: (err, req, res) => {
                         // 安全处理响应对象
-                        console.error(`[HPM] 代理错误: ${err.message}`);
                         if (res && !res.headersSent) {
                             res.writeHead(500, { 'Content-Type': 'text/plain' });
                             res.end('Proxy Error');
@@ -58,7 +58,7 @@ module.exports = {
                     proxyReqWs: (proxyReq, req, socket) => {
                         // WebSocket 错误专属处理
                         socket.on('error', (error) => {
-                            console.error('[HPM] WebSocket 错误:', error.message);
+
                         });
                     },
                 },
@@ -71,7 +71,7 @@ module.exports = {
                 noInfo: true,
             },
         },
-        http2: true, // 推荐启用HTTP/2
+        http2: false, // 推荐启用HTTP/2
         https: false, // 根据实际需要配置
         hot: true, // 启用热模块替换
         liveReload: true, // 启用实时重新加载

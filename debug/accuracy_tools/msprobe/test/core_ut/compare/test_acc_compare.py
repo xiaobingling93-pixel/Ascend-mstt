@@ -343,6 +343,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name = 'Functional.linear.0.forward'
         stack_json_data = {'Functional.linear.0.forward': ['File']}
         merge_list = {
+            'debug_struct': [],
             'input_struct': [('torch.float32', [2, 2])],
             'op_name': ['Functional.linear.0.forward.input.0'],
             'output_struct': [],
@@ -494,6 +495,7 @@ class TestParseData(unittest.TestCase):
         merge_list = parse_data.gen_merge_list(npu_json_data, 'Functional.linear.0.forward', stack_json_data)
 
         target_dict = {
+            'debug_struct': [],
             'input_struct': [('torch.float32', [2, 2])],
             'op_name': ['Functional.linear.0.forward.input.0'],
             'output_struct': [],

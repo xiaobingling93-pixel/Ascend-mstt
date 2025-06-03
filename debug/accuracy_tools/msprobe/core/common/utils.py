@@ -27,10 +27,15 @@ from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_pa
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
+file_suffix_to_file_type = {
+    "dump.json": Const.DUMP_JSON_FILE,
+    "debug.json": Const.DEBUG_JSON_FILE,
+}
 
 
 class MsprobeBaseException(Exception):
@@ -192,27 +197,6 @@ def check_regex_prefix_format_valid(prefix):
         raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
 
-def execute_command(cmd):
-    """
-    Function Description:
-        run the following command
-    Parameter:
-        cmd: command
-    Exception Description:
-        when invalid command throw exception
-    """
-    logger.info('Execute command:%s' % cmd)
-    process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while process.poll() is None:
-        line = process.stdout.readline()
-        line = line.strip()
-        if line:
-            logger.info(line)
-    if process.returncode != 0:
-        logger.error('Failed to execute command:%s' % " ".join(cmd))
-        raise CompareException(CompareException.INVALID_DATA_ERROR)
-
-
 def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
@@ -233,17 +217,33 @@ def format_value(value):
     return float('{:.12f}'.format(value))
 
 
-def md5_find(data):
-    for key_op in data:
-        for api_info in data[key_op]:
-            if isinstance(data[key_op][api_info], list):
-                for data_detail in data[key_op][api_info]:
-                    if data_detail and 'md5' in data_detail:
-                        return True
-            if isinstance(data[key_op][api_info], bool):
-                continue
-            elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
+@recursion_depth_decorator('msprobe.core.common.utils.md5_find', max_depth=Const.DUMP_MAX_DEPTH)
+def md5_find(data, json_type=Const.DUMP_JSON_FILE):
+    if json_type == Const.DUMP_JSON_FILE:
+        for key_op in data:
+            for api_info in data[key_op]:
+                if isinstance(data[key_op][api_info], list):
+                    for data_detail in data[key_op][api_info]:
+                        if data_detail and Const.MD5 in data_detail:
+                            return True
+                if isinstance(data[key_op][api_info], bool):
+                    continue
+                elif data[key_op][api_info] and Const.MD5 in data[key_op][api_info]:
+                    return True
+    elif json_type == Const.DEBUG_JSON_FILE:
+        if isinstance(data, dict):
+            if Const.MD5 in data:
                 return True
+            else:
+                for _, data_info in data.items():
+                    if md5_find(data_info, Const.DEBUG_JSON_FILE):
+                        return True
+        elif isinstance(data, list):
+            for data_info in data:
+                if md5_find(data_info, Const.DEBUG_JSON_FILE):
+                    return True
+        else:
+            return False
     return False
 
 
@@ -281,13 +281,26 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    npu_path_valid = npu_path is not None and npu_path.endswith("dump.json")
-    bench_path_valid = bench_path is not None and bench_path.endswith("dump.json")
-    if not npu_path_valid or not bench_path_valid:
+    dump_json_path_valid = npu_path is not None and npu_path.endswith("dump.json") and \
+        bench_path is not None and bench_path.endswith("dump.json")
+    debug_json_path_valid = npu_path is not None and npu_path.endswith("debug.json") and \
+        bench_path is not None and bench_path.endswith("debug.json")
+    if not dump_json_path_valid and not debug_json_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
     input_param[CompareConst.BENCH_DUMP_DATA_DIR] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+
+
+def get_file_type(file_path):
+    if not isinstance(file_path, str):
+        logger.error("get_file_type failed, check the type of file_path.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    file_type = file_suffix_to_file_type.get(file_path.split(Const.SCOPE_SEPARATOR)[-1])
+    if file_type is None:
+        logger.error("get_file_type failed, file_path is neither dump.json nor debug.json.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    return file_type
 
 
 def get_dump_mode(input_param):
@@ -295,6 +308,7 @@ def get_dump_mode(input_param):
     bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
+    json_type = get_file_type(file_path=npu_path)
 
     npu_task = npu_json_data.get('task', None)
     bench_task = bench_json_data.get('task', None)
@@ -314,8 +328,8 @@ def get_dump_mode(input_param):
         return Const.STRUCTURE
 
     if npu_task == Const.STATISTICS:
-        npu_md5_compare = md5_find(npu_json_data['data'])
-        bench_md5_compare = md5_find(bench_json_data['data'])
+        npu_md5_compare = md5_find(npu_json_data['data'], json_type)
+        bench_md5_compare = md5_find(bench_json_data['data'], json_type)
         if npu_md5_compare == bench_md5_compare:
             return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:

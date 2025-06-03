@@ -28,7 +28,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json
+    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type
 from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path
@@ -48,6 +48,7 @@ class ComparisonConfig:
     cell_mapping: dict
     api_mapping: dict
     layer_mapping: dict
+    compared_file_type: str
 
 
 class Comparator:
@@ -55,18 +56,18 @@ class Comparator:
         self.file_reader = file_reader
         self.mode_config = mode_config
         self.mapping_config = mapping_config
-
-        if self.mapping_config.data_mapping:
-            self.cross_frame = is_cross_framework
-        else:
-            self.cross_frame = (self.mapping_config.cell_mapping is not None or
-                                self.mapping_config.api_mapping is not None)
+        self.cross_frame = is_cross_framework
 
         self.mapping_dict = MappingDict(mapping_config)
 
     @staticmethod
-    def process_output_file(output_path, suffix):
-        file_name = add_time_with_xlsx("compare_result" + suffix)
+    def process_output_file(output_path, suffix, compared_file_type):
+        file_name_prefix_mapping = {
+            Const.DUMP_JSON_FILE: "compare_result",
+            Const.DEBUG_JSON_FILE: "debug_compare_result"
+        }
+        file_name_prefix = file_name_prefix_mapping.get(compared_file_type, "compare_result")
+        file_name = add_time_with_xlsx(file_name_prefix + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         if os.path.exists(file_path):
             logger.warning(f"{file_path} will be deleted.")
@@ -96,7 +97,7 @@ class Comparator:
         suffix = kwargs.get('suffix', '')
 
         # process output file
-        file_path = self.process_output_file(output_path, suffix)
+        file_path = self.process_output_file(output_path, suffix, self.mode_config.compared_file_type)
 
         # initialize the compare result table and compare general data(name, dtype, shape, statistics/md5, etc.)
         npu_json = input_param.get("npu_json_path")
@@ -115,7 +116,8 @@ class Comparator:
         # highlight suspicious API
         highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         highlight = HighLight(self.mode_config)
-        highlight.find_compare_result_error_rows(result_df, highlight_dict)
+        if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+            highlight.find_compare_result_error_rows(result_df, highlight_dict)
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         # output compare analysis suggestions
@@ -209,8 +211,10 @@ class ParseData:
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
                 elif CompareConst.PARAMS_PATTERN in op_name:
                     struct = merge_list[CompareConst.PARAMS_STRUCT].pop(0)
-                else:
+                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
                     struct = merge_list[CompareConst.PARAMS_GRAD_STRUCT].pop(0)
+                else:
+                    struct = merge_list[CompareConst.DEBUG_STRUCT].pop(0)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])
                 if self.mode_config.dump_mode == Const.MD5:
@@ -227,7 +231,8 @@ class ParseData:
 
     def gen_merge_list(self, json_data, op_name, stack_json_data):
         op_data = json_data['data'][op_name]
-        check_dump_json_str(op_data, op_name)
+        if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+            check_dump_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
 
         if self.mode_config.stack_mode:
@@ -697,10 +702,12 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             cell_mapping=kwargs.get('cell_mapping', {}),
             api_mapping=kwargs.get('api_mapping', {}),
             layer_mapping=kwargs.get('layer_mapping', {}),
+            compared_file_type='',
         )
 
         set_dump_path(input_param)
         config.dump_mode = get_dump_mode(input_param)
+        config.compared_file_type = get_file_type(input_param.get("npu_json_path", None))
 
         # set stack_mode and set "stack_json_path" in input_param
         if 'stack_json_path' in input_param:

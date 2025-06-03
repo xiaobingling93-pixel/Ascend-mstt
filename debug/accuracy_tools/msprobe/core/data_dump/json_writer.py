@@ -35,7 +35,8 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
-        self.flush_size = 20000
+        self.flush_size = 1000
+        self.larger_flush_size = 20000
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
@@ -130,7 +131,15 @@ class DataWriter:
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
-        if dump_data and isinstance(dump_data, dict) and len(dump_data) % self.flush_size == 0:
+
+        if not dump_data or not isinstance(dump_data, dict):
+            return
+
+        length = len(dump_data)
+
+        threshold = self.flush_size if length < self.larger_flush_size else self.larger_flush_size
+
+        if length % threshold == 0:
             self.write_json()
 
     def update_data(self, new_data):
