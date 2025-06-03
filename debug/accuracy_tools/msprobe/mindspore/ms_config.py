@@ -144,14 +144,3 @@ def parse_task_config(task, json_config):
     if task not in TaskDict:
         raise Exception("task is invalid.")
     return TaskDict.get(task)(task_map)
-
-
-def parse_json_config(json_file_path):
-    if not json_file_path:
-        raise Exception("json file path is None")
-    json_config = load_json(json_file_path)
-    common_config = parse_common_config(json_config)
-    if not common_config.task:
-        common_config.task = Const.STATISTICS
-    task_config = parse_task_config(common_config.task, json_config)
-    return common_config, task_config
