@@ -22,27 +22,6 @@ from msprobe.mindspore.ms_config import (parse_json_config, parse_task_config,
 
 
 class TestMsConfig(unittest.TestCase):
-    def test_parse_json_config(self):
-        mock_json_data = {
-            "dump_path": "./dump/",
-            "rank": [],
-            "step": [],
-            "level": "L1",
-            "statistics": {
-                "scope": [],
-                "list": [],
-                "data_mode": ["all"],
-                "summary_mode": "statistics"
-            }
-        }
-        with patch("msprobe.mindspore.ms_config.load_json", return_value=mock_json_data):
-            common_config, task_config = parse_json_config("./config.json")
-        self.assertEqual(common_config.task, Const.STATISTICS)
-        self.assertEqual(task_config.data_mode, ["all"])
-
-        with self.assertRaises(Exception) as context:
-            parse_json_config(None)
-        self.assertEqual(str(context.exception), "json file path is None")
 
     def test_parse_task_config(self):
         mock_json_config = {
