@@ -1,3 +1,18 @@
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from collections import defaultdict
 from multiprocessing import Pool
 import os
@@ -105,7 +120,9 @@ def analyze_communication_nodes(path: RankPath):
             comm_node = CommunicationNode(node_id, path.rank, op_data)
             comm_node.compute_ops = compute_ops
             compute_ops = []
-            communication_nodes[last_node_id].add_next(comm_node)
+            last_commu_node = communication_nodes.get(last_node_id)
+            if last_commu_node:
+                last_commu_node.add_next(comm_node)
             communication_nodes[node_id] = comm_node
             sub_layer = 0
         elif not is_ignore_op(op_name):
@@ -167,7 +184,7 @@ def search_first_anomaly(rank_nodes_dict) -> list:
                 node_ids_in_same_group = ({node.node_id} | node.link_nodes.keys() | node.src_nodes.keys()
                                           | node.dst_nodes.keys())
                 if node_ids_in_same_group in group_keys:
-                    groups[group_keys.index(node_ids_in_same_group)].append(node)
+                    groups.get(group_keys.index(node_ids_in_same_group)).append(node)
                 else:
                     group_keys.append(node_ids_in_same_group)
                     groups[group_keys.index(node_ids_in_same_group)] = [node]
@@ -210,7 +227,7 @@ def analyze_anomaly_in_group(nodes_group):
         get_compute_ops_from_commu_nodes(input_anomaly_nodes)
         if anomaly_nodes:
             return anomaly_nodes
-        # todo: 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
+        # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
         # 筛选dst中output有异常的点
         dst_list = list(filter(lambda node: node.type == NanAnalyseConst.DST, nodes_group))
         get_commu_ops(dst_list)

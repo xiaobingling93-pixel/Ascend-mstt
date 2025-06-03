@@ -1,8 +1,23 @@
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from collections import OrderedDict
 from dataclasses import dataclass
-import psutil
 import sys
 import time
+import psutil
 
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
@@ -49,17 +64,17 @@ class FileCache:
         objs = [obj]
         size = 0
         while objs:
-            o = objs.pop()
-            o_id = id(o)
-            if o_id in seen:
+            obj = objs.pop()
+            obj_id = id(obj)
+            if obj_id in seen:
                 continue
-            seen.add(o_id)
-            size += sys.getsizeof(o)
-            if isinstance(o, dict):
-                objs.extend(o.keys())
-                objs.extend(o.values())
-            elif isinstance(o, (list, tuple, set, frozenset)):
-                objs.extend(o)
+            seen.add(obj_id)
+            size += sys.getsizeof(obj)
+            if isinstance(obj, dict):
+                objs.extend(obj.keys())
+                objs.extend(obj.values())
+            elif isinstance(obj, (list, tuple, set, frozenset)):
+                objs.extend(obj)
         return size
 
     def load_json(self, json_path):
