@@ -381,6 +381,7 @@ class CompareConst:
     Class for compare module const
     """
     SPACE = " "
+    NAME = "Name"
     # compare result column name
     NPU_NAME = "NPU Name"
     BENCH_NAME = "Bench Name"

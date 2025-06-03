@@ -38,6 +38,7 @@ def compare_cli(args):
     else:
         from msprobe.mindspore.compare.ms_compare import ms_compare
         from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed, ms_graph_compare
+        from msprobe.mindspore.compare.common_dir_compare import common_dir_compare
 
     common_kwargs = {
         "auto_analyze": auto_analyze,
@@ -78,6 +79,8 @@ def compare_cli(args):
         if input_param.get("rank_id") is not None:
             ms_graph_compare(input_param, args.output_path)
             return
+        if input_param.get('common', False):
+            return common_dir_compare(input_param, args.output_path)
         if frame_name == Const.PT_FRAMEWORK:
             compare_distributed(npu_path, bench_path, args.output_path, **kwargs)
         else:
