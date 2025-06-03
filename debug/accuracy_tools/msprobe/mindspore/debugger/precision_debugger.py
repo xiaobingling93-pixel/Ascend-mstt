@@ -69,6 +69,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     def __init__(self, config_path=None, task=None, dump_path=None,
                  level=None, step=None):
+        if self.initialized:
+            return
         set_register_backward_hook_functions()
         super().__init__(config_path, task, dump_path, level, step)
 

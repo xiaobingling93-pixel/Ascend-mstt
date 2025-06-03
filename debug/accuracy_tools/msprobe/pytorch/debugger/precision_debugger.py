@@ -39,6 +39,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
         model=None,
         step=None
     ):
+        if self.initialized:
+            return
         super().__init__(config_path, task, dump_path, level, step)
         self.model = model
         if self.task == Const.GRAD_PROBE:
