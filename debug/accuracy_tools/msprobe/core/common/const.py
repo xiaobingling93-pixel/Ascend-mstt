@@ -375,10 +375,6 @@ class Const:
     MATCH_MODE_MAPPING = "mapping"
     MATCH_MODE_SIMILARITY = "similarity"
 
-    DUMP_FILE = "dump.json"
-    CONSTRUCT_FILE = "construct.json"
-    STACK_FILE = "stack.json"
-
 
 class CompareConst:
     """

@@ -25,8 +25,6 @@ from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_par
 from msprobe.core.config_check.config_check_cli import _config_checking_parser, \
             _run_config_checking_command
 
-from debug.accuracy_tools.msprobe.nan_analyze.analyzer import nan_analyze
-
 
 def is_module_available(module_name):
     spec = importlib.util.find_spec(module_name)

@@ -161,3 +161,6 @@ class NanAnalyseConst:
     DIRECTED_API = {'send': SRC, 'recv': DST, 'isend': SRC, 'irecv': DST, 'broadcast': SRC, 'scatter': SRC,
                     'gather': DST}
     OPPOSITE_DIR = {SRC: DST, DST: SRC}
+    DUMP_FILE = "dump.json"
+    CONSTRUCT_FILE = "construct.json"
+    STACK_FILE = "stack.json"

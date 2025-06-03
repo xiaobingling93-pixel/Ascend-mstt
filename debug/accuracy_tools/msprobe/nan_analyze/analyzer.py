@@ -3,7 +3,6 @@ from multiprocessing import Pool
 import os
 import re
 
-from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import check_file_or_directory_path, check_path_before_create, save_json
 from msprobe.core.common.log import logger
 from msprobe.nan_analyse.utils import RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst
@@ -47,9 +46,9 @@ def resolve_path(step_path):
         if not re.match(rank_pattern, path):
             continue
         rank = int(path.split('_')[1])
-        dump_path = os.path.join(step_path, path, Const.DUMP_FILE)
-        construct_path = os.path.join(step_path, path, Const.CONSTRUCT_FILE)
-        stack_path = os.path.join(step_path, path, Const.STACK_FILE)
+        dump_path = os.path.join(step_path, path, NanAnalyseConst.DUMP_FILE)
+        construct_path = os.path.join(step_path, path, NanAnalyseConst.CONSTRUCT_FILE)
+        stack_path = os.path.join(step_path, path, NanAnalyseConst.STACK_FILE)
         dump_path_list.append(RankPath(rank, dump_path, construct_path, stack_path))
     return dump_path_list
 
