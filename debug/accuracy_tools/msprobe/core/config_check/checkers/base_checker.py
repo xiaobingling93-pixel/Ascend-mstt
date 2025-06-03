@@ -24,7 +24,7 @@ class PackInput:
     def __init__(self, output_zip_path, model, shell_path):
         self.output_zip_path = output_zip_path
         self.shell_path = shell_path
-        self.model = model[0] if isinstance(model, list) else model
+        self.model = model[0] if isinstance(model, list) and len(model) > 0 else model
         self.check_input_params()
 
     def check_input_params(self):
