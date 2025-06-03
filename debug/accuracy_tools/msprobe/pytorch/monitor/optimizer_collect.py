@@ -15,7 +15,6 @@
 from abc import abstractmethod
 
 import torch
-import torch.distributed as dist
 
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import MVResult
@@ -26,9 +25,17 @@ class OptimizerMon(object):
     def __init__(self, torch_opt) -> None:
         self.fp16_to_fp32_param = {}
         self.torch_opt = torch_opt
+        self.state = {}
 
     def narrow_from_flatten(self, param, flatten_state):
         return flatten_state
+    
+    def get_state(self, torch_opt):
+        if hasattr(torch_opt, 'chained_optimizers'):
+            for opt in torch_opt.chained_optimizers:
+                self._get_single_state(opt)
+        else:
+            self._get_single_state(torch_opt)
 
     def fetch_grad(self, monitor, params2name):
         if not self.fp16_to_fp32_param:
@@ -65,17 +72,15 @@ class OptimizerMon(object):
     def fetch_mv(self, monitor, params2name):
         if not self.fp16_to_fp32_param:
             self.map_fp16_to_fp32_param(self.torch_opt)
+        if not self.state:
+            self.get_state(self.torch_opt)
 
         exp_avg_dict = {}
         exp_avg_sq_dict = {}
         update_dict = {}
         ratio_dict = {}
 
-        if hasattr(self.torch_opt, 'state'):
-            state = self.torch_opt.state
-        elif hasattr(self.torch_opt, 'optimizer') and hasattr(self.torch_opt.optimizer, 'state'):
-            state = self.torch_opt.optimizer.state
-        else:
+        if not self.state:
             logger.warning('optimizer state can not accessed')
             return MVResult(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict)
 
@@ -85,8 +90,8 @@ class OptimizerMon(object):
             else:
                 hp_param = lp_param
 
-            if hp_param in state:
-                state_param = state.get(hp_param, None)
+            if hp_param in self.state:
+                state_param = self.state.get(hp_param, {})
                 exp_avg = self.narrow_from_flatten(lp_param, state_param.get("exp_avg", None))
                 exp_avg_sq = self.narrow_from_flatten(lp_param, state_param.get("exp_avg_sq", None))
                 if monitor.mv_distribution:
@@ -112,6 +117,16 @@ class OptimizerMon(object):
                     monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
         return MVResult(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict)
     
+    def _get_single_state(self, torch_opt):
+        state = {}
+        if hasattr(torch_opt, 'param_to_cpu_states_map'):
+            state = torch_opt.param_to_cpu_states_map
+        elif hasattr(torch_opt, 'state'):
+            state = torch_opt.state
+        elif hasattr(torch_opt, 'optimizer') and hasattr(torch_opt.optimizer, 'state'):
+            state = torch_opt.optimizer.state
+        self.state.update(state)
+
 
 class MixPrecisionOptimizerMon(OptimizerMon):
     """
@@ -142,21 +157,11 @@ class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
         for opt in torch_opt.chained_optimizers:
             super().map_fp16_to_fp32_param(opt)
 
-        if not hasattr(self.torch_opt, 'state'):
-            torch_opt.state = {}
-            for opt in self.torch_opt.chained_optimizers:
-                self.torch_opt.state.update(opt.optimizer.state)
-
 
 class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
     def map_fp16_to_fp32_param(self, torch_opt):
         for opt in torch_opt.chained_optimizers:
             super().map_fp16_to_fp32_param(opt)
-
-        if not hasattr(self.torch_opt, 'state'):
-            torch_opt.state = {}
-            for opt in self.torch_opt.chained_optimizers:
-                self.torch_opt.state.update(opt.optimizer.state)
 
 
 class DeepSpeedZeroOptimizerMon(OptimizerMon):
@@ -308,7 +313,9 @@ class OptimizerMonFactory:
         "FP32Optimizer": OptimizerMon,
         "Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
         "DistributedOptimizer": MegatronDistributedOptimizerMon,
+        "SwapDistributedOptimizer": MegatronDistributedOptimizerMon,
         "ChainedDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
+        "ChainedSwapDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
         "ChainedFloat16OptimizerWithFloat16Params": MegatronChainedMixPrecisionOptimizerMon,
         "BF16_Optimizer": DeepSpeedZeroOptimizerStage0Mon,
         "DeepSpeedZeroOptimizer": DeepSpeedZeroOptimizerStage1or2Mon,
