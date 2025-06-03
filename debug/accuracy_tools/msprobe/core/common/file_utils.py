@@ -623,8 +623,11 @@ def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False
 def remove_path(path):
     if not os.path.exists(path):
         return
+    if os.path.islink(path):
+        logger.error(f"Failed to delete {path}, it is a symbolic link.")
+        raise RuntimeError("Delete file or directory failed.")
     try:
-        if os.path.islink(path) or os.path.isfile(path):
+        if os.path.isfile(path):
             os.remove(path)
         else:
             shutil.rmtree(path)
@@ -633,7 +636,7 @@ def remove_path(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR) from err
     except Exception as e:
         logger.error("Failed to delete {}. Please check.".format(path))
-        raise RuntimeError(f"Delete {path} failed.") from e
+        raise RuntimeError("Delete file or directory failed.") from e
 
 
 def get_json_contents(file_path):
