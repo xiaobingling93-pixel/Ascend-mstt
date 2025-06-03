@@ -4,6 +4,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 import unittest
+from unittest.mock import patch
+from msprobe.core.common_config import CommonConfig
+from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
+from msprobe.pytorch.pt_config import StatisticsConfig
 from msprobe.pytorch.debugger.precision_debugger import PrecisionDebugger
 from msprobe.core.common.file_utils import load_json
 import shutil
@@ -35,7 +39,19 @@ class MultiStartDebugger:
     @classmethod
     def init(cls, dump_path):
         cls.dump_path = dump_path
-        cls.debugger = PrecisionDebugger(task="statistics", level="L0", dump_path=dump_path)
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [],
+            "level": "L1",
+            "async_dump": False
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = StatisticsConfig(json_config)
+        with patch.object(BasePrecisionDebugger, "parse_config_path", return_value=(common_config, task_config)):
+            cls.debugger = PrecisionDebugger(task="statistics", level="L0", dump_path=dump_path)
     
     @classmethod
     def debugger_start(cls, model, tag):
@@ -48,7 +64,7 @@ class MultiStartDebugger:
     @classmethod
     def debugger_stop(cls):
         cls.debugger.stop()
-        cls.debugger.service.reset_status()
+        cls.debugger.service._reset_status()
 
     @classmethod
     def debugger_step(cls):

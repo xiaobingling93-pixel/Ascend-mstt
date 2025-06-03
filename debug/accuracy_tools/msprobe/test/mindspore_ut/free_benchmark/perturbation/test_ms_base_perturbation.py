@@ -33,7 +33,7 @@ class TestBasePerturbation(unittest.TestCase):
         self.assertFalse(TestBasePerturbation.base_pert.is_fuzzed)
         self.assertIsNone(TestBasePerturbation.base_pert.perturbation_value)
 
-    @patch("msprobe.mindspore.service.Service.should_execute_hook", return_value=False)
+    @patch("msprobe.core.hook_manager.BaseHookManager._should_execute_hook", return_value=False)
     def test_get_fuzzed_result(self, _):
         params = HandlerParams()
         params.args = [Tensor([1.0], dtype=ms.float32), Tensor([5.0], dtype=ms.float32)]

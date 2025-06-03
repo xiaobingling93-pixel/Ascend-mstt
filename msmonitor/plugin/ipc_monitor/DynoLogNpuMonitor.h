@@ -16,7 +16,7 @@ class DynoLogNpuMonitor : public MonitorBase, public Singleton<DynoLogNpuMonitor
 public:
     DynoLogNpuMonitor();
     bool Init() override;
-    ErrCode DealMonitorReq(const MsptiMonitorCfg& cmd);
+    ErrCode DealMonitorReq(MsptiMonitorCfg& cmd);
     std::string Poll() override;
     void EnableMsptiMonitor(std::unordered_map<std::string, std::string>& cfg_map);
     void Finalize();

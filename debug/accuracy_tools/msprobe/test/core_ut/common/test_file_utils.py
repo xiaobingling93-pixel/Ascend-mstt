@@ -439,18 +439,19 @@ class TestUtilityOperations:
     def test_remove_path(self):
         # Test remove file
         with patch('os.path.exists', return_value=True), \
-                patch('os.path.islink', return_value=True), \
+                patch('os.path.islink', return_value=False), \
+                patch('os.path.isfile', return_value=True), \
                 patch('os.remove') as mock_remove:
-            remove_path(str(self.test_file))
-            mock_remove.assert_called_once_with(str(self.test_file))
+            remove_path("/test_remove_path/test/test.txt")
+            mock_remove.assert_called_once_with("/test_remove_path/test/test.txt")
 
         # Test remove directory
         with patch('os.path.exists', return_value=True), \
                 patch('os.path.islink', return_value=False), \
                 patch('os.path.isfile', return_value=False), \
                 patch('shutil.rmtree') as mock_rmtree:
-            remove_path(str(self.test_dir))
-            mock_rmtree.assert_called_once_with(str(self.test_dir))
+            remove_path("/test_remove_path/test")
+            mock_rmtree.assert_called_once_with("/test_remove_path/test")
 
     def test_get_json_contents(self):
         json_content = '{"key": "value"}'

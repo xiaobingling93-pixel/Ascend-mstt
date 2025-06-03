@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 import hashlib
 from functools import wraps
+import zlib
 import torch
 from msprobe.core.grad_probe.constant import GradConst
 
@@ -74,8 +75,8 @@ class CsvMd5(CsvItem):
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         tensor_bytes = grad.cpu().detach().float().numpy().tobytes()
-        md5_hash = hashlib.md5(tensor_bytes)
-        return [md5_hash.hexdigest()]
+        md5_hash = f"{zlib.crc32(tensor_bytes):08x}"
+        return [md5_hash]
 
 
 @register_csv_item(GradConst.DISTRIBUTION)

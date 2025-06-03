@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import torch
-
+from msprobe.core.hook_manager import HookSet
 from msprobe.pytorch.function_factory import npu_custom_grad_functions
 from msprobe.pytorch.hook_module.wrap_aten import (
     AtenOPTemplate,
@@ -27,7 +27,7 @@ from msprobe.pytorch.hook_module.wrap_aten import (
 
 
 def mock_build_hook(prefix):
-    return (MagicMock(), MagicMock(), MagicMock())
+    return HookSet(MagicMock(), MagicMock(), MagicMock())
 
 
 class TestAtenOPTemplate(unittest.TestCase):

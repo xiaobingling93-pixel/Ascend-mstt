@@ -35,8 +35,8 @@ class TestService(unittest.TestCase):
         self.service = PytorchService(self.config)
 
     def test_start_success(self):
-        with patch("msprobe.pytorch.service.get_rank_if_initialized", return_value=0), \
-                patch("msprobe.pytorch.service.Service.create_dirs", return_value=None):
+        with patch("msprobe.pytorch.pytorch_service.get_rank_if_initialized", return_value=0), \
+                patch("msprobe.pytorch.pytorch_service.PytorchService.create_dirs", return_value=None):
             self.service.start(None)
         self.assertEqual(self.service.current_rank, 0)
 
@@ -93,8 +93,8 @@ class TestService(unittest.TestCase):
         self.service.model = MagicMock()
         self.service.build_hook = MagicMock()
         self.config.level = "L0"
-        with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
-                patch("msprobe.pytorch.service.ModuleProcesser.register_module_hook") as mock_register_module_hook:
+        with patch("msprobe.pytorch.pytorch_service.logger.info") as mock_logger, \
+                patch("msprobe.pytorch.pytorch_service.ModuleProcesser.register_module_hook") as mock_register_module_hook:
             self.service._register_module_hook()
             self.assertEqual(mock_logger.call_count, 1)
             mock_register_module_hook.assert_called_once()
@@ -102,7 +102,7 @@ class TestService(unittest.TestCase):
     def test_register_api_hook_with_level1(self):
         self.service.build_hook = MagicMock()
         self.config.level = "L1"
-        with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
+        with patch("msprobe.pytorch.pytorch_service.logger.info") as mock_logger, \
              patch.object(ApiRegistry, "initialize_hook") as mock_init_hook, \
              patch.object(ApiRegistry, 'register_all_api') as mock_api_modularity:
             self.service._register_api_hook()
@@ -111,7 +111,7 @@ class TestService(unittest.TestCase):
             mock_api_modularity.assert_called_once()
 
     def test_create_dirs(self):
-        with patch("msprobe.pytorch.service.create_directory"), \
+        with patch("msprobe.core.service.create_directory"), \
                 patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths"), \
                 patch("msprobe.core.data_dump.data_collector.DataCollector.initialize_json_file"):
             self.service.create_dirs()

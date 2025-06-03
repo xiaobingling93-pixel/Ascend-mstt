@@ -6,12 +6,13 @@
 #include "MetricMarkProcess.h"
 #include "MetricMemSetProcess.h"
 #include "MetricMemProcess.h"
+#include "utils.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor{
 namespace metric {
 
-MetricManager::MetricManager(): TimerTask("MetricManager", 0),
+MetricManager::MetricManager(): TimerTask("MetricManager", DEFAULT_FLUSH_INTERVAL),
 kindSwitchs_(MSPTI_ACTIVITY_KIND_COUNT), consumeStatus_(MSPTI_ACTIVITY_KIND_COUNT){
     metrics.resize(MSPTI_ACTIVITY_KIND_COUNT);
     metrics[MSPTI_ACTIVITY_KIND_KERNEL] = std::make_shared<MetricKernelProcess>();

@@ -49,10 +49,10 @@ class TestPrimitiveHookService(unittest.TestCase):
         task_config = StatisticsConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
 
-        with patch('msprobe.mindspore.service.build_data_collector'), \
-             patch('msprobe.mindspore.service.CellProcessor'), \
-             patch('msprobe.mindspore.service.PrimitiveHookService'), \
-             patch('msprobe.mindspore.service.get_api_register'):
+        with patch('msprobe.core.service.build_data_collector'), \
+             patch('msprobe.mindspore.mindspore_service.CellProcessor'), \
+             patch('msprobe.mindspore.mindspore_service.PrimitiveHookService'), \
+             patch('msprobe.mindspore.mindspore_service.get_api_register'):
             self.mock_service_instance = MindsporeService(config)
             Runtime.is_running = True
             self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)

@@ -17,20 +17,23 @@ std::string HcclMetric::seriesToJson()
     return jsonMsg.dump();
 }
 
-void MetricHcclProcess::ConsumeMsptiData(msptiActivity *record) 
+void MetricHcclProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityHccl* hcclData = ReinterpretConvert<msptiActivityHccl*>(record);
     msptiActivityHccl* tmp = ReinterpretConvert<msptiActivityHccl*>(MsptiMalloc(sizeof(msptiActivityHccl), ALIGN_SIZE));
-    memcpy(tmp, hcclData, sizeof(msptiActivityHccl));
+    if (memcpy_s(tmp, sizeof(msptiActivityHccl), hcclData, sizeof(msptiActivityHccl)) != EOK) {
+        MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
+        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+        return;
+    }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
         records.emplace_back(tmp);
     }
-    
 }
 
 std::vector<HcclMetric> MetricHcclProcess::AggregatedData()
-{   
+{
     std::vector<std::shared_ptr<msptiActivityHccl>> copyRecords;
     {
         std::unique_lock<std::mutex> lock(dataMutex);
@@ -40,13 +43,13 @@ std::vector<HcclMetric> MetricHcclProcess::AggregatedData()
     if (copyRecords.empty()) {
         return {};
     }
-    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityHccl>>> deviceId2HcclData = 
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityHccl>>> deviceId2HcclData =
         groupby(copyRecords, [](const std::shared_ptr<msptiActivityHccl>& data) -> std::uint32_t {
             return data->ds.deviceId;
         });
     std::vector<HcclMetric> ans;
     auto curTimestamp = getCurrentTimestamp64();
-    for (auto& pair: deviceId2HcclData) { 
+    for (auto& pair: deviceId2HcclData) {
         HcclMetric hcclMetric{};
         auto& hcclDatas = pair.second;
         hcclMetric.duration = std::accumulate(hcclDatas.begin(), hcclDatas.end(), 0ULL,

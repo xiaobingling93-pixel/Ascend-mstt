@@ -12,37 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import functools
-from collections import namedtuple
 
 from torch.utils.data import dataloader
 
-from msprobe.core.common.const import Const, FileCheckConst, MsgConst
+from msprobe.core.common.const import Const, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileChecker
-from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, check_token_range
+from msprobe.core.common.utils import check_token_range
+from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import check_save_param, is_torch_nn_module
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
-from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.pytorch.pytorch_service import PytorchService
-
-ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task",
-                                                   "dump_path", "level", "model"])
+from msprobe.pytorch.pt_config import parse_task_config
 
 
-class PrecisionDebugger:
-    _instance = None
-    tasks_not_need_debugger = [Const.GRAD_PROBE]
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(PrecisionDebugger, cls).__new__(cls)
-            cls._instance.config = None
-            cls._instance.enable_dataloader = False
-        return cls._instance
+class PrecisionDebugger(BasePrecisionDebugger):
 
     def __init__(
         self,
@@ -53,73 +39,34 @@ class PrecisionDebugger:
         model=None,
         step=None
     ):
-        if not hasattr(self, "initialized"):
-            config_params = ConfigParameters(config_path,
-                                             task,
-                                             dump_path,
-                                             level,
-                                             model)
-            self.check_input_params(config_params)
-
-            self.initialized = True
-            self.model = model
-            common_config, task_config = parse_json_config(config_path, task)
-            self.task = task if task else common_config.task
-            if self.task == Const.GRAD_PROBE:
-                self.gm = GradientMonitor(common_config, task_config)
-                return
-            if step is not None:
-                common_config.step = get_real_step_or_rank(step, Const.STEP)
-            self.config = DebuggerConfig(
-                common_config, task_config, task, dump_path, level
-            )
-            self.service = PytorchService(self.config)
-            self.module_dumper = ModuleDumper(self.service)
-            self.enable_dataloader = self.config.enable_dataloader
-            self.ori_customer_func = {}
-            if self.enable_dataloader:
-                logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
-                dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
+        if self.initialized:
+            return
+        super().__init__(config_path, task, dump_path, level, step)
+        self.model = model
+        if self.task == Const.GRAD_PROBE:
+            self.gm = GradientMonitor(self.common_config, self.task_config)
+            return
+        self.config = DebuggerConfig(
+            self.common_config, self.task_config, task, dump_path, level
+        )
+        self.service = PytorchService(self.config)
+        self.module_dumper = ModuleDumper(self.service)
+        self.ori_customer_func = {}
+        self.enable_dataloader = self.config.enable_dataloader
+        self.param_warning()
 
     @property
     def instance(self):
         return self._instance
 
     @staticmethod
-    def check_input_params(args):
-        if args.config_path is not None:
-            if not isinstance(args.config_path, str):
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string")
-            file_checker = FileChecker(
-                file_path=args.config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
-            file_checker.common_check()
-
-        if args.task is not None and args.task not in Const.TASK_LIST:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}")
-
-        if args.dump_path is not None:
-            if not isinstance(args.dump_path, str):
-                raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string")
-
-        if args.level is not None and args.level not in Const.LEVEL_LIST:
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
-
-        if args.model is not None:
-            logger.warning_on_rank_0(
-                "The 'model' parameter in the PrecisionDebugger will be deprecated in the future."
-                "It is recommended to pass the 'model' parameter in the start interface instead."
-            )
+    def get_task_config(task, json_config):
+        return parse_task_config(task, json_config)
 
     @classmethod
     def start(cls, model=None, token_range=None):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if instance.task in PrecisionDebugger.tasks_not_need_debugger:
+        instance = cls.get_instance()
+        if instance is None:
             return
 
         check_token_range(token_range)
@@ -131,16 +78,9 @@ class PrecisionDebugger:
             instance.service.start(instance.model, token_range)
 
     @classmethod
-    def forward_backward_dump_end(cls):
-        instance = cls._instance
-        instance.stop()
-
-    @classmethod
     def stop(cls):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if instance.task in PrecisionDebugger.tasks_not_need_debugger:
+        instance = cls.get_instance()
+        if instance is None:
             return
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, stop() skipped.")
@@ -149,9 +89,8 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        if not cls._instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if cls._instance.task in PrecisionDebugger.tasks_not_need_debugger:
+        instance = cls.get_instance()
+        if instance is None:
             return
         cls._instance.service.step()
 
@@ -176,39 +115,15 @@ class PrecisionDebugger:
             return
         instance.service.save(variable, name, save_backward)
 
-    @classmethod
-    def set_init_step(cls, step):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        check_init_step(step)
-        instance.service.init_step = step
-        instance.service.loop = 0
-
-    @classmethod
-    def register_custom_api(cls, module, api, api_prefix=None):
-        if not api_prefix:
-            api_prefix = getattr(module, "__name__", "Custom")
-        if not isinstance(api_prefix, str):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, "api_prefix must be string")
-        if not hasattr(module, api):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        instance.service.register_custom_api(module, api, api_prefix)
-
-    @classmethod
-    def restore_custom_api(cls, module, api):
-        if not hasattr(module, api):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"module {str(module)} does not have {api}")
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        instance.service.restore_custom_api(module, api)
+    def param_warning(self):
+        if self.model is not None:
+            logger.warning_on_rank_0(
+                "The 'model' parameter in the PrecisionDebugger will be deprecated in the future."
+                "It is recommended to pass the 'model' parameter in the start interface instead."
+            )
+        if self.enable_dataloader:
+            logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
+            dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
 
 def module_dump(module, dump_name):

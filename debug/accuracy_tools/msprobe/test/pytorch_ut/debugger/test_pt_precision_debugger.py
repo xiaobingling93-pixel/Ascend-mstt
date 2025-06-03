@@ -11,6 +11,9 @@ from msprobe.core.common.exceptions import MsprobeException, FileCheckException
 from msprobe.pytorch.debugger.precision_debugger import PrecisionDebugger, iter_tracer
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
 from msprobe.test.pytorch_ut.grad_probe.test_grad_monitor import common_config, task_config
+from msprobe.core.common_config import CommonConfig
+from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
+from msprobe.pytorch.pt_config import StatisticsConfig, GradToolConfig
 
 
 class Args:
@@ -23,6 +26,29 @@ class Args:
 
 
 class TestPrecisionDebugger(unittest.TestCase):
+    grad_json_config = {
+        "task": Const.GRAD_PROBE,
+        "dump_path": "/absolute_path",
+        "rank": [],
+        "step": [],
+        "level": "L1",
+        "async_dump": False
+    }
+
+    grad_common_config = CommonConfig(grad_json_config)
+    grad_task_config = GradToolConfig(grad_json_config)
+
+    json_config = {
+        "task": "statistics",
+        "dump_path": "/absolute_path",
+        "rank": [],
+        "step": [],
+        "level": "L1",
+        "async_dump": False
+    }
+
+    statistics_common_config = CommonConfig(json_config)
+    statistics_task_config = StatisticsConfig(json_config)
 
     def test_init(self):
         gm = GradientMonitor(common_config, task_config)
@@ -38,27 +64,27 @@ class TestPrecisionDebugger(unittest.TestCase):
     def test_check_input_params(self):
         args = Args(config_path = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(config_path = "./")
         with self.assertRaises(FileCheckException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, FileCheckException.INVALID_FILE_ERROR)
 
         args = Args(task = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(dump_path = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(level = 1)
         with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
+            PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
         args = Args(config_path = os.path.join(os.path.dirname(__file__), "../../../config.json"), 
@@ -66,7 +92,7 @@ class TestPrecisionDebugger(unittest.TestCase):
                     dump_path="./dump_path", 
                     level = Const.LEVEL_LIST[0], 
                     model = torch.nn.Module())
-        checked_input_params = PrecisionDebugger.check_input_params(args)
+        checked_input_params = PrecisionDebugger.check_input_params(args.config_path, args.task, args.dump_path, args.level)
         self.assertIsNone(checked_input_params)
 
     def test_start_grad_probe(self):
@@ -75,12 +101,16 @@ class TestPrecisionDebugger(unittest.TestCase):
             PrecisionDebugger.start()
         self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
 
-        PrecisionDebugger._instance = PrecisionDebugger(task=Const.GRAD_PROBE, dump_path="./dump_path")
+        with patch.object(BasePrecisionDebugger, "parse_config_path",
+                          return_value=(self.grad_common_config, self.grad_task_config)):
+            PrecisionDebugger._instance = PrecisionDebugger(task=Const.GRAD_PROBE, dump_path="./dump_path")
         checked_start = PrecisionDebugger.start()
         self.assertIsNone(checked_start)
 
     def test_start_statistics(self):
-        debugger = PrecisionDebugger(dump_path="./dump_path")
+        with patch.object(BasePrecisionDebugger, "parse_config_path",
+                          return_value=(self.statistics_common_config, self.statistics_task_config)):
+            debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
         debugger.config = MagicMock()
         debugger.task = 'statistics'
@@ -88,7 +118,9 @@ class TestPrecisionDebugger(unittest.TestCase):
         debugger.service.start.assert_called_once()
 
     def test_forward_backward_dump_end(self):
-        debugger = PrecisionDebugger(dump_path="./dump_path")
+        with patch.object(BasePrecisionDebugger, "parse_config_path", return_value=(self.statistics_common_config,
+                                                                                    self.statistics_task_config)):
+            debugger = PrecisionDebugger(dump_path="./dump_path", task='statistics')
         debugger.service = MagicMock()
         debugger.config = MagicMock()
         debugger.task = 'statistics'
@@ -101,7 +133,9 @@ class TestPrecisionDebugger(unittest.TestCase):
             PrecisionDebugger.stop()
         self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
 
-        PrecisionDebugger._instance = PrecisionDebugger(task=Const.GRAD_PROBE, dump_path="./dump_path")
+        with patch.object(BasePrecisionDebugger, "parse_config_path",
+                          return_value=(self.grad_common_config, self.grad_task_config)):
+            PrecisionDebugger._instance = PrecisionDebugger(task=Const.GRAD_PROBE, dump_path="./dump_path")
         checked_stop = PrecisionDebugger.stop()
         self.assertIsNone(checked_stop)
 
@@ -117,8 +151,10 @@ class TestPrecisionDebugger(unittest.TestCase):
             PrecisionDebugger._instance = None
             PrecisionDebugger.step()
         self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
+        with patch.object(BasePrecisionDebugger, "parse_config_path",
+                          return_value=(self.grad_common_config, self.grad_task_config)):
 
-        PrecisionDebugger._instance = PrecisionDebugger(task=Const.GRAD_PROBE, dump_path="./dump_path")
+            PrecisionDebugger._instance = PrecisionDebugger(task=Const.GRAD_PROBE, dump_path="./dump_path")
         checked_step = PrecisionDebugger.step()
         self.assertIsNone(checked_step)
 
@@ -135,7 +171,9 @@ class TestPrecisionDebugger(unittest.TestCase):
             PrecisionDebugger.monitor(torch.nn.Module())
         self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
 
-        debugger = PrecisionDebugger(task=Const.STATISTICS, dump_path="./dump_path")
+        with patch.object(BasePrecisionDebugger, "parse_config_path", return_value=(self.statistics_common_config,
+                                                                                    self.statistics_task_config)):
+            debugger = PrecisionDebugger(task=Const.STATISTICS, dump_path="./dump_path")
         checked_monitor = debugger.monitor(torch.nn.Module())
         self.assertIsNone(checked_monitor)
 

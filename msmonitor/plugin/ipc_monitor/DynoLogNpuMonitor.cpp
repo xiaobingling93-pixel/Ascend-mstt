@@ -41,7 +41,7 @@ bool DynoLogNpuMonitor::Init()
     return res;
 }
 
-ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
+ErrCode DynoLogNpuMonitor::DealMonitorReq(MsptiMonitorCfg& cmd)
 {
     if (cmd.monitorStop) {
         if (msptiMonitor_.IsStarted()) {
@@ -49,6 +49,14 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
             msptiMonitor_.Stop();
         }
         return ErrCode::SUC;
+    }
+
+    if (cmd.reportIntervals <= 0) {
+        cmd.reportIntervals = DEFAULT_FLUSH_INTERVAL;
+        LOG(WARNING) << "Invalid report interval, set to 60";
+    }
+    if (cmd.reportIntervals != 0) {
+        msptiMonitor_.SetFlushInterval(cmd.reportIntervals);
     }
 
     if (cmd.monitorStart && !msptiMonitor_.IsStarted()) {
@@ -70,7 +78,6 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(const MsptiMonitorCfg& cmd)
             msptiMonitor_.DisableActivity(activity);
         }
     }
-    msptiMonitor_.SetFlushInterval(cmd.reportIntervals);
     return ErrCode::SUC;
 }
 
