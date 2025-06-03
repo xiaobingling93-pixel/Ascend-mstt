@@ -94,34 +94,6 @@ class PrecisionDebugger(BasePrecisionDebugger):
             _dump_set_dynamic()
 
     @staticmethod
-    def _get_execution_mode():
-        jit_level = ms.context.get_jit_config().get(MsConst.JIT_LEVEL)
-        jit_level = jit_level if jit_level else ms.get_context(MsConst.JIT_LEVEL)
-        if not jit_level:
-            if MSContext.get_instance().get_ascend_soc_version() == MsConst.ASCEND_910A:
-                jit_level = MsConst.JIT_LEVEL_O2
-            else:
-                jit_level = MsConst.JIT_LEVEL_O0
-
-        if ms.get_context("mode") == ms.GRAPH_MODE:
-            if jit_level == MsConst.JIT_LEVEL_O2:
-                return MsConst.GRAPH_GE_MODE
-            else:
-                return MsConst.GRAPH_KBYK_MODE
-        else:
-            return MsConst.PYNATIVE_MODE
-
-    @staticmethod
-    def _is_graph_dump(config: DebuggerConfig):
-        if config.level != MsConst.KERNEL:
-            return False
-        if not config.list:
-            return True
-        is_graph = any(item.startswith("name-regex") for item in config.list)
-        is_graph |= all("." not in item for item in config.list)
-        return is_graph
-
-    @staticmethod
     def get_task_config(task, json_config):
         return parse_task_config(task, json_config)
 
@@ -232,3 +204,31 @@ class PrecisionDebugger(BasePrecisionDebugger):
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         return instance.config.level_ori == Const.LEVEL_L2
+
+    @staticmethod
+    def _get_execution_mode():
+        jit_level = ms.context.get_jit_config().get(MsConst.JIT_LEVEL)
+        jit_level = jit_level if jit_level else ms.get_context(MsConst.JIT_LEVEL)
+        if not jit_level:
+            if MSContext.get_instance().get_ascend_soc_version() == MsConst.ASCEND_910A:
+                jit_level = MsConst.JIT_LEVEL_O2
+            else:
+                jit_level = MsConst.JIT_LEVEL_O0
+
+        if ms.get_context("mode") == ms.GRAPH_MODE:
+            if jit_level == MsConst.JIT_LEVEL_O2:
+                return MsConst.GRAPH_GE_MODE
+            else:
+                return MsConst.GRAPH_KBYK_MODE
+        else:
+            return MsConst.PYNATIVE_MODE
+
+    @staticmethod
+    def _is_graph_dump(config: DebuggerConfig):
+        if config.level != MsConst.KERNEL:
+            return False
+        if not config.list:
+            return True
+        is_graph = any(item.startswith("name-regex") for item in config.list)
+        is_graph |= all("." not in item for item in config.list)
+        return is_graph
