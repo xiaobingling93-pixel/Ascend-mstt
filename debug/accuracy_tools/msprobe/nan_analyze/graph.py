@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from debug.accuracy_tools.msprobe.core.common.const import Const, CompareConst
-# from msprobe.core.common.const import Const, CompareConst
-# from msprobe.anomaly_analyze.utils import FileCache, RankPath, is_communication_op, is_ignore_op, check_item_anomaly, AnomalyAnalyseConst
-from utils import FileCache, RankPath, is_communication_op, is_ignore_op, check_item_anomaly, AnomalyAnalyseConst
+from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.nan_analyse.utils import FileCache, RankPath, is_ignore_op, check_item_anomaly, NanAnalyseConst
 
 
 @dataclass
@@ -16,6 +15,8 @@ class DataNode:
     input_args: list
     input_kwargs: dict
     outputs: dict
+    layer: int = 0  # 和communication_node的layer保持一致
+    sub_layer: int = 0  # 调用顺序，越小表示越先调用
 
     def __init__(self, op_name, path: RankPath, op_data):
         self.op_name = op_name
@@ -27,6 +28,21 @@ class DataNode:
         self.input_args = op_data.get(Const.INPUT_ARGS, [])
         self.input_kwargs = op_data.get(Const.INPUT_KWARGS, {})
         self.outputs = op_data.get(Const.OUTPUT, {})
+
+    @staticmethod
+    def find_stack(stack_info, op_name):
+        for item in stack_info:
+            if op_name in item[0]:
+                return item[1]
+
+    @staticmethod
+    def find_complete_construct(construct_info, op_name):
+        construct = [op_name]
+        while 1:
+            op_name = construct_info.get(op_name)
+            if not op_name:
+                return construct
+            construct.insert(0, op_name)
 
     def is_anomaly(self) -> bool:
         if is_ignore_op(self.op_name):
@@ -48,21 +64,6 @@ class DataNode:
                 'construct_info': self.find_complete_construct(construct, self.op_name),
                 'stack_info': self.find_stack(stack, self.op_name)}
 
-    @staticmethod
-    def find_stack(stack_info, op_name):
-        for item in stack_info:
-            if op_name in item[0]:
-                return item[1]
-
-    @staticmethod
-    def find_complete_construct(construct_info, op_name):
-        construct = [op_name]
-        while 1:
-            op_name = construct_info.get(op_name)
-            if not op_name:
-                return construct
-            construct.insert(0, op_name)
-
 
 class CommunicationNode:
     def __init__(self, node_id, rank, data: DataNode, layer=0, **kwargs):
@@ -70,6 +71,12 @@ class CommunicationNode:
         self.rank = rank
         self.data = data
         self.layer = layer
+        op_name_split = self.data.op_name.split(Const.SEP)
+        if len(op_name_split) < 4:
+            logger.error(f'invalid op_name: {self.data.op_name}')
+            raise RuntimeError(f'invalid op_name: {self.data.op_name}')
+        self.api = op_name_split[1]
+        self.call_cnt = op_name_split[2]
         self.pre_node = kwargs.get('pre_node')
         self.link_nodes = kwargs.get('link_nodes', {})
         self.dst_nodes = kwargs.get('dst_nodes', {})
@@ -106,44 +113,48 @@ class CommunicationNode:
             self.pre_node.next_nodes.pop(self.node_id)
 
     def has_nan_inf(self):
-        return any([check_item_anomaly(self.data.inputs), check_item_anomaly(self.data.input_args),
-                    check_item_anomaly(self.data.input_kwargs), check_item_anomaly(self.data.outputs)])
-
-    def anomaly_analyze(self):
-        pass
+        return self.input_has_nan_inf() or check_item_anomaly(self.data.outputs)
+    
+    def input_has_nan_inf(self):
+        return check_item_anomaly(self.data.input_args) or check_item_anomaly(self.data.input_kwargs)
 
     def find_connected_nodes(self):
         """
         根据 api/类型/入参/调用次数 确定相连接的node所在rank/api/类型/调用次数
         """
-        api = self._get_api()
-        tar_api = AnomalyAnalyseConst.P2P_API_MAPPING.get(api, api)
-        call_cnt = self.data.op_name
+        tar_api = NanAnalyseConst.P2P_API_MAPPING.get(self.api, self.api)
         ranks = []
-        if self.type == AnomalyAnalyseConst.SRC:
-            # todo: find ranks from dst or group
-            tar_type = AnomalyAnalyseConst.DST
-        elif self.type == AnomalyAnalyseConst.DST:
-            # todo: find ranks from src or group
-            tar_type = AnomalyAnalyseConst.SRC
-        else:
-            # todo: find ranks from group
-            tar_type = AnomalyAnalyseConst.LINK
-        return {'ranks': ranks, 'api': f'torch.distributed.{tar_api}', 'call_cnt': call_cnt, 'type': tar_type}
+        for dst in [NanAnalyseConst.DST, NanAnalyseConst.DST_GROUP]:
+            if dst in self.data.input_kwargs:
+                ranks.append(self.data.input_kwargs.get(dst).get('value'))
+                break
+        for src in [NanAnalyseConst.SRC, NanAnalyseConst.SRC_GROUP]:
+            if src in self.data.input_kwargs:
+                ranks.append(self.data.input_kwargs.get(src).get('value'))
+                break
+        if not ranks:
+            for item in self.data.input_args:
+                if item.get(Const.TYPE) == 'int':
+                    ranks.append(item.get('value'))
+        ranks.extend(self.data.input_kwargs.get('group', {}).get('group_ranks'))
+        return {'ranks': ranks, 'api': f'Distributed.{tar_api}.{self.call_cnt}.forward'}
 
     def _resolve_type(self):
-        if 'src' in self.data.input_kwargs:
-            if self.data.input_kwargs['src'] == self.rank:
-                return AnomalyAnalyseConst.SRC
-            else:
-                return AnomalyAnalyseConst.DST
-        if 'dst' in self.data.input_kwargs:
-            if self.data.input_kwargs['dst'] == self.rank:
-                return AnomalyAnalyseConst.DST
-            else:
-                return AnomalyAnalyseConst.SRC
-        return AnomalyAnalyseConst.LINK
-
-    def _get_api(self):
-        op_name_split = self.data.op_name.lower().split(Const.SEP)
-        return op_name_split[op_name_split.index('distributed') + 1]
+        for src in [NanAnalyseConst.SRC, NanAnalyseConst.SRC_GROUP]:
+            if src in self.data.input_kwargs:
+                if self.data.input_kwargs[src].get('value') == self.rank:
+                    return NanAnalyseConst.SRC
+                else:
+                    return NanAnalyseConst.DST
+        for dst in [NanAnalyseConst.DST, NanAnalyseConst.DST_GROUP]:
+            if dst in self.data.input_kwargs:
+                if self.data.input_kwargs[dst].get('value') == self.rank:
+                    return NanAnalyseConst.DST
+                else:
+                    return NanAnalyseConst.SRC
+        if self.api in NanAnalyseConst.DIRECTED_API:
+            for item in self.data.input_args:
+                if item.get(Const.TYPE) == 'int':
+                    node_type = NanAnalyseConst.DIRECTED_API[self.api]
+                    return node_type if item.get('value') == self.rank else NanAnalyseConst.OPPOSITE_DIR[node_type]
+        return NanAnalyseConst.LINK
