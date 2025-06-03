@@ -20,7 +20,7 @@ import re
 
 from msprobe.core.common.file_utils import check_file_or_directory_path, check_path_before_create, save_json
 from msprobe.core.common.log import logger
-from msprobe.nan_analyse.utils import RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst
+from msprobe.nan_analyze.utils import RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst
 from msprobe.nan_analyze.graph import DataNode, CommunicationNode
 
 

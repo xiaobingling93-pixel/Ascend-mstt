@@ -16,7 +16,7 @@
 from dataclasses import dataclass
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
-from msprobe.nan_analyse.utils import FileCache, RankPath, is_ignore_op, check_item_anomaly, NanAnalyseConst
+from msprobe.nan_analyze.utils import FileCache, RankPath, is_ignore_op, check_item_anomaly, NanAnalyseConst
 
 
 @dataclass
