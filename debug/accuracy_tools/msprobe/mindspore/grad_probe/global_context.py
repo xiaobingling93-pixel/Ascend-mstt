@@ -41,8 +41,12 @@ class GlobalContext:
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance_lock.acquire()
-            cls._instance = object.__new__(cls)
-            cls._instance_lock.release()
+            try:
+                cls._instance = object.__new__(cls)
+            except Exception as e:
+                raise RuntimeError("grad_probe global context init failed") from e
+            finally:
+                cls._instance_lock.release()
         return cls._instance
 
     def init_context(self, config_dict: Dict):
