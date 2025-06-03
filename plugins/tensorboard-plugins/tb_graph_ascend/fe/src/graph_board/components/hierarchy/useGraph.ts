@@ -17,28 +17,53 @@ import * as d3 from 'd3';
 import { maybeTruncateString, darkenColor, safeJSONParse } from '../../../utils/index';
 import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
-import { HierarchyNodeType, PreProcessDataConfigType, GraphType } from '../../type';
+import { HierarchyNodeType, PreProcessDataConfigType, GraphType, TransformType } from '../../type';
 
 import { UseGraphType } from '../../type';
-import { DURATION_TIME, NODE_TYPE_STYLES, SELECTED_STROKE_COLOR, NO_MATCHED_NODE_COLOR, BENCH_NODE_COLOR, BENCH_STROKE_COLOR, BASE_NODE_COLOR, NPU_PREFIX, BENCH_PREFIX, NODE_TYPE, OVERFLOW_COLOR, STROKE_WIDTH, SELECTED_STROKE_WIDTH } from '../../../common/constant';
+import {
+    DURATION_TIME,
+    NODE_TYPE_STYLES,
+    SELECTED_STROKE_COLOR,
+    NO_MATCHED_NODE_COLOR,
+    BENCH_NODE_COLOR,
+    BENCH_STROKE_COLOR,
+    BASE_NODE_COLOR,
+    NPU_PREFIX,
+    BENCH_PREFIX,
+    NODE_TYPE,
+    OVERFLOW_COLOR,
+    STROKE_WIDTH,
+    SELECTED_STROKE_WIDTH,
+} from '../../../common/constant';
 const useGraph = (): UseGraphType => {
-    const preProcessData = (data: Array<HierarchyNodeType>, selectedNode, config: PreProcessDataConfigType, transform: { x: number, y: number, scale: number }) => {
+    const preProcessData: UseGraphType['preProcessData'] = (
+        data: Array<HierarchyNodeType>,
+        selectedNode,
+        config: PreProcessDataConfigType,
+        transform: { x: number; y: number; scale: number },
+    ) => {
         // 遍历数据并应用样式
         const { colors, isOverflowFilter, graphType } = config;
         // 优化性能，渲染3屏节点上中下各1000的高度
-        let virtualNodes = data.filter((d) => d.y >= (-Number(transform.y) - 1000) / Number(transform.scale) && d.y <= (-Number(transform.y) + 2000) / Number(transform.scale));
+        let virtualNodes = data.filter(
+            (d) =>
+                d.y >= (-Number(transform.y) - 1000) / Number(transform.scale) &&
+                d.y <= (-Number(transform.y) + 2000) / Number(transform.scale),
+        );
         // virtualNodes的父节点
         const parentsVirtualNodes: Array<HierarchyNodeType> = [];
         virtualNodes.forEach((d) => {
             let node: HierarchyNodeType | undefined = d;
             while (node?.parentNode) {
-                const parent = data.find((d) => node?.parentNode === d.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''));
+                const parent = data.find(
+                    (dInner) => node?.parentNode === dInner.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''),
+                );
                 if (parent) {
                     parentsVirtualNodes.push(parent);
                 }
                 node = parent;
             }
-        })
+        });
         virtualNodes = [...new Set([...parentsVirtualNodes, ...virtualNodes])]; // 父节点放在前面，不然会覆盖子节点
         const renderData = virtualNodes.map((d) => {
             let precisionColor = isOverflowFilter ? getOverflowColor(d) : getPrecisionColor(d, colors, graphType);
@@ -59,27 +84,30 @@ const useGraph = (): UseGraphType => {
                 color: precisionColor,
                 stroke: strokeColor,
                 strokeWidth: d.name === selectedNode ? SELECTED_STROKE_WIDTH : STROKE_WIDTH,
-            }
+            };
         });
         return renderData;
-    }
+    };
 
-    const getPrecisionColor = (node: HierarchyNodeType, colors: PreProcessDataConfigType['colors'], graphType: GraphType) => {
+    const getPrecisionColor = (
+        node: HierarchyNodeType,
+        colors: PreProcessDataConfigType['colors'],
+        graphType: GraphType,
+    ) => {
         if (!colors || !graphType) {
             return NO_MATCHED_NODE_COLOR;
         }
         if (graphType === 'Bench') {
-            return BENCH_NODE_COLOR
+            return BENCH_NODE_COLOR;
         }
         if (isEmpty(node.matchedNodeLink)) {
-            return Object.keys(colors).find(color => colors[color].value === "无匹配节点") || NO_MATCHED_NODE_COLOR;
+            return Object.keys(colors).find((color) => colors[color].value === '无匹配节点') ?? NO_MATCHED_NODE_COLOR;
         }
         const precisionValue = parseFloat(node.precisionIndex);
         return calcClolorByPrecision(precisionValue, colors);
     };
 
     const calcClolorByPrecision = (precisionValue: number, colors: PreProcessDataConfigType['colors']) => {
-
         if (isNaN(precisionValue)) {
             return BASE_NODE_COLOR; // 默认返回灰色
         }
@@ -96,9 +124,9 @@ const useGraph = (): UseGraphType => {
         }
         // 如果没有匹配到范围，返回默认颜色（灰色）
         return NO_MATCHED_NODE_COLOR;
-    }
+    };
 
-    const createComponent = (text, precision, colors: PreProcessDataConfigType['colors']) => {
+    const createComponent: UseGraphType['createComponent'] = (text, precision, colors: PreProcessDataConfigType['colors']) => {
         const component = document.createElement('vaadin-context-menu-item');
         component.appendChild(document.createTextNode(text));
         component.style.background = calcClolorByPrecision(precision, colors);
@@ -107,7 +135,7 @@ const useGraph = (): UseGraphType => {
         component.style.border = '1px solid #615f5f';
 
         return component;
-    }
+    };
 
     const getOverflowColor = (node) => {
         const overflowLevel = node.overflowLevel;
@@ -121,9 +149,9 @@ const useGraph = (): UseGraphType => {
             default:
                 return OVERFLOW_COLOR.default;
         }
-    }
+    };
 
-    const bindInnerRect = (container, data) => {
+    const bindInnerRect: UseGraphType['bindInnerRect'] = (container, data) => {
         // 绑定数据到 innnerReact 元素
         const innnerReact = container.selectAll('.inner-rect').data(data, (d: any) => d.name);
         innnerReact
@@ -133,9 +161,10 @@ const useGraph = (): UseGraphType => {
             .attr('x', (d: any) => d.x)
             .attr('y', (d: any) => d.y)
             .attr('width', (d: any) => d.width)
-            .attr('fill', (d: any) => d.color)
+            .attr('fill', (d: any) => d.color);
 
-        innnerReact.enter()
+        innnerReact
+            .enter()
             .append('rect')
             .attr('name', (d: any) => d.name)
             .attr('class', 'inner-rect')
@@ -149,17 +178,17 @@ const useGraph = (): UseGraphType => {
             .attr('opacity', 0)
             .transition()
             .duration(DURATION_TIME + 60)
-            .attr('opacity', 1)
+            .attr('opacity', 1);
 
-
-        innnerReact.exit()
+        innnerReact
+            .exit()
             .transition()
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0)
             .remove();
-    }
+    };
 
-    const bindOuterRect = (container, data) => {
+    const bindOuterRect: UseGraphType['bindOuterRect'] = (container, data): void => {
         // 绑定数据到 outerReact 元素
         const outerReact = container.selectAll('.outer-rect').data(data, (d: any) => d.name);
         outerReact
@@ -171,10 +200,10 @@ const useGraph = (): UseGraphType => {
             .attr('width', (d: any) => d.width)
             .attr('height', (d: any) => d.height)
             .attr('stroke', (d: any) => d.stroke)
-            .attr('stroke-width', (d: any) => d.strokeWidth)
+            .attr('stroke-width', (d: any) => d.strokeWidth);
 
-
-        outerReact.enter()
+        outerReact
+            .enter()
             .append('rect')
             .attr('name', (d: any) => d.name)
             .attr('class', 'outer-rect')
@@ -191,17 +220,17 @@ const useGraph = (): UseGraphType => {
             .transition()
             .duration(DURATION_TIME + 60)
             .attr('height', (d: any) => d.height)
-            .attr('opacity', 1)
+            .attr('opacity', 1);
 
-
-        outerReact.exit()
+        outerReact
+            .exit()
             .transition()
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0)
             .remove();
-    }
+    };
 
-    const bindText = (container, data) => {
+    const bindText: UseGraphType['bindText'] = (container, data) => {
         // 绑定文本数据
         const texts = container.selectAll('text').data(data, (d: any) => d.name);
         // 更新现有文本
@@ -209,54 +238,57 @@ const useGraph = (): UseGraphType => {
             .transition()
             .duration(DURATION_TIME)
             .attr('opacity', 1)
-            .attr('x', (d: any) => d.x + d.width / 2)
+            .attr('x', (d: any) => d.x + (d.width / 2))
             .attr('y', (d: any) => d.y + 8);
 
         // 添加新文本
-        texts.enter()
+        texts
+            .enter()
             .append('text')
             .attr('name', (d: any) => d.name)
-            .attr('x', (d: any) => d.x + d.width / 2)
+            .attr('x', (d: any) => d.x + (d.width / 2))
             .attr('y', (d: any) => d.y + 8)
             .attr('dy', '0.35em')
             .attr('text-anchor', 'middle')
             .text((d: any) => maybeTruncateString(d.label, 9, d.width))
             .each(function (d) {
-                // @ts-ignore
-                d3.select(this)
-                    .append('title')
-                    .text(d.label);
+                // @ts-expect-error d3.select(this) this is a d3 selection
+                d3.select(this).append('title').text(d.label);
             })
-            .style("font-size", d => `${d.fontSize}px`)
+            .style('font-size', (d) => `${d.fontSize}px`)
             .attr('opacity', 0)
             .transition()
             .duration(DURATION_TIME + 60)
             .attr('opacity', 1);
 
         // 删除多余文本
-        texts.exit()
+        texts
+            .exit()
             .transition()
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0) // 动画过渡：透明度逐渐变为 0
             .remove();
-    }
+    };
 
-    const changeNodeExpandState = async (nodeInfo: any, metaData: any): Promise<any> => {
+    const changeNodeExpandState: UseGraphType['changeNodeExpandState'] = async (nodeInfo: any, metaData: any): Promise<any> => {
         try {
-
-            metaData = safeJSONParse(JSON.stringify(metaData));
+            const metaDataSafe = safeJSONParse(JSON.stringify(metaData));
             const params = {
-                "nodeInfo": JSON.stringify(nodeInfo),
-                "metaData": JSON.stringify(metaData)
+                nodeInfo: JSON.stringify(nodeInfo),
+                metaData: JSON.stringify(metaDataSafe),
             };
-            const result = await request({ url: 'changeNodeExpandState', method: 'GET', params: params, timeout: 10000 });
+            const result = await request({
+                url: 'changeNodeExpandState',
+                method: 'GET',
+                params: params,
+                timeout: 10000,
+            });
             return result;
-
         } catch (err) {
             return {
                 suucess: false,
-                error: '网络请求失败'
-            }
+                error: '网络请求失败',
+            };
         }
     };
 
@@ -265,12 +297,11 @@ const useGraph = (): UseGraphType => {
         try {
             const result = await request({ url: 'updateHierarchyData', method: 'GET', params: params });
             return result;
-        }
-        catch (err) {
+        } catch (err) {
             return {
                 suucess: false,
-                error: '网络请求失败'
-            }
+                error: '网络请求失败',
+            };
         }
     };
 
@@ -282,8 +313,7 @@ const useGraph = (): UseGraphType => {
         createComponent,
         updateHierarchyData,
         changeNodeExpandState,
-
     };
-}
+};
 
 export default useGraph;

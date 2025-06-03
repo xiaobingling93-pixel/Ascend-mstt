@@ -201,3 +201,48 @@ class TestDataWriter(unittest.TestCase):
             self.assertEqual(load_result, self.data_content)
         finally:
             os.remove(file_path)
+
+    def test_replace_stat_placeholders_invalid_index(self):
+        data = {
+            "type": "Tensor",
+            "dtype": "float32",
+            "shape": [1, 2],
+            Const.TENSOR_STAT_INDEX: 10  # 超出索引
+        }
+        stat_result = [[1.0, 2.0, 3.0, 4.0]]
+        self.data_writer._replace_stat_placeholders(data, stat_result)
+        self.assertIsNone(data.get(Const.TENSOR_STAT_INDEX))
+        self.assertIn(Const.MAX, data)
+        self.assertIsNone(data[Const.MAX])  # 越界填 None
+
+    def test_append_stat_to_buffer_multiple(self):
+        for i in range(5):
+            idx = self.data_writer.append_stat_to_buffer([i, i+1, i+2, i+3])
+            self.assertEqual(idx, i + 1)
+        self.assertEqual(len(self.data_writer.stat_stack_list), 6)  # 包含 setUp 中那一条
+
+    def test_get_buffer_values_max_invalid_data(self):
+        self.data_writer.stat_stack_list = [["not-a-number"]]  # 非预期格式
+        max_val = self.data_writer.get_buffer_values_max(0)
+        self.assertEqual(max_val, "not-a-number")  # 仍然返回第一位
+
+        max_val = self.data_writer.get_buffer_values_max(-1)
+        self.assertIsNone(max_val)
+
+    def test_flush_stat_stack_empty(self):
+        self.data_writer.stat_stack_list = []
+        result = self.data_writer.flush_stat_stack()
+        self.assertEqual(result, [])
+
+    def test_flush_stat_stack_with_tensor_like_items(self):
+        class DummyTensor:
+            def __init__(self, v): self.v = v
+            def item(self): return self.v
+
+        self.data_writer.stat_stack_list = [
+            [DummyTensor(1), DummyTensor(2), DummyTensor(3), DummyTensor(4)],
+            [5.5, 6.6, 7.7, 8.8]  # 混合类型
+        ]
+        result = self.data_writer.flush_stat_stack()
+        self.assertEqual(result, [[1, 2, 3, 4], [5.5, 6.6, 7.7, 8.8]])
+        self.assertEqual(self.data_writer.stat_stack_list, [])

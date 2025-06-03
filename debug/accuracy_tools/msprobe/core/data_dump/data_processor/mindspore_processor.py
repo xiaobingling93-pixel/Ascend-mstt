@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-import hashlib
+
 import zlib
 
 import mindspore as ms
@@ -111,8 +111,8 @@ class MindsporeDataProcessor(BaseDataProcessor):
     @staticmethod
     def process_group_hash(arg):
         group_ranks = distributed.get_process_group_ranks(arg)
-        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
-        return group_ranks_hash
+        group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
+        return f"{group_ranks_hash:08x}"
 
     @classmethod
     def get_special_types(cls):
@@ -270,7 +270,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.maybe_save_overflow_data()
         return api_info_struct if self.has_overflow else None
-    
+
     def analyze_params(self, name, param_name, grad):
         self.has_overflow = False
         api_info_struct = super().analyze_params(name, param_name, grad)

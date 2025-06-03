@@ -208,8 +208,10 @@ class PtdbgDispatch(TorchDispatchMode):
             dispatch_workflow(run_param, data_info)
         else:
             self.lock.acquire()
-            self.all_summary.append([])
-            self.lock.release()
+            try:
+                self.all_summary.append([])
+            finally:
+                self.lock.release()
             run_param.process_flag = True
             if self.check_fun(func, run_param):
                 data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, None, npu_out_cpu, cpu_out,

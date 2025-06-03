@@ -87,6 +87,7 @@ class Legend extends PolymerElement {
       ></vaadin-icon>
     </div>
   `;
+
   @property({ type: Object })
   onSelectChange!: () => void;
 

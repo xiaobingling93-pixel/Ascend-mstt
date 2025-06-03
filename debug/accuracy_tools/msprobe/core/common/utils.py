@@ -197,27 +197,6 @@ def check_regex_prefix_format_valid(prefix):
         raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
 
-def execute_command(cmd):
-    """
-    Function Description:
-        run the following command
-    Parameter:
-        cmd: command
-    Exception Description:
-        when invalid command throw exception
-    """
-    logger.info('Execute command:%s' % cmd)
-    process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while process.poll() is None:
-        line = process.stdout.readline()
-        line = line.strip()
-        if line:
-            logger.info(line)
-    if process.returncode != 0:
-        logger.error('Failed to execute command:%s' % " ".join(cmd))
-        raise CompareException(CompareException.INVALID_DATA_ERROR)
-
-
 def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 

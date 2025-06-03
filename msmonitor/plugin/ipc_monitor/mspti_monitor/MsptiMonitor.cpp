@@ -109,7 +109,6 @@ void MsptiMonitor::SetFlushInterval(uint32_t interval)
         cv_.notify_one();
     }
     metric::MetricManager::GetInstance()->SetReportInterval(interval);
-    metric::MetricManager::GetInstance()->Trigger();
 }
 
 bool MsptiMonitor::IsStarted()

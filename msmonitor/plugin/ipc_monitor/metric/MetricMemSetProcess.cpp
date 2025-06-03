@@ -38,16 +38,25 @@ std::vector<MemSetMetric> MetricMemSetProcess::AggregatedData()
     if (copyRecords.empty()) {
         return {};
     }
-    auto deviceId = copyRecords[0]->deviceId;
-    MemSetMetric memSetMetric{};
-    auto ans = std::accumulate(copyRecords.begin(), copyRecords.end(), 0ULL,
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityMemset>>> deviceId2MemsetData = 
+    groupby(copyRecords, [](const std::shared_ptr<msptiActivityMemset>& data) -> std::uint32_t {
+        return data->deviceId;
+    });
+    std::vector<MemSetMetric> ans;
+    auto curTimestamp = getCurrentTimestamp64();
+    for (auto& pair: deviceId2MemsetData) {
+        MemSetMetric memSetMetric{};
+        auto deviceId = pair.first;
+        auto& memSetDatas = pair.second;
+        memSetMetric.duration = std::accumulate(memSetDatas.begin(), memSetDatas.end(), 0ULL,
             [](uint64_t acc, std::shared_ptr<msptiActivityMemset> memSet) {
                 return acc + memSet->end - memSet->start;
             });
-    memSetMetric.duration = ans;
-    memSetMetric.deviceId = deviceId;
-    memSetMetric.timestamp = getCurrentTimestamp64();
-    return {memSetMetric};
+        memSetMetric.deviceId = deviceId;
+        memSetMetric.timestamp = curTimestamp;
+        ans.emplace_back(memSetMetric);
+    }
+    return ans;
 }
 
 void MetricMemSetProcess::SendProcessMessage()
