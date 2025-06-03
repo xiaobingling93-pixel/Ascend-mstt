@@ -21,6 +21,7 @@ from msprobe.mindspore import PrecisionDebugger
 from msprobe.core.common_config import CommonConfig
 from msprobe.mindspore.ms_config import StatisticsConfig
 
+
 class TestMindsporeDebuggerSave(TestCase):
     def setUp(self):
         PrecisionDebugger._instance = None
@@ -38,7 +39,7 @@ class TestMindsporeDebuggerSave(TestCase):
         }
         common_config = CommonConfig(statistics_task_json)
         task_config = StatisticsConfig(statistics_task_json)
-        with patch("msprobe.mindspore.debugger.precision_debugger.parse_config_path", return_value=(common_config, task_config)), \
+        with patch.object(BasePrecisionDebugger, "parse_config_path", return_value=(common_config, task_config)), \
             patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             self.debugger = PrecisionDebugger()
 
