@@ -439,7 +439,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
     def write_metrics(self, ops, metric_value, step, prefix='', **kwargs):
         super().write_metrics(ops, metric_value, step, prefix='')
 
-        if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD] or kwargs.get("micro_step"):
+        if prefix in [MonitorConst.ACTV, MonitorConst.ACTVGRAD] or kwargs.get("use_micro_step"):
             self.header = MonitorConst.CSV_HEADER_MICRO_STEP + ops
         else:
             self.header = MonitorConst.CSV_HEADER + ops

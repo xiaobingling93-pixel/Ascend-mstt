@@ -554,7 +554,7 @@ class TrainerMon:
 
         if self.weight_hooked:
             self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced',
-                                              micro_step=self.monitor_mbs_grad)
+                                              use_micro_step=self.monitor_mbs_grad)
         else:
             self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
