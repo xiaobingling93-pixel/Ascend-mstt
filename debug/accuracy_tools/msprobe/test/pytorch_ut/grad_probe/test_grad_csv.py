@@ -24,7 +24,7 @@ class TestGradCSV(unittest.TestCase):
 
     def test_level_L0_content(self):
         generated_csv_line = GradStatCsv.generate_csv_line("model.conv2d", level_adp["L0"], grad_tensor, [-1, 0, 1])
-        self.assertEqual(['model.conv2d', '678a6c7d9d9716682b56fda097d0936c', 2.0, -2.0, 2.851315498352051, [2, 2]],
+        self.assertEqual(['model.conv2d', 'e2863940', 2.0, -2.0, 2.851315498352051, [2, 2]],
                          generated_csv_line)
 
     def test_level_L1_content(self):

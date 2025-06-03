@@ -15,6 +15,7 @@
 
 import hashlib
 from abc import ABC, abstractmethod
+import zlib
 
 import mindspore
 from mindspore import ops
@@ -76,8 +77,8 @@ class CsvMd5(CsvItem):
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         tensor_bytes = grad.float().numpy().tobytes()
-        md5_hash = hashlib.md5(tensor_bytes)
-        return [md5_hash.hexdigest()]
+        md5_hash = f"{zlib.crc32(tensor_bytes):08x}"
+        return [md5_hash]
 
 
 @register_csv_item(GradConst.DISTRIBUTION)

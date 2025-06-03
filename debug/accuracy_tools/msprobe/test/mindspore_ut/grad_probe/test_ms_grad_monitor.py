@@ -178,5 +178,5 @@ class TestMsGradientMonitor(TestCase):
         main()
 
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
-        target_md5_value = "62e137a119c0d1a44623f10049c3f80d"
+        target_md5_value = "9b5fcbf549a7f30315bf189cff46bb31"
         self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
