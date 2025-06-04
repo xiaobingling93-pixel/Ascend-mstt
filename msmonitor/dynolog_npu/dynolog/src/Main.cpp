@@ -15,6 +15,7 @@
 #include "dynolog/src/KernelCollector.h"
 #include "dynolog/src/Logger.h"
 #include "dynolog/src/ODSJsonLogger.h"
+#include "dynolog/src/DynologTensorBoardLogger.h"
 #include "dynolog/src/PerfMonitor.h"
 #include "dynolog/src/ScubaLogger.h"
 #include "dynolog/src/ServiceHandler.h"
@@ -80,6 +81,9 @@ std::unique_ptr<Logger> getLogger(const std::string& scribe_category = "") {
   }
   if (FLAGS_use_scuba && !scribe_category.empty()) {
     loggers.push_back(std::make_unique<ScubaLogger>(scribe_category));
+  }
+  if (!FLAGS_metric_log_dir.empty()) {
+    loggers.push_back(std::make_unique<DynologTensorBoardLogger>(FLAGS_metric_log_dir));
   }
   return std::make_unique<CompositeLogger>(std::move(loggers));
 }
