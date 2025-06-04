@@ -22,6 +22,7 @@ from unittest.mock import patch
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
+from msprobe.core.common.file_utils import move_file
 
 
 class TestKernelGraphDump(TestCase):
@@ -61,7 +62,7 @@ class TestKernelGraphDump(TestCase):
 
                 _msprobe_c_path = _msprobe_c.__file__
                 _msprobe_c_test_path = _msprobe_c_path.replace('_msprobe_c.so', '_msprobe_c_test.so')
-                os.rename(_msprobe_c_path, _msprobe_c_test_path)
+                move_file(_msprobe_c_path, _msprobe_c_test_path)
                 sys.modules.pop('msprobe.lib')
                 sys.modules.pop('msprobe.lib._msprobe_c')
 
@@ -81,4 +82,4 @@ class TestKernelGraphDump(TestCase):
         if "MS_ACL_DUMP_CFG_PATH" in os.environ:
             del os.environ["MS_ACL_DUMP_CFG_PATH"]
         if _msprobe_c_existed:
-            os.rename(_msprobe_c_test_path, _msprobe_c_path)
+            move_file(_msprobe_c_test_path, _msprobe_c_path)

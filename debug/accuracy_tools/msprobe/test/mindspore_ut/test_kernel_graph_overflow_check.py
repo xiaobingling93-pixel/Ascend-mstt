@@ -22,6 +22,7 @@ from unittest.mock import patch
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.overflow_check.kernel_graph_overflow_check import KernelGraphOverflowCheck
+from msprobe.core.common.file_utils import move_file
 
 
 class TestKernelGraphOverflowCheck(TestCase):
@@ -59,7 +60,7 @@ class TestKernelGraphOverflowCheck(TestCase):
 
                 _msprobe_c_path = _msprobe_c.__file__
                 _msprobe_c_test_path = _msprobe_c_path.replace('_msprobe_c.so', '_msprobe_c_test.so')
-                os.rename(_msprobe_c_path, _msprobe_c_test_path)
+                move_file(_msprobe_c_path, _msprobe_c_test_path)
                 sys.modules.pop('msprobe.lib')
                 sys.modules.pop('msprobe.lib._msprobe_c')
 
@@ -78,4 +79,4 @@ class TestKernelGraphOverflowCheck(TestCase):
         if "MINDSPORE_DUMP_CONFIG" in os.environ:
             del os.environ["MINDSPORE_DUMP_CONFIG"]
         if _msprobe_c_existed:
-            os.rename(_msprobe_c_test_path, _msprobe_c_path)
+            move_file(_msprobe_c_test_path, _msprobe_c_path)
