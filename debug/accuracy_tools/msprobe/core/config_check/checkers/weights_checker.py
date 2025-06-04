@@ -85,8 +85,11 @@ def compare_weight(bench_dir, cmp_dir):
         cmp_root = os.path.join(cmp_dir, relative_path)
         cmp_file = os.path.join(cmp_root, info["file"])
 
-        step = int(relative_path.split(os.sep)[0].replace("step", ""))
-        rank = int(relative_path.split(os.sep)[1].replace("rank", ""))
+        path_list = relative_path.split(os.sep)
+        if len(path_list) < 2:
+            raise Exception("Can not compare weights because the extracted file has been corrupted!")
+        step = int(path_list[0].replace("step", ""))
+        rank = int(path_list[1].replace("rank", ""))
 
         if not os.path.exists(cmp_file):
             bench_data = load_json(bench_file)

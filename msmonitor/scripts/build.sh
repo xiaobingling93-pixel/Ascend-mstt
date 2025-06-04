@@ -43,7 +43,7 @@ check_rust_version() {
 update_and_checkout_submodule() {
     DYNLOG_COMMIT_ID="a9b6aeddcd6363252f5388cb0dd942981a09a24b"
 
-    git submodule update --init --recursive
+    git submodule update --init
     if [ $? -ne 0 ]; then
         echo "ERROR: update git submodule failed"
         return 1
@@ -51,6 +51,11 @@ update_and_checkout_submodule() {
 
     cd ./third_party/dynolog
     git checkout ${DYNLOG_COMMIT_ID}
+
+    git submodule add https://github.com/RustingSword/tensorboard_logger.git ./third_party/tensorboard_logger
+    git submodule update --init --recursive
+    git commit -am "Add tensorboard_logger as submodule"
+
     if [ $? -ne 0 ]; then
         echo "ERROR: switch to dynolog specified commit failed"
         cd ..

@@ -267,6 +267,8 @@ class TrainerMon:
         self.mg_direction = self.config.get('mg_direction', False)  # main grad direction
         self.cc_distribution = self.config.get("cc_distribution", {})  # communication ops
         self.stack_info = self.config.get('stack_info', False)
+        self.monitor_mbs_grad = self.config.get('monitor_mbs_grad', False)
+
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
         else:
@@ -523,9 +525,7 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.weight_hooked:
-            get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
-
+        get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
 
     def generate_param_map(self, tag, param_tensor):
@@ -619,7 +619,8 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
+        self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced',
+                                          use_micro_step=self.monitor_mbs_grad)
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
     def is_target_rank(self):
@@ -826,22 +827,30 @@ class TrainerMon:
         context = self.grad_context
 
         @_no_grad()
-        def param_hook(grad, context_dict, param, key):
-            param.micro_step += 1
+        def param_hook(grad, context_dict, param, name):
+            key = name
+            if self.monitor_mbs_grad:
+                key += f'{MonitorConst.NAME_SEP}{param.micro_step}'
+            key = get_summary_writer_tag_name(key, 'acc_grad', self.rank)
             self.register_param_call_id("param_hook", key)
+            param.micro_step += 1
+
+            if self.monitor_mbs_grad or (param.micro_step == self.micro_batch_number):
+                context_dict[key] = grad
             if param.micro_step == self.micro_batch_number:
                 param.micro_step = 0
-                context_dict[key] = grad
 
-        def param_hook_wrapper(param_hook, context_dict, param, key):
+        def param_hook_wrapper(param_hook, context_dict, param, name):
             def wrapper(grad):
-                return param_hook(grad, context_dict, param, key)
+                return param_hook(grad, context_dict, param, name)
+
             return wrapper
 
+        logger.info("hooking weights.")
         for param, name in self.param2name.items():
-            key = get_summary_writer_tag_name(name, 'acc_grad', self.rank)
             setattr(param, 'micro_step', 0)
-            handle = param.register_hook(param_hook_wrapper(param_hook, context_dict=context.acc, param=param, key=key))
+            handle = param.register_hook(
+                param_hook_wrapper(param_hook, context_dict=context.acc, param=param, name=name))
             self.handles['wgrads'].append(handle)
         self.weight_hooked = True
 

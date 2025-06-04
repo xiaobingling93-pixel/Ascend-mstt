@@ -49,6 +49,19 @@ sudo apt-get install -y cmake ninja-build
 sudo yum install -y cmake ninja
 ```
 
+- 安装protobuf (tensorboard_logger三方依赖，用于对接tensorboard展示)
+安装
+```bash
+# debian
+sudo apt install -y protobuf-compiler libprotobuf-dev
+
+# centos
+sudo yum install -y protobuf protobuf-devel protobuf-compiler
+
+# Python
+pip install protobuf
+```
+
 - 安装openssl（RPC TLS认证）& 生成证书密钥
 安装
 ```bash

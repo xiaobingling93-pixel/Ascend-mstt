@@ -246,6 +246,7 @@ class Const:
     # 分隔符常量
     SCOPE_SEPARATOR = "/"
     REPLACEMENT_CHARACTER = "_"
+    PIPE_SEPARATOR = "|"
 
     FORWARD_PATTERN = SEP + FORWARD + SEP
     BACKWARD_PATTERN = SEP + BACKWARD + SEP
@@ -385,6 +386,7 @@ class CompareConst:
     Class for compare module const
     """
     SPACE = " "
+    NAME = "Name"
     # compare result column name
     NPU_NAME = "NPU Name"
     BENCH_NAME = "Bench Name"
@@ -789,7 +791,7 @@ class MonitorConst:
     EXP_AVG_SQ = "exp_avg_sq"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
-    CSV_HEADER_XY = ["vpp_stage", "name", "step", "micro_step"]
+    CSV_HEADER_MICRO_STEP = ["vpp_stage", "name", "step", "micro_step"]
     OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
     ANOMALY_JSON = "anomaly.json"
     ANALYSE_JSON = "anomaly_analyse.json"
