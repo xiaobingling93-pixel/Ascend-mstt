@@ -157,6 +157,7 @@ def connect_communication_nodes(rank_nodes_dict):
                                 connected_node = _node
                                 is_found = True
                                 break
+                if not connected_node:
                     continue
                 if connected_node.type == NanAnalyseConst.DST:
                     node.add_dst(connected_node)
