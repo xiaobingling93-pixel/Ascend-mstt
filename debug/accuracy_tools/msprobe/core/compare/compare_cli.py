@@ -80,7 +80,8 @@ def compare_cli(args):
             ms_graph_compare(input_param, args.output_path)
             return
         if input_param.get('common', False):
-            return common_dir_compare(input_param, args.output_path)
+            common_dir_compare(input_param, args.output_path)
+            return
         if frame_name == Const.PT_FRAMEWORK:
             compare_distributed(npu_path, bench_path, args.output_path, **kwargs)
         else:

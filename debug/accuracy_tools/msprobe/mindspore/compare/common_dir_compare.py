@@ -1,3 +1,18 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.import functools
+
 import os
 import multiprocessing
 from dataclasses import dataclass
@@ -13,9 +28,9 @@ from tqdm import tqdm
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import check_file_or_directory_path
-from msprobe.core.common.file_utils import load_npy
-from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.file_utils import check_file_or_directory_path, write_df_to_csv, create_directory, \
+                                           check_path_before_create, load_npy
+from msprobe.core.common.const import CompareConst, FileCheckConst
 from msprobe.core.compare.npy_compare import compare_ops_apply
 from msprobe.core.compare.multiprocessing_compute import check_accuracy
 
@@ -49,7 +64,7 @@ def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataF
     return
 
 
-def process_directory_pair(item: Tuple[Path, Tuple[Path, Path]], name_map_dict: Dict, output_dir: str) -> Optional[pd.DataFrame]:
+def process_directory_pair(item: Tuple[Path, Tuple[Path, Path]], name_map_dict: Dict, output_dir: str):
     """
     处理一个目录对
     
@@ -64,7 +79,7 @@ def process_directory_pair(item: Tuple[Path, Tuple[Path, Path]], name_map_dict: 
     
     # 创建镜像输出目录
     output_path = Path(output_dir) / rel_path
-    output_path.mkdir(parents=True, exist_ok=True)
+    create_directory(output_path)
     
     # 生成文件映射
     npu_files = find_npy_files(npu_dir)
@@ -77,10 +92,10 @@ def process_directory_pair(item: Tuple[Path, Tuple[Path, Path]], name_map_dict: 
     
     # 执行比对
     result_df = do_multi_process(process_chunk, map_dict)
-    
+    check_path_before_create(output_path)
     # 保存结果
     result_path = os.path.join(output_path, 'result.csv')
-    result_df.to_csv(result_path, index=False)
+    write_df_to_csv(result_df, result_path)
     logger.info(f"Results saved to {result_path}")
     return None
 
@@ -116,7 +131,7 @@ def build_mirror_file_tree(npu_root: Path, bench_root: Path) -> Dict[Path, Tuple
 
 def find_npy_files(directory):
     npy_files_dict = {}
-    for root, dirs, files in os.walk(directory):
+    for root, _, files in os.walk(directory):
         for file in files:
             if file.endswith(".npy"):
                 # 分割文件名并去掉最后两个元素
@@ -206,6 +221,7 @@ def do_multi_process(func, map_dict):
     except Exception as e:
         logger.error(f"\nMain process error: {str(e)}")
         pool.terminate()
+        return pd.DataFrame({})
     finally:
         pool.close()
 
@@ -304,28 +320,28 @@ def process_chunk(df, start_idx, map_chunk, lock):
 
 @dataclass
 class ComparisonResult:
-    name: str  # Const.NAME
-    npu_dtype: Any  # Const.NPU_DTYPE
-    bench_dtype: Any  # Const.BENCH_DTYPE
-    npu_shape: Tuple[int, ...]  # Const.NPU_SHAPE
-    bench_shape: Tuple[int, ...]  # Const.BENCH_SHAPE
+    name: str  # CompareConst.NAME
+    npu_dtype: Any  # CompareConst.NPU_DTYPE
+    bench_dtype: Any  # CompareConst.BENCH_DTYPE
+    npu_shape: Tuple[int, ...]  # CompareConst.NPU_SHAPE
+    bench_shape: Tuple[int, ...]  # CompareConst.BENCH_SHAPE
     cosine: float  # Cons   t.COSINE
-    euc_dist: float  # Const.EUC_DIST
-    max_abs_err: float  # Const.MAX_ABS_ERR
-    max_relative_err: float  # Const.MAX_RELATIVE_ERR
-    one_thousandth_err_ratio: float  # Const.ONE_THOUSANDTH_ERR_RATIO
-    five_thousandth_err_ratio: float  # Const.FIVE_THOUSANDTHS_ERR_RATIO
-    npu_max: float  # Const.NPU_MAX
-    npu_min: float  # Const.NPU_MIN
-    npu_mean: float  # Const.NPU_MEAN
-    npu_norm: float  # Const.NPU_NORM
-    bench_max: float  # Const.BENCH_MAX
-    bench_min: float  # Const.BENCH_MIN
-    bench_mean: float  # Const.BENCH_MEAN
-    bench_norm: float  # Const.BENCH_NORM
-    accuracy: bool  # Const.ACCURACY
-    error_message: str  # Const.ERROR_MESSAGE
-    data_name: List[str]  # Const.DATA_NAME
+    euc_dist: float  # CompareConst.EUC_DIST
+    max_abs_err: float  # CompareConst.MAX_ABS_ERR
+    max_relative_err: float  # CompareConst.MAX_RELATIVE_ERR
+    one_thousandth_err_ratio: float  # CompareConst.ONE_THOUSANDTH_ERR_RATIO
+    five_thousandth_err_ratio: float  # CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
+    npu_max: float  # CompareConst.NPU_MAX
+    npu_min: float  # CompareConst.NPU_MIN
+    npu_mean: float  # CompareConst.NPU_MEAN
+    npu_norm: float  # CompareConst.NPU_NORM
+    bench_max: float  # CompareConst.BENCH_MAX
+    bench_min: float  # CompareConst.BENCH_MIN
+    bench_mean: float  # CompareConst.BENCH_MEAN
+    bench_norm: float  # CompareConst.BENCH_NORM
+    accuracy: bool  # CompareConst.ACCURACY
+    error_message: str  # CompareConst.ERROR_MESSAGE
+    data_name: List[str]  # CompareConst.DATA_NAME
 
 
 def _save_part_df(df, start_idx, results, lock):
