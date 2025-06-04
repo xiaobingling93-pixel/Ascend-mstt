@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from multiprocessing import Pool
 import os
 import re
 
@@ -31,19 +30,7 @@ def nan_analyze(input_path, output_path):
         gen_analyze_info(anomaly_nodes, output_path)
         return
     logger.info('Do not found anomaly before communication. Start analysing communication.')
-    with Pool(processes=max(int((os.cpu_count() + 1) // 4), 1)) as pool:
-        def err_call(err):
-            logger.error(f'Error occurred while analyze ranks\' communication nodes: {err}')
-            try:
-                pool.close()
-            except OSError as e:
-                logger.error(f'Error occurred while terminating the pool: {e}')
-
-        rank_nodes_dict = {}
-        for path in path_list:
-            rank_nodes_dict[path.rank] = pool.apply_async(analyze_communication_nodes,
-                                                          args=(path,), error_callback=err_call)
-        rank_nodes_dict = {rank: result.get() for rank, result in rank_nodes_dict.items()}
+    rank_nodes_dict = {path.rank: analyze_communication_nodes(path) for path in path_list}
     connect_communication_nodes(rank_nodes_dict)
     pruning(rank_nodes_dict)
     anomaly_nodes = search_first_anomaly(rank_nodes_dict)
@@ -127,6 +114,7 @@ def analyze_communication_nodes(path: RankPath):
             comm_node.compute_ops = compute_ops
             compute_ops = []
             last_commu_node = communication_nodes.get(last_node_id)
+            last_node_id = node_id
             if last_commu_node:
                 last_commu_node.add_next(comm_node)
             communication_nodes[node_id] = comm_node
@@ -137,7 +125,6 @@ def analyze_communication_nodes(path: RankPath):
                 data_node.sub_layer = sub_layer
                 compute_ops.append(data_node)
                 sub_layer += 1
-        last_node_id = node_id
     return communication_nodes
 
 
@@ -164,10 +151,14 @@ def connect_communication_nodes(rank_nodes_dict):
                             connected_node = _node
                             seen_nodes.add(node_id)
                             break
-                        elif rank in _node.find_connected_nodes().get('ranks', rank_nodes_dict.keys()):
-                            connected_node = _node
-                            seen_nodes.add(node_id)
-                            break
+                        else:
+                            connected_ranks = _node.find_connected_nodes().get('ranks')
+                            if not connected_ranks:
+                                connected_ranks = rank_nodes_dict.keys()
+                            if rank in connected_ranks:
+                                connected_node = _node
+                                seen_nodes.add(node_id)
+                                break
                 if not connected_node:
                     logger.warning(f'Cannot find connected communication node for "{node.node_id}".')
                     continue
