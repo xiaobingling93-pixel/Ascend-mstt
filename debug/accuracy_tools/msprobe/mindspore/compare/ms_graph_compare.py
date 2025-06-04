@@ -85,11 +85,13 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     }
     for statistic_file in statistic_file_list:
         content = read_csv(statistic_file, as_pd=False)
+        if not content:
+            logger.error(f'Empty dump file: {statistic_file}')
+            raise CompareException(f'Empty dump file: {statistic_file}')
         header = content[0]
-        for key in header_index.keys():
-            for index, value in enumerate(header):
-                if key == value:
-                    header_index[key] = index
+        for index, value in enumerate(header):
+            if value in header_index:
+                header_index[value] = index
         statistic_data_list.extend(content[1:])
 
     for key in header_index.keys():
@@ -97,7 +99,14 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
             logger.warning(f"Data_path {statistic_file_path} has no key {key}.")
 
     for data in statistic_data_list:
-        compare_key = f"{data[1]}.{data[2]}.{data[3]}.{data[5]}"
+        '''
+        13列分别是OpType, OpName, TaskId, StreamId, TimeStamp, IO, Slot, DataSize, 
+        DataType, Shape, MaxValue, MinValue, L2NormValue
+        '''
+        if len(data) < 13:
+            logger.error(f'Dump file {statistic_file_path} has been modified into incorrect format!')
+            raise CompareException(f'Dump file {statistic_file_path} has been modified into incorrect format!')
+        compare_key = f"{data[1]}.{data[2]}.{data[5]}.{data[6]}"  # OpName, TaskId, IO, Slot
         op_name = f"{compare_key} {statistic_file_path}"
         timestamp = int(data[4])
         result_data = [op_name, compare_key, timestamp]
