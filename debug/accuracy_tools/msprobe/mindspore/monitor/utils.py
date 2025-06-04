@@ -24,14 +24,17 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
-def get_single_metrics(op_list, tag, tensor, output=None):
+def get_single_metrics(op_list, tag, tensor, eps=1e-8, output=None):
     if output is None:
         output = {}
     if tag not in output:
         output[tag] = {}
     for op in op_list:
         func = FUNC_MAP.get(op)
-        statistic = func(tensor)
+        if op == "zeros":
+            statistic = func(tensor, eps)
+        else:
+            statistic = func(tensor)
         if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
             statistic = float(statistic)
             statistic = Tensor(statistic)
@@ -47,7 +50,7 @@ def get_metrics(op_list, tag2tensor, eps, output=None):
     for tag, tensor in tag2tensor.items():
         if tag not in output:
             output[tag] = {}
-        get_single_metrics(op_list, tag, tensor, output)
+        get_single_metrics(op_list, tag, tensor, eps, output)
     return output
 
 

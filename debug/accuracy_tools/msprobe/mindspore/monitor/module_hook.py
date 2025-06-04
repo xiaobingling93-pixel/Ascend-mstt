@@ -729,6 +729,8 @@ class TrainerMon:
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
                     MonitorConst.ACTV, module_input))
+            module_output = [tensor for tensor in module_output if isinstance(tensor, Tensor)] \
+                            if isinstance(module_output, tuple) else module_output
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
@@ -757,11 +759,12 @@ class TrainerMon:
                 step_accumulates_one(context, self.micro_batch_number)
                 return
 
+            valid_input_grad = [tensor for tensor in input_grad if isinstance(tensor, Tensor)]
             tbtag_tensor_map = {}
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTVGRAD, input_grad))
+                    MonitorConst.ACTVGRAD, valid_input_grad))
 
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
