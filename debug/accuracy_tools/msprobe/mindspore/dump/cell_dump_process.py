@@ -30,7 +30,7 @@ from msprobe.core.common.const import Const as CoreConst
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import (
     load_npy, save_json, remove_path, load_yaml,
-    create_directory, read_csv, write_df_to_csv, write_csv)
+    create_directory, read_csv, write_df_to_csv, write_csv, move_file)
 from msprobe.mindspore.common.log import logger
 
 CONSTRUCT_FILE_NAME = "construct.json"
@@ -277,7 +277,7 @@ def rename_filename(path="", data_df=None):
             new_file_name = filename.replace(CoreConst.BACKWARD_PATTERN,
                                              CoreConst.BACKWARD_PATTERN + str(cell_index) + CoreConst.SEP)
         if dump_task == CoreConst.TENSOR:
-            os.rename(os.path.join(path, filename), os.path.join(path, new_file_name))
+            move_file(os.path.join(path, filename), os.path.join(path, new_file_name))
         if dump_task == CoreConst.STATISTICS:
             data_df.loc[index, CoreConst.OP_NAME] = new_file_name
     logger.info("==========The rename_filename phase is Finished!==========")
@@ -405,7 +405,7 @@ def process_file(file_path):
             param_index = parts[-2].split(CoreConst.REPLACEMENT_CHARACTER)[0]
             pre_parts = CoreConst.SEP.join(parts[:-2])
             new_file_name = pre_parts + CoreConst.SEP + param_index + CoreConst.NUMPY_SUFFIX
-            os.rename(os.path.join(data_file_dir, data_file_name), os.path.join(data_file_dir, new_file_name))
+            move_file(os.path.join(data_file_dir, data_file_name), os.path.join(data_file_dir, new_file_name))
             logger.debug(f"{data_file_name} is renamed to {new_file_name}")
         else:
             logger.warning(f"Failed to rename {data_file_name}.")
@@ -606,7 +606,7 @@ def process(dump_path):
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                os.rename(rank_path, new_rank_path)
+                move_file(rank_path, new_rank_path)
                 logger.info("Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
@@ -711,7 +711,7 @@ def process_statistics(dump_path):
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                os.rename(rank_path, new_rank_path)
+                move_file(rank_path, new_rank_path)
                 logger.info("Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
