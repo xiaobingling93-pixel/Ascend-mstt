@@ -188,10 +188,11 @@ def do_multi_process(func, map_dict):
     results = []
     try:
         # 提交任务到进程池
-        for df_chunk, map_chunk in zip(df_chunks, map_chunks):
+        for process_idx, (df_chunk, map_chunk) in enumerate(zip(df_chunks, map_chunks)):
+            start_idx = df_chunk_size * process_idx
             result = pool.apply_async(
                 func,
-                args=(df_chunk, map_chunk, lock),
+                args=(df_chunk, start_idx, map_chunk, lock),
                 error_callback=err_call,
                 callback=partial(update_progress, len(map_chunk), lock)
             )
@@ -255,7 +256,7 @@ def get_tensor_stats(tensor: np.ndarray) -> Tuple[float, float, float, float]:
     return t_max, t_min, t_mean, t_l2norm
 
 
-def process_chunk(df, map_chunk, lock):
+def process_chunk(df, start_idx, map_chunk, lock):
     """处理一个数据块"""
     err_mess = []
     results = []
@@ -298,7 +299,7 @@ def process_chunk(df, map_chunk, lock):
             data_name=[npu_file, bench_file]  # CompareConst.DATA_NAME
         )
         results.append(result)
-    return _save_part_df(df, results, lock)
+    return _save_part_df(df, start_idx, results, lock)
 
 
 @dataclass
@@ -327,10 +328,11 @@ class ComparisonResult:
     data_name: List[str]  # Const.DATA_NAME
 
 
-def _save_part_df(df, results, lock):
+def _save_part_df(df, start_idx, results, lock):
     lock.acquire()
     try:
-        for process_index, result in enumerate(results):
+        for i, result in enumerate(results):
+            process_index = i + start_idx
             df.loc[process_index, CompareConst.NAME] = result.name
             df.loc[process_index, CompareConst.NPU_DTYPE] = result.npu_dtype
             df.loc[process_index, CompareConst.BENCH_DTYPE] = result.bench_dtype
