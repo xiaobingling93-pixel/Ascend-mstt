@@ -70,7 +70,7 @@ class GraphService:
         file_path = os.path.join(run, f"{tag}.vis")
         file_path = os.path.normpath(file_path)  # 标准化路径
         file_size = os.path.getsize(file_path)
-        with open(file_path, 'r', encoding='utf-8') as f: 
+        with open(file_path, 'r', encoding='utf-8') as f:
             while True:
                 chunk = f.read(chunk_size)
                 if not chunk:
