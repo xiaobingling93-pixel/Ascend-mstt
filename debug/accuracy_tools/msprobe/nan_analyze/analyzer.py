@@ -77,7 +77,7 @@ def gen_analyze_info(anomaly_nodes, output_path):
         return 
     if not os.path.exists(output_path):
         make_dir(output_path)
-    file_name = f'anomaly_analyze_{time.time()}.json'
+    file_name = f'anomaly_analyze_{time.time_ns()}.json'
     result_file = os.path.join(output_path, file_name)
     result_content = defaultdict(list)
     for node in anomaly_nodes:
