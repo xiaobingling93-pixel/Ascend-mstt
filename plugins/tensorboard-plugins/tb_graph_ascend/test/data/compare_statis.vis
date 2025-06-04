@@ -5,6 +5,9 @@
         "node": {
             "AddOne_0": {
                 "matched_node_link": [
+                    "root",
+                    "AddThree_0",
+                    "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
                     "AddOne_0"
                 ],
                 "data": {
@@ -177,7 +180,7 @@
                 "id": "Test.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.tt.ee",
                 "inputs": [],
                 "is_forward": true,
-                "node_type": 0,
+                "node_type": 8,
                 "outputs": [],
                 "output_data": {},
                 "pair": "None",
@@ -257,7 +260,7 @@
                     }
                 },
                 "is_forward": true,
-                "node_type": 0,
+                "node_type": 9,
                 "outputs": [],
                 "output_data": {
                     "output.0": {
@@ -399,7 +402,7 @@
                 "inputs": [],
                 "input_data": {},
                 "is_forward": true,
-                "node_type": 0,
+                "node_type": 1,
                 "outputs": [],
                 "output_data": {},
                 "pair": "None",
@@ -505,7 +508,32 @@
                 },
                 "stack_info": [
                     "File /home/w3000/xxxx/subnodes/sdd/adad/srit-sda/artar/prased, line 136. om het, \n dada = rtens/sda.ddd(asdw)"
-                ]
+                ],
+                "matched_distributed": {
+                    "communications_type": "send",
+                    "nodes_info": {
+                        "0": [
+                            "0.3",
+                            "Test.maxpoolMaxPool2.maxpoolpo.tt.ee"
+                        ],
+                        "1": [
+                            "Nan",
+                            "Tensor.__api__0.forward"
+                        ],
+                        "2": [
+                            "0.3",
+                            "arg0_1_0"
+                        ],
+                        "3": [
+                            "0.3",
+                            "arg0_1_0"
+                        ],
+                        "4": [
+                            "0.3",
+                            "arg0_1_0"
+                        ]
+                    }
+                }
             },
             "output_0": {
                 "matched_node_link": [],
@@ -531,6 +559,9 @@
         "node": {
             "AddOne_0": {
                 "matched_node_link": [
+                    "None",
+                    "AddThree_0",
+                    "Test.maxpoolMaxPool2.maxpoolpo.tt.ee",
                     "AddOne_0"
                 ],
                 "data": {},
@@ -909,16 +940,37 @@
         "root": "AddThree_0"
     },
     "Colors": {
-        "#FF9B3D": {
+        "#FFFCF3": {
             "value": [
                 0,
-                0.5
+                0.2
+            ],
+            "description": "此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|"
+        },
+        "#FFEDBE": {
+            "value": [
+                0.2,
+                0.4
             ],
             "description": "此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|"
         },
         "#FFDC7F": {
             "value": [
-                0.5,
+                0.4,
+                0.6
+            ],
+            "description": "此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|"
+        },
+        "#FFC62E": {
+            "value": [
+                0.6,
+                0.8
+            ],
+            "description": "此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|"
+        },
+        "#ff704d": {
+            "value": [
+                0.8,
                 1
             ],
             "description": "此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|"
@@ -929,20 +981,9 @@
         }
     },
     "MicroSteps": 5,
-    "StepList": [
-        "ALL",
-        0,
-        1,
-        2,
-        3
-    ],
     "task": "summary",
     "match": [],
-    "npu_match_nodes": {
-        "AddOne_0": "AddOne_0"
-    },
-    "bench_match_nodes": {
-        "AddOne_0": "AddOne_0"
-    },
-    "OverflowCheck": true
+    "OverflowCheck": true,
+    "npu_match_nodes": {},
+    "bench_match_nodes": {}
 }

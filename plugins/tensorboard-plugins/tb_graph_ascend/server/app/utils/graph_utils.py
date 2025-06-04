@@ -41,7 +41,7 @@ class GraphUtils:
             if current_tag == tag and current_run == run:
                 return GraphState.get_global_value('current_file_data'), None  # 直接返回获取结果
             else:
-                json_data, error_message = GraphUtils.safe_load_data(run, f"{tag}.vis")
+                json_data, error_message = GraphUtils.safe_load_data(run, f"{tag}.vis", False)
                 if error_message:
                     return None, error_message
                 GraphState.set_global_value('current_file_data', json_data)
@@ -159,7 +159,7 @@ class GraphUtils:
     @staticmethod
     def safe_save_data(data, run_name, tag):
         runs = GraphState.get_global_value('runs', {})
-        run = runs.get(run_name)
+        run = runs.get(run_name) or run_name
         safe_base_dir = GraphState.get_global_value('logdir')
         if run is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
@@ -207,12 +207,10 @@ class GraphUtils:
             return None, 'failed to save file'
 
     @staticmethod
-    def safe_load_data(run_name, tag, only_check=False, is_abs=False):
-        if (not is_abs):
-            runs = GraphState.get_global_value('runs', {})
-            run_dir = runs.get(str(run_name))
-        else:
-            run_dir = run_name
+    def safe_load_data(run_name, tag, only_check=False):
+      
+        runs = GraphState.get_global_value('runs', {})
+        run_dir = runs.get(str(run_name)) or run_name
         """Load a single .vis file from a given directory based on the tag."""
         if run_dir is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'

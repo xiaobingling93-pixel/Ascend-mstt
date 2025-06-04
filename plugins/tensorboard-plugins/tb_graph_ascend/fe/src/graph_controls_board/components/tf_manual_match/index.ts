@@ -138,6 +138,9 @@ class Legend extends PolymerElement {
           position="end"
         ></vaadin-tooltip>
       </div>
+      <template is="dom-if" if="[[matchConfigLoading]]">
+        <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+      </template>
       <div class="unmatched-node">
         <p class="vaadin-details-title">未匹配节点</p>
         <tf-search-combox
@@ -199,9 +202,6 @@ class Legend extends PolymerElement {
           text="手动匹配结束后，点击保存匹配节点信息，会将已匹配的节点对应关系保存到配置文件中，不会持久原始文件，如果是初次保存，会新建一个文件，文件名称为：[当前文件名].vis.config。"
           position="end"
         ></vaadin-tooltip>
-        <template is="dom-if" if="[[matchConfigLoading]]">
-          <vaadin-progress-bar indeterminate></vaadin-progress-bar>
-        </template>
         <vaadin-button
           class="save-button"
           theme="primary contrast small"
@@ -593,7 +593,6 @@ class Legend extends PolymerElement {
       });
     }
   }
-
   async _saveMatchedRelations(): Promise<void> {
     if (!this.isCompareGraph) {
       Notification.show('提示：单图节点不支持匹配', {
@@ -603,7 +602,9 @@ class Legend extends PolymerElement {
       });
       return;
     }
+    this.set('saveLoading', true);
     const { success, data, error } = await this.useMatched.saveMatchedRelations(this.selection);
+    this.set('saveLoading', false);
     if (success) {
       const configFile = data;
       const matchedConfigFiles = [...new Set(['未选择', configFile, ...this.matchedConfigFiles])];

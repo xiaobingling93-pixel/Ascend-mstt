@@ -21,7 +21,7 @@ from server.app.service.graph_service import GraphService
 class TestMatchNodesService:
 
     @staticmethod
-    def test_service(self, meta_data, operation_config):
+    def test_service(meta_data, operation_config):
         op_type = operation_config["type"]
         expected = operation_config["expected"]
          # 执行操作
