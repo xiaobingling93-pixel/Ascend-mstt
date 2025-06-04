@@ -173,7 +173,7 @@ class NanAnalyseConst:
     SRC_GROUP = 'src_group'
     DST_GROUP = 'dst_group'
     LINK = 'link'
-    DIRECTED_API = {'send': SRC, 'recv': DST, 'isend': SRC, 'irecv': DST, 'broadcast': SRC, 'scatter': SRC,
+    DIRECTED_API = {'send': DST, 'recv': SRC, 'isend': DST, 'irecv': SRC, 'broadcast': SRC, 'scatter': SRC,
                     'gather': DST}
     OPPOSITE_DIR = {SRC: DST, DST: SRC}
     DUMP_FILE = "dump.json"

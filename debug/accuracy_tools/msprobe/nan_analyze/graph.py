@@ -76,7 +76,8 @@ class DataNode:
             data_info_list = {Const.INPUT_ARGS: self.input_args, Const.INPUT_KWARGS: self.input_kwargs}
         else:
             data_info_list = {Const.INPUT: self.inputs}
-        return {'data_info': data_info_list,
+        return {'op_name': self.op_name,
+                'data_info': data_info_list,
                 'construct_info': self.find_complete_construct(construct, self.op_name),
                 'stack_info': self.find_stack(stack, self.op_name)}
 
@@ -142,28 +143,35 @@ class CommunicationNode:
         ranks = []
         for dst in [NanAnalyseConst.DST, NanAnalyseConst.DST_GROUP]:
             if dst in self.data.input_kwargs:
-                ranks.append(self.data.input_kwargs.get(dst).get('value'))
+                dst_value = self.data.input_kwargs.get(dst)
+                if dst_value:
+                    ranks.append(dst_value.get('value'))
                 break
         for src in [NanAnalyseConst.SRC, NanAnalyseConst.SRC_GROUP]:
             if src in self.data.input_kwargs:
-                ranks.append(self.data.input_kwargs.get(src).get('value'))
+                src_value = self.data.input_kwargs.get(src)
+                if src_value:
+                    ranks.append(src_value.get('value'))
                 break
         if not ranks:
             for item in self.data.input_args:
                 if item.get(Const.TYPE) == 'int':
                     ranks.append(item.get('value'))
-        ranks.extend(self.data.input_kwargs.get('group', {}).get('group_ranks'))
-        return {'ranks': ranks, 'api': f'Distributed.{tar_api}.{self.call_cnt}.forward'}
+        group = self.data.input_kwargs.get('group')
+        if group:
+            ranks.extend(group.get('group_ranks'))
+        return {'ranks': ranks, 'api': f'Distributed.{tar_api}',
+                'type': NanAnalyseConst.OPPOSITE_DIR.get(self.type, NanAnalyseConst.LINK)}
 
     def _resolve_type(self):
         for src in [NanAnalyseConst.SRC, NanAnalyseConst.SRC_GROUP]:
-            if src in self.data.input_kwargs:
+            if src in self.data.input_kwargs and self.data.input_kwargs[src]:
                 if self.data.input_kwargs[src].get('value') == self.rank:
                     return NanAnalyseConst.SRC
                 else:
                     return NanAnalyseConst.DST
         for dst in [NanAnalyseConst.DST, NanAnalyseConst.DST_GROUP]:
-            if dst in self.data.input_kwargs:
+            if dst in self.data.input_kwargs and self.data.input_kwargs[dst]:
                 if self.data.input_kwargs[dst].get('value') == self.rank:
                     return NanAnalyseConst.DST
                 else:

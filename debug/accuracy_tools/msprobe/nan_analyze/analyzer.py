@@ -18,7 +18,7 @@ from multiprocessing import Pool
 import os
 import re
 
-from msprobe.core.common.file_utils import check_file_or_directory_path, check_path_before_create, save_json
+from msprobe.core.common.file_utils import check_file_or_directory_path, check_path_before_create, save_json, make_dir
 from msprobe.core.common.log import logger
 from msprobe.nan_analyze.utils import RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst
 from msprobe.nan_analyze.graph import DataNode, CommunicationNode
@@ -41,8 +41,8 @@ def nan_analyze(input_path, output_path):
 
         rank_nodes_dict = {}
         for path in path_list:
-            rank_nodes_dict[path.rank] = pool.appy_async(analyze_communication_nodes,
-                                                         args=(path,), error_callback=err_call)
+            rank_nodes_dict[path.rank] = pool.apply_async(analyze_communication_nodes,
+                                                          args=(path,), error_callback=err_call)
         rank_nodes_dict = {rank: result.get() for rank, result in rank_nodes_dict.items()}
     connect_communication_nodes(rank_nodes_dict)
     pruning(rank_nodes_dict)
@@ -55,12 +55,13 @@ def nan_analyze(input_path, output_path):
 def resolve_path(step_path):
     check_file_or_directory_path(step_path, True)
     contents = os.listdir(step_path)
-    rank_pattern = r'^rank_\d+$'
+    rank_pattern = r'^rank_?(\d+)$'
     dump_path_list = []
     for path in contents:
-        if not re.match(rank_pattern, path):
+        match = re.search(rank_pattern, path)
+        if not match:
             continue
-        rank = int(path.split('_')[1])
+        rank = int(match.group(1))
         dump_path = os.path.join(step_path, path, NanAnalyseConst.DUMP_FILE)
         construct_path = os.path.join(step_path, path, NanAnalyseConst.CONSTRUCT_FILE)
         stack_path = os.path.join(step_path, path, NanAnalyseConst.STACK_FILE)
@@ -90,13 +91,18 @@ def gen_analyze_info(anomaly_nodes, output_path):
     if not anomaly_nodes:
         logger.info('Cannot find any anomaly node, no need to generate analyze file.')
         return 
-    check_path_before_create(output_path)
-    file_name = 'anomaly_analyze.txt'
+    if not os.path.exists(output_path):
+        make_dir(output_path)
+    file_name = 'anomaly_analyze.json'
     result_file = os.path.join(output_path, file_name)
     result_content = defaultdict(list)
     for node in anomaly_nodes:
         result_content[f'rank_{node.rank}'].append(node.gen_node_info())
-    save_json(output_path, result_content, 2)
+    index = 0
+    while os.path.exists(result_file):
+        result_file = os.path.join(output_path, f'anomaly_analyze({index}).json')
+        index += 1
+    save_json(result_file, result_content, 2)
     logger.info("The analyze result is saved in: %s" % result_file)
 
 
@@ -117,7 +123,7 @@ def analyze_communication_nodes(path: RankPath):
                 last_node_id = node_id
             continue
         if is_communication_op(op_name):
-            comm_node = CommunicationNode(node_id, path.rank, op_data)
+            comm_node = CommunicationNode(node_id, path.rank, DataNode(op_name, path, op_data))
             comm_node.compute_ops = compute_ops
             compute_ops = []
             last_commu_node = communication_nodes.get(last_node_id)
@@ -147,7 +153,15 @@ def connect_communication_nodes(rank_nodes_dict):
                 if connected_rank in searched_ranks:
                     continue
                 tar_node_id = f'{connected_rank}.{connected_nodes["api"]}'
-                connected_node = rank_nodes_dict[connected_rank].get(tar_node_id)
+                connected_node = None
+                for node_id, _node in rank_nodes_dict[connected_rank].items():
+                    if (node_id.startswith(tar_node_id) and _node.type == connected_nodes.get('type') and
+                        rank in _node.find_connected_nodes().get('ranks')):
+                        connected_node = _node
+                        break
+                if not connected_node:
+                    logger.warning(f'Cannot find connected communication node for "{node.node_id}".')
+                    continue
                 if connected_node.type == NanAnalyseConst.DST:
                     node.add_dst(connected_node)
                 elif connected_node.type == NanAnalyseConst.SRC:
@@ -229,7 +243,7 @@ def analyze_anomaly_in_group(nodes_group):
             return anomaly_nodes
         # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
         # 筛选dst中output有异常的点
-        dst_list = list(filter(lambda node: node.type == NanAnalyseConst.DST, nodes_group))
+        dst_list = list(filter(lambda node: node.type == NanAnalyseConst.DST and node.data.is_anomaly(), nodes_group))
         get_commu_ops(dst_list)
         return anomaly_nodes
 
