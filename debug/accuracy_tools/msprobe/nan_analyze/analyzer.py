@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from collections import defaultdict
 import os
-import re
 
 from msprobe.core.common.file_utils import check_file_or_directory_path, save_json, make_dir
 from msprobe.core.common.log import logger
@@ -40,15 +40,12 @@ def nan_analyze(input_path, output_path):
 
 
 def resolve_path(step_path):
-    check_file_or_directory_path(step_path, True)
     contents = os.listdir(step_path)
-    rank_pattern = r'^rank_?(\d+)$'
     dump_path_list = []
     for path in contents:
-        match = re.search(rank_pattern, path)
-        if not match:
+        if not path.startswith('rank'):
             continue
-        rank = int(match.group(1))
+        rank = int(path.strip('rank'))
         dump_path = os.path.join(step_path, path, NanAnalyseConst.DUMP_FILE)
         construct_path = os.path.join(step_path, path, NanAnalyseConst.CONSTRUCT_FILE)
         stack_path = os.path.join(step_path, path, NanAnalyseConst.STACK_FILE)
@@ -80,15 +77,11 @@ def gen_analyze_info(anomaly_nodes, output_path):
         return 
     if not os.path.exists(output_path):
         make_dir(output_path)
-    file_name = 'anomaly_analyze.json'
+    file_name = f'anomaly_analyze_{time.time()}.json'
     result_file = os.path.join(output_path, file_name)
     result_content = defaultdict(list)
     for node in anomaly_nodes:
         result_content[f'rank_{node.rank}'].append(node.gen_node_info())
-    index = 0
-    while os.path.exists(result_file):
-        result_file = os.path.join(output_path, f'anomaly_analyze_{index}.json')
-        index += 1
     save_json(result_file, result_content, 2)
     logger.info(f"The analyze result is saved in: {result_file}")
 
@@ -147,7 +140,6 @@ def find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_n
         if connected_rank in searched_ranks:
             continue
         tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
-        tar_node = None
         for search_id, search_node in rank_nodes_dict[connected_rank].items():
             if search_id in seen_nodes:
                 continue
@@ -155,26 +147,25 @@ def find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_n
                 continue
             search_conn_ranks = search_node.find_connected_nodes().get('ranks')
             if not search_conn_ranks:
-                tar_node = search_node
-                seen_nodes.add(search_id)
+                _connect(cur_node, search_node, seen_nodes)
                 found = True
                 break
             elif search_node.api in NanAnalyseConst.DIRECTED_API and cur_node.rank in search_conn_ranks:
-                tar_node = search_node
-                seen_nodes.add(search_id)
+                _connect(cur_node, search_node, seen_nodes)
                 found = True
                 break
-
-        if not tar_node:
-            continue
-        if tar_node.type == NanAnalyseConst.DST:
-            cur_node.add_dst(tar_node)
-        elif tar_node.type == NanAnalyseConst.SRC:
-            tar_node.layer = cur_node.layer
-            tar_node.add_dst(cur_node)
-        else:
-            cur_node.add_link(tar_node)
     return found
+
+
+def _connect(cur_node, tar_node, seen_nodes):
+    seen_nodes.add(tar_node.node_id)
+    if tar_node.type == NanAnalyseConst.DST:
+        cur_node.add_dst(tar_node)
+    elif tar_node.type == NanAnalyseConst.SRC:
+        tar_node.layer = cur_node.layer
+        tar_node.add_dst(cur_node)
+    else:
+        cur_node.add_link(tar_node)
 
 
 def pruning(rank_nodes_dict):
@@ -221,41 +212,29 @@ def search_first_anomaly(rank_nodes_dict) -> list:
 
 
 def analyze_anomaly_in_group(nodes_group):
+    anomaly_nodes = []
+
     def get_compute_ops_from_commu_nodes(commu_nodes):
         for commu_node in commu_nodes:
             for op_node in commu_node.compute_ops:
                 op_node.layer = commu_node.layer
                 anomaly_nodes.append(op_node)
-    
+
     def get_commu_ops(commu_nodes):
         for node in commu_nodes:
             node.data.layer = node.layer
             anomaly_nodes.append(node.data)
-    
-    anomaly_nodes = []
-    if all([node.type == NanAnalyseConst.LINK for node in nodes_group]):
-        # 筛选入参有问题的通信节点并追溯包含的异常计算节点
-        input_anomaly_nodes = list(filter(lambda node: node.input_has_nan_inf(), nodes_group))
-        get_compute_ops_from_commu_nodes(input_anomaly_nodes)
-        if anomaly_nodes:
-            return anomaly_nodes
-        # 筛选入参没问题但出参有问题的通信节点
-        output_anomaly_nodes = list(filter(lambda node: node.data.is_anomaly(), nodes_group))
-        get_commu_ops(output_anomaly_nodes)
-        return anomaly_nodes
-    else:
-        # 先看src中input是否有异常
-        src_list = list(filter(lambda node: node.type == NanAnalyseConst.SRC, nodes_group))
-        input_anomaly_nodes = list(filter(lambda node: node.input_has_nan_inf(), src_list))
-        # 如果有异常回溯计算节点找到异常来源
-        get_compute_ops_from_commu_nodes(input_anomaly_nodes)
-        if anomaly_nodes:
-            return anomaly_nodes
-        # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
-        # 筛选dst中output有异常的点
-        dst_list = list(filter(lambda node: node.type == NanAnalyseConst.DST and node.data.is_anomaly(), nodes_group))
-        get_commu_ops(dst_list)
-        return anomaly_nodes
+
+    # 先看src或link中input是否有异常
+    src_list = list(filter(lambda node: node.type in [NanAnalyseConst.SRC, NanAnalyseConst.LINK], nodes_group))
+    input_anomaly_nodes = list(filter(lambda node: node.input_has_nan_inf(), src_list))
+    # 如果有异常回溯计算节点找到异常来源
+    # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
+    get_compute_ops_from_commu_nodes(input_anomaly_nodes)
+    # 筛选入参没问题但出参有问题的通信节点
+    output_anomaly_nodes = list(filter(lambda node: node.data.is_anomaly(), nodes_group))
+    get_commu_ops(output_anomaly_nodes)
+    return anomaly_nodes
 
 
 def _nan_analyze_parser(parser):
@@ -268,4 +247,5 @@ def _nan_analyze_parser(parser):
 
 
 def _run_nan_analyze(args):
+    check_file_or_directory_path(args.input_path, True)
     nan_analyze(args.input_path, args.output_path)
