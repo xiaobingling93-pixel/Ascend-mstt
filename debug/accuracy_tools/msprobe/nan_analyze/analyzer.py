@@ -145,6 +145,7 @@ def connect_communication_nodes(rank_nodes_dict):
     searched_ranks = set()
     for rank, nodes in rank_nodes_dict.items():
         searched_ranks.add(rank)
+        seen_nodes = set()
         for node in nodes.values():
             connected_nodes = node.find_connected_nodes()
             if not connected_nodes.get('ranks'):
@@ -155,10 +156,18 @@ def connect_communication_nodes(rank_nodes_dict):
                 tar_node_id = f'{connected_rank}.{connected_nodes["api"]}'
                 connected_node = None
                 for node_id, _node in rank_nodes_dict[connected_rank].items():
-                    if (node_id.startswith(tar_node_id) and _node.type == connected_nodes.get('type') and
-                        rank in _node.find_connected_nodes().get('ranks')):
-                        connected_node = _node
-                        break
+                    if node_id in seen_nodes:
+                        continue
+                    if node_id.startswith(tar_node_id) and _node.type == connected_nodes.get('type'):
+                        if (_node.type in NanAnalyseConst.DIRECTED_API and
+                            rank in _node.find_connected_nodes().get('ranks')):
+                            connected_node = _node
+                            seen_nodes.add(node_id)
+                            break
+                        elif rank in _node.find_connected_nodes().get('ranks', rank_nodes_dict.keys()):
+                            connected_node = _node
+                            seen_nodes.add(node_id)
+                            break
                 if not connected_node:
                     logger.warning(f'Cannot find connected communication node for "{node.node_id}".')
                     continue

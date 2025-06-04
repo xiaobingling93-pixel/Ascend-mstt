@@ -158,7 +158,7 @@ class CommunicationNode:
                 break
         if not ranks:
             for item in self.data.input_args:
-                if item.get(Const.TYPE) == 'int':
+                if isinstance(item, dict) and item.get(Const.TYPE) == 'int':
                     ranks.append(item.get('value'))
         group = self.data.input_kwargs.get('group')
         if group:
