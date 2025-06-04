@@ -47,18 +47,20 @@ class DataNode:
     @staticmethod
     def find_stack(stack_info, op_name):
         for item in stack_info:
-            if op_name in item[0]:
+            if len(item) >= 2 and op_name in item[0]:
                 return item[1]
         return {}
 
     @staticmethod
     def find_complete_construct(construct_info, op_name):
         construct = [op_name]
-        while 1:
+        seen = set(op_name)
+        while True:
             op_name = construct_info.get(op_name)
-            if not op_name:
+            if not op_name or op_name in seen:
                 return construct
             construct.insert(0, op_name)
+            seen.add(op_name)
 
     def is_anomaly(self) -> bool:
         if is_ignore_op(self.op_name):

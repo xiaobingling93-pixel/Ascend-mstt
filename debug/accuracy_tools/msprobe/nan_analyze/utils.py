@@ -165,16 +165,21 @@ class NanAnalyseConst:
         'all_to_all_single',  # all_to_all_single 算子
         'all_to_all',  # all_to_all 算子
         'all_gather_into_tensor',  # all_gather_into_tensor 算子
-        'reduce_scatter_tensor'  # reduce_scatter_tensor 算子
+        'reduce_scatter_tensor',  # reduce_scatter_tensor 算子
+        'send_object_list',
+        'recv_object_list',
+        'batch_isend_irecv',
+        'P2POp'
     }
-    P2P_API_MAPPING = {'send': 'recv', 'recv': 'send', 'isend': 'irecv', 'irecv': 'isend'}
+    P2P_API_MAPPING = {'send': 'recv', 'recv': 'send', 'isend': 'irecv', 'irecv': 'isend',
+                       'send_object_list': 'recv_object_list', 'recv_object_list': 'send_object_list'}
     SRC = 'src'
     DST = 'dst'
     SRC_GROUP = 'src_group'
     DST_GROUP = 'dst_group'
     LINK = 'link'
     DIRECTED_API = {'send': DST, 'recv': SRC, 'isend': DST, 'irecv': SRC, 'broadcast': SRC, 'scatter': SRC,
-                    'gather': DST}
+                    'gather': DST, 'send_object_list': DST, 'recv_object_list': SRC}
     OPPOSITE_DIR = {SRC: DST, DST: SRC}
     DUMP_FILE = "dump.json"
     CONSTRUCT_FILE = "construct.json"

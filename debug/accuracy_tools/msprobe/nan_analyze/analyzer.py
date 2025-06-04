@@ -103,7 +103,7 @@ def gen_analyze_info(anomaly_nodes, output_path):
         result_file = os.path.join(output_path, f'anomaly_analyze({index}).json')
         index += 1
     save_json(result_file, result_content, 2)
-    logger.info("The analyze result is saved in: %s" % result_file)
+    logger.info(f"The analyze result is saved in: {result_file}")
 
 
 def analyze_communication_nodes(path: RankPath):
