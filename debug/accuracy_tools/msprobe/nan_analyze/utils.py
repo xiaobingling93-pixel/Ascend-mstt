@@ -167,9 +167,7 @@ class NanAnalyseConst:
         'all_gather_into_tensor',  # all_gather_into_tensor 算子
         'reduce_scatter_tensor',  # reduce_scatter_tensor 算子
         'send_object_list',
-        'recv_object_list',
-        'batch_isend_irecv',
-        'P2POp'
+        'recv_object_list'
     }
     P2P_API_MAPPING = {'send': 'recv', 'recv': 'send', 'isend': 'irecv', 'irecv': 'isend',
                        'send_object_list': 'recv_object_list', 'recv_object_list': 'send_object_list'}
