@@ -786,7 +786,7 @@ class MonitorConst:
     EXP_AVG_SQ = "exp_avg_sq"
 
     CSV_HEADER = ["vpp_stage", "name", "step"]
-    CSV_HEADER_XY = ["vpp_stage", "name", "step", "micro_step"]
+    CSV_HEADER_MICRO_STEP = ["vpp_stage", "name", "step", "micro_step"]
     OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
     ANOMALY_JSON = "anomaly.json"
     ANALYSE_JSON = "anomaly_analyse.json"
