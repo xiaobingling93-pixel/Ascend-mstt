@@ -123,7 +123,7 @@ def analyze_communication_nodes(path: RankPath):
 
 def connect_communication_nodes(rank_nodes_dict):
     searched_ranks = set()
-    for rank, nodes in rank_nodes_dict.items():
+    for rank, nodes in list(rank_nodes_dict.items())[:-1]:
         searched_ranks.add(rank)
         seen_nodes = set()
         for cur_node in nodes.values():
@@ -146,11 +146,11 @@ def find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_n
             if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
                 continue
             search_conn_ranks = search_node.find_connected_nodes().get('ranks')
-            if not search_conn_ranks:
+            if not search_conn_ranks and search_node.api not in NanAnalyseConst.DIRECTED_API:
                 _connect(cur_node, search_node, seen_nodes)
                 found = True
                 break
-            elif search_node.api in NanAnalyseConst.DIRECTED_API and cur_node.rank in search_conn_ranks:
+            elif cur_node.rank in search_conn_ranks:
                 _connect(cur_node, search_node, seen_nodes)
                 found = True
                 break
