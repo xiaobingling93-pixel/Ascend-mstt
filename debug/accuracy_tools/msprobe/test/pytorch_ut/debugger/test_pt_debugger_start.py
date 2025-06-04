@@ -64,7 +64,7 @@ class MultiStartDebugger:
     @classmethod
     def debugger_stop(cls):
         cls.debugger.stop()
-        cls.debugger.service.reset_status()
+        cls.debugger.service._reset_status()
 
     @classmethod
     def debugger_step(cls):

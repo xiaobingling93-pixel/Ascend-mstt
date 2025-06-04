@@ -41,10 +41,10 @@ class HOOKModule(nn.Module):
 
             prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
             if callable(hook_build_func):
-                forward_pre_hook, forward_hook, backward_hook = hook_build_func(prefix)
-                register_forward_pre_hook(self, forward_pre_hook)
-                register_forward_hook(self, forward_hook)
-                self.register_backward_hook(backward_hook)
+                hook_set = hook_build_func(prefix)
+                register_forward_pre_hook(self, hook_set.forward_pre_hook)
+                register_forward_hook(self, hook_set.forward_hook)
+                self.register_backward_hook(hook_set.backward_hook)
 
     def __call__(self, *args, **kwargs):
         changed = False

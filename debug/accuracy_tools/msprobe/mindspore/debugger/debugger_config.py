@@ -15,12 +15,18 @@
 
 import os
 
+from mindspore import nn
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.log import logger
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.utils import is_mindtorch
+
+if is_mindtorch():
+    import torch
 
 
 class DebuggerConfig:
@@ -65,6 +71,31 @@ class DebuggerConfig:
                              f"but got {self.handler_type}.")
                 raise ValueError
             self.dump_level = FreeBenchmarkConst.DEFAULT_DUMP_LEVEL
+
+    @staticmethod
+    def check_model(models, token_range=None):
+        if token_range and not models:
+            error_info = "The 'model' parameter must be provided when token_range is not None"
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
+
+        target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
+        if models is None or isinstance(models, target_module_type[0]):
+            return models
+        error_model = None
+        if isinstance(models, (list, tuple)):
+            for model in models:
+                if not isinstance(model, target_module_type[0]):
+                    error_model = model
+                    break
+        else:
+            error_model = models
+
+        if error_model is not None:
+            error_info = (f"The 'model' parameter must be a {target_module_type[1]} or list[{target_module_type[1]}] "
+                          f"type, currently there is a {type(error_model)} type.")
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, error_info)
+        return models
 
     def check(self):
         if not self.dump_path:

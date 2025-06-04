@@ -36,7 +36,7 @@ from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
 from msprobe.mindspore.ms_config import parse_task_config
 from msprobe.mindspore.runtime import Runtime
-from msprobe.mindspore.service import Service
+from msprobe.mindspore.mindspore_service import MindsporeService
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 try:
@@ -88,7 +88,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.config.execution_mode = self._get_execution_mode()
         if self._need_service():
             self.config.check_config_with_l2()
-            self.service = Service(self.config)
+            self.service = MindsporeService(self.config)
 
         Runtime.step_count = 0
         Runtime.is_running = False
@@ -138,7 +138,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
         instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
             if not instance.service:
-                instance.service = Service(instance.config)
+                instance.service = MindsporeService(instance.config)
+            instance.config.check_model(model, token_range)
             instance.service.start(model, token_range)
         else:
             if not instance.first_start:
@@ -152,9 +153,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
                 is_valid_step = (not instance.config.step or Runtime.step_count in instance.config.step)
                 if is_valid_rank and is_valid_step:
                     _dump_start()
-
+            Runtime.is_running = True
         instance.first_start = True
-        Runtime.is_running = True
 
     @classmethod
     def stop(cls):
@@ -166,12 +166,13 @@ class PrecisionDebugger(BasePrecisionDebugger):
             instance.gm.stop()
         if instance.service:
             instance.service.stop()
+        else:
+            Runtime.is_running = False
         if enable_dynamic_kbyk_dump:
             _dump_stop()
         if cls._need_msprobe_c() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
-        Runtime.is_running = False
-
+    
     @classmethod
     def step(cls):
         instance = cls.get_instance()

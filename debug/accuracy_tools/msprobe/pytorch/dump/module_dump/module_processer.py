@@ -168,7 +168,7 @@ class ModuleProcesser:
 
                 setattr(module, 'msprobe_forward_hook', True)
 
-            _, _, backward_data_hook = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
+            hook_set = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
 
             def get_backward_pre_hook(full_backward_name):
                 def backward_pre_hook_fn(module, grad_output):
@@ -184,7 +184,7 @@ class ModuleProcesser:
 
             if not ModuleProcesser.module_with_backward_hook.get(module_name):
                 backward_pre_hook = get_backward_pre_hook(full_backward_name)
-                backward_hook = get_backward_hook(backward_data_hook, full_backward_name)
+                backward_hook = get_backward_hook(hook_set.backward_hook, full_backward_name)
                 if torch_version_above_or_equal_2:
                     bw_hook = BackwardHook(module, [backward_hook], [backward_pre_hook])
                 else:
@@ -200,8 +200,8 @@ class ModuleProcesser:
             index = ModuleProcesser.module_count.get(module_name)
             full_name = f'{module_name}{Const.FORWARD}{Const.SEP}{index}'
 
-            _, forward_data_hook, _ = build_data_hook(BaseScope.Module_Type_Module, full_name)
-            hook_result = forward_data_hook(module, args, kwargs_or_output, output_or_kwargs)
+            hook_set = build_data_hook(BaseScope.Module_Type_Module, full_name)
+            hook_result = hook_set.forward_hook(module, args, kwargs_or_output, output_or_kwargs)
             self.set_construct_info_in_hook(full_name)
 
             if hook_result is not None:

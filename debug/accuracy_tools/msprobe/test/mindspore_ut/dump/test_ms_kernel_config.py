@@ -16,11 +16,11 @@
 import unittest
 from unittest.mock import patch
 
-from msprobe.mindspore.dump.kernel_dump.kernel_config import create_kernel_config_json
+from msprobe.core.kernel_dump.kernel_config import create_kernel_config_json
 
 
 class TestPtKernelConfig(unittest.TestCase):
-    @patch("msprobe.mindspore.dump.kernel_dump.kernel_config.save_json")
+    @patch("msprobe.core.kernel_dump.kernel_config.save_json")
     def test_create_kernel_config_json_with_rank(self, mock_save_json):
         dump_path = "./step0"
         cur_rank = 0
@@ -36,7 +36,7 @@ class TestPtKernelConfig(unittest.TestCase):
         }
         mock_save_json.assert_called_once_with(kernel_config_path, config_info, indent=4)
 
-    @patch("msprobe.mindspore.dump.kernel_dump.kernel_config.save_json")
+    @patch("msprobe.core.kernel_dump.kernel_config.save_json")
     def test_create_kernel_config_json_without_rank(self, mock_save_json):
         dump_path = "./step0"
         cur_rank = ''

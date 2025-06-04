@@ -21,8 +21,8 @@ class CodedException(Exception):
 
     def __str__(self):
         return self.error_info
-
-
+    
+    
 class MsprobeException(CodedException):
     INVALID_PARAM_ERROR = 0
     OVERFLOW_NUMS_ERROR = 1

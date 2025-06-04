@@ -23,6 +23,7 @@ import mindspore as ms
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import check_path_length, load_yaml
+from msprobe.core.hook_manager import HookSet
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
@@ -105,8 +106,13 @@ class ApiPyNativeSelfCheck:
 
         def pre_backward_hook(cell, grad_input):
             return None
-
-        return pre_hook, wrap_forward_hook, wrap_backward_hook, pre_backward_hook
+        
+        return HookSet(
+            forward_hook=wrap_forward_hook,
+            forward_pre_hook=pre_hook,
+            backward_hook=wrap_backward_hook,
+            backward_pre_hook=pre_backward_hook
+        )
 
     def store_original_func(self):
         for api_name in self.api_list:

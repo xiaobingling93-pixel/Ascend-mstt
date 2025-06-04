@@ -23,7 +23,8 @@ import mindspore as ms
 from mindspore import Tensor, ops
 
 from msprobe.core.common.utils import Const
-from msprobe.mindspore.service import Service
+from msprobe.mindspore.mindspore_service import MindsporeService
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -48,12 +49,12 @@ class TestPrimitiveHookService(unittest.TestCase):
         task_config = StatisticsConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
 
-        with patch('msprobe.mindspore.service.build_data_collector'), \
-             patch('msprobe.mindspore.service.CellProcessor'), \
-             patch('msprobe.mindspore.service.PrimitiveHookService'), \
-             patch('msprobe.mindspore.service.get_api_register'):
-            self.mock_service_instance = Service(config)
-            self.mock_service_instance.switch = True
+        with patch('msprobe.core.service.build_data_collector'), \
+             patch('msprobe.mindspore.mindspore_service.CellProcessor'), \
+             patch('msprobe.mindspore.mindspore_service.PrimitiveHookService'), \
+             patch('msprobe.mindspore.mindspore_service.get_api_register'):
+            self.mock_service_instance = MindsporeService(config)
+            Runtime.is_running = True
             self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
 
     def tearDown(self):
@@ -272,7 +273,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
     def test_wrap_primitive_no_hook_with_invalid_input(self):
         # 测试在 switch 关闭时传入无效输入时的行为
-        self.mock_service_instance.switch = False
+        Runtime.is_running = False
 
         invalid_inputs = [None, "invalid_tensor", 123]
 
@@ -404,7 +405,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
     def test_wrap_primitive_no_hook_when_switch_off(self):
         # 模拟 switch 关闭的情况
-        self.mock_service_instance.switch = False
+        Runtime.is_running = False
 
         # 模拟 Tensor 输入
         input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))

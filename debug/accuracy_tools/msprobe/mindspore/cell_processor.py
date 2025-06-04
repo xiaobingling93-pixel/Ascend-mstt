@@ -158,8 +158,8 @@ class CellProcessor:
             )
             if enable_hooked:
                 backward_hook = OrderedDict()
-                _, _, backward_data_hook, _ = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
-                backward_hook[full_backward_name] = get_backward_hook(backward_data_hook, full_backward_name)
+                hook_set = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
+                backward_hook[full_backward_name] = get_backward_hook(hook_set.backward_hook, full_backward_name)
                 CellProcessor.cell_backward_hook.append(backward_hook)
                 bw_hook = inner.CellBackwardHook(full_backward_name, cell,
                                                  self.cell_backward_hook[-1])
@@ -176,10 +176,9 @@ class CellProcessor:
             full_backward_name = f'{cell_name}{Const.BACKWARD}{Const.SEP}{index}'
 
             self.set_construct_info_in_hook(full_forward_name)
-
-            _, forward_data_hook, backward_data_hook, _ = build_data_hook(BaseScope.Module_Type_Module,
-                                                                          full_forward_name)
-            hook_result = forward_data_hook(cell, args, kwargs_or_output, output_or_kwargs)
+            
+            hook_set = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
+            hook_result = hook_set.forward_hook(cell, args, kwargs_or_output, output_or_kwargs)
             if hook_result is not None:
                 outputs = hook_result
             else:
@@ -210,7 +209,7 @@ class CellProcessor:
                 return backward_pre_hook_fn
 
             backward_pre_hook = OrderedDict()
-            backward_data_hook = None if bw_hook else backward_data_hook
+            backward_data_hook = None if bw_hook else hook_set.backward_hook
             backward_pre_hook[full_backward_name] = get_backward_pre_hook(full_backward_name, backward_data_hook)
             CellProcessor.cell_backward_pre_hook.append(backward_pre_hook)
             bw_pre_hook = inner.CellBackwardHook(full_backward_name, cell,
