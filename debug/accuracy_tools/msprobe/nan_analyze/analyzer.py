@@ -18,7 +18,7 @@ from multiprocessing import Pool
 import os
 import re
 
-from msprobe.core.common.file_utils import check_file_or_directory_path, check_path_before_create, save_json, make_dir
+from msprobe.core.common.file_utils import check_file_or_directory_path, save_json, make_dir
 from msprobe.core.common.log import logger
 from msprobe.nan_analyze.utils import RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst
 from msprobe.nan_analyze.graph import DataNode, CommunicationNode
@@ -100,7 +100,7 @@ def gen_analyze_info(anomaly_nodes, output_path):
         result_content[f'rank_{node.rank}'].append(node.gen_node_info())
     index = 0
     while os.path.exists(result_file):
-        result_file = os.path.join(output_path, f'anomaly_analyze({index}).json')
+        result_file = os.path.join(output_path, f'anomaly_analyze_{index}.json')
         index += 1
     save_json(result_file, result_content, 2)
     logger.info(f"The analyze result is saved in: {result_file}")
