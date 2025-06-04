@@ -143,26 +143,26 @@ class CommunicationNode:
         根据 api/类型/入参/调用次数 确定相连接的node的op_name
         """
         tar_api = NanAnalyseConst.P2P_API_MAPPING.get(self.api, self.api)
-        ranks = []
+        ranks = set()
         for dst in [NanAnalyseConst.DST, NanAnalyseConst.DST_GROUP]:
             if dst in self.data.input_kwargs:
                 dst_value = self.data.input_kwargs.get(dst)
                 if dst_value:
-                    ranks.append(dst_value.get('value'))
+                    ranks.add(dst_value.get('value'))
                 break
         for src in [NanAnalyseConst.SRC, NanAnalyseConst.SRC_GROUP]:
             if src in self.data.input_kwargs:
                 src_value = self.data.input_kwargs.get(src)
                 if src_value:
-                    ranks.append(src_value.get('value'))
+                    ranks.add(src_value.get('value'))
                 break
         if not ranks:
             for item in self.data.input_args:
                 if isinstance(item, dict) and item.get(Const.TYPE) == 'int':
-                    ranks.append(item.get('value'))
+                    ranks.add(item.get('value'))
         group = self.data.input_kwargs.get('group')
         if group:
-            ranks.extend(group.get('group_ranks'))
+            ranks.update(group.get('group_ranks'))
         return {'ranks': ranks, 'api': f'Distributed.{tar_api}',
                 'type': NanAnalyseConst.OPPOSITE_DIR.get(self.type, NanAnalyseConst.LINK)}
 
