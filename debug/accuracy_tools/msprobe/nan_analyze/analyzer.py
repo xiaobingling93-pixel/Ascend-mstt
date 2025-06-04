@@ -132,8 +132,8 @@ def connect_communication_nodes(rank_nodes_dict):
     searched_ranks = set()
     for rank, nodes in rank_nodes_dict.items():
         searched_ranks.add(rank)
-        seen_nodes = set()
         for node in nodes.values():
+            is_found = False
             connected_nodes = node.find_connected_nodes()
             if not connected_nodes.get('ranks'):
                 connected_nodes['ranks'] = rank_nodes_dict.keys()
@@ -143,13 +143,11 @@ def connect_communication_nodes(rank_nodes_dict):
                 tar_node_id = f'{connected_rank}.{connected_nodes["api"]}'
                 connected_node = None
                 for node_id, _node in rank_nodes_dict[connected_rank].items():
-                    if node_id in seen_nodes:
-                        continue
                     if node_id.startswith(tar_node_id) and _node.type == connected_nodes.get('type'):
                         if (_node.type in NanAnalyseConst.DIRECTED_API and
                             rank in _node.find_connected_nodes().get('ranks')):
                             connected_node = _node
-                            seen_nodes.add(node_id)
+                            is_found = True
                             break
                         else:
                             connected_ranks = _node.find_connected_nodes().get('ranks')
@@ -157,10 +155,8 @@ def connect_communication_nodes(rank_nodes_dict):
                                 connected_ranks = rank_nodes_dict.keys()
                             if rank in connected_ranks:
                                 connected_node = _node
-                                seen_nodes.add(node_id)
+                                is_found = True
                                 break
-                if not connected_node:
-                    logger.warning(f'Cannot find connected communication node for "{node.node_id}".')
                     continue
                 if connected_node.type == NanAnalyseConst.DST:
                     node.add_dst(connected_node)
@@ -169,6 +165,8 @@ def connect_communication_nodes(rank_nodes_dict):
                     connected_node.add_dst(node)
                 else:
                     node.add_link(connected_node)
+            if not is_found:
+                logger.warning(f'Cannot find connected communication node for "{node.node_id}".')
 
 
 def pruning(rank_nodes_dict):
@@ -197,9 +195,13 @@ def search_first_anomaly(rank_nodes_dict) -> list:
                 forwards = True
                 node_ids_in_same_group = ({node.node_id} | node.link_nodes.keys() | node.src_nodes.keys()
                                           | node.dst_nodes.keys())
-                if node_ids_in_same_group in group_keys:
-                    groups.get(group_keys.index(node_ids_in_same_group)).append(node)
-                else:
+                is_in_group = False
+                for i, group_set in enumerate(group_keys):
+                    if node.node_id in group_set:
+                        group_set.update(node_ids_in_same_group)
+                        groups.get(i).append(node)
+                        is_in_group = True
+                if not is_in_group:
                     group_keys.append(node_ids_in_same_group)
                     groups[group_keys.index(node_ids_in_same_group)] = [node]
         anomaly_nodes = []
