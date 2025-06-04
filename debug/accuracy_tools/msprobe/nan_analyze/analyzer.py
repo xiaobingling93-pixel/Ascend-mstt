@@ -131,7 +131,7 @@ def connect_communication_nodes(rank_nodes_dict):
             if not conn_info.get('ranks'):
                 conn_info['ranks'] = rank_nodes_dict.keys()
             if not find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_nodes):
-                logger.warning(f'Cannot find connected communication node for "{cur_node.node_id}".')
+                logger.info(f'Cannot find connected communication node for "{cur_node.node_id}".')
 
 
 def find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_nodes):
