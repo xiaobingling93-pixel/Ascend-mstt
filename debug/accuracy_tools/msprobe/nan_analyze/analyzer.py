@@ -133,46 +133,48 @@ def connect_communication_nodes(rank_nodes_dict):
     for rank, nodes in rank_nodes_dict.items():
         searched_ranks.add(rank)
         seen_nodes = set()
-        for node in nodes.values():
-            is_found = False
-            connected_nodes = node.find_connected_nodes()
-            if not connected_nodes.get('ranks'):
-                connected_nodes['ranks'] = rank_nodes_dict.keys()
-            for connected_rank in connected_nodes['ranks']:
-                if connected_rank in searched_ranks:
-                    continue
-                tar_node_id = f'{connected_rank}.{connected_nodes["api"]}'
-                connected_node = None
-                for node_id, _node in rank_nodes_dict[connected_rank].items():
-                    if node_id in seen_nodes:
-                        continue
-                    if node_id.startswith(tar_node_id) and _node.type == connected_nodes.get('type'):
-                        if (_node.type in NanAnalyseConst.DIRECTED_API and
-                            rank in _node.find_connected_nodes().get('ranks')):
-                            connected_node = _node
-                            seen_nodes.add(node_id)
-                            is_found = True
-                            break
-                        else:
-                            connected_ranks = _node.find_connected_nodes().get('ranks')
-                            if not connected_ranks:
-                                connected_ranks = rank_nodes_dict.keys()
-                            if rank in connected_ranks:
-                                connected_node = _node
-                                seen_nodes.add(node_id)
-                                is_found = True
-                                break
-                if not connected_node:
-                    continue
-                if connected_node.type == NanAnalyseConst.DST:
-                    node.add_dst(connected_node)
-                elif connected_node.type == NanAnalyseConst.SRC:
-                    connected_node.layer = node.layer
-                    connected_node.add_dst(node)
-                else:
-                    node.add_link(connected_node)
-            if not is_found:
-                logger.warning(f'Cannot find connected communication node for "{node.node_id}".')
+        for cur_node in nodes.values():
+            conn_info = cur_node.find_connected_nodes()
+            if not conn_info.get('ranks'):
+                conn_info['ranks'] = rank_nodes_dict.keys()
+            if not find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_nodes):
+                logger.warning(f'Cannot find connected communication node for "{cur_node.node_id}".')
+
+
+def find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_nodes):
+    found = False
+    for connected_rank in conn_info['ranks']:
+        if connected_rank in searched_ranks:
+            continue
+        tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
+        tar_node = None
+        for search_id, search_node in rank_nodes_dict[connected_rank].items():
+            if search_id in seen_nodes:
+                continue
+            if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
+                continue
+            search_conn_ranks = search_node.find_connected_nodes().get('ranks')
+            if not search_conn_ranks:
+                tar_node = search_node
+                seen_nodes.add(search_id)
+                found = True
+                break
+            elif search_node.api in NanAnalyseConst.DIRECTED_API and cur_node.rank in search_conn_ranks:
+                tar_node = search_node
+                seen_nodes.add(search_id)
+                found = True
+                break
+
+        if not tar_node:
+            continue
+        if tar_node.type == NanAnalyseConst.DST:
+            cur_node.add_dst(tar_node)
+        elif tar_node.type == NanAnalyseConst.SRC:
+            tar_node.layer = cur_node.layer
+            tar_node.add_dst(cur_node)
+        else:
+            cur_node.add_link(tar_node)
+    return found
 
 
 def pruning(rank_nodes_dict):
