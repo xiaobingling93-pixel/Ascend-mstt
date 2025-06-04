@@ -65,7 +65,7 @@ class DataNode:
     def is_anomaly(self) -> bool:
         if is_ignore_op(self.op_name):
             return False
-        is_input_anomaly = (check_item_anomaly(self.inputs) and check_item_anomaly(self.input_args) and
+        is_input_anomaly = (check_item_anomaly(self.inputs) or check_item_anomaly(self.input_args) or
                             check_item_anomaly(self.input_kwargs))
         is_output_anomaly = check_item_anomaly(self.outputs)
         return (not is_input_anomaly) and is_output_anomaly
@@ -75,9 +75,10 @@ class DataNode:
         construct = cache.load_json(self.construct_path)
         stack = cache.load_json(self.stack_path)
         if Const.FORWARD in self.op_name:
-            data_info_list = {Const.INPUT_ARGS: self.input_args, Const.INPUT_KWARGS: self.input_kwargs}
+            data_info_list = {Const.INPUT_ARGS: self.input_args, Const.INPUT_KWARGS: self.input_kwargs,
+                              Const.OUTPUT: self.outputs}
         else:
-            data_info_list = {Const.INPUT: self.inputs}
+            data_info_list = {Const.INPUT: self.inputs, Const.OUTPUT: self.outputs}
         return {'op_name': self.op_name,
                 'data_info': data_info_list,
                 'construct_info': self.find_complete_construct(construct, self.op_name),
