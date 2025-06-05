@@ -17,6 +17,7 @@ import importlib
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import mindspore as ms
 from mindspore import mint
 
 try:
@@ -36,12 +37,18 @@ from msprobe.mindspore.monitor import common_func
 
 from .mindtorch import reset_torch_tensor
 from msprobe.mindspore.common import utils
-from msprobe.mindspore.common.utils import is_mindtorch
+from msprobe.mindspore.common.utils import is_mindtorch, register_backward_hook_functions
 
 utils.mindtorch_check_result = None
 importlib.reload(mindspore_service)
 importlib.reload(common_func)
 reset_torch_tensor()
+
+def register_backward_pre_hook(*args, **kwargs):
+    pass
+
+register_backward_hook_functions['full'] = ms.nn.Cell.register_backward_hook
+register_backward_hook_functions["pre"] = register_backward_pre_hook
 
 
 class SetUp(TestCase):
