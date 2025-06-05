@@ -17,6 +17,7 @@ from collections import defaultdict
 
 from mindspore import nn
 
+from msprobe.core.common.runtime import Runtime
 from msprobe.mindspore.common.utils import is_mindtorch, register_backward_hook_functions
 
 
@@ -37,6 +38,8 @@ def __init__(self, hook_build_func) -> None:
         self.changed_status = True
         self.forward_data_collected = False
 
+        if not Runtime.is_running:
+            return
         prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
         if callable(hook_build_func):
             hook_set = hook_build_func(prefix)
