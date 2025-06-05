@@ -41,7 +41,7 @@ class GraphService:
                     run_abs = os.path.abspath(root)
                     run = os.path.basename(run_abs)  # 不允许同名目录，否则有问题
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
-                    _, error = GraphUtils.safe_load_data(run_abs, f"{tag}.vis", True, True)
+                    _, error = GraphUtils.safe_load_data(run_abs, f"{tag}.vis", True)
                     if error:
                         logger.error(f'Error: File run:"{run_abs},tag:{tag}" is not accessible. Error: {error}')
                         continue
@@ -263,8 +263,8 @@ class GraphService:
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_add_child_layer(graph_data, npu_node_name, bench_node_name,
-                                                                           task)
+                result = MatchNodesController.process_task_add_child_layer(graph_data,
+                                                                npu_node_name, bench_node_name, task)
                 return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}

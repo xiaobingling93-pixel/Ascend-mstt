@@ -70,7 +70,7 @@ class TestPrecisionDebugger(unittest.TestCase):
             self.assertTrue(Handler.called)
 
             mock_get_mode.return_value = MsConst.PYNATIVE_MODE
-            with patch("msprobe.mindspore.debugger.precision_debugger.Service") as mock_Service, \
+            with patch("msprobe.mindspore.debugger.precision_debugger.MindsporeService") as mock_Service, \
                  patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
                 debugger = PrecisionDebugger()
                 debugger.start()

@@ -31,7 +31,7 @@ if not hasattr(ops, 'DumpGradient'):
     setattr(ops, 'DumpGradient', DumpGradient)
 
 # ensure not to import torch_npu
-from msprobe.mindspore import service
+from msprobe.mindspore import mindspore_service
 from msprobe.mindspore.monitor import common_func
 
 from .mindtorch import reset_torch_tensor
@@ -39,7 +39,7 @@ from msprobe.mindspore.common import utils
 from msprobe.mindspore.common.utils import is_mindtorch
 
 utils.mindtorch_check_result = None
-importlib.reload(service)
+importlib.reload(mindspore_service)
 importlib.reload(common_func)
 reset_torch_tensor()
 

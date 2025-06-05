@@ -151,10 +151,15 @@ class FmkAdp:
 
     @classmethod
     def load_checkpoint(cls, path, to_cpu=True, weights_only=True):
-        if cls.fmk == Const.PT_FRAMEWORK:
-            from msprobe.pytorch.common.utils import load_pt
-            return load_pt(path, to_cpu=to_cpu, weights_only=weights_only)
         check_file_or_directory_path(path)
+        if cls.fmk == Const.PT_FRAMEWORK:
+            try:
+                if to_cpu:
+                    return cls.framework.load(path, map_location=cls.framework.device("cpu"), weights_only=weights_only)
+                else:
+                    return cls.framework.load(path, weights_only=weights_only)
+            except Exception as e:
+                raise RuntimeError(f"load pt file {path} failed: {e}") from e
         return mindspore.load_checkpoint(path)
     
     @classmethod

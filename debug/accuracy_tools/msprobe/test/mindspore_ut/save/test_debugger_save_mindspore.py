@@ -10,6 +10,7 @@ from msprobe.mindspore import PrecisionDebugger
 from msprobe.core.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 
+
 current_file = __file__
 parent_dir = os.path.abspath(os.path.dirname(current_file))
 test_dir = os.path.join(parent_dir, "test_dir")
@@ -154,6 +155,7 @@ class TestDebuggerSave(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_md5(self, _):
+        print(1111111111111111111111)
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         async_dump = False

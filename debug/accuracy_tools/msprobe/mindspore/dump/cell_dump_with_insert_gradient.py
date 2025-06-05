@@ -20,13 +20,17 @@ import re
 import time
 
 import numpy as np
+import pandas as pd
 import mindspore as ms
 from mindspore import nn, ops
 
 from msprobe.core.common.const import Const as CoreConst
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_utils import load_npy, save_json, remove_path, load_yaml
+from msprobe.core.common.file_utils import (
+    load_npy, save_json, remove_path, load_yaml,
+    create_directory, read_csv, write_df_to_csv, write_csv, move_file)
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.dump.cell_dump_process import CellDumpConfig
 
 
 CONSTRUCT_FILE_NAME = "construct.json"
@@ -40,13 +44,24 @@ KEY_FORWARD = CoreConst.FORWARD
 KEY_BACKWARD = CoreConst.BACKWARD
 KEY_INPUT = CoreConst.INPUT
 KEY_OUTPUT = CoreConst.OUTPUT
+KEY_DUMP_TENSOR_DATA = "dump_tensor_data_"
+KEY_STATISTIC_CSV = "statistic.csv"
+KEY_TD_FLAG = "td_flag"
 td = ops.TensorDump()
 if (ms.__version__ >= "2.5.0"):
     td_in = ops.TensorDump("in")
 else:
     td_in = ops.TensorDump()
+graph_step_flag = True
+try:
+    from mindspore._c_expression import _set_init_iter
+except ImportError:
+    graph_step_flag = False
 td.add_prim_attr(KEY_SIDE_EFFECT, False)
 td_in.add_prim_attr(KEY_SIDE_EFFECT, False)
+td.add_prim_attr(KEY_TD_FLAG, True)
+td_in.add_prim_attr(KEY_TD_FLAG, True)
+dump_task = CoreConst.STATISTICS
 np_ms_dtype_dict = {
     "bool": ms.bool_,
     "int8": ms.int8,
@@ -79,7 +94,11 @@ np_ms_dtype_dict = {
 
 def gen_file_path(dump_path, cell_prefix, suffix, io_type, index):
     data_path = os.path.join(dump_path, '{step}', '{rank}', CoreConst.DUMP_TENSOR_DATA)
-    file_name = cell_prefix + CoreConst.SEP + suffix + CoreConst.SEP + io_type + CoreConst.SEP + str(index)
+    file_name = ""
+    if dump_task == CoreConst.TENSOR:
+        file_name = cell_prefix + CoreConst.SEP + suffix + CoreConst.SEP + io_type + CoreConst.SEP + str(index)
+    if dump_task == CoreConst.STATISTICS:
+        file_name = cell_prefix + CoreConst.HYPHEN + suffix + CoreConst.HYPHEN + io_type + CoreConst.HYPHEN + str(index)
     return os.path.join(data_path, file_name)
 
 
@@ -206,13 +225,19 @@ def del_same_file(path, filenames):
     return result_list
 
 
-def rename_filename(path):
-    filenames = sort_filenames(path)
-    filenames = del_same_file(path, filenames)
+def rename_filename(path="", data_df=None):
+    if dump_task == CoreConst.TENSOR:
+        filenames = sort_filenames(path)
+        filenames = del_same_file(path, filenames)
+    if dump_task == CoreConst.STATISTICS:
+        filenames = data_df[CoreConst.OP_NAME].tolist()
 
     filename_dict = {}
-    for filename in filenames:
-        name_field = filename.rsplit(CoreConst.REPLACEMENT_CHARACTER, 1)[0]
+    for index, filename in enumerate(filenames):
+        if dump_task == CoreConst.TENSOR:
+            name_field = filename.rsplit(CoreConst.REPLACEMENT_CHARACTER, 1)[0]
+        if dump_task == CoreConst.STATISTICS:
+            name_field = filename
 
         if name_field in filename_dict:
             filename_dict[name_field] += 1
@@ -229,7 +254,10 @@ def rename_filename(path):
         if CoreConst.BACKWARD_PATTERN in filename:
             new_file_name = filename.replace(CoreConst.BACKWARD_PATTERN,
                                              CoreConst.BACKWARD_PATTERN + str(cell_index) + CoreConst.SEP)
-        os.rename(os.path.join(path, filename), os.path.join(path, new_file_name))
+        if dump_task == CoreConst.TENSOR:
+            move_file(os.path.join(path, filename), os.path.join(path, new_file_name))
+        if dump_task == CoreConst.STATISTICS:
+            data_df.loc[index, CoreConst.OP_NAME] = new_file_name
     logger.info("==========The rename_filename phase is Finished!==========")
 
 
@@ -288,11 +316,18 @@ def get_construct(cell_list_input):
 
 def generate_construct(path):
     global construct
-    filenames = sort_filenames(path)
+    if dump_task == CoreConst.TENSOR:
+        # filename格式：Cell.clip_grad_norm.ClipGradNorm.forward.0.output.1_int32_0.npy
+        filenames = sort_filenames(path)
+        point_position = 3
+    if dump_task == CoreConst.STATISTICS:
+        df = read_csv(path)
+        # filename格式：Cell.clip_grad_norm.ClipGradNorm.forward.0.output.1
+        filenames = df[CoreConst.OP_NAME].tolist()
+        point_position = 2
 
     # 提取文件名中Cell.{cell_name}.{class_name}.{data_mode}.{重复调用此cell的序号}字段，并存入cell_list
     for filename in filenames:
-        point_position = 3
         mid_field = filename.rsplit(CoreConst.SEP, point_position)[0]
         if KEY_INPUT in filename:
             if mid_field in cell_list:
@@ -348,7 +383,7 @@ def process_file(file_path):
             param_index = parts[-2].split(CoreConst.REPLACEMENT_CHARACTER)[0]
             pre_parts = CoreConst.SEP.join(parts[:-2])
             new_file_name = pre_parts + CoreConst.SEP + param_index + CoreConst.NUMPY_SUFFIX
-            os.rename(os.path.join(data_file_dir, data_file_name), os.path.join(data_file_dir, new_file_name))
+            move_file(os.path.join(data_file_dir, data_file_name), os.path.join(data_file_dir, new_file_name))
             logger.debug(f"{data_file_name} is renamed to {new_file_name}")
         else:
             logger.warning(f"Failed to rename {data_file_name}.")
@@ -383,21 +418,80 @@ def custom_sort(item, key_to_index):
     return key_to_index.get(key, float('inf'))
 
 
+def convert_special_values(value):
+    if isinstance(value, str):
+        if value.lower() == "true":
+            return True
+        elif value.lower() == "false":
+            return False
+        try:
+            return float(value)
+        except ValueError:
+            return value
+    elif pd.isna(value):
+        return None
+    return value
+
+
+def process_csv(path):
+    data_info = []
+    df = read_csv(path)
+    df = df.sort_values(by='Op Name', ascending=True)
+    columns = df.columns
+    colume_to_json_key = {
+        'Max Value': CoreConst.MAX,
+        'Min Value': CoreConst.MIN,
+        'Avg Value': CoreConst.MEAN,
+        'L2Norm Value': CoreConst.NORM
+    }
+    for _, row in df.iterrows():
+        # op_name_value格式：Cell.network._backbone.loss.CrossEntropyLoss.forward.0.input.0
+        op_name_value = row['Op Name']
+        op_name = op_name_value.rsplit(CoreConst.SEP, 2)[0]
+
+        # 获取input/output字段
+        io_key = op_name_value.split(CoreConst.SEP)[-2]
+
+        # shape读取出来为字符串类型转为list。"(1,4096)"->[1,4096]
+        shape_num = re.findall(r'\d+', row['Shape'])
+        shape = [int(num) for num in shape_num]
+
+        tensor_json = {
+            CoreConst.TYPE: 'mindspore.Tensor',
+            CoreConst.DTYPE: str(np_ms_dtype_dict.get(row['Data Type'])),
+            CoreConst.SHAPE: shape
+        }
+        for col_name, json_key in colume_to_json_key.items():
+            if col_name in columns:
+                value = convert_special_values(row[col_name])
+                tensor_json[json_key] = value
+      
+        if io_key == KEY_INPUT:
+            data_info.append([op_name, CoreConst.INPUT_ARGS, tensor_json])
+        elif io_key == KEY_OUTPUT:
+            data_info.append([op_name, KEY_OUTPUT, tensor_json])
+        else:
+            data_info.append([None, None, None])
+    return data_info
+
+
 def generate_dump_info(path):
     if not os.path.exists(path):
         logger.error("The provided path does not exist.")
         return
 
-    dump_data = {"task": "tensor", "level": "L0", "dump_data_dir": path, "data": {}}
-
-    with Pool(processes=10) as pool:
-        file_paths = []
-        for root, _, files in os.walk(path):
-            for file in files:
+    if dump_task == CoreConst.TENSOR:
+        dump_data = {"task": "tensor", "level": "L0", "dump_data_dir": path, "data": {}}
+        with Pool(processes=10) as pool:
+            file_paths = []
+            for file in os.listdir(path):
                 if file.endswith(FileCheckConst.NUMPY_SUFFIX):
-                    file_paths.append((os.path.join(root, file),))
-        file_paths.sort()
-        results = pool.starmap(process_file, file_paths)
+                    file_paths.append((os.path.join(path, file),))
+            file_paths.sort()
+            results = pool.starmap(process_file, file_paths)
+    if dump_task == CoreConst.STATISTICS:
+        dump_data = {"task": "statistics", "level": "L0", "framework": "mindspore", "dump_data_dir": None, "data": {}}
+        results = process_csv(path)
 
     # 收集结果
     for op_name, key, tensor_json in results:
@@ -429,23 +523,16 @@ def generate_stack_info(path):
         return
 
     stack_data = {}
-    file_paths = []
-    # 传入的path为工具生成的./dump_tensor_data，内容为npy文件
-    for root, _, files in os.walk(path):
-        for file in files:
-            if file.endswith(FileCheckConst.NUMPY_SUFFIX):
-                file_paths.append(os.path.join(root, file))
-    file_paths.sort()
-    for file_path in file_paths:
-        # 文件名举例:Cell.network._backbone.loss.CrossEntropyLoss.forward.0.input.0_float32_165.npy
-        parts = os.path.basename(file_path).split(CoreConst.SEP)
-        # op_name是Cell.network._backbone.loss.CrossEntropyLoss.forward.0
-        op_name = CoreConst.SEP.join(parts[:-3])
-        stack_data.update({op_name: []})
+    for cell_name in cell_list:
+        stack_data.update({cell_name: []})
 
     # 将数据写入stack.json
     json_path = os.path.join(os.path.dirname(path), 'stack.json')
     save_json(json_path, stack_data, indent=1)
+
+    # 删除csv文件
+    if dump_task == CoreConst.STATISTICS:
+        remove_path(path)
 
     logger.info(f"Stack data saved to {json_path}")
 
@@ -499,17 +586,124 @@ def process(dump_path):
                 logger.info("There is no data being downloaded in the specified directory, stop checking.")
                 break
         logger.info("==========Start processing data that has already been stored on the disk!==========")
-        rename_filename(npy_path)
+        rename_filename(path=npy_path)
         generate_construct(npy_path)
         generate_dump_info(npy_path)
         generate_stack_info(npy_path)
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                os.rename(rank_path, new_rank_path)
+                move_file(rank_path, new_rank_path)
                 logger.debug(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
-                logger.error(f"Error renamed to {new_rank_path}: {e}")
+                logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
+        logger.info("==========JSON file generation completed!==========")
+
+
+# 删除csv文件中每行数据最后面的逗号
+def remove_trailing_commas(filename):
+    csv_data = read_csv(filename, as_pd=False)
+    for i in range(1, len(csv_data)):
+        if csv_data[i] and csv_data[i][-1] == "":
+            csv_data[i].pop()
+    write_csv(csv_data, filename, mode="w")
+
+
+# 将相同step的csv文件合并，并加工后存入相应step目录下
+def merge_file(dump_path, rank_dir, file_dict):
+    rank_dir = rank_dir.replace(CoreConst.REPLACEMENT_CHARACTER, '')
+    for step_dir, file_list in file_dict.items():
+        step_dir = CoreConst.STEP + step_dir
+        rank_path = os.path.join(dump_path, step_dir, rank_dir)
+        create_directory(rank_path)
+        output_file = os.path.join(rank_path, KEY_STATISTIC_CSV)
+
+        all_dfs = []
+        try:
+            for file_path in file_list:
+                remove_trailing_commas(file_path)
+                df = read_csv(file_path)
+                all_dfs.append(df)
+
+            # 合并所有 DataFrame
+            merged_df = pd.concat(all_dfs, ignore_index=True)
+          
+            # 按 Timestamp 字段升序排序
+            merged_df = merged_df.sort_values(by='Timestamp', ascending=True)
+            # 删除Slot字段为0的数据
+            merged_df = merged_df[merged_df['Slot'] != 0]
+            # 重置索引，从0开始排序
+            merged_df.reset_index(drop=True, inplace=True)
+
+            # 获取op_name并加工为Cell.network._backbone.LlamaForCausalLM.forward.input.0格式
+            merged_df[CoreConst.OP_NAME] = merged_df[CoreConst.OP_NAME].str.split(KEY_DUMP_TENSOR_DATA, expand=True)[1]
+            merged_df[CoreConst.OP_NAME] = (
+                merged_df[CoreConst.OP_NAME].str.split(CoreConst.PIPE_SEPARATOR, expand=True)[0]
+            )
+            merged_df[CoreConst.OP_NAME] = (
+                merged_df[CoreConst.OP_NAME].str.replace(CoreConst.HYPHEN, CoreConst.SEP, regex=False)
+            )
+            # 重命名op_name，改为Cell.{cell_name}.{class_name}.{forward/backward}.{number}.{input/output}.{index}格式
+            rename_filename(data_df=merged_df)
+
+            # 将合并并排序后的 DataFrame 保存到相应step目录下
+            write_df_to_csv(merged_df, output_file)
+        except FileNotFoundError:
+            logger.error("One or more files not found.")
+        except KeyError:
+            logger.error("The value of the ‘Op Name’ field does not contain KEY_DUMP_TENSOR_DATA,"
+                         " and the index is out of bounds.")
+        except Exception as e:
+            logger.error(f"An error occurred:{e}")
+
+
+def process_statistics(dump_path):
+    rank_id = os.environ.get('RANK_ID')
+    rank_dir_kbk = "rank_0"
+    if rank_id is not None:
+        rank_dir_kbk = CoreConst.RANK + CoreConst.REPLACEMENT_CHARACTER + str(rank_id)
+    rank_path_kbk = os.path.join(dump_path, rank_dir_kbk)
+
+    # 按相同step数将csv文件名分组存入file_dict
+    file_dict = {}
+    depth_limit = 4
+    base_depth = rank_path_kbk.count(os.sep)
+    for root, _, files in os.walk(rank_path_kbk):
+        current_depth = root.count(os.sep) - base_depth
+        if current_depth > depth_limit:
+            continue
+        for file in files:
+            if file == KEY_STATISTIC_CSV:
+                file_path = os.path.join(root, file)
+                step_dir = os.path.basename(os.path.dirname(file_path))
+                if step_dir in file_dict:
+                    file_dict[step_dir].append(file_path)
+                else:
+                    file_dict[step_dir] = [file_path]
+
+    # 将相同step的csv文件合并，并加工后存入相应step目录下
+    merge_file(dump_path, rank_dir_kbk, file_dict)
+
+    rank_dir = rank_dir_kbk.replace(CoreConst.REPLACEMENT_CHARACTER, '')
+    dir_list = os.listdir(dump_path)
+    step_dir_list = [d for d in dir_list if d.startswith(CoreConst.STEP)]
+    for step_dir in step_dir_list:
+        step_path = os.path.join(dump_path, step_dir)
+        rank_path = os.path.join(step_path, rank_dir)
+        csv_path = os.path.join(rank_path, KEY_STATISTIC_CSV)
+        logger.info("==========Start processing data csv!==========")
+        generate_construct(csv_path)
+        generate_dump_info(csv_path)
+        generate_stack_info(csv_path)
+        remove_path(rank_path_kbk)
+        # 单卡场景，rank目录名称为rank
+        if rank_id is None:
+            new_rank_path = os.path.join(step_path, CoreConst.RANK)
+            try:
+                move_file(rank_path, new_rank_path)
+                logger.info("Directory was successfully renamed to: {new_rank_path}")
+            except Exception as e:
+                logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
         logger.info("==========JSON file generation completed!==========")
 
 
@@ -544,7 +738,75 @@ def set_tensordump_mode(cell, input_str):
         cell.output_dump_mode = second_str
 
 
-def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
+def create_kbyk_json(dump_path, summary_mode, step):
+    if step:
+        step_str = ""
+        for s in step:
+            step_str += (str(s) + '|')
+        iteration = step_str[:-1]
+    else:
+        iteration = "all"
+
+    if summary_mode == "statistics":
+        statistic_category = ["max", "min", "avg", "l2norm"]
+    elif "mean" in summary_mode:
+        mean_index = summary_mode.index("mean")
+        summary_mode[mean_index] = "avg"
+        statistic_category = summary_mode
+    else:
+        statistic_category = summary_mode
+
+    config_json = {
+        "common_dump_settings": {
+            "op_debug_mode": 0,
+            "dump_mode": 1,
+            "path": dump_path,
+            "net_name": "Net",
+            "iteration": iteration,
+            "saved_data": "statistic",
+            "input_output": 0,
+            "kernels": ["TensorDump"],
+            "support_device": [0, 1, 2, 3, 4, 5, 6, 7],
+            "statistic_category": statistic_category
+        },
+        "e2e_dump_settings": {
+            "enable": False,
+            "trans_flag": True,
+            "stat_calc_mode": "device"
+        }
+    }
+
+    create_directory(dump_path)
+    config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
+    save_json(config_json_path, config_json, indent=4)
+    logger.info(config_json_path + " has been created.")
+    return config_json_path
+
+
+def start(config: CellDumpConfig):
+    global dump_task
+    dump_task = config.task
+    net = config.net
+    dump_path = config.dump_path
+    data_mode = config.data_mode
+    summary_mode = config.summary_mode
+    step = config.step
+    if dump_task == CoreConst.STATISTICS:
+        # 使能KBK dump
+        config_json_path = create_kbyk_json(dump_path, summary_mode, step)
+        os.environ["MINDSPORE_DUMP_CONFIG"] = config_json_path
+
+        # 执行过程中跳过TensorDump算子
+        os.environ["MS_KERNEL_LAUNCH_SKIP"] = "TensorDump"
+
+        # 初始化静态图KBK dump的step数，从0开始
+        if not graph_step_flag:
+            raise Exception(
+                "Importing _set_init_iter failed, "
+                "please use the latest version package of MindSpore."
+            )
+        _set_init_iter(0)
+
     if net is None:
         return
 
@@ -585,6 +847,8 @@ def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
             else:
                 # Format: Cell.{cell_name}.{class_name}
                 cell.cell_prefix = CoreConst.SEP.join([CoreConst.CELL, name, cell.__class__.__name__])
+                if dump_task == CoreConst.STATISTICS:
+                    cell.cell_prefix = cell.cell_prefix.replace(CoreConst.SEP, CoreConst.HYPHEN)
 
             # 根据yaml配置文件设置cell的TensorDump模式
             if class_name in first_layer_key:
@@ -614,4 +878,7 @@ def start(net=None, dump_path="./", data_mode=CoreConst.ALL):
                 )
 
     logger.info("==========The cell_dump_process_start phase is Finished!==========")
-    atexit.register(process, dump_path=dump_path)
+    if dump_task == CoreConst.TENSOR:
+        atexit.register(process, dump_path=dump_path)
+    if dump_task == CoreConst.STATISTICS:
+        atexit.register(process_statistics, dump_path=dump_path)

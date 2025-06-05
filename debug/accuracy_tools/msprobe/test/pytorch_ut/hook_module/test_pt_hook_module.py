@@ -18,12 +18,13 @@ import unittest
 from collections import defaultdict
 from unittest.mock import MagicMock, patch
 
+from msprobe.core.hook_manager import HookSet
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
 
 class TestHOOKModule(unittest.TestCase):
     def setUp(self):
-        self.mock_build_hook = MagicMock(return_value=(MagicMock(), MagicMock(), MagicMock()))
+        self.mock_build_hook = MagicMock(return_value=HookSet(MagicMock(), MagicMock(), MagicMock()))
         HOOKModule.module_count = defaultdict(int)
         HOOKModule.inner_stop_hook = {}
 

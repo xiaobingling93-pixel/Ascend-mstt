@@ -35,6 +35,8 @@ except ImportError:
 
 
 class GraphModeCellDump:
+    task = CoreConst.STATISTICS
+
     def __init__(self, config: DebuggerConfig, model, strict=True):
         self.net = model
         self.white_list = []
@@ -47,16 +49,20 @@ class GraphModeCellDump:
         self.list = config.list
         self.data_mode = config.data_mode
         self.file_format = config.file_format
+        GraphModeCellDump.task = config.task
+        self.summary_mode = config.summary_mode
         self.check_config(strict)
         self.set_step()
 
     @staticmethod
     def step():
-        hal.synchronize()
-        temp_tensor = ms.Tensor([1], dtype=ms.float32)
-        step_flag = "<tensordump-update-step>"
-        _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
-        ops.tensordump(step_flag, temp_tensor)
+        # 更新TensorDump Step
+        if GraphModeCellDump.task == CoreConst.TENSOR:
+            hal.synchronize()
+            temp_tensor = ms.Tensor([1], dtype=ms.float32)
+            step_flag = "<tensordump-update-step>"
+            _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
+            ops.tensordump(step_flag, temp_tensor)
 
     def check_config(self, strict):
         if not self.net:
@@ -74,6 +80,9 @@ class GraphModeCellDump:
             if self.file_format != []:
                 logger.warning("In graph mode, cell dump does not currently support specifying file_format."
                                " The file will be stored in npy format.")
+            if self.task == CoreConst.STATISTICS and self.summary_mode == CoreConst.MD5:
+                raise Exception("The L0 level statistics dump mode does not support "
+                            "the calculation of md5 values currently In graph mode.")
         else:
             self.rank = []
             self.scope = []
@@ -81,6 +90,8 @@ class GraphModeCellDump:
             self.file_format = []
             if len(self.data_mode) != 1 or self.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
                 self.data_mode = [CoreConst.ALL]
+            if self.task == CoreConst.STATISTICS and self.summary_mode == CoreConst.MD5:
+                self.summary_mode = CoreConst.STATISTICS
 
         return True
 
@@ -113,9 +124,16 @@ class GraphModeCellDump:
                     logger.warning('the DumpGradient operator failed to execute.')
             if not enable_dump_gradient:
                 cell_dumper = cellDumperWithInsertGradient
-
-        cell_dumper.start(
+        
+        dump_config = cell_dumper.CellDumpConfig(
             net=self.net,
             dump_path=dump_path,
-            data_mode=self.data_mode[0]
+            data_mode=self.data_mode[0],
+            task=self.task,
+            summary_mode=self.summary_mode,
+            step=self.step
+        )
+
+        cell_dumper.start(
+            dump_config
         )

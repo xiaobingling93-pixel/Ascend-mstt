@@ -15,12 +15,12 @@
 
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
-
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.pt_config import parse_json_config
-from msprobe.pytorch.service import Service
+from msprobe.pytorch.pytorch_service import PytorchService
 
 
 class TestService(unittest.TestCase):
@@ -32,11 +32,11 @@ class TestService(unittest.TestCase):
                 patch("msprobe.pytorch.pt_config.load_json", return_value=mock_json_data):
             common_config, task_config = parse_json_config("./config.json", Const.STATISTICS)
         self.config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./ut_dump", "L1")
-        self.service = Service(self.config)
+        self.service = PytorchService(self.config)
 
     def test_start_success(self):
-        with patch("msprobe.pytorch.service.get_rank_if_initialized", return_value=0), \
-                patch("msprobe.pytorch.service.Service.create_dirs", return_value=None):
+        with patch("msprobe.pytorch.pytorch_service.get_rank_if_initialized", return_value=0), \
+                patch("msprobe.pytorch.pytorch_service.PytorchService.create_dirs", return_value=None):
             self.service.start(None)
         self.assertEqual(self.service.current_rank, 0)
 
@@ -54,32 +54,32 @@ class TestService(unittest.TestCase):
         mock_write_json.return_value = None
         self.service.stop()
 
-        self.assertFalse(self.service.switch)
+        self.assertFalse(Runtime.is_running)
 
     def test_stop_fail(self):
-        self.service.switch = True
+        Runtime.is_running = True
 
         self.service.config.rank = [1, 2]
         self.service.current_rank = 3
         res = self.service.stop()
         self.assertIsNone(res)
-        self.assertTrue(self.service.switch)
+        self.assertTrue(Runtime.is_running)
 
         self.service.config.step = [1, 2]
         self.service.current_iter = 3
         res = self.service.stop()
         self.assertIsNone(res)
-        self.assertTrue(self.service.switch)
+        self.assertTrue(Runtime.is_running)
 
         self.service.config.level = "L2"
         res = self.service.stop()
         self.assertIsNone(res)
-        self.assertTrue(self.service.switch)
+        self.assertTrue(Runtime.is_running)
 
         self.service.should_stop_service = True
         res = self.service.stop()
         self.assertIsNone(res)
-        self.assertTrue(self.service.switch)
+        self.assertTrue(Runtime.is_running)
 
     def test_step_success(self):
         self.service.step()
@@ -93,25 +93,25 @@ class TestService(unittest.TestCase):
         self.service.model = MagicMock()
         self.service.build_hook = MagicMock()
         self.config.level = "L0"
-        with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
-                patch("msprobe.pytorch.service.ModuleProcesser.register_module_hook") as mock_register_module_hook:
-            self.service.register_module_hook()
+        with patch("msprobe.pytorch.pytorch_service.logger.info") as mock_logger, \
+                patch("msprobe.pytorch.pytorch_service.ModuleProcesser.register_module_hook") as mock_register_module_hook:
+            self.service._register_module_hook()
             self.assertEqual(mock_logger.call_count, 1)
             mock_register_module_hook.assert_called_once()
 
     def test_register_api_hook_with_level1(self):
         self.service.build_hook = MagicMock()
         self.config.level = "L1"
-        with patch("msprobe.pytorch.service.logger.info_on_rank_0") as mock_logger, \
+        with patch("msprobe.pytorch.pytorch_service.logger.info") as mock_logger, \
              patch.object(ApiRegistry, "initialize_hook") as mock_init_hook, \
              patch.object(ApiRegistry, 'register_all_api') as mock_api_modularity:
-            self.service.register_api_hook()
+            self.service._register_api_hook()
             self.assertEqual(mock_logger.call_count, 1)
             mock_init_hook.assert_called_once()
             mock_api_modularity.assert_called_once()
 
     def test_create_dirs(self):
-        with patch("msprobe.pytorch.service.create_directory"), \
+        with patch("msprobe.core.service.create_directory"), \
                 patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths"), \
                 patch("msprobe.core.data_dump.data_collector.DataCollector.initialize_json_file"):
             self.service.create_dirs()
@@ -119,48 +119,19 @@ class TestService(unittest.TestCase):
 
     def test_need_end_service(self):
         self.service.should_stop_service = True
-        self.assertTrue(self.service.need_stop_service())
+        self.assertTrue(self.service._need_stop_service())
 
         self.service.should_stop_service = False
         self.service.config.step = [1, 3]
         self.service.current_iter = 1
-        self.assertFalse(self.service.need_stop_service())
+        self.assertFalse(self.service._need_stop_service())
 
         self.service.current_iter = 2
-        self.assertTrue(self.service.need_stop_service())
+        self.assertTrue(self.service._need_stop_service())
 
         self.service.current_iter = 4
         self.service.config.level = "L0"
         self.service.config.online_run_ut = False
-        self.assertTrue(self.service.need_stop_service())
-        self.assertFalse(self.service.switch)
+        self.assertTrue(self.service._need_stop_service())
+        self.assertFalse(Runtime.is_running)
         self.assertTrue(self.service.should_stop_service)
-
-    def test_should_execute_hook_return_false(self):
-        module = MagicMock()
-        self.service.switch = False
-        self.assertFalse(self.service.should_execute_hook("Module", module, True))
-        self.assertFalse(self.service.should_execute_hook("api", module, True))
-
-        self.service.switch = True
-        module.forward_data_collected = False
-        self.assertFalse(self.service.should_execute_hook("api", module, False))
-
-        self.service.inner_switch = True
-        self.assertFalse(self.service.should_execute_hook("Module", module, True))
-
-        self.service.inner_switch = False
-        self.service.data_collector = None
-        self.assertFalse(self.service.should_execute_hook("Module", module, True))
-
-    def test_should_execute_hook_return_true(self):
-        module = MagicMock()
-        self.service.switch = True
-        self.service.inner_switch = False
-        self.service.data_collector = MagicMock()
-        self.service.data_collector.data_processor = MagicMock()
-        self.service.data_collector.data_processor.is_terminated = False
-        self.assertTrue(self.service.should_execute_hook("Module", module, True))
-
-        module.forward_data_collected = True
-        self.assertTrue(self.service.should_execute_hook("api", module, False))

@@ -131,7 +131,7 @@ class BasePrecisionDebugger:
 
     def parse_config_path(self, json_file_path, task):
         if not json_file_path:
-            raise Exception("json file path is None")
+            json_file_path = os.path.join(os.path.dirname(__file__), "../../config.json")
         json_config = load_json(json_file_path)
         common_config = CommonConfig(json_config)
         if task:

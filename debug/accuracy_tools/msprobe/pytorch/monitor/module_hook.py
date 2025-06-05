@@ -292,6 +292,7 @@ class TrainerMon:
         self.mg_direction = self.config.get('mg_direction', False)
         self.cc_distribution = self.config.get("cc_distribution", {})
         self.stack_info = self.config.get('stack_info', False)
+        self.monitor_mbs_grad = self.config.get('monitor_mbs_grad', False)
 
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
@@ -477,10 +478,12 @@ class TrainerMon:
 
         get_metrics(self.ops, post_grad_dict, self.eps, self.grad_context.post)
         reduced_grad = self.grad_context.post
-        if self.enable_megatron or self.fsdp_wrapped_module:
-            unreduced_grad = self.grad_context.pre
-        else:
+
+        if self.weight_hooked:
             unreduced_grad = self.grad_context.acc_metric
+        else:
+            unreduced_grad = self.grad_context.pre
+
         return reduced_grad, unreduced_grad
 
     def generate_xy_metrics(self):
@@ -549,10 +552,11 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.enable_megatron or self.fsdp_wrapped_module:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
+        if self.weight_hooked:
+            self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced',
+                                              use_micro_step=self.monitor_mbs_grad)
         else:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced')
+            self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
     def hook_optimizer(self, optimizer):
@@ -1086,6 +1090,9 @@ class TrainerMon:
             self._patch_fsdp_post_backward_hook()
             return
 
+        if self.monitor_mbs_grad:
+            self._hook_weights()
+            return
         try:
             from megatron.core.distributed.param_and_grad_buffer import Bucket
             self.origin_start_grad_sync = Bucket.start_grad_sync
@@ -1143,14 +1150,22 @@ class TrainerMon:
             patch_post_backward_hook(torch.distributed.fsdp._runtime_utils._post_backward_hook)
 
     def _hook_weights(self):
+        """
+        遍历参数的梯度生成函数（grad_acc），并挂载hook，以便在该参数所有梯度计算后，采集通信聚合前梯度数据。
+        """
         context = self.grad_context
 
         @torch.no_grad
-        def param_hook(*args, context_dict, param, key, name):
-            param.micro_step += 1
+        def param_hook(*args, context_dict, param, name):
+            key = name
+            if self.monitor_mbs_grad:
+                key += f'{MonitorConst.NAME_SEP}{param.micro_step}'
+
+            key = get_summary_writer_tag_name(key, 'acc_grad', self.rank)
             self.register_param_call_id("param_hook", key)
-            if param.micro_step == self.micro_batch_number:
-                param.micro_step = 0
+            param.micro_step += 1
+
+            if self.monitor_mbs_grad or (param.micro_step == self.micro_batch_number):
                 if self.params_have_main_grad:
                     grad = param.main_grad
                 else:
@@ -1159,14 +1174,16 @@ class TrainerMon:
                     grad = grad.float()
                 context_dict[key] = grad.clone()
 
+            if param.micro_step == self.micro_batch_number:
+                param.micro_step = 0
+
         logger.info("hooking weights.")
         for param, name in self.param2name.items():
-            key = get_summary_writer_tag_name(name, 'acc_grad', self.rank)
             setattr(param, 'micro_step', 0)
             param_tmp = param.expand_as(param)
             grad_acc = param_tmp.grad_fn.next_functions[0][0]
             handle = grad_acc.register_hook(
-                partial(param_hook, context_dict=context.acc, param=param, key=key, name=name))
+                partial(param_hook, context_dict=context.acc, param=param, name=name))
             self.grad_accs.append(grad_acc)
             self.handles['wgrads'].append(handle)
 

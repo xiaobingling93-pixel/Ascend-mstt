@@ -23,6 +23,7 @@ from mindspore.ops.operations import _inner_ops
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.data_dump.scope import ModuleRangeScope
+from msprobe.core.hook_manager import HookSet
 from msprobe.mindspore.cell_processor import CellProcessor, get_cell_construct
 from msprobe.mindspore.common.log import logger
 
@@ -175,7 +176,8 @@ class TestCellProcessor(unittest.TestCase):
         mock_backward_data_hook = MagicMock()
         target_grad_output = (Tensor([0.5]),)
         mock_backward_data_hook.return_value = target_grad_output
-        mock_build_data_hook.return_value = (None, None, mock_backward_data_hook, None)
+        mock_hook_set = HookSet(backward_hook=mock_backward_data_hook)
+        mock_build_data_hook.return_value = mock_hook_set
         mock_cell = MagicMock()
 
         with patch.object(_inner_ops, 'CellBackwardHook') as mock_CellBackwardHook:
@@ -239,9 +241,11 @@ class TestCellProcessor(unittest.TestCase):
             output = Tensor([2.0])
             mock_bw.return_value = target_output
             mock_backward_data_hook.reset_mock()
-            mock_forward_data_hook_hook = MagicMock()
-            mock_forward_data_hook_hook.return_value = output
-            mock_build_data_hook.return_value = (None, mock_forward_data_hook_hook, mock_backward_data_hook, None)
+            mock_forward_data_hook = MagicMock()
+            mock_forward_data_hook.return_value = output
+            mock_build_data_hook.return_value = HookSet(
+                forward_hook=mock_forward_data_hook, backward_hook=mock_backward_data_hook
+            )
             # call testing function - forward_hook
             ret = forward_hook(mock_cell, args, output)
             self.assertEqual(CellProcessor.cell_count.get(cell_name), 0)
@@ -276,7 +280,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_bw.reset_mock()
             args = (Tensor([1.0]),)
             output = (Tensor([2.0]),)
-            mock_forward_data_hook_hook.return_value = output
+            mock_forward_data_hook.return_value = output
             target_output = (Tensor([0.5]),)
             # call testing function - forward_hook
             ret = forward_hook(mock_cell, args, output)
@@ -294,7 +298,7 @@ class TestCellProcessor(unittest.TestCase):
             mock_bw.reset_mock()
             mock_bw.return_value = (Tensor([0.5]),)
             output = (Tensor([1.0]), Tensor([2.0]))
-            mock_forward_data_hook_hook.return_value = output
+            mock_forward_data_hook.return_value = output
             with self.assertRaises(TypeError) as context:
                 # call testing function - forward_hook
                 forward_hook(mock_cell, args, output)

@@ -90,8 +90,14 @@ void IPCMonitor::LogData(const nlohmann::json& result)
   logger_->logUint("timestamp", timestamp);
   auto duration = result["duration"].get<uint64_t>();
   logger_->logUint("duration", duration);
-  auto deviceId = result["deviceId"].get<uint64_t>();
-  logger_->logUint("deviceId", deviceId);
+  auto deviceId = result["deviceId"].get<std::uint64_t>();
+  logger_->logStr("deviceId", std::to_string(deviceId));
+  auto kind = result["kind"].get<std::string>();
+  logger_->logStr("kind", kind);
+  if (result.contains("domain") && result["domain"].is_string()) {
+    auto domain = result["domain"].get<std::string>();
+    logger_->logStr("domain", domain);
+  }
   logger_->finalize();
 }
 

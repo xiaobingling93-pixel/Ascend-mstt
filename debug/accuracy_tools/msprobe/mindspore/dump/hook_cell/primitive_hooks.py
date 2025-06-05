@@ -21,6 +21,7 @@ from mindspore.common.tensor import Tensor
 from msprobe.core.common.utils import Const, DumpException
 from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputs, ModuleBackwardOutputs,
                                                         ModuleForwardInputsOutputs)
+from msprobe.core.hook_manager import BaseHookManager
 from msprobe.mindspore.common.log import logger
 
 
@@ -184,7 +185,7 @@ class PrimitiveHookService:
             current_count = self.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}{Const.SEP}{primitive_name}{Const.SEP}{current_count}"
 
-            if not self.service_instance.primitive_switch or self.service_instance.inner_switch:
+            if not self.service_instance.primitive_switch or BaseHookManager.inner_switch:
                 return origin_func(*args, **kwargs)
 
             captured_grads_input, captured_grads_output = [], []

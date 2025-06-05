@@ -222,6 +222,11 @@ def validate_dynamic_on(dynamic_on):
         raise TypeError('dynamic_on should be a bool')
 
 
+def validate_monitor_mbs_grad(monitor_mbs_grad):
+    if not isinstance(monitor_mbs_grad, bool):
+        raise TypeError('monitor_mbs_grad should be a bool')
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -275,6 +280,9 @@ def validate_config(config):
 
     squash_name = config.get('squash_name', True)
     validate_squash_name(squash_name)
+
+    monitor_mbs_grad = config.get('monitor_mbs_grad', False)
+    validate_monitor_mbs_grad(monitor_mbs_grad)
 
     dynamic_on = config.get('dynamic_on', False)
     validate_dynamic_on(dynamic_on)

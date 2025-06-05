@@ -1,174 +1,190 @@
 {
-    "test_cases": [
-        {
-            "name": "md5_full_match_success",
-            "type": "process_md5_task_add",
-            "input": {
-                "graph_data": {
-                    "NPU": {
-                        "node": {
-                            "npu_conv2d": {
-                                "input_data": {
-                                    "npu_conv2d.data1": {
-                                        "md5": "a1b2c3"
-                                    },
-                                    "npu_conv2d.data2": {
-                                        "md5": "d4e5f6"
-                                    }
-                                },
-                                "output_data": {
-                                    "npu_conv2d.out1": {
-                                        "md5": "x7y8z9"
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "Bench": {
-                        "node": {
-                            "bench_conv2d": {
-                                "input_data": {
-                                    "bench_conv2d.data1": {
-                                        "md5": "a1b2c3"
-                                    },
-                                    "bench_conv2d.data2": {
-                                        "md5": "d4e5f6"
-                                    }
-                                },
-                                "output_data": {
-                                    "bench_conv2d.out1": {
-                                        "md5": "x7y8z9"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "npu_node_name": "npu_conv2d",
-                "bench_node_name": "bench_conv2d"
-            },
-            "expected": {
-                "success": true,
-                "data": {
-                    "precision_error": 1
+  "test_cases": [
+    {
+      "name": "invalid_task_type_handling",
+      "type": "process_task_add",
+      "input": {
+        "graph_data": {
+          "NPU": { "node": { "npu_node": { "node_type": "Module" } } },
+          "Bench": { "node": { "bench_node": { "node_type": "Module" } } }
+        },
+        "npu_node_name": "npu_node",
+        "bench_node_name": "bench_node",
+        "task": "invalid_task"
+      },
+      "expected": {
+        "success": false,
+        "error": "参数错误"
+      }
+    },
+    {
+      "name": "asymmetric_children_matching",
+      "type": "process_task_add_child_layer",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_parent": {
+                "node_type": "Module",
+                "subnodes": ["npu_child1", "npu_child2"],
+                "input_data": {
+                  "npu_parent.data": { "md5": "123" }
                 }
+              },
+              "npu_child1": { "node_type": "API" },
+              "npu_child2": { "node_type": "API" }
             }
-        },
-        {
-            "name": "md5_partial_mismatch_failure",
-            "type": "process_md5_task_add",
-            "input": {
-                "graph_data": {
-                    "NPU": {
-                        "node": {
-                            "npu_conv2d": {
-                                "input_data": {
-                                    "npu_conv2d.data1": {
-                                        "md5": "a1b2c3"
-                                    },
-                                    "npu_conv2d.data2": {
-                                        "md5": "xxxxxx"
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "Bench": {
-                        "node": {
-                            "bench_conv2d": {
-                                "input_data": {
-                                    "bench_conv2d.data1": {
-                                        "md5": "a1b2c3"
-                                    },
-                                    "bench_conv2d.data2": {
-                                        "md5": "d4e5f6"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "npu_node_name": "npu_conv2d",
-                "bench_node_name": "bench_conv2d"
-            },
-            "expected": {
-                "success": true,
-                "data": {
-                    "precision_error": 0
+          },
+          "Bench": {
+            "node": {
+              "bench_parent": {
+                "node_type": "Module",
+                "subnodes": ["bench_child1"],
+                "input_data": {
+                  "bench_parent.data": { "md5": "123" }
                 }
+              },
+              "bench_child1": { "node_type": "API" }
             }
+          }
         },
-        {
-            "name": "delete_existing_node_success",
-            "type": "process_md5_task_delete",
-            "input": {
-                "graph_data": {
-                    "npu_match_nodes": {
-                        "npu_conv2d": "bench_conv2d"
-                    },
-                    "bench_match_nodes": {
-                        "bench_conv2d": "npu_conv2d"
-                    },
-                    "NPU": {
-                        "node": {
-                            "npu_conv2d": {
-                                "data": {
-                                    "precision_index": 1
-                                },
-                                "matched_node_link": [
-                                    "bench_conv2d"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "npu_node_name": "npu_conv2d",
-                "bench_node_name": "bench_conv2d"
-            },
-            "expected": {
-                "success": true,
-                "data": {}
-            }
-        },
-        {
-            "name": "delete_non_existent_node_failure",
-            "type": "process_md5_task_delete",
-            "input": {
-                "graph_data": {
-                    "NPU": {
-                        "node": {
-                            "npu_conv2d": {}
-                        }
-                    }
-                },
-                "npu_node_name": "npu_conv2d",
-                "bench_node_name": "bench_conv2d"
-            },
-            "expected": {
-                "success": false,
-                "error": "操作失败：删除节点信息失败"
-            }
-        },
-        {
-            "name": "missing_input_data_handling",
-            "type": "process_md5_task_add",
-            "input": {
-                "graph_data": {
-                    "NPU": {
-                        "node": {
-                            "npu_conv2d": {}
-                        }
-                    }
-                },
-                "npu_node_name": "npu_conv2d",
-                "bench_node_name": "bench_conv2d"
-            },
-            "expected": {
-                "success": true,
-                "data": {
-                    "precision_error": 0
-                }
-            }
+        "npu_node_name": "npu_parent",
+        "bench_node_name": "bench_parent",
+        "task": "md5"
+      },
+      "expected": {
+        "success": true,
+        "data": {
+          "npuMatchNodes": {
+            "npu_parent": "bench_parent",
+            "npu_child1": "bench_child1"
+          }
         }
-    ]
+      }
+    },
+    {
+      "name": "config_batch_matching_validation",
+      "type": "process_task_add_child_layer_by_config",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_layer1": { "node_type": "Module", "subnodes": ["npu_sub1"] },
+              "npu_sub1": { "node_type": "API" }
+            }
+          },
+          "Bench": {
+            "node": {
+              "bench_layer1": {
+                "node_type": "Module",
+                "subnodes": ["bench_sub1"]
+              },
+              "bench_sub1": { "node_type": "API" }
+            }
+          }
+        },
+        "match_node_links": { "npu_layer1": "bench_layer1" },
+        "task": "md5"
+      },
+      "expected": {
+        "success": true,
+        "data": {
+          "matchReslut": [true],
+          "npuMatchNodes": {
+            "npu_layer1": "bench_layer1",
+            "npu_sub1": "bench_sub1"
+          }
+        }
+      }
+    },
+    {
+      "name": "duplicate_matching_cleanup",
+      "type": "process_task_add",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_dup": {
+                "node_type": "Module",
+                "matched_node_link": ["old_bench_node"],
+                "data": { "precision_index": 0.5 }
+              }
+            }
+          },
+          "Bench": {
+            "node": {
+              "bench_dup": {
+                "node_type": "Module",
+                "matched_node_link": ["old_npu_node"]
+              }
+            }
+          }
+        },
+        "npu_node_name": "npu_dup",
+        "bench_node_name": "bench_dup",
+        "task": "md5"
+      },
+      "expected": {
+        "success": true,
+        "data": {
+          "npuUnMatchNodes": [],
+          "benchUnMatchNodes": []
+        }
+      }
+    },
+    {
+      "name": "deep_recursive_unmatching",
+      "type": "process_task_delete_child_layer",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_root": {
+                "node_type": "Module",
+                "subnodes": ["npu_l1"],
+                "matched_node_link": ["bench_root"]
+              },
+              "npu_l1": {
+                "node_type": "Module",
+                "subnodes": ["npu_l2"],
+                "matched_node_link": ["bench_l1"]
+              },
+              "npu_l2": {
+                "node_type": "API",
+                "matched_node_link": ["bench_l2"]
+              }
+            }
+          },
+          "Bench": {
+            "node": {
+              "bench_root": {
+                "node_type": "Module",
+                "subnodes": ["bench_l1"],
+                "matched_node_link": ["npu_root"]
+              },
+              "bench_l1": {
+                "node_type": "Module",
+                "subnodes": ["bench_l2"],
+                "matched_node_link": ["npu_l1"]
+              },
+              "bench_l2": {
+                "node_type": "API",
+                "matched_node_link": ["npu_l2"]
+              }
+            }
+          }
+        },
+        "npu_node_name": "npu_root",
+        "bench_node_name": "bench_root",
+        "task": "md5"
+      },
+      "expected": {
+        "success": true,
+        "data": {
+          "npuUnMatchNodes": ["npu_root", "npu_l1", "npu_l2"],
+          "benchUnMatchNodes": ["bench_root", "bench_l1", "bench_l2"]
+        }
+      }
+    }
+  ]
 }
