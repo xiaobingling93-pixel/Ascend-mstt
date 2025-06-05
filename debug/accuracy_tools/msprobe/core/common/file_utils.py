@@ -481,6 +481,15 @@ def save_excel(path, data):
     change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def move_directory(src_path, dst_path):
+    check_file_or_directory_path(src_path, isdir=True)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move directory {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move directory {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_DIR_AUTHORITY)
 
 
 def move_file(src_path, dst_path):
