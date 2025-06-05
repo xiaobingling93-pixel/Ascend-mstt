@@ -179,7 +179,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [强化学习数据采集](./docs/34.RL_collect.md)
 
-### 15 PyTorch 场景整网首个溢出节点分析
+### 15 整网首个溢出节点分析
 
 多rank场景下通过dump数据找到首个出现Nan或Inf的节点。
 
