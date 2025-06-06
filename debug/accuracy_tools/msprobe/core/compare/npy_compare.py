@@ -59,7 +59,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         if error_file == "no_bench_data":
             err_msg = "Bench does not have data file."
         elif error_file:
-            err_msg = f"Dump file: {error_file} may not find or read failed."
+            err_msg = f"Dump file: {error_file} not found or read failed.."
         else:
             err_msg = CompareConst.NO_BENCH
         error_flag = True
