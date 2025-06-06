@@ -20,12 +20,12 @@ from mindspore import hal, ops, Tensor
 from mindspore.ops.primitive import _run_op
 
 from msprobe.core.common.const import Const as CoreConst
+from msprobe.core.common.runtime import Runtime
 from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 import msprobe.mindspore.dump.cell_dump_process as cellDumperWithDumpGradient
 import msprobe.mindspore.dump.cell_dump_with_insert_gradient as cellDumperWithInsertGradient
-from msprobe.mindspore.runtime import Runtime
 
 tensordump_flag = True
 try:

@@ -40,7 +40,7 @@ from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.check_handler import CheckHandler
 from msprobe.mindspore.free_benchmark.handler.fix_handler import FixHandler
-from msprobe.mindspore.runtime import Runtime
+from msprobe.core.common.runtime import Runtime
 
 
 class DebuggerConfig:

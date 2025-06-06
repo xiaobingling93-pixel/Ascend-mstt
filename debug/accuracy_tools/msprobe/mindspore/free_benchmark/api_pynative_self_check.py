@@ -23,6 +23,7 @@ import mindspore as ms
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import check_path_length, load_yaml
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.hook_manager import HookSet
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
@@ -36,7 +37,6 @@ from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.handler_factory import HandlerFactory
 from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import PerturbationFactory
-from msprobe.mindspore.runtime import Runtime
 
 
 _api_register = get_api_register()
