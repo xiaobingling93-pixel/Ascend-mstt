@@ -1,12 +1,282 @@
 import os
 import unittest
+from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
-from msprobe.core.monitor.anomaly_processor import GradAnomalyData, AnomalyDataWriter, AnomalyDataLoader, \
-    AnomalyAnalyse, _get_parse_args, _get_step_and_stop, _anomaly_analyse
+from msprobe.core.monitor.anomaly_processor import ScanRule, AnomalyTurbulence, AnomalyNan, AnomalyScanner, \
+    AnomalyDataFactory, GradAnomalyData, AnomalyDataWriter, AnomalyDataLoader, AnomalyAnalyse, \
+    _get_step_and_stop, _anomaly_analyse, _get_parse_args
 
 
-class TestAnomalyDataWriter(unittest.TestCase):
+class TestScanRule(TestCase):
+    def test_apply_not_implemented(self):
+        scan_rule = ScanRule()
+        with self.assertRaises(Exception) as context:
+            scan_rule.apply(None, None)
+
+        self.assertEqual(str(context.exception), "abstract method apply is not implemented")
+
+
+class TestAnomalyTurbulence(TestCase):
+
+    def setUp(self) -> None:
+        self.threshold = 0.2
+        self.rule = AnomalyTurbulence(self.threshold)
+
+    def test_apply_with_positive_baseline(self):
+        history = [10, 12, 14]
+        cur = 16
+        result = self.rule.apply(cur, history=history)
+        self.assertTrue(result)
+
+    def test_apply_with_non_positive_baseline(self):
+        history = [0, 0, 0]
+        cur = -1
+        result = self.rule.apply(cur, history=history)
+        self.assertTrue(result)
+
+    def test_apply_with_valid_value(self):
+        history = [0, 0, 0]
+        cur = 0
+        result = self.rule.apply(cur, history=history)
+        self.assertFalse(result)
+
+
+class TestAnomalyNan(TestCase):
+
+    def setUp(self) -> None:
+        self.threshold = 1e10
+        self.rule = AnomalyNan(self.threshold)
+
+    def test_apply_with_nan(self):
+        cur = float("nan")
+        result = self.rule.apply(cur)
+        self.assertTrue(result)
+
+    def test_apply_with_big_value(self):
+        cur = float("1e30")
+        result = self.rule.apply(cur)
+        self.assertTrue(result)
+
+    def test_apply_with_valid_value(self):
+        cur = 0.5
+        result = self.rule.apply(cur)
+        self.assertFalse(result)
+
+
+class TestAnomalyScanner(TestCase):
+
+    def test_load_rules_with_valied_spec(self):
+        specs = [
+            {"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.2}}
+        ]
+        rules = AnomalyScanner.load_rules(specs)
+
+        self.assertEqual(len(rules), 1)
+        self.assertIsInstance(rules[0], AnomalyTurbulence)
+        self.assertEqual(rules[0].threshold, 0.2)
+
+        rules = AnomalyScanner.load_rules(None)
+        self.assertEqual(len(rules), 0)
+
+    @patch("msprobe.pytorch.monitor.anomaly_detect.logger")
+    def test_load_rules_with_missing_keys(self, mock_logger):
+        specs = [
+            {"rule_name": "AnomalyTurbulence"}
+        ]
+        rules = AnomalyScanner.load_rules(specs)
+
+        self.assertEqual(len(rules), 0)
+        mock_logger.warning.assert_called_once_with(f"Spec is missing required keys: {specs[0]}")
+
+    def test_load_rules_with_invalid_rule(self):
+        # test invalid rule_name
+        specs = [{"rule_name": "InvalidRule", "args": {"threshold": 0.2}}]
+        rules = AnomalyScanner.load_rules(specs)
+        self.assertEqual(len(rules), 0)
+
+        # test invalid args
+        specs = [{"rule_name": "AnomalyTurbulence", "args": "invalid args"}]
+        rules = AnomalyScanner.load_rules(specs)
+        self.assertEqual(len(rules), 0)
+
+    def test_scan(self):
+        ad_rules = [AnomalyTurbulence(0.2)]
+        # test scan with anomaly
+        expected = True, "AnomalyTurbulence"
+        self.assertEqual(AnomalyScanner.scan(ad_rules, 1.0, 2.0), expected)
+        # test scan with no anomaly
+        expected = False, None
+        self.assertEqual(AnomalyScanner.scan(ad_rules, 1.0, 1.0), expected)
+
+
+class TestAnomalyDataFactory(TestCase):
+
+    def setUp(self) -> None:
+        rank = 0
+        pp_stage = 0
+        group_mates = [0]
+        self.AnomalyDataFactory = AnomalyDataFactory(rank, pp_stage, group_mates)
+
+    def test_set_call_id(self):
+        name2callid = {'param_name': 0}
+        self.AnomalyDataFactory.set_call_id(name2callid)
+
+        self.assertEqual(self.AnomalyDataFactory.name2callid, {'param_name': 0})
+
+    def test_create_success(self):
+        tag = ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min')
+        message = "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min') at step 2."
+        step = 2
+        result = self.AnomalyDataFactory.create(tag, message, step)
+
+        self.assertEqual(result.step, step)
+        self.assertEqual(result.tag_name, tag[0])
+        self.assertEqual(result.message, message)
+        self.assertEqual(result.vpp_stage, 0)
+
+        # test no vpp_stage
+        tag = ('1.self_attention.core_attention_flash_0/rank0/output', 'min')
+        result = self.AnomalyDataFactory.create(tag, message, step)
+        self.assertEqual(result.vpp_stage, 0)
+
+    def test_create_failed(self):
+        error_tag = '0:1.self_attention.core_attention_flash_0/rank0/output'
+        message = "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min') at step 2."
+        step = 2
+        with self.assertRaises(Exception) as context:
+            self.AnomalyDataFactory.create(error_tag, message, step)
+        self.assertEqual(str(context.exception), "tag must be a tuple with length 2")
+
+
+class TestGradAnomalyData(TestCase):
+
+    def setUp(self) -> None:
+        tag_name = "0:1.self_attention.core_attention_flash.output:0/rank0/actv"
+        message = "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash.output:0/rank0/actv', 'min') at step 2."
+        group_mates = [0]
+        self.GradAnomalyData = GradAnomalyData(tag_name=tag_name, message=message, group_mates=group_mates)
+
+    def test_get_train_stage(self):
+        tag_name_list = ["0:fc2.input:0/rank0/actv", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq", ""]
+        expected_train_stage_list = [0, 1, 2, -1]
+        for tag_name, expected_train_stage in zip(tag_name_list, expected_train_stage_list):
+            train_stage = GradAnomalyData.get_train_stage(tag_name)
+            self.assertEqual(train_stage, expected_train_stage)
+
+    def test_to_dict(self):
+        expected = {
+            'rank': 0,
+            'step': 0,
+            'micro_step': 0,
+            'pp_stage': 0,
+            'vpp_stage': 0,
+            'call_id': 0,
+            'tag_name': "0:1.self_attention.core_attention_flash.output:0/rank0/actv",
+            'message': "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash.output:0/rank0/actv', 'min') at step 2.",
+            'group_mates': [0]
+        }
+
+        self.assertEqual(self.GradAnomalyData.to_dict(), expected)
+
+    def test_get_key(self):
+        expected = "0:1.self_attention.core_attention_flash.output:0/rank0/actv_step_0_call_0"
+
+        self.assertEqual(self.GradAnomalyData.get_key(), expected)
+
+    def test_lt_different_step(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=2, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_step_different_micro_step(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=1, micro_step=1, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_step_same_micro_step_different_vpp_stage(self):
+        # same forward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/actv")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0, tag_name="xxx/actv")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+        # same backward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        self.assertLess(data2, data1)
+        self.assertGreater(data1, data2)
+
+        # diff train stage
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/actv")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_step_same_micro_step_same_vpp_stage_different_pp_stage(self):
+        # same forward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/actv")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0, tag_name="xxx/actv")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+        # same backward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0, tag_name="xxx/post_grad")
+        self.assertLess(data2, data1)
+        self.assertGreater(data1, data2)
+
+        # diff train stage
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/input")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0, tag_name="xxx/post_grad")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_step_same_micro_step_same_vpp_stage_same_pp_stage_different_call_id(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=1, tag_name="")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_data(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        self.assertGreaterEqual(data1, data2)
+        self.assertLessEqual(data1, data2)
+
+    def test_lt_not_instance(self):
+        data = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        not_instance = "not an instance of GradAnomalyData"
+        self.assertEqual(data.__lt__(not_instance), NotImplemented)
+
+    def test_le_same_instance(self):
+        # 测试相同实例的情况
+        data1 = GradAnomalyData()
+        self.assertTrue(data1 <= data1)
+
+    def test_le_different_instance(self):
+        # 测试不同实例的情况
+        data1 = GradAnomalyData()
+        data2 = GradAnomalyData()
+        self.assertTrue(data1 <= data2)
+
+    def test_le_not_instance(self):
+        # 测试非GradAnomalyData实例的情况
+        data = GradAnomalyData()
+        not_instance = "Not an instance of GradAnomalyData"
+        self.assertEqual(data.__le__(not_instance), NotImplemented)
+
+    def test_le_different_instance_not_equal(self):
+        # 测试不同实例且不相等的情况
+        data1 = GradAnomalyData()
+        data2 = GradAnomalyData()
+        data2.some_attribute = "some value"
+        self.assertTrue(data1 <= data2)
+
+
+class TestAnomalyDataWriter(TestCase):
 
     def test_get_anomaly_dict(self):
         # 测试 get_anomaly_dict 方法
@@ -98,7 +368,7 @@ class TestAnomalyDataWriter(unittest.TestCase):
         mock_save_json.assert_called_once_with(writer.json_path, expected_data, indent=1)
 
 
-class TestAnomalyDataLoader(unittest.TestCase):
+class TestAnomalyDataLoader(TestCase):
 
     @patch('msprobe.pytorch.monitor.anomaly_analyse.GradAnomalyData')  # 替换为 GradAnomalyData 的实际导入路径
     def test_create_instances_from_dict(self, mock_GradAnomalyData):
@@ -152,7 +422,7 @@ class TestAnomalyDataLoader(unittest.TestCase):
         mock_load_json.assert_called_once_with('/tmp/data/rank0/anomaly.json')
 
 
-class TestAnomalyAnalyse(unittest.TestCase):
+class TestAnomalyAnalyse(TestCase):
 
     def setUp(self):
         self.anomaly_analyse = AnomalyAnalyse()
@@ -229,35 +499,7 @@ class TestAnomalyAnalyse(unittest.TestCase):
             f"The existing file will be deleted: output_path/anomaly_analyse.json.")
 
 
-class TestParseArgs(unittest.TestCase):
-
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv',
-           new=['script_name', '-d', 'path/to/data', '-o', 'path/to/output', '-k', '5', '-s', '[1,2,3]'])
-    def test_parse_args_with_all_arguments(self):
-        args = _get_parse_args()
-        self.assertEqual(args.data_path_dir, 'path/to/data')
-        self.assertEqual(args.out_path, 'path/to/output')
-        self.assertEqual(args.top_k_number, 5)
-        self.assertEqual(args.step_list, '[1,2,3]')
-
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data'])
-    def test_parse_args_with_required_argument_only(self):
-        args = _get_parse_args()
-        self.assertEqual(args.data_path_dir, 'path/to/data')
-        self.assertEqual(args.out_path, '')
-        self.assertEqual(args.top_k_number, 8)  # 默认值
-        self.assertEqual(args.step_list, '[]')  # 默认值
-
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data', '-k', '10'])
-    def test_parse_args_with_topk_only(self):
-        args = _get_parse_args()
-        self.assertEqual(args.data_path_dir, 'path/to/data')
-        self.assertEqual(args.out_path, '')
-        self.assertEqual(args.top_k_number, 10)  # 提供的值
-        self.assertEqual(args.step_list, '[]')  # 默认值
-
-
-class TestGetStepAndStop(unittest.TestCase):
+class TestGetStepAndStop(TestCase):
 
     def test_valid_step_list_and_top_k(self):
         # 构造有效的 args 对象
@@ -315,7 +557,7 @@ class TestGetStepAndStop(unittest.TestCase):
         self.assertEqual(str(context.exception), "The top k number must be greater than 0.")
 
 
-class TestAnomalyAnalyseFunction(unittest.TestCase):
+class TestAnomalyAnalyseFunction(TestCase):
 
     @patch('msprobe.pytorch.monitor.anomaly_analyse._get_parse_args')  # 模拟命令行参数解析
     @patch('msprobe.pytorch.monitor.anomaly_analyse._get_step_and_stop')  # 模拟步骤和顶级数字解析
@@ -371,6 +613,34 @@ class TestAnomalyAnalyseFunction(unittest.TestCase):
         mock_logger.info.assert_any_call(f"Top {mock_top_k_number} anomalies are listed as follows:")
         mock_logger.info.assert_any_call("0: Top Anomaly 1")
         mock_logger.info.assert_any_call("1: Top Anomaly 2")
+
+
+class TestParseArgs(TestCase):
+
+    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv',
+           new=['script_name', '-d', 'path/to/data', '-o', 'path/to/output', '-k', '5', '-s', '[1,2,3]'])
+    def test_parse_args_with_all_arguments(self):
+        args = _get_parse_args()
+        self.assertEqual(args.data_path_dir, 'path/to/data')
+        self.assertEqual(args.out_path, 'path/to/output')
+        self.assertEqual(args.top_k_number, 5)
+        self.assertEqual(args.step_list, '[1,2,3]')
+
+    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data'])
+    def test_parse_args_with_required_argument_only(self):
+        args = _get_parse_args()
+        self.assertEqual(args.data_path_dir, 'path/to/data')
+        self.assertEqual(args.out_path, '')
+        self.assertEqual(args.top_k_number, 8)  # 默认值
+        self.assertEqual(args.step_list, '[]')  # 默认值
+
+    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data', '-k', '10'])
+    def test_parse_args_with_topk_only(self):
+        args = _get_parse_args()
+        self.assertEqual(args.data_path_dir, 'path/to/data')
+        self.assertEqual(args.out_path, '')
+        self.assertEqual(args.top_k_number, 10)  # 提供的值
+        self.assertEqual(args.step_list, '[]')  # 默认值
 
 
 if __name__ == '__main__':
