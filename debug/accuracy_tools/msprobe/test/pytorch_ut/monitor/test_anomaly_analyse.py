@@ -2,10 +2,8 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 
-from msprobe.pytorch.monitor.anomaly_detect import GradAnomalyData
-
-from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter, AnomalyDataLoader, AnomalyAnalyse, \
-    _get_parse_args, _get_step_and_stop, _anomaly_analyse
+from msprobe.core.monitor.anomaly_processor import GradAnomalyData, AnomalyDataWriter, AnomalyDataLoader, \
+    AnomalyAnalyse, _get_parse_args, _get_step_and_stop, _anomaly_analyse
 
 
 class TestAnomalyDataWriter(unittest.TestCase):

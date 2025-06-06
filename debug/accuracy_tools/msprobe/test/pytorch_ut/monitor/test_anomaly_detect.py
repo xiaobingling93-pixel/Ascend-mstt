@@ -2,8 +2,9 @@ import unittest
 from unittest import TestCase
 from unittest.mock import patch
 
-from msprobe.pytorch.monitor.anomaly_detect import AnomalyTurbulence, AnomalyNan, AnomalyScanner, \
-    AnomalyDataFactory, GradAnomalyData, BaseWriterWithAD, ScanRule, WriterInput
+from msprobe.core.monitor.anomaly_processor import AnomalyTurbulence, AnomalyNan, AnomalyScanner, \
+    AnomalyDataFactory, GradAnomalyData, ScanRule
+from msprobe.pytorch.monitor.data_writers import BaseWriterWithAD, WriterInput
 
 
 class TestScanRule(TestCase):
