@@ -753,7 +753,7 @@ class MonitorConst:
     DEFAULT_MIN_COLLECT_TIMES = 0
     DEFAULT_STEP_INTERVAL = 1
 
-    OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean"]
+    OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean", "shape", "dtype"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
