@@ -2,6 +2,7 @@
 import os
 import copy
 import shutil
+import tempfile
 import unittest
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
@@ -242,6 +243,45 @@ class TestRunUtMethods(unittest.TestCase):
         result = need_to_backward(grad_index, out)
         self.assertTrue(result)
 
+    def test_check_need_grad_given_out_kwarg_then_return_false(self):
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import check_need_grad
+
+        api_info_dict = {"input_kwargs": {"out": True}}
+        result = check_need_grad(api_info_dict)
+        self.assertFalse(result)
+
+    def test_check_need_grad_given_no_out_kwarg_then_return_true(self):
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import check_need_grad
+
+        api_info_dict = {"input_kwargs": {}}
+        result = check_need_grad(api_info_dict)
+        self.assertTrue(result)
+
+    def test_preprocess_forward_content_given_duplicate_apis_then_filter(self):
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import preprocess_forward_content
+
+        forward_content = {
+            "torch.add_1": {"input_args": [{"value": 1}], "input_kwargs": {}},
+            "torch.add_2": {"input_args": [{"value": 1}], "input_kwargs": {}},
+            "torch.sub": {"input_args": [{"value": 2}], "input_kwargs": {}}
+        }
+
+        result = preprocess_forward_content(forward_content)
+
+        self.assertEqual(len(result), 2)  # One duplicate should be removed
+
+    def test_initialize_save_error_data_given_valid_path_then_return_path(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.test_dir = self.temp_dir.name
+
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import initialize_save_error_data
+
+        error_data_path = os.path.join(self.test_dir, "error_data")
+        result = initialize_save_error_data(error_data_path)
+
+        self.assertTrue(os.path.exists(result))
+        self.assertIn("ut_error_data", result)
+        self.temp_dir.cleanup()
 
 class TestRunUtOnlineConfig(unittest.TestCase):
 
