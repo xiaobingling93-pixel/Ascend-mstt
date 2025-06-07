@@ -216,7 +216,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
             if not instance.service:
-                instance.service = Service(instance.config)
+                instance.service = MindsporeService(instance.config)
             instance.service.save(variable, name, save_backward)
 
     @classmethod

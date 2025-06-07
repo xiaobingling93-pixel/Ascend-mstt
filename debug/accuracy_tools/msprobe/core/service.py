@@ -163,7 +163,7 @@ class BaseService(ABC):
         if self._is_l2_level:
             return
         if self._is_online_run_ut:
-            self.__run_ut_dispatch(False)
+            self._run_ut_dispatch(False)
         self._process_async_dump()
         self.data_collector.write_json()
 
