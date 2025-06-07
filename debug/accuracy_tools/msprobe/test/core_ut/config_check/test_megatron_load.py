@@ -2,10 +2,6 @@ import unittest
 from unittest.mock import patch, MagicMock
 from msprobe.core.config_check.ckpt_compare import megatron_loader
 import numpy as np
-import sys
-
-sys.modules['acl'] = MagicMock()
-sys.modules['tensorflow'] = MagicMock()
 
 
 class TestMegatronLoader(unittest.TestCase):
