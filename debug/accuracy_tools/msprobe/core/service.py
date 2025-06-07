@@ -87,7 +87,7 @@ class BaseService(ABC):
     @property
     def _need_tensor_data(self):
         """判断是否需要采集tensor数据"""
-        return (
+        return bool(
             self.config.task in self.data_collector.tasks_need_tensor_data or
             (self.config.task == Const.STATISTICS and self.config.tensor_list)
         )
