@@ -54,7 +54,7 @@ update_and_checkout_submodule() {
 
     git submodule add https://github.com/RustingSword/tensorboard_logger.git ./third_party/tensorboard_logger
     git submodule update --init --recursive
-    git commit -am "Add tensorboard_logger as submodule"
+    git -c user.name="build" -c user.email="build@example.com" commit -am "Add tensorboard_logger as submodule"
 
     if [ $? -ne 0 ]; then
         echo "ERROR: switch to dynolog specified commit failed"

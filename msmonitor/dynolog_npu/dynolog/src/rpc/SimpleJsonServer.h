@@ -58,6 +58,13 @@ class SimpleJsonServerBase {
     return "";
   }
 
+  void verify_certificate_version_and_algorithm(X509* cert);
+  void verify_rsa_key_length(EVP_PKEY* pkey);
+  void verify_certificate_validity(X509* cert);
+  void verify_certificate_extensions(X509* cert);
+  void load_private_key(SSL_CTX* ctx, const std::string& server_key);
+  void load_and_verify_crl(SSL_CTX* ctx, const std::string& crl_file);
+
   int port_;
   int sock_fd_{-1};
   bool initSuccess_{false};

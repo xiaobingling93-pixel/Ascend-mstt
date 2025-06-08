@@ -10,10 +10,20 @@ use std::net::TcpStream;
 use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 use std::io;
+use rpassword::prompt_password;
 
 use anyhow::Result;
 use clap::Parser;
 use std::collections::HashSet;
+
+use x509_parser::prelude::*;
+use x509_parser::num_bigint::ToBigInt;
+use std::fs::read_to_string;
+use x509_parser::public_key::RSAPublicKey;
+use x509_parser::der_parser::oid;
+use num_bigint::BigUint;
+use openssl::pkey::PKey;
+use std::io::Read;
 
 // Make all the command modules accessible to this file.
 mod commands;
@@ -42,6 +52,7 @@ use commands::*;
 ///    the command dispatching logic clear and concise, please keep the code in the match branch to a minimum.
 
 const DYNO_PORT: u16 = 1778;
+const MIN_RSA_KEY_LENGTH: u64 = 3072; // 最小 RSA 密钥长度（位）
 
 #[derive(Debug, Parser)]
 struct Opts {
@@ -259,10 +270,258 @@ struct ClientConfigPath {
     ca_cert_path: PathBuf,
 }
 
+fn verify_certificate(cert_der: &[u8], is_root_cert: bool) -> Result<()> {
+    // 解析 X509 证书
+    let (_, cert) = X509Certificate::from_der(cert_der)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse cert: {:?}", e)))?;
+
+    // 检查证书版本是否为 X.509v3
+    if cert.tbs_certificate.version != X509Version(2) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Certificate is not X.509v3"
+        ).into());
+    }
+
+    // 检查证书签名算法
+    let sig_alg = cert.signature_algorithm.algorithm;
+    
+    // 定义不安全的算法 OID
+    let md2_rsa = oid!(1.2.840.113549.1.1.2);  // MD2 with RSA
+    let md5_rsa = oid!(1.2.840.113549.1.1.4);  // MD5 with RSA
+    let sha1_rsa = oid!(1.2.840.113549.1.1.5); // SHA1 with RSA
+    
+    // 检查是否使用不安全的算法
+    if sig_alg == md2_rsa || sig_alg == md5_rsa || sig_alg == sha1_rsa {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Certificate uses insecure signature algorithm"
+        ).into());
+    }
+
+    // 定义 RSA 签名算法 OID
+    let rsa_sha256 = oid!(1.2.840.113549.1.1.11); // RSA with SHA256
+    let rsa_sha384 = oid!(1.2.840.113549.1.1.12); // RSA with SHA384
+    let rsa_sha512 = oid!(1.2.840.113549.1.1.13); // RSA with SHA512
+
+    // 检查 RSA 密钥长度
+    if sig_alg == rsa_sha256 || sig_alg == rsa_sha384 || sig_alg == rsa_sha512 {
+        // 获取公钥
+        if let Ok((_, public_key)) = SubjectPublicKeyInfo::from_der(&cert.tbs_certificate.subject_pki.subject_public_key.data) {
+            if let Ok((_, rsa_key)) = RSAPublicKey::from_der(&public_key.subject_public_key.data) {
+                // 检查 RSA 密钥长度
+                let modulus = BigUint::from_bytes_be(&rsa_key.modulus);
+                let key_length = modulus.bits();
+                if key_length < MIN_RSA_KEY_LENGTH {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("RSA key length {} bits is less than required {} bits", key_length, MIN_RSA_KEY_LENGTH)
+                    ).into());
+                }
+            }
+        }
+    }
+
+    // 检查证书的扩展域
+    let mut has_ca_constraint = false;
+    let mut has_key_usage = false;
+    let mut has_crl_sign = false;
+    let mut has_cert_sign = false;
+
+    for ext in cert.tbs_certificate.extensions() {
+        if ext.oid == oid_registry::OID_X509_EXT_BASIC_CONSTRAINTS {
+            if let Ok((_, constraints)) = BasicConstraints::from_der(ext.value) {
+                has_ca_constraint = constraints.ca;
+            } else {
+                println!("Failed to parse Basic Constraints");
+            }
+        } else if ext.oid == oid_registry::OID_X509_EXT_KEY_USAGE {
+            println!("Found Key Usage extension");
+            if let Ok((_, usage)) = KeyUsage::from_der(ext.value) {
+                has_key_usage = true;
+                has_cert_sign = usage.key_cert_sign();
+                has_crl_sign = usage.crl_sign();
+            } else {
+                println!("Failed to parse Key Usage");
+            }
+        }
+    }
+
+    // 根据证书类型进行不同的验证
+    if is_root_cert {
+        // 根证书验证要求
+        if !has_ca_constraint {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Root certificate must have CA constraint"
+            ).into());
+        }
+        if !has_key_usage {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Root certificate must have key usage extension"
+            ).into());
+        }
+        if !has_cert_sign {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Root certificate must have certificate signature permission"
+            ).into());
+        }
+        if !has_crl_sign {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Root certificate must have CRL signature permission"
+            ).into());
+        }
+    } else {
+        // 客户端证书验证要求
+        if has_ca_constraint {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Client certificate should not have CA constraint"
+            ).into());
+        }
+        if !has_key_usage {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Client certificate must have key usage extension"
+            ).into());
+        }
+    }
+
+    // 检查证书有效期
+    let now = chrono::Utc::now();
+    let not_before = chrono::DateTime::from_timestamp(
+        cert.tbs_certificate.validity.not_before.timestamp(),
+        0
+    ).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid not_before date"))?;
+
+    let not_after = chrono::DateTime::from_timestamp(
+        cert.tbs_certificate.validity.not_after.timestamp(),
+        0
+    ).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid not_after date"))?;
+
+    if now < not_before {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Certificate is not yet valid. Valid from: {}", not_before)
+        ).into());
+    }
+
+    if now > not_after {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Certificate has expired. Expired at: {}", not_after)
+        ).into());
+    }
+
+    Ok(())
+}
+
+fn is_cert_revoked(cert_der: &[u8], crl_path: &PathBuf) -> Result<bool> {
+    // 解析 X509 证书
+    let (_, cert) = X509Certificate::from_der(cert_der)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse cert: {:?}", e)))?;
+
+    // 读取 CRL 文件
+    let crl_data = read_to_string(crl_path)?;
+    let (_, pem) = pem::parse_x509_pem(crl_data.as_bytes())
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse CRL PEM: {:?}", e)))?;
+    
+    // 解析 CRL
+    let (_, crl) = CertificateRevocationList::from_der(&pem.contents)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse CRL: {:?}", e)))?;
+
+    // 检查 CRL 的有效期
+    let now = chrono::Utc::now();
+    let crl_not_before = chrono::DateTime::from_timestamp(
+        crl.tbs_cert_list.this_update.timestamp(),
+        0
+    ).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid CRL this_update date"))?;
+
+    let crl_not_after = if let Some(next_update) = crl.tbs_cert_list.next_update {
+        chrono::DateTime::from_timestamp(
+            next_update.timestamp(),
+            0
+        ).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid CRL next_update date"))?
+    } else {
+        crl_not_before + chrono::Duration::days(365)
+    };
+
+    // 检查 CRL 是否在有效期内
+    if now < crl_not_before {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("CRL is not yet valid. Valid from: {}", crl_not_before)
+        ).into());
+    }
+
+    if now > crl_not_after {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("CRL has expired. Expired at: {}", crl_not_after)
+        ).into());
+    }
+
+    // 获取证书序列号
+    let cert_serial = cert.tbs_certificate.serial.to_bigint()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Failed to convert certificate serial to BigInt"))?;
+
+    // 检查 CRL 吊销条目
+    for revoked in crl.iter_revoked_certificates() {
+        let revoked_serial = revoked.user_certificate.to_bigint()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Failed to convert revoked certificate serial to BigInt"))?;
+        
+        if revoked_serial == cert_serial {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+enum DynoClient {
+    Secure(StreamOwned<ClientConnection, TcpStream>),
+    Insecure(TcpStream),
+}
+
 fn create_dyno_client(
     host: &str, 
     port: u16,
-    config: &ClientConfigPath
+    certs_dir: &str,
+) -> Result<DynoClient> {
+    if certs_dir == "NO_CERTS" {
+        println!("Running in no-certificate mode");
+        create_dyno_client_with_no_certs(host, port)
+    } else {
+        println!("Running in certificate mode");
+        let certs_dir = PathBuf::from(certs_dir);
+        let config = ClientConfigPath {
+            cert_path: certs_dir.join("client.crt"),
+            key_path: certs_dir.join("client.key"),
+            ca_cert_path: certs_dir.join("ca.crt"),
+        };
+        let client = create_dyno_client_with_certs(host, port, &config)?;
+        Ok(DynoClient::Secure(client))
+    }
+}
+
+fn create_dyno_client_with_no_certs(
+    host: &str, 
+    port: u16,
+) -> Result<DynoClient> {
+    let addr = (host, port)
+        .to_socket_addrs()?
+        .next()
+        .expect("Failed to connect to the server");
+    let stream = TcpStream::connect(addr)?;
+    Ok(DynoClient::Insecure(stream))
+}
+
+fn create_dyno_client_with_certs(
+    host: &str, 
+    port: u16,
+    config: &ClientConfigPath,
 ) -> Result<StreamOwned<ClientConnection, TcpStream>> {
     let addr = (host, port)
         .to_socket_addrs()?
@@ -279,6 +538,9 @@ fn create_dyno_client(
     let ca_file = File::open(&config.ca_cert_path)?;
     let mut ca_reader = BufReader::new(ca_file);
     let ca_certs = rustls_pemfile::certs(&mut ca_reader)?;
+    for ca_cert in &ca_certs {
+        verify_certificate(ca_cert, true)?;  // 验证根证书
+    }
     for ca_cert in ca_certs {
         root_store.add(&Certificate(ca_cert))?;
     }
@@ -286,15 +548,71 @@ fn create_dyno_client(
     println!("Loading client cert from: {}", config.cert_path.display());
     let cert_file = File::open(&config.cert_path)?;
     let mut cert_reader = BufReader::new(cert_file);
-    let certs = rustls_pemfile::certs(&mut cert_reader)?
-        .into_iter()
-        .map(Certificate)
-        .collect();
+    let certs = rustls_pemfile::certs(&mut cert_reader)?;
+    
+    // 检查客户端证书的基本要求
+    for cert in &certs {
+        verify_certificate(cert, false)?;  // 验证客户端证书
+    }
+
+    // 检查证书吊销状态
+    let crl_path = config.cert_path.parent().unwrap().join("ca.crl");
+    if crl_path.exists() {
+        println!("Checking CRL file: {}", crl_path.display());
+        for cert in &certs {
+            match is_cert_revoked(cert, &crl_path) {
+                Ok(true) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "Certificate is revoked"
+                    ).into());
+                }
+                Ok(false) => {
+                    continue;
+                }
+                Err(e) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("CRL verification failed: {}", e)
+                    ).into());
+                }
+            }
+        }
+    } else {
+        println!("CRL file does not exist: {}", crl_path.display());
+    }
+
+    let certs = certs.into_iter().map(Certificate).collect();
 
     println!("Loading client key from: {}", config.key_path.display());
     let key_file = File::open(&config.key_path)?;
     let mut key_reader = BufReader::new(key_file);
-    let keys = rustls_pemfile::pkcs8_private_keys(&mut key_reader)?;
+    
+    // 检查私钥是否加密
+    let mut key_data = Vec::new();
+    key_reader.read_to_end(&mut key_data)?;
+    let key_str = String::from_utf8_lossy(&key_data);
+    let is_encrypted = key_str.contains("ENCRYPTED");
+
+    // 根据是否加密来加载私钥
+    let keys = if is_encrypted {
+        // 如果私钥是加密的，请求用户输入密码
+        let mut password = prompt_password("Please enter the certificate password: ")?;
+        let pkey = PKey::private_key_from_pem_passphrase(&key_data, password.as_bytes())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to decrypt private key: {}", e)))?;
+        
+        // 清除密码
+        password.clear();
+        
+        // 返回私钥
+        vec![pkey.private_key_to_der()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to convert private key to DER: {}", e)))?]
+    } else {
+        // 如果私钥未加密，直接加载
+        let mut key_reader = BufReader::new(File::open(&config.key_path)?);
+        rustls_pemfile::pkcs8_private_keys(&mut key_reader)?
+    };
+    
     if keys.is_empty() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
@@ -319,9 +637,9 @@ fn create_dyno_client(
         server_name
     )?;
 
-    // 返回 TLS stream
     Ok(StreamOwned::new(conn, stream))
 }
+
 
 fn main() -> Result<()> {
     let Opts {
@@ -331,15 +649,7 @@ fn main() -> Result<()> {
         cmd,
     } = Opts::parse();
 
-    let certs_dir = PathBuf::from(&certs_dir);
-
-    let config = ClientConfigPath {
-        cert_path: certs_dir.join("client.crt"),
-        key_path: certs_dir.join("client.key"),
-        ca_cert_path: certs_dir.join("ca.crt"),
-    };
-
-    let client = create_dyno_client(&hostname, port, &config)
+    let client = create_dyno_client(&hostname, port, &certs_dir)
         .expect("Couldn't connect to the server...");
 
     match cmd {
