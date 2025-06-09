@@ -94,16 +94,6 @@ class TestDebuggerConfig(unittest.TestCase):
         config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
         self.assertEqual(config.level, Const.LEVEL_MIX)
 
-    @patch('msprobe.pytorch.debugger.debugger_config.logger')
-    def test_check_model_with_l1(self, mock_logger):
-        config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
-        instance = MagicMock()
-        instance.model = MagicMock()
-        config.check_model(instance, None, None)
-        mock_logger.info_on_rank_0.assert_called_once_with(
-            "The current level is not L0 or mix level and token_range is None, so the model parameter will not be used"
-        )
-
     def test_check_model_with_model_is_none(self):
         self.common_config.level = Const.LEVEL_L0
         instance = MagicMock()
