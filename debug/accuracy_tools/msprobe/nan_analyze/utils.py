@@ -125,7 +125,8 @@ def is_communication_op(op_name):
 
 def is_ignore_op(op_name):
     ignore_keywords = [
-        'Torch.empty'
+        'Torch.empty',
+        'Torch.fill'
     ]
     return any(keyword in op_name for keyword in ignore_keywords)
 
@@ -147,6 +148,32 @@ def check_item_anomaly(param):
     return False
 
 
+def analyze_anomaly_in_group(nodes_group):
+    anomaly_nodes = []
+
+    def get_compute_ops_from_comm_nodes(comm_nodes):
+        for comm_node in comm_nodes:
+            for op_node in comm_node.compute_ops:
+                op_node.layer = comm_node.layer
+                anomaly_nodes.append(op_node)
+
+    def get_comm_ops(comm_nodes):
+        for node in comm_nodes:
+            node.data.layer = node.layer
+            anomaly_nodes.append(node.data)
+
+    # 先看src或link中input是否有异常
+    src_list = list(filter(lambda node: node.type in [NanAnalyseConst.SRC, NanAnalyseConst.LINK], nodes_group))
+    input_anomaly_nodes = list(filter(lambda node: node.input_has_nan_inf(), src_list))
+    # 如果有异常回溯计算节点找到异常来源
+    # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
+    get_compute_ops_from_comm_nodes(input_anomaly_nodes)
+    # 筛选入参没问题但出参有问题的通信节点
+    output_anomaly_nodes = list(filter(lambda node: node.data.is_anomaly(), nodes_group))
+    get_comm_ops(output_anomaly_nodes)
+    return anomaly_nodes
+
+
 class NanAnalyseConst:
     COMMUNICATION_KEYWORDS = {
         'send',  # send 算子
@@ -166,8 +193,8 @@ class NanAnalyseConst:
         'all_to_all',  # all_to_all 算子
         'all_gather_into_tensor',  # all_gather_into_tensor 算子
         'reduce_scatter_tensor',  # reduce_scatter_tensor 算子
-        'send_object_list',
-        'recv_object_list'
+        'send_object_list',  # send_object_list 算子
+        'recv_object_list'  # recv_object_list 算子
     }
     P2P_API_MAPPING = {'send': 'recv', 'recv': 'send', 'isend': 'irecv', 'irecv': 'isend',
                        'send_object_list': 'recv_object_list', 'recv_object_list': 'send_object_list'}

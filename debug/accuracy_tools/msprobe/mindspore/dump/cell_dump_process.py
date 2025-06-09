@@ -30,7 +30,7 @@ from msprobe.core.common.const import Const as CoreConst
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import (
     load_npy, save_json, remove_path, load_yaml,
-    create_directory, read_csv, write_df_to_csv, write_csv, move_file)
+    create_directory, read_csv, write_df_to_csv, write_csv, move_file, move_directory)
 from msprobe.mindspore.common.log import logger
 
 CONSTRUCT_FILE_NAME = "construct.json"
@@ -603,11 +603,12 @@ def process(dump_path):
         generate_construct(npy_path)
         generate_dump_info(npy_path)
         generate_stack_info(npy_path)
+        # 单卡场景，rank目录名称为rank
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                move_file(rank_path, new_rank_path)
-                logger.info("Directory was successfully renamed to: {new_rank_path}")
+                move_directory(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
         logger.info("==========JSON file generation completed!==========")
@@ -711,8 +712,8 @@ def process_statistics(dump_path):
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                move_file(rank_path, new_rank_path)
-                logger.info("Directory was successfully renamed to: {new_rank_path}")
+                move_directory(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
         logger.info("==========JSON file generation completed!==========")

@@ -189,6 +189,8 @@ class GraphBuilder:
         # 数据格式："output": [[{param1}, {param2}, ...]]
         if GraphBuilder._is_valid_batch_p2p_output(param_list):
             for param in param_list[0]:
+                if not isinstance(param, dict):
+                    continue
                 info = {GraphConst.OP: param.get(GraphConst.OP), GraphConst.PEER: param.get(GraphConst.PEER),
                         GraphConst.GROUP_ID: param.get(GraphConst.GROUP_ID)}
                 node.batch_p2p_info.append(info)
