@@ -268,11 +268,12 @@ class AnomalyDataWriter:
         anomalies: GradAnomalyData对象列表
         """
         anomalies_json = self.get_anomaly_dict(anomalies)
-        logger.info(f"{MonitorConst.ANOMALY_JSON} is at {self.dump_rank_dir}.")
+        if anomalies_json:
+            logger.info(f"{MonitorConst.ANOMALY_JSON} is at {self.dump_rank_dir}.")
 
-        data_to_write = load_json(self.json_path) if os.path.exists(self.json_path) else {}
-        data_to_write.update(anomalies_json)
-        save_json(self.json_path, data_to_write, indent=1)
+            data_to_write = load_json(self.json_path) if os.path.exists(self.json_path) else {}
+            data_to_write.update(anomalies_json)
+            save_json(self.json_path, data_to_write, indent=1)
 
 
 class AnomalyDataLoader:
