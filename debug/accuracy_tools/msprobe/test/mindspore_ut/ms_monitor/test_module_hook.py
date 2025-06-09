@@ -17,11 +17,10 @@ ms.common.initializer.One = MagicMock
 
 from msprobe.mindspore.monitor.module_hook import TrainerMon, ModuleHookContext, OptimizerContext, GradContext
 
-base_dir = os.path.dirname(os.path.realpath(__file__))
-
 class TestTrainerMon(unittest.TestCase):
     def setUp(self):
-        self.config_path = os.path.join(base_dir, "config/test_config.json")
+        self.config_path = os.path.join(os.path.dirname(os.path.realpath("test_module_hook.py")),
+                                        "config/test_config.json")
         self.mock_config = {
             "start_step": 0,
             "collect_times": 2,
