@@ -16,225 +16,229 @@
 import time
 from collections import defaultdict
 import os
+from itertools import dropwhile, chain
 
 from msprobe.core.common.file_utils import check_file_or_directory_path, save_json, make_dir
 from msprobe.core.common.log import logger
-from msprobe.nan_analyze.utils import RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst
+from msprobe.core.common.const import Const
+from msprobe.nan_analyze.utils import (RankPath, FileCache, is_communication_op, is_ignore_op, NanAnalyseConst,
+                                       analyze_anomaly_in_group)
 from msprobe.nan_analyze.graph import DataNode, CommunicationNode
 
 
-def nan_analyze(input_path, output_path):
-    path_list = resolve_path(input_path)
-    anomaly_nodes = pre_analyze(path_list) # 查找所有出现在通信节点前的异常节点
-    if anomaly_nodes:
-        gen_analyze_info(anomaly_nodes, output_path)
-        return
-    logger.info('Do not found anomaly before communication. Start analysing communication.')
-    rank_nodes_dict = {path.rank: analyze_communication_nodes(path) for path in path_list}
-    connect_communication_nodes(rank_nodes_dict)
-    pruning(rank_nodes_dict)
-    anomaly_nodes = search_first_anomaly(rank_nodes_dict)
-    if anomaly_nodes:
-        logger.info(f'Nan analyze finished. Anomaly node is {anomaly_nodes[0].op_name}.')
-    gen_analyze_info(anomaly_nodes, output_path)
+class NanAnalyzer:
+    def __init__(self, input_path, output_path):
+        self._input_path = input_path
+        self._output_path = output_path
+        self._paths = {}
+        self._resolve_input_path()
+        self._anomaly_nodes = []  # 记录所有异常节点
+        self._cache = FileCache()
+        self._first_comm_nodes = {}  # 记录各rank下首个通信节点的node_id
+        self._after_comm_anomalies = {}  # 记录各rank下发生在通信节点之后的异常计算节点
+        self._rank_comm_nodes_dict = {}  # 记录各rank的通信节点
 
-
-def resolve_path(step_path):
-    contents = os.listdir(step_path)
-    dump_path_list = []
-    for path in contents:
-        if not path.startswith('rank'):
-            continue
-        rank = int(path.strip('rank'))
-        dump_path = os.path.join(step_path, path, NanAnalyseConst.DUMP_FILE)
-        construct_path = os.path.join(step_path, path, NanAnalyseConst.CONSTRUCT_FILE)
-        stack_path = os.path.join(step_path, path, NanAnalyseConst.STACK_FILE)
-        dump_path_list.append(RankPath(rank, dump_path, construct_path, stack_path))
-    return dump_path_list
-
-
-def pre_analyze(path_list):
-    logger.info('Start searching anomaly node before communication.')
-    cache = FileCache()
-    anomaly_nodes = []
-    for path in path_list:
-        dump_data = cache.load_json(path.dump_path).get('data')
-        if not dump_data:
-            logger.warning(f'Rank {path.rank} has no dump data!')
-            continue
-        for op_name, op_data in dump_data.items():
-            if is_communication_op(op_name):
-                break
-            data_node = DataNode(op_name, path, op_data)
-            if data_node.is_anomaly():
-                anomaly_nodes.append(data_node)
-    return anomaly_nodes
-
-
-def gen_analyze_info(anomaly_nodes, output_path):
-    if not anomaly_nodes:
+    def analyze(self):
+        for analyze_func in [self._pre_analyze, self._analyze, self._post_analyze]:
+            analyze_func()
+            if self._anomaly_nodes:
+                self._gen_analyze_info()
+                return
         logger.info('Cannot find any anomaly node, no need to generate analyze file.')
-        return 
-    if not os.path.exists(output_path):
-        make_dir(output_path)
-    file_name = f'anomaly_analyze_{time.time_ns()}.json'
-    result_file = os.path.join(output_path, file_name)
-    result_content = defaultdict(list)
-    for node in anomaly_nodes:
-        result_content[f'rank_{node.rank}'].append(node.gen_node_info())
-    save_json(result_file, result_content, 2)
-    logger.info(f"The analyze result is saved in: {result_file}")
 
+    def _resolve_input_path(self):
+        contents = os.listdir(self._input_path)
+        for path in contents:
+            if not path.startswith('rank'):
+                continue
+            rank_str = path.strip('rank')
+            if not rank_str:
+                rank = 0
+            elif not rank_str.isdigit():
+                continue
+            else:
+                rank = int(rank_str)
+            dump_path = os.path.join(self._input_path, path, NanAnalyseConst.DUMP_FILE)
+            construct_path = os.path.join(self._input_path, path, NanAnalyseConst.CONSTRUCT_FILE)
+            stack_path = os.path.join(self._input_path, path, NanAnalyseConst.STACK_FILE)
+            self._paths[rank] = RankPath(rank, dump_path, construct_path, stack_path)
 
-def analyze_communication_nodes(path: RankPath):
-    cache = FileCache()
-    data = cache.load_json(path.dump_path).get('data')
-    communication_nodes = {}
-    skip_flag = True
-    compute_ops = []
-    last_node_id = None
-    sub_layer = 0  # 当前通信算子中异常计算节点的调用序数
-    for op_name, op_data in data.items():
-        node_id = f'{path.rank}.{op_name}'
-        if skip_flag:
+    def _pre_analyze(self):
+        logger.info('Start searching anomaly node before communication.')
+        for path in self._paths.values():
+            dump_data = self._cache.load_json(path.dump_path).get('data')
+            if not dump_data:
+                logger.warning(f'Rank {path.rank} has no dump data!')
+                continue
+            for op_name, op_data in dump_data.items():
+                if is_communication_op(op_name):
+                    self._first_comm_nodes[path.rank] = op_name
+                    break
+                data_node = DataNode(op_name, path.rank, op_data)
+                if data_node.is_anomaly():
+                    self._anomaly_nodes.append(data_node)
+                    break
+
+    def _analyze(self):
+        logger.info('Start searching anomaly node during communication.')
+        self._rank_comm_nodes_dict = {rank: self._analyze_comm_nodes(rank) for rank in self._paths}
+        self._connect_comm_nodes()
+        self._pruning()
+        self._search_first_anomaly()
+
+    def _post_analyze(self):
+        logger.info('Start searching anomaly node after communication.')
+        for nodes in self._after_comm_anomalies.values():
+            if nodes:
+                self._anomaly_nodes.append(nodes[0])
+
+    def _gen_analyze_info(self):
+        if not os.path.exists(self._output_path):
+            make_dir(self._output_path)
+        file_name = f'anomaly_analyze_{time.time_ns()}.json'
+        result_file = os.path.join(self._output_path, file_name)
+        result_content = defaultdict(list)
+        for node in self._anomaly_nodes:
+            result_content[f'rank_{node.rank}'].append(node.gen_node_info(self._paths[node.rank]))
+        save_json(result_file, result_content, 2)
+        logger.info(f"The analyze result is saved in: {result_file}")
+
+    def _analyze_comm_nodes(self, rank):
+        path = self._paths[rank]
+        data = self._cache.load_json(path.dump_path).get('data')
+        communication_nodes = {}
+        if rank not in self._first_comm_nodes:  # 此rank没有通信节点
+            return communication_nodes
+        last_node_id = None  # 记录上一个通信节点的node_id
+        compute_ops = []  # 记录两个通信节点之间的计算节点
+        sub_layer = 0  # 记录两个通信算子之间异常计算节点的调用序数
+        for op_name in dropwhile(lambda k: k != self._first_comm_nodes[rank], data):
+            node_id = f'{rank}.{op_name}'
+            op_data = data[op_name]
             if is_communication_op(op_name):
-                skip_flag = False
-                communication_nodes[node_id] = CommunicationNode(node_id, path.rank, DataNode(op_name, path, op_data))
+                comm_node = CommunicationNode(node_id, rank, DataNode(op_name, rank, op_data, sub_layer=sub_layer),
+                                              compute_ops=compute_ops)
+                if last_node_id:
+                    communication_nodes.get(last_node_id).add_next(comm_node)
+                communication_nodes[node_id] = comm_node
                 last_node_id = node_id
-            continue
-        if is_communication_op(op_name):
-            comm_node = CommunicationNode(node_id, path.rank, DataNode(op_name, path, op_data))
-            comm_node.compute_ops = compute_ops
-            compute_ops = []
-            last_commu_node = communication_nodes.get(last_node_id)
-            last_node_id = node_id
-            if last_commu_node:
-                last_commu_node.add_next(comm_node)
-            communication_nodes[node_id] = comm_node
-            sub_layer = 0
-        elif not is_ignore_op(op_name):
-            data_node = DataNode(op_name, path, op_data)
-            if data_node.is_anomaly():
-                data_node.sub_layer = sub_layer
-                compute_ops.append(data_node)
+                compute_ops = []
+                sub_layer = 0
+            elif not is_ignore_op(op_name):
+                data_node = DataNode(op_name, rank, op_data, sub_layer=sub_layer)
+                if data_node.is_anomaly():
+                    compute_ops.append(data_node)
                 sub_layer += 1
-    return communication_nodes
+        if compute_ops:
+            self._after_comm_anomalies[rank] = compute_ops
+        return communication_nodes
 
+    def _connect_comm_nodes(self):
+        searched_ranks = set()
+        for rank, nodes in list(self._rank_comm_nodes_dict.items())[:-1]:
+            searched_ranks.add(rank)
+            seen_nodes = set()
+            for cur_node in nodes.values():
+                conn_info = cur_node.find_connected_nodes()
+                if not conn_info.get('ranks'):
+                    conn_info['ranks'] = self._rank_comm_nodes_dict.keys()
+                if not self._find_connection(conn_info, cur_node, searched_ranks, seen_nodes):
+                    logger.info(f'Cannot find connected communication node for "{cur_node.node_id}".')
 
-def connect_communication_nodes(rank_nodes_dict):
-    searched_ranks = set()
-    for rank, nodes in list(rank_nodes_dict.items())[:-1]:
-        searched_ranks.add(rank)
-        seen_nodes = set()
-        for cur_node in nodes.values():
-            conn_info = cur_node.find_connected_nodes()
-            if not conn_info.get('ranks'):
-                conn_info['ranks'] = rank_nodes_dict.keys()
-            if not find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_nodes):
-                logger.info(f'Cannot find connected communication node for "{cur_node.node_id}".')
+    def _find_connection(self, conn_info, cur_node, searched_ranks, seen_nodes):
+        def connect():
+            seen_nodes.add(search_node.node_id)
+            if search_node.type == NanAnalyseConst.DST:
+                cur_node.add_dst(search_node)
+            elif search_node.type == NanAnalyseConst.SRC:
+                search_node.layer = cur_node.layer
+                search_node.add_dst(cur_node)
+            else:
+                cur_node.add_link(search_node)
 
-
-def find_connection(conn_info, cur_node, rank_nodes_dict, searched_ranks, seen_nodes):
-    found = False
-    for connected_rank in conn_info['ranks']:
-        if connected_rank in searched_ranks:
-            continue
-        tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
-        for search_id, search_node in rank_nodes_dict[connected_rank].items():
-            if search_id in seen_nodes:
+        found = cur_node.connected
+        for connected_rank in conn_info['ranks']:
+            if connected_rank in searched_ranks:
                 continue
-            if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
-                continue
-            search_conn_ranks = search_node.find_connected_nodes().get('ranks')
-            if not search_conn_ranks and search_node.api not in NanAnalyseConst.DIRECTED_API:
-                _connect(cur_node, search_node, seen_nodes)
-                found = True
-                break
-            elif cur_node.rank in search_conn_ranks:
-                _connect(cur_node, search_node, seen_nodes)
-                found = True
-                break
-    return found
+            tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
+            for search_id, search_node in self._rank_comm_nodes_dict[connected_rank].items():
+                if search_id in seen_nodes:
+                    continue
+                if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
+                    continue
+                search_conn_ranks = search_node.find_connected_nodes().get('ranks')
+                if ((not search_conn_ranks and search_node.api not in NanAnalyseConst.DIRECTED_API) or
+                    cur_node.rank in search_conn_ranks):  # 有些无向通信算子没有填ProcessGroup，默认连接所有rank
+                    connect()
+                    found = True
+                    break
+        return found
 
-
-def _connect(cur_node, tar_node, seen_nodes):
-    seen_nodes.add(tar_node.node_id)
-    if tar_node.type == NanAnalyseConst.DST:
-        cur_node.add_dst(tar_node)
-    elif tar_node.type == NanAnalyseConst.SRC:
-        tar_node.layer = cur_node.layer
-        tar_node.add_dst(cur_node)
-    else:
-        cur_node.add_link(tar_node)
-
-
-def pruning(rank_nodes_dict):
-    deleted_node_id = []
-    for nodes in rank_nodes_dict.values():
-        for node_id in list(nodes.keys()):
-            node = nodes[node_id]
-            if not (node.has_nan_inf() or node.compute_ops):
+    def _pruning(self):
+        deleted_node_id = []
+        for nodes in self._rank_comm_nodes_dict.values():
+            for node_id in list(nodes.keys()):
+                node = nodes[node_id]
+                if node.has_nan_inf() or node.compute_ops:
+                    continue
                 deleted_node_id.append(node_id)
                 node.delete()
                 del nodes[node_id]
-    logger.debug(f'After pruning, following nodes are removed: [{", ".join(deleted_node_id)}]')
+        logger.debug(f'After pruning, following nodes are removed: [{", ".join(deleted_node_id)}]')
 
+    def _search_first_anomaly(self):
+        nodes_queues = []
+        for comm_nodes in self._rank_comm_nodes_dict.values():
+            nodes_queues.append(sorted(list(comm_nodes.values()), key=lambda x: x.layer))
+        seen_nodes = set()
 
-def search_first_anomaly(rank_nodes_dict) -> list:
-    # group
-    nodes_lists = [sorted(list(nodes.values()), key=lambda x: x.layer) for nodes in rank_nodes_dict.values()]
-    forwards = True
-    while forwards:
-        groups = {}
-        group_keys = []
-        forwards = False
-        for nodes in nodes_lists:
-            if nodes:
-                node = nodes.pop(0)
-                forwards = True
-                node_ids_in_same_group = ({node.node_id} | node.link_nodes.keys() | node.src_nodes.keys()
-                                          | node.dst_nodes.keys())
-                is_in_group = False
-                for i, group_set in enumerate(group_keys):
-                    if node.node_id in group_set:
-                        group_set.update(node_ids_in_same_group)
-                        groups.get(i).append(node)
-                        is_in_group = True
-                if not is_in_group:
-                    group_keys.append(node_ids_in_same_group)
-                    groups[group_keys.index(node_ids_in_same_group)] = [node]
-        anomaly_nodes = []
-        for nodes_group in groups.values():
-            anomaly_nodes.extend(analyze_anomaly_in_group(nodes_group))
-        if anomaly_nodes:
-            return [min(anomaly_nodes, key=lambda x: (x.layer, x.sub_layer))]
-    return []
+        def get_next_node(node_list):
+            while node_list:
+                next_node = node_list.pop(0)
+                if next_node.node_id not in seen_nodes:
+                    return next_node
+            return None
 
+        def find_all_members(ori_node):
+            ids = get_relative_ids(ori_node)
+            id_queue = list(chain(*[get_relative_ids(self._get_node_by_id(n_id)).difference(ids) for n_id in ids]))
+            while id_queue:
+                new_id = id_queue.pop(0)
+                ids.add(new_id)
+                id_queue.extend(get_relative_ids(self._get_node_by_id(new_id)).difference(ids))
+            return ids
 
-def analyze_anomaly_in_group(nodes_group):
-    anomaly_nodes = []
+        def get_relative_ids(ori_node):
+            if not ori_node:
+                return set()
+            return ({ori_node.node_id} | ori_node.link_nodes.keys() | ori_node.src_nodes.keys() |
+                    ori_node.dst_nodes.keys())
 
-    def get_compute_ops_from_commu_nodes(commu_nodes):
-        for commu_node in commu_nodes:
-            for op_node in commu_node.compute_ops:
-                op_node.layer = commu_node.layer
-                anomaly_nodes.append(op_node)
+        while any(nodes_queues):
+            groups = []
+            all_ids_in_groups = set()
+            for nodes in nodes_queues:
+                node = get_next_node(nodes)
+                if not node:
+                    continue
+                if not groups or node.node_id in all_ids_in_groups:
+                    new_group = find_all_members(node)
+                    groups.append(new_group)
+                    all_ids_in_groups.update(new_group)
+            for group in groups:
+                seen_nodes.update(group)
+                self._anomaly_nodes.extend(analyze_anomaly_in_group([self._get_node_by_id(n_id) for n_id in group]))
+            if self._anomaly_nodes:
+                self._anomaly_nodes = [min(self._anomaly_nodes, key=lambda x: (x.layer, x.sub_layer))]
+                return
 
-    def get_commu_ops(commu_nodes):
-        for node in commu_nodes:
-            node.data.layer = node.layer
-            anomaly_nodes.append(node.data)
-
-    # 先看src或link中input是否有异常
-    src_list = list(filter(lambda node: node.type in [NanAnalyseConst.SRC, NanAnalyseConst.LINK], nodes_group))
-    input_anomaly_nodes = list(filter(lambda node: node.input_has_nan_inf(), src_list))
-    # 如果有异常回溯计算节点找到异常来源
-    # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
-    get_compute_ops_from_commu_nodes(input_anomaly_nodes)
-    # 筛选入参没问题但出参有问题的通信节点
-    output_anomaly_nodes = list(filter(lambda node: node.data.is_anomaly(), nodes_group))
-    get_commu_ops(output_anomaly_nodes)
-    return anomaly_nodes
+    def _get_node_by_id(self, node_id):
+        splits = node_id.split(Const.SEP, 1)
+        if len(splits) < 2 or not splits[0].isdigit():
+            logger.error(f'invalid node_id {node_id}')
+            raise RuntimeError(f'invalid node_id {node_id}')
+        rank = int(splits[0])
+        return self._rank_comm_nodes_dict.get(rank, {}).get(node_id)
 
 
 def _nan_analyze_parser(parser):
@@ -248,4 +252,4 @@ def _nan_analyze_parser(parser):
 
 def _run_nan_analyze(args):
     check_file_or_directory_path(args.input_path, True)
-    nan_analyze(args.input_path, args.output_path)
+    NanAnalyzer(args.input_path, args.output_path).analyze()

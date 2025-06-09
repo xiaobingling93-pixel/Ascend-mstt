@@ -23,9 +23,6 @@ from msprobe.nan_analyze.utils import FileCache, RankPath, is_ignore_op, check_i
 class DataNode:
     op_name: str
     rank: int
-    dump_path: str
-    construct_path: str
-    stack_path: str
     inputs: list
     input_args: list
     input_kwargs: dict
@@ -33,23 +30,14 @@ class DataNode:
     layer: int = 0  # 和communication_node的layer保持一致
     sub_layer: int = 0  # 调用顺序，越小表示越先调用
 
-    def __init__(self, op_name, path: RankPath, op_data):
+    def __init__(self, op_name, rank, op_data, **kwargs):
         self.op_name = op_name
-        self.rank = path.rank
-        self.dump_path = path.dump_path
-        self.construct_path = path.construct_path
-        self.stack_path = path.stack_path
+        self.rank = rank
         self.inputs = op_data.get(Const.INPUT, [])
         self.input_args = op_data.get(Const.INPUT_ARGS, [])
         self.input_kwargs = op_data.get(Const.INPUT_KWARGS, {})
         self.outputs = op_data.get(Const.OUTPUT, {})
-
-    @staticmethod
-    def find_stack(stack_info, op_name):
-        for item in stack_info:
-            if len(item) >= 2 and op_name in item[0]:
-                return item[1]
-        return {}
+        self.sub_layer = kwargs.get('sub_layer', 0)
 
     @staticmethod
     def find_complete_construct(construct_info, op_name):
@@ -62,6 +50,12 @@ class DataNode:
             construct.insert(0, op_name)
             seen.add(op_name)
 
+    def find_stack(self, stack_info):
+        for item in stack_info.values():
+            if len(item) >= 2 and self.op_name in item[0]:
+                return item[1]
+        return {}
+
     def is_anomaly(self) -> bool:
         if is_ignore_op(self.op_name):
             return False
@@ -70,10 +64,10 @@ class DataNode:
         is_output_anomaly = check_item_anomaly(self.outputs)
         return (not is_input_anomaly) and is_output_anomaly
 
-    def gen_node_info(self):
+    def gen_node_info(self, path: RankPath):
         cache = FileCache()
-        construct = cache.load_json(self.construct_path)
-        stack = cache.load_json(self.stack_path)
+        construct = cache.load_json(path.construct_path)
+        stack = cache.load_json(path.stack_path)
         if Const.FORWARD in self.op_name:
             data_info_list = {Const.INPUT_ARGS: self.input_args, Const.INPUT_KWARGS: self.input_kwargs,
                               Const.OUTPUT: self.outputs}
@@ -82,7 +76,7 @@ class DataNode:
         return {'op_name': self.op_name,
                 'data_info': data_info_list,
                 'construct_info': self.find_complete_construct(construct, self.op_name),
-                'stack_info': self.find_stack(stack, self.op_name)}
+                'stack_info': self.find_stack(stack)}
 
 
 class CommunicationNode:
@@ -104,21 +98,29 @@ class CommunicationNode:
         self.next_nodes = kwargs.get('next_nodes', {})
         self.compute_ops = kwargs.get('compute_ops', [])
         self.type = self._resolve_type()
+        self.connected = False
 
     def add_next(self, node):
         self.next_nodes[node.node_id] = node
         node.pre_node = self
         node.layer = self.layer + 1
+        node.data.layer = node.layer
 
     def add_link(self, node):
         self.link_nodes[node.node_id] = node
         node.link_nodes[self.node_id] = self
         node.layer = self.layer
+        node.data.layer = node.layer
+        self.connected = True
+        node.connected = True
 
     def add_dst(self, node):
         self.dst_nodes[node.node_id] = node
         node.src_nodes[self.node_id] = self
         node.layer = self.layer
+        node.data.layer = node.layer
+        self.connected = True
+        node.connected = True
 
     def delete(self):
         for node in self.next_nodes.values():
