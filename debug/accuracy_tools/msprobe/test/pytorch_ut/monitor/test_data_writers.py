@@ -22,7 +22,7 @@ class TestBaseWriterWithAD(TestCase):
 
         self.assertEqual(self.BaseWriter.anomalies, [])
 
-    @patch("msprobe.pytorch.monitor.anomaly_detect.logger")
+    @patch("msprobe.pytorch.monitor.data_writers.logger")
     def test_add_scalar(self, mock_logger):
         AnomalyTurbulence_obj = AnomalyTurbulence(0.2)
         self.BaseWriter.ad_rules = [AnomalyTurbulence_obj]

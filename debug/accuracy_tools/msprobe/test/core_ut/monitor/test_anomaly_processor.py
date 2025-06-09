@@ -79,7 +79,7 @@ class TestAnomalyScanner(TestCase):
         rules = AnomalyScanner.load_rules(None)
         self.assertEqual(len(rules), 0)
 
-    @patch("msprobe.pytorch.monitor.anomaly_detect.logger")
+    @patch("msprobe.core.monitor.anomaly_processor.logger")
     def test_load_rules_with_missing_keys(self, mock_logger):
         specs = [
             {"rule_name": "AnomalyTurbulence"}
@@ -297,9 +297,9 @@ class TestAnomalyDataWriter(TestCase):
         }
         self.assertEqual(result, expected)
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.create_directory')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.save_json')
+    @patch('msprobe.core.monitor.anomaly_processor.os.path.exists')
+    @patch('msprobe.core.monitor.anomaly_processor.create_directory')
+    @patch('msprobe.core.monitor.anomaly_processor.save_json')
     def test_init_detected_json(self, mock_save_json, mock_create_directory, mock_exists):
         # 模拟路径检查
         mock_exists.side_effect = [False, False, False]  # dump_path, dump_rank_dir, json_path
@@ -315,10 +315,10 @@ class TestAnomalyDataWriter(TestCase):
         # 检查是否初始化了 JSON 文件
         mock_save_json.assert_called_once_with(writer.json_path, {}, indent=1)
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.check_file_or_directory_path')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.remove_path')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.save_json')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.logger')
+    @patch('msprobe.core.monitor.anomaly_processor.check_file_or_directory_path')
+    @patch('msprobe.core.monitor.anomaly_processor.remove_path')
+    @patch('msprobe.core.monitor.anomaly_processor.save_json')
+    @patch('msprobe.core.monitor.anomaly_processor.logger')
     def test_init_detected_json_existing_file(self, mock_logger, mock_save_json, mock_remove_path, mock_check_path):
         # 设置测试参数
         dump_path = 'test/dump_path'
@@ -339,9 +339,9 @@ class TestAnomalyDataWriter(TestCase):
         mock_logger.warning.assert_called_once_with(f"The existing file will be deleted: {writer.json_path}.")
         mock_save_json.assert_called_once_with(writer.json_path, {}, indent=1)
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.load_json')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.save_json')
+    @patch('msprobe.core.monitor.anomaly_processor.os.path.exists')
+    @patch('msprobe.core.monitor.anomaly_processor.load_json')
+    @patch('msprobe.core.monitor.anomaly_processor.save_json')
     def test_write_detected_json(self, mock_save_json, mock_load_json, mock_exists):
         mock_exists.side_effect = [True, True]  # json_path 存在
 
@@ -370,7 +370,7 @@ class TestAnomalyDataWriter(TestCase):
 
 class TestAnomalyDataLoader(TestCase):
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.GradAnomalyData')  # 替换为 GradAnomalyData 的实际导入路径
+    @patch('msprobe.core.monitor.anomaly_processor.GradAnomalyData')  # 替换为 GradAnomalyData 的实际导入路径
     def test_create_instances_from_dict(self, mock_GradAnomalyData):
         # 模拟 GradAnomalyData 的构造函数
         def mock_constructor(**kwargs):
@@ -389,11 +389,11 @@ class TestAnomalyDataLoader(TestCase):
         # 确保创建了两个实例，第三个因缺少 key2 被捕获
         self.assertEqual(len(instances), 2)
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.os.listdir')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.load_json')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.check_file_or_directory_path')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.GradAnomalyData')
+    @patch('msprobe.core.monitor.anomaly_processor.os.listdir')
+    @patch('msprobe.core.monitor.anomaly_processor.os.path.exists')
+    @patch('msprobe.core.monitor.anomaly_processor.load_json')
+    @patch('msprobe.core.monitor.anomaly_processor.check_file_or_directory_path')
+    @patch('msprobe.core.monitor.anomaly_processor.GradAnomalyData')
     def test_get_anomalies_from_jsons(self, mock_GradAnomalyData, mock_check_path, mock_load_json, mock_exists,
                                       mock_listdir):
         mock_check_path.return_value = None
@@ -413,7 +413,7 @@ class TestAnomalyDataLoader(TestCase):
         mock_GradAnomalyData.side_effect = mock_constructor  # 假设构造成功
 
         loader = AnomalyDataLoader('/tmp/data')
-        with patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.isdir', return_value=True):
+        with patch('msprobe.core.monitor.anomaly_processor.os.path.isdir', return_value=True):
             anomalies = loader.get_anomalies_from_jsons()
 
         # 确保从 rank0 读取了异常数据
@@ -456,10 +456,10 @@ class TestAnomalyAnalyse(TestCase):
         self.assertEqual(len(result), 3)
         self.assertEqual(result, [anomalies[1], anomalies[0], anomalies[2]])
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.AnomalyDataWriter.get_anomaly_dict')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.save_json')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.logger')
+    @patch('msprobe.core.monitor.anomaly_processor.os.path.exists')
+    @patch('msprobe.core.monitor.anomaly_processor.AnomalyDataWriter.get_anomaly_dict')
+    @patch('msprobe.core.monitor.anomaly_processor.save_json')
+    @patch('msprobe.core.monitor.anomaly_processor.logger')
     def test_rewrite_sorted_anomalies(self, mock_logger, mock_save_json, mock_get_anomaly_dict, mock_exists):
         # 设置 mock
         mock_exists.return_value = False
@@ -469,7 +469,7 @@ class TestAnomalyAnalyse(TestCase):
 
         # 调用方法
         self.anomaly_analyse.sorted_anomalies = self.anomalies
-        with patch("msprobe.pytorch.monitor.anomaly_analyse.check_file_or_directory_path", return_value=None):
+        with patch("msprobe.core.monitor.anomaly_processor.check_file_or_directory_path", return_value=None):
             self.anomaly_analyse.rewrite_sorted_anomalies(output_path)
 
         # 验证调用
@@ -481,17 +481,17 @@ class TestAnomalyAnalyse(TestCase):
         )
         mock_logger.info.assert_called_once_with("anomaly_analyse.json is at output_path.")
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.logger')
+    @patch('msprobe.core.monitor.anomaly_processor.os.path.exists')
+    @patch('msprobe.core.monitor.anomaly_processor.logger')
     def test_rewrite_sorted_anomalies_file_exists(self, mock_logger, mock_exists):
         # 模拟文件已经存在的情况
         mock_exists.return_value = True
         output_path = 'output_path'
 
         # 调用方法
-        with patch("msprobe.pytorch.monitor.anomaly_analyse.check_file_or_directory_path", return_value=None), \
-                patch("msprobe.pytorch.monitor.anomaly_analyse.remove_path", return_value=None), \
-                patch("msprobe.pytorch.monitor.anomaly_analyse.save_json", return_value=None):
+        with patch("msprobe.core.monitor.anomaly_processor.check_file_or_directory_path", return_value=None), \
+                patch("msprobe.core.monitor.anomaly_processor.remove_path", return_value=None), \
+                patch("msprobe.core.monitor.anomaly_processor.save_json", return_value=None):
             self.anomaly_analyse.rewrite_sorted_anomalies(output_path)
 
         # 验证日志警告
@@ -559,11 +559,11 @@ class TestGetStepAndStop(TestCase):
 
 class TestAnomalyAnalyseFunction(TestCase):
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse._get_parse_args')  # 模拟命令行参数解析
-    @patch('msprobe.pytorch.monitor.anomaly_analyse._get_step_and_stop')  # 模拟步骤和顶级数字解析
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.AnomalyDataLoader')  # 模拟数据加载器
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.AnomalyAnalyse')  # 模拟异常分析器
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.logger')  # 模拟日志记录
+    @patch('msprobe.core.monitor.anomaly_processor._get_parse_args')  # 模拟命令行参数解析
+    @patch('msprobe.core.monitor.anomaly_processor._get_step_and_stop')  # 模拟步骤和顶级数字解析
+    @patch('msprobe.core.monitor.anomaly_processor.AnomalyDataLoader')  # 模拟数据加载器
+    @patch('msprobe.core.monitor.anomaly_processor.AnomalyAnalyse')  # 模拟异常分析器
+    @patch('msprobe.core.monitor.anomaly_processor.logger')  # 模拟日志记录
     def test_anomaly_analyse(self, mock_logger, mock_anomaly_analyse, mock_anomaly_data_loader, mock_get_step_and_stop,
                              mock_get_parse_args):
         # 模拟命令行参数
@@ -617,7 +617,7 @@ class TestAnomalyAnalyseFunction(TestCase):
 
 class TestParseArgs(TestCase):
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv',
+    @patch('msprobe.core.monitor.anomaly_processor.sys.argv',
            new=['script_name', '-d', 'path/to/data', '-o', 'path/to/output', '-k', '5', '-s', '[1,2,3]'])
     def test_parse_args_with_all_arguments(self):
         args = _get_parse_args()
@@ -626,7 +626,7 @@ class TestParseArgs(TestCase):
         self.assertEqual(args.top_k_number, 5)
         self.assertEqual(args.step_list, '[1,2,3]')
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data'])
+    @patch('msprobe.core.monitor.anomaly_processor.sys.argv', new=['script_name', '-d', 'path/to/data'])
     def test_parse_args_with_required_argument_only(self):
         args = _get_parse_args()
         self.assertEqual(args.data_path_dir, 'path/to/data')
@@ -634,7 +634,7 @@ class TestParseArgs(TestCase):
         self.assertEqual(args.top_k_number, 8)  # 默认值
         self.assertEqual(args.step_list, '[]')  # 默认值
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data', '-k', '10'])
+    @patch('msprobe.core.monitor.anomaly_processor.sys.argv', new=['script_name', '-d', 'path/to/data', '-k', '10'])
     def test_parse_args_with_topk_only(self):
         args = _get_parse_args()
         self.assertEqual(args.data_path_dir, 'path/to/data')
