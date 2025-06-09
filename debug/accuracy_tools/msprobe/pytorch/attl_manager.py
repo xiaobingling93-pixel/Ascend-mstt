@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import Const
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData

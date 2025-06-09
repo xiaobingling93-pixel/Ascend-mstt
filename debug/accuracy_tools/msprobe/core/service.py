@@ -87,7 +87,7 @@ class BaseService(ABC):
     @property
     def _need_tensor_data(self):
         """判断是否需要采集tensor数据"""
-        return (
+        return bool(
             self.config.task in self.data_collector.tasks_need_tensor_data or
             (self.config.task == Const.STATISTICS and self.config.tensor_list)
         )
@@ -163,7 +163,7 @@ class BaseService(ABC):
         if self._is_l2_level:
             return
         if self._is_online_run_ut:
-            self.__run_ut_dispatch(False)
+            self._run_ut_dispatch(False)
         self._process_async_dump()
         self.data_collector.write_json()
 

@@ -182,7 +182,7 @@ class CompareRealData:
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
             except (FileCheckException, CompareException):
-                error_file = npu_data_name
+                error_file = data_name_pair
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
 
