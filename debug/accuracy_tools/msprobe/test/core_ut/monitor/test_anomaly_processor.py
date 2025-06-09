@@ -24,19 +24,19 @@ class TestAnomalyTurbulence(TestCase):
         self.rule = AnomalyTurbulence(self.threshold)
 
     def test_apply_with_positive_baseline(self):
-        history = [10, 12, 14]
+        history = 12
         cur = 16
         result = self.rule.apply(cur, history=history)
         self.assertTrue(result)
 
     def test_apply_with_non_positive_baseline(self):
-        history = [0, 0, 0]
+        history = 0
         cur = -1
         result = self.rule.apply(cur, history=history)
         self.assertTrue(result)
 
     def test_apply_with_valid_value(self):
-        history = [0, 0, 0]
+        history = 0
         cur = 0
         result = self.rule.apply(cur, history=history)
         self.assertFalse(result)

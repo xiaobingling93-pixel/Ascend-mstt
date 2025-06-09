@@ -18,7 +18,6 @@ import math
 import argparse
 import ast
 import heapq
-import statistics as st
 from abc import ABC
 from dataclasses import dataclass, field
 from typing import List
@@ -48,8 +47,7 @@ class AnomalyTurbulence(ScanRule):
         :param history: float, history weighted average
         :return: bool, whether the current value deviates from the historical average value of current metric
         """
-        baseline = st.mean(history) if isinstance(history, list) else history
-        up_bound = baseline * (1 + self.threshold)
+        up_bound = history * (1 + self.threshold)
         return abs(cur) > up_bound
 
 
@@ -152,24 +150,6 @@ class AnomalyDataFactory(ABC):
         )
 
 
-class TrainStage:
-    DEFAULT_STAGE = -1
-    FORWARD_STAGE = 0
-    BACKWARD_STAGE = 1
-    OPTIMIZER_STAGE = 2
-
-
-FORWARD_KEY = [MonitorConst.ACTV]
-BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD,
-                MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
-OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
-TRAIN_STAGE = {
-    **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
-    **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
-    **{key_: TrainStage.OPTIMIZER_STAGE for key_ in OPTIMIZER_KEY}
-}
-
-
 @dataclass(eq=True)
 class GradAnomalyData:
     rank: int = 0
@@ -202,7 +182,7 @@ class GradAnomalyData:
             Forward stage prefers smaller vpp and pp
             Other stages prefer larger vpp and pp
             """
-            if self_train_stage == TrainStage.FORWARD_STAGE:
+            if self_train_stage == MonitorConst.FORWARD_STAGE:
                 return anomaly.vpp_stage, anomaly.pp_stage
             else:
                 return -anomaly.vpp_stage, -anomaly.pp_stage
@@ -223,7 +203,7 @@ class GradAnomalyData:
         :return: int, if forward return 0; if backward return 1; if optimizer return 2
         """
         key_ = tag_name.split("/")[-1]
-        return TRAIN_STAGE.get(key_, TrainStage.DEFAULT_STAGE)
+        return MonitorConst.TRAIN_STAGE.get(key_, MonitorConst.DEFAULT_STAGE)
 
     def to_dict(self):
         return self.__dict__
