@@ -84,6 +84,30 @@ class TestBaseService(unittest.TestCase):
         self.assertTrue(self.service.currrent_step_first_debug_save)
         self.assertEqual(self.service.ori_customer_func, {})
     
+    def test_properties(self):
+        self.service.config.level = Const.LEVEL_DEBUG
+        self.assertTrue(self.service._is_debug_level)
+        
+        self.service.config.level = Const.LEVEL_L2
+        self.assertTrue(self.service._is_l2_level)
+
+        self.service.config.level = Const.LEVEL_MIX
+        self.assertTrue(self.service._is_mix_level)
+
+        self.service.config.level = Const.LEVEL_MIX
+        self.assertTrue(self.service._is_need_module_hook)
+ 
+        self.service.config.level = Const.LEVEL_MIX
+        self.assertTrue(self.service._is_need_api_hook)
+
+        self.assertFalse(self.service._need_tensor_data)
+        
+        self.service.current_iter = 2
+        self.assertTrue(self.service._is_no_dump_step)
+        
+        self.service.current_rank = 1
+        self.assertTrue(self.service._is_no_dump_rank)
+
     @patch.object(BaseService, '_get_current_rank')
     @patch.object(BaseService, '_process_iteration')
     def test_start_debug_level(self, mock_process_iter, mock_get_rank):
