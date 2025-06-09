@@ -51,7 +51,7 @@ def parse_step_line(line, ops):
 
 def parse_step_fn(filepath):
     data = read_csv(filepath)
-    ops = [k for k in data.keys() if k in MonitorConst.OP_LIST]
+    ops = [k for k in data.keys() if k in MonitorConst.OP_LIST[:-2]]
     parse_step_result = {}
 
     for _, line in data.iterrows():
