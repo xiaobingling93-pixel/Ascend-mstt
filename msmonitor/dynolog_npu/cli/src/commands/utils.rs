@@ -7,27 +7,44 @@ use std::io::{Read, Write};
 
 use anyhow::Result;
 
-pub fn send_msg<T: Write>(client: &mut T, msg: &str) -> Result<()> {
-    let msg_len: [u8; 4] = i32::try_from(msg.len()).unwrap().to_ne_bytes();
+use crate::DynoClient;
 
-    client.write_all(&msg_len)?;
-    client.write_all(msg.as_bytes()).map_err(|err| err.into())
+pub fn send_msg(client: &mut DynoClient, msg: &str) -> Result<()> {
+    match client {
+        DynoClient::Secure(secure_client) => {
+            let msg_len: [u8; 4] = i32::try_from(msg.len()).unwrap().to_ne_bytes();
+            secure_client.write_all(&msg_len)?;
+            secure_client.write_all(msg.as_bytes())?;
+            secure_client.flush()?;
+        }
+        DynoClient::Insecure(insecure_client) => {
+            let msg_len: [u8; 4] = i32::try_from(msg.len()).unwrap().to_ne_bytes();
+            insecure_client.write_all(&msg_len)?;
+            insecure_client.write_all(msg.as_bytes())?;
+            insecure_client.flush()?;
+        }
+    }
+    Ok(())
 }
 
-pub fn get_resp<T: Read>(client: &mut T) -> Result<String> {
-    // Response is prefixed with length
-    let mut resp_len: [u8; 4] = [0; 4];
-    client.read_exact(&mut resp_len)?;
-
-    let resp_len = i32::from_ne_bytes(resp_len);
-    let resp_len = usize::try_from(resp_len).unwrap();
-
-    println!("response length = {}", resp_len);
-
-    let mut resp_str = Vec::<u8>::new();
-    resp_str.resize(resp_len, 0);
-
-    client.read_exact(resp_str.as_mut_slice())?;
-
-    String::from_utf8(resp_str).map_err(|err| err.into())
+pub fn get_resp(client: &mut DynoClient) -> Result<String> {
+    let mut len_buf = [0u8; 4];
+    let mut resp_buf;
+    
+    match client {
+        DynoClient::Secure(secure_client) => {
+            secure_client.read_exact(&mut len_buf)?;
+            let len = u32::from_ne_bytes(len_buf) as usize;
+            resp_buf = vec![0u8; len];
+            secure_client.read_exact(&mut resp_buf)?;
+        }
+        DynoClient::Insecure(insecure_client) => {
+            insecure_client.read_exact(&mut len_buf)?;
+            let len = u32::from_ne_bytes(len_buf) as usize;
+            resp_buf = vec![0u8; len];
+            insecure_client.read_exact(&mut resp_buf)?;
+        }
+    }
+    
+    Ok(String::from_utf8(resp_buf)?)
 }
