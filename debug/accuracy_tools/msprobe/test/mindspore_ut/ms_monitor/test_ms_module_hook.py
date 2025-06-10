@@ -19,7 +19,7 @@ from msprobe.mindspore.monitor.module_hook import TrainerMon, ModuleHookContext,
 
 class TestTrainerMon(unittest.TestCase):
     def setUp(self):
-        self.config_path = os.path.join(os.path.dirname(os.path.realpath("test_module_hook.py")),
+        self.config_path = os.path.join(os.path.dirname(os.path.realpath("test_ms_module_hook.py")),
                                         "config/test_config.json")
         self.mock_config = {
             "start_step": 0,
