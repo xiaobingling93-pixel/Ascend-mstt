@@ -16,6 +16,10 @@ if [ "$#" -ge 4 ]; then
 fi
 
 url=$(awk -F " = " '/\['${pkg_name}'\]/{a=1}a==1&&$1~/url/{print $2;exit}' config.ini)
+lib_path=$MSTT_LIB_PATH
+if [ -n "$lib_path" ]; then
+    url=${lib_path}$(echo $url | awk -F '/' -v OFS='/' '{print $5,$8}')
+fi
 if [[ ! $url = https* ]]; then
     echo "The URL of $pkg_name is illegal."
     exit 1
