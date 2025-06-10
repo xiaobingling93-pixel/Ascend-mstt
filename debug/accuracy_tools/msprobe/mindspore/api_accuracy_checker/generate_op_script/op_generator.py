@@ -116,7 +116,10 @@ class CommonConfig:
 
         filtered = {k: v for k, v in json_content.items() if k not in EXCLUED}
 
-        if len(filtered) > API_INFO:
+        if propagation == Const.FORWARD and len(filtered) > API_INFO - 1:
+            raise ValueError(f'json file has more than one API, the API only contains forward info')
+
+        if propagation == Const.BACKWARD and len(filtered) > API_INFO:
             raise ValueError(f'json file has more than one API, the API only contains forward and backward info')
 
         # Retrieve the first API name and dictionary

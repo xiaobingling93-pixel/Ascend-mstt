@@ -52,8 +52,14 @@ def softmax_grad(dp, softmax_res):
 
 
 def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
+    # 检查维度
+    if kv_tensor.dim() != 4:
+        raise ValueError(f"broadcast_kv: kv_tensor 必须是 4 维 (B, N_kv, S, D)，但得到 {kv_tensor.shape}")
     if num_kv_heads == 0 or num_kv_heads > num_heads:
-        raise ValueError(f"num_kv_heads must be non-zero and bigger than num_heads.")
+        raise ValueError("broadcast_kv: num_kv_heads 必须大于 0 且不超过 num_heads。")
+    if num_heads % num_kv_heads != 0:
+        raise ValueError(f"broadcast_kv: num_heads({num_heads}) 必须能被 num_kv_heads({num_kv_heads}) 整除。")
+
 
     factor = num_heads // num_kv_heads
     kv_shape = kv_tensor.shape
@@ -68,6 +74,17 @@ def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
 
 
 def calculate_qk(q, k, attn_mask, pse, scalar_value):
+    # 基本形状检查
+    if q.dim() < 4 or k.dim() < 4:
+        raise ValueError(f"calculate_qk: q,k 必须至少 4 维，q={q.dim()}，k={k.dim()}")
+    # 检查 head_dim 一致性
+    if q.size(-1) != k.size(-1):
+        raise ValueError(f"calculate_qk: q.head_dim({q.size(-1)}) != k.head_dim({k.size(-1)})")
+    # 检查序列长度匹配（可选）
+    if q.size(2) != k.size(2) and attn_mask is None:
+        # 只有在无 mask 时才严格要求 seq_len 相等
+        torch._assert(q.size(2) == k.size(2),
+                      f"calculate_qk: q.seq_len({q.size(2)}) != k.seq_len({k.size(2)})")
     if k.dim() != 4:
         raise ValueError(f"k tensor dimension must be 4, but got {k.dim()} dimensions (shape: {k.shape})")
 
