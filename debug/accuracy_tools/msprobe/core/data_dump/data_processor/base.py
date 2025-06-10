@@ -215,16 +215,41 @@ class BaseDataProcessor:
         ndarray_json.update({'type': 'numpy.ndarray'})
         ndarray_json.update({'dtype': str(ndarray.dtype)})
         ndarray_json.update({'shape': ndarray.shape})
-        if ndarray.size > 0:
-            ndarray_json.update({"Max": np.max(ndarray).item()})
-            ndarray_json.update({"Min": np.min(ndarray).item()})
-            ndarray_json.update({"Mean": np.mean(ndarray).item()})
-            ndarray_json.update({"Norm": np.linalg.norm(ndarray).item()})
-        else:
-            ndarray_json.update({"Max": None})
-            ndarray_json.update({"Min": None})
-            ndarray_json.update({"Mean": None})
-            ndarray_json.update({"Norm": None})
+
+        # 先初始化默认值
+        stats = {
+            "Max": None,
+            "Min": None,
+            "Mean": None,
+            "Norm": None
+        }
+
+        try:
+            # 只有非空时才尝试计算
+            if ndarray.size > 0:
+                stats = {
+                    "Max": np.max(ndarray).item(),
+                    "Min": np.min(ndarray).item(),
+                    "Mean": np.mean(ndarray).item(),
+                    "Norm": np.linalg.norm(ndarray).item()
+                }
+        except Exception as e:
+            # 决定打印内容或切片
+            if ndarray.size <= 100:
+                data_repr = ndarray
+            else:
+                # 打印前 5 和最后 5 个元素
+                flat = ndarray.flatten()
+                data_repr = np.concatenate([flat[:5], flat[-5:]])
+            logger.warning(
+                "Failed to compute stats for ndarray (dtype=%s, shape=%s, data=%s): %s",
+                ndarray.dtype, ndarray.shape, data_repr, e,
+                exc_info=True
+            )
+
+        # 最后一次性更新
+        ndarray_json.update(stats)
+
         return ndarray_json
 
     @staticmethod

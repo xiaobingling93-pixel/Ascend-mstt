@@ -27,14 +27,13 @@ from mindspore import nn, _no_grad
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
     is_skip_step, get_metrics, get_target_output_dir
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
-from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
-    CSVWriterWithAD, BaseWriterWithAD, WriterInput
-from msprobe.mindspore.monitor.anomaly_analyse import AnomalyDataWriter
+from msprobe.mindspore.monitor.data_writers import CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
 from msprobe.core.common.file_utils import write_df_to_csv
 from msprobe.core.common.utils import analyze_api_call_stack
@@ -730,6 +729,8 @@ class TrainerMon:
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
                     MonitorConst.ACTV, module_input))
+            module_output = [tensor for tensor in module_output if isinstance(tensor, Tensor)] \
+                            if isinstance(module_output, tuple) else module_output
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
@@ -758,11 +759,12 @@ class TrainerMon:
                 step_accumulates_one(context, self.micro_batch_number)
                 return
 
+            valid_input_grad = [tensor for tensor in input_grad if isinstance(tensor, Tensor)]
             tbtag_tensor_map = {}
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTVGRAD, input_grad))
+                    MonitorConst.ACTVGRAD, valid_input_grad))
 
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(

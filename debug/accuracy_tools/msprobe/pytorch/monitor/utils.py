@@ -102,8 +102,10 @@ def validate_ops(ops):
         valid_ops.append(default_op)
         logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
     # 增加默认shape和dtype参数
-    if "shape" not in valid_ops and "dtype" not in valid_ops:
-        valid_ops.extend(["shape", "dtype"])
+    if "shape" not in valid_ops:
+        valid_ops.append("shape")
+    if "dtype" not in valid_ops:
+        valid_ops.append("dtype")
     return valid_ops
 
 

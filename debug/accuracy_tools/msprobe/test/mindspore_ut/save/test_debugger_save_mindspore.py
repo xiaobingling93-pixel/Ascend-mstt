@@ -155,7 +155,6 @@ class TestDebuggerSave(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions")
     def test_save_md5(self, _):
-        print(1111111111111111111111)
         data = {"a": mindspore.Tensor([1., 2.])}
         step = []
         async_dump = False

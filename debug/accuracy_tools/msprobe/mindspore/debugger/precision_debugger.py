@@ -21,6 +21,7 @@ from mindspore._c_expression import MSContext
 
 from msprobe.core.common.const import Const, MsgConst
 from msprobe.core.common.utils import check_token_range
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
@@ -35,7 +36,6 @@ from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
 from msprobe.mindspore.ms_config import parse_task_config
-from msprobe.mindspore.runtime import Runtime
 from msprobe.mindspore.mindspore_service import MindsporeService
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
@@ -216,7 +216,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
             if not instance.service:
-                instance.service = Service(instance.config)
+                instance.service = MindsporeService(instance.config)
             instance.service.save(variable, name, save_backward)
 
     @classmethod

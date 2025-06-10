@@ -134,7 +134,7 @@ class TestBuildDynolog(unittest.TestCase):
             os.chdir(saved_dir)
             
             # 使用生成的证书目录
-            cert_path = os.path.join(cert_dir, "certs")
+            cert_path = "NO_CERTS"
             
             # 启动dynolog进程
             dynolog_cmd = ["third_party/dynolog/build/bin/dynolog", "--enable-ipc-monitor", "--certs-dir", cert_path]

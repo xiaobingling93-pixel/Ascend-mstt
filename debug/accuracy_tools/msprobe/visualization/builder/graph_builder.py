@@ -189,6 +189,8 @@ class GraphBuilder:
         # 数据格式："output": [[{param1}, {param2}, ...]]
         if GraphBuilder._is_valid_batch_p2p_output(param_list):
             for param in param_list[0]:
+                if not isinstance(param, dict):
+                    continue
                 info = {GraphConst.OP: param.get(GraphConst.OP), GraphConst.PEER: param.get(GraphConst.PEER),
                         GraphConst.GROUP_ID: param.get(GraphConst.GROUP_ID)}
                 node.batch_p2p_info.append(info)
@@ -256,14 +258,12 @@ class GraphBuilder:
         max_info = {prefix: 0 for prefix in prefixes}
 
         for key in graph.node_map.keys():
-            for prefix in prefixes:
-                # 构建正则表达式，匹配以 "backward.数字" 结尾的键
-                pattern = re.compile(r'^' + re.escape(prefix) + r'\.backward\.(\d+)$')
-                match = pattern.match(key)
-                if match:
-                    num = int(match.group(1))
-                    if num > max_info[prefix]:
-                        max_info[prefix] = num
+            parts = key.split(Const.SEP)
+            if len(parts) > 2 and parts[-2] == Const.BACKWARD:
+                num = int(parts[-1])
+                prefix = Const.SEP.join(parts[:-2])
+                if prefix in max_info and num > max_info[prefix]:
+                    max_info[prefix] = num
 
         for prefix, num in max_info.items():
             node_id = prefix + Const.SEP + Const.BACKWARD + Const.SEP + str(num)

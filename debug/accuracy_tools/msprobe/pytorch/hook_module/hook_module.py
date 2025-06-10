@@ -21,6 +21,7 @@ import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
+from msprobe.core.common.runtime import Runtime
 from msprobe.pytorch.common.utils import is_float8_tensor, register_forward_pre_hook, register_forward_hook
 
 
@@ -39,6 +40,8 @@ class HOOKModule(nn.Module):
         if not self.stop_hook:
             self.forward_data_collected = False
 
+            if not Runtime.is_running:
+                return
             prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
             if callable(hook_build_func):
                 hook_set = hook_build_func(prefix)

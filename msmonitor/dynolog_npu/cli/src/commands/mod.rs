@@ -9,10 +9,11 @@
 // handling code. Additionally, explicitly "exporting" all the command modules here allows
 // us to avoid having to explicitly list all the command modules in main.rs.
 
+pub mod status;
+pub mod version;
 pub mod dcgm;
 pub mod gputrace;
 pub mod nputrace;
 pub mod npumonitor;
-pub mod status;
-pub mod version;
+pub mod utils;
 // ... add new command modules here

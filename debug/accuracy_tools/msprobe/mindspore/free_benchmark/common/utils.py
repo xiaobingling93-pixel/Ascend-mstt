@@ -19,10 +19,10 @@ from typing import Any, Optional
 import mindspore as ms
 from mindspore import Tensor, ops
 
+from msprobe.core.common.runtime import Runtime
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
-from msprobe.mindspore.runtime import Runtime
 
 
 class Tools:
