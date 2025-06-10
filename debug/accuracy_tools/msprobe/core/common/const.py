@@ -808,8 +808,11 @@ class MonitorConst:
     FORWARD_KEY = [ACTV]
     BACKWARD_KEY = [ACTVGRAD, PRE_GRAD, POST_GRAD, ACC_GRAD]
     OPTIMIZER_KEY = [EXP_AVG, EXP_AVG_SQ]
-    TRAIN_STAGE = {
-        **{key_: FORWARD_STAGE for key_ in FORWARD_KEY},
-        **{key_: BACKWARD_STAGE for key_ in BACKWARD_KEY},
-        **{key_: OPTIMIZER_STAGE for key_ in OPTIMIZER_KEY}
-    }
+
+    TRAIN_STAGE = {}
+    for key in FORWARD_KEY:
+        TRAIN_STAGE[key] = FORWARD_STAGE
+    for key in BACKWARD_KEY:
+        TRAIN_STAGE[key] = BACKWARD_STAGE
+    for key in OPTIMIZER_KEY:
+        TRAIN_STAGE[key] = OPTIMIZER_STAGE
