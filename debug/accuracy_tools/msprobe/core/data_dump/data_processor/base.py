@@ -235,7 +235,7 @@ class BaseDataProcessor:
                 }
         except Exception as e:
             # 决定打印内容或切片
-            logger.warning(f"Error analyzing ndarray stats: {e}", exc_info=True)
+            logger.warning(f"Error analyzing ndarray stats: {e}")
 
         # 最后一次性更新
         ndarray_json.update(stats)
