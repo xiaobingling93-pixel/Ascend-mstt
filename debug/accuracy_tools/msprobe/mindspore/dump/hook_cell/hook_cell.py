@@ -15,10 +15,14 @@
 
 from collections import defaultdict
 
+import mindspore as ms
 from mindspore import nn
 
 from msprobe.core.common.runtime import Runtime
 from msprobe.mindspore.common.utils import is_mindtorch, register_backward_hook_functions
+
+
+ms_version = ms.__version__
 
 
 def add_cell_count(name):
@@ -43,8 +47,12 @@ def __init__(self, hook_build_func) -> None:
         prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
         if callable(hook_build_func):
             hook_set = hook_build_func(prefix)
-            self.register_forward_pre_hook(hook_set.forward_pre_hook)
-            self.register_forward_hook(hook_set.forward_hook)
+            if ms_version < "2.6.0" and not is_mindtorch():
+                getattr(self, "_forward_pre_hook", {})[id(self)] = hook_set.forward_pre_hook
+                getattr(self, "_forward_hook", {})[id(self)] = hook_set.forward_hook
+            else:
+                self.register_forward_pre_hook(hook_set.forward_pre_hook)
+                self.register_forward_hook(hook_set.forward_hook)
             register_backward_hook_functions["full"](self, hook_set.backward_hook)
             register_backward_hook_functions["pre"](self, hook_set.backward_pre_hook)
 
