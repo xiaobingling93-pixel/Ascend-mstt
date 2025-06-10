@@ -7,8 +7,8 @@ from msprobe.mindspore.monitor.module_hook import TrainerMon, ModuleHookContext,
 
 class TestTrainerMon(unittest.TestCase):
     def setUp(self):
-        self.config_path = os.path.join(os.path.dirname(os.path.realpath("test_ms_module_hook.py")),
-                                        "config/test_config.json")
+        base_dir = os.path.dirname(os.path.realpath(__file__))
+        self.config_path = os.path.join(base_dir, "config/test_config.json")
         self.mock_config = {
             "start_step": 0,
             "collect_times": 2,
@@ -21,9 +21,7 @@ class TestTrainerMon(unittest.TestCase):
             "wg_distribution": True,
             "param_distribution": True
         }
-        with patch('os.path.exists', return_value=True), \
-                patch('json.load', return_value=self.mock_config):
-            self.trainer = TrainerMon(self.config_path)
+        self.trainer = TrainerMon(self.config_path)
 
     def test_init_given_valid_config_when_initialized_then_sets_correct_attributes(self):
         self.assertEqual(self.trainer.config_file_path, self.config_path)
