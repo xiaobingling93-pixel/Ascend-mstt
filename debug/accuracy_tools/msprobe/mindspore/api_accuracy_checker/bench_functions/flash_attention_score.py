@@ -80,11 +80,7 @@ def calculate_qk(q, k, attn_mask, pse, scalar_value):
     # 检查 head_dim 一致性
     if q.size(-1) != k.size(-1):
         raise ValueError(f"calculate_qk: q.head_dim({q.size(-1)}) != k.head_dim({k.size(-1)})")
-    # 检查序列长度匹配（可选）
-    if q.size(2) != k.size(2) and attn_mask is None:
-        # 只有在无 mask 时才严格要求 seq_len 相等
-        torch._assert(q.size(2) == k.size(2),
-                      f"calculate_qk: q.seq_len({q.size(2)}) != k.seq_len({k.size(2)})")
+
     if k.dim() != 4:
         raise ValueError(f"k tensor dimension must be 4, but got {k.dim()} dimensions (shape: {k.shape})")
 
