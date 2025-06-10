@@ -1438,8 +1438,8 @@ def seed_all(seed={random_seed}):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(True)
-    torch_npu.npu.manual_seed_all(seed)
-    torch_npu.npu.manual_seed(seed)
+    mindtorch.manual_seed(seed)
+    mindtorch.use_deterministic_algorithms(True)
     mindspore.set_deterministic(True)
 
 class ApiInputAggregation:
