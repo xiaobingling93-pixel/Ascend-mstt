@@ -3,18 +3,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 import mindspore as ms
 
-# Mock necessary MindSpore components
-ms.Tensor = MagicMock
-ms.nn.Cell = MagicMock
-ms.ops.ReduceSum = MagicMock
-ms.ops.ReduceMax = MagicMock
-ms.ops.ReduceMin = MagicMock
-ms.ops.ReduceMean = MagicMock
-ms.ops.IsNan = MagicMock
-ms.ops.IsInf = MagicMock
-ms.common.initializer.initializer = MagicMock
-ms.common.initializer.One = MagicMock
-
 from msprobe.mindspore.monitor.module_hook import TrainerMon, ModuleHookContext, OptimizerContext, GradContext
 
 class TestTrainerMon(unittest.TestCase):
