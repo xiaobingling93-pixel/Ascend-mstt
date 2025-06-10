@@ -15,102 +15,18 @@
 
 import itertools
 import os
-import sys
-import math
-import statistics as st
-from abc import ABC
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 from collections import defaultdict
 
 import pandas as pd
-
 from mindspore import ops
 from mindspore import Tensor
 from mindspore import _no_grad
+
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import change_mode, create_directory, write_df_to_csv
+from msprobe.core.monitor.anomaly_processor import AnomalyDataFactory, AnomalyTurbulence, AnomalyScanner
 from msprobe.core.common.const import FileCheckConst, MonitorConst
-
-
-class ScanRule(ABC):
-    name = "ScanRule"
-
-    def apply(self, cur, history=None):
-        raise NotImplementedError("abstract method apply is not implemented")
-
-
-class AnomalyTurbulence(ScanRule):
-    name = "AnomalyTurbulence"
-
-    def __init__(self, threshold) -> None:
-        self.threshold = threshold
-
-    def apply(self, cur, history=None):
-        """
-        :param cur: float, current metric value
-        :param history: float, history weighted average
-        :return: bool, whether the current value deviates from the historical average value of current metric
-        """
-        baseline = st.mean(history) if isinstance(history, list) else history
-        up_bound = baseline * (1 + self.threshold)
-        return abs(cur) > up_bound
-
-
-class AnomalyNan(ScanRule):
-    name = "AnomalyNan"
-
-    def __init__(self, threshold=None) -> None:
-        self.threshold = threshold
-
-    def apply(self, cur, history=None):
-        return math.isnan(cur) or (self.threshold is not None and abs(cur) > self.threshold)
-
-
-class AnomalyScanner:
-
-    @staticmethod
-    def load_rules(specs: List[dict]):
-        """
-        specs: [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}]
-        """
-        if specs is None:
-            return []
-        alert_rules = []
-        for spec in specs:
-            # 使用get方法获取键值，如果键不存在则返回None
-            rule_cls_name = spec.get("rule_name")
-            rule_args = spec.get("args")
-
-            # 检查必要的键是否存在
-            if rule_cls_name is None or (rule_cls_name == "AnomalyTurbulence" and rule_args is None):
-                logger.warning(f"Spec is missing required keys: {spec}")
-                continue
-
-            cur_module = sys.modules.get(__name__)
-            try:
-                rule_cls = getattr(cur_module, rule_cls_name)
-            except AttributeError:
-                logger.error(f"Rule class '{rule_cls_name}' not found in the current module.")
-                continue
-
-            try:
-                rule_instance = rule_cls(**rule_args) if rule_args is not None else rule_cls()
-                alert_rules.append(rule_instance)
-            except Exception as e:
-                logger.error(f"Error creating instance of rule '{rule_cls_name}': {e}")
-                continue
-
-        return alert_rules
-
-    @staticmethod
-    def scan(scan_rules: List[ScanRule], history, cur):
-        anomaly = False
-        for rule in scan_rules:
-            anomaly = rule.apply(cur, history=history)
-            if anomaly:
-                return anomaly, rule.name
-        return anomaly, None
 
 
 class BCOLORS:
@@ -123,129 +39,6 @@ class BCOLORS:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-
-
-class AnomalyDataFactory(ABC):
-    def __init__(self, rank, pp_stage, group_mates):
-        super().__init__()
-        self.rank = rank
-        self.pp_stage = pp_stage
-        self.group_mates = group_mates
-        self.micro_step = 0
-        self.name2callid = {}
-
-    def set_call_id(self, name2callid):
-        """根据当前GradContext信息更新call_id vpp_stage等信息
-        """
-        self.name2callid = name2callid
-
-    def create(self, tag, message, step):
-        """如果检查出异常, 调用当前接口生成GradAnomalyData实例
-        tag (tuple): metric tag ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
-        message (str): anomaly detect message
-        step (int): training step
-        """
-        if not isinstance(tag, tuple) or len(tag) != 2:
-            raise ValueError("tag must be a tuple with length 2")
-        tag_name = tag[0]
-        param_name = tag_name.split('/')[0]
-        call_id = self.name2callid.get(tag_name, -1)
-        if MonitorConst.NAME_SEP in param_name:
-            vpp_stage = int(param_name.split(MonitorConst.NAME_SEP)[0])
-        else:
-            vpp_stage = 0
-
-        return GradAnomalyData(
-            self.rank,
-            step,
-            self.micro_step,
-            self.pp_stage,
-            vpp_stage,
-            call_id,
-            tag_name,
-            message,
-            self.group_mates
-        )
-
-
-class TrainStage:
-    DEFAULT_STAGE = -1
-    FORWARD_STAGE = 0
-    BACKWARD_STAGE = 1
-    OPTIMIZER_STAGE = 2
-
-
-FORWARD_KEY = [MonitorConst.ACTV]
-BACKWARD_KEY = [MonitorConst.ACTVGRAD, MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
-OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EXP_AVG_SQ]
-TRAIN_STAGE = {
-    **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
-    **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
-    **{key_: TrainStage.OPTIMIZER_STAGE for key_ in OPTIMIZER_KEY}
-}
-
-
-@dataclass(eq=True)
-class GradAnomalyData:
-    rank: int = 0
-    step: int = 0
-    micro_step: int = 0
-    pp_stage: int = 0
-    vpp_stage: int = 0
-    call_id: int = 0
-    tag_name: str = field(default=None, compare=False)
-    message: str = field(default="", compare=False)
-    group_mates: list = field(default=None, compare=False)
-
-    def __lt__(self, other):
-        """
-        自定义比较函数，用于确定 GradAnomalyData 实例之间的顺序。
-        比较规则为：
-            step 和 micro_step 值越小优先级越高；
-            vpp 和 pp 在前向阶段值越小优先级越高，在非前向阶段值越大优先级越高；
-            call_id 值越小优先级越高。
-        """
-        if not isinstance(other, GradAnomalyData):
-            return NotImplemented
-
-        self_train_stage = self.get_train_stage(self.tag_name)
-        other_train_stage = self.get_train_stage(other.tag_name)
-
-        def vpp_pp_comparator(anomaly):
-            """
-            Determine the priority rule for vpp and pp based on train stage
-            Forward stage prefers smaller vpp and pp
-            Other stages prefer larger vpp and pp
-            """
-            if self_train_stage == TrainStage.FORWARD_STAGE:
-                return anomaly.vpp_stage, anomaly.pp_stage
-            else:
-                return -anomaly.vpp_stage, -anomaly.pp_stage
-
-        self_cmp = [self.step, self.micro_step, self_train_stage, *vpp_pp_comparator(self), self.call_id]
-        other_cmp = [other.step, other.micro_step, other_train_stage, *vpp_pp_comparator(other), other.call_id]
-        return self_cmp < other_cmp
-
-    def __le__(self, other):
-        if not isinstance(other, GradAnomalyData):
-            return NotImplemented
-        return self == other or self < other
-
-    @staticmethod
-    def get_train_stage(tag_name):
-        """
-        :param tag_name: "0:fc2.input:0/rank0/actv", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/exp_avg_sq"
-        :return: int, if forward return 0; if backward return 1; if optimizer return 2
-        """
-        key_ = tag_name.split("/")[-1]
-        return TRAIN_STAGE.get(key_, TrainStage.DEFAULT_STAGE)
-
-    def to_dict(self):
-        return self.__dict__
-
-    def get_key(self):
-        # 0:1.self_attention.core_attention_flash_0/rank0/input_grad
-        return ''.join([str(self.tag_name), "_step_", str(self.step), "_call_", str(self.call_id)])
 
 
 @dataclass
