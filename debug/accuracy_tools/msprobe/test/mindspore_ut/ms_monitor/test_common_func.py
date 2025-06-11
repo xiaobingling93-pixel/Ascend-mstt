@@ -10,8 +10,6 @@ from msprobe.mindspore.monitor.common_func import (
     get_parameters,
     get_rank,
     comm_is_initialized,
-    optimizer_pre_hook,
-    optimizer_post_hook
 )
 
 TORCH_AVAILABLE = False
