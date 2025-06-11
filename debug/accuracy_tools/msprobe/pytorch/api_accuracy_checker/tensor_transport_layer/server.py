@@ -12,18 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from functools import partial
+import os
 import struct
 import zlib
 import time
 import io
 from threading import Thread
 
-from twisted.internet import reactor, protocol, endpoints
+from twisted.internet import reactor, protocol, endpoints, ssl
 
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import cipher_list, \
-    STRUCT_UNPACK_MODE as unpack_mode, STR_TO_BYTES_ORDER as bytes_order
+    STRUCT_UNPACK_MODE as unpack_mode, STR_TO_BYTES_ORDER as bytes_order, verify_callback, load_ssl_pem
 
 
 class TCPServer:
@@ -43,14 +44,28 @@ class TCPServer:
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
-            from OpenSSL import SSL
-            from twisted.internet import ssl
-            server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
-            server_context_ = server_context_factory.getContext()
-            server_context_.set_cipher_list(cipher_list)
-            server_context_.set_options(SSL.OP_NO_RENEGOTIATION)
-            server_context_.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT)
-            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, server_context_factory)
+            server_key, server_crt, ca_crt, crl_pem = load_ssl_pem(
+                key_file=os.path.join(self.tls_path, "server.key"),
+                cert_file=os.path.join(self.tls_path, "server.crt"),
+                ca_file=os.path.join(self.tls_path, "ca.crt"),
+                crl_file=os.path.join(self.tls_path, "crl.pem")
+            )
+
+            ssl_options = ssl.CertificateOptions(
+                privateKey=server_key,
+                certificate=server_crt,
+                method=ssl.SSL.TLSv1_2_METHOD,
+                verify=True,
+                requireCertificate=True,
+                caCerts=[ca_crt],  # 信任的CA证书列表
+            )
+            ssl_context = ssl_options.getContext()
+            ssl_context.set_cipher_list(cipher_list)
+            ssl_context.set_options(ssl.SSL.OP_NO_RENEGOTIATION)
+            ssl_context.set_verify(ssl.SSL.VERIFY_PEER | ssl.SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
+                                   partial(verify_callback, crl=crl_pem))
+
+            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, ssl_options)
         else:
             endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
         endpoint.listen(self.factory)

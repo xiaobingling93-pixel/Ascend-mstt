@@ -18,8 +18,7 @@ import re
 
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, check_crt_valid, \
-    FileChecker
+from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
@@ -67,8 +66,10 @@ class TensorConfig(BaseConfig):
             check_file_or_directory_path(self.tls_path, isdir=True)
             check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
             check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
-            check_crt_valid(os.path.join(self.tls_path, "client.crt"))
-            check_crt_valid(os.path.join(self.tls_path, "client.key"), True)
+            check_file_or_directory_path(os.path.join(self.tls_path, "ca.crt"))
+            crl_path = os.path.join(self.tls_path, "crl.pem")
+            if os.path.exists(crl_path):
+                check_file_or_directory_path(crl_path)
 
         if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
             raise Exception(f"host: {self.host} is invalid.")

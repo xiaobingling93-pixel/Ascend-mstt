@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from functools import partial
 import zlib
 import io
 import struct
@@ -22,12 +22,12 @@ from queue import Queue
 from threading import Thread
 from typing import Union
 
-from twisted.internet import reactor, protocol, endpoints
+from twisted.internet import reactor, protocol, endpoints, ssl
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import STRUCT_UNPACK_MODE as unpack_mode, \
-    STR_TO_BYTES_ORDER as bytes_order
+    STR_TO_BYTES_ORDER as bytes_order, cipher_list, verify_callback, load_ssl_pem
 
 MAX_SENDING_QUEUE_SIZE = 20
 
@@ -103,12 +103,28 @@ class TCPClient:
         self.factory = MessageClientFactory()
         self.factory.protocol = cur_protocol
         if self.tls_path:
-            from OpenSSL import SSL
-            from twisted.internet import ssl
-            client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt)
-            client_context_ = client_context_factory.getContext()
-            client_context_.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT)
-            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
+            client_key, client_crt, ca_crt, crl_pem = load_ssl_pem(
+                key_file=os.path.join(self.tls_path, "client.key"),
+                cert_file=os.path.join(self.tls_path, "client.crt"),
+                ca_file=os.path.join(self.tls_path, "ca.crt"),
+                crl_file=os.path.join(self.tls_path, "crl.pem")
+            )
+
+            ssl_options = ssl.CertificateOptions(
+                privateKey=client_key,
+                certificate=client_crt,
+                method=ssl.SSL.TLSv1_2_METHOD,
+                verify=True,
+                requireCertificate=True,
+                caCerts=[ca_crt],  # 信任的CA证书列表
+            )
+            ssl_context = ssl_options.getContext()
+            ssl_context.set_cipher_list(cipher_list)
+            ssl_context.set_options(ssl.SSL.OP_NO_RENEGOTIATION)
+            ssl_context.set_verify(ssl.SSL.VERIFY_PEER | ssl.SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
+                                   partial(verify_callback, crl=crl_pem))
+
+            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, ssl_options)
         else:
             endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         d = endpoint.connect(self.factory)
@@ -346,7 +362,7 @@ class ClientProtocol(protocol.Protocol):
     def connectionLost(self, reason):
         self.signal_exit = True
         self.factory.num_connections -= 1
-        logger.info(f"Lost connection with server, reason is : {reason}")
+        logger.info(f"Lost connection with server, reason is : {reason.value}")
 
 
 class MessageClientFactory(protocol.ClientFactory):

@@ -496,24 +496,6 @@ class TestUtilityOperations:
             assert result[0]['file'] == 'file1.txt'
 
 
-class TestCertificateOperations:
-    @pytest.fixture(autouse=True)
-    def setup(self, tmp_path):
-        self.cert_file = tmp_path / "test.pem"
-        self.mock_cert = MagicMock()
-        self.mock_cert.get_notBefore.return_value = b'20230101000000Z'
-        self.mock_cert.get_notAfter.return_value = b'20250101000000Z'
-        self.mock_cert.has_expired.return_value = False
-
-    def test_check_crt_valid(self):
-        # Test expired certificate
-        self.mock_cert.has_expired.return_value = True
-        with patch('OpenSSL.crypto.load_certificate', return_value=self.mock_cert), \
-                patch('builtins.open', mock_open(read_data='cert data')), \
-                pytest.raises(RuntimeError):
-            check_crt_valid(self.cert_file)
-
-
 class TestDirectoryChecks:
     @pytest.fixture(autouse=True)
     def setup(self, tmp_path):
