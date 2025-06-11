@@ -15,7 +15,7 @@
 #include "dynolog/src/KernelCollector.h"
 #include "dynolog/src/Logger.h"
 #include "dynolog/src/ODSJsonLogger.h"
-#include "dynolog/src/DynologTensorBoardLogger.h"
+
 #include "dynolog/src/PerfMonitor.h"
 #include "dynolog/src/ScubaLogger.h"
 #include "dynolog/src/ServiceHandler.h"
@@ -27,6 +27,10 @@
 
 #ifdef USE_PROMETHEUS
 #include "dynolog/src/PrometheusLogger.h"
+#endif
+
+#ifdef USE_TENSORBOARD 
+#include "dynolog/src/DynologTensorBoardLogger.h"
 #endif
 
 using namespace dynolog;
@@ -70,6 +74,11 @@ std::unique_ptr<Logger> getLogger(const std::string& scribe_category = "") {
     loggers.push_back(std::make_unique<PrometheusLogger>());
   }
 #endif
+#ifdef USE_TENSORBOARD
+  if (!FLAGS_metric_log_dir.empty()) {
+    loggers.push_back(std::make_unique<DynologTensorBoardLogger>(FLAGS_metric_log_dir));
+  }
+#endif
   if (FLAGS_use_fbrelay) {
     loggers.push_back(std::make_unique<FBRelayLogger>());
   }
@@ -81,9 +90,6 @@ std::unique_ptr<Logger> getLogger(const std::string& scribe_category = "") {
   }
   if (FLAGS_use_scuba && !scribe_category.empty()) {
     loggers.push_back(std::make_unique<ScubaLogger>(scribe_category));
-  }
-  if (!FLAGS_metric_log_dir.empty()) {
-    loggers.push_back(std::make_unique<DynologTensorBoardLogger>(FLAGS_metric_log_dir));
   }
   return std::make_unique<CompositeLogger>(std::move(loggers));
 }

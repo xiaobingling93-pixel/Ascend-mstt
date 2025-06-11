@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
-export BUILD_PROMETHEUS=1
+export BUILD_PROMETHEUS=0
+export BUILD_TENSORBOARD=1
+export USE_TENSORBOARD="OFF"
 
 check_gcc_version() {
     if ! command -v gcc >/dev/null 2>&1; then
@@ -52,9 +54,13 @@ update_and_checkout_submodule() {
     cd ./third_party/dynolog
     git checkout ${DYNLOG_COMMIT_ID}
 
-    git submodule add https://github.com/RustingSword/tensorboard_logger.git ./third_party/tensorboard_logger
+    if [ "${BUILD_TENSORBOARD}" -ne 0 ]; then
+        if [ ! -d "./third_party/tensorboard_logger" ]; then
+            git submodule add https://github.com/RustingSword/tensorboard_logger.git ./third_party/tensorboard_logger
+        fi
+        USE_TENSORBOARD="ON"
+    fi
     git submodule update --init --recursive
-    git -c user.name="build" -c user.email="build@example.com" commit -am "Add tensorboard_logger as submodule"
 
     if [ $? -ne 0 ]; then
         echo "ERROR: switch to dynolog specified commit failed"
