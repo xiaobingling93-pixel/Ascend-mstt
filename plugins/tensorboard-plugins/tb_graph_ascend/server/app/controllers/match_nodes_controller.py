@@ -437,6 +437,8 @@ class MatchNodesController:
         keys_to_remove = ADD_MATCH_KEYS
         # 遍历graph_npu_node_data中的每个主键和对应的子字典
         for key, fild_obj in graph_npu_node_data.items():
+            if not fild_obj or type(fild_obj) != dict:
+                continue
             # 使用字典解析创建新的子字典，排除不需要的键
             graph_npu_node_data[key] = {
                 sub_key: value
