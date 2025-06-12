@@ -119,6 +119,11 @@ class CommonConfig:
         if len(filtered) > API_INFO:
             raise ValueError(f'json file has more than one API, the API only contains forward and backward info')
 
+        if propagation == Const.FORWARD and filtered and all(k.endswith('forward') for k in filtered):
+            raise ValueError(
+                "json file has more than one API, the API only contains forward info。"
+            )
+
         # Retrieve the first API name and dictionary
         forward_item = next(iter(json_content.items()), None)
         if not forward_item or not isinstance(forward_item[1], dict) or not forward_item[1]:
