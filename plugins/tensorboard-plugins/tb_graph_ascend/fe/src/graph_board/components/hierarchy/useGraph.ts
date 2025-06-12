@@ -186,6 +186,8 @@ const useGraph = (): UseGraphType => {
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0)
             .remove();
+        // 强制 DOM 排列顺序与数据一致
+        innnerReact.order();
     };
 
     const bindOuterRect: UseGraphType['bindOuterRect'] = (container, data): void => {
@@ -228,6 +230,9 @@ const useGraph = (): UseGraphType => {
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0)
             .remove();
+
+        // 强制 DOM 排列顺序与数据一致
+        outerReact.order();
     };
 
     const bindText: UseGraphType['bindText'] = (container, data) => {
@@ -268,6 +273,10 @@ const useGraph = (): UseGraphType => {
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0) // 动画过渡：透明度逐渐变为 0
             .remove();
+
+
+        // 强制 DOM 排列顺序与数据一致
+        texts.order();
     };
 
     const changeNodeExpandState: UseGraphType['changeNodeExpandState'] = async (nodeInfo: any, metaData: any): Promise<any> => {
