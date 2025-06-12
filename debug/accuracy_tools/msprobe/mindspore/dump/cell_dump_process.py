@@ -801,9 +801,13 @@ def create_kbyk_json(dump_path, summary_mode, step):
     }
 
     create_directory(dump_path)
-    config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
+    rank_id = os.environ.get('RANK_ID')
+    if rank_id is None:
+        rank_id = 0
+    config_json_path = os.path.join(dump_path, rank_id + "kernel_kbyk_dump.json")
     save_json(config_json_path, config_json, indent=4)
     logger.info(config_json_path + " has been created.")
+    return config_json_path
 
 
 def start(config: CellDumpConfig):
@@ -816,9 +820,7 @@ def start(config: CellDumpConfig):
     step = config.step
     if dump_task == CoreConst.STATISTICS:
         # 使能KBK dump
-        config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
-        if not os.path.exists(config_json_path):
-            create_kbyk_json(dump_path, summary_mode, step)
+        config_json_path = create_kbyk_json(dump_path, summary_mode, step)
         os.environ["MINDSPORE_DUMP_CONFIG"] = config_json_path
 
         # 执行过程中跳过TensorDump算子
@@ -831,6 +833,7 @@ def start(config: CellDumpConfig):
                 "please use the latest version package of MindSpore."
             )
         _set_init_iter(0)
+        remove_path(config_json_path)
 
     if not dump_gradient_op_existed or net is None:
         return
