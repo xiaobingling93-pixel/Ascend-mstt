@@ -35,7 +35,7 @@ import pandas as pd
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, CompareConst
 from msprobe.core.common.global_lock import global_lock, is_main_process
 
 proc_lock = multiprocessing.Lock()
@@ -474,7 +474,15 @@ def save_excel(path, data):
         elif data_type == "list":
             with pd.ExcelWriter(path) as writer:
                 for data_df, sheet_name in data:
-                    data_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    data_length = len(data_df)
+                    if data_length < CompareConst.MAX_EXCEL_LENGTH:
+                        data_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    else:
+                        slice_num = (data_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
+                        slice_size = (data_length + slice_num - 1) // slice_num
+                        for i in range(slice_num):
+                            data_df.iloc[i * slice_size: min((i + 1) * slice_size, data_length)] \
+                                   .to_excel(writer, sheet_name=f'{sheet_name}_part_{i}', index=False)
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
@@ -914,7 +922,7 @@ class SharedDict:
             self._shm = shared_memory.SharedMemory(create=False, name=name)
         except FileNotFoundError:
             try:
-                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 128)
                 data = pickle.dumps({})
                 self._shm.buf[0:len(data)] = bytearray(data)
                 logger.debug(f'create shared memory, name: {name}')
