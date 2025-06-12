@@ -190,7 +190,7 @@ class TfVaadinTable extends PolymerElement {
 
     const textarea = document.createElement('textarea');
     textarea.readOnly = true;
-    textarea.value = rowData.item[propertyName];
+    textarea.value = rowData.item[propertyName] || 'null';
     textarea.onmouseenter = () => {
       button.style.display = 'unset';
     };
@@ -236,7 +236,7 @@ class TfVaadinTable extends PolymerElement {
     }
     const textarea = root.querySelector('textarea');
     if (textarea) {
-      textarea.value = rowData.item[propertyName];
+      textarea.value = rowData.item[propertyName] || 'null';
     }
   }
 
