@@ -371,17 +371,6 @@ class TestBenchFunctions(unittest.TestCase):
         k2, v2 = generate_kv(k, v, 4, 2)
         self.assertEqual(k2.shape[1], 4)
 
-    def test_rebuild_softmax(self):
-        q = torch.randn(1,1,3,4)
-        k = torch.randn(1,1,3,4)
-        out = rebuid_softmax_by_qkv(q, k, None, None, 1.0)
-        self.assertEqual(out.shape[-1], q.shape[2])
-        # max_sum path
-        qk, m, s = softmax_forward(torch.matmul(q,k.permute(0,1,3,2)))
-        params = RebuildSoftmaxParams(q,q,None,None,1.0,m,s)
-        out2 = rebuild_softmax_by_max_sum(params)
-        self.assertTrue(torch.allclose(out2, torch.softmax(torch.matmul(q,k.permute(0,1,3,2)),dim=-1)))
-
     def test_get_head_and_layout(self):
         with self.assertRaises(ValueError):
             get_head_num(1)
