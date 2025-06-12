@@ -153,6 +153,7 @@ class TfVaadinTable extends PolymerElement {
       switch (titleName) {
         case 'stackInfo':
         case 'suggestions':
+        case 'parallelMergeInfo':
           this._createCopyableTextarea(root, propertyName, rowData);
           break;
         default:
@@ -164,6 +165,7 @@ class TfVaadinTable extends PolymerElement {
       switch (titleName) {
         case 'stackInfo':
         case 'suggestions':
+        case 'parallelMergeInfo':
           this._updateCopyableTextarea(root, propertyName, rowData);
           break;
         default:
@@ -180,6 +182,9 @@ class TfVaadinTable extends PolymerElement {
     const textTitle = 'title';
     title.className = 'copyable-input-title';
     title.style.fontWeight = 'bold';
+    title.style.marginTop = '8px';
+    title.style.marginBottom = '8px';
+    title.style.fontSize = '14px';
     title.textContent = `${rowData.item[textTitle]}:`;
     container.appendChild(title);
 
