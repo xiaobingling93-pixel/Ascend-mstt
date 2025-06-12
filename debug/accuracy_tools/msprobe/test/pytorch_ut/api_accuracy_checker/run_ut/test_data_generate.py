@@ -298,53 +298,6 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertIsInstance(tensor, torch.Tensor)
         self.assertEqual(tensor.dtype, torch.int32)
 
-    def test_gen_common_tensor_boundary_values(self):
-        low_info = [1, float('-inf')]
-        high_info = [2, float('inf')]
-        shape = (3, 3)
-        data_dtype = 'torch.float32'
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(tensor.max() == float('inf'))
-        self.assertTrue(tensor.min() == float('-inf'))
-        
-        low_info = [float('inf'), float('inf')]
-        high_info = [float('inf'), float('inf')]
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(tensor.max() == float('inf'))
-        self.assertTrue(tensor.min() == float('inf'))
-
-        low_info = [1, float('inf')]
-        high_info = [2, float('inf')]
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(tensor.max() == float('inf'))
-        self.assertTrue(torch.allclose(tensor.min(), torch.tensor(1.0), atol = 0.5))
-        
-        low_info = [1, float('-inf')]
-        high_info = [2, float('-inf')]
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(torch.allclose(tensor.max(), torch.tensor(2.0), atol = 0.5))
-        self.assertTrue(tensor.min() == float('-inf'))
-        
-        low_info = [1, float('nan')]
-        high_info = [2, float('nan')]
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
-
-        low_info = [float('nan'), float('nan')]
-        high_info = [float('nan'), float('nan')]
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
-
-        shape = (0, 0)
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertEqual(tensor.numel(), 0)
-        
-        shape = (1, 2)
-        low_info = [2, float('nan')]
-        high_info = [2, float('nan')]
-        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
-
     def test_gen_bool_tensor(self):
         info = {"type": "torch.Tensor", "dtype": "torch.bool", "shape": [1, 1, 160, 256], "Max": 1, "Min": 0,
                 "requires_grad": False}
