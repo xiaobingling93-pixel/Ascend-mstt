@@ -804,7 +804,6 @@ def create_kbyk_json(dump_path, summary_mode, step):
     config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
     save_json(config_json_path, config_json, indent=4)
     logger.info(config_json_path + " has been created.")
-    return config_json_path
 
 
 def start(config: CellDumpConfig):
@@ -817,7 +816,9 @@ def start(config: CellDumpConfig):
     step = config.step
     if dump_task == CoreConst.STATISTICS:
         # 使能KBK dump
-        config_json_path = create_kbyk_json(dump_path, summary_mode, step)
+        config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
+        if not os.path.exists(config_json_path):
+            create_kbyk_json(dump_path, summary_mode, step)
         os.environ["MINDSPORE_DUMP_CONFIG"] = config_json_path
 
         # 执行过程中跳过TensorDump算子
