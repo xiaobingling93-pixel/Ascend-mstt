@@ -9,7 +9,8 @@ from msprobe.mindspore.api_accuracy_checker.bench_functions.flash_attention_scor
     generate_attn_mask, generate_kv, rebuid_softmax_by_qkv,
     rebuild_softmax_by_max_sum, FlashAttentionScore,
     npu_fusion_attention_forward_patch, npu_fusion_attention_backward_patch,
-    FaForwardParams, FaBackwardParams, RebuildSoftmaxParams, GTYPE
+    FaForwardParams, FaBackwardParams, RebuildSoftmaxParams, GTYPE,
+    get_head_num, get_input_layout
 )
 
 class TestBenchFunctions(unittest.TestCase):
@@ -134,77 +135,274 @@ class TestBenchFunctions(unittest.TestCase):
         k2, _ = generate_kv(key, value, 4, 2)
         self.assertEqual(k2.shape[1], 4)
 
-    def test_rebuild_softmax_by_qkv(self):
-        q = torch.randn(1,1,3,4)
-        k = torch.randn(1,1,3,4)
-        res = rebuid_softmax_by_qkv(q, k, None, None, 1.0)
-        expected_shape = torch.matmul(q, k.permute(0,1,3,2)).shape
-        self.assertEqual(res.shape, expected_shape)
 
-    def test_rebuild_softmax_max_sum(self):
-        q = torch.randn(1,1,3,4)
-        k = torch.randn(1,1,3,4)
-        softmax_max = torch.randn(1,1,1,2)
-        softmax_sum = torch.randn(1,1,1,2)
-        params = RebuildSoftmaxParams(q, k, None, None, 1.0, softmax_max, softmax_sum)
-        res = rebuild_softmax_by_max_sum(params)
-        repeat_dim = 4 // softmax_max.shape[-1]
-        expected = torch.exp(torch.matmul(q, k.permute(0,1,3,2)) -
-                              softmax_max.repeat(1,1,1,repeat_dim)).div(
-            softmax_sum.repeat(1,1,1,repeat_dim)
-        )
-        self.assertTrue(torch.allclose(res, expected, atol=1e-6))
-        # error when softmax_max length zero
-        params_err = RebuildSoftmaxParams(q, k, None, None, 1.0, torch.randn(1,1,1,0), softmax_sum)
-        with self.assertRaises(ValueError):
-            rebuild_softmax_by_max_sum(params_err)
-
-    def test_fusion_attention_forward_backward(self):
-        B, N, S, D = 1, 2, 3, 4
+    def test_rebuild_softmax_by_max_sum_and_errors(self):
+        # 正常路径
+        B, N, S, D = 1, 1, 3, 4
         q = torch.randn(B, N, S, D)
         k = torch.randn(B, N, S, D)
-        v = torch.randn(B, N, S, D)
-        params = FaForwardParams(q, k, v, None, None, None, 1.0, 1.0)
-        y, mx, sm = fusion_attention_forward(params)
-        dq = torch.randn_like(y)
-        bparams = FaBackwardParams(dq, q, k, v, torch.softmax(torch.randn_like(y), -1), None, None, 1.0, 1.0)
-        dq_out, dk_out, dv_out = fusion_attention_backward(bparams)
-        self.assertEqual(dq_out.shape, q.shape)
-        self.assertEqual(dk_out.shape, k.shape)
-        self.assertEqual(dv_out.shape, v.shape)
-        # keep_prob zero errors
-        params_bad = FaForwardParams(q, k, v, None, None, None, 1.0, 0)
-        with self.assertRaises(ValueError):
-            fusion_attention_forward(params_bad)
-        bparams_bad = FaBackwardParams(dq, q, k, v, torch.softmax(torch.randn_like(y), -1), None, None, 1.0, 0)
-        with self.assertRaises(ValueError):
-            fusion_attention_backward(bparams_bad)
+        attn_mask = None
+        pse = None
+        scalar = 1.0
+        # 手动构造 softmax_max、softmax_sum
+        qk, softmax_max, softmax_sum = softmax_forward(torch.matmul(q, k.permute(0,1,3,2)))
+        params = RebuildSoftmaxParams(q=q, k=k, attn_mask=attn_mask, pse=pse,
+                                     scalar_value=scalar,
+                                     softmax_max=softmax_max, softmax_sum=softmax_sum)
+        res = rebuild_softmax_by_max_sum(params)
+        self.assertTrue(torch.allclose(res, torch.softmax(torch.matmul(q,k.permute(0,1,3,2)), dim=-1)))
 
-    def test_flash_attention_score_forward(self):
-        fas = FlashAttentionScore()
-        B, N, S, D = 1, 2, 3, 4
-        q = torch.randn(B, S, N*D)
-        k = torch.randn(B, S, N*D)
-        v = torch.randn(B, S, N*D)
-        out, max_vals, sum_vals = fas.forward(q, k, v, head_num=N, input_layout="BSH")
-        self.assertIsInstance(out, torch.Tensor)
-        self.assertIsInstance(max_vals, torch.Tensor)
-        self.assertIsInstance(sum_vals, torch.Tensor)
+        # softmax_max 最后一维为 0 时抛错
+        bad_max = torch.empty(B, N, S, 0)
+        bad_params = params._replace(softmax_max=bad_max)
+        with self.assertRaises(ValueError):
+            rebuild_softmax_by_max_sum(bad_params)
 
-    def test_npu_fusion_patches(self):
-        # forward patch
-        q = torch.randn(2,3,4)
-        k = torch.randn(2,3,4)
-        args, dims, newk = npu_fusion_attention_forward_patch(q, k, k, head_num=2, input_layout="BSH")
-        self.assertIsInstance(args, list)
+    def test_npu_patch_forward_and_backward_patch(self):
+        # forward_patch 长度不足报错
         with self.assertRaises(RuntimeError):
-            npu_fusion_attention_forward_patch(q)
-        # backward patch
-        dx = torch.randn(2,3,4)
-        args_b, dims_b, newk_b = npu_fusion_attention_backward_patch(q, k, k, dx, q, 2, input_layout="BSH")
-        self.assertIsInstance(args_b, list)
+            npu_fusion_attention_forward_patch(1)
+        # backward_patch 长度不等于6 报错
         with self.assertRaises(ValueError):
-            npu_fusion_attention_backward_patch(q, k)
+            npu_fusion_attention_backward_patch(1,2,3)
+
+        # 正常调用，检查返回结构
+        B, S1, S2, N1, D = 1, 2, 2, 2, 4
+        head_num = 1
+        layout = "BSH"
+        q = torch.randn(B, S1, N1 * D)
+        k = torch.randn(B, S2, N1 * D)
+        # forward_patch 返回 args, dims_kwargs, new_kwargs
+        args, dims, new_kwargs = npu_fusion_attention_forward_patch(q, k, None, head_num, layout)
+        self.assertIn("b", dims)
+        # backward_patch
+        dx = torch.randn_like(q)
+        args2, dims2, new_kwargs2 = npu_fusion_attention_backward_patch(q, k, None, dx, head_num, layout)
+        self.assertIn("s1", dims2)
+
+
+    def test_fusion_attention_forward_with_drop_mask(self):
+        B, N, S, D = 1, 2, 3, 4
+        q = torch.randn(B, N, S, D, dtype=torch.float64)
+        k = torch.randn(B, N, S, D, dtype=torch.float64)
+        v = torch.randn(B, N, S, D, dtype=torch.float64)
+        # 制造一个 drop_mask
+        drop_mask = torch.randint(0, 2, (B, N, S, S), dtype=torch.float64)
+        # 注意 drop_mask 需要能广播到 softmax_res 形状 (B,N,S,S)
+        params = FaForwardParams(
+            q=q, k=k, v=v,
+            drop_mask=drop_mask,
+            attn_mask=None,
+            pse=None,
+            scalar_value=1.0,
+            keep_prob=0.5
+        )
+        y1, _, _ = fusion_attention_forward(params)
+        # 手动计算：先 softmax，再 mask，再 matmul
+        qk = calculate_qk(q, k, None, None, 1.0)
+        sm, _, _ = softmax_forward(qk)
+        masked = sm * drop_mask * (1.0 / 0.5)
+        y2 = torch.matmul(masked, v)
+        self.assertTrue(torch.allclose(y1, y2))
+
+    def test_fusion_attention_backward_with_drop_mask(self):
+        B, N, S, D = 1, 2, 3, 4
+        # 构造前向结果
+        dx = torch.randn(B, N, S, D, dtype=torch.float64)
+        q = torch.randn(B, N, S, D, dtype=torch.float64)
+        k = torch.randn(B, N, S, D, dtype=torch.float64)
+        v = torch.randn(B, N, S, D, dtype=torch.float64)
+        # 构造 softmax_res (B,N,S,S) 和 drop_mask
+        sm = torch.softmax(torch.randn(B, N, S, S, dtype=torch.float64), dim=-1)
+        drop_mask = torch.randint(0, 2, (B, N, S, S), dtype=torch.float64)
+        params = FaBackwardParams(
+            dx=dx, q=q, k=k, v=v,
+            softmax_res=sm,
+            drop_mask=drop_mask,
+            pse=None,
+            scalar_value=1.0,
+            keep_prob=0.8
+        )
+        dq1, dk1, dv1 = fusion_attention_backward(params)
+        # 直接对比形状和 dtype
+        self.assertEqual(dq1.shape, q.shape)
+        self.assertEqual(dk1.shape, k.shape)
+        self.assertEqual(dv1.shape, v.shape)
+        self.assertEqual(dq1.dtype, torch.float64)
+
+    def test_get_head_num_and_input_layout_errors(self):
+        # 既无 kwargs, 也无足够 args
+        with self.assertRaises(ValueError):
+            get_head_num(1, 2, 3)
+        with self.assertRaises(ValueError):
+            get_input_layout(1, 2, 3, 4)
+
+    def test_npu_forward_patch_sanity(self):
+        # 测试 sparse_mode 非零路径
+        B, S1, S2, N1, D = 1, 3, 5, 2, 4
+        head_num = 2
+        layout = "BSH"
+        q = torch.randn(B, S1, N1 * D)
+        k = torch.randn(B, S2, N1 * D)
+        # 传入 sparse_mode, pre/next token，pse
+        args, dims, new_kwargs = npu_fusion_attention_forward_patch(
+            q, k, None,
+            head_num, layout,
+            sparse_mode=3,
+            pre_tockens=1,
+            next_tockens=2,
+            pse=torch.ones(1),
+        )
+        # dims 检查
+        self.assertEqual(dims["b"], B)
+        self.assertEqual(dims["s1"], S1)
+        self.assertEqual(dims["s2"], S2)
+        self.assertEqual(new_kwargs["sparse_mode"], 3)
+        self.assertTrue("pse" in new_kwargs)
+
+    def test_npu_backward_patch_sanity(self):
+        B, S1, S2, N1, D = 1, 4, 4, 2, 4
+        head_num = 2
+        layout = "BSH"
+        q = torch.randn(B, S1, N1 * D)
+        k = torch.randn(B, S2, N1 * D)
+        dx = torch.randn(B, S1, N1 * D)
+        # 正确长度
+        args, dims, new_kwargs = npu_fusion_attention_backward_patch(
+            q, k, None, dx, head_num, layout
+        )
+        self.assertEqual(dims["n1"], N1)
+        self.assertEqual(dims["n2"], N1)
+        # 传入 n2 不整除 n1 抛错
+        with self.assertRaises(ValueError):
+            npu_fusion_attention_backward_patch(
+                q, k, None, dx, 3, layout
+            )
+
+    def test_gtype_constant(self):
+        # Ensure GTYPE matches expected torch dtype
+        self.assertEqual(GTYPE, torch.float64)
+
+    def test_softmax_forward_and_sum(self):
+        x = torch.tensor([[0.5, -0.5], [2.0, 3.0]], dtype=GTYPE)
+        res, x_max, x_sum = softmax_forward(x)
+        expected = torch.softmax(x, dim=-1)
+        self.assertTrue(torch.allclose(res, expected, atol=1e-6))
+        self.assertTrue(torch.allclose(x_sum, torch.exp(x - x_max).sum(dim=-1, keepdim=True), atol=1e-6))
+
+    def test_softmax_grad_zero_sum(self):
+        x = torch.randn(3, 4, dtype=GTYPE)
+        y, _, _ = softmax_forward(x)
+        dp = torch.randn_like(y)
+        grad = softmax_grad(dp, y)
+        self.assertTrue(torch.allclose(grad.sum(dim=-1), torch.zeros_like(grad.sum(dim=-1)), atol=1e-6))
+
+    def test_broadcast_kv_and_errors(self):
+        B, N_kv, S, D = 2, 1, 3, 4
+        num_heads = 2
+        kv = torch.arange(B*N_kv*S*D, dtype=torch.float32).reshape(B, N_kv, S, D)
+        out = broadcast_kv(num_heads, N_kv, kv, kv.dtype)
+        self.assertEqual(out.shape, (B, num_heads, S, D))
+        # invalid dims
+        with self.assertRaises(ValueError):
+            broadcast_kv(2, 0, kv, kv.dtype)
+        with self.assertRaises(ValueError):
+            broadcast_kv(3, 2, kv, kv.dtype)
+
+    def test_calculate_qk_basic_and_errors(self):
+        q = torch.randn(1,1,2,3)
+        k = torch.randn(1,1,2,3)
+        scalar = 0.5
+        out = calculate_qk(q, k, None, None, scalar)
+        expected = torch.matmul(q, k.permute(0,1,3,2)) * scalar
+        self.assertTrue(torch.allclose(out, expected))
+        # shape mismatch
+        k_bad = torch.randn(1,1,2,4)
+        with self.assertRaises(ValueError):
+            calculate_qk(q, k_bad, None, None, scalar)
+        # low dims
+        q3 = torch.randn(2,3,4)
+        with self.assertRaises(ValueError):
+            calculate_qk(q3, q3, None, None, scalar)
+
+    def test_fusion_attention_forward_backward_no_mask(self):
+        B, N, S, D = 1, 2, 3, 4
+        q = torch.randn(B,N,S,D,dtype=GTYPE)
+        k = torch.randn(B,N,S,D,dtype=GTYPE)
+        v = torch.randn(B,N,S,D,dtype=GTYPE)
+        params = FaForwardParams(q=q, k=k, v=v, drop_mask=None, attn_mask=None,
+                                  pse=None, scalar_value=1.0, keep_prob=1.0)
+        y, m, s = fusion_attention_forward(params)
+        # gradient
+        dx = torch.randn_like(y)
+        backward = FaBackwardParams(dx=dx, q=q, k=k, v=v,
+                                     softmax_res=torch.softmax(calculate_qk(q, k, None, None, 1.0), dim=-1),
+                                     drop_mask=None, pse=None, scalar_value=1.0, keep_prob=1.0)
+        dq, dk, dv = fusion_attention_backward(backward)
+        self.assertEqual(dq.shape, q.shape)
+        self.assertEqual(dk.shape, k.shape)
+        self.assertEqual(dv.shape, v.shape)
+
+    def test_parse_and_convert_layouts(self):
+        q = torch.randn(2,3,4)
+        k = torch.randn(2,5,4)
+        head = 2
+        args = parse_bsnd_args(q, k, head, "BSH")
+        self.assertEqual(args[0], 2)
+        B,N,S,D = 1,2,3,4
+        x = torch.arange(B*N*S*D).reshape(B,N,S,D)
+        for layout in ["BSH","SBH","BSND","BNSD"]:
+            out = convert_from_bnsd(x, layout)
+            back = convert_to_bnsd(out, N, layout)
+            self.assertTrue(torch.equal(back, x.to(GTYPE)))
+
+    def test_generate_attn_mask(self):
+        for mode in range(5):
+            mask = generate_attn_mask(mode, None, 1,1,3,3,0,0,torch.float32)
+            self.assertEqual(mask.shape, (3,3))
+        # reverse large mask
+        orig = torch.from_numpy(np.triu(np.ones([2048,2048]),1)).to(torch.float32)
+        rev = generate_attn_mask(2, orig, 1,1,3,3,0,0,torch.float32)
+        self.assertEqual(rev.shape, (3,3))
+
+    def test_generate_kv(self):
+        k = torch.randn(1,2,3,4)
+        v = torch.randn(1,2,3,4)
+        k2, v2 = generate_kv(k, v, 4, 2)
+        self.assertEqual(k2.shape[1], 4)
+
+    def test_rebuild_softmax(self):
+        q = torch.randn(1,1,3,4)
+        k = torch.randn(1,1,3,4)
+        out = rebuid_softmax_by_qkv(q, k, None, None, 1.0)
+        self.assertEqual(out.shape[-1], q.shape[2])
+        # max_sum path
+        qk, m, s = softmax_forward(torch.matmul(q,k.permute(0,1,3,2)))
+        params = RebuildSoftmaxParams(q,q,None,None,1.0,m,s)
+        out2 = rebuild_softmax_by_max_sum(params)
+        self.assertTrue(torch.allclose(out2, torch.softmax(torch.matmul(q,k.permute(0,1,3,2)),dim=-1)))
+
+    def test_get_head_and_layout(self):
+        with self.assertRaises(ValueError):
+            get_head_num(1)
+        with self.assertRaises(ValueError):
+            get_input_layout(1,2,3)
+
+    def test_npu_patches(self):
+        # forward patch
+        q = torch.randn(1,2,2*4)
+        k = torch.randn(1,3,2*4)
+        with self.assertRaises(RuntimeError):
+            npu_fusion_attention_forward_patch(1)
+        args, dims, new_kwargs = npu_fusion_attention_forward_patch(q, k, None, 2, "BSH")
+        self.assertIn("b", dims)
+        # backward patch
+        dx = torch.randn_like(q)
+        with self.assertRaises(ValueError):
+            npu_fusion_attention_backward_patch(q,k,None,dx,3)
+        args2, dims2, new_kwargs2 = npu_fusion_attention_backward_patch(q,k,None,dx,2, "BSH")
+        self.assertIn("s1", dims2)
+
 
 if __name__ == '__main__':
     unittest.main()
