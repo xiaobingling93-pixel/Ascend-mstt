@@ -11,6 +11,7 @@
 #include <chrono>
 #include <glog/logging.h>
 
+#ifdef USE_TENSORBOARD
 DEFINE_string(metric_log_dir, "", "The Path to store tensorboard logs");
 
 namespace dynolog {
@@ -137,3 +138,4 @@ void TensorBoardLoggerImpl::log(const std::string &key, double val, uint64_t ste
     logger_->add_scalar(key, step, val);
 }
 }
+#endif
