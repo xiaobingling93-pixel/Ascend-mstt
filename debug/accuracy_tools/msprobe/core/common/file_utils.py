@@ -462,6 +462,17 @@ def save_excel(path, data):
                 return "list"
         raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
 
+    def save_in_slice(df, base_name):
+        df_length = len(df)
+        if df_length < CompareConst.MAX_EXCEL_LENGTH:
+            df.to_excel(writer, sheet_name=base_name, index=False)
+        else:
+            slice_num = (df_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
+            slice_size = (df_length + slice_num - 1) // slice_num
+            for i in range(slice_num):
+                df.iloc[i * slice_size: min((i + 1) * slice_size, df_length)] \
+                    .to_excel(writer, sheet_name=f'{base_name}_part_{i}' if base_name else f'part_{i}', index=False)
+
     check_path_before_create(path)
     path = os.path.realpath(path)
 
@@ -469,20 +480,12 @@ def save_excel(path, data):
     data_type = validate_data(data)
 
     try:
-        if data_type == "single":
-            data.to_excel(path, index=False)
-        elif data_type == "list":
-            with pd.ExcelWriter(path) as writer:
+        with pd.ExcelWriter(path) as writer:
+            if data_type == "single":
+                save_in_slice(data, None)
+            elif data_type == "list":
                 for data_df, sheet_name in data:
-                    data_length = len(data_df)
-                    if data_length < CompareConst.MAX_EXCEL_LENGTH:
-                        data_df.to_excel(writer, sheet_name=sheet_name, index=False)
-                    else:
-                        slice_num = (data_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
-                        slice_size = (data_length + slice_num - 1) // slice_num
-                        for i in range(slice_num):
-                            data_df.iloc[i * slice_size: min((i + 1) * slice_size, data_length)] \
-                                   .to_excel(writer, sheet_name=f'{sheet_name}_part_{i}', index=False)
+                    save_in_slice(data_df, sheet_name)
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
