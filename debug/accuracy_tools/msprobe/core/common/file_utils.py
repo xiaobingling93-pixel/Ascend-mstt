@@ -922,7 +922,8 @@ class SharedDict:
             self._shm = shared_memory.SharedMemory(create=False, name=name)
         except FileNotFoundError:
             try:
-                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 128)
+                # 共享内存空间增加至5M
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 5)
                 data = pickle.dumps({})
                 self._shm.buf[0:len(data)] = bytearray(data)
                 logger.debug(f'create shared memory, name: {name}')
@@ -937,6 +938,7 @@ class SharedDict:
             except Exception as e:
                 logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
                 self._dict = {}
+                self._shm.buf[:] = bytearray(b'\x00' * len(self._shm.buf))  # 清空内存
                 self._changed = True
 
 
