@@ -482,7 +482,7 @@ def save_excel(path, data):
     try:
         with pd.ExcelWriter(path) as writer:
             if data_type == "single":
-                save_in_slice(data, None)
+                save_in_slice(data, 'Sheet1')
             elif data_type == "list":
                 for data_df, sheet_name in data:
                     save_in_slice(data_df, sheet_name)
