@@ -143,10 +143,10 @@ def cell_construct_wrapper(func, self):
             if backward_or_all and ops.is_tensor(item):
                 if need_tensordump_in(self, 'input_dump_mode', index):
                     item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
-                              item, "in")
+                              item, "out")
                 else:
                     item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
-                              item, "out")
+                              item, "in")
             if forward_or_all and ops.is_tensor(item):
                 if need_tensordump_in(self, 'input_dump_mode', index):
                     temp = td_in(
@@ -169,10 +169,10 @@ def cell_construct_wrapper(func, self):
                 if backward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode', index):
                         item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
-                                  item, "in")
+                                  item, "out")
                     else:
                         item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
-                                  item, "out")
+                                  item, "in")
                 if forward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode', index):
                         temp = td_in(
@@ -194,10 +194,10 @@ def cell_construct_wrapper(func, self):
             if backward_or_all:
                 if need_tensordump_in(self, 'output_dump_mode', index):
                     out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
-                             out, "in")
+                             out, "out")
                 else:
                     out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
-                             out, "out")
+                             out, "in")
             if forward_or_all and ops.is_tensor(out):
                 if need_tensordump_in(self, 'output_dump_mode', index):
                     temp = td_in(
