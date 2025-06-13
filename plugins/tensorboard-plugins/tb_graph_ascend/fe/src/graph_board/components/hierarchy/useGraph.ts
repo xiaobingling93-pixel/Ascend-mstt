@@ -17,7 +17,7 @@ import * as d3 from 'd3';
 import { maybeTruncateString, darkenColor, safeJSONParse } from '../../../utils/index';
 import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
-import { HierarchyNodeType, PreProcessDataConfigType, GraphType, TransformType } from '../../type';
+import { HierarchyNodeType, PreProcessDataConfigType, GraphType } from '../../type';
 
 import { UseGraphType } from '../../type';
 import {
@@ -58,13 +58,13 @@ const useGraph = (): UseGraphType => {
                 const parent = data.find(
                     (dInner) => node?.parentNode === dInner.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''),
                 );
-                if (parent) {
+                if (parent && virtualNodes.indexOf(parent) === -1 && parentsVirtualNodes.indexOf(parent) === -1) {
                     parentsVirtualNodes.push(parent);
                 }
                 node = parent;
             }
         });
-        virtualNodes = [...new Set([...parentsVirtualNodes, ...virtualNodes])]; // 父节点放在前面，不然会覆盖子节点
+        virtualNodes = [...new Set([...parentsVirtualNodes.reverse(), ...virtualNodes])]; // 父节点放在前面，不然会覆盖子节点
         const renderData = virtualNodes.map((d) => {
             let precisionColor = isOverflowFilter ? getOverflowColor(d) : getPrecisionColor(d, colors, graphType);
             let strokeColor;
