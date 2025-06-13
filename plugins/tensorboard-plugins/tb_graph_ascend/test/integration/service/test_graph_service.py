@@ -43,10 +43,6 @@ class TestMatchNodesService:
                     bench_node_name=operation_config["bench_node_name"],
                     meta_data=meta_data
                 )
-            elif op_type == "get_matched_state_list":
-                result = GraphService.get_matched_state_list(
-                    meta_data=meta_data
-                )
             elif op_type == "save_data":
                 result = GraphService.save_data(
                     meta_data=meta_data

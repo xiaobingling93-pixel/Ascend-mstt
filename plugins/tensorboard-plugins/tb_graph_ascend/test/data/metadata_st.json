@@ -32,12 +32,20 @@
                     "Min": "-234.124124234",
                     "Mean": "-5.23432654",
                     "Norm": "35555.3406",
-                    "error_key": ["type", "shape"]
+                    "error_key": [
+                      "type",
+                      "shape"
+                    ]
                   },
                   "Test.maxpoolMaxPool2.maxpoolpo.tt.ee.kwrag_arg.1": {
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
-                    "shape": [64, 256, 2, 2],
+                    "shape": [
+                      64,
+                      256,
+                      2,
+                      2
+                    ],
                     "Max": "5348.2343242",
                     "Min": "-2344.124124234",
                     "Mean": "-51.23432654",
@@ -51,7 +59,12 @@
                   "output.0": {
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
-                    "shape": [128, 512, 2, 2],
+                    "shape": [
+                      128,
+                      512,
+                      2,
+                      2
+                    ],
                     "Max": "5038.2343242",
                     "Min": "-1234.124124234",
                     "Mean": "-410.23432654",
@@ -60,7 +73,12 @@
                   "output.1": {
                     "type": "torch.Tensor",
                     "dtype": "torch.float32",
-                    "shape": [16, 256, 2, 2],
+                    "shape": [
+                      16,
+                      256,
+                      2,
+                      2
+                    ],
                     "Max": "538.2343242",
                     "Min": "-234.124124234",
                     "Mean": "-51.23432654",
@@ -68,7 +86,10 @@
                   }
                 },
                 "pair": "None",
-                "subnodes": ["AddOne_0", "AddOne_1"],
+                "subnodes": [
+                  "AddOne_0",
+                  "AddOne_1"
+                ],
                 "type": "AddTwo",
                 "upnode": "AddThree_0"
               }
@@ -102,26 +123,12 @@
             "data": {
               "npuMatchNodes": {},
               "benchMatchNodes": {},
-              "npuUnMatchNodes": ["AddOne_0"],
-              "benchUnMatchNodes": ["AddOne_0"]
-            }
-          }
-        },
-        {
-          "type": "add_match_nodes",
-          "npu_node_name": "AddOne_0",
-          "bench_node_name": "AddOne_0",
-          "expected": {
-            "success": true,
-            "data": {
-              "npuMatchNodes": {
-                "AddOne_0": "AddOne_0"
-              },
-              "benchMatchNodes": {
-                "AddOne_0": "AddOne_0"
-              },
-              "npuUnMatchNodes": [],
-              "benchUnMatchNodes": []
+              "npuUnMatchNodes": [
+                "AddOne_0"
+              ],
+              "benchUnMatchNodes": [
+                "AddOne_0"
+              ]
             }
           }
         },

@@ -25,7 +25,7 @@ class MatchNodesController:
     def is_same_node_type(graph_data, npu_node_name, bench_node_name):
         npu_node_type = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {}).get('node_type')
         bench_node_type = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {}).get('node_type')
-        if not npu_node_type or not bench_node_type or npu_node_type != bench_node_type:
+        if npu_node_type == None or bench_node_type == None or npu_node_type != bench_node_type:
             return False
         return True
 
@@ -36,6 +36,11 @@ class MatchNodesController:
             result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
+        else:
+            result = {
+                'success': False,
+                'error': 'task类型错误'
+            }
         return result
 
     @staticmethod
@@ -77,7 +82,8 @@ class MatchNodesController:
     def process_task_add_child_layer(graph_data, npu_node_name, bench_node_name, task):
         if not all([graph_data, npu_node_name, bench_node_name, task]):
             return {'success': False, 'error': '参数错误'}
-        if not MatchNodesController.is_same_node_type:
+     
+        if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
             return {
                 'success': False,
                 'error': '节点类型不一致,无法添加匹配关系'
