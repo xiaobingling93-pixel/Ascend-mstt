@@ -21,8 +21,15 @@
 
      * 进入目录 `/plugins/tensorboard-plugins/tb_plugin` 下.
      * 编译前端代码
-       - `python setup.py build_fe` \
-     **注意**: build_fe步骤需要安装[Node.js](https://nodejs.org/zh-cn/download)和[yarn](https://yarn.bootcss.com/docs/install/index.html)环境
+       ```
+        cd fe
+        # 此步骤为安装前端依赖
+        yarn
+        # 回到上层目录执行构建指令
+        cd ..
+        python setup.py build_fe
+       ```
+     **注意**: 编译前端步骤需要安装[Node.js](https://nodejs.org/zh-cn/download)和[yarn](https://yarn.bootcss.com/docs/install/index.html)环境
      * 执行安装命令可直接安装:
        - `pip install .`
      * 或： 构建whl包安装
