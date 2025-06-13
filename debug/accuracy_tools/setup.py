@@ -34,7 +34,8 @@ INSTALL_REQUIRED = [
     "twisted",
     "matplotlib",
     "tensorboard",
-    "tabulate"
+    "tabulate",
+    "pwinput"
 ]
 
 EXCLUDE_PKGS = [
