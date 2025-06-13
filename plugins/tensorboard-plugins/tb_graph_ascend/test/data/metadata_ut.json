@@ -1,12 +1,154 @@
 {
   "test_cases": [
     {
-      "name": "invalid_task_type_handling",
+      "name": "md5任务数据匹配",
       "type": "process_task_add",
       "input": {
         "graph_data": {
-          "NPU": { "node": { "npu_node": { "node_type": "Module" } } },
-          "Bench": { "node": { "bench_node": { "node_type": "Module" } } }
+          "NPU": {
+            "node": {
+              "npu_node": {
+                "node_type": "Module",
+                "matched_node_link": [],
+                "data": {},
+                "input_data": {
+                  "input_arg0": {
+                    "md5": "1234567890abcdef"
+                  },
+                  "input_arg1": {
+                    "md5": "abcdef1234567890"
+                  },
+                  "output_data": {
+                    "output_arg0": {
+                      "md5": "abcdef1234567890"
+                    },
+                    "output_arg1": {
+                      "md5": "1234567890abcdef"
+                    }
+                  }
+                }
+              }
+            },
+            "Bench": {
+              "node": {
+                "bench_node": {
+                  "node_type": "Module",
+                  "matched_node_link": [],
+                  "input_data": {
+                    "input_arg0": {
+                      "md5": "1234567890abcdef"
+                    },
+                    "input_arg1": {
+                      "md5": "abcdef1234567890"
+                    },
+                    "output_data": {
+                      "output_arg0": {
+                        "md5": "abcdef1234567890"
+                      },
+                      "output_arg1": {
+                        "md5": "1234567890abcdef"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "npu_node_name": "npu_node",
+        "bench_node_name": "bench_node",
+        "task": "md5"
+      },
+      "expected": {
+        "success": true
+      }
+    },
+    {
+      "name": "summary任务匹配",
+      "type": "process_task_add",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_node": {
+                "node_type": "Module",
+                "input_data": {
+                  "input1": {
+                    "Max": 1.0,
+                    "Min": 0.1,
+                    "Mean": 0.5,
+                    "Norm": 0.7
+                  },
+                  "input2": {
+                    "Max": 1.0,
+                    "Min": 0.1,
+                    "Mean": 0.5,
+                    "Norm": 0.7
+                  }
+                },
+                "output_data": {
+                  "output1": {
+                    "Max": 2.0,
+                    "Min": 0.2,
+                    "Mean": 1.0,
+                    "Norm": 1.4
+                  },
+                  "output2": {
+                    "Max": 2.0,
+                    "Min": 0.2,
+                    "Mean": 1.0,
+                    "Norm": 1.4
+                  }
+                },
+                "matched_node_link": []
+              }
+            }
+          },
+          "Bench": {
+            "node": {
+              "bench_node": {
+                "node_type": "Module",
+                "matched_node_link": []
+              }
+            }
+          }
+        },
+        "npu_node_name": "npu_node",
+        "bench_node_name": "bench_node",
+        "task": "summary"
+      },
+      "expected": {
+        "success": true
+      }
+    },
+    {
+      "name": "测试无效任务类型",
+      "type": "process_task_delete",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_node": {
+                "node_type": "Module",
+                "matched_node_link": [
+                  "bench_node"
+                ],
+                "data": {
+                  "precision_index": 0.95
+                }
+              }
+            }
+          },
+          "Bench": {
+            "node": {
+              "bench_node": {
+                "node_type": "Module",
+                "matched_node_link": [
+                  "npu_node"
+                ]
+              }
+            }
+          }
         },
         "npu_node_name": "npu_node",
         "bench_node_name": "bench_node",
@@ -14,176 +156,156 @@
       },
       "expected": {
         "success": false,
-        "error": "参数错误"
+        "error": "task类型错误"
       }
     },
     {
-      "name": "asymmetric_children_matching",
-      "type": "process_task_add_child_layer",
+      "name": "测试MD5任务删除成功",
+      "type": "process_task_delete",
       "input": {
         "graph_data": {
           "NPU": {
             "node": {
-              "npu_parent": {
+              "npu_node": {
                 "node_type": "Module",
-                "subnodes": ["npu_child1", "npu_child2"],
-                "input_data": {
-                  "npu_parent.data": { "md5": "123" }
+                "matched_node_link": [
+                  "bench_node"
+                ],
+                "data": {
+                  "precision_index": 0.95
                 }
-              },
-              "npu_child1": { "node_type": "API" },
-              "npu_child2": { "node_type": "API" }
+              }
             }
           },
           "Bench": {
             "node": {
-              "bench_parent": {
+              "bench_node": {
                 "node_type": "Module",
-                "subnodes": ["bench_child1"],
-                "input_data": {
-                  "bench_parent.data": { "md5": "123" }
+                "matched_node_link": [
+                  "npu_node"
+                ]
+              }
+            }
+          }
+        },
+        "npu_node_name": "npu_node",
+        "bench_node_name": "bench_node",
+        "task": "md5"
+      },
+      "expected": {
+        "success": true,
+        "data": {}
+      }
+    },
+    {
+      "name": "测试MD5任务删除失败（节点未匹配）",
+      "type": "process_task_delete",
+      "input": {
+        "graph_data": {
+          "NPU": {
+            "node": {
+              "npu_node": {
+                "node_type": "Module",
+                "matched_node_link": [],
+                "data": {
+                  "precision_index": 0.95
                 }
-              },
-              "bench_child1": { "node_type": "API" }
-            }
-          }
-        },
-        "npu_node_name": "npu_parent",
-        "bench_node_name": "bench_parent",
-        "task": "md5"
-      },
-      "expected": {
-        "success": true,
-        "data": {
-          "npuMatchNodes": {
-            "npu_parent": "bench_parent",
-            "npu_child1": "bench_child1"
-          }
-        }
-      }
-    },
-    {
-      "name": "config_batch_matching_validation",
-      "type": "process_task_add_child_layer_by_config",
-      "input": {
-        "graph_data": {
-          "NPU": {
-            "node": {
-              "npu_layer1": { "node_type": "Module", "subnodes": ["npu_sub1"] },
-              "npu_sub1": { "node_type": "API" }
-            }
-          },
-          "Bench": {
-            "node": {
-              "bench_layer1": {
-                "node_type": "Module",
-                "subnodes": ["bench_sub1"]
-              },
-              "bench_sub1": { "node_type": "API" }
-            }
-          }
-        },
-        "match_node_links": { "npu_layer1": "bench_layer1" },
-        "task": "md5"
-      },
-      "expected": {
-        "success": true,
-        "data": {
-          "matchReslut": [true],
-          "npuMatchNodes": {
-            "npu_layer1": "bench_layer1",
-            "npu_sub1": "bench_sub1"
-          }
-        }
-      }
-    },
-    {
-      "name": "duplicate_matching_cleanup",
-      "type": "process_task_add",
-      "input": {
-        "graph_data": {
-          "NPU": {
-            "node": {
-              "npu_dup": {
-                "node_type": "Module",
-                "matched_node_link": ["old_bench_node"],
-                "data": { "precision_index": 0.5 }
               }
             }
           },
           "Bench": {
             "node": {
-              "bench_dup": {
+              "bench_node": {
                 "node_type": "Module",
-                "matched_node_link": ["old_npu_node"]
+                "matched_node_link": []
               }
             }
           }
         },
-        "npu_node_name": "npu_dup",
-        "bench_node_name": "bench_dup",
+        "npu_node_name": "npu_node",
+        "bench_node_name": "bench_node",
         "task": "md5"
       },
       "expected": {
-        "success": true,
-        "data": {
-          "npuUnMatchNodes": [],
-          "benchUnMatchNodes": []
-        }
+        "success": false,
+        "error": "操作失败：节点未匹配，请先匹配节点"
       }
     },
     {
-      "name": "deep_recursive_unmatching",
-      "type": "process_task_delete_child_layer",
+      "name": "测试SUMMARY任务删除失败（节点未匹配）",
+      "type": "process_task_delete",
       "input": {
         "graph_data": {
           "NPU": {
             "node": {
-              "npu_root": {
+              "npu_node": {
                 "node_type": "Module",
-                "subnodes": ["npu_l1"],
-                "matched_node_link": ["bench_root"]
-              },
-              "npu_l1": {
-                "node_type": "Module",
-                "subnodes": ["npu_l2"],
-                "matched_node_link": ["bench_l1"]
-              },
-              "npu_l2": {
-                "node_type": "API",
-                "matched_node_link": ["bench_l2"]
+                "input_data": {
+                  "input1": {
+                    "Max": 1.0,
+                    "Min": 0.1,
+                    "Mean": 0.5,
+                    "Norm": 0.7,
+                    "MaxAbsErr": 0.1,
+                    "MinAbsErr": 0.05,
+                    "MeanAbsErr": 0.1,
+                    "NormAbsErr": 0.1
+                  },
+                  "input2": {
+                    "Max": 1.0,
+                    "Min": 0.1,
+                    "Mean": 0.5,
+                    "Norm": 0.7,
+                    "MaxAbsErr": 0.1,
+                    "MinAbsErr": 0.05,
+                    "MeanAbsErr": 0.1,
+                    "NormAbsErr": 0.1
+                  }
+                },
+                "output_data": {
+                  "output1": {
+                    "Max": 2.0,
+                    "Min": 0.2,
+                    "Mean": 1.0,
+                    "Norm": 1.4,
+                    "MaxAbsErr": 0.1,
+                    "MinAbsErr": 0.05,
+                    "MeanAbsErr": 0.1,
+                    "NormAbsErr": 0.1
+                  },
+                  "output2": {
+                    "Max": 2.0,
+                    "Min": 0.2,
+                    "Mean": 1.0,
+                    "Norm": 1.4,
+                    "MaxAbsErr": 0.1,
+                    "MinAbsErr": 0.05,
+                    "MeanAbsErr": 0.1
+                  }
+                },
+                "matched_node_link": [],
+                "data": {
+                  "precision_index": 0.95
+                }
               }
             }
           },
           "Bench": {
             "node": {
-              "bench_root": {
+              "bench_node": {
                 "node_type": "Module",
-                "subnodes": ["bench_l1"],
-                "matched_node_link": ["npu_root"]
-              },
-              "bench_l1": {
-                "node_type": "Module",
-                "subnodes": ["bench_l2"],
-                "matched_node_link": ["npu_l1"]
-              },
-              "bench_l2": {
-                "node_type": "API",
-                "matched_node_link": ["npu_l2"]
+                "matched_node_link": []
               }
             }
           }
         },
-        "npu_node_name": "npu_root",
-        "bench_node_name": "bench_root",
-        "task": "md5"
+        "npu_node_name": "npu_node",
+        "bench_node_name": "bench_node",
+        "task": "summary"
       },
       "expected": {
-        "success": true,
-        "data": {
-          "npuUnMatchNodes": ["npu_root", "npu_l1", "npu_l2"],
-          "benchUnMatchNodes": ["bench_root", "bench_l1", "bench_l2"]
-        }
+        "success": false,
+        "error": "操作失败：节点未匹配，请先匹配节点"
       }
     }
   ]

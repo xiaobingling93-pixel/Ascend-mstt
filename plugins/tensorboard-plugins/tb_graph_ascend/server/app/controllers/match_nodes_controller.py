@@ -45,6 +45,11 @@ class MatchNodesController:
             result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
+        else:
+            result = {
+                'success': False,
+                'error': 'task类型错误'
+            }
         return result
 
     @staticmethod
@@ -215,6 +220,7 @@ class MatchNodesController:
         npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
         bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
+        
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
         return {'success': True}
 

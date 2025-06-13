@@ -28,62 +28,64 @@ class TestMatchNodesController:
         expected = ut_test_case.get("expected")
          # 执行操作
         try:
-            if op_type == "process_md5_task_add":
-                result = MatchNodesController.process_md5_task_add(
+            if op_type == "process_task_add":
+                result = MatchNodesController.process_task_add(
                     graph_data=input_data.get("graph_data"),
                     npu_node_name=input_data.get("npu_node_name"),
                     bench_node_name=input_data.get("bench_node_name"),
+                    task=input_data.get('task')
                 )
-            elif op_type == "process_md5_task_delete":
-                result = MatchNodesController.process_md5_task_delete(
+            elif op_type == "process_task_delete":
+                result = MatchNodesController.process_task_delete(
                     graph_data=input_data.get("graph_data"),
                     npu_node_name=input_data.get("npu_node_name"),
                     bench_node_name=input_data.get("bench_node_name"),
+                    task=input_data.get('task')
                 )
-            elif op_type == "process_summary_task_add":
-                
-                result = MatchNodesController.process_summary_task_add(
-                    graph_data=input_data.get("graph_data"),
-                    npu_node_name=input_data.get("npu_node_name"),
-                    bench_node_name=input_data.get("bench_node_name"),
-                )
-            elif op_type == "process_summary_task_delete":
-                result = MatchNodesController.process_summary_task_delete(
-                    npu_data=input_data.get("npu_data"),
-                    bench_data=input_data.get("bench_data"),
-                    npu_node_name=input_data.get("npu_node_name"),
-                    bench_node_name=input_data.get("bench_node_name"),
-                )
-            elif op_type == "calculate_statistical_diff":
-                result = MatchNodesController.calculate_statistical_diff(
-                    npu_data=input_data.get("npu_data"),
-                    bench_data=input_data.get("bench_data"),
-                    npu_node_name=input_data.get("npu_node_name"),
-                    bench_node_name=input_data.get("bench_node_name"),
-                )
-            elif op_type == "calculate_max_relative_error":
-                result = MatchNodesController.calculate_max_relative_error(
-                    result=input_data.get("result"),
-                )
-            elif op_type == "calculate_md5_diff":
-                result = MatchNodesController.calculate_md5_diff(
-                    npu_data=input_data.get("npu_data"),
-                    bench_data=input_data.get("bench_data"),
-                )
-            elif op_type == "update_graph_node_data":
-                result = MatchNodesController.update_graph_node_data(
-                    graph_npu_node_data=input_data.get("graph_npu_node_data"),
-                    statistical_diff=input_data.get("statistical_diff"),
-                )
-            elif op_type == "delete_matched_node_data":
-                result = MatchNodesController.delete_matched_node_data(
-                    graph_npu_node_data=input_data.get("graph_npu_node_data"),
-                )
+            # elif op_type == "process_summary_task_add":
+            #     result = MatchNodesController.process_summary_task_add(
+            #         graph_data=input_data.get("graph_data"),
+            #         npu_node_name=input_data.get("npu_node_name"),
+            #         bench_node_name=input_data.get("bench_node_name"),
+            #     )
+            # elif op_type == "process_summary_task_delete":
+            #     result = MatchNodesController.process_summary_task_delete(
+            #         npu_data=input_data.get("npu_data"),
+            #         bench_data=input_data.get("bench_data"),
+            #         npu_node_name=input_data.get("npu_node_name"),
+            #         bench_node_name=input_data.get("bench_node_name"),
+            #     )
+            # elif op_type == "calculate_statistical_diff":
+            #     result = MatchNodesController.calculate_statistical_diff(
+            #         npu_data=input_data.get("npu_data"),
+            #         bench_data=input_data.get("bench_data"),
+            #         npu_node_name=input_data.get("npu_node_name"),
+            #         bench_node_name=input_data.get("bench_node_name"),
+            #     )
+            # elif op_type == "calculate_max_relative_error":
+            #     result = MatchNodesController.calculate_max_relative_error(
+            #         result=input_data.get("result"),
+            #     )
+            # elif op_type == "calculate_md5_diff":
+            #     result = MatchNodesController.calculate_md5_diff(
+            #         npu_data=input_data.get("npu_data"),
+            #         bench_data=input_data.get("bench_data"),
+            #     )
+            # elif op_type == "update_graph_node_data":
+            #     result = MatchNodesController.update_graph_node_data(
+            #         graph_npu_node_data=input_data.get("graph_npu_node_data"),
+            #         statistical_diff=input_data.get("statistical_diff"),
+            #     )
+            # elif op_type == "delete_matched_node_data":
+            #     result = MatchNodesController.delete_matched_node_data(
+            #         graph_npu_node_data=input_data.get("graph_npu_node_data"),
+            #     )
             else:
+                print("No such operation", op_type)
                 return
         except Exception as e:
             result = {"error": type(e).__name__}
-        
+        print("result:", result)
         # 验证结果
         assert result == expected, \
             f"Operation {op_type} failed on {ut_test_case}"
