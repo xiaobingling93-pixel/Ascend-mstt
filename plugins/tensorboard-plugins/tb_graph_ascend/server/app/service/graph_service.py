@@ -182,9 +182,9 @@ class GraphService:
                 result['benchUnMatchNodes'] = bench_unmatehed_name_list
                 result['npuMatchNodes'] = graph_data.setdefault('npu_match_nodes', {})
                 result['benchMatchNodes'] = graph_data.setdefault('bench_match_nodes', {})
-                for npu_node_name, v in graph_data.get(NPU, {}).get('node', {}).items():
-                    if 'matched_node_link' in v and v.get('matched_node_link'):
-                        bench_node_name = v.get('matched_node_link', [None])[-1].replace(BENCH_PREFIX, '', 1)
+                for npu_node_name, npu_node in graph_data.get(NPU, {}).get('node', {}).items():
+                    if npu_node.get('matched_node_link', None):
+                        bench_node_name = npu_node.get('matched_node_link', [None])[-1].replace(BENCH_PREFIX, '', 1)
                         result['npuMatchNodes'][npu_node_name] = bench_node_name
                         result['benchMatchNodes'][bench_node_name] = npu_node_name
                 
