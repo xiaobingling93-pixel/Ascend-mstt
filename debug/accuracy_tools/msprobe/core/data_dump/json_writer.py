@@ -35,6 +35,7 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
+        self.dump_error_info_path = None
         self.flush_size = 1000
         self.larger_flush_size = 20000
         self.cache_data = {}
@@ -128,6 +129,7 @@ class DataWriter:
         self.dump_tensor_data_dir = dump_path_aggregation.dump_tensor_data_dir
         self.free_benchmark_file_path = dump_path_aggregation.free_benchmark_file_path
         self.debug_file_path = dump_path_aggregation.debug_file_path
+        self.dump_error_info_path = dump_path_aggregation.dump_error_info_path
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
@@ -141,6 +143,15 @@ class DataWriter:
 
         if length % threshold == 0:
             self.write_json()
+
+    def write_error_log(self, message: str):
+        try:
+            with open(self.dump_error_info_path, "a") as f:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"[{timestamp}] {message}\n")
+        except Exception as e:
+            print(f"[FallbackError] Failed to write error log: {e}")
 
     def update_data(self, new_data):
         with lock:
