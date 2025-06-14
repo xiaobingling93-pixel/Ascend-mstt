@@ -465,7 +465,7 @@ def save_excel(path, data):
     def save_in_slice(df, base_name):
         df_length = len(df)
         if df_length < CompareConst.MAX_EXCEL_LENGTH:
-            df.to_excel(writer, sheet_name=base_name, index=False)
+            df.to_excel(writer, sheet_name=base_name if base_name else 'Sheet1', index=False)
         else:
             slice_num = (df_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
             slice_size = (df_length + slice_num - 1) // slice_num
@@ -482,7 +482,7 @@ def save_excel(path, data):
     try:
         with pd.ExcelWriter(path) as writer:
             if data_type == "single":
-                save_in_slice(data, 'Sheet1')
+                save_in_slice(data, None)
             elif data_type == "list":
                 for data_df, sheet_name in data:
                     save_in_slice(data_df, sheet_name)
