@@ -33,7 +33,7 @@ import pandas as pd
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, CompareConst
 from msprobe.core.common.global_lock import global_lock, is_main_process
 
 proc_lock = multiprocessing.Lock()
@@ -460,6 +460,17 @@ def save_excel(path, data):
                 return "list"
         raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
 
+    def save_in_slice(df, base_name):
+        df_length = len(df)
+        if df_length < CompareConst.MAX_EXCEL_LENGTH:
+            df.to_excel(writer, sheet_name=base_name if base_name else 'Sheet1', index=False)
+        else:
+            slice_num = (df_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
+            slice_size = (df_length + slice_num - 1) // slice_num
+            for i in range(slice_num):
+                df.iloc[i * slice_size: min((i + 1) * slice_size, df_length)] \
+                    .to_excel(writer, sheet_name=f'{base_name}_part_{i}' if base_name else f'part_{i}', index=False)
+
     check_path_before_create(path)
     path = os.path.realpath(path)
 
@@ -467,12 +478,12 @@ def save_excel(path, data):
     data_type = validate_data(data)
 
     try:
-        if data_type == "single":
-            data.to_excel(path, index=False)
-        elif data_type == "list":
-            with pd.ExcelWriter(path) as writer:
+        with pd.ExcelWriter(path) as writer:
+            if data_type == "single":
+                save_in_slice(data, None)
+            elif data_type == "list":
                 for data_df, sheet_name in data:
-                    data_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    save_in_slice(data_df, sheet_name)
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
@@ -877,7 +888,8 @@ class SharedDict:
             self._shm = shared_memory.SharedMemory(create=False, name=name)
         except FileNotFoundError:
             try:
-                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
+                # 共享内存空间增加至5M
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 5)
                 data = pickle.dumps({})
                 self._shm.buf[0:len(data)] = bytearray(data)
                 logger.debug(f'create shared memory, name: {name}')
@@ -892,6 +904,7 @@ class SharedDict:
             except Exception as e:
                 logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
                 self._dict = {}
+                self._shm.buf[:] = bytearray(b'\x00' * len(self._shm.buf))  # 清空内存
                 self._changed = True
 
 
