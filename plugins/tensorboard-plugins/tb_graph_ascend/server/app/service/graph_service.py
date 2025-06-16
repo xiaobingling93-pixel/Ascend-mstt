@@ -180,7 +180,7 @@ class GraphService:
                 result['benchNodeList'] = bench_node_name_list
                 result['npuUnMatchNodes'] = npu_unmatehed_name_list
                 result['benchUnMatchNodes'] = bench_unmatehed_name_list
-                result['npuMatchNodes'] = graph_data.       ('npu_match_nodes', {})
+                result['npuMatchNodes'] = graph_data.setdefault('npu_match_nodes', {})
                 result['benchMatchNodes'] = graph_data.setdefault('bench_match_nodes', {})
                 GraphState.set_global_value('config_data', config_data)
                 return {'success': True, 'data': result}
