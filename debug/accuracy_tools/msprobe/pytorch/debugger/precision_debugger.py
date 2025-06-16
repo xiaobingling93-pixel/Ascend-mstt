@@ -53,14 +53,14 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.module_dumper = ModuleDumper(self.service)
         self.ori_customer_func = {}
         self.enable_dataloader = self.config.enable_dataloader
-        self.param_warning()
+        self._param_warning()
 
     @property
     def instance(self):
         return self._instance
 
     @staticmethod
-    def get_task_config(task, json_config):
+    def _get_task_config(task, json_config):
         return parse_task_config(task, json_config)
 
     @classmethod
@@ -115,7 +115,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             return
         instance.service.save(variable, name, save_backward)
 
-    def param_warning(self):
+    def _param_warning(self):
         if self.model is not None:
             logger.warning_on_rank_0(
                 "The 'model' parameter in the PrecisionDebugger will be deprecated in the future."
