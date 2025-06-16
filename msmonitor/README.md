@@ -71,9 +71,10 @@ sudo apt-get install -y openssl
 # centos
 sudo yum install -y openssl
 ```
-dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynlog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
+dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynolog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
 **用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。**
-服务端证书目录结构：
+
+服务端证书目录结构： 
 ```bash
 server_certs
 ├── ca.crt (根证书，用于验证其他证书的合法性，必选)
@@ -117,6 +118,21 @@ msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用
 
 ### Profiler trace dump功能
 Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Pytorch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
+
+- 查看dynolog支持的命令和帮助
+
+```bash
+dynolog --help
+```
+
+dynolog命令参数如下，更多dynolog原生参数请通过--help查看。
+
+| 命令 | 参数类型   | 说明                                                        |
+|---|--------|-----------------------------------------------------------|
+| --enable-ipc-monitor  | action | 是否启用IPC监控功能，用于与dyno进行通信，设置参数开启，默认不开启  |
+| --port      |  i32   | dynolog daemon进程监听的端口号，默认值1778       |
+| --certs-dir | String | 用于指定dyno与dynolog RPC通信时TLS证书的路径，当值为`NO_CERTS`时不使用证书校验，必选值 |
+
 
 - 查看dyno支持的命令和帮助
 
@@ -311,8 +327,8 @@ Step6: 观测Prometheus上报数据
 curl 127.0.0.1:8080/metrics
 ```
 
-## 附录
+## [Mindspore框架下msMonitor的使用方法](./docs/mindspore_adapter.md)
 
-[Mindspore框架下msMonitor的使用方法](./docs/mindspore_adapter.md)
+## 附录
 
 [安全声明](./docs/security_statement.md)
