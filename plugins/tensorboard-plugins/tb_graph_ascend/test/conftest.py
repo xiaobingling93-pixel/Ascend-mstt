@@ -16,7 +16,7 @@
 
 import pytest
 from server.app.utils.global_state import GraphState
-from test.data.test_case_factory import TestCaseFactory
+from data.test_case_factory import TestCaseFactory
 
 
 @pytest.fixture(scope="function", autouse=True)

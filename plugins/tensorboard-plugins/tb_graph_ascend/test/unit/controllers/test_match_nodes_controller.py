@@ -17,7 +17,7 @@
 import pytest
 
 from server.app.controllers.match_nodes_controller import MatchNodesController
-from test.data.test_case_factory import TestCaseFactory
+from data.test_case_factory import TestCaseFactory
 
 
 @pytest.mark.unit
