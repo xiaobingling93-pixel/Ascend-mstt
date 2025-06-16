@@ -25,7 +25,7 @@ class MatchNodesController:
     def is_same_node_type(graph_data, npu_node_name, bench_node_name):
         npu_node_type = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {}).get('node_type')
         bench_node_type = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {}).get('node_type')
-        if npu_node_type == None or bench_node_type == None or npu_node_type != bench_node_type:
+        if npu_node_type is None or bench_node_type is None or npu_node_type != bench_node_type:
             return False
         return True
 
