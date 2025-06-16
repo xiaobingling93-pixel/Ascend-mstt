@@ -161,6 +161,7 @@ class ModeAdapter:
                 else change_percentage
             precision_index = GraphConst.MAX_INDEX_KEY \
                 if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
+        precision_index = self._ignore_precision_index(node.id, precision_index)
         return precision_index, other_dict
 
     def prepare_real_data(self, node):
@@ -197,3 +198,11 @@ class ModeAdapter:
                 CompareConst.MAX_ABS_ERR: ToolTip.MAX_ABS_ERR,
                 CompareConst.MAX_RELATIVE_ERR: ToolTip.MAX_RELATIVE_ERR}
         return json.dumps(tips)
+
+    def _ignore_precision_index(self, node_id, precision_index):
+        node_id_split = node_id.split(Const.SEP)
+        if len(node_id_split) < 2:
+            return precision_index
+        if node_id.split(Const.SEP)[1] in GraphConst.IGNORE_PRECISION_INDEX:
+            return GraphConst.MAX_INDEX_KEY if self.compare_mode == GraphConst.MD5_COMPARE else GraphConst.MIN_INDEX_KEY
+        return precision_index
