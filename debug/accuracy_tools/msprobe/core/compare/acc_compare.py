@@ -186,11 +186,16 @@ class ParseData:
         elif self.mode_config.dump_mode == Const.MD5:
             result[Const.MD5] = []
 
-        api_nums = len(data_json['data'])
+        apis_data = data_json.get('data', None)
+        if not apis_data:
+            logger.warning('No APIs found in dump.json. Comparison result will be empty.')
+            return pd.DataFrame(result)
+
+        api_nums = len(apis_data)
         progress_bar = tqdm(total=api_nums, desc="API/Module Read Progress", unit="api/module", ncols=100)
 
         # 从json中循环解析API数据，遍历所有API
-        for data_name in data_json['data']:
+        for data_name in apis_data:
             check_op_str_pattern_valid(data_name)
             merge_list = self.gen_merge_list(data_json, data_name, stack_json_data)
             if not merge_list:
@@ -599,8 +604,12 @@ class CreateTable:
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
         bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
                          CompareConst.BENCH_NORM]
-        result[npu_summary] = result['summary_x'].apply(self.set_summary).tolist()
-        result[bench_summary] = result['summary_y'].apply(self.set_summary).tolist()
+        if result.empty:
+            result[npu_summary] = pd.DataFrame(columns=npu_summary)
+            result[bench_summary] = pd.DataFrame(columns=bench_summary)
+        else:
+            result[npu_summary] = result['summary_x'].apply(self.set_summary).tolist()
+            result[bench_summary] = result['summary_y'].apply(self.set_summary).tolist()
 
         result_df = pd.DataFrame(columns=header)
         for h in header:
