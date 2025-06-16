@@ -64,8 +64,17 @@ class GraphState:
         初始化全局变量的默认值
         """
         global _state
-        GraphState._state = {'logdir': '', "current_tag": '', 'current_run': '', "current_file_path": '',
-                             'current_file_data': {}}
+        GraphState._state = {  
+                'logdir': '',
+                'current_tag': '',
+                'current_run': '',
+                'current_file_path': '',
+                'current_file_data': {},
+                'current_hierarchy': {},
+                'config_data': {},
+                'first_run_tags': {},
+                'runs': {}
+            }
 
     @staticmethod
     def set_global_value(key, value):
