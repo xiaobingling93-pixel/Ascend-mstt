@@ -119,8 +119,8 @@ class CommonConfig:
         if len(filtered) > API_INFO:
             raise ValueError(f'json file has more than one API, the API only contains forward and backward info')
 
-        if propagation == Const.FORWARD and len(filtered) == API_INFO \
-                and filtered and all(k.endswith('forward') for k in filtered):
+        if propagation == Const.FORWARD and filtered and len(filtered) == API_INFO \
+                 and all(k.endswith('forward') for k in filtered):
             raise ValueError(
                 "json file has more than one API, the API only contains forward info。"
             )
