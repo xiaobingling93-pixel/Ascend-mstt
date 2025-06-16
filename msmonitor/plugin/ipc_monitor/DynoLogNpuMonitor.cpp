@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "DynoLogNpuMonitor.h"
 #include <glog/logging.h>
 #include <algorithm>
@@ -66,7 +81,8 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(MsptiMonitorCfg& cmd)
 
     if (msptiMonitor_.IsStarted() && !cmd.enableActivities.empty()) {
         auto curActivities = msptiMonitor_.GetEnabledActivities();
-        std::vector<msptiActivityKind> enableKinds, disableKinds;
+        std::vector<msptiActivityKind> enableKinds;
+        std::vector<msptiActivityKind> disableKinds;
         std::set_difference(cmd.enableActivities.begin(), cmd.enableActivities.end(), curActivities.begin(), curActivities.end(),
                             std::back_inserter(enableKinds));
         std::set_difference(curActivities.begin(), curActivities.end(), cmd.enableActivities.begin(), cmd.enableActivities.end(),
