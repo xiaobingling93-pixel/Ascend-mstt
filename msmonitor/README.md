@@ -74,7 +74,7 @@ sudo yum install -y openssl
 dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynlog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
 **用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。**
 服务端证书目录结构：
-```bash  
+```bash
 server_certs
 ├── ca.crt (根证书，用于验证其他证书的合法性，必选)
 ├── server.crt (服务器端的证书，用于向客户端证明服务器身份，必选)
@@ -82,7 +82,7 @@ server_certs
 └── ca.crl (证书吊销列表，包含已被吊销的证书信息，可选)
 ```
 客户端证书目录结构：
-```bash  
+```bash
 client_certs
 ├── ca.crt (根证书，用于验证其他证书的合法性，必选)
 ├── client.crt (客户端证书，用于向服务器证明客户端身份，必选)
@@ -130,7 +130,7 @@ dyno命令参数如下，更多dyno原生参数请通过--help查看。
 |-------------|--------|--------------------------------------|
 | --hostname  | String | dynolog daemon所在主机的标识名称，默认值localhost |
 | --port      |  i32   | dynolog daemon进程监听的端口号，默认值1778       |
-| --certs-dir |  String   | 用于指定dyno与dynolog RPC通信时TLS证书的路径，必选值  |
+| --certs-dir |  String   | 用于指定dyno与dynolog RPC通信时TLS证书的路径，当值为`NO_CERTS`时不使用证书校验，必选值  |
 
 - 查看nputrace支持的命令和帮助
 
@@ -222,7 +222,7 @@ dyno --certs-dir /home/client_certs --hostname x.x.x.x nputrace --start-step 10 
 ```
 
 ### NPU Monitor功能
-NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。 
+NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
 
 **注意**：NPU Monitor功能开启时，不能同时开启Profiler trace dump功能。
 

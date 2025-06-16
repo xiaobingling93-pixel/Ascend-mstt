@@ -97,6 +97,8 @@ check_rust_version
 echo "------------------ Update and checkout submodule -------------------"
 update_and_checkout_submodule
 
+cp -r dynolog_npu/cmake third_party/dynolog
+
 echo "------------------ Generate patch for Ascend -----------------------"
 bash scripts/gen_dyno_patches.sh
 
