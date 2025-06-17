@@ -125,7 +125,6 @@ class MatchNodesController:
             for key in common_keys:
                 npu_subnode_list = npu_match_names.get(key, [])
                 bench_subnode_list = bench_match_names.get(key, [])
-                
                 # 多个节点可能有一个module name
                 for npu_subnode_name, bench_subnode_name in zip(npu_subnode_list, bench_subnode_list):
                     result = MatchNodesController.process_task_add(graph_data, npu_subnode_name, bench_subnode_name,
@@ -177,6 +176,7 @@ class MatchNodesController:
 
         # 2. 目标节点的子节点和标杆侧的子节点添加匹配关系
         def process_child_layer(npu_child_nodes):
+            print("process_child_layer", npu_child_nodes)
             for npu_subnode_name in npu_child_nodes:
                 npu_subnode_info = npu_nodes.get(npu_subnode_name, {})
                 matched_node_link = npu_subnode_info.get('matched_node_link', [])
@@ -193,6 +193,7 @@ class MatchNodesController:
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
+
         if result.get('success') and npu_subnodes and bench_subnodes:
             process_child_layer(npu_subnodes)
         if result.get('success'):

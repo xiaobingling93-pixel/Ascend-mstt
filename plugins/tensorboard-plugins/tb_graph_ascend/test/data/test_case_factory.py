@@ -31,6 +31,14 @@ class TestCaseFactory:
         return cls._load_cases('test_match_node_controller\\process_task_delete_case.json')
     
     @classmethod
+    def get_process_task_add_child_layer_cases(cls):
+        return cls._load_cases('test_match_node_controller\\process_task_add_child_layer.json')
+    
+    @classmethod
+    def get_process_task_delete_child_layer_cases(cls):
+        return cls._load_cases('test_match_node_controller\\process_task_delete_child_layer.json')
+    
+    @classmethod
     def _load_cases(cls, filename):
         """从JSON文件加载测试用例"""
         path = os.path.join(cls.CASE_DIR, filename)
