@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
@@ -46,14 +47,14 @@ class BasePrecisionDebugger:
         if self.initialized:
             return
         self.initialized = True
-        self.check_input_params(config_path, task, dump_path, level)
-        self.common_config, self.task_config = self.parse_config_path(config_path, task)
+        self._check_input_params(config_path, task, dump_path, level)
+        self.common_config, self.task_config = self._parse_config_path(config_path, task)
         self.task = self.common_config.task
         if step is not None:
             self.common_config.step = get_real_step_or_rank(step, Const.STEP)
 
     @staticmethod
-    def check_input_params(config_path, task, dump_path, level):
+    def _check_input_params(config_path, task, dump_path, level):
         if not config_path:
             config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
         if config_path is not None:
@@ -79,16 +80,7 @@ class BasePrecisionDebugger:
 
     @staticmethod
     def _get_task_config(task, json_config):
-        raise NotImplementedError("Subclass must implment _get_task_config")
-
-    @classmethod
-    def get_instance(cls):
-        instance = cls._instance
-        if not instance:
-            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
-        if instance.task in BasePrecisionDebugger.tasks_not_need_debugger:
-            instance = None
-        return instance
+        raise NotImplementedError("Subclass must implement _get_task_config")
 
     @classmethod
     def forward_backward_dump_end(cls):
@@ -129,7 +121,16 @@ class BasePrecisionDebugger:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         instance.service.restore_custom_api(module, api)
 
-    def parse_config_path(self, json_file_path, task):
+    @classmethod
+    def _get_instance(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if instance.task in BasePrecisionDebugger.tasks_not_need_debugger:
+            instance = None
+        return instance
+
+    def _parse_config_path(self, json_file_path, task):
         if not json_file_path:
             json_file_path = os.path.join(os.path.dirname(__file__), "../../config.json")
         json_config = load_json(json_file_path)

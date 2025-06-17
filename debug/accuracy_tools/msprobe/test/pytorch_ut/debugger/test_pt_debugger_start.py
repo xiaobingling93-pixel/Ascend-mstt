@@ -50,7 +50,7 @@ class MultiStartDebugger:
 
         common_config = CommonConfig(json_config)
         task_config = StatisticsConfig(json_config)
-        with patch.object(BasePrecisionDebugger, "parse_config_path", return_value=(common_config, task_config)):
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", return_value=(common_config, task_config)):
             cls.debugger = PrecisionDebugger(task="statistics", level="L0", dump_path=dump_path)
     
     @classmethod
