@@ -1,9 +1,0 @@
-{
-    "dump_json_path": "./dump.json",
-    "api_name": "Tensor.reshape.779",
-    "extract_api_path": "Tensor.reshape.779",
-    "propagation": "backward",
-    "data_mode": "random_data",
-    "random_seed": 42,
-    "iter_times": 1
-}
