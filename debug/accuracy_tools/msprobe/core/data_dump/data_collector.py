@@ -15,6 +15,7 @@
 
 import atexit
 import os
+import traceback
 
 from msprobe.core.data_dump.scope import ScopeFactory
 from msprobe.core.data_dump.json_writer import DataWriter
@@ -116,9 +117,11 @@ class DataCollector:
             if self.config.level == Const.LEVEL_L2:
                 return
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_input_data_collect failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] forward_input_data_collect failed: name={name}, pid={pid}\n{tb}"
             )
 
     def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -135,9 +138,11 @@ class DataCollector:
                 return
             self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_output_data_collect failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] forward_output_data_collect failed: name={name}, pid={pid}\n{tb}"
             )
 
     def forward_data_collect_only_tensor(self, name, module, pid, module_input_output):
@@ -145,9 +150,11 @@ class DataCollector:
             if not self.check_scope_and_pid(self.scope, name, pid):
                 return
             self.data_processor.analyze_forward(name, module, module_input_output)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_data_collect_only_tensor failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] forward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}"
             )
 
     def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -161,9 +168,11 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_data_collect failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] forward_data_collect failed: name={name}, pid={pid}\n{tb}"
             )
 
     def backward_data_collect_only_tensor(self, name, module, pid, module_input_output, is_recompute=None):
@@ -171,11 +180,12 @@ class DataCollector:
             if not self.check_scope_and_pid(self.scope, name, pid):
                 return
             self.data_processor.analyze_backward(name, module, module_input_output)
-        except Exception as e:
-            self.data_writer.write_error_log(
-                f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}, error={str(e)}"
-            )
 
+        except Exception:
+            tb = traceback.format_exc()
+            self.data_writer.write_error_log(
+                f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}"
+            )
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         try:
             self.update_construct(name)
@@ -190,9 +200,11 @@ class DataCollector:
                 module_name = name.rsplit(Const.SEP, 2)[0]
                 self.backward_module_names[module_name] = True
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_data_collect failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] backward_data_collect failed: name={name}, pid={pid}\n{tb}"
             )
 
     def backward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -205,9 +217,11 @@ class DataCollector:
                 data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
             self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_input_data_collect failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] backward_input_data_collect failed: name={name}, pid={pid}\n{tb}"
             )
 
     def backward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -220,9 +234,11 @@ class DataCollector:
                 data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
             self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
-        except Exception as e:
+
+        except Exception:
+            tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_output_data_collect failed: name={name}, pid={pid}, error={str(e)}"
+                f"[ERROR] backward_output_data_collect failed: name={name}, pid={pid}\n{tb}"
             )
 
     def update_construct(self, name):
@@ -268,10 +284,9 @@ class DataCollector:
                 return
             data_info = self.data_processor.analyze_params(grad_name, param_name, data)
             self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
-        except Exception as e:
-            self.data_writer.write_error_log(
-                f"[ERROR] params_data_collect failed: name={name}, param_name={param_name}, pid={pid}, error={str(e)}"
-            )
+        except Exception:
+            tb = traceback.format_exc()
+            self.data_writer.write_error_log(f"...\n{tb}")
 
     def debug_data_collect_forward(self, variable, name_with_count):
         data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)

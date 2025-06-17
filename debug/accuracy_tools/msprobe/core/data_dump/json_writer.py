@@ -17,6 +17,8 @@ import csv
 import os
 import copy
 import threading
+import traceback
+from datetime import datetime
 
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
@@ -43,6 +45,7 @@ class DataWriter:
         self.cache_construct = {}
         self.cache_debug = {}
         self.stat_stack_list = []
+        self._error_log_initialized = False
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -145,13 +148,26 @@ class DataWriter:
             self.write_json()
 
     def write_error_log(self, message: str):
+        """
+        写错误日志：
+          - 第一次调用时以 'w' 模式清空文件，之后都用 'a' 模式追加
+          - 添加时间戳
+          - 在 message 后写入当前的调用栈（方便追踪日志来源）
+        """
         try:
-            with open(self.dump_error_info_path, "a") as f:
-                from datetime import datetime
+            mode = "w" if not self._error_log_initialized else "a"
+            self._error_log_initialized = True
+
+            with open(self.dump_error_info_path, mode) as f:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 f.write(f"[{timestamp}] {message}\n")
+                f.write("Call stack (most recent call last):\n")
+                # format_stack() 返回的是写日志时的栈，如果想要写出 exception 时的 traceback，需要在调用方抓取 format_exc()
+                f.write("".join(traceback.format_stack()[:-1]))  # 去掉自己这一层
+                f.write("\n")
         except Exception as e:
-            print(f"[FallbackError] Failed to write error log: {e}")
+            # 如果连写日志都失败了，就打印到 stderr
+            logger.warning(f"[FallbackError] Failed to write error log: {e}")
 
     def update_data(self, new_data):
         with lock:
