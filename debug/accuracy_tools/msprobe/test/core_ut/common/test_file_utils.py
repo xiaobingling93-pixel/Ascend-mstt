@@ -246,14 +246,23 @@ class TestFileOperations:
             save_yaml(str(self.yaml_file), test_data)
             mock_file.assert_called_once_with(str(self.yaml_file), 'w', encoding='utf-8')
             assert mock_flock.call_count == 2
-            mock_dump.assert_called_once_with(test_data, mock_file(), sort_keys=False)
+            mock_dump.assert_called_once_with(test_data, mock_file(), sort_keys=False)\
 
-    def test_save_excel(self):
+    def test_save_excel_tiny(self):
         df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
         with patch('pandas.DataFrame.to_excel') as mock_to_excel, \
+                patch('pandas.ExcelWriter') as mock_writer, \
                 patch('os.chmod') as mock_chmod:
             save_excel(self.excel_file, df)
-            mock_to_excel.assert_called_once_with(str(self.excel_file), index=False)
+            mock_to_excel.assert_called_once_with(mock_writer().__enter__(), sheet_name='Sheet1', index=False)
+
+    def test_save_excel_large(self):
+        df = pd.DataFrame({'col1': list(range(1500000)), 'col2': list(range(1500000, 0, -1))})
+        with patch('pandas.DataFrame.to_excel') as mock_to_excel, \
+                patch('pandas.ExcelWriter') as mock_writer, \
+                patch('os.chmod') as mock_chmod:
+            save_excel(self.excel_file, df)
+            mock_to_excel.assert_called_with(mock_writer().__enter__(), sheet_name='part_1', index=False)
 
     def test_move_file(self):
         dst_file = self.test_dir / "moved_file"
@@ -494,24 +503,6 @@ class TestUtilityOperations:
             result = os_walk_for_files(str(self.test_dir), 1)
             assert len(result) == 1
             assert result[0]['file'] == 'file1.txt'
-
-
-class TestCertificateOperations:
-    @pytest.fixture(autouse=True)
-    def setup(self, tmp_path):
-        self.cert_file = tmp_path / "test.pem"
-        self.mock_cert = MagicMock()
-        self.mock_cert.get_notBefore.return_value = b'20230101000000Z'
-        self.mock_cert.get_notAfter.return_value = b'20250101000000Z'
-        self.mock_cert.has_expired.return_value = False
-
-    def test_check_crt_valid(self):
-        # Test expired certificate
-        self.mock_cert.has_expired.return_value = True
-        with patch('OpenSSL.crypto.load_certificate', return_value=self.mock_cert), \
-                patch('builtins.open', mock_open(read_data='cert data')), \
-                pytest.raises(RuntimeError):
-            check_crt_valid(self.cert_file)
 
 
 class TestDirectoryChecks:

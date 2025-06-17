@@ -109,6 +109,9 @@ class OptimizerMon(object):
                     else:
                         logger.warning(f"step of {name} is None, maybe something wrong happened.")
                         continue
+                    if exp_avg is None or exp_avg_sq is None:
+                        logger.warning(f"exp_avg or exp_avg_sq of {name} is None, skip calculation.")
+                        continue
                     exp_avg_hat = exp_avg / (1 - self.torch_opt.defaults['betas'][0] ** step)
                     exp_avg_sq_hat = exp_avg_sq / (1 - self.torch_opt.defaults['betas'][1] ** step)
                     update_dict[name] = exp_avg_hat / (torch.sqrt(exp_avg_sq_hat) + self.torch_opt.defaults['eps'])

@@ -676,6 +676,7 @@ torch:
   - _batch_norm_impl_index
   - _convolution
   - _foreach_norm
+  - _fused_adamw_
   - _softmax_backward_data
   - abs
   - abs_

@@ -255,7 +255,8 @@ def record_skip_info(api_full_name, compare, compare_alg_results):
 
 def is_unsupported_api(api_name, is_overflow_check=False):
     split_name = api_name.split(Const.SEP)[0]
-    flag = (split_name == Const.DISTRIBUTED) or (is_overflow_check and split_name == Const.NPU)
+    unsupport_type_list = [Const.DISTRIBUTED, Const.MINDSPEED_API_TYPE_PREFIX]
+    flag = (split_name in unsupport_type_list) or (is_overflow_check and split_name == Const.NPU)
     if flag:
         logger.info(f"{split_name} api is not supported for run ut. SKIP.")
     return flag

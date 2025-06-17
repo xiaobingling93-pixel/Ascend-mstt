@@ -5,6 +5,7 @@ import time
 from enum import Enum, auto
 from abc import ABC, abstractmethod
 import csv
+import random
 
 import gc
 import sys
@@ -1432,6 +1433,16 @@ global_context = GlobalContext()
 
 # ======== 输入类型类 =======
 
+def seed_all(seed={random_seed}):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+    mindtorch.manual_seed(seed)
+    mindtorch.use_deterministic_algorithms(True)
+    mindspore.set_deterministic(True)
+
 class ApiInputAggregation:
     def __init__(self, inputs, kwargs, gradient_inputs) -> None:
         """
@@ -2024,7 +2035,7 @@ if __name__ == "__main__":
     api_name_str = ".".join(api_full_name.split(".")[:3])
     propagation = "{propagation}"
     data_mode = "{data_mode}"
-    torch.manual_seed({random_seed})
+    seed_all({random_seed})
 
     data_manager = DataManager("./op_result_output", None)
     create_directory("./op_result_output")

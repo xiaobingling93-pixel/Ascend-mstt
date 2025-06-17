@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-__version__ = '1.3.0'
+__version__ = '8.1.0'
 
 import subprocess
 import platform
@@ -34,7 +34,8 @@ INSTALL_REQUIRED = [
     "twisted",
     "matplotlib",
     "tensorboard",
-    "tabulate"
+    "tabulate",
+    "pwinput"
 ]
 
 EXCLUDE_PKGS = [

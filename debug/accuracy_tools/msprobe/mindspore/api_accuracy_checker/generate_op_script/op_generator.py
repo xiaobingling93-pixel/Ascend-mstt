@@ -116,8 +116,22 @@ class CommonConfig:
 
         filtered = {k: v for k, v in json_content.items() if k not in EXCLUED}
 
+        if not filtered:
+            raise ValueError(f'json file is empty!')
+
         if len(filtered) > API_INFO:
             raise ValueError(f'json file has more than one API, the API only contains forward and backward info')
+
+        is_forward_phase = propagation == Const.FORWARD
+
+        is_exact_api_count = len(filtered) == API_INFO
+
+        all_keys_forward = all(k.endswith('forward') for k in filtered)
+
+        if is_forward_phase and is_exact_api_count and all_keys_forward:
+            raise ValueError(
+                "json file has more than one API, the API only contains forward info。"
+            )
 
         # Retrieve the first API name and dictionary
         forward_item = next(iter(json_content.items()), None)

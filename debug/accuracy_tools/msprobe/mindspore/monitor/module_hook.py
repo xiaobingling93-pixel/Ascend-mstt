@@ -21,6 +21,7 @@ from datetime import datetime
 
 import pytz
 import pandas as pd
+import mindspore
 from mindspore import Tensor, mint
 from mindspore import nn, _no_grad
 
@@ -562,9 +563,9 @@ class TrainerMon:
         v_dict = {}
         for name, param in get_parameters(common_opt):
             if MonitorConst.EXP_AVG_SQ in name:
-                m_dict[name] = param
-            elif MonitorConst.EXP_AVG in name:
                 v_dict[name] = param
+            elif MonitorConst.EXP_AVG in name:
+                m_dict[name] = param
         return m_dict, v_dict
 
     def generate_mv_metrics(self, opt_context):
@@ -783,10 +784,16 @@ class TrainerMon:
             step_accumulates_one(context, self.micro_batch_number)
             return
 
-        def fwd_hook_fun_wrapper(fwd_hook_fun, name):
-            def wrapper(module, args, kwargs, module_output):
-                return fwd_hook_fun(module, args, kwargs, module_output, name)
-            return wrapper
+        def fwd_hook_register(module, fwd_hook_fun, name):
+            if mindspore.__version__ >= '2.6.0':
+                def wrapper(module, args, kwargs, module_output):
+                    return fwd_hook_fun(module, args, kwargs, module_output, name)
+                return module.register_forward_hook(wrapper, with_kwargs=True)
+
+            else:
+                def wrapper(module, args, module_output):
+                    return fwd_hook_fun(module, args, None, module_output, name)
+                return module.register_forward_hook(wrapper)
 
         def stack_hook(module, args, kwargs, module_output, name):
             if module not in self.module_fwd_hook_context_by_module:
@@ -802,15 +809,14 @@ class TrainerMon:
         for module_name, submodule in get_submodules(module):
             if self.stack_info:
                 name = vpp_stage + squash_param_name(module_name)
-                handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(stack_hook, name=name), with_kwargs=True)
+                handle = fwd_hook_register(submodule, stack_hook, name=name)
                 self.handles["stack"].append(handle)
             name = self._is_target_module(module_name, target_names, vpp_stage)
             if not name:
                 continue
             if self.xy_distribution or self.print_struct:
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name),
-                                                             with_kwargs=True)
+                    handle = fwd_hook_register(submodule, fwd_hook_fun, name=name)
                     self.handles['xy'].append(handle)
                 if not self.forward_only:
                     handle = submodule.register_backward_hook(bwd_hook_fun)

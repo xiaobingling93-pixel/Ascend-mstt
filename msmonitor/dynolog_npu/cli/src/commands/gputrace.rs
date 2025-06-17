@@ -3,14 +3,10 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 
-use std::net::TcpStream;
-use rustls::{ClientConnection, StreamOwned};
-
 use anyhow::Result;
 use serde_json::Value;
-
-#[path = "utils.rs"]
-mod utils;
+use crate::DynoClient;
+use super::utils;
 
 // This module contains the handling logic for dyno gputrace
 
@@ -96,7 +92,7 @@ impl GpuTraceConfig {
 
 /// Gputrace command triggers GPU profiling on pytorch apps
 pub fn run_gputrace(
-    mut client: StreamOwned<ClientConnection, TcpStream>,
+    mut client: DynoClient,
     job_id: u64,
     pids: &str,
     process_limit: u32,
@@ -118,11 +114,11 @@ pub fn run_gputrace(
         kineto_config, job_id, pids, process_limit
     );
 
-    utils::send_msg(&mut client, &request_json).expect("Error sending message to service");
+    utils::send_msg(&mut client, &request_json)?;
 
-    let resp_str = utils::get_resp(&mut client).expect("Unable to decode output bytes");
+    let resp_str = utils::get_resp(&mut client)?;
 
-    println!("response = {}", resp_str);
+    println!("response = {}\n", resp_str);
 
     let resp_v: Value = serde_json::from_str(&resp_str)?;
     let processes = resp_v["processesMatched"].as_array().unwrap();

@@ -17,12 +17,10 @@
 import json
 import os
 import tempfile
-from datetime import datetime, timezone
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
-import OpenSSL
 import numpy as np
 from pathlib import Path
 
@@ -32,7 +30,6 @@ from msprobe.core.common.file_utils import (
     FileCheckException,
     check_file_or_directory_path,
     check_file_size,
-    check_crt_valid,
     get_file_content_bytes,
     get_json_contents,
     save_json,
@@ -465,60 +462,6 @@ class TestUtils(TestCase):
         file_path_false = 1
         self.assertTrue(is_json_file(file_path_true))
         self.assertFalse(is_json_file(file_path_false))
-
-
-class TestCheckCrtValid(TestCase):
-    """
-    Test the check_crt_valid function.
-    """
-
-    def setUp(self):
-        self.cert_file_path = "cert_file_path.pem"
-        if not os.path.exists(self.cert_file_path):
-            with open(self.cert_file_path, 'w') as f:
-                f.write("This is a test certificate.")
-
-    def tearDown(self):
-        if os.path.exists(self.cert_file_path):
-            os.remove(self.cert_file_path)
-
-    @patch('msprobe.core.common.file_utils.datetime')
-    @patch('OpenSSL.crypto.load_certificate')
-    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime):
-        mock_cert = MagicMock()
-        mock_cert.get_notBefore.return_value = b'20220101'
-        mock_cert.get_notAfter.return_value = b'20230101'
-        mock_cert.has_expired.return_value = False
-        mock_load_certificate.return_value = mock_cert
-        mock_datetime.now.return_value = datetime(2022, 10, 1)
-
-        check_crt_valid(self.cert_file_path)
-        mock_load_certificate.assert_called_once_with(OpenSSL.crypto.FILETYPE_PEM, 'cert_data')
-
-    @patch('datetime.datetime')
-    @patch('OpenSSL.crypto.load_certificate')
-    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime):
-        mock_cert = MagicMock()
-        mock_cert.get_notBefore.return_value = b'20220101'
-        mock_cert.get_notAfter.return_value = b'20230101'
-        mock_cert.has_expired.return_value = True
-        mock_load_certificate.return_value = mock_cert
-        mock_datetime.now.return_value = datetime(2022, 10, 1, tzinfo=timezone.utc)
-
-        with self.assertRaises(RuntimeError) as context:
-            check_crt_valid(self.cert_file_path)
-        self.assertIn('The SSL certificate has expired and needs to be replaced', str(context.exception))
-
-    @patch('OpenSSL.crypto.load_certificate')
-    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_exception(self, mock_open_, mock_load_certificate):
-        mock_load_certificate.side_effect = Exception('Test Exception')
-
-        with self.assertRaises(RuntimeError) as context:
-            check_crt_valid(self.cert_file_path)
-        self.assertIn('The SSL certificate is invalid', str(context.exception))
 
 
 class TestDetectFrameworkByDumpJson(unittest.TestCase):

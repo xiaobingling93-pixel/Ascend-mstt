@@ -53,9 +53,9 @@ def tensor_to_hash(tensor):
 def get_tensor_features(tensor):
     features = {
         "max": FmkAdp.tensor_max(tensor),
-        "min": FmkAdp.tensor_max(tensor),
-        "mean": FmkAdp.tensor_max(tensor),
-        "norm": FmkAdp.tensor_max(tensor),
+        "min": FmkAdp.tensor_min(tensor),
+        "mean": FmkAdp.tensor_mean(tensor),
+        "norm": FmkAdp.tensor_norm(tensor),
     }
 
     return features

@@ -96,7 +96,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             _dump_set_dynamic()
 
     @staticmethod
-    def get_task_config(task, json_config):
+    def _get_task_config(task, json_config):
         return parse_task_config(task, json_config)
 
     @staticmethod
