@@ -184,6 +184,9 @@ class GraphConst:
     OP = 'op'
     PEER = 'peer'
     GROUP_ID = 'group_id'
+    
+    IGNORE_PRECISION_INDEX = {'empty', 'empty_like', 'empty_with_format', 'new_empty_strided', 'new_empty',
+                              'empty_strided'}
 
 
 def is_serializable(obj):
