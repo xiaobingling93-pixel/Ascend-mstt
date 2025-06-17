@@ -60,14 +60,14 @@ void SimpleJsonServerBase::initSocket()
 {
     struct sockaddr_in6 server_addr;
 
-    /* Create socket for listening (client requests).*/
+    /* Create socket for listening (client requests). */
     sock_fd_ = ::socket(AF_INET6, SOCK_STREAM, 0);
     if (sock_fd_ == -1) {
         std::perror("socket()");
         return;
     }
 
-    /* Set socket to reuse address in case server is restarted.*/
+    /* Set socket to reuse address in case server is restarted. */
     int flag = 1;
     int ret =
         ::setsockopt(sock_fd_, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
@@ -122,17 +122,19 @@ void SimpleJsonServerBase::initSocket()
  */
 class ClientSocketWrapper {
 public:
-    ~ClientSocketWrapper() {
+    ~ClientSocketWrapper()
+    {
         if (FLAGS_certs_dir != NO_CERTS_MODE && ssl_) {
         SSL_shutdown(ssl_);
         SSL_free(ssl_);
         }
         if (client_sock_fd_ != -1) {
             ::close(client_sock_fd_);
-       }
+        }
     }
 
-    bool accept(int server_socket, SSL_CTX* ctx) {
+    bool accept(int server_socket, SSL_CTX* ctx)
+    {
         struct sockaddr_in6 client_addr;
         socklen_t client_addr_len = sizeof(client_addr);
         std::array<char, INET6_ADDRSTRLEN> client_addr_str;
@@ -166,7 +168,8 @@ public:
         return true;
     }
 
-    std::string get_message() {
+    std::string get_message()
+    {
         int32_t msg_size = -1;
         if (!read_helper((uint8_t*)&msg_size, sizeof(msg_size)) || msg_size <= 0) {
             LOG(ERROR) << "Invalid message size = " << msg_size;
@@ -192,7 +195,8 @@ public:
         return message;
     }
 
-    bool send_response(const std::string& response) {
+    bool send_response(const std::string& response)
+    {
         int32_t size = response.size();
         int ret;
         if (FLAGS_certs_dir == NO_CERTS_MODE) {
@@ -234,58 +238,61 @@ public:
         return ret > 0;
     }
 
- private:
-  int read_helper(uint8_t* buf, int size) {
-    if (FLAGS_certs_dir == NO_CERTS_MODE) {
-      int ret = ::read(client_sock_fd_, (void*)buf, size);
-      if (ret == -1) {
-        std::perror("read()");
-      }
-      return ret;
+private:
+    int read_helper(uint8_t* buf, int size)
+    {
+        if (FLAGS_certs_dir == NO_CERTS_MODE) {
+            int ret = ::read(client_sock_fd_, (void*)buf, size);
+            if (ret == -1) {
+                std::perror("read()");
+            }
+            return ret;
+        }
+        int ret = SSL_read(ssl_, (void*)buf, size);
+        if (ret <= 0) {
+            ERR_print_errors_fp(stderr);
+        }
+        return ret;
     }
-    int ret = SSL_read(ssl_, (void*)buf, size);
-    if (ret <= 0) {
-      ERR_print_errors_fp(stderr);
-    }
-    return ret;
-  }
-
-  int client_sock_fd_ = -1;
-  SSL* ssl_ = nullptr;
+        int client_sock_fd_ = -1;
+        SSL* ssl_ = nullptr;
 };
 
 /* Accepts socket connections and processes the payloads.
- * This will inturn call the Handler functions*/
-void SimpleJsonServerBase::loop() noexcept {
-  if (sock_fd_ == -1 || !initSuccess_) {
-    return;
-  }
+ * This will inturn call the Handler functions */
+void SimpleJsonServerBase::loop() noexcept
+{
+    if (sock_fd_ == -1 || !initSuccess_) {
+        return;
+    }
 
-  while (run_) {
-    processOne();
-  }
+    while (run_) {
+        processOne();
+    }
 }
 
-void SimpleJsonServerBase::processOne() noexcept {
-  LOG(INFO) << "Waiting for connection.";
-  ClientSocketWrapper client;
-  if (!client.accept(sock_fd_, ctx_)) {
-    return;
-  }
-  std::string request_str = client.get_message();
-  LOG(INFO) << "RPC message received = " << request_str;
-  auto response_str = processOneImpl(request_str);
-  if (response_str.empty()) {
-    return;
-  }
-  if (!client.send_response(response_str)) {
-    LOG(ERROR) << "Failed to send response";
-  }
+void SimpleJsonServerBase::processOne() noexcept
+{
+    LOG(INFO) << "Waiting for connection.";
+    ClientSocketWrapper client;
+    if (!client.accept(sock_fd_, ctx_)) {
+        return;
+    }
+    std::string request_str = client.get_message();
+    LOG(INFO) << "RPC message received = " << request_str;
+    auto response_str = processOneImpl(request_str);
+    if (response_str.empty()) {
+        return;
+    }
+    if (!client.send_response(response_str)) {
+        LOG(ERROR) << "Failed to send response";
+    }
 }
 
-void SimpleJsonServerBase::run() {
-  LOG(INFO) << "Launching RPC thread";
-  thread_ = std::make_unique<std::thread>([this]() { this->loop(); });
+void SimpleJsonServerBase::run()
+{
+    LOG(INFO) << "Launching RPC thread";
+    thread_ = std::make_unique<std::thread>([this]() { this->loop(); });
 }
 
 void SimpleJsonServerBase::init_openssl()
@@ -415,7 +422,8 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
 
 
 // 禁用终端回显的函数，但显示星号
-std::string get_password_with_stars() {
+std::string get_password_with_stars()
+{
     struct termios old_flags, new_flags;
     std::string password;
 
@@ -450,7 +458,8 @@ std::string get_password_with_stars() {
 }
 
 // 验证证书版本和签名算法
-void SimpleJsonServerBase::verify_certificate_version_and_algorithm(X509* cert) {
+void SimpleJsonServerBase::verify_certificate_version_and_algorithm(X509* cert)
+{
     // 1. 检查证书版本是否为 X.509v3
     if (X509_get_version(cert) != 2) {  // 2 表示 X.509v3
         throw std::runtime_error("Certificate is not X.509v3");
@@ -463,7 +472,6 @@ void SimpleJsonServerBase::verify_certificate_version_and_algorithm(X509* cert) 
     }
 
     int sig_nid = OBJ_obj2nid(sig_alg->algorithm);
-    
     // 检查是否使用不安全的算法
     if (sig_nid == NID_md2WithRSAEncryption ||
         sig_nid == NID_md5WithRSAEncryption ||
@@ -473,7 +481,8 @@ void SimpleJsonServerBase::verify_certificate_version_and_algorithm(X509* cert) 
 }
 
 // 验证 RSA 密钥长度
-void SimpleJsonServerBase::verify_rsa_key_length(EVP_PKEY* pkey) {
+void SimpleJsonServerBase::verify_rsa_key_length(EVP_PKEY* pkey)
+{
     if (EVP_PKEY_base_id(pkey) == EVP_PKEY_RSA) {
         size_t key_length = 0;
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -501,7 +510,8 @@ void SimpleJsonServerBase::verify_rsa_key_length(EVP_PKEY* pkey) {
 }
 
 // 验证证书有效期
-void SimpleJsonServerBase::verify_certificate_validity(X509* cert) {
+void SimpleJsonServerBase::verify_certificate_validity(X509* cert)
+{
     ASN1_TIME* not_before = X509_get_notBefore(cert);
     ASN1_TIME* not_after = X509_get_notAfter(cert);
     if (!not_before || !not_after) {
@@ -509,8 +519,9 @@ void SimpleJsonServerBase::verify_certificate_validity(X509* cert) {
     }
 
     time_t current_time = time(nullptr);
-    struct tm tm_before = {}, tm_after = {};
-    if (!ASN1_TIME_to_tm(not_before, &tm_before) || 
+    struct tm tm_before = {};
+    struct tm tm_after = {};
+    if (!ASN1_TIME_to_tm(not_before, &tm_before) ||
         !ASN1_TIME_to_tm(not_after, &tm_after)) {
         throw std::runtime_error("Failed to convert certificate dates");
     }
@@ -554,7 +565,8 @@ void SimpleJsonServerBase::verify_certificate_validity(X509* cert) {
 }
 
 // 验证证书扩展域
-void SimpleJsonServerBase::verify_certificate_extensions(X509* cert) {
+void SimpleJsonServerBase::verify_certificate_extensions(X509* cert)
+{
     bool has_ca_constraint = false;
     bool has_key_usage = false;
     bool has_cert_sign = false;
@@ -594,7 +606,8 @@ void SimpleJsonServerBase::verify_certificate_extensions(X509* cert) {
 }
 
 // 加载私钥
-void SimpleJsonServerBase::load_private_key(SSL_CTX* ctx, const std::string& server_key) {
+void SimpleJsonServerBase::load_private_key(SSL_CTX* ctx, const std::string& server_key)
+{
     FILE* key_file = fopen(server_key.c_str(), "r");
     if (!key_file) {
         throw std::runtime_error("Failed to open server key file");
@@ -654,7 +667,8 @@ void SimpleJsonServerBase::load_private_key(SSL_CTX* ctx, const std::string& ser
 }
 
 // 加载和验证 CRL
-void SimpleJsonServerBase::load_and_verify_crl(SSL_CTX* ctx, const std::string& crl_file) {
+void SimpleJsonServerBase::load_and_verify_crl(SSL_CTX* ctx, const std::string& crl_file)
+{
     X509_STORE* store = SSL_CTX_get_cert_store(ctx);
     if (!store) {
         throw std::runtime_error("Failed to get certificate store");
@@ -696,7 +710,8 @@ void SimpleJsonServerBase::load_and_verify_crl(SSL_CTX* ctx, const std::string& 
     }
 }
 
-void SimpleJsonServerBase::configure_context(SSL_CTX* ctx) {
+void SimpleJsonServerBase::configure_context(SSL_CTX* ctx)
+{
     if (FLAGS_certs_dir.empty()) {
         throw std::runtime_error("--certs-dir must be specified!");
     }
@@ -758,7 +773,8 @@ void SimpleJsonServerBase::configure_context(SSL_CTX* ctx) {
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
 }
 
-void secure_clear_password(std::string& password) {
+void secure_clear_password(std::string& password)
+{
     if (!password.empty()) {
         // 使用随机数据覆盖密码
         std::generate(password.begin(), password.end(), std::rand);
