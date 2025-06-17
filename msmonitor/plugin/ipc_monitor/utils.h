@@ -71,11 +71,13 @@ std::string formatErrorCode(SubModule submodule, ErrCode errorCode);
 #define IPC_ERROR(error) formatErrorCode(SubModule::IPC, error)
 
 template<typename T, typename V>
-inline T ReinterpretConvert(V ptr) {
+inline T ReinterpretConvert(V ptr)
+{
     return reinterpret_cast<T>(ptr);
 }
 template <typename Container, typename KeyFunc>
-auto groupby(const Container& vec, KeyFunc keyFunc) {
+auto groupby(const Container& vec, KeyFunc keyFunc)
+{
     using KeyType = decltype(keyFunc(*vec.begin()));
     using ValueType = typename Container::value_type;
     std::unordered_map<KeyType, std::vector<ValueType>> grouped;
