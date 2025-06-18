@@ -41,6 +41,22 @@ class TestCaseFactory:
     @classmethod
     def get_process_task_add_child_layer_by_config_cases(cls):
         return cls._load_cases('test_match_node_controller\\process_task_add_child_layer_by_config.json')
+
+    @classmethod
+    def get_change_expand_state_cases(cls):
+        return cls._load_cases('test_layout_hierarchy_controller\\change_expand_state_case.json')
+    
+    @classmethod
+    def get_update_hierarchy_data_cases(cls):
+        return cls._load_cases('test_layout_hierarchy_controller\\update_hierarchy_data_case.json')
+    
+    @classmethod
+    def load_single_graph_test_data(cls):
+        return cls._load_cases('test_layout_hierarchy_controller\\test_single_statis_graph.vis')
+    
+    @classmethod
+    def load_compare_graph_test_data(cls):
+        return cls._load_cases('test_layout_hierarchy_controller\\test_compare_statis_graph.vis')
     
     @classmethod
     def _load_cases(cls, filename):
