@@ -84,14 +84,8 @@ class TestPytorchHookManager(unittest.TestCase):
         self.mock_config.task = Const.STRUCTURE
         params_dict = self.manager._get_params_dict(mock_module)
         self.assertEqual(params_dict, {})
-<<<<<<< HEAD
-        
-        # Test with other tasks
-        self.mock_config.task = "statistcis"
-=======
    
         self.mock_config.task = "statistics"
->>>>>>> 686cde3be1a5ea1782ebf86e1b01550b7d8016d9
     
         mock_named_params = [
             ("conv.weight", MagicMock()),
@@ -104,9 +98,3 @@ class TestPytorchHookManager(unittest.TestCase):
         self.assertEqual(set(params_dict.keys()), {"weight", "bias"})
         self.assertEqual(params_dict["weight"], mock_named_params[0][1])
         self.assertEqual(params_dict["bias"], mock_named_params[1][1])
-<<<<<<< HEAD
-
-if __name__ == '__main__':
-    unittest.main()
-=======
->>>>>>> 686cde3be1a5ea1782ebf86e1b01550b7d8016d9

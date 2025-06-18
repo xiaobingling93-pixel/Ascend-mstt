@@ -25,11 +25,7 @@ class TestMindsproeHookManager(unittest.TestCase):
         self.mock_data_collector = MagicMock()
         self.mock_config = MagicMock()
         self.mock_config.data_mode = ["all"]
-<<<<<<< HEAD
-        self.mock_config.task = "statistcis"
-=======
         self.mock_config.task = "statistics"
->>>>>>> 686cde3be1a5ea1782ebf86e1b01550b7d8016d9
         self.mock_config.level = Const.LEVEL_L1
         self.manager = MindsproeHookManager(
             self.mock_data_collector, 
@@ -94,11 +90,7 @@ class TestMindsproeHookManager(unittest.TestCase):
         params_dict = self.manager._get_params_dict(mock_module)
         self.assertEqual(params_dict, {})
       
-<<<<<<< HEAD
-        self.mock_config.task = "statistcis"
-=======
         self.mock_config.task = "statistics"
->>>>>>> 686cde3be1a5ea1782ebf86e1b01550b7d8016d9
         mock_params = {
             "test_module.weight": "w1",
             "test_module.bias": "b1"

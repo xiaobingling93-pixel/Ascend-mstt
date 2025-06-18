@@ -57,12 +57,6 @@ class TestDumpToolFactory(TestCase):
             DumpToolFactory.create(config)
         self.assertEqual(str(context.exception), "Valid level is needed.")
 
-        config.level = Const.KERNEL
-        with self.assertRaises(ValueError):
-            DumpToolFactory.create(config)
-        mock_logger_error.assert_called_with("Data dump is not supported in None mode when dump level is kernel.")
-        mock_logger_error.reset_mock()
-
         config.execution_mode = Const.GRAPH_GE_MODE
         config.level = Const.CELL
         with patch('msprobe.mindspore.dump.dump_tool_factory.is_graph_mode_cell_dump_allowed') as \
@@ -78,7 +72,6 @@ class TestDumpToolFactory(TestCase):
                 DumpToolFactory.create(config)
             self.assertEqual(str(context.exception), "Cell dump is not supported in graph mode.")
 
-        config.execution_mode = Const.GRAPH_KBYK_MODE
         config.level = Const.KERNEL
         dumper = DumpToolFactory.create(config)
-        self.assertEqual(dumper.dump_json["common_dump_settings"]["net_name"], "Net")
+        self.assertIsInstance(dumper, tuple)

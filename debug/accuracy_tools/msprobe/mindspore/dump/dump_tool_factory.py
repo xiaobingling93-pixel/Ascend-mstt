@@ -51,6 +51,8 @@ class DumpToolFactory:
         else:
             if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
                 raise Exception("data_mode must be one of all, input, output.")
+        if config.level == Const.KERNEL:
+            return (KernelGraphDump(config), KernelKbykDump(config))
         tool = DumpToolFactory.tools.get(config.level)
         if not tool:
             raise Exception("Valid level is needed.")
