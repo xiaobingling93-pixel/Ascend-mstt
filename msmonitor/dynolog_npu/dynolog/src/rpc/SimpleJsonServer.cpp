@@ -312,7 +312,8 @@ SSL_CTX* SimpleJsonServerBase::create_context()
     return ctx;
 }
 
-static bool is_cert_revoked(X509* cert, X509_STORE* store) {
+static bool is_cert_revoked(X509* cert, X509_STORE* store)
+{
     if (!cert || !store) {
         LOG(ERROR) << "Invalid certificate or store pointer";
         return false;
@@ -424,7 +425,8 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
 // 禁用终端回显的函数，但显示星号
 std::string get_password_with_stars()
 {
-    struct termios old_flags, new_flags;
+    struct termios old_flags;
+    struct termios new_flags;
     std::string password;
 
     // 获取当前终端设置
@@ -584,8 +586,7 @@ void SimpleJsonServerBase::verify_certificate_extensions(X509* cert)
                     has_ca_constraint = constraints->ca;
                     BASIC_CONSTRAINTS_free(constraints);
                 }
-            }
-            else if (OBJ_obj2nid(obj) == NID_key_usage) {
+            } else if (OBJ_obj2nid(obj) == NID_key_usage) {
                 ASN1_BIT_STRING* usage = (ASN1_BIT_STRING*)X509V3_EXT_d2i(ext);
                 if (usage) {
                     has_key_usage = true;

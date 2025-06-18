@@ -130,9 +130,9 @@ std::vector<MarkMetric> MetricMarkProcess::AggregatedData()
         markMetric.domain = domainName;
         markMetric.timestamp = getCurrentTimestamp64();
         markMetric.duration = std::accumulate(rangeDatas.begin(), rangeDatas.end(), 0ULL,
-                    [](uint64_t acc, const RangeMarkData& rangeData) {
-                        return acc + rangeData.deviceEnd - rangeData.deviceStart;
-                    });
+            [](uint64_t acc, const RangeMarkData& rangeData) {
+            return acc + rangeData.deviceEnd - rangeData.deviceStart;
+            });
         ans.emplace_back(markMetric);
     }
     return ans;
