@@ -161,8 +161,8 @@ class DataWriter:
             check_path_before_create(self.dump_error_info_path)
 
             with FileOpen(self.dump_error_info_path, mode) as f:
-                CST = timezone(timedelta(hours=8), name="CST")
-                timestamp = datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S %z")
+                cst_timezone = timezone(timedelta(hours=8), name="CST")
+                timestamp = datetime.now(cst_timezone).strftime("%Y-%m-%d %H:%M:%S %z")
                 f.write(f"[{timestamp}] {message}\n")
                 f.write("Call stack (most recent call last):\n")
 
