@@ -25,6 +25,8 @@ DEFINE_string(certs_dir, "", "TLS crets dir");
 constexpr int CLIENT_QUEUE_LEN = 50;
 const std::string NO_CERTS_MODE = "NO_CERTS";
 const size_t MIN_RSA_KEY_LENGTH = 3072;
+constexpr char BACKSPACE_ASCII = 8;
+constexpr char DEL_ASCII = 127;
 
 namespace dynolog {
 
@@ -421,7 +423,7 @@ int get_password_with_stars(char* buf, size_t bufsize)
 
     char ch;
     while ((ch = getchar()) != '\n' && idx + 1 < bufsize) {
-        if (ch == 127 || ch == 8) {
+        if (ch == DEL_ASCII || ch == BACKSPACE_ASCII) {
             if (idx > 0) {
                 idx--;
                 printf("\b \b");
