@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "MetricManager.h"
 #include "MetricKernelProcess.h"
 #include "MetricApiProcess.h"
@@ -9,11 +24,11 @@
 #include "utils.h"
 
 namespace dynolog_npu {
-namespace ipc_monitor{
+namespace ipc_monitor {
 namespace metric {
 
 MetricManager::MetricManager(): TimerTask("MetricManager", DEFAULT_FLUSH_INTERVAL),
-kindSwitchs_(MSPTI_ACTIVITY_KIND_COUNT), consumeStatus_(MSPTI_ACTIVITY_KIND_COUNT){
+    kindSwitchs_(MSPTI_ACTIVITY_KIND_COUNT), consumeStatus_(MSPTI_ACTIVITY_KIND_COUNT) {
     metrics.resize(MSPTI_ACTIVITY_KIND_COUNT);
     metrics[MSPTI_ACTIVITY_KIND_KERNEL] = std::make_shared<MetricKernelProcess>();
     metrics[MSPTI_ACTIVITY_KIND_API] = std::make_shared<MetricApiProcess>();
@@ -31,10 +46,10 @@ void MetricManager::ReleaseResource()
             kindSwitchs_[i] = false;
             metrics[i]->Clear();
         }
-    } 
+    }
 }
 
-ErrCode MetricManager::ConsumeMsptiData(msptiActivity *record) 
+ErrCode MetricManager::ConsumeMsptiData(msptiActivity *record)
 {
     if (!kindSwitchs_[record->kind]) {
         return ErrCode::PERMISSION;
@@ -69,7 +84,7 @@ void MetricManager::SendMetricMsg()
     }
 }
 
-void MetricManager::EnableKindSwitch_(msptiActivityKind kind, bool flag) 
+void MetricManager::EnableKindSwitch_(msptiActivityKind kind, bool flag)
 {
     kindSwitchs_[kind] = flag;
 }

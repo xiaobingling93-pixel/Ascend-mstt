@@ -27,10 +27,10 @@ except ImportError:
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
-from msprobe.mindspore.runtime import Runtime
 
 
 _api_register = get_api_register()

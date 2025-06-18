@@ -26,8 +26,6 @@ import shutil
 import sys
 import zipfile
 import multiprocessing
-from datetime import datetime, timezone
-from dateutil import parser
 import yaml
 import numpy as np
 import pandas as pd
@@ -35,7 +33,7 @@ import pandas as pd
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, CompareConst
 from msprobe.core.common.global_lock import global_lock, is_main_process
 
 proc_lock = multiprocessing.Lock()
@@ -462,6 +460,17 @@ def save_excel(path, data):
                 return "list"
         raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
 
+    def save_in_slice(df, base_name):
+        df_length = len(df)
+        if df_length < CompareConst.MAX_EXCEL_LENGTH:
+            df.to_excel(writer, sheet_name=base_name if base_name else 'Sheet1', index=False)
+        else:
+            slice_num = (df_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
+            slice_size = (df_length + slice_num - 1) // slice_num
+            for i in range(slice_num):
+                df.iloc[i * slice_size: min((i + 1) * slice_size, df_length)] \
+                    .to_excel(writer, sheet_name=f'{base_name}_part_{i}' if base_name else f'part_{i}', index=False)
+
     check_path_before_create(path)
     path = os.path.realpath(path)
 
@@ -469,18 +478,27 @@ def save_excel(path, data):
     data_type = validate_data(data)
 
     try:
-        if data_type == "single":
-            data.to_excel(path, index=False)
-        elif data_type == "list":
-            with pd.ExcelWriter(path) as writer:
+        with pd.ExcelWriter(path) as writer:
+            if data_type == "single":
+                save_in_slice(data, None)
+            elif data_type == "list":
                 for data_df, sheet_name in data:
-                    data_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    save_in_slice(data_df, sheet_name)
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
     change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def move_directory(src_path, dst_path):
+    check_file_or_directory_path(src_path, isdir=True)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move directory {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move directory {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_DIR_AUTHORITY)
 
 
 def move_file(src_path, dst_path):
@@ -668,41 +686,6 @@ def os_walk_for_files(path, depth):
             for file in files:
                 res.append({"file": file, "root": root})
     return res
-
-
-def check_crt_valid(pem_path, is_public_key=False):
-    """
-    Check the validity of the SSL certificate.
-
-    Load the SSL certificate from the specified path, parse and check its validity period.
-    If the certificate is expired or invalid, raise a RuntimeError.
-
-    Parameters:
-    pem_path (str): The file path of the SSL certificate.
-    is_public_key (bool): The file is public key or not.
-
-    Raises:
-    RuntimeError: If the SSL certificate is invalid or expired.
-    """
-    import OpenSSL
-    try:
-        with FileOpen(pem_path, "r") as f:
-            pem_data = f.read()
-        if is_public_key:
-            cert = OpenSSL.crypto.load_publickey(OpenSSL.crypto.FILETYPE_PEM, pem_data)
-        else:
-            cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
-        pem_start = parser.parse(cert.get_notBefore().decode("UTF-8"))
-        pem_end = parser.parse(cert.get_notAfter().decode("UTF-8"))
-        logger.info(f"The SSL certificate passes the verification and the validity period "
-                    f"starts from {pem_start} ends at {pem_end}.")
-    except Exception as e:
-        logger.error("Failed to parse the SSL certificate. Check the certificate.")
-        raise RuntimeError(f"The SSL certificate is invalid, {pem_path}") from e
-
-    now_utc = datetime.now(tz=timezone.utc)
-    if cert.has_expired() or not (pem_start <= now_utc <= pem_end):
-        raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")
 
 
 def read_xlsx(file_path, sheet_name=None):
@@ -905,7 +888,8 @@ class SharedDict:
             self._shm = shared_memory.SharedMemory(create=False, name=name)
         except FileNotFoundError:
             try:
-                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024)
+                # 共享内存空间增加至5M
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 5)
                 data = pickle.dumps({})
                 self._shm.buf[0:len(data)] = bytearray(data)
                 logger.debug(f'create shared memory, name: {name}')
@@ -920,6 +904,7 @@ class SharedDict:
             except Exception as e:
                 logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
                 self._dict = {}
+                self._shm.buf[:] = bytearray(b'\x00' * len(self._shm.buf))  # 清空内存
                 self._changed = True
 
 

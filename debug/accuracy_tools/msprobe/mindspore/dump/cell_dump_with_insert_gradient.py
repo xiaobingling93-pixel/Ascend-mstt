@@ -28,7 +28,7 @@ from msprobe.core.common.const import Const as CoreConst
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import (
     load_npy, save_json, remove_path, load_yaml,
-    create_directory, read_csv, write_df_to_csv, write_csv, move_file)
+    create_directory, read_csv, write_df_to_csv, write_csv, move_file, move_directory)
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.cell_dump_process import CellDumpConfig
 
@@ -590,10 +590,11 @@ def process(dump_path):
         generate_construct(npy_path)
         generate_dump_info(npy_path)
         generate_stack_info(npy_path)
+        # 单卡场景，rank目录名称为rank
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                move_file(rank_path, new_rank_path)
+                move_directory(rank_path, new_rank_path)
                 logger.debug(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
@@ -700,8 +701,8 @@ def process_statistics(dump_path):
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                move_file(rank_path, new_rank_path)
-                logger.info("Directory was successfully renamed to: {new_rank_path}")
+                move_directory(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
         logger.info("==========JSON file generation completed!==========")
@@ -777,7 +778,10 @@ def create_kbyk_json(dump_path, summary_mode, step):
     }
 
     create_directory(dump_path)
-    config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
+    rank_id = os.environ.get('RANK_ID')
+    if rank_id is None:
+        rank_id = 0
+    config_json_path = os.path.join(dump_path, rank_id + "kernel_kbyk_dump.json")
     save_json(config_json_path, config_json, indent=4)
     logger.info(config_json_path + " has been created.")
     return config_json_path
@@ -806,6 +810,7 @@ def start(config: CellDumpConfig):
                 "please use the latest version package of MindSpore."
             )
         _set_init_iter(0)
+        remove_path(config_json_path)
 
     if net is None:
         return

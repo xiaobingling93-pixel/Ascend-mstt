@@ -32,7 +32,7 @@ from msprobe.mindspore.common.utils import (
 )
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
-from msprobe.mindspore.runtime import Runtime
+from msprobe.core.common.runtime import Runtime
 
 
 def get_cell_construct(construct):

@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.core.service import BaseService
 from msprobe.core.common.utils import Const
+from msprobe.core.service import BaseService
 from msprobe.pytorch.attl_manager import ATTLManager
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized, torch_version_above_or_equal_2
-from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
+from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.hook_module.jit_script_wrapper import wrap_jit_script_func
 from msprobe.pytorch.hook_module.pt_hook_manager import PytorchHookManager
@@ -33,7 +33,7 @@ class PytorchService(BaseService):
     @property
     def _get_framework_type(self):
         return Const.PT_FRAMEWORK
-    
+
     @staticmethod
     def _get_current_rank():
         return get_rank_if_initialized()
@@ -59,7 +59,7 @@ class PytorchService(BaseService):
         ModuleProcesser.enable_module_dump = True
         self.module_processor.register_module_hook(self.model, self.build_hook)
         self.logger.info(f"The module {self.config.task} hook function is successfully mounted to the model.")
-    
+
     def _run_ut_dispatch(self, status):
         if torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl_manager.attl, status, self.config.online_run_ut_recompute)

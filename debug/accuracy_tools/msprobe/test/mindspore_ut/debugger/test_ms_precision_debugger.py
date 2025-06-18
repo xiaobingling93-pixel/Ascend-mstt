@@ -25,7 +25,7 @@ from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.ms_config import StatisticsConfig
-from msprobe.mindspore.runtime import Runtime
+from msprobe.core.common.runtime import Runtime
 
 
 class TestPrecisionDebugger(unittest.TestCase):

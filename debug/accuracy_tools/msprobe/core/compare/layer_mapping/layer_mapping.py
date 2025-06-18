@@ -164,6 +164,8 @@ def preprocess_layer_mapping(mapping):
         for key, value in name_map.items():
             key_list = key.split('.')
             prefix = key_list[0]  # 取前缀
+            value_list = value.split('(')
+            value = value_list[0]  # 取前缀
             key_len = len(key_list)
             if prefix not in final_mapping[type_name]:
                 final_mapping[type_name][prefix] = []

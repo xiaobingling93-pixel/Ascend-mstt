@@ -53,10 +53,6 @@ class BasePrecisionDebugger:
             self.common_config.step = get_real_step_or_rank(step, Const.STEP)
 
     @staticmethod
-    def get_task_config(task, json_config):
-        raise NotImplementedError("Subclass must implment get_task_config")
-
-    @staticmethod
     def check_input_params(config_path, task, dump_path, level):
         if not config_path:
             config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
@@ -80,6 +76,10 @@ class BasePrecisionDebugger:
         if level is not None and level not in Const.LEVEL_LIST:
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
+
+    @staticmethod
+    def _get_task_config(task, json_config):
+        raise NotImplementedError("Subclass must implment _get_task_config")
 
     @classmethod
     def get_instance(cls):
@@ -135,9 +135,9 @@ class BasePrecisionDebugger:
         json_config = load_json(json_file_path)
         common_config = CommonConfig(json_config)
         if task:
-            task_config = self.get_task_config(task, json_config)
+            task_config = self._get_task_config(task, json_config)
         else:
             if not common_config.task:
                 common_config.task = Const.STATISTICS
-            task_config = self.get_task_config(common_config.task, json_config)
+            task_config = self._get_task_config(common_config.task, json_config)
         return common_config, task_config

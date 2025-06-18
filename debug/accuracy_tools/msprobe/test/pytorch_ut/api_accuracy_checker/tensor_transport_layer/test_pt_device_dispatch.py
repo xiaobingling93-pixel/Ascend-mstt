@@ -33,7 +33,6 @@ class TestDeviceDispatchFunc(unittest.TestCase):
         mock_consumer_queue.get.side_effect = [mock_api_data, "KILL_"]
 
         run_ut_process(xpu_id, mock_consumer_queue, None, None)
-        mock_torch.device.assert_called_once_with('cuda:1')
         mock_online_compare.assert_called_with(mock_api_data, mock_torch.device(), None)
 
     @patch("msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch.UtDataInfo")

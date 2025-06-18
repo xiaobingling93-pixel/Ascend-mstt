@@ -24,14 +24,17 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
-def get_single_metrics(op_list, tag, tensor, output=None):
+def get_single_metrics(op_list, tag, tensor, eps=1e-8, output=None):
     if output is None:
         output = {}
     if tag not in output:
         output[tag] = {}
     for op in op_list:
         func = FUNC_MAP.get(op)
-        statistic = func(tensor)
+        if op == "zeros":
+            statistic = func(tensor, eps)
+        else:
+            statistic = func(tensor)
         if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
             statistic = float(statistic)
             statistic = Tensor(statistic)
@@ -47,7 +50,7 @@ def get_metrics(op_list, tag2tensor, eps, output=None):
     for tag, tensor in tag2tensor.items():
         if tag not in output:
             output[tag] = {}
-        get_single_metrics(op_list, tag, tensor, output)
+        get_single_metrics(op_list, tag, tensor, eps, output)
     return output
 
 
@@ -95,8 +98,10 @@ def validate_ops(ops):
         valid_ops.append(default_op)
         logger.info(f"There is no valid ops, default op {default_op} is used")
     # 增加默认shape和dtype参数
-    if "shape" not in valid_ops and "dtype" not in valid_ops:
-        valid_ops.extend(["shape", "dtype"])
+    if "shape" not in valid_ops:
+        valid_ops.append("shape")
+    if "dtype" not in valid_ops:
+        valid_ops.append("dtype")
     return valid_ops
 
 
@@ -225,7 +230,9 @@ def validate_dynamic_on(dynamic_on):
 
 def validate_monitor_mbs_grad(monitor_mbs_grad):
     if not isinstance(monitor_mbs_grad, bool):
-        raise TypeError('monitor_mbs_grad should be a bool')
+        logger.warning(f'monitor_mbs_grad should be a bool, actual value is {monitor_mbs_grad}.')
+        return False
+    return monitor_mbs_grad
 
 
 def validate_config(config):
@@ -277,8 +284,7 @@ def validate_config(config):
     collect_times = config.get('collect_times', int(1e8))
     validate_collect_times(collect_times)
 
-    monitor_mbs_grad = config.get('monitor_mbs_grad', False)
-    validate_monitor_mbs_grad(monitor_mbs_grad)
+    config["monitor_mbs_grad"] = validate_monitor_mbs_grad(config.get('monitor_mbs_grad', False))
 
     dynamic_on = config.get('dynamic_on', False)
     validate_dynamic_on(dynamic_on)

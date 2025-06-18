@@ -9,6 +9,8 @@
 
 #include "MsMonitorMetrics.h"
 
+#ifdef USE_TENSORBOARD
+
 #include "tensorboard_logger.h"
 
 DECLARE_string(metric_log_dir);
@@ -95,3 +97,4 @@ private:
 };
 
 } // namespace dynolog
+#endif

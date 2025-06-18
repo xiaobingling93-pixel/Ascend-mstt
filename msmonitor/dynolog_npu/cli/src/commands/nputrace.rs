@@ -1,11 +1,7 @@
-use std::net::TcpStream;
-use rustls::{ClientConnection, StreamOwned};
-
 use anyhow::Result;
 use serde_json::Value;
-
-#[path = "utils.rs"]
-mod utils;
+use crate::DynoClient;
+use super::utils;
 
 #[derive(Debug)]
 pub enum NpuTraceTriggerConfig {
@@ -134,7 +130,7 @@ impl NpuTraceConfig {
 }
 
 pub fn run_nputrace(
-    mut client: StreamOwned<ClientConnection, TcpStream>,
+    mut client: DynoClient,
     job_id: u64,
     pids: &str,
     process_limit: u32,
@@ -156,9 +152,9 @@ pub fn run_nputrace(
         config_str, job_id, pids, process_limit
     );
 
-    utils::send_msg(&mut client, &request_json).expect("Error sending message to service");
+    utils::send_msg(&mut client, &request_json)?;
 
-    let resp_str = utils::get_resp(&mut client).expect("Unable to decode output bytes");
+    let resp_str = utils::get_resp(&mut client)?;
 
     println!("response = {}", resp_str);
 

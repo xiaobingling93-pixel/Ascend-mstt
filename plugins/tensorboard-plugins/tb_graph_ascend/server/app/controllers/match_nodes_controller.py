@@ -25,7 +25,7 @@ class MatchNodesController:
     def is_same_node_type(graph_data, npu_node_name, bench_node_name):
         npu_node_type = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {}).get('node_type')
         bench_node_type = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {}).get('node_type')
-        if not npu_node_type or not bench_node_type or npu_node_type != bench_node_type:
+        if npu_node_type is None or bench_node_type is None or npu_node_type != bench_node_type:
             return False
         return True
 
@@ -36,6 +36,11 @@ class MatchNodesController:
             result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
+        else:
+            result = {
+                'success': False,
+                'error': 'task类型错误'
+            }
         return result
 
     @staticmethod
@@ -45,6 +50,11 @@ class MatchNodesController:
             result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
+        else:
+            result = {
+                'success': False,
+                'error': 'task类型错误'
+            }
         return result
 
     @staticmethod
@@ -72,7 +82,8 @@ class MatchNodesController:
     def process_task_add_child_layer(graph_data, npu_node_name, bench_node_name, task):
         if not all([graph_data, npu_node_name, bench_node_name, task]):
             return {'success': False, 'error': '参数错误'}
-        if not MatchNodesController.is_same_node_type:
+     
+        if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
             return {
                 'success': False,
                 'error': '节点类型不一致,无法添加匹配关系'
@@ -215,6 +226,7 @@ class MatchNodesController:
         npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
         bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
+        
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
         return {'success': True}
 
@@ -437,6 +449,8 @@ class MatchNodesController:
         keys_to_remove = ADD_MATCH_KEYS
         # 遍历graph_npu_node_data中的每个主键和对应的子字典
         for key, fild_obj in graph_npu_node_data.items():
+            if not fild_obj or not isinstance(fild_obj, dict):
+                continue
             # 使用字典解析创建新的子字典，排除不需要的键
             graph_npu_node_data[key] = {
                 sub_key: value

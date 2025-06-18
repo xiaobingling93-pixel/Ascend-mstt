@@ -7,6 +7,7 @@ add_definitions(-DDYNOLOG_VERSION=${DYNOLOG_VERSION} -DDYNOLOG_GIT_REV=${DYNOLOG
 
 message("Use Prometheus = ${USE_PROMETHEUS}")
 message("Use ODS Graph API = ${USE_ODS_GRAPH_API}")
+message("Use Tensorboard = ${USE_TENSORBOARD}")
 
 # our build script will first create a src/ dir where all source code will exist
 file (GLOB dynolog_src "*.h" "*.cpp")

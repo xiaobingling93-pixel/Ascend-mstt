@@ -2,6 +2,7 @@
 import os
 import copy
 import shutil
+import tempfile
 import unittest
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
@@ -58,80 +59,80 @@ class TestFileCheck(unittest.TestCase):
 
     def test_config_path_soft_link_check(self):
         args = Args(config_path=self.soft_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
-        
+
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_api_info_path_soft_link_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.soft_json_path, out_path=self.hard_path)
-        
+
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_out_path_soft_link_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.soft_path)
-        
+
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
-    
+
     def test_result_csv_path_soft_link_check(self):
-        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path,
                     result_csv_path=self.csv_path)
-        
+
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_config_path_empty_check(self):
         args = Args(config_path=self.empty_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
-        
+
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_api_info_path_empty_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.empty_path, out_path=self.hard_path)
-        
+
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_out_path_empty_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.empty_path)
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_result_csv_path_empty_check(self):
-        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path,
                     result_csv_path=self.empty_path)
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_config_path_invalid_check(self):
         args = Args(config_path=123, api_info_path=self.hard_json_path, out_path=self.hard_path)
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_api_info_path_invalid_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path="123", out_path=self.hard_path)
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_out_path_invalid_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=123)
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
     def test_result_csv_path_invalid_check(self):
-        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path,
                     result_csv_path=123)
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
@@ -196,26 +197,26 @@ class TestRunUtMethods(unittest.TestCase):
         self.assertIsNone(data_info.bench_output)
         self.assertIsNone(data_info.grad_in)
         self.assertIsNone(data_info.in_fwd_data_list)
-    
+
     def test_blacklist_and_whitelist_filter(self):
         api_name = "test_api"
         black_list = ["test_api"]
         white_list = []
         result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
         self.assertTrue(result)
-        
+
         api_name = "test_api"
         black_list = []
         white_list = ["another_api"]
         result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
         self.assertTrue(result)
-        
+
         api_name = "test_api"
         black_list = ["test_api"]
         white_list = ["test_api"]
         result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
         self.assertTrue(result)
-        
+
         api_name = "test_api"
         black_list = []
         white_list = ["test_api"]
@@ -230,23 +231,62 @@ class TestRunUtMethods(unittest.TestCase):
         api_name = "Distributed.all_reduce"
         result = is_unsupported_api(api_name)
         self.assertTrue(result)
-        
+
     def test_no_backward(self):
         grad_index = None
-        out = (1, 2, 3) 
+        out = (1, 2, 3)
         result = need_to_backward(grad_index, out)
         self.assertFalse(result)
 
         grad_index = 0
-        out = 42 
+        out = 42
         result = need_to_backward(grad_index, out)
         self.assertTrue(result)
+
+    def test_check_need_grad_given_out_kwarg_then_return_false(self):
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import check_need_grad
+
+        api_info_dict = {"input_kwargs": {"out": True}}
+        result = check_need_grad(api_info_dict)
+        self.assertFalse(result)
+
+    def test_check_need_grad_given_no_out_kwarg_then_return_true(self):
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import check_need_grad
+
+        api_info_dict = {"input_kwargs": {}}
+        result = check_need_grad(api_info_dict)
+        self.assertTrue(result)
+
+    def test_preprocess_forward_content_given_duplicate_apis_then_filter(self):
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import preprocess_forward_content
+
+        forward_content = {
+            "torch.add_1": {"input_args": [{"value": 1}], "input_kwargs": {}},
+            "torch.add_2": {"input_args": [{"value": 1}], "input_kwargs": {}},
+            "torch.sub": {"input_args": [{"value": 2}], "input_kwargs": {}}
+        }
+
+        result = preprocess_forward_content(forward_content)
+
+        self.assertEqual(len(result), 2)  # One duplicate should be removed
+
+    def test_initialize_save_error_data_given_valid_path_then_return_path(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.test_dir = self.temp_dir.name
+
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import initialize_save_error_data
+
+        error_data_path = os.path.join(self.test_dir, "error_data")
+        result = initialize_save_error_data(error_data_path)
+
+        self.assertTrue(os.path.exists(result))
+        self.assertIn("ut_error_data", result)
+        self.temp_dir.cleanup()
 
 
 class TestRunUtOnlineConfig(unittest.TestCase):
 
-    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.run_ut.check_crt_valid')
-    def test_checked_online_config(self, mock_check_crt_valid):
+    def test_checked_online_config(self):
         class OnlineConfigClass:
             is_online = True
             rank_list = [0, 1]
@@ -254,8 +294,6 @@ class TestRunUtOnlineConfig(unittest.TestCase):
             tls_path = ""
             host = "127.0.0.1"
             port = 12345
-
-        mock_check_crt_valid.return_value = None
 
         online_config = OnlineConfigClass()
         res = checked_online_config(online_config)
@@ -297,6 +335,8 @@ class TestRunUtOnlineConfig(unittest.TestCase):
             file.write("1")
         with open(os.path.join(online_config.tls_path, "server.crt"), 'w') as file:
             file.write("1")
+        with open(os.path.join(online_config.tls_path, "ca.crt"), 'w') as file:
+            file.write("1")
         checked_online_config(online_config)
         shutil.rmtree(online_config.tls_path)
         online_config.tls_path = ""
@@ -314,3 +354,7 @@ class TestRunUtOnlineConfig(unittest.TestCase):
             checked_online_config(online_config)
         self.assertIn(str(context.exception), f"port: {online_config.port} is invalid, port range 0-65535.")
         online_config.port = 6123
+
+
+if __name__ == '__main__':
+    unittest.main()

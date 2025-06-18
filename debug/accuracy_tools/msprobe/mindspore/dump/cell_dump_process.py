@@ -30,7 +30,7 @@ from msprobe.core.common.const import Const as CoreConst
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import (
     load_npy, save_json, remove_path, load_yaml,
-    create_directory, read_csv, write_df_to_csv, write_csv, move_file)
+    create_directory, read_csv, write_df_to_csv, write_csv, move_file, move_directory)
 from msprobe.mindspore.common.log import logger
 
 CONSTRUCT_FILE_NAME = "construct.json"
@@ -143,10 +143,10 @@ def cell_construct_wrapper(func, self):
             if backward_or_all and ops.is_tensor(item):
                 if need_tensordump_in(self, 'input_dump_mode', index):
                     item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
-                              item, "in")
+                              item, "out")
                 else:
                     item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_OUTPUT, index),
-                              item, "out")
+                              item, "in")
             if forward_or_all and ops.is_tensor(item):
                 if need_tensordump_in(self, 'input_dump_mode', index):
                     temp = td_in(
@@ -169,10 +169,10 @@ def cell_construct_wrapper(func, self):
                 if backward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode', index):
                         item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
-                                  item, "in")
+                                  item, "out")
                     else:
                         item = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, index),
-                                  item, "out")
+                                  item, "in")
                 if forward_or_all and ops.is_tensor(item):
                     if need_tensordump_in(self, 'output_dump_mode', index):
                         temp = td_in(
@@ -194,10 +194,10 @@ def cell_construct_wrapper(func, self):
             if backward_or_all:
                 if need_tensordump_in(self, 'output_dump_mode', index):
                     out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
-                             out, "in")
+                             out, "out")
                 else:
                     out = gd(gen_file_path(self.dump_path, self.cell_prefix, KEY_BACKWARD, KEY_INPUT, 0),
-                             out, "out")
+                             out, "in")
             if forward_or_all and ops.is_tensor(out):
                 if need_tensordump_in(self, 'output_dump_mode', index):
                     temp = td_in(
@@ -603,11 +603,12 @@ def process(dump_path):
         generate_construct(npy_path)
         generate_dump_info(npy_path)
         generate_stack_info(npy_path)
+        # 单卡场景，rank目录名称为rank
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                move_file(rank_path, new_rank_path)
-                logger.info("Directory was successfully renamed to: {new_rank_path}")
+                move_directory(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
         logger.info("==========JSON file generation completed!==========")
@@ -711,8 +712,8 @@ def process_statistics(dump_path):
         if rank_id is None:
             new_rank_path = os.path.join(step_path, CoreConst.RANK)
             try:
-                move_file(rank_path, new_rank_path)
-                logger.info("Directory was successfully renamed to: {new_rank_path}")
+                move_directory(rank_path, new_rank_path)
+                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
             except Exception as e:
                 logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
         logger.info("==========JSON file generation completed!==========")
@@ -800,7 +801,10 @@ def create_kbyk_json(dump_path, summary_mode, step):
     }
 
     create_directory(dump_path)
-    config_json_path = os.path.join(dump_path, "kernel_kbyk_dump.json")
+    rank_id = os.environ.get('RANK_ID')
+    if rank_id is None:
+        rank_id = 0
+    config_json_path = os.path.join(dump_path, rank_id + "kernel_kbyk_dump.json")
     save_json(config_json_path, config_json, indent=4)
     logger.info(config_json_path + " has been created.")
     return config_json_path
@@ -829,6 +833,7 @@ def start(config: CellDumpConfig):
                 "please use the latest version package of MindSpore."
             )
         _set_init_iter(0)
+        remove_path(config_json_path)
 
     if not dump_gradient_op_existed or net is None:
         return

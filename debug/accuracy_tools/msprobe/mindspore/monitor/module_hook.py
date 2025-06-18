@@ -21,20 +21,20 @@ from datetime import datetime
 
 import pytz
 import pandas as pd
+import mindspore
 from mindspore import Tensor, mint
 from mindspore import nn, _no_grad
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
     is_skip_step, get_metrics, get_target_output_dir
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
-from msprobe.mindspore.monitor.anomaly_detect import AnomalyScanner, AnomalyDataFactory, \
-    CSVWriterWithAD, BaseWriterWithAD, WriterInput
-from msprobe.mindspore.monitor.anomaly_analyse import AnomalyDataWriter
+from msprobe.mindspore.monitor.data_writers import CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
 from msprobe.core.common.file_utils import write_df_to_csv
 from msprobe.core.common.utils import analyze_api_call_stack
@@ -563,9 +563,9 @@ class TrainerMon:
         v_dict = {}
         for name, param in get_parameters(common_opt):
             if MonitorConst.EXP_AVG_SQ in name:
-                m_dict[name] = param
-            elif MonitorConst.EXP_AVG in name:
                 v_dict[name] = param
+            elif MonitorConst.EXP_AVG in name:
+                m_dict[name] = param
         return m_dict, v_dict
 
     def generate_mv_metrics(self, opt_context):
@@ -730,6 +730,8 @@ class TrainerMon:
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
                     MonitorConst.ACTV, module_input))
+            module_output = [tensor for tensor in module_output if isinstance(tensor, Tensor)] \
+                            if isinstance(module_output, tuple) else module_output
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
@@ -758,11 +760,12 @@ class TrainerMon:
                 step_accumulates_one(context, self.micro_batch_number)
                 return
 
+            valid_input_grad = [tensor for tensor in input_grad if isinstance(tensor, Tensor)]
             tbtag_tensor_map = {}
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
-                    MonitorConst.ACTVGRAD, input_grad))
+                    MonitorConst.ACTVGRAD, valid_input_grad))
 
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
@@ -781,10 +784,16 @@ class TrainerMon:
             step_accumulates_one(context, self.micro_batch_number)
             return
 
-        def fwd_hook_fun_wrapper(fwd_hook_fun, name):
-            def wrapper(module, args, kwargs, module_output):
-                return fwd_hook_fun(module, args, kwargs, module_output, name)
-            return wrapper
+        def fwd_hook_register(module, fwd_hook_fun, name):
+            if mindspore.__version__ >= '2.6.0':
+                def wrapper(module, args, kwargs, module_output):
+                    return fwd_hook_fun(module, args, kwargs, module_output, name)
+                return module.register_forward_hook(wrapper, with_kwargs=True)
+
+            else:
+                def wrapper(module, args, module_output):
+                    return fwd_hook_fun(module, args, None, module_output, name)
+                return module.register_forward_hook(wrapper)
 
         def stack_hook(module, args, kwargs, module_output, name):
             if module not in self.module_fwd_hook_context_by_module:
@@ -800,15 +809,14 @@ class TrainerMon:
         for module_name, submodule in get_submodules(module):
             if self.stack_info:
                 name = vpp_stage + squash_param_name(module_name)
-                handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(stack_hook, name=name), with_kwargs=True)
+                handle = fwd_hook_register(submodule, stack_hook, name=name)
                 self.handles["stack"].append(handle)
             name = self._is_target_module(module_name, target_names, vpp_stage)
             if not name:
                 continue
             if self.xy_distribution or self.print_struct:
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(fwd_hook_fun_wrapper(fwd_hook_fun, name=name),
-                                                             with_kwargs=True)
+                    handle = fwd_hook_register(submodule, fwd_hook_fun, name=name)
                     self.handles['xy'].append(handle)
                 if not self.forward_only:
                     handle = submodule.register_backward_hook(bwd_hook_fun)

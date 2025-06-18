@@ -753,7 +753,7 @@ class MonitorConst:
     DEFAULT_MIN_COLLECT_TIMES = 0
     DEFAULT_STEP_INTERVAL = 1
 
-    OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean"]
+    OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean", "shape", "dtype"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
@@ -799,5 +799,20 @@ class MonitorConst:
     CSV = "csv"
     API = "api"
     HEADER_NAME = 'name'
-
     MAX_NDIGITS = 20
+
+    DEFAULT_STAGE = -1
+    FORWARD_STAGE = 0
+    BACKWARD_STAGE = 1
+    OPTIMIZER_STAGE = 2
+    FORWARD_KEY = [ACTV]
+    BACKWARD_KEY = [ACTVGRAD, PRE_GRAD, POST_GRAD, ACC_GRAD]
+    OPTIMIZER_KEY = [EXP_AVG, EXP_AVG_SQ]
+
+    TRAIN_STAGE = {}
+    for key in FORWARD_KEY:
+        TRAIN_STAGE[key] = FORWARD_STAGE
+    for key in BACKWARD_KEY:
+        TRAIN_STAGE[key] = BACKWARD_STAGE
+    for key in OPTIMIZER_KEY:
+        TRAIN_STAGE[key] = OPTIMIZER_STAGE

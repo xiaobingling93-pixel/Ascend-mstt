@@ -33,7 +33,7 @@ class ATTLManager:
                                      connect_port=self.config.port,
                                      nfs_path=self.config.nfs_path,
                                      tls_path=self.config.tls_path)
-            need_dump = len(self.config.rank) == 0 or self.current_rank in self.config.rank
+            need_dump = len(self.config.rank) == 0 or Runtime.current_rank in self.config.rank
             self.attl = ATTL('npu', attl_config, need_dump=need_dump)
             if self.config.nfs_path:
                 self.attl.upload("start")
@@ -47,7 +47,7 @@ class ATTLManager:
                     Runtime.current_iter,
                     Runtime.current_rank
                 )
-        logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
+        logger.info(f"tools is dumping api: {api_data.name}, rank: {Runtime.current_rank}")
         api_type, _, _ = api_data.name.split(Const.SEP)
         if api_type in [Const.DISTRIBUTED]:
             logger.info(f"api {api_data.name} is not supported, skip")

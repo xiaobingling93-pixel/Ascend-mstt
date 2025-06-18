@@ -114,14 +114,15 @@ export function parseTransform(transformStr: string): { x: number; y: number; sc
   }
 
   // 匹配 translate(X,Y) 部分
-  const translateMatch = transformStr.match(/translate\((?<x>[^,]+),(?<y>[^)]+)\)/);
+
+  const translateMatch = transformStr.match(/translate\((?<x>[\w\s.-]{1,100}),(?<y>[\w\s.-]{1,100})\)/);
   if (translateMatch) {
     result.x = parseFloat(translateMatch.groups?.x.trim() ?? '0');
     result.y = parseFloat(translateMatch.groups?.y.trim() ?? '0');
   }
 
   // 匹配 scale(Z) 部分
-  const scaleMatch = transformStr.match(/scale\((?<scaleValue>[^)]+)\)/);
+  const scaleMatch = transformStr.match(/scale\((?<scaleValue>[\w\s.-]{0,100},?)/);
   if (scaleMatch) {
     result.scale = parseFloat(scaleMatch.groups?.scaleValue.trim() ?? '0');
   }

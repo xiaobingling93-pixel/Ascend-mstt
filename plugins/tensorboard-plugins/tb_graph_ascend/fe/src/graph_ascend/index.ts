@@ -250,7 +250,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
         this.eventSource.onerror = (e) => {
             if (!this.progressData || !this.progressData.done) {
-                this.progreesError('连接中断', '请检查网络连接');
+                this.progreesError('加载失败', '请检查文件格式是否正确');
             }
             this.eventSource?.close();
         };

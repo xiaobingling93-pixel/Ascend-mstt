@@ -70,6 +70,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       outputData: nodeInfo.output_data,
       stackData: !isEmpty(nodeInfo.stack_info) ? JSON.stringify(nodeInfo.stack_info) : '',
       suggestions: nodeInfo.suggestions,
+      parallelMergeInfo: !isEmpty(nodeInfo.parallel_merge_info) ? JSON.stringify(nodeInfo.parallel_merge_info) : '',
     };
   };
 
@@ -179,6 +180,20 @@ const useNodeInfo = (): UseNodeInfoType => {
     if (!isEmpty(suggestion)) {
       suggestion[title] = 'suggestions';
       detailData.push(suggestion);
+    }
+    // 获取parallel_merge_info
+    const parallelMergeInfo: Record<string, unknown> = {};
+    const npuparallelMergeInfo = npuNode?.parallelMergeInfo;
+    const benchparallelMergeInfo = benchNode?.parallelMergeInfo;
+    if (!isEmpty(npuparallelMergeInfo)) {
+      parallelMergeInfo[nodeName] = safeJSONParse(npuparallelMergeInfo).join('\n');
+    }
+    if (!isEmpty(benchparallelMergeInfo)) {
+      parallelMergeInfo[benchNodeName] = safeJSONParse(benchparallelMergeInfo);
+    }
+    if (!isEmpty(parallelMergeInfo)) {
+      parallelMergeInfo[title] = 'parallelMergeInfo';
+      detailData.push(parallelMergeInfo);
     }
     return detailData;
   };
