@@ -106,7 +106,7 @@ public:
     /* 获取全局对象 */
     static PythonObject GetGlobal(const std::string& name, bool ignore = true);
     /* 获取模块对象；若其还未加载至缓存，则加载一遍 */
-    static PythonObject Import (const std::string& name, bool ignore = true) noexcept;
+    static PythonObject Import(const std::string& name, bool ignore = true) noexcept;
 
     /* From/To转换，统一放一份在基类，用于遍历迭代器等场景 */
     static PythonObject From(const PythonObject& input);
@@ -193,7 +193,7 @@ private:
 class PythonNumberObject : public PythonObject {
 public:
     PythonNumberObject();
-    PythonNumberObject(PyObject* o);
+    explicit PythonNumberObject(PyObject* o);
 
     static PythonNumberObject From(const int32_t& input);
     static PythonNumberObject From(const uint32_t& input);
@@ -203,7 +203,7 @@ public:
 class PythonStringObject : public PythonObject {
 public:
     PythonStringObject();
-    PythonStringObject(PyObject* o);
+    explicit PythonStringObject(PyObject* o);
 
     static PythonStringObject From(const std::string& input);
     static PythonStringObject From(const char* input);
@@ -212,7 +212,7 @@ public:
 class PythonBoolObject : public PythonObject {
 public:
     PythonBoolObject();
-    PythonBoolObject(PyObject* o);
+    explicit PythonBoolObject(PyObject* o);
 
     static PythonBoolObject From(const bool& input);
 };
@@ -221,7 +221,7 @@ class PythonListObject : public PythonObject {
 public:
     PythonListObject();
     explicit PythonListObject(size_t size);
-    PythonListObject(PyObject* o);
+    explicit PythonListObject(PyObject* o);
 
     template <typename T>
     static PythonListObject From(const std::vector<T>& input);
@@ -238,7 +238,7 @@ public:
 class PythonTupleObject : public PythonObject {
 public:
     PythonTupleObject();
-    PythonTupleObject(PyObject* o);
+    explicit PythonTupleObject(PyObject* o);
 
     template <typename T>
     static PythonTupleObject From(const std::vector<T>& input);
@@ -250,7 +250,7 @@ public:
 class PythonDictObject : public PythonObject {
 public:
     PythonDictObject();
-    PythonDictObject(PyObject* o);
+    explicit PythonDictObject(PyObject* o);
 
     template <typename T1, typename T2>
     static PythonDictObject From(const std::map<T1, T2>& input);
@@ -290,7 +290,9 @@ int32_t PythonObject::To(std::vector<T>& output) const
     while ((item = PyIter_Next(iter)) != nullptr) {
         T tmp;
         if (PythonObject(item).To(tmp) != 0) {
-            goto error;
+            Py_DECREF(item);
+            Py_DECREF(iter);
+            return -1;
         }
         output.emplace_back(tmp);
         Py_DECREF(item);
@@ -298,10 +300,6 @@ int32_t PythonObject::To(std::vector<T>& output) const
 
     Py_DECREF(iter);
     return 0;
-error:
-    Py_DECREF(item);
-    Py_DECREF(iter);
-    return -1;
 }
 
 template <typename T>

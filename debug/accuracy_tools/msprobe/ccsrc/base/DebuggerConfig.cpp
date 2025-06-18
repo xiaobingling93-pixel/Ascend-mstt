@@ -95,7 +95,7 @@ static bool DebuggerCfgParseUIntRangeGetBorder(const std::string& exp, uint32_t&
 {
     if (std::count(exp.begin(), exp.end(), '-') != 1) {
         LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT,
-                    "When using a range expression, it should be formatted as \"a-b\".");
+                  "When using a range expression, it should be formatted as \"a-b\".");
         return false;
     }
     std::istringstream iss(exp);
@@ -103,7 +103,7 @@ static bool DebuggerCfgParseUIntRangeGetBorder(const std::string& exp, uint32_t&
     iss >> left >> dash >> right;
     if (iss.fail() || dash != '-') {
         LOG_ERROR(DebuggerErrno::ERROR_INVALID_FORMAT,
-                    "When using a range expression, it should be formatted as \"a-b\".");
+                  "When using a range expression, it should be formatted as \"a-b\".");
         return false;
     }
     if (left >= right) {

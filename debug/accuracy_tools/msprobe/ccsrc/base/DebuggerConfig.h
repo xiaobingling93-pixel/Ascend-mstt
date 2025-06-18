@@ -209,7 +209,7 @@ private:
 
 class DebuggerConfig {
 public:
-    static DebuggerConfig& GetInstance() 
+    static DebuggerConfig& GetInstance()
     {
         static DebuggerConfig configInstance;
         return configInstance;

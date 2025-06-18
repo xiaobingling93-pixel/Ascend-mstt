@@ -245,7 +245,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true)
             return 0;
         }
 
-        if (SIZE_MAX / dim < static_cast<unsigned long>(num)) {
+        if (SIZE_MAX / static_cast<unsigned long>(dim) < static_cast<unsigned long>(num)) {
             throw std::out_of_range(tensor + ": Count of element over size_t.");
         }
         num *= static_cast<size_t>(dim);
@@ -258,12 +258,12 @@ static inline size_t SizeOfAclDType(const AclTensorInfo& tensor)
     return DataUtils::SizeOfDType(tensor.dtype);
 }
 
-static inline size_t SizeOfAclDType(const AclDtype& dtype) 
+static inline size_t SizeOfAclDType(const AclDtype& dtype)
 {
     return DataUtils::SizeOfDType(dtype);
 }
 
-size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) 
+size_t SizeOfTensor(const AclTensorInfo& tensor, bool host)
 {
     size_t num = EleNumOfTensor(tensor, host);
     size_t eleSize = SizeOfAclDType(tensor);

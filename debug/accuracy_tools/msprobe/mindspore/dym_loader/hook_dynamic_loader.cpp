@@ -1,5 +1,5 @@
-/**
- * Copyright 2024 Huawei Technologies Co., Ltd
+/*
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ bool HookDynamicLoader::UnloadLibrary()
     return true;
 }
 
-void *HookDynamicLoader::GetHooker(const std::string &funcName) 
+void *HookDynamicLoader::GetHooker(const std::string &funcName)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     auto iter = funcMap_.find(funcName);

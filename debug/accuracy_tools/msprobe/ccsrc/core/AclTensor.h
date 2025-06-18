@@ -58,12 +58,12 @@ struct AclTensorInfo {
     }
 };
 
-inline std::string operator+(const std::string& s, const AclTensorInfo& tensor) 
+inline std::string operator+(const std::string& s, const AclTensorInfo& tensor)
 {
     return s + tensor.ToString();
 }
 
-inline std::string operator+(const AclTensorInfo& tensor, const std::string& s) 
+inline std::string operator+(const AclTensorInfo& tensor, const std::string& s)
 {
     return tensor.ToString() + s;
 }
