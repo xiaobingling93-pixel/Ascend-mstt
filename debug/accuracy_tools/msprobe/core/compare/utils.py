@@ -590,4 +590,10 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
                 'bench_json_path': bench_path,
                 'is_print_compare_log': is_print_compare_log
             }
-            compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}', **kwargs)
+            try:
+                compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}', **kwargs)
+            except CompareException as e:
+                if e.code == CompareException.INVALID_DATA_ERROR:
+                    logger.error(f"Invalid or missing 'data' in dump.json. Skipping {nr} comparison.")
+                if e.code == CompareException.INVALID_TASK_ERROR:
+                    logger.error(f"Invalid or missing 'task' in dump.json. Skipping {nr} comparison.")

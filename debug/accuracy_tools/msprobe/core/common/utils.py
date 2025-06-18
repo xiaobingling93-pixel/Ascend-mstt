@@ -303,6 +303,21 @@ def get_file_type(file_path):
     return file_type
 
 
+def check_dump_json_key(json_data, device_type):
+    task = json_data.get('task', None)
+    if not task:
+        logger.error(f"Task for {device_type} is empty, please check.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    if 'data' not in json_data:
+        logger.error(f"Missing 'data' in dump.json, please check dump.json of {device_type}.")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    api_data = json_data.get('data')
+    if not isinstance(api_data, dict):
+        logger.error(f"Invalid type for 'data': expected a dict. Please check dump.json of {device_type}.")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    return task, api_data
+
+
 def get_dump_mode(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
@@ -310,12 +325,8 @@ def get_dump_mode(input_param):
     bench_json_data = load_json(bench_path)
     json_type = get_file_type(file_path=npu_path)
 
-    npu_task = npu_json_data.get('task', None)
-    bench_task = bench_json_data.get('task', None)
-
-    if not npu_task or not bench_task:
-        logger.error(f"Please check the dump task is correct, npu's task is {npu_task}, bench's task is {bench_task}.")
-        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    npu_task, npu_api_data = check_dump_json_key(npu_json_data, 'npu')
+    bench_task, bench_api_data = check_dump_json_key(bench_json_data, 'bench')
 
     if npu_task != bench_task:
         logger.error(f"Please check the dump task is consistent.")
@@ -328,8 +339,8 @@ def get_dump_mode(input_param):
         return Const.STRUCTURE
 
     if npu_task == Const.STATISTICS:
-        npu_md5_compare = md5_find(npu_json_data['data'], json_type)
-        bench_md5_compare = md5_find(bench_json_data['data'], json_type)
+        npu_md5_compare = md5_find(npu_api_data, json_type)
+        bench_md5_compare = md5_find(bench_api_data, json_type)
         if npu_md5_compare == bench_md5_compare:
             return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:
