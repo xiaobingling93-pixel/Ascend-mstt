@@ -101,7 +101,7 @@ class DataCollector:
 
     def forward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         try:
-            # raise RuntimeError("Injected test exception for analyze_forward_input")
+
             if self.config.task == Const.FREE_BENCHMARK:
                 backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
                 if self.check_scope_and_pid(self.scope, backward_name, pid):
@@ -127,7 +127,7 @@ class DataCollector:
 
     def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         try:
-            # raise RuntimeError("Injected test exception for analyze_forward_input")
+
             self.update_construct(name)
             if not self.check_scope_and_pid(self.scope, name, pid):
                 return
@@ -161,7 +161,7 @@ class DataCollector:
 
     def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         try:
-            # raise RuntimeError("Injected test exception for analyze_forward_input")
+
             self.update_construct(name)
             if not self.check_scope_and_pid(self.scope, name, pid):
                 return
@@ -189,6 +189,7 @@ class DataCollector:
             self.data_writer.write_error_log(
                 f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}"
             )
+
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
         try:
             self.update_construct(name)

@@ -18,10 +18,10 @@ import os
 import copy
 import threading
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json, check_path_before_create
 from msprobe.core.common.log import logger
 from msprobe.core.common.decorator import recursion_depth_decorator
 
@@ -158,11 +158,14 @@ class DataWriter:
             mode = "w" if not self._error_log_initialized else "a"
             self._error_log_initialized = True
 
-            with open(self.dump_error_info_path, mode) as f:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            check_path_before_create(self.dump_error_info_path)
+
+            with FileOpen(self.dump_error_info_path, mode) as f:
+                CST = timezone(timedelta(hours=8), name="CST")
+                timestamp = datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S %z")
                 f.write(f"[{timestamp}] {message}\n")
                 f.write("Call stack (most recent call last):\n")
-                # format_stack() 返回的是写日志时的栈，如果想要写出 exception 时的 traceback，需要在调用方抓取 format_exc()
+
                 f.write("".join(traceback.format_stack()[:-1]))  # 去掉自己这一层
                 f.write("\n")
         except Exception as e:
