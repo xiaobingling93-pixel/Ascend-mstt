@@ -105,7 +105,7 @@ class Comparator:
         stack_json = input_param.get("stack_json_path")
         result_df = self.compare_statistics([npu_json, bench_json, stack_json])
         if not result_df.values.tolist():
-            logger.warning("Can`t match any op.")
+            logger.warning("Can`t match any op. No compare result file generated.")
             return
 
         # compare real data
@@ -188,7 +188,7 @@ class ParseData:
 
         apis_data = data_json.get('data', None)
         if not apis_data:
-            logger.warning('No APIs found in dump.json. Comparison result will be empty.')
+            logger.warning('No APIs found in dump.json.')
             return pd.DataFrame(result)
 
         api_nums = len(apis_data)
