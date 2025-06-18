@@ -35,7 +35,8 @@ INSTALL_REQUIRED = [
     "matplotlib",
     "tensorboard",
     "tabulate",
-    "pwinput"
+    "pwinput",
+    "psutil"
 ]
 
 EXCLUDE_PKGS = [
