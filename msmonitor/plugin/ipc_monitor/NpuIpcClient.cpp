@@ -24,10 +24,10 @@ bool IpcClient::Init()
     return true;
 }
 
-bool IpcClient::RegisterInstance(int32_t id)
+bool IpcClient::RegisterInstance(int32_t npu)
 {
     NpuContext context{
-        .npu = id,
+        .npu = npu,
         .pid = getpid(),
         .jobId = JOB_ID,
     };

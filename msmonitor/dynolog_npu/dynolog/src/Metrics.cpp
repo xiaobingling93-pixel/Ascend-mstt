@@ -14,17 +14,17 @@ const std::vector<MetricDesc> getAllMetrics()
 {
     static std::vector<MetricDesc> metrics_ = {
         {.name = "kindName",
-        .type = MetricType::Instant,
-        .desc = "Report data kind name"},
+         .type = MetricType::Instant,
+         .desc = "Report data kind name"},
         {.name = "duration",
-        .type = MetricType::Delta,
-        .desc = "Total execution time for corresponding kind"},
+         .type = MetricType::Delta,
+         .desc = "Total execution time for corresponding kind"},
         {.name = "timestamp",
-        .type = MetricType::Instant,
-        .desc = "The timestamp of the reported data"},
+         .type = MetricType::Instant,
+         .desc = "The timestamp of the reported data"},
         {.name = "deviceId",
-        .type = MetricType::Instant,
-        .desc = "The ID of the device for reporting data"},
+         .type = MetricType::Instant,
+         .desc = "The ID of the device for reporting data"},
     };
     return metrics_;
 }
