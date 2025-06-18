@@ -25,12 +25,19 @@ class MatchNodesController:
     def is_same_node_type(graph_data, npu_node_name, bench_node_name):
         npu_node_type = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {}).get('node_type')
         bench_node_type = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {}).get('node_type')
+
         if npu_node_type is None or bench_node_type is None or npu_node_type != bench_node_type:
             return False
         return True
 
     @staticmethod
     def process_task_add(graph_data, npu_node_name, bench_node_name, task):
+        if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
+                return {
+                    'success': False,
+                    'error': '节点类型不一致,无法添加匹配关系'
+                }
+            
         result = {}
         if task == 'md5':
             result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
@@ -45,7 +52,7 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_delete(graph_data, npu_node_name, bench_node_name, task):
-        result = {}
+
         if task == 'md5':
             result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
         elif task == 'summary':
@@ -234,8 +241,8 @@ class MatchNodesController:
     @staticmethod
     def process_summary_task_add(graph_data, npu_node_name, bench_node_name):
         # 节点信息提取
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
         # 计算统计误差
         intput_statistical_diff = MatchNodesController.calculate_statistical_diff(
             npu_node_data.get('input_data'), bench_node_data.get('input_data'), npu_node_name, bench_node_name

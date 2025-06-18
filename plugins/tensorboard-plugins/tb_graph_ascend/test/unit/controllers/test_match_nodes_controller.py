@@ -65,4 +65,13 @@ class TestMatchNodesController:
         excepted = test_case['expected']
         actual = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name, bench_node_name, task)
         assert actual == excepted
+    
+    @pytest.mark.parametrize("test_case", TestCaseFactory.get_process_task_add_child_layer_by_config_cases(),
+                             ids=lambda c: f"{c['case_id']}:{c['description']}")
+    def test_process_task_add_child_layer_by_config(self, test_case):
+        """测试根据配置文件添加子节点层功能"""
+        graph_data, match_node_links, task = test_case['input'].values()
+        excepted = test_case['expected']
+        actual = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
+        assert actual == excepted
    

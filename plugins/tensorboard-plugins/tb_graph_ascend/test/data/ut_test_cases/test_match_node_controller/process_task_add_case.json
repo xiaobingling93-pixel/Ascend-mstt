@@ -76,26 +76,26 @@
                                 }
                             }
                         }
-                    },
-                    "Bench": {
-                        "node": {
-                            "bench_node": {
-                                "node_type": "Module",
-                                "matched_node_link": [],
-                                "input_data": {
-                                    "input_arg0": {
+                    }
+                },
+                "Bench": {
+                    "node": {
+                        "bench_node": {
+                            "node_type": "Module",
+                            "matched_node_link": [],
+                            "input_data": {
+                                "input_arg0": {
+                                    "md5": "1234567890abcdef"
+                                },
+                                "input_arg1": {
+                                    "md5": "abcdef1234567890"
+                                },
+                                "output_data": {
+                                    "output_arg0": {
                                         "md5": "1234567890abcdef"
                                     },
-                                    "input_arg1": {
-                                        "md5": "abcdef1234567890"
-                                    },
-                                    "output_data": {
-                                        "output_arg0": {
-                                            "md5": "1234567890abcdef"
-                                        },
-                                        "output_arg1": {
-                                            "md5": "1234567890abcdef"
-                                        }
+                                    "output_arg1": {
+                                        "md5": "1234567890abcdef"
                                     }
                                 }
                             }
@@ -142,7 +142,8 @@
             "task": "md5"
         },
         "expected": {
-            "success": true
+            "success": false,
+            "error": "节点类型不一致,无法添加匹配关系"
         }
     },
     {
