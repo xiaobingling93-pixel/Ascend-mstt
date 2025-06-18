@@ -299,7 +299,7 @@ class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
         self.fp32_flat_groups = torch_opt.fp32_partitioned_groups_flat
         self.param2group = self.get_group_index()
 
-    def param_not_in_partition(self, param, group_index):
+    def param_not_in_partition(self, lp_param, group_idx):
         """Each param partioned across all zero ranks"""
         return False
     

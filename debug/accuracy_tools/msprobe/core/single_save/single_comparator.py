@@ -181,32 +181,32 @@ class SingleComparator:
 
     @classmethod
     def compare_single_tag(cls, tag, array_paths1, array_paths2, output_dir):
-        try:
-            data = []
-            paths1 = array_paths1.get(tag, [])
-            paths2 = array_paths2.get(tag, [])
-            path_dict1 = {(step, rank, micro_step, array_id): path for step, rank, micro_step, array_id, path in paths1}
-            path_dict2 = {(step, rank, micro_step, array_id): path for step, rank, micro_step, array_id, path in paths2}
-            common_keys = set(path_dict1.keys()) & set(path_dict2.keys())
-            for key in common_keys:
-                try:
-                    array1 = np.load(path_dict1[key])
-                    array2 = np.load(path_dict2[key])
-                    result = cls.compare_arrays(array1, array2)
-                    step, rank, micro_step, array_id = key
-                    data.append([
-                        step, rank, micro_step, array_id, 
-                        list(array1.shape), list(array2.shape), 
-                        result.same_percentage, 
-                        result.first_mismatch_index, 
-                        result.max_abs_error, 
-                        result.max_relative_error, 
-                        result.percentage_within_thousandth, 
-                        result.percentage_within_hundredth
-                    ])
-                except Exception as e:
-                    logger.error(f"Error comparing {path_dict1[key]} and {path_dict2[key]}: {e}")
+        data = []
+        paths1 = array_paths1.get(tag, [])
+        paths2 = array_paths2.get(tag, [])
+        path_dict1 = {(step, rank, micro_step, array_id): path for step, rank, micro_step, array_id, path in paths1}
+        path_dict2 = {(step, rank, micro_step, array_id): path for step, rank, micro_step, array_id, path in paths2}
+        common_keys = set(path_dict1.keys()) & set(path_dict2.keys())
+        for key in common_keys:
+            try:
+                array1 = np.load(path_dict1[key])
+                array2 = np.load(path_dict2[key])
+                result = cls.compare_arrays(array1, array2)
+                step, rank, micro_step, array_id = key
+                data.append([
+                    step, rank, micro_step, array_id,
+                    list(array1.shape), list(array2.shape),
+                    result.same_percentage,
+                    result.first_mismatch_index,
+                    result.max_abs_error,
+                    result.max_relative_error,
+                    result.percentage_within_thousandth,
+                    result.percentage_within_hundredth
+                ])
+            except Exception as e:
+                logger.error(f"Error comparing {path_dict1[key]} and {path_dict2[key]}: {e}")
 
+        try:
             df = pd.DataFrame(data, columns=SingleComparator.result_header)
             df = df.sort_values(by=['step', 'rank', 'micro_step', 'id'])
             # 构建输出文件的完整路径

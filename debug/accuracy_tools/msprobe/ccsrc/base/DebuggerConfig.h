@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef DEBUGGERCONFIG_H
+#define DEBUGGERCONFIG_H
 
 #include <string>
 #include <vector>
@@ -209,7 +210,7 @@ private:
 
 class DebuggerConfig {
 public:
-    static DebuggerConfig& GetInstance() 
+    static DebuggerConfig& GetInstance()
     {
         static DebuggerConfig configInstance;
         return configInstance;
@@ -263,3 +264,5 @@ private:
 };
 
 }
+
+#endif

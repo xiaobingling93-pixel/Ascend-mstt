@@ -284,8 +284,8 @@ def rename_filename(path="", data_df=None):
 
 
 # Extract the field between the first "." and the third to last ".", i.e. {cell_name}
-def get_cell_name(str):
-    parts = str.split(CoreConst.SEP)
+def get_cell_name(cell_str):
+    parts = cell_str.split(CoreConst.SEP)
     if len(parts) < 4:
         return None
     start_index = 1
@@ -294,10 +294,10 @@ def get_cell_name(str):
 
 
 # Extract the field between the last "." and the second to last ".", i.e. {data_made}
-def get_data_mode(str):
-    last_dot_index = str.rfind(CoreConst.SEP)
-    second_last_dot_index = str.rfind(CoreConst.SEP, 0, last_dot_index)
-    data_mode = str[second_last_dot_index + 1:last_dot_index]
+def get_data_mode(cell_str):
+    last_dot_index = cell_str.rfind(CoreConst.SEP)
+    second_last_dot_index = cell_str.rfind(CoreConst.SEP, 0, last_dot_index)
+    data_mode = cell_str[second_last_dot_index + 1:last_dot_index]
     return data_mode
 
 
