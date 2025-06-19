@@ -312,33 +312,30 @@ SSL_CTX* SimpleJsonServerBase::create_context()
     return ctx;
 }
 
-static bool is_cert_revoked(X509* cert, X509_STORE* store) {
+static bool is_cert_revoked(X509* cert, X509_STORE* store)
+{
     if (!cert || !store) {
         LOG(ERROR) << "Invalid certificate or store pointer";
         return false;
     }
-
     // 获取证书的颁发者名称
     X509_NAME* issuer = X509_get_issuer_name(cert);
     if (!issuer) {
         LOG(ERROR) << "Failed to get certificate issuer";
         return false;
     }
-
     // 获取证书的序列号
     const ASN1_INTEGER* serial = X509_get_serialNumber(cert);
     if (!serial) {
         LOG(ERROR) << "Failed to get certificate serial number";
         return false;
     }
-
     // 创建证书验证上下文
     X509_STORE_CTX* ctx = X509_STORE_CTX_new();
     if (!ctx) {
         LOG(ERROR) << "Failed to create certificate store context";
         return false;
     }
-
     bool is_revoked = false;
     try {
         // 初始化证书验证上下文
@@ -347,7 +344,6 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
             X509_STORE_CTX_free(ctx);
             return false;
         }
-
         // 获取CRL列表
         STACK_OF(X509_CRL)* crls = X509_STORE_CTX_get1_crls(ctx, issuer);
         if (!crls) {
@@ -355,31 +351,25 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
             X509_STORE_CTX_free(ctx);
             return false;
         }
-
         time_t current_time = time(nullptr);
-
         for (int i = 0; i < sk_X509_CRL_num(crls); i++) {
             X509_CRL* crl = sk_X509_CRL_value(crls, i);
             if (!crl) {
                 LOG(ERROR) << "Invalid CRL at index " << i;
                 continue;
             }
-            
             // 检查 CRL 的有效期
             const ASN1_TIME* crl_this_update = X509_CRL_get0_lastUpdate(crl);
             const ASN1_TIME* crl_next_update = X509_CRL_get0_nextUpdate(crl);
-            
             if (!crl_this_update) {
                 LOG(ERROR) << "Failed to get CRL this_update time";
                 continue;
             }
-
             // 检查 CRL 是否已生效
             if (X509_cmp_time(crl_this_update, &current_time) > 0) {
                 LOG(INFO) << "CRL is not yet valid";
                 continue;
             }
-
             // 检查 CRL 是否过期
             if (crl_next_update) {
                 if (X509_cmp_time(crl_next_update, &current_time) < 0) {
@@ -387,7 +377,6 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
                     continue;
                 }
             }
-
             // 检查证书是否在 CRL 中
             STACK_OF(X509_REVOKED)* revoked = X509_CRL_get_REVOKED(crl);
             if (revoked) {
@@ -407,7 +396,6 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
                 break;
             }
         }
-
         if (crls) {
             sk_X509_CRL_pop_free(crls, X509_CRL_free);
         }
@@ -415,7 +403,6 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
         LOG(ERROR) << "Exception while checking CRL: " << e.what();
         is_revoked = false;
     }
-
     X509_STORE_CTX_free(ctx);
     return is_revoked;
 }
@@ -424,7 +411,8 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store) {
 // 禁用终端回显的函数，但显示星号
 std::string get_password_with_stars()
 {
-    struct termios old_flags, new_flags;
+    struct termios old_flags;
+    struct termios new_flags;
     std::string password;
 
     // 获取当前终端设置
@@ -584,8 +572,7 @@ void SimpleJsonServerBase::verify_certificate_extensions(X509* cert)
                     has_ca_constraint = constraints->ca;
                     BASIC_CONSTRAINTS_free(constraints);
                 }
-            }
-            else if (OBJ_obj2nid(obj) == NID_key_usage) {
+            } else if (OBJ_obj2nid(obj) == NID_key_usage) {
                 ASN1_BIT_STRING* usage = (ASN1_BIT_STRING*)X509V3_EXT_d2i(ext);
                 if (usage) {
                     has_key_usage = true;
