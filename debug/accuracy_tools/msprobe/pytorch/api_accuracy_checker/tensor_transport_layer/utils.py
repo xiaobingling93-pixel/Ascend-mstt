@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import gc
 import os
 from datetime import datetime, timezone
 
@@ -117,6 +118,7 @@ def load_ssl_pem(key_file, cert_file, ca_file, crl_file):
         with FileOpen(key_file, "rb") as f:
             key = crypto.load_privatekey(crypto.FILETYPE_PEM, f.read(), passphrase.encode())
             del passphrase
+            gc.collect()
         with FileOpen(cert_file, "rb") as f:
             crt = crypto.load_certificate(crypto.FILETYPE_PEM, f.read())
             check_crt_valid(crt)
