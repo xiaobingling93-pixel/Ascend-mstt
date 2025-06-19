@@ -17,9 +17,11 @@ import csv
 import os
 import copy
 import threading
+import traceback
+from datetime import datetime, timezone, timedelta
 
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json, check_path_before_create
 from msprobe.core.common.log import logger
 from msprobe.core.common.decorator import recursion_depth_decorator
 
@@ -35,6 +37,7 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
+        self.dump_error_info_path = None
         self.flush_size = 1000
         self.larger_flush_size = 20000
         self.cache_data = {}
@@ -42,6 +45,7 @@ class DataWriter:
         self.cache_construct = {}
         self.cache_debug = {}
         self.stat_stack_list = []
+        self._error_log_initialized = False
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -128,6 +132,7 @@ class DataWriter:
         self.dump_tensor_data_dir = dump_path_aggregation.dump_tensor_data_dir
         self.free_benchmark_file_path = dump_path_aggregation.free_benchmark_file_path
         self.debug_file_path = dump_path_aggregation.debug_file_path
+        self.dump_error_info_path = dump_path_aggregation.dump_error_info_path
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
@@ -141,6 +146,31 @@ class DataWriter:
 
         if length % threshold == 0:
             self.write_json()
+
+    def write_error_log(self, message: str):
+        """
+        写错误日志：
+          - 第一次调用时以 'w' 模式清空文件，之后都用 'a' 模式追加
+          - 添加时间戳
+          - 在 message 后写入当前的调用栈（方便追踪日志来源）
+        """
+        try:
+            mode = "w" if not self._error_log_initialized else "a"
+            self._error_log_initialized = True
+
+            check_path_before_create(self.dump_error_info_path)
+
+            with FileOpen(self.dump_error_info_path, mode) as f:
+                cst_timezone = timezone(timedelta(hours=8), name="CST")
+                timestamp = datetime.now(cst_timezone).strftime("%Y-%m-%d %H:%M:%S %z")
+                f.write(f"[{timestamp}] {message}\n")
+                f.write("Call stack (most recent call last):\n")
+
+                f.write("".join(traceback.format_stack()[:-1]))  # 去掉自己这一层
+                f.write("\n")
+        except Exception as e:
+            # 如果连写日志都失败了，就打印到 stderr
+            logger.warning(f"[FallbackError] Failed to write error log: {e}")
 
     def update_data(self, new_data):
         with lock:
