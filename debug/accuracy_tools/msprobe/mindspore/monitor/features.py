@@ -64,12 +64,13 @@ def get_dtype(t):
     return t.dtype
 
 
-FUNC_MAP = {"min"  : get_min,
-            "max"  : get_max,
-            "mean" : get_mean,
-            "norm" : get_norm,
-            "nans" : get_nans,
-            "zeros": get_zeros,
-            "shape": get_shape,
-            "dtype": get_dtype
-           }
+FUNC_MAP = {
+    "min": get_min,
+    "max": get_max,
+    "mean": get_mean,
+    "norm": get_norm,
+    "nans": get_nans,
+    "zeros": get_zeros,
+    "shape": get_shape,
+    "dtype": get_dtype
+}

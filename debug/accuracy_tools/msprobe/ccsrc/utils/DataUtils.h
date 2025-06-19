@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef DATAUTILS_H
+#define DATAUTILS_H
 
 #include <cstdint>
 #include <string>
@@ -167,3 +168,5 @@ std::string GetShapeString(const TensorShape& shape);
 
 }
 }
+
+#endif

@@ -323,5 +323,6 @@ def has_kwargs_in_forward_hook():
             kwargs_exist_in_forward_hook = 'with_kwargs' in func_params
         except Exception:
             kwargs_exist_in_forward_hook = False
+        return kwargs_exist_in_forward_hook
 
     return kwargs_exist_in_forward_hook

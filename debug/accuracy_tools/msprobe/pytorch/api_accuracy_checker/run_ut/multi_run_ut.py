@@ -70,7 +70,7 @@ def split_json_file(input_file, num_splits, filter_api):
         split_forward_data = dict(items[start:end])
         temp_data = {
             **input_data,
-            "data":{
+            "data": {
                 **split_forward_data,
                 **backward_data
             }
@@ -141,7 +141,7 @@ def run_parallel_ut(config):
 
     for api_info in config.api_files:
         cmd = create_cmd(api_info, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, 
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                    text=True, bufsize=1, shell=False)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
@@ -187,8 +187,8 @@ def run_parallel_ut(config):
 
 
 def prepare_config(args):
-    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
-                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE,
+                                        ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
     api_info = api_info_file_checker.common_check()
     out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
@@ -197,11 +197,11 @@ def prepare_config(args):
     split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
     config_path = args.config_path if args.config_path else None
     if config_path:
-        config_path_checker = FileChecker(config_path, FileCheckConst.FILE, 
+        config_path_checker = FileChecker(config_path, FileCheckConst.FILE,
                                           FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
         config_path = config_path_checker.common_check()
     result_csv_path = args.result_csv_path or os.path.join(
-                      out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
+        out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
         details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
         comparator = Comparator(result_csv_path, details_csv_path, False)
@@ -220,7 +220,7 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     parser = argparse.ArgumentParser(description='Run UT in parallel')
     _run_ut_parser(parser)
-    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, 
+    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
                         help='Number of splits for parallel processing. Range: 1-64')
     args = parser.parse_args()
     config = prepare_config(args)

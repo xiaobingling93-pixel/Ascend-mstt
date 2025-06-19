@@ -120,7 +120,7 @@ std::string GetAbsPath(const std::string &originPath)
     return resolvedPath;
 }
 
-bool IsDir(const std::string& path) 
+bool IsDir(const std::string& path)
 {
     struct stat buffer;
     if (stat(path.c_str(), &buffer) == 0) {
