@@ -48,7 +48,7 @@ T Lcm(T a, T b)
 }
 
 template <typename T>
-T DivCeil(T v, T divisor) 
+T DivCeil(T v, T divisor)
 {
     if (divisor == 0) {
         return 0;

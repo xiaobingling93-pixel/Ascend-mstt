@@ -32,7 +32,7 @@ public:
     }
 
     std::string Name() const override {return "MindSpore AclDumper";}
-    bool Condition(const DebuggerConfig& cfg) const override 
+    bool Condition(const DebuggerConfig& cfg) const override
     {
         return cfg.GetFramework() == DebuggerFramework::FRAMEWORK_MINDSPORE &&
                cfg.GetDebugLevel() == DebuggerLevel::L2;

@@ -32,7 +32,7 @@ static PyObject *CPythonKernelInitDump(PyObject *module, PyObject *args)
     Py_RETURN_NONE;
 }
 
-static PyObject *CPythonKernelSetDump(PyObject *module, PyObject *args) 
+static PyObject *CPythonKernelSetDump(PyObject *module, PyObject *args)
 {
     const char *path;
     if (!PyArg_ParseTuple(args, "s", &path)) {
@@ -46,7 +46,7 @@ static PyObject *CPythonKernelSetDump(PyObject *module, PyObject *args)
     Py_RETURN_NONE;
 }
 
-static PyObject *CPythonKernelFinalizeDump(PyObject *module, PyObject *args) 
+static PyObject *CPythonKernelFinalizeDump(PyObject *module, PyObject *args)
 {
     PyGILState_STATE gstate = PyGILState_Ensure();
     KernelFinalizeDump();

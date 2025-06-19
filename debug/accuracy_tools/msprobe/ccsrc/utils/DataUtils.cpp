@@ -26,7 +26,7 @@
 namespace MindStudioDebugger {
 namespace  DataUtils {
 
-int64_t SizeToS64(size_t v) 
+int64_t SizeToS64(size_t v)
 {
     if (v > static_cast<size_t>(INT64_MAX)) {
         throw std::runtime_error("Value " + std::to_string(v) + "exceeds the maximum value of int64.");
@@ -34,7 +34,7 @@ int64_t SizeToS64(size_t v)
     return static_cast<int64_t>(v);
 }
 
-std::string U64ToHexString(uint64_t v) 
+std::string U64ToHexString(uint64_t v)
 {
     std::stringstream ss;
     ss << "0x" << std::hex << std::uppercase << v;

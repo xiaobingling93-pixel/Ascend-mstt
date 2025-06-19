@@ -85,9 +85,9 @@ std::vector<std::string> SplitPath(const std::string &path, char separator)
     return tokens;
 }
 
-std::string GetAbsPath(const std::string &originPath) 
+std::string GetAbsPath(const std::string &originpath)
 {
-    std::string fullPath = GetFullPath(originPath);
+    std::string fullPath = GetFullPath(originpath);
     if (fullPath.empty()) {
         return "";
     }
@@ -249,7 +249,8 @@ bool IsPathLengthLegal(const std::string& path)
 
 bool IsPathDepthValid(const std::string& path)
 {
-    return std::count(path.begin(), path.end(), PATH_SEPARATOR) <= PATH_DEPTH_MAX;
+    auto depth = static_cast<uint32_t>(std::count(path.begin(), path.end(), PATH_SEPARATOR));
+    return depth <= PATH_DEPTH_MAX;
 }
 
 bool IsFileOwner(const std::string& path)
@@ -264,7 +265,8 @@ bool IsFileOwner(const std::string& path)
 }
 
 /****************** 文件操作函数库，会对入参做基本检查 ************************/
-DebuggerErrno DeleteFile(const std::string &path) {
+DebuggerErrno DeleteFile(const std::string &path)
+{
     if (!IsPathExist(path)) {
         return DebuggerErrno::OK;
     }
@@ -326,7 +328,7 @@ static DebuggerErrno DeleteDirRec(const std::string &path, uint32_t depth)
     return DebuggerErrno::OK;
 }
 
-DebuggerErrno DeleteDir(const std::string &path, bool recursion) 
+DebuggerErrno DeleteDir(const std::string &path, bool recursion)
 {
     if (!IsPathExist(path)) {
         return DebuggerErrno::OK;
