@@ -118,6 +118,7 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
+            self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
         except Exception:
@@ -139,7 +140,6 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
-            self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
         except Exception:
