@@ -290,7 +290,10 @@ class DataCollector:
             self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
         except Exception:
             tb = traceback.format_exc()
-            self.data_writer.write_error_log(f"...\n{tb}")
+            self.data_writer.write_error_log(
+                f"[ERROR] params_data_collect failed: "
+                f"name={name}, param_name={param_name}, pid={pid}\n{tb}"
+            )
 
     def debug_data_collect_forward(self, variable, name_with_count):
         data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)
