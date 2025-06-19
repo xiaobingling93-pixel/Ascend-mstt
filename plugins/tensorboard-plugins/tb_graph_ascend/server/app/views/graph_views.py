@@ -20,6 +20,7 @@ from pathlib import Path
 from werkzeug import wrappers, Response, exceptions
 from tensorboard.backend import http_util
 from ..service.graph_service import GraphService
+from ..utils.graph_utils import GraphUtils
 
 
 class GraphView:
@@ -97,8 +98,8 @@ class GraphView:
     @wrappers.Request.application
     def change_node_expand_state(request):
         try:
-            node_info = json.loads(request.args.get("nodeInfo"))
-            meta_data = json.loads(request.args.get("metaData"))
+            node_info = GraphUtils.safe_json_loads(request.args.get("nodeInfo"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             hierarchy = GraphService.change_node_expand_state(node_info, meta_data)
         except (TypeError, json.JSONDecodeError):
             hierarchy = {'success': False,
@@ -120,8 +121,8 @@ class GraphView:
     @wrappers.Request.application
     def get_node_info(request):
         try:
-            node_info = json.loads(request.args.get("nodeInfo"))
-            meta_data = json.loads(request.args.get("metaData"))
+            node_info = GraphUtils.safe_json_loads(request.args.get("nodeInfo"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             node_detail = GraphService.get_node_info(node_info, meta_data)
         except (TypeError, json.JSONDecodeError):
             node_detail = {'success': False,
@@ -136,7 +137,7 @@ class GraphView:
     def add_match_nodes_by_config(request):
         try:
             config_file = request.args.get("configFile")
-            meta_data = json.loads(request.args.get("metaData"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             match_result = GraphService.add_match_nodes_by_config(config_file, meta_data)
         except (TypeError, json.JSONDecodeError):
             match_result = {'success': False,
@@ -152,7 +153,7 @@ class GraphView:
         try:
             npu_node_name = request.args.get("npuNodeName")
             bench_node_name = request.args.get("benchNodeName")
-            meta_data = json.loads(request.args.get("metaData"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             match_result = GraphService.add_match_nodes(npu_node_name, bench_node_name, meta_data)
         except (TypeError, json.JSONDecodeError):
             match_result = {'success': False,
@@ -168,7 +169,7 @@ class GraphView:
         try:
             npu_node_name = request.args.get("npuNodeName")
             bench_node_name = request.args.get("benchNodeName")
-            meta_data = json.loads(request.args.get("metaData"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data)
         except (TypeError, json.JSONDecodeError):
             match_result = {'success': False,
@@ -182,7 +183,7 @@ class GraphView:
     @wrappers.Request.application
     def save_data(request):
         try:
-            meta_data = json.loads(request.args.get("metaData"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             save_result = GraphService.save_data(meta_data)
         except (TypeError, json.JSONDecodeError):
             save_result = {'success': False,
@@ -197,7 +198,7 @@ class GraphView:
     def update_colors(request):
         try:
             run = request.args.get('run')
-            colors = json.loads(request.args.get('colors'))
+            colors = GraphUtils.safe_json_loads(request.args.get('colors'))
             update_result = GraphService.update_colors(run, colors)
         except (TypeError, json.JSONDecodeError):
             update_result = {'success': False,
@@ -211,7 +212,7 @@ class GraphView:
     @wrappers.Request.application
     def save_matched_relations(request):
         try:
-            meta_data = json.loads(request.args.get("metaData"))
+            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
             save_result = GraphService.save_matched_relations(meta_data)
         except (TypeError, json.JSONDecodeError):
             save_result = {'success': False,

@@ -90,7 +90,7 @@ class GraphService:
         if json_data is None and buffer:  # 最终验证数据
             try:
                 yield f"data: {json.dumps({'progress': current_progress, 'status': 'loading'})}\n\n"
-                json_data = json.loads(buffer)
+                json_data = GraphUtils.safe_json_loads(buffer)
                 yield f"data: {json.dumps({'progress': 99, 'status': 'loading'})}\n\n"
             except json.JSONDecodeError as e:
                 yield f"data: {json.dumps({'progress': current_progress, 'error': str(e)})}\n\n"

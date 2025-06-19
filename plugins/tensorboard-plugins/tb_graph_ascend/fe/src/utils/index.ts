@@ -40,7 +40,17 @@ const removePrototypePollution = (obj: any): void => {
   }
 };
 
-export const safeJSONParse = (str: any, defaultValue: any = null): any => {
+export const safeJSONParse = (str: string, defaultValue: any = null): any => {
+  // 只接受 string 类型
+  if (typeof str !== 'string') {
+    return defaultValue;
+  }
+
+  // 长度限制（3GB
+  const maxLength = 3 * 1024 * 1024 * 1024;
+  if (str.length > maxLength) {
+    return defaultValue;
+  }
   try {
     const res = JSON.parse(str);
     removePrototypePollution(res);
