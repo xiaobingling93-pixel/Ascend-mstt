@@ -20,6 +20,10 @@ if(USE_ODS_GRAPH_API)
   target_compile_options(dynolog_lib PUBLIC "-DUSE_GRAPH_ENDPOINT")
 endif()
 
+if(USE_TENSORBOARD)
+  target_compile_options(dynolog_lib PUBLIC "-DUSE_TENSORBOARD")
+endif()
+
 if(USE_PROMETHEUS)
   find_package(prometheus-cpp CONFIG REQUIRED)
   add_definitions(-DUSE_PROMETHEUS)

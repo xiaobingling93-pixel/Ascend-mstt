@@ -11,6 +11,9 @@ OFF)
 option(USE_PROMETHEUS "Enable logging to prometheus, this requires
 prometheus-cpp to be installed on the system"
 OFF)
+option(USE_TENSORBOARD "Enable logging to tensorboard, this requires
+protobuf to be installed on the system"
+ON)
 
 if(USE_PROMETHEUS)
   find_package(prometheus-cpp CONFIG REQUIRED)

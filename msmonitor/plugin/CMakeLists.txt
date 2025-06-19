@@ -56,6 +56,7 @@ target_compile_options(IPCMonitor PRIVATE
     -ftrapv
     $<$<NOT:$<STREQUAL:${CMAKE_BUILD_TYPE},Debug>>:-O2>
 )
+add_compile_options(-D_FORITFY_SOURCE=2 -O2)
 
 target_link_options(IPCMonitor PRIVATE
     -Wl,-z,relro,-z,now,-z,noexecstack
