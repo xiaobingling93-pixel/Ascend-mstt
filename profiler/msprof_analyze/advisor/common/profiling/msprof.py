@@ -194,10 +194,10 @@ class MsprofDB(Msprof):
       ) as args
       
     FROM COMMUNICATION_TASK_INFO as comm 
-    LEFT JOIN TASK as task ON comm.globalTaskId = task.globalTaskId
-    LEFT JOIN STRING_IDS as str ON str.id = comm.taskType
-    LEFT JOIN ENUM_HCCL_LINK_TYPE as link ON link.id = comm.linkType
-    LEFT JOIN ENUM_HCCL_TRANSPORT_TYPE as trans ON trans.id = comm.transportType
+    JOIN TASK as task ON comm.globalTaskId = task.globalTaskId
+    JOIN STRING_IDS as str ON str.id = comm.taskType
+    JOIN ENUM_HCCL_LINK_TYPE as link ON link.id = comm.linkType
+    JOIN ENUM_HCCL_TRANSPORT_TYPE as trans ON trans.id = comm.transportType
     """
 
     HCCL_OP_SQL = """
@@ -206,7 +206,7 @@ class MsprofDB(Msprof):
         comm.startNs / 1000.0 as ts,
         (comm.endNs - comm.startNs) / 1000.0 as dur
     FROM COMMUNICATION_OP as comm 
-    LEFT JOIN STRING_IDS as str ON str.id = comm.opName
+    JOIN STRING_IDS as str ON str.id = comm.opName
     """
 
     NODE_INFO_SQL = """
@@ -235,12 +235,12 @@ class MsprofDB(Msprof):
         super().__init__(path)
 
 
-    def parse_from_file(self, db_path: str):
-        if not db_path or not os.path.exists(db_path):
+    def parse_from_file(self, file: str):
+        if not file or not os.path.exists(file):
             logger.error("db path is None.")
             return False
-        self.process_communication_tasks(db_path)
-        self.process_node_tasks(db_path)
+        self.process_communication_tasks(file)
+        self.process_node_tasks(file)
         return True
 
     def process_communication_tasks(self, db_path):

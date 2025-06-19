@@ -96,7 +96,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             _dump_set_dynamic()
 
     @staticmethod
-    def get_task_config(task, json_config):
+    def _get_task_config(task, json_config):
         return parse_task_config(task, json_config)
 
     @staticmethod
@@ -129,7 +129,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     @classmethod
     def start(cls, model=None, token_range=None):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         if instance is None:
             return
         if cls._need_msprobe_c() and _msprobe_c:
@@ -158,7 +158,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     @classmethod
     def stop(cls):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         if instance is None:
             return
 
@@ -175,7 +175,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
     
     @classmethod
     def step(cls):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         if instance is None:
             return
 

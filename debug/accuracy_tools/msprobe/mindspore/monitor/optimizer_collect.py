@@ -105,6 +105,9 @@ class OptimizerMon(object):
                     else:
                         logger.warning(f"step of {name} is None, maybe something wrong happened.")
                         continue
+                    if exp_avg is None or exp_avg_sq is None:
+                        logger.warning(f"exp_avg or exp_avg_sq of {name} is None, skip calculation.")
+                        continue
                     exp_avg_hat = exp_avg / (1 - self.optim.defaults['betas'][0] ** step)
                     exp_avg_sq_hat = exp_avg_sq / (1 - self.optim.defaults['betas'][1] ** step)
                     update_dict[name] = exp_avg_hat / (mint.sqrt(exp_avg_sq_hat) + self.optim.defaults['eps'])
@@ -292,7 +295,7 @@ class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
         self.fp32_flat_groups = optim.fp32_partitioned_groups_flat
         self.param2group = self.get_group_index()
 
-    def param_not_in_partition(self, param, group_index):
+    def param_not_in_partition(self, lp_param, group_idx):
         """Each param partioned across all zero ranks"""
         return False
     

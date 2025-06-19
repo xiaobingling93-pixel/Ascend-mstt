@@ -45,7 +45,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileChecker, change_mode, \
-    create_directory, get_json_contents, read_csv, check_file_or_directory_path, check_crt_valid
+    create_directory, get_json_contents, read_csv, check_file_or_directory_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
@@ -483,7 +483,6 @@ def _run_ut(parser=None):
     run_ut_command(args)
     
 
-
 def checked_online_config(online_config):
     if not online_config.is_online:
         return
@@ -504,8 +503,10 @@ def checked_online_config(online_config):
         check_file_or_directory_path(online_config.tls_path, isdir=True)
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
-        check_crt_valid(os.path.join(online_config.tls_path, "server.crt"))
-        check_crt_valid(os.path.join(online_config.tls_path, "server.key"), True)
+        check_file_or_directory_path(os.path.join(online_config.tls_path, "ca.crt"))
+        crl_path = os.path.join(online_config.tls_path, "crl.pem")
+        if os.path.exists(crl_path):
+            check_file_or_directory_path(crl_path)
 
     # host and port
     if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):

@@ -17,7 +17,7 @@ import * as d3 from 'd3';
 import { maybeTruncateString, darkenColor, safeJSONParse } from '../../../utils/index';
 import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
-import { HierarchyNodeType, PreProcessDataConfigType, GraphType, TransformType } from '../../type';
+import { HierarchyNodeType, PreProcessDataConfigType, GraphType } from '../../type';
 
 import { UseGraphType } from '../../type';
 import {
@@ -58,13 +58,13 @@ const useGraph = (): UseGraphType => {
                 const parent = data.find(
                     (dInner) => node?.parentNode === dInner.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''),
                 );
-                if (parent) {
+                if (parent && virtualNodes.indexOf(parent) === -1 && parentsVirtualNodes.indexOf(parent) === -1) {
                     parentsVirtualNodes.push(parent);
                 }
                 node = parent;
             }
         });
-        virtualNodes = [...new Set([...parentsVirtualNodes, ...virtualNodes])]; // 父节点放在前面，不然会覆盖子节点
+        virtualNodes = [...new Set([...parentsVirtualNodes.reverse(), ...virtualNodes])]; // 父节点放在前面，不然会覆盖子节点
         const renderData = virtualNodes.map((d) => {
             let precisionColor = isOverflowFilter ? getOverflowColor(d) : getPrecisionColor(d, colors, graphType);
             let strokeColor;
@@ -186,6 +186,8 @@ const useGraph = (): UseGraphType => {
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0)
             .remove();
+        // 强制 DOM 排列顺序与数据一致
+        innnerReact.order();
     };
 
     const bindOuterRect: UseGraphType['bindOuterRect'] = (container, data): void => {
@@ -228,6 +230,9 @@ const useGraph = (): UseGraphType => {
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0)
             .remove();
+
+        // 强制 DOM 排列顺序与数据一致
+        outerReact.order();
     };
 
     const bindText: UseGraphType['bindText'] = (container, data) => {
@@ -268,6 +273,10 @@ const useGraph = (): UseGraphType => {
             .duration(DURATION_TIME - 60)
             .attr('opacity', 0) // 动画过渡：透明度逐渐变为 0
             .remove();
+
+
+        // 强制 DOM 排列顺序与数据一致
+        texts.order();
     };
 
     const changeNodeExpandState: UseGraphType['changeNodeExpandState'] = async (nodeInfo: any, metaData: any): Promise<any> => {

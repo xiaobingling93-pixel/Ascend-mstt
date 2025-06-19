@@ -39,7 +39,7 @@ bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionNa
     return true;
 }
 
-bool HookDynamicLoader::LoadLibrary() 
+bool HookDynamicLoader::LoadLibrary()
 {
     std::string msprobePath = "";
     // 获取gil锁

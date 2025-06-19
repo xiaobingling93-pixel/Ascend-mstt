@@ -160,6 +160,9 @@ class Hierarchy extends PolymerElement {
     @property({ type: Object })
     contextMenuItems: Array<ContextMenuItem> = [];
 
+    @property({ type: String })
+    hightLightNodeName: string = '';
+
     @property({ type: Object })
     hightLightMatchedNode: ((matchedNodes, graphType) => void) | null = null;
 
@@ -177,7 +180,7 @@ class Hierarchy extends PolymerElement {
     // 颜色变化
     @observe('colors', 'isOverflowFilter')
     reRenderGraph() {
-        this.renderGraph(this.hierarchyData, this.selectedNode);
+        this.renderGraph(this.hierarchyData, this.hightLightNodeName);
     }
 
     override ready(): void {
@@ -233,7 +236,7 @@ class Hierarchy extends PolymerElement {
             if (this.container) {
                 d3.select(this.container as HTMLElement).attr('transform', (d3 as any).event.transform.toString());
             }
-            this.renderGraph(this.hierarchyData, this.selectedNode);
+            this.renderGraph(this.hierarchyData, this.hightLightNodeName);
             this.minimap?.zoom((d3 as any).event.transform); // Notify the minimap.
         });
 
@@ -272,6 +275,7 @@ class Hierarchy extends PolymerElement {
 
     async changeSelectNode(selectedNode) {
         if (!selectedNode) {
+            this.set('hightLightNodeName', '');
             this.renderGraph(this.hierarchyData, '');
             return;
         }
@@ -300,6 +304,7 @@ class Hierarchy extends PolymerElement {
             const matchedNodes = this.hierarchyObject[nodeName]?.matchedNodeLink;
             this.hightLightMatchedNode?.(matchedNodes, this.graphType);
         }
+        this.set('hightLightNodeName', selectedNode); // 设置高亮节点
         this.renderGraph(this.hierarchyData, selectedNode, transform);
     }
 
@@ -310,6 +315,7 @@ class Hierarchy extends PolymerElement {
             return;
         }
         const matchedNodeName = nodeNames[nodeNames.length - 1];
+        this.set('hightLightNodeName', matchedNodeName);
         this.renderGraph(this.hierarchyData, matchedNodeName);
     }
 
@@ -321,7 +327,7 @@ class Hierarchy extends PolymerElement {
         changeGraphPosition(this.container, 0, 0, 1, 350);
         const newTransform = d3.zoomIdentity.translate(0, 0).scale(1);
         this.minimap?.zoom(newTransform);
-        this.renderGraph(this.hierarchyData, this.selectedNode);
+        this.renderGraph(this.hierarchyData, this.hightLightNodeName);
     }
 
     // 总绑定事件方法，管理所有事件的绑定和解绑
@@ -354,7 +360,7 @@ class Hierarchy extends PolymerElement {
                 const hierarchyData = Object.values(hierarchyObject);
                 this.set('hierarchyData', hierarchyData);
                 this.set('hierarchyObject', hierarchyObject);
-                this.renderGraph(hierarchyData, this.selectedNode);
+                this.renderGraph(hierarchyData, this.hightLightNodeName);
                 // // 选中节点
                 const tempSelectedNode = this.selectedNode;
                 this.set('selectedNode', '');
@@ -412,6 +418,7 @@ class Hierarchy extends PolymerElement {
                         ? matchedNodeName
                         : matchedPrefix + matchedNodeName; // 加上前缀
                     this.set('selectedNode', matchedNodeName); // 选中对应测节点就能触发展开和选中
+                    this.set('hightLightNodeName', selectedNode.name)
                     const transform = this.changeNodeCenter(selectedNode.name);
                     this.renderGraph(this.hierarchyData, selectedNode.name, transform); // 更新selectedNode 会导致当前节点失去高亮显示
                 } else {
@@ -507,7 +514,7 @@ class Hierarchy extends PolymerElement {
             }
             await this.changeNodeExpandState(nodeInfo);
             const transform = this.changeNodeCenter(nodeName);
-            this.renderGraph(this.hierarchyData, this.selectedNode, transform);
+            this.renderGraph(this.hierarchyData, this.hightLightNodeName, transform);
         };
         const onDoubleClickGraphEvent = (event) => {
             event.preventDefault();
@@ -530,7 +537,7 @@ class Hierarchy extends PolymerElement {
             changeGraphPosition(this.container as HTMLElement, transform.x, transform.y, transform.scale);
             const newTransform = d3.zoomIdentity.translate(transform.x, transform.y).scale(transform.scale);
             this.minimap?.zoom(newTransform);
-            this.renderGraph(this.hierarchyData, this.selectedNode, {
+            this.renderGraph(this.hierarchyData, this.hightLightNodeName, {
                 x: transform.x,
                 y: transform.y,
                 scale: transform.scale,
@@ -566,7 +573,7 @@ class Hierarchy extends PolymerElement {
                 changeGraphPosition(container, newX, newY, scale);
                 const newTransform = d3.zoomIdentity.translate(newX, newY).scale(scale);
                 this.minimap?.zoom(newTransform);
-                this.renderGraph(this.hierarchyData, this.selectedNode, { x: newX, y: newY, scale: scale });
+                this.renderGraph(this.hierarchyData, this.hightLightNodeName, { x: newX, y: newY, scale: scale });
             }
         };
         const handleMouseUp = () => {
@@ -637,7 +644,7 @@ class Hierarchy extends PolymerElement {
             // 更新缩略图
             const newTransform = d3.zoomIdentity.translate(transform.x, transform.y).scale(transform.scale);
             this.minimap?.zoom(newTransform);
-            this.renderGraph(this.hierarchyData, this.selectedNode, {
+            this.renderGraph(this.hierarchyData, this.hightLightNodeName, {
                 x: transform.x,
                 y: transform.y,
                 scale: transform.scale,

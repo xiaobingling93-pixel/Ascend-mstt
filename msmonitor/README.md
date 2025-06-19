@@ -50,7 +50,7 @@ sudo yum install -y cmake ninja
 ```
 
 - 安装protobuf (tensorboard_logger三方依赖，用于对接tensorboard展示)
-安装
+
 ```bash
 # debian
 sudo apt install -y protobuf-compiler libprotobuf-dev
@@ -71,10 +71,11 @@ sudo apt-get install -y openssl
 # centos
 sudo yum install -y openssl
 ```
-dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynlog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
+dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynolog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
 **用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。**
-服务端证书目录结构：
-```bash  
+
+服务端证书目录结构： 
+```bash
 server_certs
 ├── ca.crt (根证书，用于验证其他证书的合法性，必选)
 ├── server.crt (服务器端的证书，用于向客户端证明服务器身份，必选)
@@ -82,7 +83,7 @@ server_certs
 └── ca.crl (证书吊销列表，包含已被吊销的证书信息，可选)
 ```
 客户端证书目录结构：
-```bash  
+```bash
 client_certs
 ├── ca.crt (根证书，用于验证其他证书的合法性，必选)
 ├── client.crt (客户端证书，用于向服务器证明客户端身份，必选)
@@ -118,19 +119,34 @@ msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用
 ### Profiler trace dump功能
 Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Pytorch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
 
+- 查看dynolog支持的命令和帮助
+
+```bash
+dynolog --help
+```
+
+dynolog命令参数如下，更多dynolog原生参数请通过--help查看。
+
+| 命令 | 参数类型   | 说明                                                        |
+|---|--------|-----------------------------------------------------------|
+| --enable-ipc-monitor  | action | 是否启用IPC监控功能，用于与dyno进行通信，设置参数开启，默认不开启  |
+| --port      |  i32   | dynolog daemon进程监听的端口号，默认值1778       |
+| --certs-dir | String | 用于指定dyno与dynolog RPC通信时TLS证书的路径，当值为`NO_CERTS`时不使用证书校验，必选值 |
+
+
 - 查看dyno支持的命令和帮助
 
 ```bash
 dyno --help
 ```
 
-dyno命令支持的参数选项
+dyno命令参数如下，更多dyno原生参数请通过--help查看。
 
-| 命令        | 参数类型   | 说明                                  |
-|-----------|--------|-------------------------------------|
-| hostname  | String | 网络中唯一标识一台设备的名称，默认值localhost         |
-| port      |  i32   | 用于区分同一设备上的不同网络服务或应用程序，默认值1778       |
-| certs-dir |  String   | 用于指定dyno与dynolog RPC通信时TLS证书的路径，当值为`NO_CERTS`时不使用证书校验，必选值 |
+| 命令          | 参数类型   | 说明                                   |
+|-------------|--------|--------------------------------------|
+| --hostname  | String | dynolog daemon所在主机的标识名称，默认值localhost |
+| --port      |  i32   | dynolog daemon进程监听的端口号，默认值1778       |
+| --certs-dir |  String   | 用于指定dyno与dynolog RPC通信时TLS证书的路径，当值为`NO_CERTS`时不使用证书校验，必选值  |
 
 - 查看nputrace支持的命令和帮助
 
@@ -144,38 +160,38 @@ dyno nputrace --help
 dyno --certs-dir <CERT_DIR> nputrace [SUBCOMMANDS] --log-file <LOG_FILE>
 ```
 
-nputrace子命令支持的参数选项
+nputrace的SUBCOMMANDS（子命令）选项如下：
 
-| 子命令                 | 参数类型 | 说明                                                                                                                                                                                                                                                             | PyTorch支持 | MindSpore支持 |
-|---------------------|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|
-| job-id              | u64 | 采集任务的job id，默认值0，dynolog原生参数                                                                                                                                                                                                                                   |     N     |      N      |
-| pids                | String | 采集任务的pid列表，多个pid用逗号分隔，默认值0，dynolog原生参数                                                                                                                                                                                                                         |     N     |      N      |
-| process-limit       | u64 | 最大采集进程的数量，默认值3，dynolog原生参数                                                                                                                                                                                                                                     |     N     |      N      |
-| profile-start-time  | u64 | 用于同步采集的Unix时间戳，单位毫秒，默认值0，dynolog原生参数                                                                                                                                                                                                                           |     N     |      N      |
-| duration-ms         | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数                                                                                                                                                                                                                                  |     N     |      N      |
-| iterations          | i64 | 采集总迭代数，默认值-1，dynolog原生参数，必选参数，需与start-step参数同时指定                                                                                                                                                                                                                                     |     Y     |      Y      |
-| log-file            | String | 采集落盘的路径，必选值                                                                                                                                                                                                                                                    |     Y     |      Y      |
-| start-step          | u64 | 开始采集的迭代数，默认值0                                                                                                                                                                                                                                                  |     Y     |      Y      |
-| record-shapes       | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集                                                                                                                                                                                                                     |     Y     |      Y      |
-| profile-memory      | action | 是否采集算子内存信息，设置参数采集，默认不采集                                                                                                                                                                                                                                        |     Y     |      Y      |
-| with-stack          | action | 是否采集Python调用栈，设置参数采集，默认不采集                                                                                                                                |     Y     |      Y      |
-| with-flops          | action | 是否采集算子flops，设置参数采集，默认不采集                                                                                                                                                                                                                                       |     Y     |      N      |
-| with-modules        | action | 是否采集modules层级的Python调用栈，设置参数采集，默认不采集                                                                                                                                                                                                                           |     Y     |      N      |
-| analyse             | action | 采集后是否自动解析，设置参数解析，默认不解析                                                                                                                                                                                                                                         |     Y     |      Y      |
-| l2-cache            | action | 是否采集L2 Cache数据，设置参数采集，默认不采集                                                                                                                                                                                                                                    |     Y     |      Y      |
-| op-attr             | action | 是否采集算子属性信息，设置参数采集，默认不采集                                                                                                                                                                                                                                        |     Y     |      N      |
-| msprof-tx           | action | 是否使能MSTX，设置参数采集，默认不使能                                                                                                                                                                                                                                          |     Y     |      Y      |
-| mstx-domain-include | Option<String> | 使能msproftx采集mstx打点数据的情况下，配置该开关，设置实际采集的domain范围。该参数为可选参数，默认不使能                                                                                                                                                                                                  |     Y     |      Y      |
-| mstx-domain-exclude | Option<String> | 使能msproftx采集mstx打点数据的情况下，配置该开关，设置实际不采集的domain范围。该参数为可选参数，默认不使能                                                                                                                                                                                                 |     Y     |      Y      |
-| data-simplification | String | 解析完成后是否数据精简，可选值范围[`true`, `false`]，默认值`true`                                                                                                                                                                                                                   |     Y     |      Y      |
-| activities          | String | 控制CPU、NPU事件采集范围，可选值范围[`CPU,NPU`, `NPU,CPU`, `CPU`, `NPU`]，默认值`CPU,NPU`                                                                                                                                                                                         |     Y     |      Y      |
-| profiler-level      | String | 控制profiler的采集等级，可选值范围[`Level_none`, `Level0`, `Level1`, `Level2`]，默认值`Level0`                                                                                                                                                                                  |     Y     |      Y      |
-| aic-metrics         | String | AI Core的性能指标采集项，可选值范围[`AiCoreNone`, `PipeUtilization`, `ArithmeticUtilization`, `Memory`, `MemoryL0`, `ResourceConflictRatio`, `MemoryUB`, `L2Cache`, `MemoryAccess`]，默认值`AiCoreNone`                                                                          |     Y     |      Y      |
-| export-type         | String | profiler解析导出数据的类型，可选值范围[`Text`, `Db`]，默认值`Text`                                                                                                                                                                                                                |     Y     |      Y      |
-| gc-detect-threshold | Option<f32> | GC检测阈值，单位ms，只采集超过阈值的GC事件。该参数为可选参数，默认不设置时不开启GC检测                                                                                                                                                                                                                |     Y     |      N      |
-| host-sys            | String | 采集[host侧系统数据](https://www.hiascend.com/document/detail/zh/mindstudio/70RC3/T&ITools/Profiling/atlasprofiling_16_0014.html)(CPU利用率、内存利用率、磁盘I/O利用率、网络I/O利用率等)。该参数为可选参数，可选值范围[`cpu`, `mem`, `disk`, `network`, `osrt`] , 默认不设置时不开启host侧系统数据采集 |     Y     |      Y      |
-| sys-io              | action | 采集NIC、ROCE数据。该参数为可选参数，默认不设置时不开启NIC、ROCE数据采集                                                                                                                                                                                                                    |     Y     |      Y      |
-| sys-interconnection | action | 采集集合通信带宽数据（HCCS）、PCIe、片间传输带宽数据。该参数为可选参数，默认不设置时不开启HCCS、PCIe、片间传输带宽数据采集                                                                                                                                                                                          |     Y     |      Y      |
+| 子命令                   | 参数类型 | 说明                                                                                                                                                                                                                                         | PyTorch支持 | MindSpore支持 |
+|-----------------------|-------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|
+| --job-id              | u64 | 采集任务的job id，默认值0，dynolog原生参数                                                                                                                                                                                                               |     N     |      N      |
+| --pids                | String | 采集任务的pid列表，多个pid用逗号分隔，默认值0，dynolog原生参数                                                                                                                                                                                                     |     N     |      N      |
+| --process-limit       | u64 | 最大采集进程的数量，默认值3，dynolog原生参数                                                                                                                                                                                                                 |     N     |      N      |
+| --profile-start-time  | u64 | 用于同步采集的Unix时间戳，单位毫秒，默认值0，dynolog原生参数                                                                                                                                                                                                       |     N     |      N      |
+| --duration-ms         | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数                                                                                                                                                                                                              |     N     |      N      |
+| --iterations          | i64 | 采集总迭代数，默认值-1，dynolog原生参数，必选参数，需与start-step参数同时指定                                                                                                                                                                                           |     Y     |      Y      |
+| --log-file            | String | 采集落盘的路径，必选值                                                                                                                                                                                                                                |     Y     |      Y      |
+| --start-step          | u64 | 开始采集的迭代数，默认值0                                                                                                                                                                                                                              |     Y     |      Y      |
+| --record-shapes       | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集                                                                                                                                                                                                 |     Y     |      Y      |
+| --profile-memory      | action | 是否采集算子内存信息，设置参数采集，默认不采集                                                                                                                                                                                                                    |     Y     |      Y      |
+| --with-stack          | action | 是否采集Python调用栈，设置参数采集，默认不采集                                                                                                                                                                                                                 |     Y     |      Y      |
+| --with-flops          | action | 是否采集算子flops，设置参数采集，默认不采集                                                                                                                                                                                                                   |     Y     |      N      |
+| --with-modules        | action | 是否采集modules层级的Python调用栈，设置参数采集，默认不采集                                                                                                                                                                                                       |     Y     |      N      |
+| --analyse             | action | 采集后是否自动解析，设置参数解析，默认不解析                                                                                                                                                                                                                     |     Y     |      Y      |
+| --l2-cache            | action | 是否采集L2 Cache数据，设置参数采集，默认不采集                                                                                                                                                                                                                |     Y     |      Y      |
+| --op-attr             | action | 是否采集算子属性信息，设置参数采集，默认不采集                                                                                                                                                                                                                    |     Y     |      N      |
+| --msprof-tx           | action | 是否使能MSTX，设置参数采集，默认不使能                                                                                                                                                                                                                      |     Y     |      Y      |
+| --mstx-domain-include | Option<String> | 使能--msprof-tx采集mstx打点数据的情况下，配置该开关，设置实际采集的domain范围，与--mstx-domain-exclude参数互斥，若同时设置，则只有--mstx-domain-include生效。该参数为可选参数，默认不使能。可配置一个或多个domain，例如：--mstx-domain-include domain1, domain2                                                      |     Y     |      Y      |
+| --mstx-domain-exclude | Option<String> | 使能--msprof-tx采集mstx打点数据的情况下，配置该开关，设置实际不采集的domain范围，与--mstx-domain-include参数互斥，若同时设置，则只有--mstx-domain-include生效。该参数为可选参数，默认不使能。可配置一个或多个domain，例如：--mstx-domain-exclude domain1, domain2                                                     |     Y     |      Y      |
+| --data-simplification | String | 解析完成后是否数据精简，可选值范围[`true`, `false`]，默认值`true`                                                                                                                                                                                               |     Y     |      Y      |
+| --activities          | String | 控制CPU、NPU事件采集范围，可以设置单个或多个，多个类型以逗号分隔，可选值范围[`CPU`, `NPU`]，默认值`CPU,NPU`                                                                                                                                                                       |     Y     |      Y      |
+| --profiler-level      | String | 控制profiler的采集等级，可选值范围[`Level_none`, `Level0`, `Level1`, `Level2`]，默认值`Level0`                                                                                                                                                              |     Y     |      Y      |
+| --aic-metrics         | String | AI Core的性能指标采集项，可选值范围[`AiCoreNone`, `PipeUtilization`, `ArithmeticUtilization`, `Memory`, `MemoryL0`, `ResourceConflictRatio`, `MemoryUB`, `L2Cache`, `MemoryAccess`]，默认值`AiCoreNone`                                                      |     Y     |      Y      |
+| --export-type         | String | profiler解析导出数据的类型，可选值范围[`Text`, `Db`]，默认值`Text`                                                                                                                                                                                            |     Y     |      Y      |
+| --gc-detect-threshold | Option<f32> | GC检测阈值，单位ms，只采集超过阈值的GC事件。该参数为可选参数，默认不设置时不开启GC检测                                                                                                                                                                                            |     Y     |      N      |
+| --host-sys            | String | 采集[host侧系统数据](https://www.hiascend.com/document/detail/zh/mindstudio/80RC1/T&ITools/Profiling/atlasprofiling_16_0014.html)(CPU利用率、内存利用率、磁盘I/O利用率、网络I/O利用率等)。该参数为可选参数，可选值范围[`cpu`, `mem`, `disk`, `network`, `osrt`] , 默认不设置时不开启host侧系统数据采集 |     Y     |      Y      |
+| --sys-io              | action | 采集NIC、ROCE数据。该参数为可选参数，设置参数采集，默认不采集                                                                                                                                                                                                         |     Y     |      Y      |
+| --sys-interconnection | action | 采集集合通信带宽数据（HCCS）、PCIe、片间传输带宽数据。该参数为可选参数，设置参数采集，默认不采集                                                                                                                                                                                       |     Y     |      Y      |
 
 - nputrace使用方法
 
@@ -222,7 +238,7 @@ dyno --certs-dir /home/client_certs --hostname x.x.x.x nputrace --start-step 10 
 ```
 
 ### NPU Monitor功能
-NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。 
+NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
 
 **注意**：NPU Monitor功能开启时，不能同时开启Profiler trace dump功能。
 
@@ -236,14 +252,14 @@ dyno npu-monitor --help
 dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 ```
 
-npu-monitor子命令支持的参数选项
+npu-monitor的SUBCOMMANDS（子命令）选项如下：
 
-| 子命令 | 参数类型 | 说明                                                                                                                               | PyTorch支持 | MindSpore支持 |
-|-------|-------|----------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|
-| npu-monitor-start | action | 开启性能监控，设置参数后生效，默认不生效                                                                                                             | Y | Y |
-| npu-monitor-stop | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                             | Y | Y |
-| report-interval-s | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                    | Y | Y |
-| mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker` | Y | Y |
+| 子命令                   | 参数类型 | 说明                                                                                                                               | PyTorch支持 | MindSpore支持 |
+|-----------------------|-------|----------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|
+| --npu-monitor-start   | action | 开启性能监控，设置参数后生效，默认不生效                                                                                                             | Y | Y |
+| --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                             | Y | Y |
+| --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                    | Y | Y |
+| --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker` | Y | Y |
 
 - npu-monitor使用方法
 
@@ -311,8 +327,8 @@ Step6: 观测Prometheus上报数据
 curl 127.0.0.1:8080/metrics
 ```
 
-## 附录
+## [Mindspore框架下msMonitor的使用方法](./docs/mindspore_adapter.md)
 
-[Mindspore框架下msMonitor的使用方法](./docs/mindspore_adapter.md)
+## 附录
 
 [安全声明](./docs/security_statement.md)

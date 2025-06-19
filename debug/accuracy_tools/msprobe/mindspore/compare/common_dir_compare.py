@@ -151,7 +151,7 @@ def find_npy_files(directory):
 def generate_map_dict(npu_file_dict, bench_file_dict, name_map_dict=None):
     for k, npu_file_list in npu_file_dict.items():
         bench_file_list = bench_file_dict.get(k)
-        if not bench_file_dict and k in name_map_dict:
+        if not bench_file_list and k in name_map_dict:
             bench_file_list = bench_file_dict.get(name_map_dict.get(k))
         bench_length = len(bench_file_list)
         if not (bench_file_list and bench_length):

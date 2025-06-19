@@ -118,12 +118,12 @@ class ApiTemplate(HOOKCell):
             try:
                 bound = inspect.signature(self.api_func).bind(*args, **kwargs)
                 bound.apply_defaults()
-                use_asyn_op_flag = bound.arguments.get("asyn_op", False)
+                use_async_op_flag = bound.arguments.get("async_op", False)
             except Exception as e:
-                use_asyn_op_flag = False
+                use_async_op_flag = False
                 logger.warning(f"fail to get dist api's func signature because {e}, no wait")
 
-            if use_asyn_op_flag or self.api_name in ["isend", "irecv"]:
+            if use_async_op_flag or self.api_name in ["isend", "irecv"]:
                 output = self.async_to_sync(output)
             if self.api_name == "batch_isend_irecv" and isinstance(output, list):
                 output = [self.async_to_sync(handle) for handle in output]

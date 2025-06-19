@@ -29,7 +29,6 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import move2target_device
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params
 
-
 # NPU vs GPU api list
 CompareApi = set(absolute_standard_api) | set(binary_standard_api) | set(thousandth_standard_api)
 
@@ -43,6 +42,15 @@ OnlineApiPrecisionCompareConfig = namedtuple('OnlineApiPrecisionCompareConfig',
 CommonCompareConfig = namedtuple('CommonCompareConfig', ['compare', 'handle_func', 'config'])
 
 
+def get_gpu_device():
+    try:
+        import torch_npu
+        is_gpu = False
+    except ImportError:
+        is_gpu = True
+    return is_gpu
+
+
 def run_ut_process(xpu_id, consumer_queue, common_config, api_precision_csv_file):
     """ When consumer_queue(shared with ConsumerDispatcher) is not empty, consume api data from consumer_queue.
     :param xpu_id: int
@@ -51,7 +59,9 @@ def run_ut_process(xpu_id, consumer_queue, common_config, api_precision_csv_file
     :param api_precision_csv_file: list, length is 2, result file name and details file name
     :return:
     """
-    gpu_device = torch.device(f'cuda:{xpu_id}')
+    device_info = "cuda" if get_gpu_device() else "npu"
+    logger.info(f"Start run_ut_process for {device_info} device, rank: {xpu_id}.")
+    gpu_device = torch.device(f'{device_info}:{xpu_id}')
 
     while True:
         if consumer_queue.empty():

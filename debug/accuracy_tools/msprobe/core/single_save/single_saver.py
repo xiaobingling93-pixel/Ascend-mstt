@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from collections import defaultdict
 
 from msprobe.core.common.file_utils import create_directory, save_json
 from msprobe.core.common.const import Const
@@ -36,7 +37,7 @@ class SingleSave:
             cls._instance.dump_path = dump_path
             cls._instance.rank = FmkAdp.get_rank_id()
             cls._instance.step_count = 0
-            cls._instance.cache_dict = {}
+            cls._instance.tag_count = defaultdict(int)
         return cls._instance
 
     @staticmethod
@@ -109,13 +110,7 @@ class SingleSave:
     @classmethod
     def step(cls):
         instance = cls._instance
-        for key, value in instance.cache_dict.items():
-            if not value["have_micro_batch"]:
-                cls.save_ex({key: value["data"][0]})
-            else:
-                for i, data in enumerate(value["data"]):
-                    cls.save_ex({key: data}, micro_batch=i)
-        instance.cache_dict = {}
+        instance.tag_count = defaultdict(int)
         instance.step_count += 1
 
     @classmethod
@@ -127,14 +122,8 @@ class SingleSave:
                              "Skip current save process.")
             return
         for key, value in data.items():
-            if key not in instance.cache_dict:
-                instance.cache_dict[key] = {
-                    "have_micro_batch": False,
-                    "data": [value]
-                }
-            else:
-                instance.cache_dict[key]["have_micro_batch"] = True
-                instance.cache_dict[key]["data"].append(value)
+            cls.save_ex({key: value}, micro_batch=instance.tag_count[key])
+            instance.tag_count[key] += 1
 
     @classmethod
     def _analyze_list_tuple_data(cls, data, data_name=None, save_dir=None):

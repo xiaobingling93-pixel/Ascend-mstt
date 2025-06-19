@@ -49,7 +49,6 @@ class Hierarchy:
     def measure_text_width(text):
         return len(text) * 6  # 假设每个字符宽度为6
 
-
     @staticmethod
     def extract_label_name(node_name, node_type):
         splited_subnode_name = node_name.split('.')

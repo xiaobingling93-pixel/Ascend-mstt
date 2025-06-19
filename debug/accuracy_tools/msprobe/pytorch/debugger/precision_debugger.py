@@ -53,19 +53,36 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.module_dumper = ModuleDumper(self.service)
         self.ori_customer_func = {}
         self.enable_dataloader = self.config.enable_dataloader
-        self.param_warning()
-
-    @property
-    def instance(self):
-        return self._instance
+        self._param_warning()
 
     @staticmethod
-    def get_task_config(task, json_config):
+    def _get_task_config(task, json_config):
         return parse_task_config(task, json_config)
+
+    @staticmethod
+    def _iter_tracer(func):
+        def func_wrapper(*args, **kwargs):
+            debugger_instance = PrecisionDebugger._instance
+            if not debugger_instance:
+                raise MsprobeException(
+                    MsprobeException.INTERFACE_USAGE_ERROR,
+                    f"PrecisionDebugger must be instantiated before executing the dataloader iteration"
+                )
+
+            debugger_instance.enable_dataloader = False
+            if not debugger_instance.service.first_start:
+                debugger_instance.stop()
+                debugger_instance.step()
+            result = func(*args, **kwargs)
+            debugger_instance.start()
+            debugger_instance.enable_dataloader = True
+            return result
+
+        return func_wrapper
 
     @classmethod
     def start(cls, model=None, token_range=None):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         if instance is None:
             return
 
@@ -79,7 +96,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     @classmethod
     def stop(cls):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         if instance is None:
             return
         if instance.enable_dataloader:
@@ -89,7 +106,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     @classmethod
     def step(cls):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         if instance is None:
             return
         cls._instance.service.step()
@@ -115,7 +132,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             return
         instance.service.save(variable, name, save_backward)
 
-    def param_warning(self):
+    def _param_warning(self):
         if self.model is not None:
             logger.warning_on_rank_0(
                 "The 'model' parameter in the PrecisionDebugger will be deprecated in the future."
@@ -123,7 +140,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             )
         if self.enable_dataloader:
             logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
-            dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
+            dataloader._BaseDataLoaderIter.__next__ = self._iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
 
 def module_dump(module, dump_name):
@@ -155,17 +172,3 @@ def module_dump_end():
             f"PrecisionDebugger must be instantiated before using module_dump_end interface"
         )
     instance.module_dumper.stop_module_dump()
-
-
-def iter_tracer(func):
-    def func_wrapper(*args, **kwargs):
-        debugger_instance = PrecisionDebugger.instance
-        debugger_instance.enable_dataloader = False
-        if not debugger_instance.service.first_start:
-            debugger_instance.stop()
-            debugger_instance.step()
-        result = func(*args, **kwargs)
-        debugger_instance.start()
-        debugger_instance.enable_dataloader = True
-        return result
-    return func_wrapper

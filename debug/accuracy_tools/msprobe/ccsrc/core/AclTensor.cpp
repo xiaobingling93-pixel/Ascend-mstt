@@ -253,7 +253,7 @@ static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true)
     return num;
 }
 
-static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) 
+static inline size_t SizeOfAclDType(const AclTensorInfo& tensor)
 {
     return DataUtils::SizeOfDType(tensor.dtype);
 }

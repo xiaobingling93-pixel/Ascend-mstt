@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "utils.h"
 #include <glog/logging.h>
 #include <glog/stl_logging.h>
@@ -12,7 +28,7 @@
 #include <unordered_map>
 #include <fcntl.h>
 #include <libgen.h>
-#include <limits.h>
+#include <climits>
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -377,22 +393,22 @@ bool PathUtils::IsSoftLink(const std::string &path)
     return S_ISLNK(st.st_mode);
 }
 
-bool PathUtils::DirPathCheck(const std::string& absPath)
+bool PathUtils::DirPathCheck(const std::string& path)
 {
-    if (absPath.empty() || absPath.size() > PATH_MAX) {
-        fprintf(stderr, "[ERROR] The length of Path %s is invalid.\n", absPath.c_str());
+    if (path.empty() || path.size() > PATH_MAX) {
+        fprintf(stderr, "[ERROR] The length of Path %s is invalid.\n", path.c_str());
         return false;
     }
-    if (IsSoftLink(absPath)) {
-        fprintf(stderr, "[ERROR] Path %s is soft link.\n", absPath.c_str());
+    if (IsSoftLink(path)) {
+        fprintf(stderr, "[ERROR] Path %s is soft link.\n", path.c_str());
         return false;
     }
-    if (!IsFileExist(absPath) && !CreateDir(absPath)) {
-        fprintf(stderr, "[ERROR] Path %s not exist and create failed.\n", absPath.c_str());
+    if (!IsFileExist(path) && !CreateDir(path)) {
+        fprintf(stderr, "[ERROR] Path %s not exist and create failed.\n", path.c_str());
         return false;
     }
-    if (!IsDir(absPath) || !IsFileWritable(absPath)) {
-        fprintf(stderr, "[ERROR] %s is not a directory or is not writable.\n", absPath.c_str());
+    if (!IsDir(path) || !IsFileWritable(path)) {
+        fprintf(stderr, "[ERROR] %s is not a directory or is not writable.\n", path.c_str());
         return false;
     }
     return true;

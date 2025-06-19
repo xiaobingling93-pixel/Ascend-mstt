@@ -73,27 +73,27 @@ DETAIL_TEST_ROWS = [
 
 
 precision_configs = {
-    torch.float16 : {
-        'small_value' : [
+    torch.float16: {
+        'small_value': [
             1e-3
         ],
-        'small_value_atol' : [
+        'small_value_atol': [
             1e-5
         ]
     },
     torch.bfloat16: {
-        'small_value' : [
+        'small_value': [
             1e-3
         ],
-        'small_value_atol' : [
+        'small_value_atol': [
             1e-5
         ]
     },
-    torch.float32:{
-        'small_value' : [
+    torch.float32: {
+        'small_value': [
             1e-6
         ],
-        'small_value_atol' : [
+        'small_value_atol': [
             1e-9
         ]
     }
@@ -101,33 +101,33 @@ precision_configs = {
 
 
 ULP_PARAMETERS = {
-    torch.float16 : {
-        'min_eb' : [
+    torch.float16: {
+        'min_eb': [
             -14
         ],
-        'exponent_num' : [
+        'exponent_num': [
             10
         ]
     },
-    torch.bfloat16 : {
-        'min_eb' : [
+    torch.bfloat16: {
+        'min_eb': [
             -126
         ],
-        'exponent_num' : [
+        'exponent_num': [
             7
         ]
     },
-    torch.float32 : {
-        'min_eb' : [
+    torch.float32: {
+        'min_eb': [
             -126
         ],
-        'exponent_num' : [
+        'exponent_num': [
             23
         ]
     }
 }
-  
-    
+
+
 class ApiPrecisionCompareColumn:
     API_NAME = 'API Name'
     DEVICE_DTYPE = 'DEVICE Dtype'
@@ -202,7 +202,7 @@ class ApiPrecisionCompareColumn:
 
 
 CompareMessage = {
-    "topk" : "在npu上，topk的入参sorted=False时不生效，会返回有序tensor，而cpu上会返回无序tensor。 如果topk精度不达标，请检查是否是该原因导致的。"
+    "topk": "在npu上，topk的入参sorted=False时不生效，会返回有序tensor，而cpu上会返回无序tensor。 如果topk精度不达标，请检查是否是该原因导致的。"
 }
 
 
