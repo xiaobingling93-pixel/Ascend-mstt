@@ -183,7 +183,6 @@ class MatchNodesController:
 
         # 2. 目标节点的子节点和标杆侧的子节点添加匹配关系
         def process_child_layer(npu_child_nodes):
-            print("process_child_layer", npu_child_nodes)
             for npu_subnode_name in npu_child_nodes:
                 npu_subnode_info = npu_nodes.get(npu_subnode_name, {})
                 matched_node_link = npu_subnode_info.get('matched_node_link', [])

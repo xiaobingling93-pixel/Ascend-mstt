@@ -20,47 +20,68 @@ import os
 class TestCaseFactory:
     """管理所有测试用例的统一工厂"""
     
-    CASE_DIR = os.path.join(os.path.dirname(__file__), 'ut_test_cases')
+    UT_CASE_DIR = os.path.join(os.path.dirname(__file__), 'ut_test_cases')
+    ST_CASE_DIR = os.path.join(os.path.dirname(__file__), 'st_test_cases')
 
     @classmethod
     def get_process_task_add_cases(cls):
-        return cls._load_cases('test_match_node_controller\\process_task_add_case.json')
+        return cls._load_ut_cases('test_match_node_controller\\process_task_add_case.json')
     
     @classmethod
     def get_process_task_delete_cases(cls):
-        return cls._load_cases('test_match_node_controller\\process_task_delete_case.json')
+        return cls._load_ut_cases('test_match_node_controller\\process_task_delete_case.json')
     
     @classmethod
     def get_process_task_add_child_layer_cases(cls):
-        return cls._load_cases('test_match_node_controller\\process_task_add_child_layer.json')
+        return cls._load_ut_cases('test_match_node_controller\\process_task_add_child_layer.json')
     
     @classmethod
     def get_process_task_delete_child_layer_cases(cls):
-        return cls._load_cases('test_match_node_controller\\process_task_delete_child_layer.json')
+        return cls._load_ut_cases('test_match_node_controller\\process_task_delete_child_layer.json')
     
     @classmethod
     def get_process_task_add_child_layer_by_config_cases(cls):
-        return cls._load_cases('test_match_node_controller\\process_task_add_child_layer_by_config.json')
+        return cls._load_ut_cases('test_match_node_controller\\process_task_add_child_layer_by_config.json')
 
     @classmethod
     def get_change_expand_state_cases(cls):
-        return cls._load_cases('test_layout_hierarchy_controller\\change_expand_state_case.json')
+        return cls._load_ut_cases('test_layout_hierarchy_controller\\change_expand_state_case.json')
     
     @classmethod
     def get_update_hierarchy_data_cases(cls):
-        return cls._load_cases('test_layout_hierarchy_controller\\update_hierarchy_data_case.json')
+        return cls._load_ut_cases('test_layout_hierarchy_controller\\update_hierarchy_data_case.json')
     
     @classmethod
     def load_single_graph_test_data(cls):
-        return cls._load_cases('test_layout_hierarchy_controller\\test_single_statis_graph.vis')
+        return cls._load_ut_cases('test_layout_hierarchy_controller\\test_single_statis_graph.vis')
     
     @classmethod
     def load_compare_graph_test_data(cls):
-        return cls._load_cases('test_layout_hierarchy_controller\\test_compare_statis_graph.vis')
+        return cls._load_ut_cases('test_layout_hierarchy_controller\\test_compare_statis_graph.vis')
+
+    @classmethod
+    def _load_ut_cases(cls, filename):
+        """从JSON文件加载测试用例"""
+        path = os.path.join(cls.UT_CASE_DIR, filename)
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    # ST
+    @classmethod
+    def get_load_graph_config_info_cases(cls):
+        return cls._load_st_cases('test_load_graph_config_info.json')
     
     @classmethod
-    def _load_cases(cls, filename):
+    def get_load_graph_all_node_list(cls):
+        return cls._load_st_cases('test_load_graph_all_node_list.json')
+    
+    @classmethod
+    def load_compare_resnet_test_data(cls):
+        return cls._load_st_cases('test_compare_resnet_data.vis')
+
+    @classmethod
+    def _load_st_cases(cls, filename):
         """从JSON文件加载测试用例"""
-        path = os.path.join(cls.CASE_DIR, filename)
+        path = os.path.join(cls.ST_CASE_DIR, filename)
         with open(path, 'r', encoding='utf-8') as f:
             return json.load(f)

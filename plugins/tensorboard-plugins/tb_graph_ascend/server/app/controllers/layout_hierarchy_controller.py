@@ -29,7 +29,6 @@ class LayoutHierarchyController:
 
     @staticmethod
     def change_expand_state(node_name, graph_type, graph, micro_step):
-        print("change_expand_state", node_name, graph_type, micro_step)
         if node_name == 'root':
             LayoutHierarchyController.hierarchy[graph_type] = Hierarchy(graph_type, graph, micro_step)
         elif LayoutHierarchyController.hierarchy.get(graph_type, None):

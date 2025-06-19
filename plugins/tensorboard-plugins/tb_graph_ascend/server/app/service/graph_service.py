@@ -31,9 +31,11 @@ class GraphService:
     @staticmethod
     def load_meta_dir():
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
+      
         logdir = GraphState.get_global_value('logdir')
         runs = GraphState.get_global_value('runs', {})
         first_run_tags = GraphState.get_global_value('first_run_tags', {})
+        
         meta_dir = {}
         for root, _, files in GraphUtils.walk_with_max_depth(logdir, 2):
             for file in files:

@@ -33,7 +33,6 @@ class TestLayoutHierarchyController:
         node_name, graph_type, graph, micro_step = test_case['input'].values()
         excepted = test_case['expected']
         actual = LayoutHierarchyController.change_expand_state(node_name, graph_type, graph, micro_step)
-      
         assert actual == excepted
 
     @pytest.mark.parametrize("test_case", TestCaseFactory.get_update_hierarchy_data_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
@@ -41,6 +40,4 @@ class TestLayoutHierarchyController:
         graph_type = test_case['input']['graph_type']
         excepted = test_case['expected']
         actual = LayoutHierarchyController.update_hierarchy_data(graph_type)
-        print("graph_type===", graph_type)
-        print(actual)
         assert actual == excepted

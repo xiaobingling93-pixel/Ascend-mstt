@@ -52,7 +52,6 @@ class TestMatchNodesController:
         graph_data, npu_node_name, bench_node_name, task = test_case['input'].values()
         excepted = test_case['expected']
         actual = MatchNodesController.process_task_add_child_layer(graph_data, npu_node_name, bench_node_name, task)
-        print(actual)
         assert actual == excepted
 
     @pytest.mark.parametrize("test_case", TestCaseFactory.get_process_task_delete_child_layer_cases(),
