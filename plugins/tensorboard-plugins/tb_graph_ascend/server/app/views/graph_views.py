@@ -126,7 +126,6 @@ class GraphView:
         config_file = request.args.get("configFile")
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
         match_result = GraphService.add_match_nodes_by_config(config_file, meta_data)
-        match_result = {'success': False, 'error': e}
         return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 添加匹配节点
@@ -143,16 +142,10 @@ class GraphView:
     @staticmethod
     @wrappers.Request.application
     def delete_match_nodes(request):
-        try:
-            npu_node_name = request.args.get("npuNodeName")
-            bench_node_name = request.args.get("benchNodeName")
-            meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
-            match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data)
-        except (TypeError, json.JSONDecodeError):
-            match_result = {'success': False,
-                            'error': 'DeleteMatchNodes failed: The query parameters are not in a legal JSON format.'}
-        except Exception as e:
-            match_result = {'success': False, 'error': e}
+        npu_node_name = request.args.get("npuNodeName")
+        bench_node_name = request.args.get("benchNodeName")
+        meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
+        match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data)
         return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 保存匹配节点列表
