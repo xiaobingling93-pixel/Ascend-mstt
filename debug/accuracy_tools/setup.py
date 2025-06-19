@@ -30,7 +30,7 @@ INSTALL_REQUIRED = [
     "rich",
     "tqdm",
     "openpyxl >= 3.0.6",
-    "pyopenssl",
+    "pyopenssl==24.2.1",
     "twisted",
     "matplotlib",
     "tensorboard",
