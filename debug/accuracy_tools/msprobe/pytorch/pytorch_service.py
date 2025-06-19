@@ -37,6 +37,9 @@ class PytorchService(BaseService):
     @staticmethod
     def _get_current_rank():
         return get_rank_if_initialized()
+    
+    def reset_status(self):
+        self._reset_status()
 
     def _init_specific_components(self):
         self.logger = logger
