@@ -130,6 +130,9 @@ class GraphUtils:
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
             return default_value
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return default_value
 
     @staticmethod   
     def safe_json_load(file_obj, default_value=None):
