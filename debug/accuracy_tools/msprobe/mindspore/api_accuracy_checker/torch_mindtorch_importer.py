@@ -122,7 +122,7 @@ else:
 
     import torch
 
-    if is_mindtorch():`
+    if is_mindtorch():
         set_pt_mt_env_invalid()
 
     sys.path = initial_sys_path
