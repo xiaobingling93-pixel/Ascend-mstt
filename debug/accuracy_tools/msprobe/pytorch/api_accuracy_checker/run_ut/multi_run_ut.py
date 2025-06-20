@@ -33,7 +33,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
-    create_directory, load_json, save_json
+    create_directory, load_json, save_json, read_csv
 from msprobe.core.common.file_utils import remove_path
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
@@ -134,9 +134,9 @@ def run_parallel_ut(config):
 
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
-            with FileOpen(result_csv_path, 'r') as result_file:
-                completed_items = len(result_file.readlines()) - 1
-                progress_bar.update(completed_items - progress_bar.n)
+            result_file = read_csv(result_csv_path)
+            completed_items = len(result_file)
+            progress_bar.update(completed_items - progress_bar.n)
             time.sleep(1)
 
     for api_info in config.api_files:
