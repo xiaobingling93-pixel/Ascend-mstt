@@ -38,7 +38,7 @@ namespace  FileUtils {
 using namespace  MindStudioDebugger;
 
 /********************* 基础检查函数库，不做过多校验，路径有效性由调用者保证 ******************/
-bool IsPathExist(const std::string& path) 
+bool IsPathExist(const std::string& path)
 {
     struct stat buffer;
     return (stat(path.c_str(), &buffer) == 0);
@@ -129,7 +129,7 @@ bool IsDir(const std::string& path)
     return false;
 }
 
-bool IsRegularFile(const std::string& path) 
+bool IsRegularFile(const std::string& path)
 {
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
@@ -138,7 +138,7 @@ bool IsRegularFile(const std::string& path)
     return false;
 }
 
-bool IsFileSymbolLink(const std::string& path) 
+bool IsFileSymbolLink(const std::string& path)
 {
     struct stat buffer;
     if (lstat(path.c_str(), &buffer) == 0) {
@@ -149,7 +149,7 @@ bool IsFileSymbolLink(const std::string& path)
     return false;
 }
 
-bool IsPathCharactersValid(const std::string& path) 
+bool IsPathCharactersValid(const std::string& path)
 {
     for (const char& ch : path) {
         if (!std::isalnum(ch) && ch != '_' && ch != '.' && ch != ':' && ch != '/' && ch != '-') {
@@ -346,7 +346,7 @@ DebuggerErrno DeleteDir(const std::string &path, bool recursion)
     return DebuggerErrno::OK;
 }
 
-static DebuggerErrno CreateDirAux(const std::string& path, bool recursion, mode_t mode) 
+static DebuggerErrno CreateDirAux(const std::string& path, bool recursion, mode_t mode)
 {
     std::string parent = GetParentDir(path);
     DebuggerErrno ret;
@@ -411,7 +411,7 @@ DebuggerErrno Chmod(const std::string& path, const mode_t& mode)
     return chmod(absPath.c_str(), mode) == 0 ? DebuggerErrno::OK : DebuggerErrno::ERROR_SYSCALL_FAILED;
 }
 
-DebuggerErrno GetFileSize(const std::string &path, size_t& size) 
+DebuggerErrno GetFileSize(const std::string &path, size_t& size)
 {
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) != 0) {

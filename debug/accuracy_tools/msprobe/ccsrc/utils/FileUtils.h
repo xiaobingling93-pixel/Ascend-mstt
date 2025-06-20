@@ -96,7 +96,7 @@ DebuggerErrno OpenFile(const std::string& path, std::ofstream& ofs, std::ios::op
 /* 通用检查函数 */
 DebuggerErrno CheckFileSuffixAndSize(const std::string &path, FileType type);
 DebuggerErrno CheckDirCommon(const std::string &path);
-DebuggerErrno CheckFileBeforeRead(const std::string &path, const std::string& authority="r",
+DebuggerErrno CheckFileBeforeRead(const std::string &path, const std::string& authority = "r",
                                   FileType type = FileType::COMMON);
 DebuggerErrno CheckFileBeforeCreateOrWrite(const std::string &path, bool overwrite = false);
 }

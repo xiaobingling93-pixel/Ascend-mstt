@@ -23,7 +23,7 @@ namespace MindStudioDebugger {
 namespace  MathUtils {
 
 template <typename T>
-T Gcd(T a, T b) 
+T Gcd(T a, T b)
 {
     if (a == 0 || b == 0) {
         return 0;
@@ -38,7 +38,7 @@ T Gcd(T a, T b)
 }
 
 template <typename T>
-T Lcm(T a, T b) 
+T Lcm(T a, T b)
 {
     if (a == 0 || b == 0) {
         return 0;

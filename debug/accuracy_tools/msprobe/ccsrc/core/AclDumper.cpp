@@ -247,8 +247,7 @@ DebuggerErrno AclDumper::AclDumpGenStatJson(std::shared_ptr<const StatisticsCfg>
         aclDumpJson[ACL_DUMP_STEP] = std::to_string(INT_MAX);
     } else {
         std::vector<std::string> kernelsList = statisticsCfg->matcher.GenRealKernelList(kernels);
-        if (!kernelsList.empty())
-        {
+        if (!kernelsList.empty()) {
             aclDumpJson[ACL_DUMP_LIST].push_back({{ACL_DUMP_LAYER, kernelsList}});
         }
     }

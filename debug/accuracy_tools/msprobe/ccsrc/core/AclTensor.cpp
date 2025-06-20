@@ -164,7 +164,7 @@ const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTrans
     {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_C04, AclFormat::FORMAT_FRACTAL_Z_C04},
     {AclDumpMsg::OutputFormat::FORMAT_CHWN, AclFormat::FORMAT_CHWN},
     {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS,
-    AclFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS},
+        AclFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS},
     {AclDumpMsg::OutputFormat::FORMAT_HWCN, AclFormat::FORMAT_HWCN},
     {AclDumpMsg::OutputFormat::FORMAT_NC1KHKWHWC0, AclFormat::FORMAT_NC1KHKWHWC0},
     {AclDumpMsg::OutputFormat::FORMAT_BN_WEIGHT, AclFormat::FORMAT_BN_WEIGHT},
@@ -235,7 +235,7 @@ static inline AclFormat transAclFormat2MS(AclDumpMsg::OutputFormat fmt)
     return AclFormat::FORMAT_MAX;
 }
 
-static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) 
+static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true)
 {
     size_t num = 1;
     const AclShape& shape = host ? tensor.hostShape : tensor.deviceShape;
@@ -299,7 +299,7 @@ static inline void AssertConsis(const AclTensorInfo& tensor)
     size_t tensorSize = EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor);
     // Processing dtype whose size < 1
     // The ele num of quantization type(qint4*2) in MindSpore must be even.
-    int int4_size_factor = 2;
+    size_t int4_size_factor = 2;
     if (tensor.dtype == AclDtype::DT_INT4) {
         tensorSize = EleNumOfTensor(tensor, false) / int4_size_factor;
     }
@@ -839,50 +839,57 @@ static DebuggerErrno TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* 
     return DebuggerErrno::OK;
 }
 
-static DebuggerErrno TransInt4ToInt8(const uint8_t* input, size_t elemNums, uint8_t* output, size_t bufferSize)
-{
+static DebuggerErrno TransInt4ToInt8(const uint8_t* input,
+                                     size_t elemNums,
+                                     uint8_t* output,
+                                     size_t bufferSize) {
+    // 输出缓冲区要能容纳 elemNums 个 int8_t
     if (bufferSize < elemNums * sizeof(int8_t)) {
-        LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, "Insufficient space for converting data from int4 to int8.");
+        LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW,
+                  "Insufficient space for converting data from int4 to int8.");
         return DebuggerErrno::ERROR_BUFFER_OVERFLOW;
     }
-    const int8_t *srcData = reinterpret_cast<const int8_t *>(input);
-    int8_t *dstData = reinterpret_cast<int8_t *>(output);
-    size_t inputLength = elemNums / 2;
-    int maxValue = 7;
-    int minValue = -8;
-    int signBitShift = 3;
-    int signBitMask = 0x08;
-    for (size_t i = 0; i < inputLength; ++i) {
-        int8_t s = *srcData;
-        int8_t t = s & 0xf;
-        // keep the sign bit not change
-        int8_t signBit = (t & signBitMask) >> signBitShift;
-        if (signBit == 1) {
-            t = t | 0xf0;
-        } else {
-            t = t & 0x0f;
-        }
-        if (t < minValue || t > maxValue) {
-            LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid int4 value.");
-        }
-        *dstData = t;
-        ++dstData;
 
-        int highByteShift = 4;
-        t = s >> highByteShift;
-        signBit = (t & signBitMask) >> signBitShift;
-        if (signBit == 1) {
-            t = t | 0xf0;
-        } else {
-            t = t & 0x0f;
+    const uint8_t* srcData = input;       // 原始数据按字节读取
+    int8_t*       dstData = reinterpret_cast<int8_t*>(output);
+    size_t        inputLength = elemNums / 2;
+
+    const int8_t  maxValue     =  7;
+    const int8_t  minValue     = -8;
+    const uint8_t signBitMask  = 0x08;
+    const int     signBitShift = 3;
+
+    for (size_t i = 0; i < inputLength; ++i) {
+        uint8_t byte = srcData[i];
+
+        // —— 低 4 位 ——
+        uint8_t u = byte & 0x0F;  // 在无符号变量上做 AND
+        uint8_t sign = (u & signBitMask) >> signBitShift;
+        if (sign) {
+            u |= 0xF0;             // 在无符号变量上做 OR
         }
+        // 转回有符号并检查范围
+        int8_t t = static_cast<int8_t>(u);
         if (t < minValue || t > maxValue) {
-            LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid int4 value.");
+            LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE,
+                      "Invalid int4 value (low nibble).");
         }
-        *dstData = t;
-        ++dstData;
-        ++srcData;
+        *dstData++ = t;
+
+        // —— 高 4 位 ——
+        u = (byte >> 4) & 0x0F;   // 无符号右移后截低 4 位
+        sign = (u & signBitMask) >> signBitShift;
+        if (sign) {
+            u |= 0xF0;
+        }
+        t = static_cast<int8_t>(u);
+        if (t < minValue || t > maxValue) {
+            LOG_ERROR(DebuggerErrno::ERROR_INVALID_VALUE,
+                      "Invalid int4 value (high nibble).");
+        }
+        *dstData++ = t;
     }
+
     return DebuggerErrno::OK;
 }
 

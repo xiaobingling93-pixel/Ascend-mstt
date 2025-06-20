@@ -23,7 +23,7 @@
 
 namespace py = pybind11;
 
-HookDynamicLoader &HookDynamicLoader::GetInstance() 
+HookDynamicLoader &HookDynamicLoader::GetInstance()
 {
     static HookDynamicLoader instance;
     return instance;
@@ -83,7 +83,7 @@ bool HookDynamicLoader::LoadLibrary()
     return true;
 }
 
-bool HookDynamicLoader::UnloadLibrary() 
+bool HookDynamicLoader::UnloadLibrary()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!handle_) {
@@ -103,8 +103,8 @@ void *HookDynamicLoader::GetHooker(const std::string &funcName)
     std::lock_guard<std::mutex> lock(mutex_);
     auto iter = funcMap_.find(funcName);
     if (iter == funcMap_.end()) {
-      MS_LOG(WARNING) << "Function not found: " << funcName;
-      return nullptr;
+        MS_LOG(WARNING) << "Function not found: " << funcName;
+        return nullptr;
     }
     return iter->second;
 }

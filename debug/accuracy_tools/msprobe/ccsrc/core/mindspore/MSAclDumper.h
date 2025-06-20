@@ -25,7 +25,7 @@ namespace MindStudioDebugger {
 
 class MSAclDumper : public PrecisionDbgTaskBase {
 public:
-    static MSAclDumper& GetInstance() 
+    static MSAclDumper& GetInstance()
     {
         static MSAclDumper dumperInstance;
         return dumperInstance;
