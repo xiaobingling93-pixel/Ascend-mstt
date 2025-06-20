@@ -133,9 +133,8 @@ class TestRenameFilename(unittest.TestCase):
         self.logger_patcher.stop()
 
     @patch.object(cell_dump_process, "sort_filenames")
-    @patch.object(cell_dump_process, "del_same_file")
     @patch("msprobe.mindspore.dump.cell_dump_process.move_file")
-    def test_rename_filename_tensor(self, mock_move_file, mock_del_same_file, mock_sort_filenames):
+    def test_rename_filename_tensor(self, mock_move_file, mock_sort_filenames):
         cell_dump_process.dump_task = CoreConst.TENSOR
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -153,7 +152,6 @@ class TestRenameFilename(unittest.TestCase):
                     f.write(b"dummy")
 
             mock_sort_filenames.return_value = filenames
-            mock_del_same_file.side_effect = lambda path, files: files
 
             rename_calls = []
             def fake_rename(src, dst):
