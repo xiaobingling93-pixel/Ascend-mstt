@@ -108,7 +108,8 @@ def delete_torch_paths():
 
         if count_delete_env_path >= MsCompareConst.MAX_RECURSION_DEPTH - 1:
             raise Exception(f"Please check if you have a valid PyTorch and MindTorch environment, and ensure "
-                            f"the PYTHONPATH environment variable depth does not exceed {MsCompareConst.MAX_RECURSION_DEPTH}.")
+                            f"the PYTHONPATH environment variable depth does not "
+                            f"exceed {MsCompareConst.MAX_RECURSION_DEPTH}.")
 
 
 if not is_mindtorch():
