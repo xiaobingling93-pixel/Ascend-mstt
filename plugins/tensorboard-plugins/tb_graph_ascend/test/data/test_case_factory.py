@@ -53,11 +53,11 @@ class TestCaseFactory:
     
     @classmethod
     def load_single_graph_test_data(cls):
-        return cls._load_ut_cases('test_layout_hierarchy_controller\\test_single_statis_graph.vis')
+        return cls._load_ut_cases('test_layout_hierarchy_controller\\mock_single_statis_graph.vis')
     
     @classmethod
     def load_compare_graph_test_data(cls):
-        return cls._load_ut_cases('test_layout_hierarchy_controller\\test_compare_statis_graph.vis')
+        return cls._load_ut_cases('test_layout_hierarchy_controller\\mock_compare_statis_graph.vis')
 
     @classmethod
     def _load_ut_cases(cls, filename):
@@ -72,12 +72,28 @@ class TestCaseFactory:
         return cls._load_st_cases('test_load_graph_config_info.json')
     
     @classmethod
-    def get_load_graph_all_node_list(cls):
+    def get_load_graph_all_node_list_cases(cls):
         return cls._load_st_cases('test_load_graph_all_node_list.json')
     
     @classmethod
+    def get_change_node_expand_state_cases(cls):
+        return cls._load_st_cases('test_change_node_expand_state.json')
+    
+    @classmethod
+    def get_test_add_match_nodes_cases(cls):
+        return cls._load_st_cases('test_add_match_nodes.json')
+    
+    @classmethod
+    def get_test_update_hierarchy_data_cases(cls):
+        return cls._load_st_cases('test_update_hierarchy_data.json')
+    
+    @classmethod
+    def get_test_delete_match_nodes_cases(cls):
+        return cls._load_st_cases('test_delete_match_nodes.json')
+    
+    @classmethod
     def load_compare_resnet_test_data(cls):
-        return cls._load_st_cases('test_compare_resnet_data.vis')
+        return cls._load_st_cases('mock_compare_resnet_data.vis')
 
     @classmethod
     def _load_st_cases(cls, filename):
