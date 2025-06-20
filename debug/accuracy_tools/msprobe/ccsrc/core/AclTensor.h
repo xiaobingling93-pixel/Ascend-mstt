@@ -52,7 +52,7 @@ struct AclTensorInfo {
     bool dumpOriginData;
     std::vector<uint8_t> transBuf;
 
-    std::string ToString() const 
+    std::string ToString() const
     {
         return "AclTensor(path=" + dumpPath + ",dtype=" + DataUtils::GetDTypeString(dtype) + ",inout=" + inout + ")";
     }

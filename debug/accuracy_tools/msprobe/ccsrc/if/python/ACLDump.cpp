@@ -24,7 +24,7 @@
 
 namespace MindStudioDebugger {
 
-static PyObject *CPythonKernelInitDump(PyObject *module, PyObject *args) 
+static PyObject *CPythonKernelInitDump(PyObject *module, PyObject *args)
 {
     PyGILState_STATE gstate = PyGILState_Ensure();
     KernelInitDump();

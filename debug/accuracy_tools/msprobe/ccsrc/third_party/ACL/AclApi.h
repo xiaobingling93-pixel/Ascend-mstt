@@ -35,7 +35,6 @@ typedef struct AclDumpChunk  {
     int32_t    flag;                                       // 预留Dump数据标识，当前数据无标识
     uint8_t    dataBuf[0];                                 // Dump数据的内存地址
 } AclDumpChunk;
-
 }
 
 namespace MindStudioDebugger {

@@ -43,7 +43,7 @@ protected:
 
 class PrecisionDebugger {
 public:
-    static PrecisionDebugger& GetInstance() 
+    static PrecisionDebugger& GetInstance()
     {
         static PrecisionDebugger debuggerInstance;
         return debuggerInstance;
