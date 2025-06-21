@@ -92,6 +92,10 @@ class TestCaseFactory:
         return cls._load_st_cases('test_delete_match_nodes.json')
     
     @classmethod
+    def get_test_get_node_info_cases(cls):
+        return cls._load_st_cases('test_get_node_info.json')
+
+    @classmethod
     def load_compare_resnet_test_data(cls):
         return cls._load_st_cases('mock_compare_resnet_data.vis')
 

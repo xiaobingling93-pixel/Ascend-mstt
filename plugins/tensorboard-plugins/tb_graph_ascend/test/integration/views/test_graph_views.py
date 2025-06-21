@@ -128,3 +128,13 @@ class TestGraphViews:
         response_iter = GraphView.delete_match_nodes(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
+        
+    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_get_node_info_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    def test_get_node_info(self, test_case):
+        input = test_case['input']
+        excepted = test_case['expected']
+        request = TestGraphViews.create_mock_request(input)
+        response_iter = GraphView.get_node_info(request, TestGraphViews.start_response)
+        response_body = b''.join(response_iter).decode('utf-8')
+        assert response_body == json.dumps(excepted)
+        
