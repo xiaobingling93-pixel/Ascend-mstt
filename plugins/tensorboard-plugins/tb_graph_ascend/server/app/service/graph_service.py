@@ -353,7 +353,7 @@ class GraphService:
     def save_matched_relations(meta_data):
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
-        npu_match_nodes_list = config_data.get('npuMatchNodes', {})
+        npu_match_nodes_list = config_data.get('manualMatchNodes', {})
         run = meta_data.get('run')
         tag = meta_data.get('tag')
         try:
