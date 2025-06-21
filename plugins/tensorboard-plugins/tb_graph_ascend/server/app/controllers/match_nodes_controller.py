@@ -328,6 +328,7 @@ class MatchNodesController:
     def add_config_match_nodes(npu_node_name, bench_node_name):
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
+        manual_match_nodes = config_data.setdefault('manualMatchNodes', {})
         npu_match_nodes_list = config_data.setdefault('npuMatchNodes', {})
         bench_match_nodes_list = config_data.setdefault('benchMatchNodes', {})
         npu_unmatehed_name_list = config_data.setdefault('npuUnMatchNodes', [])
@@ -335,25 +336,29 @@ class MatchNodesController:
         # 更新匹配列表和未匹配列表
         if str(npu_node_name) in npu_unmatehed_name_list:
             npu_unmatehed_name_list.remove(str(npu_node_name))
-        if str(str(bench_node_name)) in bench_unmatehed_name_list:
+        if str(bench_node_name) in bench_unmatehed_name_list:
             bench_unmatehed_name_list.remove(str(bench_node_name))
-        npu_match_nodes_list[npu_node_name] = bench_node_name
-        bench_match_nodes_list[bench_node_name] = npu_node_name
+        manual_match_nodes[str(npu_node_name)] = str(bench_node_name)
+        npu_match_nodes_list[str(npu_node_name)] = str(bench_node_name)
+        bench_match_nodes_list[str(bench_node_name)] = str(npu_node_name)
         GraphState.set_global_value("config_data", config_data)
 
     @staticmethod
     def delete_config_match_nodes(npu_node_name, bench_node_name):
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
+        manual_match_nodes = config_data.setdefault('manualMatchNodes', {})
         npu_match_nodes_list = config_data.setdefault('npuMatchNodes', {})
         bench_match_nodes_list = config_data.setdefault('benchMatchNodes', {})
         npu_unmatehed_name_list = config_data.setdefault('npuUnMatchNodes', [])
         bench_unmatehed_name_list = config_data.setdefault('benchUnMatchNodes', [])
         # 更新匹配列表和未匹配列表
-        if npu_node_name in npu_match_nodes_list:
-            del npu_match_nodes_list[npu_node_name]
-        if bench_node_name in bench_match_nodes_list:
-            del bench_match_nodes_list[bench_node_name]
+        if str(npu_node_name) in manual_match_nodes:
+            del manual_match_nodes[str(npu_node_name)]
+        if str(npu_node_name) in npu_match_nodes_list:
+            del npu_match_nodes_list[str(npu_node_name)]
+        if str(bench_node_name) in bench_match_nodes_list:
+            del bench_match_nodes_list[str(bench_node_name)]
         npu_unmatehed_name_list.append(str(npu_node_name))
         bench_unmatehed_name_list.append(str(bench_node_name))
         GraphState.set_global_value("config_data", config_data)
