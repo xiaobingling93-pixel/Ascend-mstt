@@ -688,8 +688,23 @@ def os_walk_for_files(path, depth):
     return res
 
 
+def check_zip_file(zip_file_path):
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+        total_size = 0
+        if len(zip_file.infolist()) > FileCheckConst.MAX_FILE_IN_ZIP_SIZE:
+            raise ValueError(f"Too many files in {os.path.basename(zip_file_path)}")
+        for file_info in zip_file.infolist():
+            if file_info.file_size > FileCheckConst.MAX_FILE_SIZE:
+                raise ValueError(f"File {file_info.filename} is too large to extract")
+
+            total_size += file_info.file_size
+            if total_size > FileCheckConst.MAX_ZIP_SIZE:
+                raise ValueError(f"Total extracted size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+
+
 def read_xlsx(file_path, sheet_name=None):
     check_file_or_directory_path(file_path)
+    check_zip_file(file_path)
     try:
         if sheet_name:
             result_df = pd.read_excel(file_path, keep_default_na=False, sheet_name=sheet_name)
@@ -794,17 +809,7 @@ def extract_zip(zip_file_path, extract_dir):
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
     try:
         proc_lock.acquire()
-        with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
-            total_size = 0
-            if len(zip_file.infolist()) > FileCheckConst.MAX_FILE_IN_ZIP_SIZE:
-                raise ValueError(f"Too many files in {os.path.basename(zip_file_path)}")
-            for file_info in zip_file.infolist():
-                if file_info.file_size > FileCheckConst.MAX_FILE_IN_ZIP_SIZE:
-                    raise ValueError(f"File {file_info.filename} is too large to extract")
-
-                total_size += file_info.file_size
-                if total_size > FileCheckConst.MAX_ZIP_SIZE:
-                    raise ValueError(f"Total extracted size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+        check_zip_file(zip_file_path)
     except Exception as e:
         logger.error(f'Save content to file "{os.path.basename(zip_file_path)}" failed.')
         raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e

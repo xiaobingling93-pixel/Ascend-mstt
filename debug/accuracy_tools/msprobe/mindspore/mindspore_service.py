@@ -51,6 +51,9 @@ class MindsporeService(BaseService):
     def empty(self, *args, **kwargs):
         pass
 
+    def reset_status(self):
+        self._reset_status()
+
     def _init_specific_components(self):
         self.logger = logger
         self.api_register = get_api_register()

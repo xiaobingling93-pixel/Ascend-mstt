@@ -29,7 +29,7 @@
 #include "dynolog/src/PrometheusLogger.h"
 #endif
 
-#ifdef USE_TENSORBOARD 
+#ifdef USE_TENSORBOARD
 #include "dynolog/src/DynologTensorBoardLogger.h"
 #endif
 
@@ -67,44 +67,47 @@ DEFINE_bool(
     "Enabled GPU monitorng, currently supports NVIDIA GPUs.");
 DEFINE_bool(enable_perf_monitor, false, "Enable heartbeat perf monitoring.");
 
-std::unique_ptr<Logger> getLogger(const std::string& scribe_category = "") {
-  std::vector<std::unique_ptr<Logger>> loggers;
+std::unique_ptr<Logger> getLogger(const std::string& scribe_category = "")
+{
+    std::vector<std::unique_ptr<Logger>> loggers;
 #ifdef USE_PROMETHEUS
-  if (FLAGS_use_prometheus) {
+    if (FLAGS_use_prometheus) {
     loggers.push_back(std::make_unique<PrometheusLogger>());
-  }
+    }
 #endif
 #ifdef USE_TENSORBOARD
-  if (!FLAGS_metric_log_dir.empty()) {
+    if (!FLAGS_metric_log_dir.empty()) {
     loggers.push_back(std::make_unique<DynologTensorBoardLogger>(FLAGS_metric_log_dir));
-  }
+    }
 #endif
-  if (FLAGS_use_fbrelay) {
+    if (FLAGS_use_fbrelay) {
     loggers.push_back(std::make_unique<FBRelayLogger>());
-  }
-  if (FLAGS_use_ODS) {
+    }
+    if (FLAGS_use_ODS) {
     loggers.push_back(std::make_unique<ODSJsonLogger>());
-  }
-  if (FLAGS_use_JSON) {
+    }
+    if (FLAGS_use_JSON) {
     loggers.push_back(std::make_unique<JsonLogger>());
-  }
-  if (FLAGS_use_scuba && !scribe_category.empty()) {
+    }
+    if (FLAGS_use_scuba && !scribe_category.empty()) {
     loggers.push_back(std::make_unique<ScubaLogger>(scribe_category));
-  }
-  return std::make_unique<CompositeLogger>(std::move(loggers));
+    }
+    return std::make_unique<CompositeLogger>(std::move(loggers));
 }
 
-auto next_wakeup(int sec) {
-  return std::chrono::steady_clock::now() + std::chrono::seconds(sec);
+auto next_wakeup(int sec)
+{
+    return std::chrono::steady_clock::now() + std::chrono::seconds(sec);
 }
 
-void kernel_monitor_loop() {
-  KernelCollector kc;
+void kernel_monitor_loop()
+{
+    KernelCollector kc;
 
-  LOG(INFO) << "Running kernel monitor loop : interval = "
+    LOG(INFO) << "Running kernel monitor loop : interval = "
             << FLAGS_kernel_monitor_reporting_interval_s << " s.";
 
-  while (1) {
+    while (1) {
     auto logger = getLogger();
     auto wakeup_timepoint =
         next_wakeup(FLAGS_kernel_monitor_reporting_interval_s);
@@ -115,20 +118,21 @@ void kernel_monitor_loop() {
 
     /* sleep override */
     std::this_thread::sleep_until(wakeup_timepoint);
-  }
+    }
 }
 
-void perf_monitor_loop() {
-  PerfMonitor pm(
+void perf_monitor_loop()
+{
+    PerfMonitor pm(
       hbt::CpuSet::makeAllOnline(),
       std::vector<ElemId>{"instructions", "cycles"},
       getDefaultPmuDeviceManager(),
       getDefaultMetrics());
 
-  LOG(INFO) << "Running perf monitor loop : interval = "
-            << FLAGS_perf_monitor_reporting_interval_s << " s.";
+    LOG(INFO) << "Running perf monitor loop : interval = "
+        << FLAGS_perf_monitor_reporting_interval_s << " s.";
 
-  while (1) {
+    while (1) {
     auto logger = getLogger();
     auto wakeup_timepoint =
         next_wakeup(FLAGS_perf_monitor_reporting_interval_s);
@@ -139,22 +143,24 @@ void perf_monitor_loop() {
     logger->finalize();
     /* sleep override */
     std::this_thread::sleep_until(wakeup_timepoint);
-  }
+    }
 }
 
-auto setup_server(std::shared_ptr<ServiceHandler> handler) {
-  return std::make_unique<SimpleJsonServer<ServiceHandler>>(
-      handler, FLAGS_port);
+auto setup_server(std::shared_ptr<ServiceHandler> handler)
+{
+    return std::make_unique<SimpleJsonServer<ServiceHandler>>(
+        handler, FLAGS_port);
 }
 
-void gpu_monitor_loop(std::shared_ptr<gpumon::DcgmGroupInfo> dcgm) {
-  auto logger = getLogger(FLAGS_scribe_category);
+void gpu_monitor_loop(std::shared_ptr<gpumon::DcgmGroupInfo> dcgm)
+{
+    auto logger = getLogger(FLAGS_scribe_category);
 
-  LOG(INFO) << "Running DCGM loop : interval = "
-            << FLAGS_dcgm_reporting_interval_s << " s.";
-  LOG(INFO) << "DCGM fields: " << gpumon::FLAGS_dcgm_fields;
+    LOG(INFO) << "Running DCGM loop : interval = "
+        << FLAGS_dcgm_reporting_interval_s << " s.";
+    LOG(INFO) << "DCGM fields: " << gpumon::FLAGS_dcgm_fields;
 
-  while (1) {
+    while (1) {
     auto wakeup_timepoint = next_wakeup(FLAGS_dcgm_reporting_interval_s);
 
     dcgm->update();
@@ -162,23 +168,27 @@ void gpu_monitor_loop(std::shared_ptr<gpumon::DcgmGroupInfo> dcgm) {
 
     /* sleep override */
     std::this_thread::sleep_until(wakeup_timepoint);
-  }
+    }
 }
 
-int main(int argc, char** argv) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  FLAGS_logtostderr = 1;
-  google::InitGoogleLogging(argv[0]);
+int main(int argc, char** argv)
+{
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+    FLAGS_logtostderr = 1;
+    google::InitGoogleLogging(argv[0]);
 
-  LOG(INFO) << "Starting Ascend Extension for dynolog, version = " DYNOLOG_VERSION
-            << ", build git-hash = " DYNOLOG_GIT_REV;
+    LOG(INFO) << "Starting Ascend Extension for dynolog, version = " DYNOLOG_VERSION
+        << ", build git-hash = " DYNOLOG_GIT_REV;
 
-  std::shared_ptr<gpumon::DcgmGroupInfo> dcgm;
+    std::shared_ptr<gpumon::DcgmGroupInfo> dcgm;
 
-  std::unique_ptr<tracing::IPCMonitor> ipcmon;
-  std::unique_ptr<std::thread> ipcmon_thread, data_ipcmon_thread, gpumon_thread, pm_thread;
+    std::unique_ptr<tracing::IPCMonitor> ipcmon;
+    std::unique_ptr<std::thread> ipcmon_thread;
+    std::unique_ptr<std::thread> data_ipcmon_thread;
+    std::unique_ptr<std::thread> gpumon_thread;
+    std::unique_ptr<std::thread> pm_thread;
 
-  if (FLAGS_enable_ipc_monitor) {
+    if (FLAGS_enable_ipc_monitor) {
     LOG(INFO) << "Starting IPC Monitor";
     ipcmon = std::make_unique<tracing::IPCMonitor>();
     ipcmon->setLogger(std::move(getLogger()));
@@ -186,37 +196,37 @@ int main(int argc, char** argv) {
         std::make_unique<std::thread>([&ipcmon]() { ipcmon->loop(); });
     data_ipcmon_thread =
         std::make_unique<std::thread>([&ipcmon]() { ipcmon->dataLoop(); });
-  }
+    }
 
-  if (FLAGS_enable_gpu_monitor) {
+    if (FLAGS_enable_gpu_monitor) {
     dcgm = gpumon::DcgmGroupInfo::factory(
         gpumon::FLAGS_dcgm_fields, FLAGS_dcgm_reporting_interval_s * 1000);
     gpumon_thread = std::make_unique<std::thread>(gpu_monitor_loop, dcgm);
-  }
-  std::thread km_thread{kernel_monitor_loop};
-  if (FLAGS_enable_perf_monitor) {
+    }
+    std::thread km_thread{kernel_monitor_loop};
+    if (FLAGS_enable_perf_monitor) {
     pm_thread = std::make_unique<std::thread>(perf_monitor_loop);
-  }
+    }
 
-  // setup service
-  auto handler = std::make_shared<ServiceHandler>(dcgm);
+    // setup service
+    auto handler = std::make_shared<ServiceHandler>(dcgm);
 
-  // use simple json RPC server for now
-  auto server = setup_server(handler);
-  server->run();
+    // use simple json RPC server for now
+    auto server = setup_server(handler);
+    server->run();
 
-  if (km_thread.joinable()) {
+    if (km_thread.joinable()) {
     km_thread.join();
-  }
+    }
 
-  if (pm_thread && pm_thread->joinable()) {
+    if (pm_thread && pm_thread->joinable()) {
     pm_thread->join();
-  }
-  if (gpumon_thread && gpumon_thread->joinable()) {
+    }
+    if (gpumon_thread && gpumon_thread->joinable()) {
     gpumon_thread->join();
-  }
+    }
 
-  server->stop();
+    server->stop();
 
-  return 0;
+    return 0;
 }

@@ -54,7 +54,8 @@ from msprobe.core.common.utils import (CompareException,
                                        is_json_file,
                                        detect_framework_by_dump_json,
                                        is_save_variable_valid,
-                                       get_file_type)
+                                       get_file_type,
+                                       check_dump_json_key)
 from msprobe.core.common.decorator import recursion_depth_decorator
 
 
@@ -216,7 +217,7 @@ class TestUtils(TestCase):
         npu_json = {
             "task": Const.TENSOR,
             "dump_data_dir": "dump_data_dir",
-            "data": "data"
+            "data": {"api": "value"}
         }
 
         input_param["npu_json_path"] = "npu_path"
@@ -538,3 +539,52 @@ class TestIsSaveVariableValid(unittest.TestCase):
 
     def test_is_save_variable_valid_DictWithInvalidValue_ReturnsFalse(self):
         self.assertFalse(is_save_variable_valid({"a": [1, slice(1)]}, self.valid_special_types))
+
+
+class TestCheckDumpJsonKey(unittest.TestCase):
+    def test_valid_input(self):
+        json_data = {
+            "task": "tensor",
+            "data": {"api1": "value1"}
+        }
+        task, api_data = check_dump_json_key(json_data, "NPU")
+        self.assertEqual(task, "tensor")
+        self.assertEqual(api_data, {"api1": "value1"})
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_missing_task(self, mock_logger):
+        json_data = {
+            "data": {"api1": "value1"}
+        }
+        with self.assertRaises(CompareException) as context:
+            check_dump_json_key(json_data, "bench")
+        self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
+        mock_logger.error.assert_called_once_with(
+            "Task for bench is empty, please check."
+        )
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_missing_data(self, mock_logger):
+        json_data = {
+            "task": "tensor"
+        }
+        with self.assertRaises(CompareException) as context:
+            check_dump_json_key(json_data, "npu")
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
+        mock_logger.error.assert_called_once_with(
+            "Missing 'data' in dump.json, please check dump.json of npu."
+        )
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_wrong_data_type(self, mock_logger):
+        json_data = {
+            "task": "tensor",
+            "data": [1]
+        }
+        with self.assertRaises(CompareException) as context:
+            check_dump_json_key(json_data, "npu")
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
+        mock_logger.error.assert_called_once_with(
+            "Invalid type for 'data': expected a dict. Please check dump.json of npu."
+        )
+

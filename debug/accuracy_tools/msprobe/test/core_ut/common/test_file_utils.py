@@ -1,7 +1,8 @@
+import unittest
 from unittest.mock import patch, mock_open, MagicMock
+from zipfile import ZipFile, ZipInfo
+import tempfile
 
-import numpy as np
-import pandas as pd
 import pytest
 
 from msprobe.core.common.file_utils import *
@@ -526,3 +527,58 @@ class TestDirectoryChecks:
             check_file_or_directory_path(self.test_file, isdir=False)
             # Test directory path
             check_file_or_directory_path(self.test_dir, isdir=True)
+
+
+cur_dir = os.path.dirname(os.path.realpath(__file__))
+zip_dir = os.path.join(cur_dir, 'test_temp_zip_file')
+
+
+class TestCheckZipFile(unittest.TestCase):
+    def setUp(self):
+        os.makedirs(zip_dir, mode=0o750, exist_ok=True)
+
+    def tearDown(self):
+        if os.path.exists(zip_dir):
+            shutil.rmtree(zip_dir)
+
+    @staticmethod
+    def create_fake_zip_with_sizes(file_sizes):
+        """创建临时 zip 文件，file_sizes 为每个文件的大小列表，伪造一个具有 file_size=size 的 ZIP 条目"""
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".zip", dir=zip_dir)
+        os.close(tmp_fd)
+        with ZipFile(tmp_path, 'w', allowZip64=True) as zipf:
+            for i, size in enumerate(file_sizes):
+                info = ZipInfo(f"file_{i}.bin")
+                zipf.writestr(info, b'')  # 实际内容为空，但声明文件大小为 size
+                info.file_size = size
+        return tmp_path
+
+    def test_valid_zip(self):
+        file_sizes = [100, 200, 300]
+        zip_path = self.create_fake_zip_with_sizes(file_sizes)
+        try:
+            check_zip_file(zip_path)
+        finally:
+            os.remove(zip_path)
+
+    def test_single_file_too_large(self):
+        file_sizes = [FileCheckConst.MAX_FILE_IN_ZIP_SIZE + 1]
+        zip_path = self.create_fake_zip_with_sizes(file_sizes)
+        try:
+            with self.assertRaises(ValueError) as cm:
+                check_zip_file(zip_path)
+            self.assertIn("is too large to extract", str(cm.exception))
+        finally:
+            os.remove(zip_path)
+
+    def test_total_size_too_large(self):
+        count = 20
+        size_each = (FileCheckConst.MAX_ZIP_SIZE // count) + 1
+        file_sizes = [size_each] * count
+        zip_path = self.create_fake_zip_with_sizes(file_sizes)
+        try:
+            with self.assertRaises(ValueError) as cm:
+                check_zip_file(zip_path)
+            self.assertIn("Total extracted size exceeds the limit", str(cm.exception))
+        finally:
+            os.remove(zip_path)

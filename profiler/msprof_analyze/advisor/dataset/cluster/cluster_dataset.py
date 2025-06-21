@@ -159,7 +159,7 @@ class ClusterStepTraceTimeDataset(ClusterDataset):
                         .apply(lambda x: sorted(list(map(int, re.findall(r'\d+', x)))))
                         .tolist())
         # process rank info
-        rank_df = step_df[step_df['type'] == 'rank']
+        rank_df = step_df[step_df['type'] == 'rank'].copy()
         rank_df['step'] = rank_df['step'].fillna(Constant.DEFAULT_STEP)
         rank_df["step_rank"] = rank_df.apply(lambda row: f"{row['step']}_{row['index']}", axis=1)
         step_dict = (rank_df.set_index('step_rank')[['computing', 'communication_not_overlapped', 'free']].
@@ -228,8 +228,10 @@ class ClusterCommunicationDataset(ClusterDataset):
         return {
             self.RDMA_TIME_MS: 0,
             self.RDMA_SIZE_MB: 0,
+            self.RDMA_BANDWIDTH: 0,
             self.SDMA_TIME_MS: 0,
             self.SDMA_SIZE_MB: 0,
+            self.SDMA_BANDWIDTH: 0
         }
 
     def process(self, communication_json: dict):
@@ -327,7 +329,6 @@ class ClusterCommunicationDataset(ClusterDataset):
         for row in bandwidth_df.itertuples(index=False):
             if row.band_type == self.SDMA:
                 self.rank_bw_dict[row.step_rank][self.SDMA_SIZE_MB] = row.transit_size
-                self.rank_bw_dict[row.step_rank][self.SDMA_TIME_MS] = row.transit_time
                 self.rank_bw_dict[row.step_rank][self.SDMA_TIME_MS] = row.transit_time
                 self.rank_bw_dict[row.step_rank][self.SDMA_BANDWIDTH] = row.bandwidth
             elif row.band_type == self.RDMA:

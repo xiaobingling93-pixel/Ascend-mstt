@@ -55,7 +55,7 @@ class TestPrecisionDebugger(unittest.TestCase):
 
         mock_get_mode = MagicMock()
         mock_parse_json_config = MagicMock()
-        with patch.object(BasePrecisionDebugger, "parse_config_path", new=mock_parse_json_config), \
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
              patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler), \
              patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
@@ -83,7 +83,7 @@ class TestPrecisionDebugger(unittest.TestCase):
             debugger.start()
         self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
 
-        with patch.object(BasePrecisionDebugger, "parse_config_path", new=mock_parse_json_config), \
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
              patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler), \
              patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
@@ -139,7 +139,7 @@ class TestPrecisionDebugger(unittest.TestCase):
 
         common_config = CommonConfig(json_config)
         task_config = StatisticsConfig(json_config)
-        with patch.object(BasePrecisionDebugger, "parse_config_path", return_value=(common_config, task_config)), \
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", return_value=(common_config, task_config)), \
              patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             debugger = PrecisionDebugger()
         debugger.task = "statistics"

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-__version__ = '8.1.0'
+__version__ = '8.1.1'
 
 import subprocess
 import platform
@@ -30,12 +30,13 @@ INSTALL_REQUIRED = [
     "rich",
     "tqdm",
     "openpyxl >= 3.0.6",
-    "pyopenssl",
+    "pyopenssl==24.2.1",
     "twisted",
     "matplotlib",
     "tensorboard",
     "tabulate",
-    "pwinput"
+    "pwinput",
+    "psutil"
 ]
 
 EXCLUDE_PKGS = [

@@ -6,7 +6,7 @@
 #include "dynolog/src/tracing/IPCMonitor.h"
 #include <glog/logging.h>
 #include <nlohmann/json.hpp>
-#include <string.h>
+#include <cstring>
 #include <unistd.h>
 #include <cstdint>
 #include <ostream>
@@ -39,8 +39,8 @@ void IPCMonitor::loop()
 {
     while (ipc_manager_) {
         if (ipc_manager_->recv()) {
-          std::unique_ptr<ipcfabric::Message> msg = ipc_manager_->retrieve_msg();
-          processMsg(std::move(msg));
+            std::unique_ptr<ipcfabric::Message> msg = ipc_manager_->retrieve_msg();
+            processMsg(std::move(msg));
         }
         /* sleep override */
         usleep(kSleepUs);
@@ -68,9 +68,9 @@ void IPCMonitor::processMsg(std::unique_ptr<ipcfabric::Message> msg)
     // sizeof(msg->metadata.type) = 32, well above the size of the constant
     // strings we are comparing against. memcmp is safe
     if (memcmp( // NOLINT(facebook-security-vulnerable-memcmp)
-            msg->metadata.type,
-            kLibkinetoContext.data(),
-            kLibkinetoContext.size()) == 0) {
+        msg->metadata.type,
+        kLibkinetoContext.data(),
+        kLibkinetoContext.size()) == 0) {
         registerLibkinetoContext(std::move(msg));
     } else if (
         memcmp( // NOLINT(facebook-security-vulnerable-memcmp)
@@ -112,9 +112,9 @@ void IPCMonitor::processDataMsg(std::unique_ptr<ipcfabric::Message> msg)
         return;
     }
     if (memcmp( // NOLINT(facebook-security-vulnerable-memcmp)
-            msg->metadata.type,
-            kLibkinetoData.data(),
-            kLibkinetoData.size()) == 0) {
+        msg->metadata.type,
+        kLibkinetoData.data(),
+        kLibkinetoData.size()) == 0) {
         std::string message = std::string((char*)msg->buf.get(), msg->metadata.size);
         try {
             nlohmann::json result = nlohmann::json::parse(message);
@@ -154,7 +154,7 @@ void IPCMonitor::getLibkinetoOnDemandRequest(
     }
     std::unique_ptr<ipcfabric::Message> ret =
         ipcfabric::Message::constructMessage<decltype(ret_config)>(
-        ret_config, kLibkinetoRequest);
+            ret_config, kLibkinetoRequest);
     if (!ipc_manager_->sync_send(*ret, msg->src)) {
         LOG(ERROR) << "Failed to return config to libkineto: IPC sync_send fail";
     }
@@ -162,7 +162,8 @@ void IPCMonitor::getLibkinetoOnDemandRequest(
 }
 
 void IPCMonitor::registerLibkinetoContext(
-    std::unique_ptr<ipcfabric::Message> msg) {
+    std::unique_ptr<ipcfabric::Message> msg)
+{
     if (!ipc_manager_) {
         LOG(ERROR) << "Fabric Manager not initialized";
         return;
@@ -178,7 +179,7 @@ void IPCMonitor::registerLibkinetoContext(
     }
     std::unique_ptr<ipcfabric::Message> ret =
         ipcfabric::Message::constructMessage<decltype(size)>(
-        size, kLibkinetoContext);
+            size, kLibkinetoContext);
     if (!ipc_manager_->sync_send(*ret, msg->src)) {
         LOG(ERROR) << "Failed to send ctxt from dyno: IPC sync_send fail";
     }

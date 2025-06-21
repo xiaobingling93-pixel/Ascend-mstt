@@ -17,7 +17,6 @@ import os
 
 import mindspore
 import numpy as np
-import torch
 from mindspore._c_expression import typing
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException

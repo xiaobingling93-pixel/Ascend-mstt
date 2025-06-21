@@ -16,8 +16,7 @@
 
 DECLARE_string(certs_dir);
 
-namespace dynolog
-{
+namespace dynolog {
 // This is a simple service built using UNIX Sockets
 // with remote procedure calls implemented via JSON string.
 class SimpleJsonServerBase {
