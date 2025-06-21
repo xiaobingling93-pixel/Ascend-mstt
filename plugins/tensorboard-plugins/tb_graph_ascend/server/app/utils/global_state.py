@@ -80,7 +80,7 @@ class GraphState:
             'current_file_data': {},
             'current_hierarchy': {},
             'config_data': {
-                "run":"",
+                "run": "",
                 "npuUnMatchNodes": [],
                 "benchUnMatchNodes": [],
                 "npuMatchNodes": {},
