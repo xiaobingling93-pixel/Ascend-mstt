@@ -169,7 +169,6 @@ class GraphView:
     @staticmethod
     @wrappers.Request.application
     def save_matched_relations(request):
-        print("save_matched_relations", request)
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
         save_result = GraphService.save_matched_relations(meta_data)
         return http_util.Respond(request, json.dumps(save_result), "application/json")
