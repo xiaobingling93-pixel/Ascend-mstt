@@ -18,8 +18,7 @@ from typing import (
     Dict,
     List,
     Tuple,
-    Union,
-    TypeAlias,
+    Union
 )
 import os
 import numpy as np
@@ -47,25 +46,21 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
 else:
     import torch
 
-# 类型别名，分别表示前向、后向（MS/MT）和函数总体可能的返回类型
-ReturnForward: TypeAlias = Tuple[
+# 为了可读性，我们先给每种返回形态起个别名
+ForwardResult = Tuple[
     List[ComputeElement],
     Tuple[Any, ...],
     Dict[str, Any],
     Tuple[Any, ...],
 ]
 
-ReturnBackwardMS: TypeAlias = Tuple[
+BackwardResultMT = Tuple[
     List[ComputeElement],
     Union[Any, Tuple[Any, ...]],
     Tuple[Any, ...],
 ]
 
-ReturnType: TypeAlias = Union[
-    List[ComputeElement],  # 非 MS/MT 后向
-    ReturnForward,         # MS/MT 前向
-    ReturnBackwardMS,      # MS/MT 后向
-]
+PyTorchBackward = List[ComputeElement]
 
 
 class ApiInputAggregation:
@@ -212,7 +207,7 @@ class ApiRunner:
         api_input_aggregation,
         forward_or_backward: str,
         api_platform: str,
-    ) -> ReturnType:
+    ) -> Union[ForwardResult, BackwardResultMT, PyTorchBackward]:
         inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
                        for compute_element in api_input_aggregation.inputs)
         kwargs = {key: value.get_parameter(get_origin=False, tensor_platform=api_platform)
