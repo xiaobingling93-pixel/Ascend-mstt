@@ -24,6 +24,7 @@ import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects }
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
+import { PRECISION_DESC } from '../../../common/constant';
 
 const UNMATCHED_NODE_NAME = '无匹配节点';
 @customElement('tf-color-select')
@@ -141,6 +142,13 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         .toggle-legend-text {
           font-size: 15px;
         }
+        #question {
+          cursor: pointer;
+          position: relative;
+          font-size: 10px;
+          top: -4px;
+          left: 2px;
+        }
 
         /* Vaadin 组合框样式 */
         vaadin-combo-box {
@@ -161,7 +169,15 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
             <div>
               <template is="dom-if" if="[[!isOverflowFilter]]">
                 <div class="toolbar">
-                  <div style="font-size: 15px">精度误差</div>
+                  <div style="font-size: 15px">
+                    精度误差
+                  <vaadin-icon id="question" icon="vaadin:question-circle"></vaadin-icon>
+                  <vaadin-tooltip
+                    for="question"
+                    text=[[precisionDesc]]
+                    position="end"
+                  ></vaadin-tooltip>
+                  </div>
                   <div style="margin-left: auto; display: flex; gap: 8px;">
                     <vaadin-icon icon="vaadin:cog-o" on-click="_clickSetting"></vaadin-icon>
                     <template is="dom-if" if="[[showSwitchIcon]]">
@@ -383,6 +399,12 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @property({ type: Object })
   selection: any = {};
 
+  @property({ type: String })
+  task: string = '';
+
+  @property({ type: String })
+  precisionDesc: string = PRECISION_DESC[this.task];
+
   @observe('colorset')
   _observeColorSet(): void {
     if (_.isEmpty(this.colorset)) {
@@ -399,6 +421,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     } else {
       return;
     }
+  }
+  @observe('task')
+  _observeTask(): void {
+    this.set('precisionDesc', PRECISION_DESC[this.task]);
   }
 
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor

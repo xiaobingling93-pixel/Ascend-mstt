@@ -38,6 +38,7 @@ export interface GraphConfigType {
     microSteps: number;
     isSingleGraph: boolean;
     matchedConfigFiles: string[];
+    task: string;
 }
 
 export interface GraphAllNodeType {

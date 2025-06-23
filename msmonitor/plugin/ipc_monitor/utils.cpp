@@ -366,9 +366,8 @@ std::string PathUtils::DirName(const std::string &path)
     if (path.empty()) {
         return "";
     }
-    char tempPath[PATH_MAX] = {0};
-    strncpy(tempPath, path.c_str(), path.size() < PATH_MAX ? path.size() : PATH_MAX);
-    char* cPath = dirname(tempPath);
+    std::string tempPath = std::string(path.begin(), path.end());
+    char* cPath = dirname(const_cast<char *>(tempPath.data()));
     return cPath ? std::string(cPath) : "";
 }
 

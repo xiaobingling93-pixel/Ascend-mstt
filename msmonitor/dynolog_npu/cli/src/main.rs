@@ -3,7 +3,7 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 use rustls::{Certificate, RootCertStore, PrivateKey, ClientConnection, StreamOwned};
 use std::sync::Arc;
 use std::net::TcpStream;
@@ -23,7 +23,6 @@ use x509_parser::public_key::RSAPublicKey;
 use x509_parser::der_parser::oid;
 use num_bigint::BigUint;
 use openssl::pkey::PKey;
-use std::io::Read;
 
 // Make all the command modules accessible to this file.
 mod commands;
@@ -55,14 +54,15 @@ const DYNO_PORT: u16 = 1778;
 const MIN_RSA_KEY_LENGTH: u64 = 3072; // 最小 RSA 密钥长度（位）
 
 #[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
 struct Opts {
-    #[clap(long, default_value = "localhost")]
+    #[arg(long, default_value = "localhost")]
     hostname: String,
-    #[clap(long, default_value_t = DYNO_PORT)]
+    #[arg(long, default_value_t = DYNO_PORT)]
     port: u16,
-    #[clap(long, required = true)]
+    #[arg(long, required = true)]
     certs_dir: String,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Command,
 }
 
@@ -112,44 +112,44 @@ enum Command {
     /// Capture gputrace
     Gputrace {
         /// Job id of the application to trace.
-        #[clap(long, default_value_t = 0)]
+        #[arg(long, default_value_t = 0)]
         job_id: u64,
         /// List of pids to capture trace for (comma separated).
-        #[clap(long, default_value = "0")]
+        #[arg(long, default_value = "0")]
         pids: String,
         /// Duration of trace to collect in ms.
-        #[clap(long, default_value_t = 500)]
+        #[arg(long, default_value_t = 500)]
         duration_ms: u64,
         /// Training iterations to collect, this takes precedence over duration.
-        #[clap(long, default_value_t = -1)]
+        #[arg(long, default_value_t = -1)]
         iterations: i64,
         /// Log file for trace.
-        #[clap(long)]
+        #[arg(long)]
         log_file: String,
         /// Unix timestamp used for synchronized collection (milliseconds since epoch).
-        #[clap(long, default_value_t = 0)]
+        #[arg(long, default_value_t = 0)]
         profile_start_time: u64,
         /// Start iteration roundup, starts an iteration based trace at a multiple
         /// of this value.
-        #[clap(long, default_value_t = 1)]
+        #[arg(long, default_value_t = 1)]
         profile_start_iteration_roundup: u64,
         /// Max number of processes to profile.
-        #[clap(long, default_value_t = 3)]
+        #[arg(long, default_value_t = 3)]
         process_limit: u32,
         /// Record PyTorch operator input shapes and types.
-        #[clap(long, action)]
+        #[arg(long)]
         record_shapes: bool,
         /// Profile PyTorch memory.
-        #[clap(long, action)]
+        #[arg(long)]
         profile_memory: bool,
         /// Capture Python stacks in traces.
-        #[clap(long, action)]
+        #[arg(long)]
         with_stacks: bool,
         /// Annotate operators with analytical flops.
-        #[clap(long, action)]
+        #[arg(long)]
         with_flops: bool,
         /// Capture PyTorch operator modules in traces.
-        #[clap(long, action)]
+        #[arg(long)]
         with_modules: bool,
     },
     /// Capture nputrace. Subcommand functions aligned with Ascend Torch Profiler.
