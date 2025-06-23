@@ -137,4 +137,10 @@ class TestGraphViews:
         response_iter = GraphView.get_node_info(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
+    
+    def test_save_matched_relations(self):
+        request = TestGraphViews.create_mock_request("/data/plugin/graph_ascend/saveMatchedRelations?metaData={\"run\":\"st_test_cases\",\"tag\":\"mock_compare_resnet_data")
+        response_iter = GraphView.save_matched_relations(request, TestGraphViews.start_response)
+        response_body = b''.join(response_iter).decode('utf-8')
+        print(response_body)
         
