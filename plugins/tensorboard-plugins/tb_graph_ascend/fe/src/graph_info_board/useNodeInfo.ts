@@ -189,7 +189,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       parallelMergeInfo[nodeName] = safeJSONParse(npuparallelMergeInfo).join('\n');
     }
     if (!isEmpty(benchparallelMergeInfo)) {
-      parallelMergeInfo[benchNodeName] = safeJSONParse(benchparallelMergeInfo);
+      parallelMergeInfo[benchNodeName] = safeJSONParse(benchparallelMergeInfo).join('\n');
     }
     if (!isEmpty(parallelMergeInfo)) {
       parallelMergeInfo[title] = 'parallelMergeInfo';
