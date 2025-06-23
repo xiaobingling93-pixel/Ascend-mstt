@@ -136,6 +136,7 @@ class GraphService:
             # 读取目录下配置文件列表
             config_files = GraphUtils.find_config_files(run)
             config['matchedConfigFiles'] = config_files
+            config['task'] = graph_data.get('task')
             return {'success': True, 'data': config}
         except Exception as e:
             return {'success': False, 'error': '获取配置信息失败,请检查目录中第一个文件'}

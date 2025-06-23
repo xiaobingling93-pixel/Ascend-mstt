@@ -55,6 +55,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 matchedlist="[[matchedlist]]"
                 minimap-vis="{{minimapVis}}"
                 is-single-graph="{{isSingleGraph}}"
+                task="[[task]]"
                 is-overflow-filter="{{isOverflowFilter}}"
                 on-fit-tap="onFitTap"
             ></graph-controls-board>
@@ -180,6 +181,8 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     @property({ type: Object })
     matchedConfigFiles: string[] = [];
+    @property({ type: Object })
+    task: string = '';
 
     private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
@@ -265,6 +268,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('overflowcheck', config.overflowCheck);
             this.set('colorset', Object.entries(config.colors || {}));
             this.set('isSingleGraph', config.isSingleGraph);
+            this.set('task', config.task)
             this.set('matchedConfigFiles', ['未选择', ...config.matchedConfigFiles]);
             const microstepsCount = Number(config.microSteps);
             if (microstepsCount) {
