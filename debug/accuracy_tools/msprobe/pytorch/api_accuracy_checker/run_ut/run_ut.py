@@ -293,7 +293,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     if grad_input_index is not None:
         grad_index = grad_input_index.get('grad_index')
 
-    if need_backward:
+    if need_backward and out is not None:
         if need_to_backward(grad_index, out):
             backward_args = backward_content[api_full_name].get("input")
             func_options = {
