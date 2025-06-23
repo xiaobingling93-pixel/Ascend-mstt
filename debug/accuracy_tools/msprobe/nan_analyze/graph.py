@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.nan_analyze.utils import FileCache, RankPath, is_ignore_op, check_item_anomaly, NanAnalyseConst
+from mstt.debug.accuracy_tools.msprobe.core.common.exceptions import MsprobeException
 
 
 @dataclass
@@ -52,6 +53,8 @@ class DataNode:
 
     def find_stack(self, stack_info):
         for item in stack_info.values():
+            if not isinstance(item, list):
+                raise MsprobeException(4, f'The value\'s type in stack.json should be a list, not {type(item)}!')
             if len(item) >= 2 and self.op_name in item[0]:
                 return item[1]
         return {}
