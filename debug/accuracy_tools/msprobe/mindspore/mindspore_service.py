@@ -39,11 +39,11 @@ else:
     pijit_label = True
 
 
-class MindsporeService(BaseService):    
+class MindsporeService(BaseService):
     @property
     def _get_framework_type(self):
         return Const.MT_FRAMEWORK if is_mindtorch() else Const.MS_FRAMEWORK
-    
+
     @staticmethod
     def _get_current_rank():
         return get_rank_if_initialized()

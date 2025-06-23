@@ -23,7 +23,7 @@ from msprobe.pytorch.common.utils import is_recomputation, torch_version_above_o
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
 
-class PytorchHookManager(BaseHookManager): 
+class PytorchHookManager(BaseHookManager):
     @property
     def _is_recompute(self):
         return is_recomputation()
@@ -41,7 +41,7 @@ class PytorchHookManager(BaseHookManager):
         kwargs = kwargs_or_output if torch_version_above_or_equal_2 else {}
         output = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
         return kwargs, output
-    
+
     def build_hook(self, hook_type, name):
         if hook_type == Const.API:
             full_forward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.FORWARD
@@ -51,10 +51,10 @@ class PytorchHookManager(BaseHookManager):
         hookset = HookSet(
             forward_hook=self._build_forward_hook(hook_type, full_forward_name),
             forward_pre_hook=self._build_forward_pre_hook(hook_type, full_forward_name, name),
-            backward_hook=self._build_backward_hook(hook_type, full_backward_name)        
+            backward_hook=self._build_backward_hook(hook_type, full_backward_name)
         )
         return hookset
-    
+
     def _need_exchange(self, module):
         return True
 
@@ -62,7 +62,7 @@ class PytorchHookManager(BaseHookManager):
         params_dict = {}
         if self.config.task != Const.STRUCTURE:
             params_dict = {
-                    key.split(Const.SEP)[-1]: value
-                    for key, value in module.named_parameters(recurse=False)
-                    }
+                key.split(Const.SEP)[-1]: value
+                for key, value in module.named_parameters(recurse=False)
+            }
         return params_dict

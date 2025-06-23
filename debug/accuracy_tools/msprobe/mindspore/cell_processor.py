@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 from collections import OrderedDict
 
 from mindspore import Tensor
@@ -21,6 +22,8 @@ from mindspore.ops.operations import _inner_ops as inner
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import ModuleQueue, ThreadSafe
 from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope, BaseScope
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.log import logger
@@ -32,7 +35,6 @@ from msprobe.mindspore.common.utils import (
 )
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
-from msprobe.core.common.runtime import Runtime
 
 
 def get_cell_construct(construct):
@@ -40,13 +42,15 @@ def get_cell_construct(construct):
         if hasattr(self, 'msprobe_hook'):
             setattr(self, 'msprobe_input_kwargs', kwargs)
         return construct(self, *args, **kwargs)
+
     return _construct
 
 
 class CellProcessor:
+    cell_queue = ModuleQueue()
     cell_count = {}
-    cell_stack = []
-    api_parent_node = None
+    cell_stack = {}
+    api_parent_node = {}
     module_node = {}
     cell_bw_hook_kernels = {}
     cell_backward_pre_hook = []
@@ -65,9 +69,10 @@ class CellProcessor:
 
     @classmethod
     def reset_cell_stats(cls):
+        cls.cell_queue = ModuleQueue()
         cls.cell_count = {}
-        cls.cell_stack = []
-        cls.api_parent_node = None
+        cls.cell_stack = {}
+        cls.api_parent_node = {}
         cls.module_node = {}
         cls.cell_bw_hook_kernels = {}
         cls.cell_backward_pre_hook = []
@@ -122,6 +127,7 @@ class CellProcessor:
                 GraphModeCellDump(config, cells_and_names_in_graph_mode, strict=False).handle()
 
     def build_cell_hook(self, cell_name, build_data_hook):
+        @ThreadSafe.synchronized
         def forward_pre_hook(cell, args):
             index = CellProcessor.set_and_get_calls_number(cell_name)
             full_forward_name = f'{cell_name}{Const.FORWARD}{Const.SEP}{index}'
@@ -146,11 +152,13 @@ class CellProcessor:
                 setattr(cell, 'msprobe_forward_hook', True)
 
             def get_backward_hook(backward_data_hook, full_backward_name):
+                @ThreadSafe.synchronized
                 def backward_hook_fn(cell, grad_input, grad_output):
                     new_output = backward_data_hook(cell, grad_input, grad_output)
                     self.set_construct_info_in_hook(full_backward_name)
                     cell.has_pre_hook_called = False
                     return new_output
+
                 return backward_hook_fn
 
             enable_hooked = sum(
@@ -170,13 +178,14 @@ class CellProcessor:
 
             return args
 
+        @ThreadSafe.synchronized
         def forward_hook(cell, args, kwargs_or_output, output_or_kwargs=None):
             index = CellProcessor.cell_count.get(cell_name, 0)
             full_forward_name = f'{cell_name}{Const.FORWARD}{Const.SEP}{index}'
             full_backward_name = f'{cell_name}{Const.BACKWARD}{Const.SEP}{index}'
 
             self.set_construct_info_in_hook(full_forward_name)
-            
+
             hook_set = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
             hook_result = hook_set.forward_hook(cell, args, kwargs_or_output, output_or_kwargs)
             if hook_result is not None:
@@ -199,6 +208,7 @@ class CellProcessor:
                 outputs = new_outputs
 
             def get_backward_pre_hook(full_backward_name, backward_data_hook):
+                @ThreadSafe.synchronized
                 def backward_pre_hook_fn(cell, grad_output):
                     cell.has_pre_hook_called = True
                     self.set_construct_info_in_pre_hook(full_backward_name)
@@ -206,6 +216,7 @@ class CellProcessor:
                         backward_data_hook(cell, (), grad_output)
                         self.set_construct_info_in_hook(full_backward_name)
                         cell.has_pre_hook_called = False
+
                 return backward_pre_hook_fn
 
             backward_pre_hook = OrderedDict()
@@ -233,18 +244,28 @@ class CellProcessor:
         return forward_pre_hook
 
     def set_construct_info_in_pre_hook(self, full_name):
-        if self.cell_stack:
-            CellProcessor.module_node[full_name] = self.cell_stack[-1]
+        tid = threading.get_ident()
+        if tid not in self.cell_stack:
+            CellProcessor.cell_stack[tid] = []
+
+        if self.cell_stack[tid]:
+            CellProcessor.module_node[full_name] = self.cell_stack[tid][-1]
         else:
-            CellProcessor.module_node[full_name] = None
-        CellProcessor.cell_stack.append(full_name)
-        CellProcessor.api_parent_node = full_name
+            parent_name = CellProcessor.cell_queue.find_last(full_name)
+            CellProcessor.module_node[full_name] = parent_name
+
+        CellProcessor.cell_queue.add_name(full_name)
+        CellProcessor.cell_stack[tid].append(full_name)
+        CellProcessor.api_parent_node[tid] = full_name
         if self.scope:
             self.scope.begin_module(full_name)
 
     def set_construct_info_in_hook(self, full_name):
-        if self.cell_stack:
-            CellProcessor.cell_stack.pop()
-        CellProcessor.api_parent_node = CellProcessor.cell_stack[-1] if self.cell_stack else None
+        tid = threading.get_ident()
+        CellProcessor.api_parent_node[tid] = None
+        if self.cell_stack.get(tid):
+            CellProcessor.cell_stack[tid].pop()
+        if self.cell_stack.get(tid):
+            CellProcessor.api_parent_node[tid] = CellProcessor.cell_stack[tid][-1]
         if self.scope:
             self.scope.end_module(full_name)

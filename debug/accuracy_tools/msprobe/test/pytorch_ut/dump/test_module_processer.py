@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+
 import unittest
 from unittest.mock import patch, MagicMock
-
 import torch
 
 import msprobe.pytorch.dump.module_dump.module_processer as mp
@@ -78,9 +79,9 @@ class TestWrapper(unittest.TestCase):
 class TestModuleProcesser(unittest.TestCase):
     def setUp(self):
         ModuleProcesser.module_count = {}
-        ModuleProcesser.module_stack = []
+        ModuleProcesser.module_stack = {}
         ModuleProcesser.module_node = {}
-        ModuleProcesser.api_parent_node = ""
+        ModuleProcesser.api_parent_node = {}
 
         self.scope = ModuleRangeScope([], [])
         self.mock_scope = MagicMock()
@@ -199,22 +200,25 @@ class TestModuleProcesser(unittest.TestCase):
         ModuleProcesser.reset_module_stats()
 
         self.assertEqual(ModuleProcesser.module_count, {})
-        self.assertEqual(ModuleProcesser.module_stack, [])
-        self.assertEqual(ModuleProcesser.api_parent_node, "")
+        self.assertEqual(ModuleProcesser.module_stack, {})
+        self.assertEqual(ModuleProcesser.api_parent_node, {})
         self.assertEqual(ModuleProcesser.module_node, {})
         self.assertEqual(ModuleProcesser.module_bw_hook_kernels, {})
         self.assertFalse(ModuleProcesser.enable_module_dump)
 
     def test_set_construct_info_in_pre_hook_with_stack(self):
         processor = ModuleProcesser(self.mock_scope)
-        ModuleProcesser.module_stack = ["parent_module"]
+        ModuleProcesser.module_stack[threading.get_ident()] = ["parent_module"]
         processor.scope = self.mock_scope
 
         processor.set_construct_info_in_pre_hook("current_module")
 
         self.assertEqual(ModuleProcesser.module_node["current_module"], "parent_module")
-        self.assertEqual(ModuleProcesser.module_stack, ["parent_module", "current_module"])
-        self.assertEqual(ModuleProcesser.api_parent_node, "current_module")
+        self.assertEqual(
+            ModuleProcesser.module_stack[threading.get_ident()],
+            ["parent_module", "current_module"]
+        )
+        self.assertEqual(ModuleProcesser.api_parent_node[threading.get_ident()], "current_module")
         self.mock_scope.begin_module.assert_called_once_with("current_module")
 
     def test_set_construct_info_in_pre_hook_empty_stack(self):
@@ -223,19 +227,19 @@ class TestModuleProcesser(unittest.TestCase):
         processor.set_construct_info_in_pre_hook("root_module")
 
         self.assertIsNone(ModuleProcesser.module_node["root_module"])
-        self.assertEqual(ModuleProcesser.module_stack, ["root_module"])
-        self.assertEqual(ModuleProcesser.api_parent_node, "root_module")
+        self.assertEqual(ModuleProcesser.module_stack[threading.get_ident()], ["root_module"])
+        self.assertEqual(ModuleProcesser.api_parent_node[threading.get_ident()], "root_module")
 
     def test_set_construct_info_in_hook_with_forward(self):
         mp.torch_version_above_or_equal_2 = True
         processor = ModuleProcesser(self.mock_scope)
-        ModuleProcesser.module_stack = ["parent", "current"]
+        ModuleProcesser.module_stack = {threading.get_ident(): ["parent", "current"]}
         processor.scope = self.mock_scope
 
         processor.set_construct_info_in_hook("current")
 
-        self.assertEqual(ModuleProcesser.module_stack, ["parent"])
-        self.assertEqual(ModuleProcesser.api_parent_node, "parent")
+        self.assertEqual(ModuleProcesser.module_stack[threading.get_ident()], ["parent"])
+        self.assertEqual(ModuleProcesser.api_parent_node[threading.get_ident()], "parent")
         self.mock_scope.end_module.assert_called_once_with("current")
 
     def test_set_construct_info_in_hook_with_backward(self):
@@ -245,7 +249,7 @@ class TestModuleProcesser(unittest.TestCase):
 
         processor.set_construct_info_in_hook("backward_module", is_forward=False)
 
-        self.assertEqual(ModuleProcesser.api_parent_node, "backward_module")
+        self.assertEqual(ModuleProcesser.api_parent_node[threading.get_ident()], "backward_module")
         self.mock_scope.begin_module.assert_called_once_with("backward_module")
 
     def test_set_construct_info_in_hook_empty_stack(self):
@@ -254,7 +258,7 @@ class TestModuleProcesser(unittest.TestCase):
 
         processor.set_construct_info_in_hook("module")
 
-        self.assertIsNone(ModuleProcesser.api_parent_node)
+        self.assertEqual(ModuleProcesser.api_parent_node, {threading.get_ident(): None})
 
 
 if __name__ == "__main__":
