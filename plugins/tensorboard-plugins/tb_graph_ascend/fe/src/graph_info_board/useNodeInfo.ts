@@ -161,7 +161,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       stackInfo[nodeName] = safeJSONParse(npustackInfo.replace(/'/g, '"'))?.join('\n');
     }
     if (!isEmpty(benchstackInfo)) {
-      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"'));
+      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"')).join('\n');
     }
     if (!isEmpty(stackInfo)) {
       stackInfo[title] = 'stackInfo';
