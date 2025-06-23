@@ -4,6 +4,29 @@ export BUILD_PROMETHEUS=0
 export BUILD_TENSORBOARD=1
 export USE_TENSORBOARD="OFF"
 
+# 设置 CARGO_HOME
+export CARGO_HOME="/root/.cargo"
+
+# 创建 Cargo 配置目录
+mkdir -p ${CARGO_HOME}
+
+# 创建 config.toml(安全编译选项)
+cat > ${CARGO_HOME}/config.toml << EOF
+[net]
+git-fetch-with-cli = true
+
+[build]
+rustflags = [
+    "-C", "relocation_model=pie",
+    "-C", "link-args=-Wl,-z,now",
+    "-C", "link-args=-Wl,-z,relro",
+    "-C", "strip=symbols",
+    "-C", "overflow_checks",
+    "-C", "link-args=-static-libgcc",
+    "-C", "link-args=-static-libstdc++"
+]
+EOF
+
 check_gcc_version() {
     if ! command -v gcc >/dev/null 2>&1; then
         echo "ERROR: gcc command not found"
