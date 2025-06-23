@@ -20,6 +20,7 @@ from unittest.mock import patch
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
+from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 from msprobe.mindspore.common.const import Const
 
@@ -47,7 +48,9 @@ class TestTaskHandlerFactory(TestCase):
         config.execution_mode = Const.GRAPH_GE_MODE
 
         handler = TaskHandlerFactory.create(config)
-        self.assertTrue(isinstance(handler, KernelGraphDump))
+        self.assertTrue(isinstance(handler, tuple))
+        self.assertTrue(isinstance(handler[1], KernelKbykDump))
+        self.assertTrue(isinstance(handler[0], KernelGraphDump))
 
         with patch("msprobe.mindspore.task_handler_factory.TaskHandlerFactory.tasks", new=tasks):
             with self.assertRaises(Exception) as context:
