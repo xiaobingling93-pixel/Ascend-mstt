@@ -21,6 +21,8 @@ from unittest.mock import patch
 
 from msprobe.nan_analyze.graph import CommunicationNode, DataNode
 from msprobe.nan_analyze.utils import RankPath
+
+from msprobe.core.common.exceptions import MsprobeException
 from test_nan_analyzer import DumpDataBuilder, gen_normal_dump_json, MockedFileCache, json_dict, gen_stack_json, do_nothing
 
 
@@ -121,6 +123,9 @@ class TestDataNode(unittest.TestCase):
             data_node = DataNode(op_name, 0, dump_json[0]['data'][op_name])
             stack_info = data_node.find_stack(json_dict[os.path.join('./step0', 'rank', 'stack.json')])
             self.assertEqual(stack_info[0], 'File /root/example.py, line 10, in test_fcn, \\n test(tensor)')
+            with self.assertRaises(MsprobeException) as context:
+                data_node.find_stack({op_name: 'blabla'})
+                self.assertEqual(context.exception.code, 4)
 
     def test_find_complete_construct(self):
         with patch('msprobe.nan_analyze.graph.FileCache', MockedFileCache):
