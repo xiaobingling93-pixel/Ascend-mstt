@@ -39,12 +39,19 @@ class KernelKbykDump:
         common_set["input_output"] = 0
         common_set["kernels"] = []
         common_set["support_device"] = [0, 1, 2, 3, 4, 5, 6, 7]
-        e2e_set = {
-                    "enable": not config.async_dump,
-                    "trans_flag": True,
-                    "stat_calc_mode": config.stat_cal_mode,
-                    "device_stat_precision_mode": config.device_stat_precision_mode,
-                  }
+
+        if config.stat_cal_mode and config.device_stat_precision_mode:
+            e2e_set = {
+                        "enable": not config.async_dump,
+                        "trans_flag": True,
+                        "stat_calc_mode": config.stat_cal_mode,
+                        "device_stat_precision_mode": config.device_stat_precision_mode
+                    }
+        else:
+            e2e_set = {
+                        "enable": not config.async_dump,
+                        "trans_flag": True
+                    }
 
         if config.list:
             common_set["dump_mode"] = 1

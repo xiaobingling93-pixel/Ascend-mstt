@@ -1,5 +1,5 @@
-/**
- * Copyright 2024 Huawei Technologies Co., Ltd
+/*
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 
 namespace py = pybind11;
 
-HookDynamicLoader &HookDynamicLoader::GetInstance() 
+HookDynamicLoader &HookDynamicLoader::GetInstance()
 {
     static HookDynamicLoader instance;
     return instance;
@@ -39,7 +39,7 @@ bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionNa
     return true;
 }
 
-bool HookDynamicLoader::LoadLibrary() 
+bool HookDynamicLoader::LoadLibrary()
 {
     std::string msprobePath = "";
     // 获取gil锁
@@ -83,7 +83,7 @@ bool HookDynamicLoader::LoadLibrary()
     return true;
 }
 
-bool HookDynamicLoader::UnloadLibrary() 
+bool HookDynamicLoader::UnloadLibrary()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!handle_) {
@@ -98,13 +98,13 @@ bool HookDynamicLoader::UnloadLibrary()
     return true;
 }
 
-void *HookDynamicLoader::GetHooker(const std::string &funcName) 
+void *HookDynamicLoader::GetHooker(const std::string &funcName)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     auto iter = funcMap_.find(funcName);
     if (iter == funcMap_.end()) {
-      MS_LOG(WARNING) << "Function not found: " << funcName;
-      return nullptr;
+        MS_LOG(WARNING) << "Function not found: " << funcName;
+        return nullptr;
     }
     return iter->second;
 }

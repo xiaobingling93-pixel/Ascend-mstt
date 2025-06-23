@@ -81,13 +81,12 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.common_config.dump_path = dump_path if dump_path else self.common_config.dump_path
         self.config = DebuggerConfig(self.common_config, self.task_config)
 
-        if self._need_msprobe_c() and _msprobe_c:
+        if self._is_kernel_dump() and _msprobe_c:
             os.environ["MS_HOOK_ENABLE"] = "on"
             _msprobe_c._PrecisionDebugger(framework="MindSpore", config_path=config_path)
 
         self.config.execution_mode = self._get_execution_mode()
         if self._need_service():
-            self.config.check_config_with_l2()
             self.service = MindsporeService(self.config)
 
         Runtime.step_count = 0
@@ -119,8 +118,6 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     @staticmethod
     def _is_graph_dump(config: DebuggerConfig):
-        if config.level != MsConst.KERNEL:
-            return False
         if not config.list:
             return True
         is_graph = any(item.startswith("name-regex") for item in config.list)
@@ -132,28 +129,22 @@ class PrecisionDebugger(BasePrecisionDebugger):
         instance = cls._get_instance()
         if instance is None:
             return
-        if cls._need_msprobe_c() and _msprobe_c:
-            _msprobe_c._PrecisionDebugger().start()
-        check_token_range(token_range)
-        instance.config.execution_mode = cls._get_execution_mode()
-        if cls._need_service():
-            if not instance.service:
-                instance.service = MindsporeService(instance.config)
-            instance.config.check_model(model, token_range)
-            instance.service.start(model, token_range)
+        if cls._is_kernel_dump():
+            cls._start_kernel_dump()
         else:
-            if not instance.first_start:
-                get_api_register().restore_all_api()
-                handler = TaskHandlerFactory.create(instance.config, model)
-                handler.handle()
-                if enable_dynamic_kbyk_dump:
-                    _set_init_iter(0)
-            if enable_dynamic_kbyk_dump:
-                is_valid_rank = (not instance.config.rank or Runtime.rank_id in instance.config.rank)
-                is_valid_step = (not instance.config.step or Runtime.step_count in instance.config.step)
-                if is_valid_rank and is_valid_step:
-                    _dump_start()
-            Runtime.is_running = True
+            check_token_range(token_range)
+            instance.config.execution_mode = cls._get_execution_mode()
+            if cls._need_service():
+                if not instance.service:
+                    instance.service = MindsporeService(instance.config)
+                instance.config.check_model(model, token_range)
+                instance.service.start(model, token_range)
+            else:
+                if not instance.first_start:
+                    get_api_register().restore_all_api()
+                    handler = TaskHandlerFactory.create(instance.config, model)
+                    handler.handle()
+                Runtime.is_running = True
         instance.first_start = True
 
     @classmethod
@@ -170,7 +161,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             Runtime.is_running = False
         if enable_dynamic_kbyk_dump:
             _dump_stop()
-        if cls._need_msprobe_c() and _msprobe_c:
+        if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
     
     @classmethod
@@ -185,7 +176,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             GraphModeCellDump.step()
         if enable_dynamic_kbyk_dump:
             _dump_step(1)
-        if cls._need_msprobe_c() and _msprobe_c:
+        if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().step()
 
         HOOKCell.cell_count = defaultdict(int)
@@ -224,14 +215,41 @@ class PrecisionDebugger(BasePrecisionDebugger):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if instance.config.level_ori == Const.LEVEL_L2:
+            return False
         if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
             return False
         else:
-            return instance.config.task != Const.FREE_BENCHMARK and not instance._is_graph_dump(instance.config)
-
+            return instance.config.task != Const.FREE_BENCHMARK
+        
     @classmethod
-    def _need_msprobe_c(cls):
+    def _is_kernel_dump(cls):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         return instance.config.level_ori == Const.LEVEL_L2
+    
+    @classmethod
+    def _start_kernel_dump(cls):
+        instance = cls.get_instance()
+        is_graph_config = cls._is_graph_dump(instance.config)
+        instance.config.check_config_with_l2(is_graph_config)
+        if not is_graph_config:
+            if not instance.service:
+                instance.service = MindsporeService(instance.config)
+            instance.service.start()
+        else:
+            if _msprobe_c:
+                _msprobe_c._PrecisionDebugger().start()
+            if not instance.first_start:
+                get_api_register().restore_all_api()
+                handlers = TaskHandlerFactory.create(instance.config)
+                for handler in handlers:
+                    handler.handle()
+                if enable_dynamic_kbyk_dump:
+                    _set_init_iter(0)
+            if enable_dynamic_kbyk_dump:
+                is_valid_rank = (not instance.config.rank or Runtime.rank_id in instance.config.rank)
+                is_valid_step = (not instance.config.step or Runtime.step_count in instance.config.step)
+                if is_valid_rank and is_valid_step:
+                    _dump_start()

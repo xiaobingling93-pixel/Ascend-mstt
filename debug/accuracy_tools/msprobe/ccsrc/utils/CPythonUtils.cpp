@@ -181,7 +181,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore) noexcept
         return PythonObject();
     }
 
-    PyObject* o = PyObject_CallObject(ptr, args.IsNone() ? nullptr : args);
+    PyObject* o = PyObject_CallObject(ptr, args.IsNone() ? nullptr : reinterpret_cast<PyObject*>(&args));
     if (o == nullptr && ignore) {
         PyErr_Clear();
     }

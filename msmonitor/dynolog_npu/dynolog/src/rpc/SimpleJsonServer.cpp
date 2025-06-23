@@ -25,6 +25,8 @@ DEFINE_string(certs_dir, "", "TLS crets dir");
 constexpr int CLIENT_QUEUE_LEN = 50;
 const std::string NO_CERTS_MODE = "NO_CERTS";
 const size_t MIN_RSA_KEY_LENGTH = 3072;
+constexpr char BACKSPACE_ASCII = 8;
+constexpr char DEL_ASCII = 127;
 
 namespace dynolog {
 
@@ -407,42 +409,35 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store)
     return is_revoked;
 }
 
-
 // 禁用终端回显的函数，但显示星号
-std::string get_password_with_stars()
+int get_password_with_stars(char* buf, size_t bufsize)
 {
     struct termios old_flags;
     struct termios new_flags;
-    std::string password;
+    size_t idx = 0;
 
-    // 获取当前终端设置
     tcgetattr(fileno(stdin), &old_flags);
     new_flags = old_flags;
-    new_flags.c_lflag &= ~ECHO;  // 禁用回显
-
-    // 设置新的终端属性
+    new_flags.c_lflag &= ~ECHO;
     tcsetattr(fileno(stdin), TCSANOW, &new_flags);
 
-    // 读取密码并显示星号
     char ch;
-    while ((ch = getchar()) != '\n') {
-        if (ch == 127 || ch == 8) {  // 处理退格键 (ASCII 127 或 8)
-            if (!password.empty()) {
-                password.pop_back();
-                std::cout << "\b \b";  // 删除一个星号
-                std::cout.flush();     // 立即刷新输出
+    while ((ch = getchar()) != '\n' && idx + 1 < bufsize) {
+        if (ch == DEL_ASCII || ch == BACKSPACE_ASCII) {
+            if (idx > 0) {
+                idx--;
+                printf("\b \b");
+                fflush(stdout);
             }
         } else {
-            password += ch;
-            std::cout << '*';         // 显示星号
-            std::cout.flush();        // 立即刷新输出
+            buf[idx++] = ch;
+            printf("*");
+            fflush(stdout);
         }
     }
-
-    // 恢复原来的终端设置
+    buf[idx] = '\0';
     tcsetattr(fileno(stdin), TCSANOW, &old_flags);
-
-    return password;
+    return idx;
 }
 
 // 验证证书版本和签名算法
@@ -611,26 +606,26 @@ void SimpleJsonServerBase::load_private_key(SSL_CTX* ctx, const std::string& ser
     rewind(key_file);
 
     if (is_encrypted) {
-        std::string password;
+        char password[256] = {0};
         std::cout << "Please enter the certificate password: ";
-        password = get_password_with_stars();
+        get_password_with_stars(password, sizeof(password));
         std::cout << std::endl;
 
         EVP_PKEY* pkey = PEM_read_PrivateKey(
             key_file,
             nullptr,
             [](char* buf, int size, int rwflag, void* userdata) -> int {
-                const std::string* password = static_cast<const std::string*>(userdata);
-                if (password->size() > static_cast<size_t>(size)) {
-                    return 0;
-                }
-                password->copy(buf, password->size());
-                return password->size();
+                const char* password = static_cast<const char*>(userdata);
+                int pwlen = strlen(password);
+                if (pwlen > size) return 0;
+                std::copy(password, password + pwlen, buf);
+                return pwlen;
             },
-            const_cast<std::string*>(&password));
+            password);
 
         fclose(key_file);
-        secure_clear_password(password);
+        // 直接清空 char[] 密码
+        std::fill(std::begin(password), std::end(password), 0);
 
         if (!pkey) {
             ERR_print_errors_fp(stderr);

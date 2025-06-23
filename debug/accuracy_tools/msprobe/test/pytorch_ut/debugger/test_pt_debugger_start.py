@@ -51,20 +51,20 @@ class MultiStartDebugger:
         common_config = CommonConfig(json_config)
         task_config = StatisticsConfig(json_config)
         with patch.object(BasePrecisionDebugger, "_parse_config_path", return_value=(common_config, task_config)):
-            cls.debugger = PrecisionDebugger(task="statistics", level="L0", dump_path=dump_path)
+            cls.debugger = PrecisionDebugger(task="statistics", level="L0", dump_path=dump_path, step=["2-3"])
     
     @classmethod
     def debugger_start(cls, model, tag):
         cls.debugger.service.first_start = True if model not in cls.hooked_model else False
         cls.debugger.service.config.dump_path = os.path.join(cls.dump_path, tag)
         cls.debugger.start(model=model)
-        if model not in cls.hooked_model:
+        if not cls.debugger.service.first_start and model not in cls.hooked_model:
             cls.hooked_model.append(model)
 
     @classmethod
     def debugger_stop(cls):
         cls.debugger.stop()
-        cls.debugger.service._reset_status()
+        cls.debugger.service.reset_status()
 
     @classmethod
     def debugger_step(cls):
@@ -91,14 +91,14 @@ class TestPTDebuggerStart(unittest.TestCase):
         
         model1_dump_path = os.path.join(dump_path, "model1")
         self.assertTrue(os.path.exists(model1_dump_path))
-        self.assertEqual(len(os.listdir(model1_dump_path)), 10)
-        model1_construct_json = load_json(os.path.join(model1_dump_path, "step0", "rank", "construct.json"))
+        self.assertEqual(len(os.listdir(model1_dump_path)), 2)
+        model1_construct_json = load_json(os.path.join(model1_dump_path, "step2", "rank", "construct.json"))
         self.assertEqual(len(model1_construct_json), 1)
 
         model2_dump_path = os.path.join(dump_path, "model2")
         self.assertTrue(os.path.exists(model2_dump_path))
-        self.assertEqual(len(os.listdir(model2_dump_path)), 10)
-        model2_construct_json = load_json(os.path.join(model2_dump_path, "step0", "rank", "construct.json"))
+        self.assertEqual(len(os.listdir(model2_dump_path)), 2)
+        model2_construct_json = load_json(os.path.join(model2_dump_path, "step2", "rank", "construct.json"))
         self.assertEqual(len(model2_construct_json), 1)
         
         shutil.rmtree(dump_path)

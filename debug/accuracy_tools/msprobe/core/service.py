@@ -331,6 +331,7 @@ class BaseService(ABC):
         dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
         dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
         dump_path_aggregation.construct_file_path = os.path.join(dump_dir, "construct.json")
+        dump_path_aggregation.dump_error_info_path = os.path.join(dump_dir, "dump_error_info.log")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
         dump_path_aggregation.free_benchmark_file_path = os.path.join(dump_dir, "free_benchmark.csv")

@@ -161,7 +161,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       stackInfo[nodeName] = safeJSONParse(npustackInfo.replace(/'/g, '"'))?.join('\n');
     }
     if (!isEmpty(benchstackInfo)) {
-      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"'));
+      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"')).join('\n');
     }
     if (!isEmpty(stackInfo)) {
       stackInfo[title] = 'stackInfo';
@@ -189,7 +189,7 @@ const useNodeInfo = (): UseNodeInfoType => {
       parallelMergeInfo[nodeName] = safeJSONParse(npuparallelMergeInfo).join('\n');
     }
     if (!isEmpty(benchparallelMergeInfo)) {
-      parallelMergeInfo[benchNodeName] = safeJSONParse(benchparallelMergeInfo);
+      parallelMergeInfo[benchNodeName] = safeJSONParse(benchparallelMergeInfo).join('\n');
     }
     if (!isEmpty(parallelMergeInfo)) {
       parallelMergeInfo[title] = 'parallelMergeInfo';

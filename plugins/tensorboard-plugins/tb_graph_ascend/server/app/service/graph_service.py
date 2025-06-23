@@ -90,7 +90,7 @@ class GraphService:
         if json_data is None and buffer:  # 最终验证数据
             try:
                 yield f"data: {json.dumps({'progress': current_progress, 'status': 'loading'})}\n\n"
-                json_data = json.loads(buffer)
+                json_data = GraphUtils.safe_json_loads(buffer)
                 yield f"data: {json.dumps({'progress': 99, 'status': 'loading'})}\n\n"
             except json.JSONDecodeError as e:
                 yield f"data: {json.dumps({'progress': current_progress, 'error': str(e)})}\n\n"
@@ -114,8 +114,8 @@ class GraphService:
             # 读取全局信息,tag层面
             if graph_data.get('MicroSteps', {}):
                 config['microSteps'] = graph_data.get('MicroSteps')
-            if config.get('Tooltips', {}):
-                config['tooltips'] = graph_data.get('Tooltips')
+            if graph_data.get('ToolTip', {}):
+                config['tooltips'] = graph_data.get('ToolTip')
             config['overflowCheck'] = bool(graph_data.get('OverflowCheck')) if 'OverflowCheck' in graph_data else True
             config['isSingleGraph'] = False if graph_data.get(NPU) else True
             # 读取配置信息，run层面
@@ -136,6 +136,7 @@ class GraphService:
             # 读取目录下配置文件列表
             config_files = GraphUtils.find_config_files(run)
             config['matchedConfigFiles'] = config_files
+            config['task'] = graph_data.get('task')
             return {'success': True, 'data': config}
         except Exception as e:
             return {'success': False, 'error': '获取配置信息失败,请检查目录中第一个文件'}
@@ -353,7 +354,7 @@ class GraphService:
     def save_matched_relations(meta_data):
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
-        npu_match_nodes_list = config_data.get('npuMatchNodes', {})
+        npu_match_nodes_list = config_data.get('manualMatchNodes', {})
         run = meta_data.get('run')
         tag = meta_data.get('tag')
         try:

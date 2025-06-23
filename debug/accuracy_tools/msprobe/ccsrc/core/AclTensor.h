@@ -52,18 +52,18 @@ struct AclTensorInfo {
     bool dumpOriginData;
     std::vector<uint8_t> transBuf;
 
-    std::string ToString() const 
+    std::string ToString() const
     {
         return "AclTensor(path=" + dumpPath + ",dtype=" + DataUtils::GetDTypeString(dtype) + ",inout=" + inout + ")";
     }
 };
 
-inline std::string operator+(const std::string& s, const AclTensorInfo& tensor) 
+inline std::string operator+(const std::string& s, const AclTensorInfo& tensor)
 {
     return s + tensor.ToString();
 }
 
-inline std::string operator+(const AclTensorInfo& tensor, const std::string& s) 
+inline std::string operator+(const AclTensorInfo& tensor, const std::string& s)
 {
     return tensor.ToString() + s;
 }

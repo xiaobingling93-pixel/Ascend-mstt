@@ -127,6 +127,7 @@ class TestDataWriter(unittest.TestCase):
         dump_path_aggregation.dump_tensor_data_dir = test_path
         dump_path_aggregation.free_benchmark_file_path = test_path
         dump_path_aggregation.debug_file_path = test_path
+        dump_path_aggregation.dump_error_info_path = test_path
 
         self.data_writer.update_dump_paths(dump_path_aggregation)
         self.assertTrue(self.data_writer.dump_file_path == test_path)

@@ -62,10 +62,18 @@ std::string RandomString(uint32_t len, char min, char max)
 std::string CalculateMD5(const uint8_t* data, size_t length)
 {
     MD5_CTX md5ctx;
+    /*
+     * 不用于数据加密，不用于文件完整性校验，不用于密码存储，不用于数据唯一性检查
+     * 只用于Tensor的统计信息呈现，不涉及数据安全
+    */
     MD5_Init(&md5ctx);
     MD5_Update(&md5ctx, data, length);
 
     unsigned char digest[MD5_DIGEST_LENGTH];
+    /*
+     * 不用于数据加密，不用于文件完整性校验，不用于密码存储，不用于数据唯一性检查
+     * 只用于Tensor的统计信息呈现，不涉及数据安全
+    */
     MD5_Final(digest, &md5ctx);
 
     static const char HEX_CHAR[] = "0123456789abcdef";

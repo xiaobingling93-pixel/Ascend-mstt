@@ -201,34 +201,9 @@ def sort_filenames(path):
     return filenames
 
 
-# 删除重复dump的文件：自定义文件名相同，并且数据相同
-def del_same_file(path, filenames):
-    result_list = []
-    seen_prefixes = {}
-    for current_filename in filenames:
-        parts = current_filename.rsplit(CoreConst.REPLACEMENT_CHARACTER, 1)
-        prefix = parts[0]
-        if prefix not in seen_prefixes:
-            result_list.append(current_filename)
-            seen_prefixes[prefix] = current_filename
-        else:
-            current_file_path = os.path.join(path, current_filename)
-            current_file = load_npy(current_file_path)
-            prev_filename = seen_prefixes[prefix]
-            prev_file_path = os.path.join(path, prev_filename)
-            prev_file = load_npy(prev_file_path)
-            if np.array_equal(current_file, prev_file):
-                remove_path(current_file_path)
-                logger.warning(f"{current_file_path} is deleted!")
-            else:
-                result_list.append(current_filename)
-    return result_list
-
-
 def rename_filename(path="", data_df=None):
     if dump_task == CoreConst.TENSOR:
         filenames = sort_filenames(path)
-        filenames = del_same_file(path, filenames)
     if dump_task == CoreConst.STATISTICS:
         filenames = data_df[CoreConst.OP_NAME].tolist()
 
@@ -781,7 +756,7 @@ def create_kbyk_json(dump_path, summary_mode, step):
     rank_id = os.environ.get('RANK_ID')
     if rank_id is None:
         rank_id = 0
-    config_json_path = os.path.join(dump_path, rank_id + "kernel_kbyk_dump.json")
+    config_json_path = os.path.join(dump_path, str(rank_id) + "kernel_kbyk_dump.json")
     save_json(config_json_path, config_json, indent=4)
     logger.info(config_json_path + " has been created.")
     return config_json_path

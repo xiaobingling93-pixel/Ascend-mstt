@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef ACLDUMPDATAPROCESSOR_H
+#define ACLDUMPDATAPROCESSOR_H
 
 #include <string>
 #include <vector>
@@ -56,4 +57,6 @@ private:
 };
 
 }
+
+#endif
 
