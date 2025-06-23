@@ -54,7 +54,8 @@ class DataNode:
     def find_stack(self, stack_info):
         for item in stack_info.values():
             if not isinstance(item, list):
-                raise MsprobeException(4, f'The value\'s type in stack.json should be a list, not {type(item)}!')
+                raise MsprobeException(MsprobeException.UNSUPPORTED_TYPE_ERROR,
+                                       f'The value\'s type in stack.json should be a list, not {type(item)}!')
             if len(item) >= 2 and self.op_name in item[0]:
                 return item[1]
         return {}
