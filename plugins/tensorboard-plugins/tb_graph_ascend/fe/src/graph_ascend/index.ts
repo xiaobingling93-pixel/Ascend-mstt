@@ -261,7 +261,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         const config = data as GraphConfigType;
         if (success) {
             this.set('colors', config.colors);
-            this.set('tooltips', config.tooltips);
+            this.set('tooltips', safeJSONParse(config.tooltips));
             this.set('overflowcheck', config.overflowCheck);
             this.set('colorset', Object.entries(config.colors || {}));
             this.set('isSingleGraph', config.isSingleGraph);
