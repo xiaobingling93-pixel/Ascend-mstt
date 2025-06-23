@@ -114,8 +114,8 @@ class GraphService:
             # 读取全局信息,tag层面
             if graph_data.get('MicroSteps', {}):
                 config['microSteps'] = graph_data.get('MicroSteps')
-            if config.get('Tooltips', {}):
-                config['tooltips'] = graph_data.get('Tooltips')
+            if graph_data.get('ToolTip', {}):
+                config['tooltips'] = graph_data.get('ToolTip')
             config['overflowCheck'] = bool(graph_data.get('OverflowCheck')) if 'OverflowCheck' in graph_data else True
             config['isSingleGraph'] = False if graph_data.get(NPU) else True
             # 读取配置信息，run层面
@@ -136,6 +136,7 @@ class GraphService:
             # 读取目录下配置文件列表
             config_files = GraphUtils.find_config_files(run)
             config['matchedConfigFiles'] = config_files
+            config['task'] = graph_data.get('task')
             return {'success': True, 'data': config}
         except Exception as e:
             return {'success': False, 'error': '获取配置信息失败,请检查目录中第一个文件'}

@@ -184,6 +184,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       </div>
       <tf-color-select
         colors="{{colors}}"
+        task=[[task]]
         is-overflow-filter="{{isOverflowFilter}}"
         overflowcheck="[[overflowcheck]]"
         selected-node="{{selectedNode}}"
