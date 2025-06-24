@@ -128,7 +128,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         </style>
     `;
 
-    @property({ type: Array })
+    @property({ type: Object })
     metaDir: Record<string, string> = {};
 
     @property({ type: Object, notify: true })
