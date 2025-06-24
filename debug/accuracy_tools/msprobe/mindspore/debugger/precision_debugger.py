@@ -231,7 +231,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
     
     @classmethod
     def _start_kernel_dump(cls):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         is_graph_config = cls._is_graph_dump(instance.config)
         instance.config.check_config_with_l2(is_graph_config)
         if not is_graph_config:
