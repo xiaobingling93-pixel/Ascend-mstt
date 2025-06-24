@@ -48,4 +48,4 @@ class OverflowCheckToolFactory:
             logger.error(f"Overflow check is not supported in {config.execution_mode} mode "
                          f"when level is {config.level}.")
             raise ValueError
-        return tool(config)
+        return (tool(config),)
