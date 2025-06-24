@@ -35,7 +35,7 @@ void MetricKernelProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityKernel* kernel = ReinterpretConvert<msptiActivityKernel*>(record);
     msptiActivityKernel* ptr = ReinterpretConvert<msptiActivityKernel*>(MsptiMalloc(sizeof(msptiActivityKernel), ALIGN_SIZE));
-    if (memcpy_s(ptr, sizeof(msptiActivityKernel), kernel, sizeof(msptiActivityKernel)) != EOK) {
+    if (ptr == nullptr || memcpy_s(ptr, sizeof(msptiActivityKernel), kernel, sizeof(msptiActivityKernel)) != EOK) {
         MsptiFree(ReinterpretConvert<uint8_t*>(ptr));
         LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
         return;

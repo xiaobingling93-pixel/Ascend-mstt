@@ -114,7 +114,9 @@ msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用
 
 ## 使用方式
 
-- **说明**：**NPU Monitor**功能和**Profiler trace dump** 功能不能**同时开启。
+- **说明**：
+- 1. **NPU Monitor**功能和**Profiler trace dump** 功能不能**同时开启。
+- 2. **NPU Monitor**功能暂不支持图模式场景
 
 ### NPU Monitor功能
 NPU Monitor基于MSPTI/MSTX能力开发，实现了轻量级在线监控能力，能够用于性能问题的初步定位。
@@ -133,12 +135,12 @@ dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 
 npu-monitor的SUBCOMMANDS（子命令）选项如下：
 
-| 子命令                   | 参数类型 | 说明                                                                                                                               | PyTorch支持 | MindSpore支持 |    是否必选     |
-|-----------------------|-------|----------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|:-----------:|
-| --npu-monitor-start   | action | 开启性能监控，设置参数后生效，默认不生效                                                                                                             | Y | Y | N |
-| --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                             | Y | Y | N |
-| --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                    | Y | Y | N |
-| --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`] , 默认值`Marker` | Y | Y | N |
+| 子命令                   | 参数类型 | 说明                                                                                                                                                   | PyTorch支持 | MindSpore支持 |    是否必选     |
+|-----------------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|:-----------:|
+| --npu-monitor-start   | action | 开启性能监控，设置参数后生效，默认不生效                                                                                                                                 | Y | Y | N |
+| --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                                                 | Y | Y | N |
+| --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                                        | Y | Y | N |
+| --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`, 'Communication'] , 默认值`Marker` | Y | Y | N |
 
 - npu-monitor使用方法
 

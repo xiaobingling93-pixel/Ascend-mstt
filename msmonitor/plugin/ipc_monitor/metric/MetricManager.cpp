@@ -21,6 +21,7 @@
 #include "MetricMarkProcess.h"
 #include "MetricMemSetProcess.h"
 #include "MetricMemProcess.h"
+#include "MetricCommunicationProcess.h"
 #include "utils.h"
 
 namespace dynolog_npu {
@@ -37,6 +38,7 @@ MetricManager::MetricManager(): TimerTask("MetricManager", DEFAULT_FLUSH_INTERVA
     metrics[MSPTI_ACTIVITY_KIND_MEMSET] = std::make_shared<MetricMemSetProcess>();
     metrics[MSPTI_ACTIVITY_KIND_HCCL] = std::make_shared<MetricHcclProcess>();
     metrics[MSPTI_ACTIVITY_KIND_MEMORY] = std::make_shared<MetricMemProcess>();
+    metrics[MSPTI_ACTIVITY_KIND_COMMUNICATION] = std::make_shared<MetricCommunicationProcess>();
 }
 
 void MetricManager::ReleaseResource()

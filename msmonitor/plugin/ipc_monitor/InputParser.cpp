@@ -41,7 +41,8 @@ const std::unordered_map<std::string, msptiActivityKind> kindStrMap {
     {"Hccl", MSPTI_ACTIVITY_KIND_HCCL},
     {"Memory", MSPTI_ACTIVITY_KIND_MEMORY},
     {"MemSet", MSPTI_ACTIVITY_KIND_MEMSET},
-    {"MemCpy", MSPTI_ACTIVITY_KIND_MEMCPY}
+    {"MemCpy", MSPTI_ACTIVITY_KIND_MEMCPY},
+    {"Communication", MSPTI_ACTIVITY_KIND_COMMUNICATION},
 };
 
 std::set<msptiActivityKind> str2Kinds(const std::string& kindStrs)

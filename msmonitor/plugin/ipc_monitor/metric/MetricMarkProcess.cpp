@@ -79,7 +79,7 @@ void MetricMarkProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityMarker* markerData = ReinterpretConvert<msptiActivityMarker*>(record);
     msptiActivityMarker* tmp = ReinterpretConvert<msptiActivityMarker*>(MsptiMalloc(sizeof(msptiActivityMarker), ALIGN_SIZE));
-    if (memcpy_s(tmp, sizeof(msptiActivityMarker), markerData, sizeof(msptiActivityMarker)) != EOK) {
+    if (tmp == nullptr || memcpy_s(tmp, sizeof(msptiActivityMarker), markerData, sizeof(msptiActivityMarker)) != EOK) {
         MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
         LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
         return;
