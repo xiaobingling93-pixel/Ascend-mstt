@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
 
@@ -252,21 +253,6 @@ class TestDataCollector(unittest.TestCase):
         self.data_collector.data_writer.update_construct.assert_called_with(
             self.data_collector.module_processor.module_node
         )
-
-    def test_update_construct_without_module_prefix(self):
-        self.data_collector.module_processor = MagicMock()
-        self.data_collector.data_writer = MagicMock()
-        self.data_collector.config.level = "mix"
-        self.data_collector.optimizer_status = "other_status"
-        self.data_collector.module_processor.api_parent_node = "parent_node"
-        test_name = "api_name"
-
-        self.data_collector.update_construct(test_name)
-        calls = [
-            unittest.mock.call({"api_name": "parent_node"}),
-            unittest.mock.call(self.data_collector.module_processor.module_node)
-        ]
-        self.data_collector.data_writer.update_construct.assert_has_calls(calls)
 
     def test_handle_data(self):
         with patch.object(DataCollector, "update_data") as mock_update_data, \

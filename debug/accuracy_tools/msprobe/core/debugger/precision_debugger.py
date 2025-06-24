@@ -18,7 +18,7 @@ import os
 from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker, load_json
-from msprobe.core.common.utils import get_real_step_or_rank, check_init_step
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, ThreadSafe
 from msprobe.core.common_config import CommonConfig
 
 
@@ -27,13 +27,14 @@ class BasePrecisionDebugger:
     tasks_not_need_debugger = [Const.GRAD_PROBE]
 
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(BasePrecisionDebugger, cls).__new__(cls)
-            cls._instance.config = None
-            cls._instance.enable_dataloader = False
-            cls._instance.initialized = False
-            cls.service = None
-            cls.first_start = False
+        if not cls._instance:
+            with ThreadSafe():
+                if not cls._instance:
+                    cls._instance = super(BasePrecisionDebugger, cls).__new__(cls)
+                    cls._instance.config = None
+                    cls._instance.initialized = False
+                    cls.service = None
+                    cls.first_start = False
         return cls._instance
 
     def __init__(
@@ -83,11 +84,13 @@ class BasePrecisionDebugger:
         raise NotImplementedError("Subclass must implement _get_task_config")
 
     @classmethod
+    @ThreadSafe.synchronized
     def forward_backward_dump_end(cls):
         instance = cls._instance
         instance.stop()
 
     @classmethod
+    @ThreadSafe.synchronized
     def set_init_step(cls, step):
         instance = cls._instance
         if not instance:
@@ -97,6 +100,7 @@ class BasePrecisionDebugger:
         instance.service.loop = 0
 
     @classmethod
+    @ThreadSafe.synchronized
     def register_custom_api(cls, module, api, api_prefix=None):
         if not api_prefix:
             api_prefix = getattr(module, "__name__", "Custom")
@@ -112,6 +116,7 @@ class BasePrecisionDebugger:
         instance.service.register_custom_api(module, api, api_prefix)
 
     @classmethod
+    @ThreadSafe.synchronized
     def restore_custom_api(cls, module, api):
         if not hasattr(module, api):
             raise MsprobeException(
