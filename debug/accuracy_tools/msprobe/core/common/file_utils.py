@@ -460,7 +460,33 @@ def save_excel(path, data):
                 return "list"
         raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
 
+    def check_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be considered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    def malicious_check(df):
+        for row_name in df.index:
+            if not check_value_is_valid(row_name):
+                raise RuntimeError(f"Malicious value [{row_name}] not allowed to be written into the excel: {path}.")
+
+        for col_name in df.columns:
+            if not check_value_is_valid(col_name):
+                raise RuntimeError(f"Malicious value [{col_name}] not allowed to be written into the excel: {path}.")
+
+        for _, row in df.iterrows():
+            for _, value in row.items():
+                if not check_value_is_valid(value):
+                    raise RuntimeError(f"Malicious value [{value}] not allowed to be written into the excel: {path}.")
+
     def save_in_slice(df, base_name):
+        malicious_check(df)
         df_length = len(df)
         if df_length < CompareConst.MAX_EXCEL_LENGTH:
             df.to_excel(writer, sheet_name=base_name if base_name else 'Sheet1', index=False)
