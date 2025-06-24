@@ -37,8 +37,6 @@ try:
     from rich.table import Table
     from rich import print as rich_print
     from rich.columns import Columns
-
-    install()
 except ImportError as err:
     install = None
     Panel = None
