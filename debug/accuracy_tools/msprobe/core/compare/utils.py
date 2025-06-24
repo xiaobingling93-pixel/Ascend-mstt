@@ -509,8 +509,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
                 result.append(result_item)
 
-    n_num, n_num_input, n_num_output, n_num_params, n_num_params_grad = count_struct(n_dict)
-    b_num, b_num_input, b_num_output, b_num_params, b_num_params_grad = count_struct(b_dict)
+    _, n_num_input, n_num_output, n_num_params, n_num_params_grad = count_struct(n_dict)
+    _, b_num_input, b_num_output, b_num_params, b_num_params_grad = count_struct(b_dict)
 
     get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
     get_accuracy_core(n_num_input + n_num_output, n_num_params, b_num_input + b_num_output, b_num_params,
