@@ -15,42 +15,45 @@
                             0,
                             0.2
                         ],
-                        "description": "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
+                        "description": "\u6b64\u8282\u70b9\u6240\u6709\u8f93\u5165\u8f93\u51fa\u7684\u7edf\u8ba1\u91cf\u76f8\u5bf9\u8bef\u5dee, \u503c\u8d8a\u5927\u4ee3\u8868\u6d4b\u91cf\u503c\u4e0e\u6807\u6746\u503c\u7684\u504f\u5dee\u8d8a\u5927, \u76f8\u5bf9\u8bef\u5dee\u8ba1\u7b97\u65b9\u5f0f:|(\u6d4b\u91cf\u503c-\u6807\u6746\u503c)/\u6807\u6746\u503c|"
                     },
                     "#FFEDBE": {
                         "value": [
                             0.2,
                             0.4
                         ],
-                        "description": "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
+                        "description": "\u6b64\u8282\u70b9\u6240\u6709\u8f93\u5165\u8f93\u51fa\u7684\u7edf\u8ba1\u91cf\u76f8\u5bf9\u8bef\u5dee, \u503c\u8d8a\u5927\u4ee3\u8868\u6d4b\u91cf\u503c\u4e0e\u6807\u6746\u503c\u7684\u504f\u5dee\u8d8a\u5927, \u76f8\u5bf9\u8bef\u5dee\u8ba1\u7b97\u65b9\u5f0f:|(\u6d4b\u91cf\u503c-\u6807\u6746\u503c)/\u6807\u6746\u503c|"
                     },
                     "#FFDC7F": {
                         "value": [
                             0.4,
                             0.6
                         ],
-                        "description": "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
+                        "description": "\u6b64\u8282\u70b9\u6240\u6709\u8f93\u5165\u8f93\u51fa\u7684\u7edf\u8ba1\u91cf\u76f8\u5bf9\u8bef\u5dee, \u503c\u8d8a\u5927\u4ee3\u8868\u6d4b\u91cf\u503c\u4e0e\u6807\u6746\u503c\u7684\u504f\u5dee\u8d8a\u5927, \u76f8\u5bf9\u8bef\u5dee\u8ba1\u7b97\u65b9\u5f0f:|(\u6d4b\u91cf\u503c-\u6807\u6746\u503c)/\u6807\u6746\u503c|"
                     },
                     "#FFC62E": {
                         "value": [
                             0.6,
                             0.8
                         ],
-                        "description": "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
+                        "description": "\u6b64\u8282\u70b9\u6240\u6709\u8f93\u5165\u8f93\u51fa\u7684\u7edf\u8ba1\u91cf\u76f8\u5bf9\u8bef\u5dee, \u503c\u8d8a\u5927\u4ee3\u8868\u6d4b\u91cf\u503c\u4e0e\u6807\u6746\u503c\u7684\u504f\u5dee\u8d8a\u5927, \u76f8\u5bf9\u8bef\u5dee\u8ba1\u7b97\u65b9\u5f0f:|(\u6d4b\u91cf\u503c-\u6807\u6746\u503c)/\u6807\u6746\u503c|"
                     },
                     "#FF704D": {
                         "value": [
                             0.8,
                             1
                         ],
-                        "description": "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
+                        "description": "\u6b64\u8282\u70b9\u6240\u6709\u8f93\u5165\u8f93\u51fa\u7684\u7edf\u8ba1\u91cf\u76f8\u5bf9\u8bef\u5dee, \u503c\u8d8a\u5927\u4ee3\u8868\u6d4b\u91cf\u503c\u4e0e\u6807\u6746\u503c\u7684\u504f\u5dee\u8d8a\u5927, \u76f8\u5bf9\u8bef\u5dee\u8ba1\u7b97\u65b9\u5f0f:|(\u6d4b\u91cf\u503c-\u6807\u6746\u503c)/\u6807\u6746\u503c|"
                     },
                     "#C7C7C7": {
                         "value": [],
-                        "description": "比对过程中节点未匹配上"
+                        "description": "\u6bd4\u5bf9\u8fc7\u7a0b\u4e2d\u8282\u70b9\u672a\u5339\u914d\u4e0a"
                     }
                 },
-                "matchedConfigFiles": []
+                "matchedConfigFiles": [
+                    "mock_compare_resnet_data.vis.config"
+                ],
+                "task": "summary"
             }
         }
     }

@@ -94,6 +94,14 @@ class TestCaseFactory:
     @classmethod
     def get_test_get_node_info_cases(cls):
         return cls._load_st_cases('test_get_node_info.json')
+    
+    @classmethod
+    def get_test_add_match_nodes_by_config_cases(cls):
+        return cls._load_st_cases('test_add_match_nodes_by_config.json')
+
+    @classmethod
+    def get_test_update_colors_cases(cls):
+        return cls._load_st_cases('test_update_colors.json')
 
     @classmethod
     def load_compare_resnet_test_data(cls):

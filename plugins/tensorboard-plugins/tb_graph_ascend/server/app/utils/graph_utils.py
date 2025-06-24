@@ -148,8 +148,7 @@ class GraphUtils:
             if len(json_data) > MAX_FILE_SIZE:
                 logger.error(f"File content exceeds {MAX_FILE_SIZE} bytes.")
                 return default_value
-            
-            result = json.load(json_data)
+            result = json.loads(json_data)
             GraphUtils.remove_prototype_pollution(result)
             return result
         except json.JSONDecodeError as e:
