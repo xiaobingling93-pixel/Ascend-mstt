@@ -645,14 +645,25 @@ def replace_last_occurrence(text, old, new):
 
 def load_stack_json(stack_path):
     stack_dict = load_json(stack_path)
+
+    if not isinstance(stack_dict, dict):
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR,
+            "The format of the stack.json is incorrect, the outermost layer of stack.json should be a dict type."
+        )
+
     if not stack_dict.get(Const.NEW_STACK_FLAG):
         return stack_dict
 
     new_stack_dict = {}
     for stack_info in stack_dict.values():
-        if len(stack_info) != 2:
+        if not isinstance(stack_info, list) or len(stack_info) != 2:
             continue
+
         api_list, stack_str = stack_info
+        if not isinstance(api_list, list):
+            continue
+
         for api_name in api_list:
             new_stack_dict.update({api_name: stack_str})
     return new_stack_dict
