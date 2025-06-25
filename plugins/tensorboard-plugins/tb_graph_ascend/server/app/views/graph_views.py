@@ -29,7 +29,6 @@ class GraphView:
     @staticmethod
     @wrappers.Request.application
     def static_file_route(request):
-        print(  )
         filename = os.path.basename(request.path)
         extension = os.path.splitext(filename)[1]
         if extension == '.html':
@@ -153,7 +152,6 @@ class GraphView:
     @staticmethod
     @wrappers.Request.application
     def save_data(request):
-        print("save_data", request)
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
         save_result = GraphService.save_data(meta_data)
         return http_util.Respond(request, json.dumps(save_result), "application/json")

@@ -266,7 +266,7 @@ class GraphUtils:
                 raise RuntimeError("The target file is a symbolic link")
             if os.path.islink(run):
                 raise RuntimeError(f"Parent directory contains a symbolic link")
-            # # 尝试写入文件
+            # 尝试写入文件
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             os.chmod(file_path, 0o640)
@@ -286,7 +286,6 @@ class GraphUtils:
 
     @staticmethod
     def safe_load_data(run_name, tag, only_check=False):
-      
         runs = GraphState.get_global_value('runs', {})
         run_dir = runs.get(str(run_name)) or run_name
         """Load a single .vis file from a given directory based on the tag."""
@@ -439,16 +438,3 @@ class GraphUtils:
 
         return sorted_data
 
-    @staticmethod
-    def process_vis_file(dir_path, file, run_tag_pairs):
-        file_path = os.path.join(dir_path, file)
-        if os.path.isfile(file_path) and file.endswith('.vis'):
-            run = dir_path
-            run_name = os.path.basename(run)
-            GraphState.set_global_value('runs', run, run_name)
-            tag = file[:-4]  # Use the filename without extension as tag
-            _, error = GraphUtils.safe_load_data(run_name, tag, True)
-            if error:
-                logger.error(f'Error: File run:"{run}, tag:{tag}" is not accessible. Error: {error}')
-                return
-            run_tag_pairs.setdefault(run_name, []).append(tag)

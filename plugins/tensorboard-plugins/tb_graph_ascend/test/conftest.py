@@ -22,7 +22,6 @@ from data.test_case_factory import TestCaseFactory
 @pytest.fixture(scope="function", autouse=True)
 def reset_global_state(request):
     """每个测试后重置全局状态"""
-    print('module', request.module.__name__)
     # 执行测试
     yield
     # 恢复原始状态

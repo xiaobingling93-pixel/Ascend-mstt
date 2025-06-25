@@ -41,3 +41,4 @@ class TestLayoutHierarchyController:
         excepted = test_case['expected']
         actual = LayoutHierarchyController.update_hierarchy_data(graph_type)
         assert actual == excepted
+  
