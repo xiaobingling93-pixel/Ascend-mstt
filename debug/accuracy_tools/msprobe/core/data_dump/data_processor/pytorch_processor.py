@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
 import zlib
 from dataclasses import asdict
 from typing import List
@@ -24,14 +23,15 @@ from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from msprobe.pytorch.common.utils import save_pt, load_pt
+from msprobe.pytorch.common.utils import Const as PtConst, save_pt, is_hifloat8_tensor, is_float8_tensor
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from msprobe.core.common.utils import recursion_depth_decorator
 
 is_gpu = False
 try:
@@ -101,19 +101,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             logger.warning("Async dump do not support complex data!")
             return tensor_stat
         elif data.dtype == torch.bool:
-            tensor_stat.stack_tensor_stat = (["Max", "Min"], torch.stack(
-                [torch.any(data), torch.all(data)]))
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([data, data, data, data]))
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         else:
-            if not data.is_floating_point() or data.dtype == torch.float64:
+            if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
-            tensor_stat.stack_tensor_stat = (["Max", "Min", "Mean", "Norm"], torch.stack([
-                torch.max(data),
-                torch.min(data),
-                torch.mean(data),
-                torch.norm(data)
-            ]))
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
         return tensor_stat
 
     @staticmethod
@@ -126,17 +124,17 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.min = np.min(data_abs).item()
             tensor_stat.mean = np.mean(data_abs).item()
         elif data.dtype == torch.bool:
-            tensor_stat.max = torch.any(data).item()
-            tensor_stat.min = torch.all(data).item()
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
         else:
-            if not data.is_floating_point() or data.dtype == torch.float64:
+            if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
-            tensor_stat.max = torch.max(data).item()
-            tensor_stat.min = torch.min(data).item()
-            tensor_stat.mean = torch.mean(data).item()
-            tensor_stat.norm = torch.norm(data).item()
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
         return tensor_stat
 
     @staticmethod
@@ -173,12 +171,8 @@ class PytorchDataProcessor(BaseDataProcessor):
     @staticmethod
     def process_group_hash(arg):
         group_ranks = dist.get_process_group_ranks(arg)
-        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
-        return group_ranks_hash
-
-    @staticmethod
-    def is_distributed_op(module):
-        return getattr(module, "op_is_distributed", False)
+        group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
+        return f"{group_ranks_hash:08x}"
 
     @staticmethod
     def is_hookable_element(element):
@@ -216,38 +210,47 @@ class PytorchDataProcessor(BaseDataProcessor):
             logger.warning(f"Failed to get value of torch.distributed.ReduceOp with error info: {e}.")
         return {"type": "torch.distributed.ReduceOp", "value": op_type}
 
+    @staticmethod
+    def _cast_to_float_if_fp8(tensor):
+        dtype = str(tensor.dtype)
+        if is_float8_tensor(tensor):
+            dtype = PtConst.HIFLOAT8_TYPE if is_hifloat8_tensor(tensor) else dtype
+            logger.debug(
+                f"The {dtype} tensor analyzing/saving is unsupported in dump function."
+                f"Casting to float for processing."
+            )
+            tensor = tensor.float()
+        return tensor, dtype
+
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
 
+    def dump_async_data(self):
+        for file_path, tensor in self._async_dump_cache.items():
+            save_pt(tensor.contiguous(), file_path)
+        self._async_dump_cache.clear()
+
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
-        if isinstance(element, torch.Size):
-            return self._analyze_torch_size(element)
-        if isinstance(element, torch.memory_format):
-            return self._analyze_memory_format(element)
-        if isinstance(element, dist.ProcessGroup):
-            return self._analyze_process_group(element)
-        if isinstance(element, dist.P2POp):
-            return self._analyze_p2pop(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, dist.ReduceOp):
-            return self._analyze_reduce_op(element)
-        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
-        if converted_numpy is not element:
-            return {"type": numpy_type, "value": converted_numpy}
-        if isinstance(element, torch.Tensor):
-            return self._analyze_tensor(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, np.ndarray):
-            return self._analyze_numpy(element, Const.SEP.join([str(suffix) for suffix in suffix_stack]))
-        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
-            return self._analyze_builtin(element)
-        return {}
 
-    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
-        if self.is_distributed_op(module):
-            module_input_output.update_output_with_args_and_kwargs()
-        return super().analyze_forward_output(name, module, module_input_output)
+        suffix_str = Const.SEP.join(str(s) for s in suffix_stack)
+        type_analyzer = [
+            (PytorchDataProcessor.builtin_type, self._analyze_builtin),
+            (torch.Size, self._analyze_torch_size),
+            (torch.Tensor, lambda e: self._analyze_tensor(e, suffix_str)),
+            (torch.memory_format, self._analyze_memory_format),
+            (dist.ProcessGroup, self._analyze_process_group),
+            (dist.P2POp, lambda e: self._analyze_p2pop(e, suffix_str)),
+            (dist.ReduceOp, self._analyze_reduce_op),
+            (PytorchDataProcessor.np_type[:-1], self._analyze_numpy),
+            (np.ndarray, lambda e: self._analyze_ndarray(e, suffix_str)),
+        ]
+        for type_key, analyze_fn in type_analyzer:
+            if isinstance(element, type_key):
+                return analyze_fn(element)
+        return {}
 
     def _analyze_p2pop(self, arg, suffix):
         p2pop_info = {"class_type": "torch.distributed.P2POp"}
@@ -265,48 +268,34 @@ class PytorchDataProcessor(BaseDataProcessor):
         return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
+        tensor, dtype = self._cast_to_float_if_fp8(tensor)
         tensor_stat = self.get_stat_info(tensor, self.config.async_dump)
         tensor_json = {}
         tensor_json.update({'type': 'torch.Tensor'})
-        tensor_json.update({'dtype': str(tensor.dtype)})
+        tensor_json.update({'dtype': dtype})
         tensor_json.update({"shape": tensor.shape})
-        if tensor_stat.stack_tensor_stat is None:
-            tensor_json.update({"Max": tensor_stat.max})
-            tensor_json.update({"Min": tensor_stat.min})
-            tensor_json.update({"Mean": tensor_stat.mean})
-            tensor_json.update({"Norm": tensor_stat.norm})
-            tensor_json.update({"requires_grad": tensor.requires_grad})
-            if tensor_stat.max is not None:
-                if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
-                    tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
-            if tensor_stat.min is not None:
-                if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
-                    tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
 
-        else:
-            tensor_json.update({"requires_grad": tensor.requires_grad})
-            tensor_json.update({"tensor_stat": tensor_stat.stack_tensor_stat})
+        stat_values = [
+            tensor_stat.max,
+            tensor_stat.min,
+            tensor_stat.mean,
+            tensor_stat.norm
+        ]
+        placeholder_index = self.data_writer.append_stat_to_buffer(stat_values)
+
+        tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
+        tensor_json.update({"requires_grad": tensor.requires_grad})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
-
-class StatisticsDataProcessor(PytorchDataProcessor):
-    pass
-
-
-class TensorDataProcessor(PytorchDataProcessor):
-    def dump_async_data(self):
-        for file_path, tensor in self._async_dump_cache.items():
-            save_pt(tensor.contiguous(), file_path)
-        self._async_dump_cache.clear()
-
-    def _analyze_tensor(self, tensor, suffix):
+    def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        single_arg = super()._analyze_tensor(tensor, suffix)
+        single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
+        tensor, _ = self._cast_to_float_if_fp8(tensor)
         if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.clone().detach()
         else:
@@ -314,12 +303,34 @@ class TensorDataProcessor(PytorchDataProcessor):
             save_pt(saved_tensor, file_path)
         return single_arg
 
-    def _analyze_numpy(self, ndarray, suffix):
+    def _analyze_and_save_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         save_pt(torch.tensor(ndarray), file_path)
-        ndarray_json = super()._analyze_numpy(ndarray, suffix)
+        ndarray_json = PytorchDataProcessor._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
+
+
+class StatisticsDataProcessor(PytorchDataProcessor):
+    def _analyze_tensor(self, tensor, suffix):
+        if any(item in self.current_api_or_module_name for item in self.config.tensor_list):
+            return self._analyze_and_save_tensor(tensor, suffix)
+        else:
+            return super()._analyze_tensor(tensor, suffix)
+
+    def _analyze_ndarray(self, ndarray, suffix):
+        if any(item in self.current_api_or_module_name for item in self.config.tensor_list):
+            return self._analyze_and_save_ndarray(ndarray, suffix)
+        else:
+            return super()._analyze_ndarray(ndarray, suffix)
+
+
+class TensorDataProcessor(PytorchDataProcessor):
+    def _analyze_tensor(self, tensor, suffix):
+        return self._analyze_and_save_tensor(tensor, suffix)
+
+    def _analyze_ndarray(self, ndarray, suffix):
+        return self._analyze_and_save_ndarray(ndarray, suffix)
 
 
 class OverflowCheckDataProcessor(PytorchDataProcessor):
@@ -385,7 +396,8 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             self._analyze_maybe_overflow_flag()
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
-                save_pt(tensor, file_path)
+                tensor, _ = self._cast_to_float_if_fp8(tensor)
+                save_pt(tensor.clone().contiguous().detach(), file_path)
             self.real_overflow_nums += 1
             if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
                 logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
@@ -411,10 +423,22 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             raise RuntimeError(f"overflow check failed") from e
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if tensor_json['Max'] is None or tensor_json['Min'] is None:
+        tensor_stat_index = tensor_json.get(Const.TENSOR_STAT_INDEX)
+        if tensor_stat_index is None:
+            logger.warning("tensor_stat_index does not exist in tensor_json.")
             return
-        self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
-                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
+        max_tensor = self.data_writer.get_buffer_values_max(tensor_stat_index)
+        min_tensor = self.data_writer.get_buffer_values_min(tensor_stat_index)
+
+        if max_tensor is None or min_tensor is None:
+            return
+
+        if torch.isinf(max_tensor) or torch.isnan(max_tensor):
+            self.has_overflow = True
+            return
+
+        if torch.isinf(min_tensor) or torch.isnan(min_tensor):
+            self.has_overflow = True
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
@@ -510,11 +534,13 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
             return
 
         if self.config.is_backward_kernel_dump:
-            self.forward_args = self.clone_and_detach_tensor(module_input_output.args)
-            self.forward_kwargs = self.clone_and_detach_tensor(module_input_output.kwargs)
             try:
+                self.forward_args = self.clone_and_detach_tensor(module_input_output.args)
+                self.forward_kwargs = self.clone_and_detach_tensor(module_input_output.kwargs)
                 output = module.forward(*self.forward_args, **self.forward_kwargs)
-            except Exception:
+            except Exception as e:
+                if isinstance(e, MsprobeException):
+                    logger.warning(str(e))
                 self._print_unsupported_log(name)
                 self.enable_kernel_dump = False
                 return
@@ -556,9 +582,17 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
         self.stop_kernel_dump()
         logger.info(f"The kernel data of {name} is dumped successfully.")
 
-    @recursion_depth_decorator("KernelDump: KernelDumpDataProcessor.clone_and_detach_tensor")
+    @recursion_depth_decorator(
+        "KernelDump: KernelDumpDataProcessor.clone_and_detach_tensor",
+        max_depth=Const.DUMP_MAX_DEPTH
+    )
     def clone_and_detach_tensor(self, input_params):
         if isinstance(input_params, torch.Tensor):
+            if is_float8_tensor(input_params):
+                raise MsprobeException(
+                    MsprobeException.UNSUPPORTED_TYPE_ERROR,
+                    f"L2 backward dump does not support float8 type."
+                )
             if input_params.requires_grad:
                 return input_params.clone().detach().requires_grad_()
             return input_params.clone()
@@ -573,6 +607,8 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
 
     def analyze_single_element(self, element, suffix_stack):
         if isinstance(element, torch.Tensor):
+            if is_float8_tensor(element):
+                return {}
             if not self.is_found_output_tensor:
                 if element.requires_grad:
                     self.forward_output_tensor = element

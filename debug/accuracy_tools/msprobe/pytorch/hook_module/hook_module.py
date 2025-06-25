@@ -21,43 +21,42 @@ import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
-torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import ThreadSafe
+from msprobe.pytorch.common.utils import is_float8_tensor, register_forward_pre_hook, register_forward_hook
 
 
 class HOOKModule(nn.Module):
     module_count = defaultdict(int)
-    inner_stop_hook = {}
+    inner_stop_hook = defaultdict(bool)
 
     def __init__(self, hook_build_func) -> None:
         super(HOOKModule, self).__init__()
         self.has_overflow = False
-        self.current_thread = threading.current_thread().ident
-        if self.current_thread not in HOOKModule.inner_stop_hook:
-            HOOKModule.inner_stop_hook[self.current_thread] = False
-        self.stop_hook = HOOKModule.inner_stop_hook.get(self.current_thread, False)
+        self.tid = threading.get_ident()
+        self.stop_hook = HOOKModule.inner_stop_hook.get(self.tid, False)
 
         if not self.stop_hook:
             self.forward_data_collected = False
 
+            if not Runtime.is_running:
+                return
             prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
+            ThreadSafe.acquire()
             if callable(hook_build_func):
-                forward_pre_hook, forward_hook, backward_hook, _ = hook_build_func(prefix)
-                if torch_version_above_or_equal_2:
-                    self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
-                    self.register_forward_hook(forward_hook, with_kwargs=True)
-                else:
-                    self.register_forward_pre_hook(forward_pre_hook)
-                    self.register_forward_hook(forward_hook)
-                self.register_backward_hook(backward_hook)
+                hook_set = hook_build_func(prefix)
+                register_forward_pre_hook(self, hook_set.forward_pre_hook)
+                register_forward_hook(self, hook_set.forward_hook)
+                self.register_backward_hook(hook_set.backward_hook)
 
     def __call__(self, *args, **kwargs):
         changed = False
         if not self.stop_hook:
-            HOOKModule.inner_stop_hook[self.current_thread] = True
+            HOOKModule.inner_stop_hook[self.tid] = True
             changed = True
         result = self._call_func(*args, **kwargs)
         if changed:
-            HOOKModule.inner_stop_hook[self.current_thread] = False
+            HOOKModule.inner_stop_hook[self.tid] = False
         return result
 
     @staticmethod
@@ -77,13 +76,7 @@ class HOOKModule(nn.Module):
         if len(self._backward_hooks) > 0:
             full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
         for hook in self._forward_pre_hooks.values():
-            result_args, result_kwargs = hook(self, args, kwargs)
-            if result_args is not None:
-                if not isinstance(result_args, tuple):
-                    result_args = (result_args,)
-                args = result_args
-            if result_kwargs is not None:
-                kwargs = result_kwargs
+            hook(self, args, kwargs)
         bw_hook = None
         if len(full_backward_hooks) > 0:
             bw_hook = full_hooks.BackwardHook(self, full_backward_hooks)
@@ -111,7 +104,7 @@ class HOOKModule(nn.Module):
                 else:
                     return result
 
-            if not (var.requires_grad and torch.is_grad_enabled()):
+            if is_float8_tensor(var) or not (var.requires_grad and torch.is_grad_enabled()):
                 return result
 
             grad_fn = var.grad_fn

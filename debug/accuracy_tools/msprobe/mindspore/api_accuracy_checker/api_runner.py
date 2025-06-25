@@ -13,6 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union
+)
+import os
+import numpy as np
 import mindspore
 from mindspore import ops
 from msprobe.core.common.const import Const
@@ -37,6 +46,21 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
 else:
     import torch
 
+# 为了可读性，我们先给每种返回形态起个别名
+ForwardResult = Tuple[
+    List[ComputeElement],
+    Tuple[Any, ...],
+    Dict[str, Any],
+    Tuple[Any, ...],
+]
+
+BackwardResultMT = Tuple[
+    List[ComputeElement],
+    Union[Any, Tuple[Any, ...]],
+    Tuple[Any, ...],
+]
+
+PyTorchBackward = List[ComputeElement]
 
 
 class ApiInputAggregation:
@@ -148,13 +172,13 @@ class ApiRunner:
         Args:
             api_type_str: str, Union["MintFunctional", "Mint", "Tensor", "Functional"]
             api_sub_name: str, e.g. "relu"
-            api_platform: str: Union["mindpore", "pytorch"]
+            api_platform: str: Union["mindspore", "pytorch"]
 
         Return:
             api_instance: function object
 
         Description:
-            get mindspore.mint/torch api fucntion
+            get mindspore.mint/torch api function
             mindspore.mint.{api_sub_name} <--> torch.{api_sub_name}
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         """
@@ -178,7 +202,12 @@ class ApiRunner:
         return api_instance
 
     @staticmethod
-    def run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform):
+    def run_api(
+        api_instance,
+        api_input_aggregation,
+        forward_or_backward: str,
+        api_platform: str,
+    ) -> Union[ForwardResult, BackwardResultMT, PyTorchBackward]:
         inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
                        for compute_element in api_input_aggregation.inputs)
         kwargs = {key: value.get_parameter(get_origin=False, tensor_platform=api_platform)
@@ -189,6 +218,8 @@ class ApiRunner:
             forward_result = api_instance(*inputs, **kwargs)  # can be single tensor or tuple
             forward_result_tuple = convert_to_tuple(forward_result)
             res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in forward_result_tuple]
+            if api_platform == Const.MS_FRAMEWORK or api_platform == Const.MT_FRAMEWORK:
+                return res_compute_element_list, inputs, kwargs, forward_result_tuple
         else:
             if gradient_inputs is None:
                 err_msg = f"ApiRunner.run_api failed: run backward api but gradient_inputs is missing"
@@ -206,6 +237,7 @@ class ApiRunner:
                 backward_result = grad_func(*inputs, gradient_inputs)  # can be single tensor or tuple
                 backward_result_tuple = convert_to_tuple(backward_result)
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_tuple]
+                return res_compute_element_list, gradient_inputs, backward_result_tuple
             else:
                 # set requires_grad
                 requires_grad_index = []

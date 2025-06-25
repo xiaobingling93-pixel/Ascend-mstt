@@ -27,8 +27,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "include/ErrorCode.hpp"
-#include "FileUtils.hpp"
+#include "include/ErrorCode.h"
+#include "FileUtils.h"
 
 /* 部分环境上c++版本比较老，这里不用filesystem库实现 */
 
@@ -38,7 +38,8 @@ namespace  FileUtils {
 using namespace  MindStudioDebugger;
 
 /********************* 基础检查函数库，不做过多校验，路径有效性由调用者保证 ******************/
-bool IsPathExist(const std::string& path) {
+bool IsPathExist(const std::string& path)
+{
     struct stat buffer;
     return (stat(path.c_str(), &buffer) == 0);
 }
@@ -60,7 +61,7 @@ static std::string GetFullPath(const std::string &originPath)
     }
 
     cwd = cwdBuf;
-    std::string fullPath = std::move(cwd + pathSeparator + originPath);
+    std::string fullPath = std::move(cwd + PATH_SEPARATOR + originPath);
 
     return fullPath;
 }
@@ -84,8 +85,9 @@ std::vector<std::string> SplitPath(const std::string &path, char separator)
     return tokens;
 }
 
-std::string GetAbsPath(const std::string &originPath) {
-    std::string fullPath = GetFullPath(originPath);
+std::string GetAbsPath(const std::string &originpath)
+{
+    std::string fullPath = GetFullPath(originpath);
     if (fullPath.empty()) {
         return "";
     }
@@ -118,7 +120,8 @@ std::string GetAbsPath(const std::string &originPath) {
     return resolvedPath;
 }
 
-bool IsDir(const std::string& path) {
+bool IsDir(const std::string& path)
+{
     struct stat buffer;
     if (stat(path.c_str(), &buffer) == 0) {
         return (buffer.st_mode & S_IFDIR) != 0;
@@ -126,15 +129,17 @@ bool IsDir(const std::string& path) {
     return false;
 }
 
-bool IsRegularFile(const std::string& path) {
-    struct stat path_stat;
-    if (stat(path.c_str(), &path_stat) == 0) {
-        return S_ISREG(path_stat.st_mode);
+bool IsRegularFile(const std::string& path)
+{
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISREG(pathStat.st_mode);
     }
     return false;
 }
 
-bool IsFileSymbolLink(const std::string& path) {
+bool IsFileSymbolLink(const std::string& path)
+{
     struct stat buffer;
     if (lstat(path.c_str(), &buffer) == 0) {
         if (S_ISLNK(buffer.st_mode)) {
@@ -144,7 +149,8 @@ bool IsFileSymbolLink(const std::string& path) {
     return false;
 }
 
-bool IsPathCharactersValid(const std::string& path) {
+bool IsPathCharactersValid(const std::string& path)
+{
     for (const char& ch : path) {
         if (!std::isalnum(ch) && ch != '_' && ch != '.' && ch != ':' && ch != '/' && ch != '-') {
             return false;
@@ -243,14 +249,15 @@ bool IsPathLengthLegal(const std::string& path)
 
 bool IsPathDepthValid(const std::string& path)
 {
-    return std::count(path.begin(), path.end(), pathSeparator) <= PATH_DEPTH_MAX;
+    auto depth = static_cast<uint32_t>(std::count(path.begin(), path.end(), PATH_SEPARATOR));
+    return depth <= PATH_DEPTH_MAX;
 }
 
 bool IsFileOwner(const std::string& path)
 {
-    struct stat file_stat;
-    if (stat(path.c_str(), &file_stat) == 0) {
-        if (file_stat.st_uid == getuid()) {
+    struct stat fileStat;
+    if (stat(path.c_str(), &fileStat) == 0) {
+        if (fileStat.st_uid == getuid()) {
             return true;
         }
     }
@@ -258,7 +265,8 @@ bool IsFileOwner(const std::string& path)
 }
 
 /****************** 文件操作函数库，会对入参做基本检查 ************************/
-DebuggerErrno DeleteFile(const std::string &path) {
+DebuggerErrno DeleteFile(const std::string &path)
+{
     if (!IsPathExist(path)) {
         return DebuggerErrno::OK;
     }
@@ -306,7 +314,6 @@ static DebuggerErrno DeleteDirRec(const std::string &path, uint32_t depth)
                 closedir(dir);
                 return DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE;
         }
-
     }
 
     closedir(dir);
@@ -321,7 +328,8 @@ static DebuggerErrno DeleteDirRec(const std::string &path, uint32_t depth)
     return DebuggerErrno::OK;
 }
 
-DebuggerErrno DeleteDir(const std::string &path, bool recursion) {
+DebuggerErrno DeleteDir(const std::string &path, bool recursion)
+{
     if (!IsPathExist(path)) {
         return DebuggerErrno::OK;
     }
@@ -340,7 +348,8 @@ DebuggerErrno DeleteDir(const std::string &path, bool recursion) {
     return DebuggerErrno::OK;
 }
 
-static DebuggerErrno CreateDirAux(const std::string& path, bool recursion, mode_t mode) {
+static DebuggerErrno CreateDirAux(const std::string& path, bool recursion, mode_t mode)
+{
     std::string parent = GetParentDir(path);
     DebuggerErrno ret;
 
@@ -404,16 +413,17 @@ DebuggerErrno Chmod(const std::string& path, const mode_t& mode)
     return chmod(absPath.c_str(), mode) == 0 ? DebuggerErrno::OK : DebuggerErrno::ERROR_SYSCALL_FAILED;
 }
 
-DebuggerErrno GetFileSize(const std::string &path, size_t& size) {
-    struct stat path_stat;
-    if (stat(path.c_str(), &path_stat) != 0) {
+DebuggerErrno GetFileSize(const std::string &path, size_t& size)
+{
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) != 0) {
         return DebuggerErrno::ERROR_FILE_NOT_EXISTS;
     }
-    if (!S_ISREG(path_stat.st_mode)) {
+    if (!S_ISREG(pathStat.st_mode)) {
         return DebuggerErrno::ERROR_ILLEGAL_FILE_TYPE;
     }
 
-    size = static_cast<size_t>(path_stat.st_size);
+    size = static_cast<size_t>(pathStat.st_size);
     return DebuggerErrno::OK;
 }
 
@@ -600,63 +610,5 @@ DebuggerErrno CheckFileBeforeCreateOrWrite(const std::string &path, bool overwri
     }
     return DebuggerErrno::OK;
 }
-
-/* 其他文件操作工具 */
-static DebuggerErrno ListAllAux(const std::string &path, std::vector<std::string>& output, uint32_t depth)
-{
-    if (depth > PATH_DEPTH_MAX) {
-        return DebuggerErrno::ERROR_PATH_TOO_DEEP;
-    }
-
-    DIR* dir = opendir(path.c_str());
-    if (dir == nullptr) {
-        return DebuggerErrno::ERROR_FAILED_TO_OPEN_FILE;
-    }
-
-    DebuggerErrno ret = DebuggerErrno::OK;
-    size_t max = output.capacity();
-    size_t num = output.size();
-    if (num >= max) {
-        return DebuggerErrno::OK;
-    }
-
-    struct dirent* entry = nullptr;
-    while ((entry = readdir(dir)) != nullptr) {
-        if (strcmp(entry->d_name, ".") == 0 || (strcmp(entry->d_name, "..") == 0)) {
-            continue;
-        }
-        std::string entryPath = path + "/" + entry->d_name;
-        if (entry->d_type == DT_DIR) {
-            ret = ListAllAux(entryPath, output, depth + 1);
-            if (ret != DebuggerErrno::OK) {
-                closedir(dir);
-                return ret;
-            }
-        } else if (entry->d_type == DT_REG) {
-            output.emplace_back(entryPath);
-            if (++num >= max) {
-                break;
-            }
-        }
-    }
-    closedir(dir);
-    return DebuggerErrno::OK;
-}
-
-std::vector<std::string> ListAll(const std::string &path, size_t max)
-{
-    std::vector<std::string> ret;
-    std::string realPath = GetAbsPath(path);
-    if (CheckDirCommon(realPath) != DebuggerErrno::OK) {
-        return ret;
-    }
-    ret.reserve(max);
-
-    uint32_t depth = std::count(realPath.begin(), realPath.end(), pathSeparator);
-    ListAllAux(realPath, ret, depth);
-    ret.resize(ret.size());
-    return ret;
-}
-
 }
 }

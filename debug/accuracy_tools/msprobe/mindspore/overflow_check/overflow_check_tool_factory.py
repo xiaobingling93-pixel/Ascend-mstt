@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from msprobe.core.common.log import logger
 from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.overflow_check.kernel_graph_overflow_check import KernelGraphOverflowCheck
@@ -44,6 +45,7 @@ class OverflowCheckToolFactory:
             raise Exception("Valid level is needed.")
         tool = tool.get(config.execution_mode)
         if not tool:
-            raise Exception(f"Overflow check is not supported in {config.execution_mode} mode "
-                            f"when level is {config.level}.")
-        return tool(config)
+            logger.error(f"Overflow check is not supported in {config.execution_mode} mode "
+                         f"when level is {config.level}.")
+            raise ValueError
+        return (tool(config),)

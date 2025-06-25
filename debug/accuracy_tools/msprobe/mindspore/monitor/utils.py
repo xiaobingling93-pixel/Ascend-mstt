@@ -24,18 +24,24 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
-def get_single_metrics(op_list, tag, tensor, output=None):
+def get_single_metrics(op_list, tag, tensor, eps=1e-8, output=None):
     if output is None:
         output = {}
     if tag not in output:
         output[tag] = {}
     for op in op_list:
         func = FUNC_MAP.get(op)
-        statistic = func(tensor)
+        if op == "zeros":
+            statistic = func(tensor, eps)
+        else:
+            statistic = func(tensor)
         if hasattr(statistic, "dtype") and statistic.dtype == mstype.bfloat16:
             statistic = float(statistic)
             statistic = Tensor(statistic)
-        output[tag][op] = statistic.astype(mstype.float32)
+        if isinstance(statistic, Tensor):
+            output[tag][op] = statistic.astype(mstype.float32)
+        else:
+            output[tag][op] = statistic
 
 
 def get_metrics(op_list, tag2tensor, eps, output=None):
@@ -44,7 +50,7 @@ def get_metrics(op_list, tag2tensor, eps, output=None):
     for tag, tensor in tag2tensor.items():
         if tag not in output:
             output[tag] = {}
-        get_single_metrics(op_list, tag, tensor, output)
+        get_single_metrics(op_list, tag, tensor, eps, output)
     return output
 
 
@@ -91,6 +97,11 @@ def validate_ops(ops):
         default_op = MonitorConst.OP_LIST[0]
         valid_ops.append(default_op)
         logger.info(f"There is no valid ops, default op {default_op} is used")
+    # 增加默认shape和dtype参数
+    if "shape" not in valid_ops:
+        valid_ops.append("shape")
+    if "dtype" not in valid_ops:
+        valid_ops.append("dtype")
     return valid_ops
 
 
@@ -171,7 +182,7 @@ def validate_alert(alert):
             args = rule.get("args")
             if args and isinstance(args, dict):
                 threshold = args.get("threshold")
-                if not isinstance(threshold, float) or threshold < 0:
+                if not isinstance(threshold, (float, int)) or threshold < 0:
                     raise TypeError('threshold must be float and not less than 0')
     dump = alert.get('dump')
     if dump and not isinstance(dump, bool):
@@ -210,6 +221,18 @@ def validate_collect_times(collect_times):
         raise TypeError('collect_times must be int.')
     if collect_times < 1:
         raise ValueError("collect_times must greater than 1")
+
+
+def validate_dynamic_on(dynamic_on):
+    if not isinstance(dynamic_on, bool):
+        raise TypeError('dynamic_on should be a bool')
+
+
+def validate_monitor_mbs_grad(monitor_mbs_grad):
+    if not isinstance(monitor_mbs_grad, bool):
+        logger.warning(f'monitor_mbs_grad should be a bool, actual value is {monitor_mbs_grad}.')
+        return False
+    return monitor_mbs_grad
 
 
 def validate_config(config):
@@ -260,6 +283,11 @@ def validate_config(config):
 
     collect_times = config.get('collect_times', int(1e8))
     validate_collect_times(collect_times)
+
+    config["monitor_mbs_grad"] = validate_monitor_mbs_grad(config.get('monitor_mbs_grad', False))
+
+    dynamic_on = config.get('dynamic_on', False)
+    validate_dynamic_on(dynamic_on)
 
     if not targets:
         if xy_distribution:

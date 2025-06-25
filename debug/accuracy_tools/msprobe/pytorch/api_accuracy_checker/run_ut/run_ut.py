@@ -45,11 +45,11 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileChecker, change_mode, \
-    create_directory, get_json_contents, read_csv, check_file_or_directory_path, check_crt_valid
+    create_directory, get_json_contents, read_csv, check_file_or_directory_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
-from msprobe.core.common.utils import safe_get_value, CompareException
+from msprobe.core.common.utils import safe_get_value, CompareException, is_int, check_op_str_pattern_valid
 from msprobe.pytorch.common.utils import seed_all
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
@@ -65,7 +65,8 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 
 not_backward_list = ['repeat_interleave']
 unsupported_backward_list = ['masked_select']
-unsupported_api_list = ["to"]
+unsupported_api_list = ["to", "empty", "empty_like", "empty_strided", "new_empty", "new_empty_strided", 
+                        "empty_with_format"]
 
 
 tqdm_params = {
@@ -84,6 +85,9 @@ tqdm_params = {
 }
 
 
+seed_all()
+
+
 def run_ut(config):
     logger.info("start UT test")
     if config.online_config.is_online:
@@ -94,7 +98,7 @@ def run_ut(config):
         logger.info(f"UT task details will be saved in {config.details_csv_path}")
 
     if config.save_error_data:
-        logger.info(f"UT task error_datas will be saved in {config.error_data_path}")
+        logger.info(f"UT task error_data will be saved in {config.error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut, config=config)
 
     if config.online_config.is_online:
@@ -118,6 +122,7 @@ def run_ut(config):
 def run_api_offline(config, compare, api_name_set):
     err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
+        check_op_str_pattern_valid(api_full_name)
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
@@ -288,7 +293,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     if grad_input_index is not None:
         grad_index = grad_input_index.get('grad_index')
 
-    if need_backward:
+    if need_backward and out is not None:
         if need_to_backward(grad_index, out):
             backward_args = backward_content[api_full_name].get("input")
             func_options = {
@@ -347,6 +352,9 @@ def need_to_backward(grad_index, out):
 
 def run_backward(args, grad, grad_index, out):
     if grad_index is not None:
+        if not is_int(grad_index):
+            logger.error(f"{grad_index} dtype is not int")
+            raise TypeError(f"{grad_index} dtype is not int")
         if grad_index >= len(out):
             logger.error(f"Run backward error when grad_index is {grad_index}")
             raise IndexError(f"Run backward error when grad_index is {grad_index}")
@@ -433,6 +441,7 @@ def preprocess_forward_content(forward_content):
     arg_cache = {}
 
     for key, value in forward_content.items():
+        check_op_str_pattern_valid(key)
         base_key = key.rsplit(Const.SEP, 1)[0]
 
         if key not in arg_cache:
@@ -472,7 +481,7 @@ def _run_ut(parser=None):
     _run_ut_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     run_ut_command(args)
-
+    
 
 def checked_online_config(online_config):
     if not online_config.is_online:
@@ -494,7 +503,10 @@ def checked_online_config(online_config):
         check_file_or_directory_path(online_config.tls_path, isdir=True)
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
-        check_crt_valid(os.path.join(online_config.tls_path, "server.crt"))
+        check_file_or_directory_path(os.path.join(online_config.tls_path, "ca.crt"))
+        crl_path = os.path.join(online_config.tls_path, "crl.pem")
+        if os.path.exists(crl_path):
+            check_file_or_directory_path(crl_path)
 
     # host and port
     if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
@@ -564,7 +576,15 @@ def run_ut_command(args):
     error_data_path = checker_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
-            time_info = result_csv_path.split('.')[0].split('_')[-1]
+            parts_by_dot = result_csv_path.split(Const.SEP)
+            if len(parts_by_dot) < 2 or not parts_by_dot[0]:
+                raise ValueError("result_csv_path does not contain a valid file name with an extension.")
+            file_name_part = parts_by_dot[0]
+            parts_by_underscore = file_name_part.split(Const.REPLACEMENT_CHARACTER)
+            if len(parts_by_underscore) < 2:
+                raise ValueError("File name part does not contain enough '_' separated segments.")
+            time_info = parts_by_underscore[-1]
+
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
@@ -582,9 +602,8 @@ def run_ut_command(args):
     }
     run_ut_config = checker_config.get_run_ut_config(**config_params)
     run_ut(run_ut_config)
+    logger.info("UT task completed.")
 
 
 if __name__ == '__main__':
-    seed_all()
     _run_ut()
-    logger.info("UT task completed.")

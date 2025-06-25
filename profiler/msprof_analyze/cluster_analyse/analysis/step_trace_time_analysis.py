@@ -25,6 +25,7 @@ from msprof_analyze.prof_common.logger import get_logger
 from msprof_analyze.cluster_analyse.analysis.msprof_step_trace_time_adapter import MsprofStepTraceTimeAdapter
 from msprof_analyze.cluster_analyse.cluster_data_preprocess.msprof_data_preprocessor import MsprofDataPreprocessor
 from msprof_analyze.cluster_analyse.analysis.msprof_step_trace_time_adapter import MsprofStepTraceTimeDBAdapter
+from msprof_analyze.cluster_analyse.analysis.stage_group_analysis import StageInfoAnalysis
 
 logger = get_logger()
 
@@ -34,15 +35,29 @@ class StepTraceTimeAnalysis:
     CLUSTER_TRACE_TIME_TABLE = "ClusterStepTraceTime"
     PROFILER_METADATA_JSON = "profiler_metadata.json"
     PARALLEL_HEADERS = ["DP Index", "PP Index", "TP Index"]
+    STEP_TRACE_TIME_SQL = """
+    SELECT 
+        step, 
+        computing,communication_not_overlapped,
+        overlapped,
+        communication,
+        free,
+        stage,
+        bubble,
+        communication_not_overlapped_and_exclude_receive,
+        preparing
+    FROM {}
+    """
 
     def __init__(self, param: dict):
         self.collection_path = param.get(Constant.COLLECTION_PATH)
         self.cluster_analysis_output_path = param.get(Constant.CLUSTER_ANALYSIS_OUTPUT_PATH)
         self.data_map = param.get(Constant.DATA_MAP)
-        self.communication_group = param.get(Constant.COMM_DATA_DICT, {}).get(Constant.COMMUNICATION_GROUP, {})
+        self.communication_data_dict = param.get(Constant.COMM_DATA_DICT, {})
         self.step_time_dict = {}
         self.step_data_list = []
         self.data_type = param.get(Constant.DATA_TYPE)
+        self.data_simplification = param.get(Constant.DATA_SIMPLIFICATION)
         self.distributed_args = None
         self.is_msprof = param.get(Constant.IS_MSPROF)
         self.is_mindspore = param.get(Constant.IS_MINDSPORE)
@@ -82,7 +97,7 @@ class StepTraceTimeAnalysis:
         self.partition_ranks_data()
         self.dump_data()
         increase_shared_value(completed_processes, lock)
-        logger.warning("StepTraceTimeAnalysis completed")
+        logger.info("StepTraceTimeAnalysis completed")
 
     def partition_ranks_data(self):
         if not self.distributed_args:
@@ -179,7 +194,7 @@ class StepTraceTimeAnalysis:
                     if (os.path.exists(step_time_file) and
                             DBManager.check_tables_in_db(step_time_file, Constant.TABLE_STEP_TRACE)):
                         conn, cursor = DBManager.create_connect_db(step_time_file)
-                        sql = "select * from {0}".format(Constant.TABLE_STEP_TRACE)
+                        sql = self.STEP_TRACE_TIME_SQL.format(Constant.TABLE_STEP_TRACE)
                         data = DBManager.fetch_all_data(cursor, sql, is_dict=False)
                         self.step_time_dict[rank_id] = data
                         DBManager.destroy_db_connect(conn, cursor)
@@ -194,7 +209,8 @@ class StepTraceTimeAnalysis:
                     self.step_data_list.append([data_bean.step, Constant.RANK, rank_id] + data_bean.row)
                 else:
                     self.step_data_list.append([data_bean[0], Constant.RANK, rank_id] + list(data_bean[1:]))
-        stage_list = self.communication_group.get(Constant.P2P)
+
+        stage_list = self.generate_stage_group_list()
         if not stage_list:
             return
         step_group_dict = {}
@@ -222,3 +238,16 @@ class StepTraceTimeAnalysis:
                 elif self.step_time_dict.get(rank):
                     return self.step_time_dict[rank][0].all_headers
         return []
+
+    def generate_stage_group_list(self):
+        if Constant.STAGE in self.communication_data_dict:
+            return self.communication_data_dict[Constant.STAGE]
+        params = {
+            Constant.CLUSTER_ANALYSIS_OUTPUT_PATH: self.cluster_analysis_output_path,
+            Constant.DATA_TYPE: self.data_type,
+            Constant.DATA_SIMPLIFICATION: self.data_simplification,
+            Constant.COMM_DATA_DICT: self.communication_data_dict
+        }
+        stage_analyzer = StageInfoAnalysis(params)
+        stage_list = stage_analyzer.run()
+        return stage_list

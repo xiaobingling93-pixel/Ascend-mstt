@@ -1,10 +1,9 @@
-set(PACKAGE_VERSION 3.13.0)
+set(PACKAGE_VERSION 3.15.0)
 
 set(PKG_NAME protobuf)
-set(URL "https://gitee.com/mirrors/protobuf_source/repository/archive/v3.13.0.tar.gz")
-set(SHA256_VALUE "ab9b39e7053a6fb06b01bf75fb6ec6a71a1ada5a5f8e2446f927336e97b9e7bb")
+set(SHA256_VALUE "a1ce078c369f46a3277fdc7ce462ac73cb7cb0edec8bc9d90d23fdb34491c575")
 set(DOWNLOAD_PATH "$ENV{PROJECT_ROOT_PATH}/third_party")
-set(DIR_NAME "${DOWNLOAD_PATH}/protobuf_source-v3.13.0")
+set(DIR_NAME "${DOWNLOAD_PATH}/protobuf_source-v3.15.0")
 
 if (NOT ${PKG_NAME}_FOUND)
 
@@ -32,7 +31,6 @@ endif()
 endif()
 
 download_opensource_pkg(${PKG_NAME}
-    URL ${URL}
     SHA256 ${SHA256_VALUE}
     DOWNLOAD_PATH ${DOWNLOAD_PATH}
 )

@@ -2,9 +2,9 @@
 #include <mockcpp/mockcpp.hpp>
 
 #include "include/test_utils.hpp"
-#include "third_party/ACL/AclApi.hpp"
-#include "base/ErrorInfos.hpp"
-#include "core/PrecisionDebugger.hpp"
+#include "third_party/ACL/AclApi.h"
+#include "base/ErrorInfosManager.h"
+#include "core/PrecisionDebugger.h"
 
 using namespace MindStudioDebugger;
 
@@ -17,15 +17,15 @@ public:
     std::string Name() const override {return "PrecisionDbgTaskStub";}
     bool Condition(const DebuggerConfig& cfg) const override {return true;}
 
-    void Initialize(const DebuggerConfig& cfg) {initialize_called = true;}
-    void OnStart() {start_called = true;}
-    void OnStop() {stop_called = true;}
-    void OnStep() {step_called = true;}
+    void Initialize(const DebuggerConfig& cfg) {initializeCalled = true;}
+    void OnStart() {startCalled = true;}
+    void OnStop() {stopCalled = true;}
+    void OnStep() {stepCalled = true;}
 
-    bool initialize_called{false};
-    bool start_called{false};
-    bool stop_called{false};
-    bool step_called{false};
+    bool initializeCalled{false};
+    bool startCalled{false};
+    bool stopCalled{false};
+    bool stepCalled{false};
 };
 
 class PrecisionDbgTaskUselessStub : public PrecisionDbgTaskStub {
@@ -35,11 +35,11 @@ public:
 
 TEST(PrecisionDebuggerTest, TestRegisterBeforeInit) {
     PrecisionDebugger& debugger = PrecisionDebugger::GetInstance();
-    PrecisionDbgTaskStub stub_task;
+    PrecisionDbgTaskStub stubTask;
 
     DebuggerConfig::GetInstance().Reset();
-    debugger.RegisterDebuggerTask(&stub_task);
-    stub_task.Register();
+    debugger.RegisterDebuggerTask(&stubTask);
+    stubTask.Register();
 
     EXPECT_FALSE(debugger.IsEnable());
     EXPECT_EQ(debugger.GetCurStep(), 0);
@@ -49,12 +49,12 @@ TEST(PrecisionDebuggerTest, TestRegisterBeforeInit) {
     debugger.Step();
     EXPECT_EQ(debugger.GetCurStep(), 0);
 
-    EXPECT_FALSE(stub_task.initialize_called);
-    EXPECT_FALSE(stub_task.start_called);
-    EXPECT_FALSE(stub_task.stop_called);
-    EXPECT_FALSE(stub_task.step_called);
+    EXPECT_FALSE(stubTask.initializeCalled);
+    EXPECT_FALSE(stubTask.startCalled);
+    EXPECT_FALSE(stubTask.stopCalled);
+    EXPECT_FALSE(stubTask.stepCalled);
 
-    debugger.UnRegisterDebuggerTask(&stub_task);
+    debugger.UnRegisterDebuggerTask(&stubTask);
     debugger.UnRegisterDebuggerTask(nullptr);
 }
 
@@ -81,39 +81,39 @@ TEST(PrecisionDebuggerTest, TestInit) {
 
 TEST(PrecisionDebuggerTest, TestSubTaskDispatch) {
     PrecisionDebugger& debugger = PrecisionDebugger::GetInstance();
-    PrecisionDbgTaskStub stub_task1;
-    PrecisionDbgTaskStub stub_task2;
-    PrecisionDbgTaskUselessStub stub_task3;
+    PrecisionDbgTaskStub stubTask1;
+    PrecisionDbgTaskStub stubTask2;
+    PrecisionDbgTaskUselessStub stubTask3;
     MOCKER(MindStudioDebugger::AscendCLApi::LoadAclApi)
     .stubs()
     .then(returnValue(0));
-    MOCKER(MindStudioDebugger::AscendCLApi::ACLAPI_aclrtSynchronizeDevice)
+    MOCKER(MindStudioDebugger::AscendCLApi::AclApiAclrtSynchronizeDevice)
     .stubs()
     .then(returnValue(0))
     .expects(atLeast(1));
 
-    stub_task1.Register();
+    stubTask1.Register();
     EXPECT_EQ(debugger.Initialize("MindSpore", CONFIG_EXAMPLE), 0);
-    stub_task2.Register();
-    stub_task3.Register();
+    stubTask2.Register();
+    stubTask3.Register();
 
-    EXPECT_TRUE(stub_task1.initialize_called);
-    EXPECT_TRUE(stub_task2.initialize_called);
-    EXPECT_FALSE(stub_task3.initialize_called);
-    EXPECT_FALSE(stub_task1.start_called);
-    EXPECT_FALSE(stub_task2.stop_called);
-    EXPECT_FALSE(stub_task3.step_called);
+    EXPECT_TRUE(stubTask1.initializeCalled);
+    EXPECT_TRUE(stubTask2.initializeCalled);
+    EXPECT_FALSE(stubTask3.initializeCalled);
+    EXPECT_FALSE(stubTask1.startCalled);
+    EXPECT_FALSE(stubTask2.stopCalled);
+    EXPECT_FALSE(stubTask3.stepCalled);
 
     debugger.Start();
-    EXPECT_TRUE(stub_task1.start_called);
-    EXPECT_FALSE(stub_task3.start_called);
+    EXPECT_TRUE(stubTask1.startCalled);
+    EXPECT_FALSE(stubTask3.startCalled);
 
     debugger.Stop();
-    EXPECT_TRUE(stub_task1.stop_called);
-    EXPECT_TRUE(stub_task2.stop_called);
+    EXPECT_TRUE(stubTask1.stopCalled);
+    EXPECT_TRUE(stubTask2.stopCalled);
 
     debugger.Step();
-    EXPECT_TRUE(stub_task1.step_called);
+    EXPECT_TRUE(stubTask1.stepCalled);
 
     GlobalMockObject::verify();
     GlobalMockObject::reset();

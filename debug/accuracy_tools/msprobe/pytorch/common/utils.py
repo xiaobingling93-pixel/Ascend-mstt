@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -24,11 +24,12 @@ from functools import wraps
 import numpy as np
 import torch
 import torch.distributed as dist
+
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import (FileCheckConst, change_mode,
                                             check_file_or_directory_path, check_path_before_create, FileOpen)
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import check_seed_all
+from msprobe.core.common.utils import check_seed_all, is_save_variable_valid
 from packaging import version
 
 try:
@@ -38,7 +39,9 @@ except ImportError:
 else:
     is_gpu = False
 
+
 torch_without_guard_version = torch.__version__ >= '2.1'
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 if not is_gpu and not torch_without_guard_version:
     from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
@@ -261,6 +264,10 @@ class Const:
     NPU = 'NPU'
     DISTRIBUTED = 'Distributed'
 
+    HIFLOAT8_TYPE = "torch_npu.HiFloat8Tensor"
+    FLOAT8_E5M2_TYPE = "torch.float8_e5m2"
+    FLOAT8_E4M3FN_TYPE = "torch.float8_e4m3fn"
+
     RAISE_PRECISION = {
         torch.float16: torch.float32,
         torch.bfloat16: torch.float32,
@@ -309,14 +316,14 @@ def print_rank_0(message):
         logger.info(message)
 
 
-def load_pt(pt_path, to_cpu=False):
+def load_pt(pt_path, to_cpu=False, weights_only=True):
     pt_path = os.path.realpath(pt_path)
     check_file_or_directory_path(pt_path)
     try:
         if to_cpu:
-            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=True)
+            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=weights_only)
         else:
-            pt = torch.load(pt_path, weights_only=True)
+            pt = torch.load(pt_path, weights_only=weights_only)
     except Exception as e:
         raise RuntimeError(f"load pt file {pt_path} failed") from e
     return pt
@@ -391,7 +398,7 @@ def save_api_data(api_data):
         io_buff = io.BytesIO()
         torch.save(api_data, io_buff)
     except Exception as e:
-        raise RuntimeError(f"save api_data to io_buff failed") from e
+        raise RuntimeError("save api_data to io_buff failed") from e
     return io_buff
 
 
@@ -399,9 +406,9 @@ def load_api_data(api_data_bytes):
     """Load data from bytes stream"""
     try:
         buffer = io.BytesIO(api_data_bytes)
-        buffer = torch.load(buffer, map_location="cpu")
+        buffer = torch.load(buffer, map_location="cpu", weights_only=False)
     except Exception as e:
-        raise RuntimeError(f"load api_data from bytes failed") from e
+        raise RuntimeError("load api_data from bytes failed") from e
     return buffer
 
 
@@ -419,7 +426,11 @@ def is_recomputation():
         bool: True if in the re-computation phase, False otherwise.
     """
     backward_function_indices = []
-    call_stack = inspect.stack()
+    try:
+        call_stack = inspect.stack()
+    except Exception as e:
+        logger.warning(f"Failed to capture stack trace, recomputation validation may be incorrect, error info: {e}.")
+        return False
 
     # Identify the function 'backward' is being executed within the 'torch/_tensor.py' file.
     for frame_info in call_stack:
@@ -449,9 +460,11 @@ def is_recomputation():
 
 def check_save_param(variable, name, save_backward):
     # try catch this api to skip invalid call
-    if not isinstance(variable, (list, dict, tuple, torch.Tensor, int, float, str)):
+    valid_data_types = (torch.Tensor, int, float, str)
+    if not is_save_variable_valid(variable, valid_data_types):
+        valid_data_types_with_nested_types = valid_data_types + (dict, tuple, list)
         logger.warning("PrecisionDebugger.save variable type not valid, "
-                       "should be one of list, dict, tuple, torch.Tensor, int, float or string. "
+                       f"should be one of {valid_data_types_with_nested_types}"
                        "Skip current save process.")
         raise ValueError
     if not isinstance(name, str):
@@ -466,10 +479,31 @@ def check_save_param(variable, name, save_backward):
         raise ValueError
 
 
-def replace_last_occurrence(text, old, new):
-    if text is None:
-        return text
-    index = text.rfind(old)
-    if index != -1:
-        return text[:index] + text[index:].replace(old, new, 1)
-    return text
+def is_torch_nn_module(variable):
+    return isinstance(variable, torch.nn.Module) and not isinstance(variable, torch.jit.ScriptModule)
+
+
+def is_hifloat8_tensor(tensor):
+    if not is_gpu and hasattr(torch_npu, "HiFloat8Tensor") and isinstance(tensor, torch_npu.HiFloat8Tensor):
+        return True
+    return False
+
+
+def is_float8_tensor(tensor):
+    if str(tensor.dtype) in [Const.FLOAT8_E5M2_TYPE, Const.FLOAT8_E4M3FN_TYPE]:
+        return True
+    return is_hifloat8_tensor(tensor)
+
+
+def register_forward_pre_hook(module, forward_pre_hook):
+    if torch_version_above_or_equal_2:
+        module.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
+    else:
+        module.register_forward_pre_hook(forward_pre_hook)
+
+
+def register_forward_hook(module, forward_hook):
+    if torch_version_above_or_equal_2:
+        module.register_forward_hook(forward_hook, with_kwargs=True)
+    else:
+        module.register_forward_hook(forward_hook)

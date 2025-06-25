@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -16,12 +16,16 @@
 import csv
 import os
 import copy
-import numpy as np
+import threading
+import traceback
+from datetime import datetime, timezone, timedelta
 
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json, check_path_before_create
 from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.decorator import recursion_depth_decorator
+
+lock = threading.Lock()
 
 
 class DataWriter:
@@ -33,11 +37,15 @@ class DataWriter:
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
         self.debug_file_path = None
+        self.dump_error_info_path = None
         self.flush_size = 1000
+        self.larger_flush_size = 20000
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
         self.cache_debug = {}
+        self.stat_stack_list = []
+        self._error_log_initialized = False
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -54,13 +62,54 @@ class DataWriter:
         if is_new_file:
             change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
+    @recursion_depth_decorator("JsonWriter: DataWriter._replace_stat_placeholders")
+    def _replace_stat_placeholders(self, data, stat_result):
+        if isinstance(data, dict):
+            keys = list(data.keys())  # 获取当前所有键
+            for key in keys:  # 递归所有变量
+                value = data[key]
+                if key == Const.TENSOR_STAT_INDEX and isinstance(value, int):
+                    if value >= 0:
+                        idx = value
+                    else:
+                        return
+                    stat_values = stat_result[idx] if idx < len(stat_result) else [None] * 4
+
+                    new_entries = {
+                        Const.TYPE: data["type"],
+                        Const.DTYPE: data["dtype"],
+                        Const.SHAPE: data["shape"],
+                        Const.MAX: stat_values[0],
+                        Const.MIN: stat_values[1],
+                        Const.MEAN: stat_values[2],
+                        Const.NORM: stat_values[3],
+                    }
+                    del data[key]
+
+                    # 重构字典顺序
+                    updated_dict = {}
+                    # 通过插入排序后字段保证字段写入json的有序
+                    updated_dict.update(new_entries)
+                    # 遍历原字典其他字段（排除已删除的tensor_stat_index）
+                    for k in data:
+                        if k not in new_entries:
+                            updated_dict[k] = data[k]
+                    data.clear()
+                    data.update(updated_dict)
+                else:
+                    self._replace_stat_placeholders(value, stat_result)
+        elif isinstance(data, (list, tuple)):
+            for item in data:
+                self._replace_stat_placeholders(item, stat_result)
+
     def reset_cache(self):
         self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
+        self.cache_debug = {}
 
     def initialize_json_file(self, **kwargs):
-        if self.debug_file_path and not self.cache_debug:
+        if kwargs["level"] == Const.LEVEL_DEBUG and not self.cache_debug:
             # debug level case only create debug.json
             debug_dict = copy.deepcopy(kwargs)
             debug_dict.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
@@ -83,42 +132,88 @@ class DataWriter:
         self.dump_tensor_data_dir = dump_path_aggregation.dump_tensor_data_dir
         self.free_benchmark_file_path = dump_path_aggregation.free_benchmark_file_path
         self.debug_file_path = dump_path_aggregation.debug_file_path
+        self.dump_error_info_path = dump_path_aggregation.dump_error_info_path
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
-        if dump_data and isinstance(dump_data, dict) and len(dump_data) % self.flush_size == 0:
+
+        if not dump_data or not isinstance(dump_data, dict):
+            return
+
+        length = len(dump_data)
+
+        threshold = self.flush_size if length < self.larger_flush_size else self.larger_flush_size
+
+        if length % threshold == 0:
             self.write_json()
 
+    def write_error_log(self, message: str):
+        """
+        写错误日志：
+          - 第一次调用时以 'w' 模式清空文件，之后都用 'a' 模式追加
+          - 添加时间戳
+          - 在 message 后写入当前的调用栈（方便追踪日志来源）
+        """
+        try:
+            mode = "w" if not self._error_log_initialized else "a"
+            self._error_log_initialized = True
+
+            check_path_before_create(self.dump_error_info_path)
+
+            with FileOpen(self.dump_error_info_path, mode) as f:
+                cst_timezone = timezone(timedelta(hours=8), name="CST")
+                timestamp = datetime.now(cst_timezone).strftime("%Y-%m-%d %H:%M:%S %z")
+                f.write(f"[{timestamp}] {message}\n")
+                f.write("Call stack (most recent call last):\n")
+
+                f.write("".join(traceback.format_stack()[:-1]))  # 去掉自己这一层
+                f.write("\n")
+        except Exception as e:
+            # 如果连写日志都失败了，就打印到 stderr
+            logger.warning(f"[FallbackError] Failed to write error log: {e}")
+
     def update_data(self, new_data):
-        if not isinstance(new_data, dict) or len(new_data.keys()) != 1:
-            logger.warning(f"The data info({new_data}) should be a dict with only one outer key.")
-            return
-        dump_data = self.cache_data.get(Const.DATA)
-        if not isinstance(dump_data, dict):
-            logger.warning(f"The dump data({dump_data}) should be a dict.")
-            return
+        with lock:
+            if not isinstance(new_data, dict) or len(new_data.keys()) != 1:
+                logger.warning(f"The data info({new_data}) should be a dict with only one outer key.")
+                return
+            dump_data = self.cache_data.get(Const.DATA)
+            if not isinstance(dump_data, dict):
+                logger.warning(f"The dump data({dump_data}) should be a dict.")
+                return
 
-        key = next(iter(new_data.keys()))
-        if key in dump_data:
-            dump_data.get(key).update(new_data.get(key))
-        else:
-            dump_data.update(new_data)
+            key = next(iter(new_data.keys()))
+            if key in dump_data:
+                dump_data.get(key).update(new_data.get(key))
+            else:
+                dump_data.update(new_data)
 
-    def update_stack(self, new_data):
-        self.cache_stack.update(new_data)
+    def update_stack(self, name, stack_data):
+        with lock:
+            api_list = self.cache_stack.get(stack_data)
+            if api_list is None:
+                self.cache_stack.update({stack_data: [name]})
+            else:
+                api_list.append(name)
 
     def update_construct(self, new_data):
-        self.cache_construct.update(new_data)
+        with lock:
+            self.cache_construct.update(new_data)
 
     def update_debug(self, new_data):
-        self.cache_debug['data'].update(new_data)
+        with lock:
+            self.cache_debug['data'].update(new_data)
 
     def write_data_json(self, file_path):
         logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
         save_json(file_path, self.cache_data, indent=1)
 
     def write_stack_info_json(self, file_path):
-        save_json(file_path, self.cache_stack, indent=1)
+        num, new_cache_stack = 0, {}
+        for key, value in self.cache_stack.items():
+            new_cache_stack[num] = [value, key]
+            num += 1
+        save_json(file_path, new_cache_stack, indent=1)
 
     def write_construct_info_json(self, file_path):
         save_json(file_path, self.cache_construct, indent=1)
@@ -126,38 +221,62 @@ class DataWriter:
     def write_debug_info_json(self, file_path):
         save_json(file_path, self.cache_debug, indent=1)
 
+    def append_stat_to_buffer(self, stat_vector):
+        """
+        直接使用 Python list 存储 stat_vector,
+        将 stat_vector 存入 self.stat_stack_list 的方式
+        """
+        self.stat_stack_list.append(stat_vector)
+        return len(self.stat_stack_list) - 1
+
+    def get_buffer_values_max(self, index):
+        if 0 <= index < len(self.stat_stack_list) and len(self.stat_stack_list[index]) >= 1:
+            return self.stat_stack_list[index][0]
+        else:
+            logger.warning(f"stat_stack_list[{index}] The internal data is incomplete,"
+                           f" and the maximum value cannot be obtained.")
+            return None
+
+    def get_buffer_values_min(self, index):
+        if 0 <= index < len(self.stat_stack_list) and len(self.stat_stack_list[index]) >= 1:
+            return self.stat_stack_list[index][1]
+        else:
+            logger.warning(f"stat_stack_list[{index}] Internal data is incomplete"
+                           f" and minimum values cannot be obtained.")
+            return None
+
+    def flush_stat_stack(self):
+        """
+        在 flush 阶段，将所有存储的统计值从设备搬到 CPU，
+        这里返回一个列表，每个元素是 [Max, Min, Mean, Norm] 的数值列表
+        """
+        if not self.stat_stack_list:
+            return []
+        result = [
+            [
+                x.item() if hasattr(x, "item") else x
+                for x in stat_values
+            ]
+            for stat_values in self.stat_stack_list
+        ]
+        self.stat_stack_list = []
+        return result
+
     def write_json(self):
-        if self.cache_data:
-            self.write_data_json(self.dump_file_path)
-        if self.cache_stack:
-            self.write_stack_info_json(self.stack_file_path)
-        if self.cache_construct:
-            self.write_construct_info_json(self.construct_file_path)
-        if self.cache_debug:
-            self.write_debug_info_json(self.debug_file_path)
+        with lock:
+            # 在写 JSON 前，统一获取统计值
+            stat_result = self.flush_stat_stack()
+            # 遍历 cache_data，将占位符替换为最终统计值
+            if stat_result:
+                self._replace_stat_placeholders(self.cache_data, stat_result)
+                if self.cache_debug:
+                    self._replace_stat_placeholders(self.cache_debug, stat_result)
+            if self.cache_data:
+                self.write_data_json(self.dump_file_path)
+            if self.cache_stack:
+                self.write_stack_info_json(self.stack_file_path)
+            if self.cache_construct:
+                self.write_construct_info_json(self.construct_file_path)
+            if self.cache_debug:
+                self.write_debug_info_json(self.debug_file_path)
 
-    def fill_stack_tensor_data(self):
-        self.process_stat_data_recursive(self.cache_data)
-
-    def process_stat_data_recursive(self, data, depth=0):
-        if depth > Const.MAX_DEPTH:
-            logger.error(f"The maximum depth of recursive process stat data, {Const.MAX_DEPTH} is reached.")
-            raise MsprobeException(MsprobeException.RECURSION_LIMIT_ERROR)
-        if isinstance(data, dict):
-            if "tensor_stat" in data.keys():
-                tensor_stat = data["tensor_stat"]
-                if len(tensor_stat) != Const.TENSOR_STAT_LEN or len(tensor_stat[0]) != len(tensor_stat[1]):
-                    logger.warning("Some bad data in async dump")
-                else:
-                    tensor_stat_index, tensor_stat_data = tensor_stat[0], tensor_stat[1]
-                    if hasattr(tensor_stat_data, "device") and tensor_stat_data.device != Const.CPU_LOWERCASE:
-                        tensor_stat_data = tensor_stat_data.cpu()
-                    for index, stat in zip(tensor_stat_index, tensor_stat_data):
-                        data.update({index: stat.item()})
-                del data["tensor_stat"]
-            else:
-                for key in data.keys():
-                    self.process_stat_data_recursive(data[key], depth + 1)
-        elif isinstance(data, (list, tuple)):
-            for i in data:
-                self.process_stat_data_recursive(i, depth + 1)

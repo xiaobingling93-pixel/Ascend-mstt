@@ -16,14 +16,16 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.const import Const, MsgConst
+from msprobe.core.common_config import CommonConfig
+from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.mindspore.runtime import Runtime
+from msprobe.mindspore.ms_config import StatisticsConfig
+from msprobe.core.common.runtime import Runtime
 
 
 class TestPrecisionDebugger(unittest.TestCase):
@@ -48,12 +50,12 @@ class TestPrecisionDebugger(unittest.TestCase):
         }
 
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         handler = Handler()
 
         mock_get_mode = MagicMock()
         mock_parse_json_config = MagicMock()
-        with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", new=mock_parse_json_config), \
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
              patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler), \
              patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
@@ -68,20 +70,20 @@ class TestPrecisionDebugger(unittest.TestCase):
             self.assertTrue(Handler.called)
 
             mock_get_mode.return_value = MsConst.PYNATIVE_MODE
-            with patch("msprobe.mindspore.debugger.precision_debugger.Service") as mock_Service, \
+            with patch("msprobe.mindspore.debugger.precision_debugger.MindsporeService") as mock_Service, \
                  patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
                 debugger = PrecisionDebugger()
                 debugger.start()
                 service = mock_Service.return_value
                 mock_Service.assert_called_with(debugger.config)
-                service.start.assert_called_with(None)
+                service.start.assert_called_with(None, None)
 
         PrecisionDebugger._instance = None
         with self.assertRaises(Exception) as context:
             debugger.start()
         self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
 
-        with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", new=mock_parse_json_config), \
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
              patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler), \
              patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
@@ -126,19 +128,24 @@ class TestPrecisionDebugger(unittest.TestCase):
         mock_reset_cell.assert_called_once()
 
     def test_forward_backward_dump_end(self):
-        with patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [],
+            "level": "L1",
+            "async_dump": False
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = StatisticsConfig(json_config)
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", return_value=(common_config, task_config)), \
+             patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             debugger = PrecisionDebugger()
         debugger.task = "statistics"
         debugger.service = MagicMock()
         debugger.forward_backward_dump_end()
         debugger.service.stop.assert_called_once()
-
-    def test_is_graph_dump_level_not_kernel(self):
-        config = MagicMock()
-        config.level = "NOT_KERNEL"
-        config.list = ["some_value"]
-        result = PrecisionDebugger._is_graph_dump(config)
-        self.assertFalse(result)
 
     def test_is_graph_dump_empty_list(self):
         config = MagicMock()

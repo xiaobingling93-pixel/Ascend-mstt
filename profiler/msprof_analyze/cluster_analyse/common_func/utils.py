@@ -18,6 +18,10 @@ from multiprocessing import Value, Lock
 import numpy as np
 import pandas as pd
 
+from msprof_analyze.prof_common.logger import get_logger
+
+logger = get_logger()
+
 
 def format_columns(df: pd.DataFrame):
     formatted_df = df.rename(
@@ -66,7 +70,7 @@ def stdev(df, aggregated):
     var_sum = np.dot(df["totalCount"] - 1, df["stdev"] ** 2)
     deviation = df["averageNs"] - aggregated["averageNs"].loc[df.name]
     dev_sum = np.dot(df["totalCount"], deviation ** 2)
-    return np.sqrt((var_sum + dev_sum) / (instance - 1))
+    return np.sqrt((var_sum + dev_sum) / (instance - 1)) if (instance - 1) else 0
 
 
 def convert_unit(df: pd.DataFrame, src_unit, dst_unit):
@@ -92,3 +96,26 @@ def double_hash(data):
         hash_values[1] = (hash_values[1] * prime[1] + ord(d)) & uint32_max
 
     return ((hash_values[0] << uint32_bits) | hash_values[1])
+
+
+class UnionFind(object):
+    """Disjoint Set Union"""
+
+    @classmethod
+    def union(cls, *args):
+        result = set()
+        for s in args:
+            if not isinstance(s, set):
+                logger.warning(f"All arguments must be sets, got {type(s).__name__}")
+                return set()
+            result |= s
+        return result
+
+    @classmethod
+    def is_connected(cls, first_set: set, second_set: set):
+        """
+        check whether set p and set q are connected
+        """
+        if not isinstance(first_set, set) or not isinstance(second_set, set):
+            return False
+        return len(first_set & second_set) > 0

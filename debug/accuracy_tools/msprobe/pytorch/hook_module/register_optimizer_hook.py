@@ -32,8 +32,9 @@ def register_optimizer_hook(data_collector):
     def patch_clip_grad(func):
         def wrapper(*args, **kwargs):
             data_collector.optimizer_status = Const.CLIP_GRAD
-            func(*args, **kwargs)
+            result = func(*args, **kwargs)
             data_collector.optimizer_status = Const.END_PREFIX + Const.CLIP_GRAD
+            return result
 
         return wrapper
 

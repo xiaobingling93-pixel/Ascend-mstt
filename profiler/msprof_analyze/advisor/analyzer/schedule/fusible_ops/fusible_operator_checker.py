@@ -24,7 +24,7 @@ from msprof_analyze.advisor.result.result import OptimizeResult
 from msprof_analyze.advisor.result.item import OptimizeItem, OptimizeRecord
 from msprof_analyze.prof_common.additional_args_manager import AdditionalArgsManager
 from msprof_analyze.prof_common.file_manager import FileManager
-from msprof_analyze.advisor.utils.utils import convert_to_float_with_warning
+from msprof_analyze.advisor.utils.utils import convert_to_float_with_warning, safe_division
 from msprof_analyze.advisor.display.html.priority_background_color import PriorityBackgroundColor
 
 logger = logging.getLogger()
@@ -92,6 +92,10 @@ class FusibleOperatorChecker:
                 any(task.op_name.lower().startswith(item) for item in ["hcom", "lccl", "lcoc"]))
 
     @staticmethod
+    def check_aicpu(task: OpInfo):
+        return task.task_type == Constant.AI_CPU
+
+    @staticmethod
     def calculate_total_time(pre_timestamp, timestamp, duration):
         total_time = (convert_to_float_with_warning(timestamp) + convert_to_float_with_warning(duration) -
                       convert_to_float_with_warning(pre_timestamp))
@@ -109,7 +113,7 @@ class FusibleOperatorChecker:
                                                              tasks[-1].task_duration)
         length = len(profiling_dataset.op_summary.op_list)
         for index, task in enumerate(tasks):
-            if self.check_hccl(task):
+            if self.check_hccl(task) or self.check_aicpu(task):
                 continue
             start_time = convert_to_float_with_warning(task.task_start_time)
             key = self.generate_key(task)
@@ -120,7 +124,7 @@ class FusibleOperatorChecker:
                 if i + index >= length:
                     break
                 new_task = tasks[i + index]
-                if self.check_hccl(new_task):
+                if self.check_hccl(new_task) or self.check_aicpu(new_task):
                     break
                 key = key + self._SPLITTER + self.generate_key(new_task)
                 duration = duration + convert_to_float_with_warning(new_task.task_duration)
@@ -143,7 +147,7 @@ class FusibleOperatorChecker:
             self.post_processing(result_dict)
 
     def check_sequence_ratio(self, detail: List):
-        return detail[self._TOTAL_TIME_INDEX] / self.step_duration > self.sequence_duration_threshold
+        return safe_division(detail[self._TOTAL_TIME_INDEX], self.step_duration) > self.sequence_duration_threshold
 
     def check_sequence_num(self, detail: List):
         return detail[self._COUNT_INDEX] > self.sequence_count_threshold
@@ -203,9 +207,9 @@ class FusibleOperatorChecker:
 
     def compute_priority(self):
         sequence_total_time = sum(detail[self._TOTAL_TIME_INDEX] for detail in self.host_details + self.mte_details)
-        if sequence_total_time / self.step_duration > self._HIGH_PRIORITY:
+        if safe_division(sequence_total_time, self.step_duration) > self._HIGH_PRIORITY:
             return PriorityBackgroundColor.high
-        elif sequence_total_time / self.step_duration < self._LOW_PRIORITY:
+        elif safe_division(sequence_total_time, self.step_duration) < self._LOW_PRIORITY:
             return PriorityBackgroundColor.low
         else:
             return PriorityBackgroundColor.medium

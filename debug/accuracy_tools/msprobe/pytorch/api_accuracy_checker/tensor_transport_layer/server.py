@@ -12,19 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import os.path
+from functools import partial
+import os
 import struct
-import hashlib
+import zlib
 import time
 import io
 from threading import Thread
 
-from twisted.internet import reactor, protocol, endpoints
+from twisted.internet import reactor, protocol, endpoints, ssl
 
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import cipher_list, \
-    STRUCT_UNPACK_MODE as unpack_mode, STR_TO_BYTES_ORDER as bytes_order
+    STRUCT_UNPACK_MODE as unpack_mode, STR_TO_BYTES_ORDER as bytes_order, verify_callback, load_ssl_pem
 
 
 class TCPServer:
@@ -44,15 +44,28 @@ class TCPServer:
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
-            from OpenSSL import SSL
-            from twisted.internet import ssl
-            server_key = os.path.join(self.tls_path, "server.key")
-            server_crt = os.path.join(self.tls_path, "server.crt")
-            server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
-            server_context_ = server_context_factory.getContext()
-            server_context_.set_cipher_list(cipher_list)
-            server_context_.set_options(SSL.OP_NO_RENEGOTIATION)
-            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, server_context_factory)
+            server_key, server_crt, ca_crt, crl_pem = load_ssl_pem(
+                key_file=os.path.join(self.tls_path, "server.key"),
+                cert_file=os.path.join(self.tls_path, "server.crt"),
+                ca_file=os.path.join(self.tls_path, "ca.crt"),
+                crl_file=os.path.join(self.tls_path, "crl.pem")
+            )
+
+            ssl_options = ssl.CertificateOptions(
+                privateKey=server_key,
+                certificate=server_crt,
+                method=ssl.SSL.TLSv1_2_METHOD,
+                verify=True,
+                requireCertificate=True,
+                caCerts=[ca_crt],  # 信任的CA证书列表
+            )
+            ssl_context = ssl_options.getContext()
+            ssl_context.set_cipher_list(cipher_list)
+            ssl_context.set_options(ssl.SSL.OP_NO_RENEGOTIATION)
+            ssl_context.set_verify(ssl.SSL.VERIFY_PEER | ssl.SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
+                                   partial(verify_callback, crl=crl_pem))
+
+            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, ssl_options)
         else:
             endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
         endpoint.listen(self.factory)
@@ -85,10 +98,10 @@ class ServerProtocol(protocol.Protocol):
         self.consumer_queue = shared_queue
         self.check_sum = check_sum
         self.length_width = 8
-        self.md5_width = 32
+        self.crc_width = 8
         self.obj_length = None
         self.tell = 0
-        self.obj_md5 = None
+        self.obj_crc = None
         self.obj_body = None
         self.sequence_number = -1
         self.rank = -1
@@ -99,7 +112,7 @@ class ServerProtocol(protocol.Protocol):
         self.buffer = io.BytesIO()
         self.obj_length = None
         self.tell = 0
-        self.obj_md5 = None
+        self.obj_crc = None
         self.obj_body = None
         self.factory.transport_dict[self.transport] = 1
         self.factory.transport_list.append(self.transport)
@@ -132,11 +145,12 @@ class ServerProtocol(protocol.Protocol):
             time.sleep(0.1)
 
         obj_key = str(self.sequence_number) + "_" + str(self.rank) + "_" + str(self.step)
+        # get the crc value of a 16-bit string with a length of 8
+        recv_crc = f"{zlib.crc32(self.obj_body):08x}"
 
-        recv_md5 = hashlib.md5(self.obj_body).hexdigest()
-        if self.check_sum and recv_md5 != self.obj_md5:
-            # when needs check md5 and check no pass, indicates received data error, send b"ERROR" to client.
-            logger.debug(f"Error:接收数据有问题，流水号{self.sequence_number}, expected {self.obj_md5}, but get {recv_md5}")
+        if self.check_sum and recv_crc != self.obj_crc:
+            # when needs check hash value and check no pass, indicates received data error, send b"ERROR" to client.
+            logger.debug(f"Error:接收数据有问题，流水号{self.sequence_number}, expected {self.obj_crc}, but get {recv_crc}")
             self.send_ack(self.ACK_ERROR)
         else:
             if self.obj_body == self.ACK_STOP:
@@ -146,7 +160,7 @@ class ServerProtocol(protocol.Protocol):
             if obj_key in self.sequence_number_dict:
                 logger.debug(f"这是一次异常的重传，可以忽略。 {obj_key}, {self.sequence_number_dict}")
             else:
-                self.sequence_number_dict[obj_key] = self.obj_md5
+                self.sequence_number_dict[obj_key] = self.obj_crc
                 self.consumer_queue.put(self.obj_body, block=True)
 
         self.reset_env()
@@ -173,7 +187,7 @@ class ServerProtocol(protocol.Protocol):
         self.sequence_number = -1
         self.rank = -1
         self.step = -1
-        self.obj_md5 = None
+        self.obj_crc = None
         self.obj_body = None
 
     def dataReceived(self, data):
@@ -192,15 +206,15 @@ class ServerProtocol(protocol.Protocol):
             logger.debug(
                 f"流水号: {self.sequence_number}; RANK: {self.rank}; STEP: {self.step}; Length: {self.obj_length}")
 
-        # If needs check md5 but not parse md5 yet, read 32b md5 values
-        check_sum_and_md5 = (self.check_sum
+        # If needs check hash but not parse crc yet, read 8b crc values
+        check_sum_and_crc = (self.check_sum
                              and self.obj_length is not None
-                             and self.obj_md5 is None
-                             and len(self.buffer.getvalue()) - self.tell >= self.md5_width)
-        if check_sum_and_md5:
-            self.obj_md5 = self.buffer.read(self.md5_width).decode()
-            self.tell += self.md5_width
-            logger.debug(f"MD5: {self.obj_md5}")
+                             and self.obj_crc is None
+                             and len(self.buffer.getvalue()) - self.tell >= self.crc_width)
+        if check_sum_and_crc:
+            self.obj_crc = self.buffer.read(self.crc_width).decode()
+            self.tell += self.crc_width
+            logger.debug(f"Hash value: {self.obj_crc}")
 
         current_length = len(self.buffer.getvalue()) - self.tell
         if self.obj_length is not None and 0 < self.obj_length <= current_length:

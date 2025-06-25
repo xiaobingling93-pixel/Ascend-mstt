@@ -93,7 +93,7 @@ class TestMsGraphCompare(unittest.TestCase):
         compare_result_db = ms_graph_comparator.compare_ops(compare_result_db, mode)
         result = compare_result_db.values.tolist()
 
-        op_name = 'Default_Switch-op1_kernel_graph1_Data_86.185.41.output'
+        op_name = 'Default_Switch-op1_kernel_graph1_Data_86.185.output.0'
         npu_file_path = os.path.join(self.npu_data_path, 'rank_0/mnist/0/0/statistic.csv')
         bench_file_path = os.path.join(self.bench_data_path, 'rank_0/mnist/0/0/statistic.csv')
         npu_name = f'{op_name} {npu_file_path}'

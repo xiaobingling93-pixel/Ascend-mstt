@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -21,7 +21,8 @@ from functools import partial
 import pandas as pd
 from tqdm import tqdm
 
-from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory
+from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory, \
+    remove_path
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx
 from msprobe.core.compare.utils import table_value_is_valid
@@ -32,8 +33,8 @@ def check_compare_result_name(file_name):
     """
     check whether the compare result name is as expected
     """
-    single_rank_pattern = r"^compare_result_rank-rank_\d{14}.xlsx$"
-    multi_ranks_pattern = r"^compare_result_rank(\d+)-rank\1_\d{14}.xlsx$"
+    single_rank_pattern = r"^compare_result_(rank|rank-rank)_\d{14}\.xlsx$"
+    multi_ranks_pattern = r"^compare_result_rank(\d+)(?:-rank\1)?_\d{14}\.xlsx$"
     if re.match(multi_ranks_pattern, file_name):
         return True
     if re.match(single_rank_pattern, file_name):
@@ -47,7 +48,7 @@ def reorder_path(compare_result_path_list):
     """
     reorder compare results by rank num
     """
-    rank_pattern = r"compare_result_rank(\d+)-rank"
+    rank_pattern = r"compare_result_rank(\d+)"
     reorder_path_list = sorted(
         compare_result_path_list,
         key=lambda path: int(re.search(rank_pattern, os.path.basename(path)).group(1))
@@ -63,6 +64,7 @@ def get_result_path(input_dir):
                                 for f in os.listdir(input_dir) if f.endswith(FileCheckConst.XLSX_SUFFIX)]
     filt_compare_result_path_list = []
     for file_path in compare_result_path_list:
+        FileChecker(file_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
         file_name = os.path.basename(file_path)
         if check_compare_result_name(file_name):
             compare_result_path_checker = FileChecker(file_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
@@ -236,7 +238,7 @@ def handle_multi_process(func, func_args, lock):
     def err_call(args):
         logger.error('Multiprocess merge result failed! Reason: {}'.format(args))
         try:
-            pool.terminate()
+            pool.close()
         except OSError:
             logger.error("Pool terminate failed")
 
@@ -329,6 +331,10 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
     for i, df in enumerate(merge_df_list):
         # merge_df_list中df与compare_index_list中compare_index一一对应
         final_result_df_list.append((df, compare_index_list[i]))
+
+    if os.path.exists(output_path):
+        logger.warning(f"{output_path} will be deleted.")
+        remove_path(output_path)
     save_excel(output_path, final_result_df_list)
     logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")
 

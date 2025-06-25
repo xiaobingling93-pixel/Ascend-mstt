@@ -29,6 +29,7 @@ class TensorConfig(BaseConfig):
         self.check_mode = None
         self.file_format = json_config.get("file_format")
         self.check_config()
+        self._check_summary_mode()
         self._check_config()
 
     def _check_config(self):
@@ -42,12 +43,23 @@ class StatisticsConfig(BaseConfig):
         self.file_format = None
         self.check_mode = None
         self.check_config()
-        self._check_config()
+        self._check_summary_mode()
 
-    def _check_config(self):
-        single_opt = ["statistics", "md5"]
+        self.tensor_list = json_config.get("tensor_list", [])
+        self._check_str_list_config(self.tensor_list, "tensor_list")
+        self.stat_cal_mode = json_config.get("device", "host")
+        self.device_stat_precision_mode = json_config.get("precision", "high")
+        self._check_stat_params()
+
+    def _check_stat_params(self):
+        if self.stat_cal_mode not in ["device", "host"]:
+            raise Exception("Config param [device] is invalid, expected from [\"device\", \"host\"]")
+        if self.device_stat_precision_mode not in ["high", "low"]:
+            raise Exception("Config param [precision] is invalid, expected from [\"high\", \"low\"]")
+
+    def _check_summary_mode(self):
         muti_opt = ["md5", "max", "min", "mean", "l2norm"]
-        if isinstance(self.summary_mode, str) and self.summary_mode not in single_opt:
+        if isinstance(self.summary_mode, str) and self.summary_mode not in Const.SUMMARY_MODE:
             raise Exception("summary_mode is invalid")
         if isinstance(self.summary_mode, list) and not all(opt in muti_opt for opt in self.summary_mode):
             raise Exception("summary_mode is invalid")
@@ -132,14 +144,3 @@ def parse_task_config(task, json_config):
     if task not in TaskDict:
         raise Exception("task is invalid.")
     return TaskDict.get(task)(task_map)
-
-
-def parse_json_config(json_file_path):
-    if not json_file_path:
-        raise Exception("json file path is None")
-    json_config = load_json(json_file_path)
-    common_config = parse_common_config(json_config)
-    if not common_config.task:
-        common_config.task = Const.STATISTICS
-    task_config = parse_task_config(common_config.task, json_config)
-    return common_config, task_config

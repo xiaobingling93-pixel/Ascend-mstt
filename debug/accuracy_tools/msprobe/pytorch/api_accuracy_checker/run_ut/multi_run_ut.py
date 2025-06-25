@@ -33,7 +33,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
-    create_directory, load_json, save_json
+    create_directory, load_json, save_json, read_csv
 from msprobe.core.common.file_utils import remove_path
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
@@ -70,7 +70,7 @@ def split_json_file(input_file, num_splits, filter_api):
         split_forward_data = dict(items[start:end])
         temp_data = {
             **input_data,
-            "data":{
+            "data": {
                 **split_forward_data,
                 **backward_data
             }
@@ -87,10 +87,6 @@ def signal_handler(signum, frame):
     raise KeyboardInterrupt()
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
-
 ParallelUTConfig = namedtuple('ParallelUTConfig', ['api_files', 'out_path', 'num_splits',
                                                    'save_error_data_flag', 'jit_compile_flag', 'device_id',
                                                    'result_csv_path', 'total_items', 'config_path'])
@@ -100,7 +96,7 @@ def run_parallel_ut(config):
     processes = []
     device_id_cycle = cycle(config.device_id)
     if config.save_error_data_flag:
-        logger.info("UT task error datas will be saved")
+        logger.info("UT task error data will be saved")
     logger.info(f"Starting parallel UT with {config.num_splits} processes")
     progress_bar = tqdm(total=config.total_items, desc="Total items", unit="items")
 
@@ -132,17 +128,20 @@ def run_parallel_ut(config):
                     sys.stdout.flush()
         except ValueError as e:
             logger.warning(f"An error occurred while reading subprocess output: {e}")
+        finally:
+            if process.poll() is None:
+                process.stdout.close()
 
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
-            with FileOpen(result_csv_path, 'r') as result_file:
-                completed_items = len(result_file.readlines()) - 1
-                progress_bar.update(completed_items - progress_bar.n)
+            result_file = read_csv(result_csv_path)
+            completed_items = len(result_file)
+            progress_bar.update(completed_items - progress_bar.n)
             time.sleep(1)
 
     for api_info in config.api_files:
         cmd = create_cmd(api_info, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, 
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                    text=True, bufsize=1, shell=False)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
@@ -188,8 +187,8 @@ def run_parallel_ut(config):
 
 
 def prepare_config(args):
-    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
-                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE,
+                                        ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
     api_info = api_info_file_checker.common_check()
     out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
@@ -198,11 +197,11 @@ def prepare_config(args):
     split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
     config_path = args.config_path if args.config_path else None
     if config_path:
-        config_path_checker = FileChecker(config_path, FileCheckConst.FILE, 
+        config_path_checker = FileChecker(config_path, FileCheckConst.FILE,
                                           FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
         config_path = config_path_checker.common_check()
     result_csv_path = args.result_csv_path or os.path.join(
-                      out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
+        out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
         details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
         comparator = Comparator(result_csv_path, details_csv_path, False)
@@ -217,14 +216,12 @@ def prepare_config(args):
 
 
 def main():
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     parser = argparse.ArgumentParser(description='Run UT in parallel')
     _run_ut_parser(parser)
-    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, 
+    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
                         help='Number of splits for parallel processing. Range: 1-64')
     args = parser.parse_args()
     config = prepare_config(args)
     run_parallel_ut(config)
-
-
-if __name__ == '__main__':
-    main()

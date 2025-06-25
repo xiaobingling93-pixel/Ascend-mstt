@@ -82,15 +82,22 @@ class TestPytorchDataProcessor(unittest.TestCase):
 
     def test_get_stat_info_float_async(self):
         tensor = torch.tensor([1.0, 2.0, 3.0])
-        result = self.processor.get_stat_info_async(tensor).stack_tensor_stat[1]
-        self.assertEqual(result[0].item(), 3.0)
-        self.assertEqual(result[1].item(), 1.0)
-        self.assertEqual(result[2].item(), 2.0)
-        self.assertEqual(result[3].item(), torch.norm(tensor).item())
+        result = self.processor.get_stat_info_async(tensor)
+
+        result_max = result.max
+        result_min = result.min
+        result_mean = result.mean
+        result_norm = result.norm
+
+        self.assertEqual(result_max.item(), 3.0)
+        self.assertEqual(result_min.item(), 1.0)
+        self.assertEqual(result_mean.item(), 2.0)
+        self.assertEqual(result_norm.item(), torch.norm(tensor).item())
 
     def test_get_stat_info_int(self):
         tensor = torch.tensor([1, 2, 3], dtype=torch.int32)
         result = self.processor.get_stat_info(tensor)
+
         self.assertEqual(result.max, 3)
         self.assertEqual(result.min, 1)
         self.assertEqual(result.mean, 2)
@@ -98,11 +105,17 @@ class TestPytorchDataProcessor(unittest.TestCase):
 
     def test_get_stat_info_int_async(self):
         tensor = torch.tensor([1, 2, 3])
-        result = self.processor.get_stat_info_async(tensor).stack_tensor_stat[1]
-        self.assertEqual(result[0].item(), 3.0)
-        self.assertEqual(result[1].item(), 1.0)
-        self.assertEqual(result[2].item(), 2.0)
-        self.assertEqual(result[3].item(), torch.norm(tensor.float()).item())
+        result = self.processor.get_stat_info_async(tensor)
+
+        result_max = result.max
+        result_min = result.min
+        result_mean = result.mean
+        result_norm = result.norm
+
+        self.assertEqual(result_max.item(), 3.0)
+        self.assertEqual(result_min.item(), 1.0)
+        self.assertEqual(result_mean.item(), 2.0)
+        self.assertEqual(result_norm.item(), torch.norm(tensor.float()).item())
 
     def test_get_stat_info_empty(self):
         tensor = torch.tensor([])
@@ -122,9 +135,13 @@ class TestPytorchDataProcessor(unittest.TestCase):
 
     def test_get_stat_info_bool_async(self):
         tensor = torch.tensor([True, False, True])
-        result = self.processor.get_stat_info_async(tensor).stack_tensor_stat[1]
-        self.assertEqual(result[0].item(), True)
-        self.assertEqual(result[1].item(), False)
+        result = self.processor.get_stat_info_async(tensor)
+
+        result_max = result.max
+        result_min = result.min
+
+        self.assertEqual(result_max.item(), True)
+        self.assertEqual(result_min.item(), False)
 
     def test_get_stat_info_with_scalar_tensor(self):
         scalar_tensor = torch.tensor(42.0)
@@ -206,7 +223,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         dist.init_process_group(backend='gloo', world_size=1, rank=0)
         process_group_element = dist.group.WORLD
         result = self.processor.process_group_hash(process_group_element)
-        expected = hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        expected = f"{zlib.crc32(str([0]).encode('utf-8')):08x}"
         self.assertEqual(result, expected)
 
     def test_analyze_torch_size(self):
@@ -232,7 +249,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         expected = {
             'type': 'torch.ProcessGroup',
             'group_ranks': [0],
-            'group_id': hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+            'group_id': f"{zlib.crc32(str([0]).encode('utf-8')):08x}"
         }
         self.assertEqual(result, expected)
 
@@ -247,6 +264,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         class TestReduceOp:
             def __str__(self):
                 raise Exception("failed to convert str type")
+
         arg = TestReduceOp()
         self.processor._analyze_reduce_op(arg)
         mock_logger_warning.assert_called_with(
@@ -278,11 +296,35 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result, self.processor._analyze_process_group(process_group_element))
 
     def test_analyze_single_element_numpy_conversion(self):
-        numpy_element = np.int64(1)
-        converted_numpy, numpy_type = self.processor._convert_numpy_to_builtin(numpy_element)
+        numpy_element = np.int32(5)
         result = self.processor.analyze_single_element(numpy_element, [])
-        expected_result = {"type": numpy_type, "value": converted_numpy} 
-        self.assertEqual(result, expected_result)
+        expected = {"type": 'int32', "value": 5}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.float32(3.14)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'float32', "value": 3.140000104904175}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.bool_(True)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'bool_', "value": True}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.str_("abc")
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'str_', "value": "abc"}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.byte(1)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'int8', "value": 1}
+        self.assertEqual(result, expected)
+
+        numpy_element = np.complex128(1 + 2j)
+        result = self.processor.analyze_single_element(numpy_element, [])
+        expected = {"type": 'complex128', "value": (1 + 2j)}
+        self.assertEqual(result, expected)
 
     def test_analyze_single_element_tensor(self):
         tensor_element = torch.tensor([1, 2, 3])
@@ -312,28 +354,30 @@ class TestPytorchDataProcessor(unittest.TestCase):
             'type': 'torch.Tensor',
             'dtype': str(tensor.dtype),
             'shape': tensor.shape,
-            'Max': 3.0,
-            'Min': 1.0,
-            'Mean': 2.0,
-            'Norm': torch.norm(tensor).item(),
             'requires_grad': tensor.requires_grad,
             'md5': 'mocked_md5'
         }
+        result.pop('tensor_stat_index', None)
         self.assertDictEqual(expected, result)
 
     def test_analyze_tensor_with_empty_tensor(self):
         tensor = torch.tensor([])
         result = self.processor._analyze_tensor(tensor, 'suffix')
-        self.assertEqual(result['Max'], None)
-        self.assertEqual(result['Min'], None)
-        self.assertEqual(result['Mean'], None)
-        self.assertEqual(result['Norm'], None)
 
-    def test_analyze_tensor_with_inf_and_nan(self):
-        tensor = torch.tensor([1.0, float('inf'), float('nan'), -float('inf')])
-        result = self.processor._analyze_tensor(tensor, 'suffix')
-        self.assertEqual(result['Max_except_inf_nan'], 1.0)
-        self.assertEqual(result['Min_except_inf_nan'], 1.0)
+        self.assertEqual(result['type'], "torch.Tensor")
+        self.assertEqual(result['dtype'], 'torch.float32')
+        self.assertEqual(result['shape'], torch.Size([0]))
+        self.assertEqual(result['requires_grad'], False)
+
+    def test_cast_to_float_if_fp8(self):
+        tensor = MagicMock()
+        tensor.dtype = "torch.float8_e5m2"
+        _, dtype = self.processor._cast_to_float_if_fp8(tensor)
+        self.assertEqual(dtype, "torch.float8_e5m2")
+
+        tensor.dtype = "torch.float8_e4m3fn"
+        _, dtype = self.processor._cast_to_float_if_fp8(tensor)
+        self.assertEqual(dtype, "torch.float8_e4m3fn")
 
 
 class TestTensorDataProcessor(unittest.TestCase):
@@ -358,13 +402,10 @@ class TestTensorDataProcessor(unittest.TestCase):
             'type': 'torch.Tensor',
             'dtype': 'torch.float32',
             'shape': tensor.shape,
-            'Max': 3.0,
-            'Min': 1.0,
-            'Mean': 2.0,
-            'Norm': torch.norm(tensor).item(),
             'requires_grad': False,
             'data_name': 'test_api.input.suffix.pt'
         }
+        result.pop('tensor_stat_index', None)
         self.assertEqual(expected, result)
 
 
@@ -382,6 +423,9 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         sys.modules['torch_npu'] = Mock()
         sys.modules['torch_npu.npu'] = Mock()
         sys.modules['torch_npu.npu.utils'] = Mock()
+        self.tensor_json = {
+            'tensor_stat_index': 123  # 默认情况下 tensor_stat_index 存在
+        }
 
     def test_is_terminated(self):
         self.processor.overflow_nums = -1
@@ -396,7 +440,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
 
     def test_analyze_forward_input(self):
         with patch.object(BaseDataProcessor, "analyze_forward_input", return_value={"name": 1}):
-            api_info = self.processor.analyze_forward_input("name", "module","module_input_output")
+            api_info = self.processor.analyze_forward_input("name", "module", "module_input_output")
             self.assertEqual(self.processor.cached_api_info, {"name": 1})
             self.assertIsNone(api_info)
 
@@ -458,18 +502,42 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.processor._is_support_inf_nan()
         self.assertTrue(self.processor.support_inf_nan)
 
-    def test_analyze_maybe_overflow_tensor(self):
-        tensor_json = {'Max': None, 'Min': None}
-        self.processor._analyze_maybe_overflow_tensor(tensor_json)
+    def test_max_tensor_or_min_tensor_is_none(self):
+        # 让 get_buffer_values_max 和 get_buffer_values_min 返回 None
+        self.processor.data_writer.get_buffer_values_max.return_value = None
+        self.processor.data_writer.get_buffer_values_min.return_value = None
+
+        # 在该情况下应该直接返回，不做任何改变
+        self.processor._analyze_maybe_overflow_tensor(self.tensor_json)
+
+        # 确保 has_overflow 没有被设置
         self.assertFalse(self.processor.has_overflow)
 
-        tensor_json = {'Max': float('inf'), 'Min': 1.0}
-        self.processor._analyze_maybe_overflow_tensor(tensor_json)
+    def test_tensor_is_inf_or_nan(self):
+        # 模拟 max_tensor 为 Inf
+        self.processor.data_writer.get_buffer_values_max.return_value = torch.tensor(float('inf'))
+        self.processor.data_writer.get_buffer_values_min.return_value = torch.tensor(1.0)
+
+        # 测试应该设置 has_overflow 为 True
+        self.processor._analyze_maybe_overflow_tensor(self.tensor_json)
         self.assertTrue(self.processor.has_overflow)
 
-        tensor_json = {'Max': 1.0, 'Min': float('inf')}
-        self.processor._analyze_maybe_overflow_tensor(tensor_json)
+        # 模拟 min_tensor 为 NaN
+        self.processor.data_writer.get_buffer_values_max.return_value = torch.tensor(1.0)
+        self.processor.data_writer.get_buffer_values_min.return_value = torch.tensor(float('nan'))
+
+        # 测试应该设置 has_overflow 为 True
+        self.processor._analyze_maybe_overflow_tensor(self.tensor_json)
         self.assertTrue(self.processor.has_overflow)
+
+    def test_normal_tensor(self):
+        # 模拟正常的 max_tensor 和 min_tensor
+        self.processor.data_writer.get_buffer_values_max.return_value = torch.tensor(1.0)
+        self.processor.data_writer.get_buffer_values_min.return_value = torch.tensor(-1.0)
+
+        # 在正常情况下不应该改变 has_overflow
+        self.processor._analyze_maybe_overflow_tensor(self.tensor_json)
+        self.assertFalse(self.processor.has_overflow)
 
     @patch('msprobe.core.common.file_utils.path_len_exceeds_limit', return_value=False)
     @patch.object(BaseDataProcessor, 'get_save_file_path',

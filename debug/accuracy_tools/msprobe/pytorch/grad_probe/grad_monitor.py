@@ -46,7 +46,7 @@ class GradientMonitor:
         if not os.path.exists(self._output_path):
             create_directory(self._output_path)
         else:
-            logger.warning(f"the file in {self._output_path} will be recoverd")
+            logger.warning(f"the file in {self._output_path} will be deleted")
         self._step = -1
         self._param2name = defaultdict(str)
 
@@ -97,7 +97,7 @@ class GradientMonitor:
                 create_directory(output_dirpath)
             output_path = os.path.join(output_dirpath, f"grad_summary_{self._step}.csv")
             if os.path.exists(output_path):
-                logger.warning(f"{output_path} will be recoverd")
+                logger.warning(f"{output_path} will be deleted")
                 remove_path(output_path)
             header_result = GradStatCsv.generate_csv_header(self._level_adp, self._bounds)
             output_lines.insert(0, header_result)

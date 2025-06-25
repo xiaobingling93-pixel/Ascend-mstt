@@ -14,8 +14,10 @@
 # limitations under the License.
 
 import os
+from dataclasses import dataclass
+from typing import Any, Optional
 from tqdm import tqdm
-
+import numpy as np
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json, load_yaml
 from msprobe.core.common.utils import add_time_as_suffix
@@ -28,6 +30,9 @@ from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_jso
 from msprobe.mindspore.common.const import MsCompareConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker import torch_mindtorch_importer
+from msprobe.core.data_dump.data_collector import build_data_collector
+from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
+from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
@@ -59,69 +64,57 @@ class ProcessResultPacket:
         self.err_msg = err_msg
 
 
+@dataclass
+class Config:
+    execution_mode: str
+    dump_path: str
+    task: str
+    level: str
+    scope: Optional[Any]
+    list: Optional[Any]
+    framework: str
+    data_mode: str
+    file_format: str
+    dump_tensor_data_dir: str
+    async_dump: bool
+    summary_mode: Optional[Any] = None
+
+
 class ApiAccuracyChecker:
     def __init__(self, args):
         self.api_infos = dict()
         self.data_manager = DataManager(args.out_path, args.result_csv_path)  # 在初始化时实例化 DataManager
+        self.save_error_data = args.save_error_data
+        if self.save_error_data:
+            config, dump_path_aggregation = self.init_save_error_data(args)
+            self.data_collector = build_data_collector(config)
+            self.data_collector.update_dump_paths(dump_path_aggregation)
 
     @staticmethod
-    def run_and_compare_helper(api_info, api_name_str, api_input_aggregation, forward_or_backward):
-        """
-        Args:
-            api_info: ApiInfo
-            api_name_str: str
-            api_input_aggregation: ApiInputAggregation
-            forward_or_backward: str: Union["forward", "backward"]
+    def init_save_error_data(args):
+        config = Config(
+            execution_mode="pynative",
+            dump_path=f"{args.out_path}",
+            dump_tensor_data_dir=f"{args.out_path}",
+            task="tensor",  # 任务类型,模拟保存tensor数据
+            level="L1",  # 级别
+            scope=None,  # 作用域 (None)
+            list=None,  # API 列表 (None)
+            framework=Const.MS_FRAMEWORK,  # 框架类型
+            data_mode="all",
+            file_format="npy",
+            async_dump=False
+        )
 
-        Return:
-            output_list: List[tuple(str, str, BasicInfoAndStatus, dict{str: CompareResult})]
-
-        Description:
-            get mindspore api output, run torch api and get output.
-            compare output.
-            record compare result.
-        """
-        # get output
-        if global_context.get_is_constructed():
-            # constructed situation, need use constructed input to run mindspore api getting tested_output
-            tested_outputs = api_runner(api_input_aggregation, api_name_str,
-                                        forward_or_backward, global_context.get_framework())
-        else:
-            tested_outputs = api_info.get_compute_element_list(forward_or_backward, Const.OUTPUT)
-
-        bench_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.PT_FRAMEWORK)
-        tested_outputs = trim_output_compute_element_list(tested_outputs, forward_or_backward)
-        bench_outputs = trim_output_compute_element_list(bench_outputs, forward_or_backward)
-        if len(tested_outputs) != len(bench_outputs):
-            logger.warning(f"ApiAccuracyChecker.run_and_compare_helper: api: {api_name_str}.{forward_or_backward}, "
-                           "number of bench outputs and tested outputs is different, comparing result can be wrong. "
-                           f"tested outputs: {len(tested_outputs)}, bench outputs: {len(bench_outputs)}")
-
-        # compare output
-        output_list = []
-        for i, (bench_out, tested_out) in enumerate(zip(bench_outputs, tested_outputs)):
-            api_name_with_slot = Const.SEP.join([api_name_str, forward_or_backward, Const.OUTPUT, str(i)])
-            bench_dtype = bench_out.get_dtype()
-            tested_dtype = tested_out.get_dtype()
-            shape = bench_out.get_shape()
-
-            compare_result_dict = dict()
-            for compare_algorithm_name, compare_algorithm in compare_algorithms.items():
-                compare_result = compare_algorithm(bench_out, tested_out)
-                compare_result_dict[compare_algorithm_name] = compare_result
-
-            if compare_result_dict.get(CompareConst.COSINE).pass_status == CompareConst.PASS and \
-                    compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
-                status = CompareConst.PASS
-                err_msg = ""
-            else:
-                status = CompareConst.ERROR
-                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
-                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
-            basic_info_status = \
-                BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
-            output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
-        return output_list
+        dump_dir = f"{args.out_path}"
+        dump_data_dir = os.path.join(dump_dir, "error_data")
+        create_directory(dump_data_dir)
+        dump_path_aggregation = DumpPathAggregation()
+        dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
+        dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
+        dump_path_aggregation.dump_error_info_path = os.path.join(dump_dir, "dump_error_info.log")
+        dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
+        return config, dump_path_aggregation
 
     @staticmethod
     def prepare_api_input_aggregation(api_info, forward_or_backward=Const.FORWARD):
@@ -172,6 +165,105 @@ class ApiAccuracyChecker:
             return True
         return False
 
+    def post_forward_hook(self, api_or_module_name, primitive_instance, args, kwargs, output):
+        self.data_collector.update_api_or_module_name(api_or_module_name)
+        module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+        self.data_collector.forward_data_collect_only_tensor(
+            api_or_module_name,
+            primitive_instance,
+            os.getpid(),
+            module_input_output
+        )
+
+    def backward_hook(self, api_or_module_name, module, grad_input, grad_output):
+        self.data_collector.update_api_or_module_name(api_or_module_name)
+
+        module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+        self.data_collector.backward_data_collect_only_tensor(
+            api_or_module_name,
+            module,
+            os.getpid(),
+            module_input_output
+        )
+
+    def run_and_compare_helper(self, api_info, api_name_str, api_input_aggregation, forward_or_backward):
+        """
+        Args:
+            api_info: ApiInfo
+            api_name_str: str
+            api_input_aggregation: ApiInputAggregation
+            forward_or_backward: str: Union["forward", "backward"]
+
+        Return:
+            output_list: List[tuple(str, str, BasicInfoAndStatus, dict{str: CompareResult})]
+
+        Description:
+            get mindspore api output, run torch api and get output.
+            compare output.
+            record compare result.
+        """
+        # get output
+        if global_context.get_is_constructed():
+            if forward_or_backward == Const.FORWARD:
+                tested_outputs, inputs, kwargs, forward_result_tuple = api_runner(api_input_aggregation, api_name_str,
+                                                                                  forward_or_backward,
+                                                                                  global_context.get_framework())
+            elif forward_or_backward == Const.BACKWARD:
+                tested_outputs, gradient_inputs, backward_result_tuple = api_runner(api_input_aggregation, api_name_str,
+                                                                                    forward_or_backward,
+                                                                                    global_context.get_framework())
+            else:
+                tested_outputs = api_runner(api_input_aggregation, api_name_str,
+                                            forward_or_backward, global_context.get_framework())
+        else:
+            tested_outputs = api_info.get_compute_element_list(forward_or_backward, Const.OUTPUT)
+
+        bench_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.PT_FRAMEWORK)
+
+        tested_outputs = trim_output_compute_element_list(tested_outputs, forward_or_backward)
+        bench_outputs = trim_output_compute_element_list(bench_outputs, forward_or_backward)
+        if len(tested_outputs) != len(bench_outputs):
+            logger.warning(f"ApiAccuracyChecker.run_and_compare_helper: api: {api_name_str}.{forward_or_backward}, "
+                           "number of bench outputs and tested outputs is different, comparing result can be wrong. "
+                           f"tested outputs: {len(tested_outputs)}, bench outputs: {len(bench_outputs)}")
+
+        # compare output
+        output_list = []
+        for i, (bench_out, tested_out) in enumerate(zip(bench_outputs, tested_outputs)):
+            api_name_with_slot = Const.SEP.join([api_name_str, forward_or_backward, Const.OUTPUT, str(i)])
+            bench_dtype = bench_out.get_dtype()
+            tested_dtype = tested_out.get_dtype()
+            shape = bench_out.get_shape()
+
+            compare_result_dict = dict()
+            for compare_algorithm_name, compare_algorithm in compare_algorithms.items():
+                compare_result = compare_algorithm(bench_out, tested_out)
+                compare_result_dict[compare_algorithm_name] = compare_result
+
+            if compare_result_dict.get(CompareConst.COSINE).pass_status == CompareConst.PASS and \
+                    compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
+                status = CompareConst.PASS
+                err_msg = ""
+
+            else:
+                status = CompareConst.ERROR
+                err_msg = (compare_result_dict.get(CompareConst.COSINE).err_msg +
+                           compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg)
+                if forward_or_backward == Const.FORWARD and self.save_error_data \
+                        and global_context.get_is_constructed():
+                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.FORWARD}"
+                    self.post_forward_hook(api_name_str_backward, None, inputs, kwargs, forward_result_tuple)
+
+                if forward_or_backward == Const.BACKWARD and self.save_error_data \
+                        and global_context.get_is_constructed():
+                    api_name_str_backward = f"{api_name_str}{Const.SEP}{Const.BACKWARD}"
+                    self.backward_hook(api_name_str_backward, None, gradient_inputs, backward_result_tuple)
+
+            basic_info_status = \
+                BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
+            output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
+        return output_list
+
     def parse(self, api_info_path):
 
         api_info_dict = load_json(api_info_path)
@@ -183,9 +275,9 @@ class ApiAccuracyChecker:
                                                             MsCompareConst.TENSOR_TASK))
         try:
             framework = check_and_get_from_json_dict(api_info_dict, MsCompareConst.FRAMEWORK,
-                                                "framework field in api_info.json", accepted_type=str,
-                                                accepted_value=(Const.MS_FRAMEWORK,
-                                                                Const.MT_FRAMEWORK))
+                                                     "framework field in api_info.json", accepted_type=str,
+                                                     accepted_value=(Const.MS_FRAMEWORK,
+                                                                     Const.MT_FRAMEWORK))
         except Exception as e:
             framework = Const.MS_FRAMEWORK
             logger.warning(f"JSON parsing error in framework field: {e}")

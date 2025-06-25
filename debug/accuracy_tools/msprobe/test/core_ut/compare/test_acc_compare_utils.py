@@ -12,9 +12,8 @@ import numpy as np
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
-    count_struct, get_accuracy, append_stack_info, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
-    op_item_parse, read_op, rename_api, resolve_api_special_parameters, result_item_init, stack_column_process, \
-    table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list, gen_op_item
+    count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
+    stack_column_process, table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list, gen_op_item
 
 # test_read_op_1
 op_data = {
@@ -272,6 +271,7 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                   'output_struct': [('torch.float32', [16, 1, 3, 3])],
                   'params_struct': [],
                   'params_grad_struct': [],
+                  'debug_struct': [],
                   'summary': [[0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275],
                               [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481,
                                0.02844562754034996],
@@ -295,6 +295,7 @@ result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.
                       'output_struct': [('torch.float32', [16, 1, 3, 3], 2)],
                       'params_struct': [],
                       'params_grad_struct': [],
+                      'debug_struct': [],
                       'summary': [
                           [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481, 0.02844562754034996],
                           [-0.1, -0.1, -0.1, -0.1],
@@ -306,7 +307,7 @@ base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_
 
 
 def create_json_files(base_dir):
-    file_names = ['dump.json', 'stack.json', 'construct.json']
+    file_names = ['dump.json', 'stack.json', 'construct.json', 'debug.json']
 
     for file_name in file_names:
         file_path = os.path.join(base_dir, file_name)
@@ -339,28 +340,19 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_extract_json_1(self):
         create_json_files(base_dir1)
-        result = extract_json(base_dir1, stack_json=False)
+        result = extract_json(base_dir1, Const.DUMP_JSON_FILE)
         self.assertEqual(result, os.path.join(base_dir1, 'dump.json'))
 
-        result = extract_json(base_dir1, stack_json=True)
+        result = extract_json(base_dir1, Const.STACK_JSON_FILE)
         self.assertEqual(result, os.path.join(base_dir1, 'stack.json'))
+
+        result = extract_json(base_dir1, Const.DEBUG_JSON_FILE)
+        self.assertEqual(result, os.path.join(base_dir1, 'debug.json'))
 
     def test_check_and_return_dir_contents(self):
         create_rank_dirs(base_dir2)
         result = check_and_return_dir_contents(base_dir2, 'rank')
         self.assertEqual(set(result), set(['rank0', 'rank1']))
-
-    def test_rename_api_1(self):
-        test_name_1 = "Distributed.broadcast.0.forward.input.0"
-        expect_name_1 = "Distributed.broadcast.input.0"
-        actual_name_1 = rename_api(test_name_1, "forward")
-        self.assertEqual(actual_name_1, expect_name_1)
-
-    def test_rename_api_2(self):
-        test_name_2 = "Torch.sum.0.backward.output.0"
-        expect_name_2 = "Torch.sum.output.0"
-        actual_name_2 = rename_api(test_name_2, "backward")
-        self.assertEqual(actual_name_2, expect_name_2)
 
     def test_read_op(self):
         result = read_op(op_data, op_name)
@@ -378,11 +370,6 @@ class TestUtilsMethods(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             op_item_parse(parse_item, parse_op_name, depth=11)
         self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
-
-    def test_resolve_api_special_parameters(self):
-        item_list = []
-        resolve_api_special_parameters(data_dict, full_op_name, item_list)
-        self.assertEqual(item_list, o_result_api_special)
 
     def test_get_rela_diff_summary_mode_float_or_int(self):
         result_item = [0] * 14
@@ -448,57 +435,6 @@ class TestUtilsMethods(unittest.TestCase):
         result = []
         get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
-
-    def test_append_stack_info_stack_exist_index_0(self):
-        result_item = ['item1']
-        npu_stack_info = ['stack_info1']
-        index = 0
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', 'stack_info1'])
-
-    def test_append_stack_info_stack_exist_index_not_0(self):
-        result_item = ['item1']
-        npu_stack_info = ['stack_info1']
-        index = 1
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', CompareConst.NONE])
-
-    def test_append_stack_info_stack_empty_index_0(self):
-        result_item = ['item1']
-        npu_stack_info = []
-        index = 0
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', CompareConst.NONE])
-
-    def test_append_stack_info_stack_empty_index_not_0(self):
-        result_item = ['item1']
-        npu_stack_info = []
-        index = 1
-
-        append_stack_info(result_item, npu_stack_info, index)
-
-        self.assertEqual(result_item, ['item1', CompareConst.NONE])
-
-    def test_get_un_match_accuracy_md5(self):
-        result = []
-        get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
-        self.assertEqual(result, o_result_unmatch_1)
-
-    def test_get_un_match_accuracy_summary(self):
-        result = []
-        get_un_match_accuracy(result, npu_dict, dump_mode=Const.SUMMARY)
-        self.assertEqual(result, o_result_unmatch_2)
-
-    def test_get_un_match_accuracy_all(self):
-        result = []
-        get_un_match_accuracy(result, npu_dict, dump_mode=Const.ALL)
-        self.assertEqual(result, o_result_unmatch_3)
 
     def test_merge_tensor_summary(self):
         op_dict = merge_tensor(tensor_list, dump_mode=Const.SUMMARY)

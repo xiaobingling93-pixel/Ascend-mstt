@@ -105,9 +105,7 @@ class TestTensorConfig(unittest.TestCase):
             self.config._check_file_format()
         self.assertIn(str(context.exception), "file_format is invalid")
 
-    @patch('msprobe.pytorch.pt_config.check_crt_valid')
-    def test_check_online_run_ut(self, mock_check_crt_valid):
-        mock_check_crt_valid.return_value = True
+    def test_check_online_run_ut(self):
 
         self.config.online_run_ut = "True"
         with self.assertRaises(Exception) as context:
@@ -136,6 +134,10 @@ class TestTensorConfig(unittest.TestCase):
         with open(os.path.join(self.config.tls_path, "client.key"), 'w') as file:
             file.write("1")
         with open(os.path.join(self.config.tls_path, "client.crt"), 'w') as file:
+            file.write("1")
+        with open(os.path.join(self.config.tls_path, "ca.crt"), 'w') as file:
+            file.write("1")
+        with open(os.path.join(self.config.tls_path, "crl.pem"), 'w') as file:
             file.write("1")
         self.config._check_online_run_ut()
         shutil.rmtree(self.config.tls_path)
@@ -181,7 +183,7 @@ class TestStatisticsConfig(unittest.TestCase):
         self.config.summary_mode = "invalid_mode"
         with self.assertRaises(Exception) as context:
             self.config._check_summary_mode()
-        self.assertIn(str(context.exception), "summary_mode is invalid")
+        self.assertIn(str(context.exception), "[msprobe] 无效参数：")
 
     def test_check_summary_mode_none(self):
         self.config.summary_mode = None
@@ -261,14 +263,14 @@ class TestFreeBenchmarkCheckConfig(unittest.TestCase):
         config = FreeBenchmarkCheckConfig(invalid_config)
         mock_error.assert_called_once()
         self.assertIn("fuzz_device is invalid", str(mock_error.call_args))
-        
+
     @patch('msprobe.core.common.log.logger.error_log_with_exp')
     def test_check_fuzz_device_cpu_mode_invalid(self, mock_error):
         invalid_config = self.valid_config.copy()
         invalid_config["fuzz_device"] = "cpu"
         invalid_config["pert_mode"] = "INVALID_CPU_MODE"
         config = FreeBenchmarkCheckConfig(invalid_config)
-        self.assertIn("You neet to and can only set fuzz_device as ", str(mock_error.call_args))
+        self.assertIn("You need to and can only set fuzz_device as ", str(mock_error.call_args))
 
     @patch('msprobe.core.common.log.logger.error_log_with_exp')
     def test_check_handler_type_invalid(self, mock_error):
@@ -277,7 +279,7 @@ class TestFreeBenchmarkCheckConfig(unittest.TestCase):
         config = FreeBenchmarkCheckConfig(invalid_config)
         mock_error.assert_called_once()
         self.assertIn("handler_type is invalid", str(mock_error.call_args))
-        
+
     @patch('msprobe.core.common.log.logger.error_log_with_exp')
     def test_check_fuzz_stage_invalid(self, mock_error):
         invalid_config = self.valid_config.copy()
@@ -319,7 +321,7 @@ class TestFreeBenchmarkCheckConfig(unittest.TestCase):
         config = FreeBenchmarkCheckConfig(invalid_config)
         mock_error.assert_called_once()
         self.assertIn("preheat_step must be greater than 0", str(mock_error.call_args))
-        
+
     @patch('msprobe.core.common.log.logger.error_log_with_exp')
     def test_check_preheat_max_sample_not_int(self, mock_error):
         invalid_config = self.valid_config.copy()
@@ -328,7 +330,7 @@ class TestFreeBenchmarkCheckConfig(unittest.TestCase):
         config = FreeBenchmarkCheckConfig(invalid_config)
         mock_error.assert_called_once()
         self.assertIn("max_sample is invalid, it should be an integer", str(mock_error.call_args))
-        
+
     @patch('msprobe.core.common.log.logger.error_log_with_exp')
     def test_check_max_sample_invalid_not_great_than_zero(self, mock_error):
         invalid_config = self.valid_config.copy()
@@ -397,19 +399,19 @@ class TestRunUTConfig(unittest.TestCase):
     def test_check_nfs_path_config_not_exist(self, mock_exists):
         with self.assertRaises(Exception) as context:
             RunUTConfig.check_nfs_path_config("./invalid_nfs")
-        self.assertIn("does not exist", str(context.exception))
+        self.assertIn("[msprobe] 非法文件路径：", str(context.exception))
 
     @patch('os.path.exists', return_value=False)
     def test_check_tls_path_config_not_exist(self, mock_exists):
         with self.assertRaises(Exception) as context:
             RunUTConfig.check_tls_path_config("./invalid_tls")
-        self.assertIn("does not exist", str(context.exception))
+        self.assertIn("[msprobe] 非法文件路径：", str(context.exception))
 
     def test_check_run_ut_config(self):
         with patch.object(RunUTConfig, 'check_filter_list_config') as mock_filter, \
-             patch.object(RunUTConfig, 'check_error_data_path_config') as mock_error, \
-             patch.object(RunUTConfig, 'check_nfs_path_config') as mock_nfs, \
-             patch.object(RunUTConfig, 'check_tls_path_config') as mock_tls:
+                patch.object(RunUTConfig, 'check_error_data_path_config') as mock_error, \
+                patch.object(RunUTConfig, 'check_nfs_path_config') as mock_nfs, \
+                patch.object(RunUTConfig, 'check_tls_path_config') as mock_tls:
             self.config.check_run_ut_config()
             mock_filter.assert_called()
             mock_error.assert_called()
@@ -442,3 +444,7 @@ class TestGradToolConfig(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             GradToolConfig(json_config)
         self.assertTrue("param_list must be a list" in str(context.exception))
+
+
+if __name__ == '__main__':
+    unittest.main()

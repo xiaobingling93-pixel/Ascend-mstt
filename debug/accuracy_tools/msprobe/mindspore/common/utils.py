@@ -13,25 +13,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import os
 import random
+import types
 
 import mindspore as ms
-
 from mindspore import ops
+from mindspore.common.jit_config import JitConfig
 from mindspore.mint import nn
 
+from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const
-from msprobe.core.common.utils import CompareException, check_seed_all
+from msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
+from msprobe.mindspore.common.const import Const as MsConst
+
+try:
+    from mindspore._c_expression import _set_init_iter
+except ImportError:
+    enable_dynamic_kbyk_dump = False
+else:
+    enable_dynamic_kbyk_dump = True
+
+mindtorch_check_result = None
+register_backward_hook_functions = {}
+kwargs_exist_in_forward_hook = None
 
 
 class MsprobeStep(ms.train.Callback):
     def __init__(self, debugger):
         super(MsprobeStep, self).__init__()
         self.debugger = debugger
+
+    def on_train_begin(self, run_context):
+        self.debugger.start()
+        if enable_dynamic_kbyk_dump:
+            _set_init_iter(0)
 
     def on_train_step_begin(self, run_context):
         self.debugger.start()
@@ -82,8 +102,8 @@ def convert_to_int(value):
 
 
 def clean_input_kwargs(cell):
-    if hasattr(cell, 'input_kwargs'):
-        del cell.input_kwargs
+    if hasattr(cell, 'msprobe_input_kwargs'):
+        del cell.msprobe_input_kwargs
 
 
 def list_lowest_level_directories(root_dir):
@@ -152,9 +172,6 @@ def remove_dropout():
     nn.functional.dropout = dropout_ext
 
 
-mindtorch_check_result = None
-
-
 def is_mindtorch():
     global mindtorch_check_result
     if mindtorch_check_result is None:
@@ -169,11 +186,11 @@ def is_mindtorch():
     return mindtorch_check_result
 
 
-register_backward_hook_functions = {}
-
-
 def set_register_backward_hook_functions():
     global register_backward_hook_functions
+    if register_backward_hook_functions:
+        return
+
     if is_mindtorch():
         import torch
         from msprobe.mindspore.mindtorch import (_call_impl,
@@ -192,9 +209,11 @@ def set_register_backward_hook_functions():
 
 def check_save_param(variable, name, save_backward):
     # try catch this api to skip invalid call
-    if not isinstance(variable, (list, dict, tuple, ms.Tensor, int, float, str)):
+    valid_data_types = (ms.Tensor, int, float, str)
+    if not is_save_variable_valid(variable, valid_data_types):
+        valid_data_types_with_nested_types = valid_data_types + (dict, tuple, list)
         logger.warning("PrecisionDebugger.save variable type not valid, "
-                       "should be one of list, dict, tuple, ms.Tensor, int, float or string. "
+                       f"should be one of {valid_data_types_with_nested_types}"
                        "Skip current save process.")
         raise ValueError
     if not isinstance(name, str):
@@ -207,3 +226,103 @@ def check_save_param(variable, name, save_backward):
                        "should be bool. "
                        "Skip current save process.")
         raise ValueError
+
+
+def is_graph_mode_cell_dump_allowed(config):
+    if config.task not in [Const.TENSOR, Const.STATISTICS] or is_mindtorch() or not hasattr(ops, 'DumpGradient'):
+        return False
+    valid_mix_level = [MsConst.CELL_AND_API, Const.LEVEL_MIX]
+    if config.level in valid_mix_level and config.execution_mode == MsConst.PYNATIVE_MODE:
+        return True
+    return config.level == MsConst.CELL or config.level == Const.LEVEL_L0
+
+
+@recursion_depth_decorator('msprobe.mindspore.common.utils.is_decorated_by_jit')
+def is_decorated_by_jit(func):
+    closure = getattr(func, '__closure__', [])
+    if closure:
+        for obj in closure:
+            if isinstance(obj.cell_contents, JitConfig):
+                return True
+            elif isinstance(obj.cell_contents, types.FunctionType) and hasattr(obj.cell_contents, '__closure__'):
+                if is_decorated_by_jit(obj.cell_contents):
+                    return True
+    return False
+
+
+@recursion_depth_decorator('msprobe.mindspore.common.utils.get_cells_and_names')
+def get_cells_and_names(model, cells_set=None, name_prefix=''):
+    cells_set = cells_set if cells_set else set()
+    if model in cells_set:
+        return
+
+    cells_set.add(model)
+    jit_decorated = is_decorated_by_jit(model.construct)
+    yield name_prefix, model, jit_decorated
+    if jit_decorated:
+        return
+
+    children_cells = getattr(model, '_cells')
+    for name, cell in children_cells.items():
+        if cell:
+            cells_name_prefix = f'{name_prefix}{Const.SEP}{name}' if name_prefix else name
+            jit_decorated = is_decorated_by_jit(model.construct)
+            if jit_decorated:
+                yield cells_name_prefix, cell, jit_decorated
+            else:
+                for ele in get_cells_and_names(cell, cells_set, cells_name_prefix):
+                    yield ele
+
+
+def get_cells_and_names_with_index(models):
+    cells_with_index_in_pynative_mode = {}
+    cells_with_index_in_graph_mode = {}
+
+    def distinguish_cells(cells):
+        cells_in_pynative_mode = []
+        cells_in_graph_mode = []
+        for name, cell, jit_decorated in cells:
+            if jit_decorated:
+                cells_in_graph_mode.append((name, cell))
+            else:
+                cells_in_pynative_mode.append((name, cell))
+        return cells_in_pynative_mode, cells_in_graph_mode
+
+    if is_mindtorch():
+        if isinstance(models, (list, tuple)):
+            for index, model in enumerate(models):
+                cells_with_index_in_pynative_mode[str(index)] = model.named_modules()
+        else:
+            cells_with_index_in_pynative_mode["-1"] = models.named_modules()
+    else:
+        if isinstance(models, (list, tuple)):
+            for index, model in enumerate(models):
+                cells = get_cells_and_names(model)
+                cells_in_pynative_mode, cells_in_graph_mode = distinguish_cells(cells)
+                cells_with_index_in_pynative_mode[str(index)] = cells_in_pynative_mode
+                cells_with_index_in_graph_mode[str(index)] = cells_in_graph_mode
+        else:
+            cells = get_cells_and_names(models)
+            cells_in_pynative_mode, cells_in_graph_mode = distinguish_cells(cells)
+            cells_with_index_in_pynative_mode["-1"] = cells_in_pynative_mode
+            cells_with_index_in_graph_mode["-1"] = cells_in_graph_mode
+
+    return cells_with_index_in_pynative_mode, cells_with_index_in_graph_mode
+
+
+def has_kwargs_in_forward_hook():
+    global kwargs_exist_in_forward_hook
+
+    if kwargs_exist_in_forward_hook is None:
+        if is_mindtorch():
+            kwargs_exist_in_forward_hook = True
+            return kwargs_exist_in_forward_hook
+
+        try:
+            func_params = inspect.signature(nn.Cell.register_forward_hook).parameters
+            kwargs_exist_in_forward_hook = 'with_kwargs' in func_params
+        except Exception:
+            kwargs_exist_in_forward_hook = False
+        return kwargs_exist_in_forward_hook
+
+    return kwargs_exist_in_forward_hook

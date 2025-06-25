@@ -42,10 +42,10 @@ class CannApiSum(BaseRecipeAnalysis):
         grouped = stats_res.groupby("name")
         res = {}
         total_time = grouped["totalTimeNs"].sum()
-        res["timeRatio"] = total_time / total_time.sum() * 100.0
+        res["timeRatio"] = total_time / total_time.sum() * 100.0 if total_time.sum() else 0
         res["totalTimeNs"] = total_time
         res["totalCount"] = grouped["totalCount"].sum()
-        res["averageNs"] = res["totalTimeNs"] / res["totalCount"]
+        res["averageNs"] = res["totalTimeNs"] / res["totalCount"].where(res["totalCount"] != 0, other=0)
         res["Q1Ns"] = grouped["Q1Ns"].min()
         res["medNs"] = grouped["medNs"].median()
         res["Q3Ns"] = grouped["Q3Ns"].max()
@@ -90,7 +90,8 @@ class CannApiSum(BaseRecipeAnalysis):
         self.add_helper_file("cluster_display.py")
 
     def save_db(self):
-        self.dump_data(self._stats_rank_data, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, "CannApiSumRank")
+        self.dump_data(self._stats_rank_data, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, "CannApiSumRank",
+                       index=False)
         self.dump_data(self._stats_data, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, "CannApiSum")
 
     def _mapper_func(self, data_map, analysis_class):

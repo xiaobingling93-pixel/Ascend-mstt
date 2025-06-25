@@ -18,7 +18,7 @@
 #include <string>
 #include <map>
 
-#include "CPythonUtils.hpp"
+#include "CPythonUtils.h"
 
 namespace MindStudioDebugger {
 namespace  CPythonUtils {
@@ -77,7 +77,6 @@ PythonObject PythonObject::From(const uint32_t& input)
 PythonObject PythonObject::From(const double& input)
 {
     return PythonNumberObject::From(input);
-
 }
 PythonObject PythonObject::From(const std::string& input)
 {
@@ -108,7 +107,7 @@ int32_t PythonObject::To(uint32_t& output) const
     if (!PyLong_Check(ptr)) {
         return -1;
     }
-    output = static_cast<int32_t>(PyLong_AsUnsignedLong(ptr));
+    output = static_cast<uint32_t>(PyLong_AsUnsignedLong(ptr));
     return 0;
 }
 
@@ -155,7 +154,7 @@ PythonObject PythonObject::Get(const std::string& name, bool ignore) const
     return ret;
 }
 
-PythonObject PythonObject::Call(bool ignore)
+PythonObject PythonObject::Call(bool ignore) noexcept
 {
     if (!PyCallable_Check(ptr)) {
         if (!ignore) {
@@ -173,7 +172,7 @@ PythonObject PythonObject::Call(bool ignore)
     return ret;
 }
 
-PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore)
+PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore) noexcept
 {
     if (!PyCallable_Check(ptr)) {
         if (!ignore) {
@@ -182,7 +181,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore)
         return PythonObject();
     }
 
-    PyObject* o = PyObject_CallObject(ptr, args.IsNone() ? nullptr : args);
+    PyObject* o = PyObject_CallObject(ptr, args.IsNone() ? nullptr : reinterpret_cast<PyObject*>(&args));
     if (o == nullptr && ignore) {
         PyErr_Clear();
     }
@@ -191,7 +190,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, bool ignore)
     return ret;
 }
 
-PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore)
+PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwargs, bool ignore) noexcept
 {
     if (!PyCallable_Check(ptr)) {
         if (!ignore) {
@@ -203,7 +202,7 @@ PythonObject PythonObject::Call(PythonTupleObject& args, PythonDictObject& kwarg
     if (args.IsNone() || kwargs.IsNone()) {
         if (!ignore) {
             PyErr_SetString(PyExc_TypeError, "Call python object with invalid parameters.");
-        } 
+        }
         return PythonObject();
     }
 
@@ -227,10 +226,9 @@ PythonObject PythonObject::GetGlobal(const std::string& name, bool ignore)
     }
 
     return PythonObject(PyDict_GetItemString(globals, name.c_str()));
-    
 }
 
-PythonObject PythonObject::Import(const std::string& name, bool ignore)
+PythonObject PythonObject::Import(const std::string& name, bool ignore) noexcept
 {
     PyObject* m = PyImport_ImportModule(name.c_str());
     if (m == nullptr) {
@@ -483,7 +481,7 @@ PythonTupleObject::PythonTupleObject() : PythonObject()
 
 PythonTupleObject::PythonTupleObject(PyObject* o) : PythonObject()
 {
-    if (!PyTuple_Check(o)) {
+    if (!o || !PyTuple_Check(o)) {
         return;
     }
 

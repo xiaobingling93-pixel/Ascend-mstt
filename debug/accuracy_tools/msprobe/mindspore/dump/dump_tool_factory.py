@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +14,18 @@
 # limitations under the License.
 
 from msprobe.mindspore.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.mindspore.common.utils import is_graph_mode_cell_dump_allowed
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
+from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
 
 
 class DumpToolFactory:
     tools = {
         Const.CELL: {
-            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_KBYK_MODE: GraphModeCellDump,
             Const.GRAPH_GE_MODE: None,
             Const.PYNATIVE_MODE: None
         },
@@ -39,14 +42,23 @@ class DumpToolFactory:
     }
 
     @staticmethod
-    def create(config: DebuggerConfig):
-        if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
-            raise Exception("data_mode must be one of all, input, output.")
+    def create(config: DebuggerConfig, model=None):
+        if config.level == Const.CELL:
+            if not is_graph_mode_cell_dump_allowed(config):
+                raise Exception("Cell dump is not supported in graph mode.")
+            if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_CELL_DUMP_DATA_MODE_LIST:
+                raise Exception("data_mode must be one of all, forward, backward.")
+        else:
+            if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
+                raise Exception("data_mode must be one of all, input, output.")
+        if config.level == Const.KERNEL:
+            return (KernelGraphDump(config), KernelKbykDump(config))
         tool = DumpToolFactory.tools.get(config.level)
         if not tool:
             raise Exception("Valid level is needed.")
         tool = tool.get(config.execution_mode)
         if not tool:
-            raise Exception(f"Data dump is not supported in {config.execution_mode} mode "
-                            f"when dump level is {config.level}.")
-        return tool(config)
+            logger.error(f"Data dump is not supported in {config.execution_mode} mode "
+                         f"when dump level is {config.level}.")
+            raise ValueError
+        return tool(config, model) if tool == GraphModeCellDump else tool(config)

@@ -188,7 +188,7 @@ class DataManager:
 
     def record_exception_skip(self, api_name, forward_or_backward, err_msg):
         '''
-            record exception_skip infomation into self.record_exception_skip.
+            record exception_skip information into self.record_exception_skip.
             self.record_exception_skip: dict{str: dict{"forward": str/None, "backward": str/None}}
             string in key is api_name, string in value is err_msg
         '''
@@ -270,7 +270,7 @@ class DataManager:
                 entry.backward_pass_status,
                 overall_err_msg
             ]
-            # change row if this api has excption_skip infomation
+            # change row if this api has exception_skip information
             if api_name in self.results_exception_skip:
                 if self.results_exception_skip[api_name][Const.FORWARD] is not None:
                     row[1] = CompareConst.SKIP

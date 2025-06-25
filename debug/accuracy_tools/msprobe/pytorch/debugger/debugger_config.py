@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_torch_nn_module
 
 
 class DebuggerConfig:
@@ -60,6 +59,7 @@ class DebuggerConfig:
                 if isinstance(task_config.online_run_ut_recompute, bool) else False
 
         self.check()
+        self._check_statistics_config(task_config)
 
         if self.level == Const.LEVEL_L2:
             self.is_backward_kernel_dump = False
@@ -78,10 +78,13 @@ class DebuggerConfig:
         if not isinstance(self.async_dump, bool):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR and not self.list:
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                   f"The parameters async_dump is true in tensor task, the parameters list cannot be "
-                                   f"empty.")
+        if self.async_dump and self.task == Const.TENSOR:
+            if self.level == Const.LEVEL_DEBUG:
+                self.list = [] # async_dump + debug level case ignore list
+            if not self.list and self.level != Const.LEVEL_DEBUG:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                    f"The parameters async_dump is true in tensor task, the parameters list cannot be "
+                                    f"empty.")
         if self.task == Const.STRUCTURE and self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
                 f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
@@ -93,25 +96,24 @@ class DebuggerConfig:
         self.check_kwargs()
         return True
 
-    def check_model(self, instance, start_model):
-        if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
-            if instance.model is not None or start_model is not None:
-                logger.info_on_rank_0(
-                    f"The current level is not L0 or mix level, so the model parameters will not be used.")
+    def check_model(self, instance, start_model, token_range=None):
+        instance.model = start_model if start_model is not None else instance.model
+        if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX] and token_range is None:
             return
-        if start_model is None and instance.model is None:
+
+        if instance.model is None:
             logger.error_on_rank_0(
-                f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' parameter.")
+                f"For level {self.level} or non-empty token_range, "
+                f"PrecisionDebugger or start interface must receive a 'model' parameter.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
 
-        instance.model = start_model if start_model is not None else instance.model
-        if isinstance(instance.model, torch.nn.Module):
+        if is_torch_nn_module(instance.model):
             return
 
         error_model = None
         if isinstance(instance.model, (list, tuple)):
             for model in instance.model:
-                if not isinstance(model, torch.nn.Module):
+                if not is_torch_nn_module(model):
                     error_model = model
                     break
         else:
@@ -119,7 +121,7 @@ class DebuggerConfig:
 
         if error_model is not None:
             error_info = (f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] "
-                          f"type, currently there is a {type(error_model)} type.")
+                          f"type, currently there is an unsupported {type(error_model)} type.")
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
 
@@ -130,8 +132,23 @@ class DebuggerConfig:
         if not self.list or len(self.list) != 1:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the list must be configured as a list with one api name.")
+        if self.task != Const.TENSOR:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the task must be set to tensor.")
+
         api_name = self.list[0]
         if api_name.endswith(Const.BACKWARD):
             self.is_backward_kernel_dump = True
             api_forward_name = api_name[:-len(Const.BACKWARD)] + Const.FORWARD
             self.list.append(api_forward_name)
+
+    def _check_statistics_config(self, task_config):
+        if self.task != Const.STATISTICS:
+            return
+        self.tensor_list = []
+        if not hasattr(task_config, "tensor_list"):
+            return
+        if self.level == Const.LEVEL_DEBUG and task_config.tensor_list:
+            logger.warning_on_rank_0("When level is set to debug, the tensor_list will be invalid.")
+            return
+        self.tensor_list = task_config.tensor_list

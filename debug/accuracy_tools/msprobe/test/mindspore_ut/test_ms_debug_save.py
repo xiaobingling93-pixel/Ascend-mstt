@@ -16,8 +16,11 @@ from unittest import TestCase
 from unittest.mock import patch
 import mindspore
 
+from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.mindspore import PrecisionDebugger
-from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.core.common_config import CommonConfig
+from msprobe.mindspore.ms_config import StatisticsConfig
+
 
 class TestMindsporeDebuggerSave(TestCase):
     def setUp(self):
@@ -35,8 +38,8 @@ class TestMindsporeDebuggerSave(TestCase):
             }
         }
         common_config = CommonConfig(statistics_task_json)
-        task_config = BaseConfig(statistics_task_json)
-        with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", return_value=(common_config, task_config)), \
+        task_config = StatisticsConfig(statistics_task_json)
+        with patch.object(BasePrecisionDebugger, "_parse_config_path", return_value=(common_config, task_config)), \
             patch("msprobe.mindspore.debugger.precision_debugger.set_register_backward_hook_functions"):
             self.debugger = PrecisionDebugger()
 
@@ -52,26 +55,27 @@ class TestMindsporeDebuggerSave(TestCase):
             "framework": "mindspore",
             "dump_data_dir": None,
             "data": {
-                "x_tensor.0": {
+                "x_tensor.0.debug": {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
-                    "shape": (1,),
-                    "Max": 1.0,
-                    "Min": 1.0,
-                    "Mean": 1.0,
-                    "Norm": 1.0
+                    "shape": (1,)
                 },
-                "x_tensor_grad.0": {
+                "x_tensor_grad.0.debug": {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
-                    "shape": (1,),
-                    "Max": 2.0,
-                    "Min": 2.0,
-                    "Mean": 2.0,
-                    "Norm": 2.0
+                    "shape": (1,)
                 }
             }
         }
+
+
         grad_fn = mindspore.value_and_grad(forward_func, (0, 1))
         grad_fn(x, y)
-        self.assertEqual(self.debugger.service.data_collector.data_writer.cache_debug, result_json)
+
+        result = self.debugger.service.data_collector.data_writer.cache_debug
+        # Remove 'tensor_stat_index' from all entries in the data dictionary
+        for key in result["data"]:
+            if 'tensor_stat_index' in result["data"][key]:
+                del result["data"][key]['tensor_stat_index']
+
+        self.assertEqual(result, result_json)

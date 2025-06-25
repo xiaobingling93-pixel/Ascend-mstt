@@ -318,7 +318,7 @@ def format_excel_title(title: str) -> str:
         "accelerator_core": "task_type",
         "start_time": "task_start_time",
         "duration": "task_duration",
-        "wait_time": "wait_time"
+        "wait_time": "task_wait_time"
     }
     return kernel_details_col_name_map.get(title, title)
 
@@ -447,7 +447,7 @@ def convert_to_int(data: any) -> int:
     try:
         int_value = int(convert_to_float(data))
     except ValueError:
-        logger.error(f"Can not convert %s to int.", data)
+        logger.warning(f"Can not convert %s to int.", data)
         return 0
     return int_value
 

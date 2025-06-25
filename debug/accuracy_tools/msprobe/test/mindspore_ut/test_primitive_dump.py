@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,96 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
+from collections import defaultdict
+import tempfile
 import unittest
-import mindspore as ms
-import numpy as np
-import os
 from unittest.mock import Mock, patch
 
-from mindspore import nn
+import numpy as np
+import mindspore as ms
+from mindspore import Tensor, ops
 
-import tempfile
 from msprobe.core.common.utils import Const
-from msprobe.mindspore.service import Service
-from msprobe.core.common.exceptions import MsprobeException
+from msprobe.mindspore.mindspore_service import MindsporeService
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from collections import defaultdict
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
-from mindspore.common.tensor import Tensor
-
-
-class DummyModel(nn.Cell):
-    def __init__(self):
-        super(DummyModel, self).__init__()
-        self.dense = nn.Dense(2, 2)
-
-    def construct(self, x):
-        return self.dense(x)
-
-
-class TestService(unittest.TestCase):
-    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
-    def setUp(self, _):
-        json_config = {
-            "task": "statistics",
-            "dump_path": "/absolute_path",
-            "rank": [],
-            "step": [0, 2],
-            "level": "L1"
-        }
-
-        common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
-        config = DebuggerConfig(common_config, task_config)
-        self.service = Service(config)
-        self.service.model = Mock()
-        self.service.data_collector = Mock()
-        self.service.switch = True  # Make sure the switch is on for testing
-        self.service.primitive_switch = True  # Make sure the switch is on for testing
-
-    def test_check_model_valid_none(self):
-        model = None
-        self.assertIsNone(self.service.check_model_valid(model))
-
-    def test_check_model_valid_valid_model(self):
-        model = DummyModel()
-        self.assertEqual(self.service.check_model_valid(model), model)
-
-    def test_check_model_valid_invalid_model(self):
-        model = "invalid_model"
-        with self.assertRaises(MsprobeException) as context:
-            self.service.check_model_valid(model)
-
-    def test_update_primitive_counters(self):
-        primitive_name = "test_primitive"
-        self.service.primitive_hook_service.update_primitive_counters(primitive_name)
-        self.assertEqual(self.service.primitive_hook_service.primitive_counters[primitive_name], 0)
-        self.service.primitive_hook_service.update_primitive_counters(primitive_name)
-        self.assertEqual(self.service.primitive_hook_service.primitive_counters[primitive_name], 1)
-
-    def test_step_updates_iteration(self):
-        initial_iter = self.service.loop
-        self.service.step()
-        self.assertEqual(self.service.loop, initial_iter + 1)
-
-    @patch.object(HOOKCell, 'cell_count', new_callable=lambda: defaultdict(int))
-    def test_step_resets_counters(self, _):
-        # 假设在 step 调用之前已经有一些 primitive_counters
-        self.service.primitive_hook_service.primitive_counters["test_primitive"] = 5
-        self.service.step()
-        self.assertEqual(self.service.primitive_hook_service.primitive_counters, {})
-        self.assertEqual(HOOKCell.cell_count, defaultdict(int))
-
-    def test_start_calls_update_iter(self):
-        # 检查是否在调用 start 时调用了 update_iter
-        with patch.object(self.service.data_collector, 'update_iter') as mock_update_iter:
-            initial_iter = self.service.loop
-            init_step = self.service.init_step
-            self.service.start()
-            mock_update_iter.assert_called_once_with(initial_iter + init_step)
+from msprobe.mindspore.ms_config import StatisticsConfig
 
 
 class TestPrimitiveHookService(unittest.TestCase):
@@ -119,21 +46,16 @@ class TestPrimitiveHookService(unittest.TestCase):
         }
 
         common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
+        task_config = StatisticsConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
-        self.service = Service(config)
-        self.service.model = Mock()
-        self.service.data_collector = Mock()
-        self.service.switch = True  # Make sure the switch is on for testing
 
-        # 模拟一个 service_instance 和 data_collector
-        self.mock_service_instance = Service(config)
-        self.mock_service_instance.switch = True
-        self.mock_service_instance.data_collector = Mock()
-        self.mock_service_instance.data_collector.dump_file_path = json_config["dump_path"]
-
-        # 初始化 PrimitiveHookService
-        self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
+        with patch('msprobe.core.service.build_data_collector'), \
+             patch('msprobe.mindspore.mindspore_service.CellProcessor'), \
+             patch('msprobe.mindspore.mindspore_service.PrimitiveHookService'), \
+             patch('msprobe.mindspore.mindspore_service.get_api_register'):
+            self.mock_service_instance = MindsporeService(config)
+            Runtime.is_running = True
+            self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
 
     def tearDown(self):
         # 测试结束时删除临时目录
@@ -148,7 +70,6 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
         hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
-        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(None, "example")
 
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
@@ -163,7 +84,6 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         backward_hook(grad_2)
         self.assertEqual(len(captured_grads), 6)  # 捕获到两个梯度
-        print(f"1After first backward_hook call, len(captured_grads): {len(captured_grads)}")
 
         # 调用到达阈值，验证数据收集
         self.assertTrue(self.mock_service_instance.data_collector.backward_output_data_collect.called)
@@ -177,7 +97,6 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
         hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
-        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(None, "example")
 
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
@@ -214,14 +133,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
         hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
-        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(None, "example")
-        if wrapped_primitive_call.__closure__:
-            for i, closure in enumerate(wrapped_primitive_call.__closure__):
-                print(f"Closure[{i}]:", closure.cell_contents)
 
-        if hook_primitive_inputs.__closure__:
-            for i, closure in enumerate(hook_primitive_inputs.__closure__):
-                print(f"2Closure[{i}]:", closure.cell_contents)
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
         backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
@@ -235,7 +147,6 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         backward_hook(grad_2)
         self.assertEqual(len(captured_grads), 6)  # 捕获到两个梯度
-        print(f"After first backward_hook call, len(captured_grads): {len(captured_grads)}")
 
         # 调用到达阈值，验证数据收集
         self.assertTrue(self.mock_service_instance.data_collector.backward_input_data_collect.called)
@@ -282,18 +193,15 @@ class TestPrimitiveHookService(unittest.TestCase):
         updated_primitive_name = "test_primitive_input"
 
         # 调用 hook_primitive_inputs
-        hooked_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents(args,
-                                                                                                                 captured_grads_input,
-                                                                                                                 updated_primitive_name)
-
-        # 验证 hooked_inputs 是否正确添加了 hook
-        for arg, hooked_arg in zip(args, hooked_inputs):
-            if isinstance(arg, Tensor):
-                print(f"Captured hooked_arg after hook: {hooked_arg}")
-                self.assertTrue(hasattr(hooked_arg, 'grad_fn'))
-
-        # 打印调试信息
-        print(f"Captured gradients after hook: {captured_grads_input}")
+        hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
+        with patch.object(ops, 'HookBackward') as mock_HookBackward:
+            target_value = Tensor([1.0])
+            mock_hbw = mock_HookBackward.return_value
+            mock_hbw.return_value = target_value
+            hooked_inputs = hook_primitive_inputs(args, captured_grads_input, updated_primitive_name)
+            self.assertEqual(mock_HookBackward.call_count, len(args))
+            for hooked_input in hooked_inputs:
+                self.assertTrue((hooked_input == target_value).all())
 
     def test_hook_primitive_outputs(self):
         # 模拟前向输出
@@ -302,17 +210,16 @@ class TestPrimitiveHookService(unittest.TestCase):
         updated_primitive_name = "test_primitive_output"
 
         # 调用 hook_primitive_outputs
-        hook_primitive_outputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[
-            1].cell_contents
-        hooked_outputs = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)
-
-        # 验证 hooked_outputs 是否正确添加了 hook
-        for tensor, hooked_tensor in zip(out, hooked_outputs):
-            if isinstance(tensor, Tensor):
-                self.assertTrue(hasattr(hooked_tensor, 'grad_fn'))
-
-        # 打印调试信息
-        print(f"Captured gradients after output hook: {captured_grads_output}")
+        hook_primitive_outputs = self.primitive_hook_service.wrap_primitive(None,
+                                                                            "example").__closure__[1].cell_contents
+        with patch.object(ops, 'HookBackward') as mock_HookBackward:
+            target_value = Tensor([1.0])
+            mock_hbw = mock_HookBackward.return_value
+            mock_hbw.return_value = target_value
+            hooked_outputs = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)
+            self.assertEqual(mock_HookBackward.call_count, len(out))
+            for hooked_output in hooked_outputs:
+                self.assertTrue((hooked_output == target_value).all())
 
     def test_wrapped_primitive_call_args(self):
         # 模拟前向输入
@@ -325,18 +232,17 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 调用 wrapped_primitive_call 并检查 hooked_inputs 是否与原始 args 相同
         try:
-            hooked_inputs = wrapped_primitive_call.__closure__[0].cell_contents(args, captured_grads_input,
-                                                                                updated_primitive_name)
-            for arg, hooked_arg in zip(args, hooked_inputs):
-                if isinstance(arg, Tensor):
-                    self.assertTrue(hasattr(hooked_arg, 'grad_fn'))
-                    self.assertTrue(np.array_equal(arg.asnumpy(), hooked_arg.asnumpy()))
-                    print(f"Arg type: {type(arg)}, Hooked input type: {type(hooked_arg)}")
-                else:
-                    self.assertEqual(arg, hooked_arg)
+            with patch.object(ops, 'HookBackward') as mock_HookBackward:
+                target_value = Tensor([1.0])
+                mock_hbw = mock_HookBackward.return_value
+                mock_hbw.return_value = target_value
+                hooked_inputs = wrapped_primitive_call.__closure__[0].cell_contents(args, captured_grads_input,
+                                                                                    updated_primitive_name)
+                self.assertEqual(mock_HookBackward.call_count, len(args))
+                for hooked_input in hooked_inputs:
+                    self.assertTrue((hooked_input == target_value).all())
         except Exception as e:
             self.fail(f"wrapped_primitive_call raised an exception: {e}")
-
 
     def test_update_primitive_counters_multiple(self):
         # 测试更新 primitive 计数器的功能，增加多个不同名称的测试
@@ -367,7 +273,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
     def test_wrap_primitive_no_hook_with_invalid_input(self):
         # 测试在 switch 关闭时传入无效输入时的行为
-        self.mock_service_instance.switch = False
+        Runtime.is_running = False
 
         invalid_inputs = [None, "invalid_tensor", 123]
 
@@ -416,12 +322,10 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         for captured_grads in captured_grads_sets:
             updated_primitive_name = "MatMul.Backward"
-            num_tensors = len(captured_grads)
             hook = self.primitive_hook_service.wrap_primitive(Mock(), "MatMul")
 
             backward_hook = hook(Mock(), captured_grads, updated_primitive_name, Const.INPUT)
             self.assertIsNotNone(backward_hook)
-
 
     @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
     def test_wrap_primitive_forward_and_backward_hooks(self, mock_hook_backward):
@@ -446,9 +350,6 @@ class TestPrimitiveHookService(unittest.TestCase):
             for i in range(5):
                 self.primitive_hook_service.update_primitive_counters(name)
                 self.assertEqual(self.primitive_hook_service.primitive_counters[name], i)
-
-
-
 
     def test_update_primitive_counters(self):
         primitive_name = "MatMul"
@@ -496,7 +397,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
 
         # 模拟反向传播过程，调用包装的 primitive
-        with patch.object(self.mock_service_instance.data_collector, 'backward_data_collect') as mock_backward_collect:
+        with patch.object(self.mock_service_instance.data_collector, 'backward_data_collect'):
             result = wrapped_func(Mock(), input_tensor)
 
             # 验证结果是 Tensor 实例
@@ -504,7 +405,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
     def test_wrap_primitive_no_hook_when_switch_off(self):
         # 模拟 switch 关闭的情况
-        self.mock_service_instance.switch = False
+        Runtime.is_running = False
 
         # 模拟 Tensor 输入
         input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
@@ -544,7 +445,6 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 测试 create_backward_hook 的功能
         captured_grads = []
         updated_primitive_name = "MatMul.Backward"
-        num_tensors = 2
 
         # 创建 backward hook
         backward_hook = self.primitive_hook_service.wrap_primitive(Mock(), "MatMul")

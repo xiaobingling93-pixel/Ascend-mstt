@@ -16,9 +16,9 @@
 import os
 import re
 
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, check_crt_valid
+from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
@@ -42,6 +42,7 @@ class TensorConfig(BaseConfig):
         self.tls_path = json_config.get("tls_path", "./")
         self.online_run_ut_recompute = json_config.get("online_run_ut_recompute", False)
         self.check_config()
+        self._check_summary_mode()
         self._check_file_format()
         if self.online_run_ut:
             self._check_online_run_ut()
@@ -65,7 +66,10 @@ class TensorConfig(BaseConfig):
             check_file_or_directory_path(self.tls_path, isdir=True)
             check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
             check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
-            check_crt_valid(os.path.join(self.tls_path, "client.crt"))
+            check_file_or_directory_path(os.path.join(self.tls_path, "ca.crt"))
+            crl_path = os.path.join(self.tls_path, "crl.pem")
+            if os.path.exists(crl_path):
+                check_file_or_directory_path(crl_path)
 
         if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
             raise Exception(f"host: {self.host} is invalid.")
@@ -80,9 +84,8 @@ class StatisticsConfig(BaseConfig):
         self.check_config()
         self._check_summary_mode()
 
-    def _check_summary_mode(self):
-        if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
-            raise Exception("summary_mode is invalid")
+        self.tensor_list = json_config.get("tensor_list", [])
+        self._check_str_list_config(self.tensor_list, "tensor_list")
 
 
 class OverflowCheckConfig(BaseConfig):
@@ -95,6 +98,8 @@ class OverflowCheckConfig(BaseConfig):
     def check_overflow_config(self):
         if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_num is invalid")
+        if self.overflow_nums is not None and self.overflow_nums != -1 and self.overflow_nums <= 0:
+            raise Exception("overflow_nums should be -1 or positive integer")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
 
@@ -148,7 +153,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
                 self.pert_mode in PytorchFreeBenchmarkConst.CPU_MODE_LIST
         ):
             msg = (
-                f"You neet to and can only set fuzz_device as {DeviceType.CPU} "
+                f"You need to and can only set fuzz_device as {DeviceType.CPU} "
                 f"when pert_mode in {PytorchFreeBenchmarkConst.CPU_MODE_LIST}"
             )
             logger.error_log_with_exp(
@@ -271,13 +276,13 @@ class RunUTConfig(BaseConfig):
 
     @classmethod
     def check_nfs_path_config(cls, nfs_path):
-        if nfs_path and not os.path.exists(nfs_path):
-            raise Exception("nfs_path: %s does not exist" % nfs_path)
+        if nfs_path:
+            FileChecker(nfs_path, FileCheckConst.DIR, FileCheckConst.READ_ABLE).common_check()
 
     @classmethod
     def check_tls_path_config(cls, tls_path):
-        if tls_path and not os.path.exists(tls_path):
-            raise Exception("tls_path: %s does not exist" % tls_path)
+        if tls_path:
+            FileChecker(tls_path, FileCheckConst.DIR, FileCheckConst.READ_ABLE).common_check()
 
     def check_run_ut_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)

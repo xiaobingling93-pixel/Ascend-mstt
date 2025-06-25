@@ -112,7 +112,7 @@ class GradComparator:
             result.append([key] + value)
         result_csv_path = os.path.join(output_dir, "similarities.csv")
         if os.path.exists(result_csv_path):
-            logger.warning(f"{result_csv_path} will be recoverd")
+            logger.warning(f"{result_csv_path} will be deleted")
             remove_path(result_csv_path)
         write_csv(result, result_csv_path)
 
@@ -121,7 +121,7 @@ class GradComparator:
         similarities = {}
         logger.info(f"{len(steps)} steps will be compared")
         grad_weight_order = cls._get_grad_weight_order(path1, path2)
-        for step in tqdm(steps, desc="culculate similarities (by step)"):
+        for step in tqdm(steps, desc="calculate similarities (by step)"):
             grad_files = cls._get_matched_grad_files(path1, path2, step)
             same_count_summary = 0
             total_count_summary = 0

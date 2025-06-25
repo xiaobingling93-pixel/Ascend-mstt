@@ -59,7 +59,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         if error_file == "no_bench_data":
             err_msg = "Bench does not have data file."
         elif error_file:
-            err_msg = f"Dump file: {error_file} not found."
+            err_msg = f"Dump file: {error_file} not found or read failed."
         else:
             err_msg = CompareConst.NO_BENCH
         error_flag = True
@@ -290,10 +290,8 @@ class CompareOps:
 
 
 def error_value_process(n_value):
-    if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE:
+    if n_value in [CompareConst.READ_NONE, CompareConst.UNREADABLE, CompareConst.NONE]:
         return CompareConst.UNSUPPORTED, ""
-    if n_value == CompareConst.NONE:
-        return 0, ""
     if n_value == CompareConst.SHAPE_UNMATCH:
         return CompareConst.SHAPE_UNMATCH, ""
     if n_value == CompareConst.NAN:

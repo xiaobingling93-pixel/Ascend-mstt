@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-__version__ = '1.2.2'
+__version__ = '8.1.1'
 
 import subprocess
 import platform
@@ -24,17 +24,19 @@ import setuptools
 INSTALL_REQUIRED = [
     "wheel",
     "einops",
-    "numpy < 2.0",
+    "numpy >=1.23.0, < 2.0",
     "pandas >= 1.3.5, < 2.1",
     "pyyaml",
     "rich",
     "tqdm",
-    "openpyxl",
-    "pyopenssl",
+    "openpyxl >= 3.0.6",
+    "pyopenssl==24.2.1",
     "twisted",
     "matplotlib",
     "tensorboard",
-    "tabulate"
+    "tabulate",
+    "pwinput",
+    "psutil"
 ]
 
 EXCLUDE_PKGS = [

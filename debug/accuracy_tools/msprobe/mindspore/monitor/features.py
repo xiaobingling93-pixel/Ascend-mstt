@@ -46,6 +46,8 @@ def get_max(x: Tensor):
 
 @_no_grad()
 def get_zeros(x: Tensor, eps: float):
+    if x.numel() == 0:
+        return Tensor(float('nan'))
     return mint.sum(mint.abs(x) < eps) / x.numel()
 
 
@@ -54,10 +56,21 @@ def get_nans(t):
     return ops.isnan(t.astype(mstype.float32)).sum()
 
 
-FUNC_MAP = {"min"  : get_min,
-            "max"  : get_max,
-            "mean" : get_mean,
-            "norm" : get_norm,
-            "nans" : get_nans,
-            "zeros": get_zeros
-           }
+def get_shape(t):
+    return t.shape
+
+
+def get_dtype(t):
+    return t.dtype
+
+
+FUNC_MAP = {
+    "min": get_min,
+    "max": get_max,
+    "mean": get_mean,
+    "norm": get_norm,
+    "nans": get_nans,
+    "zeros": get_zeros,
+    "shape": get_shape,
+    "dtype": get_dtype
+}

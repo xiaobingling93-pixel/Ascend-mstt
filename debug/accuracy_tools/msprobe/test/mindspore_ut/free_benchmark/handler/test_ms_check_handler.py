@@ -24,7 +24,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.handler.check_handler import CheckHandler
-from msprobe.mindspore.runtime import Runtime
+from msprobe.core.common.runtime import Runtime
 
 
 def where(*args):

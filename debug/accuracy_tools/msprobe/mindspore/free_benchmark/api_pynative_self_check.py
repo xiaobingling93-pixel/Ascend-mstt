@@ -23,6 +23,8 @@ import mindspore as ms
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import check_path_length, load_yaml
+from msprobe.core.common.runtime import Runtime
+from msprobe.core.hook_manager import HookSet
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
@@ -35,7 +37,6 @@ from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.handler_factory import HandlerFactory
 from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import PerturbationFactory
-from msprobe.mindspore.runtime import Runtime
 
 
 _api_register = get_api_register()
@@ -75,7 +76,7 @@ class ApiPyNativeSelfCheck:
             ret = None
 
             if not need_wrapper_func():
-                del cell.input_kwargs
+                del cell.msprobe_input_kwargs
                 return ret
 
             api_name_with_id = api_name_with_id[:-1]
@@ -84,9 +85,9 @@ class ApiPyNativeSelfCheck:
                         api_name_with_id[api_name_with_id.find(Const.SEP) + 1:api_name_with_id.rfind(Const.SEP)])
             if api_name in self.api_list:
                 ret = check_self(api_name_with_id, output_data, self.ori_func.get(api_name),
-                                 *input_data, **cell.input_kwargs)
+                                 *input_data, **cell.msprobe_input_kwargs)
 
-            del cell.input_kwargs
+            del cell.msprobe_input_kwargs
             return ret
 
         def backward_hook(cell, grad_input, grad_output):
@@ -105,8 +106,13 @@ class ApiPyNativeSelfCheck:
 
         def pre_backward_hook(cell, grad_input):
             return None
-
-        return pre_hook, wrap_forward_hook, wrap_backward_hook, pre_backward_hook
+        
+        return HookSet(
+            forward_hook=wrap_forward_hook,
+            forward_pre_hook=pre_hook,
+            backward_hook=wrap_backward_hook,
+            backward_pre_hook=pre_backward_hook
+        )
 
     def store_original_func(self):
         for api_name in self.api_list:

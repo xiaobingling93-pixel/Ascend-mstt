@@ -1,11 +1,11 @@
 #!/bin/bash
 
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <url> <path> [ <sha256_value> ] [ <tag> ]"
+    echo "Usage: $0 <pkg_name> <path> [ <sha256_value> ] [ <tag> ]"
     exit 1
 fi
 
-url=$1
+pkg_name=$1
 path=$2
 
 if [ "$#" -ge 3 ]; then
@@ -13,6 +13,16 @@ if [ "$#" -ge 3 ]; then
 fi
 if [ "$#" -ge 4 ]; then
     tag=$4
+fi
+
+url=$(awk -F " = " '/\['${pkg_name}'\]/{a=1}a==1&&$1~/url/{print $2;exit}' config.ini)
+lib_path=$MSTT_LIB_PATH
+if [ -n "$lib_path" ]; then
+    url=${lib_path}$(echo $url | awk -F '/' -v OFS='/' '{print $5,$8}')
+fi
+if [[ ! $url = https* ]]; then
+    echo "The URL of $pkg_name is illegal."
+    exit 1
 fi
 
 echo "Start to download ${url}..."

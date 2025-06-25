@@ -1,0 +1,21 @@
+html,
+body,
+graph-ascend {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, sans-serif;
+}
+
+vaadin-combo-box-scroller {
+  overflow: scroll;
+  font-size: 14px;
+}
+
+vaadin-combo-box-item {
+  overflow: unset;
+  font-size: 14px;
+}
+
+vaadin-select-item {
+  font-size: 14px;
+}

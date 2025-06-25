@@ -22,7 +22,7 @@ from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools, UnequalRow, make_unequal_row
-from msprobe.mindspore.runtime import Runtime
+from msprobe.core.common.runtime import Runtime
 
 
 class TestUtils(unittest.TestCase):

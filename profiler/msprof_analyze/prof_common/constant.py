@@ -122,8 +122,10 @@ class Constant(object):
     # db name
     DB_COMMUNICATION_ANALYZER = "analysis.db"
     DB_CLUSTER_COMMUNICATION_ANALYZER = "cluster_analysis.db"
+    DB_MS_COMMUNICATION_ANALYZER = "communication_analyzer.db"
 
     # db tables
+    TABLE_COMMUNICATION_GROUP = "CommunicationGroup"
     TABLE_COMM_ANALYZER_BANDWIDTH = "CommAnalyzerBandwidth"
     TABLE_COMM_ANALYZER_TIME = "CommAnalyzerTime"
     TABLE_COMM_ANALYZER_MATRIX = "CommAnalyzerMatrix"
@@ -132,6 +134,10 @@ class Constant(object):
     TABLE_RANK_DEVICE_MAP = "RankDeviceMap"
     TABLE_CLUSTER_BASE_INFO = "ClusterBaseInfo"
     TABLE_META_DATA = "META_DATA"
+    TABLE_COMMUNICATION_GROUP_MAPPING = "CommunicationGroupMapping"
+    TABLE_CLUSTER_COMMUNICATION_MATRIX = "ClusterCommAnalyzerMatrix"
+    TABLE_CLUSTER_COMMUNICATION_BANDWIDTH = "ClusterCommAnalyzerBandwidth"
+    TABLE_CLUSTER_COMMUNICATION_TIME = "ClusterCommunicationTime"
 
     # data config key
     CONFIG = "config"
@@ -174,6 +180,7 @@ class Constant(object):
     INVALID_VALUE = -1
     MILLISECONDS_TO_SECONDS = 10 ** 3
     MICROSECONDS_TO_SECONDS = 10 ** 6
+    MILLISECONDS_TO_MICROSECONDS = 10 ** 3
 
     PROFILING_TYPE = "profiling type"
 
@@ -451,3 +458,23 @@ class Constant(object):
     UNKNOWN = "unknown"
 
     SQL_PLACEHOLDER_PATTERN = r"\?|\%s"
+
+    # cluster_analysis_output
+    COMMUNICATION_GROUP_JSON = "communication_group.json"
+    CLUSTER_COMMUNICATION_MATRIX_JSON = "cluster_communication_matrix.json"
+    KEY_COMM_GROUP_PARALLEL_INFO = "comm_group_parallel_info"
+
+    TABLE_PYTORCH_API = "PYTORCH_API"
+    TABLE_CANN_API = "CANN_API"
+    TABLE_AICORE_FREQ = "AICORE_FREQ"
+    TABLE_STRING_IDS = "STRING_IDS"
+    TABLE_ENUM_API_TYPE = "ENUM_API_TYPE"
+    TABLE_GC_RECORD = "GC_RECORD"
+    TABLE_COMPUTE_TASK_INFO = "COMPUTE_TASK_INFO"
+    TABLE_COMMUNICATION_OP = "COMMUNICATION_OP"
+    TABLE_COMMUNICATION_TASK_INFO = "COMMUNICATION_TASK_INFO"
+    TABLE_TASK = "TASK"
+    TABLE_PYTORCH_CALLCHAINS = "PYTORCH_CALLCHAINS"
+    TABLE_COMMUNICATION_SCHEDULE_TASK_INFO = "COMMUNICATION_SCHEDULE_TASK_INFO"
+    TABLE_TASK_PMU_INFO = "TASK_PMU_INFO"
+

@@ -111,7 +111,8 @@ class CSVGenerator(Process):
         output_path = context.get_context(GradConst.OUTPUT_PATH)
         self.level = context.get_context(GradConst.LEVEL)
         self.bounds = context.get_context(GradConst.BOUNDS)
-        self.dump_dir = f"{output_path}/rank{rank_id}/Dump/"
+        time_stamp = context.get_context(GradConst.TIME_STAMP)
+        self.dump_dir = f"{output_path}/rank{rank_id}/Dump{time_stamp}/"
         self.save_dir = f"{output_path}/rank{rank_id}/"
         self.current_step = None
         self.stop_event = multiprocessing.Event()

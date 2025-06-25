@@ -14,24 +14,29 @@
 # limitations under the License.
 
 import collections
+import functools
+import inspect
 import os
 import re
-import subprocess
+import threading
 import time
-from collections import defaultdict
+from collections import OrderedDict
 from datetime import datetime, timezone
-from functools import wraps
 
 import numpy as np
 
-from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.core.common.log import logger
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
-
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
+from msprobe.core.common.log import logger
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
+file_suffix_to_file_type = {
+    "dump.json": Const.DUMP_JSON_FILE,
+    "debug.json": Const.DEBUG_JSON_FILE,
+}
 
 
 class MsprobeBaseException(Exception):
@@ -76,6 +81,7 @@ class MsprobeBaseException(Exception):
     NAMES_STRUCTS_MATCH_ERROR = 34
     INVALID_STATE_ERROR = 35
     INVALID_API_NAME_ERROR = 36
+    CROSS_FRAME_ERROR = 37
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -105,6 +111,82 @@ class DumpException(MsprobeBaseException):
 
     def __str__(self):
         return f"Dump Error Code {self.code}: {self.error_info}"
+
+
+class ThreadSafe:
+    """
+    线程安全控制工具类，提供三种使用方式：
+    1.上下文管理器：with ThreadSafe()
+    2.主动加锁与释放锁：ThreadSafe.acquire()/ThreadSafe.release()
+    3.方法装饰器：@ThreadSafe.synchronized
+    """
+    _lock = threading.RLock()
+
+    def __enter__(self):
+        self.__class__._lock.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__class__._lock.release()
+
+    @classmethod
+    def acquire(cls):
+        cls._lock.acquire()
+
+    @classmethod
+    def release(cls):
+        cls._lock.release()
+
+    @classmethod
+    def synchronized(cls, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            with cls._lock:
+                return func(*args, **kwargs)
+
+        return wrapper
+
+
+class ModuleQueue:
+    def __init__(self):
+        self.queue = OrderedDict()
+
+    def add_name(self, name):
+        self.queue[name] = True
+
+    def remove_name(self, name):
+        if name in self.queue:
+            del self.queue[name]
+
+    def find_last(self, name):
+        """
+        在队列中找到当前 Module/Cell 的父节点名称并返回，若找不到则返回None
+
+        Args:
+            name: 需要寻找父节点的 Module/Cell 的名称
+
+        Returns:
+            返回父节点名称，找不到则返回None
+
+        Examples:
+            父节点名称格式: Module.module1.module1.forward.0
+            子节点名称格式: Module.module1.module2.Module2.forward.0
+            匹配关系: Module/Cell 的名称总能被点(.)分割符分成5个部分及以上，子节点截断后4个点和父节点截断后3个点的前缀名称是匹配的
+        """
+        child_parts = name.split('.')
+        if len(child_parts) < 5:
+            return None
+        child_name_prefix = '.'.join(child_parts[:-4])
+        if child_name_prefix in Const.MODULE_PREFIX:
+            return None
+
+        for parent_name in reversed(self.queue):
+            parent_parts = parent_name.split('.')
+            if len(parent_parts) < 5:
+                return None
+            parent_name_prefix = '.'.join(parent_parts[:-3])
+            if parent_name_prefix == child_name_prefix:
+                return parent_name
+        return None
 
 
 def is_json_file(file_path):
@@ -192,27 +274,6 @@ def check_regex_prefix_format_valid(prefix):
         raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
 
-def execute_command(cmd):
-    """
-    Function Description:
-        run the following command
-    Parameter:
-        cmd: command
-    Exception Description:
-        when invalid command throw exception
-    """
-    logger.info('Execute command:%s' % cmd)
-    process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while process.poll() is None:
-        line = process.stdout.readline()
-        line = line.strip()
-        if line:
-            logger.info(line)
-    if process.returncode != 0:
-        logger.error('Failed to execute command:%s' % " ".join(cmd))
-        raise CompareException(CompareException.INVALID_DATA_ERROR)
-
-
 def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
@@ -233,17 +294,33 @@ def format_value(value):
     return float('{:.12f}'.format(value))
 
 
-def md5_find(data):
-    for key_op in data:
-        for api_info in data[key_op]:
-            if isinstance(data[key_op][api_info], list):
-                for data_detail in data[key_op][api_info]:
-                    if data_detail and 'md5' in data_detail:
-                        return True
-            if isinstance(data[key_op][api_info], bool):
-                continue
-            elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
+@recursion_depth_decorator('msprobe.core.common.utils.md5_find', max_depth=Const.DUMP_MAX_DEPTH)
+def md5_find(data, json_type=Const.DUMP_JSON_FILE):
+    if json_type == Const.DUMP_JSON_FILE:
+        for key_op in data:
+            for api_info in data[key_op]:
+                if isinstance(data[key_op][api_info], list):
+                    for data_detail in data[key_op][api_info]:
+                        if data_detail and Const.MD5 in data_detail:
+                            return True
+                if isinstance(data[key_op][api_info], bool):
+                    continue
+                elif data[key_op][api_info] and Const.MD5 in data[key_op][api_info]:
+                    return True
+    elif json_type == Const.DEBUG_JSON_FILE:
+        if isinstance(data, dict):
+            if Const.MD5 in data:
                 return True
+            else:
+                for _, data_info in data.items():
+                    if md5_find(data_info, Const.DEBUG_JSON_FILE):
+                        return True
+        elif isinstance(data, list):
+            for data_info in data:
+                if md5_find(data_info, Const.DEBUG_JSON_FILE):
+                    return True
+        else:
+            return False
     return False
 
 
@@ -281,13 +358,41 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    npu_path_valid = npu_path is not None and npu_path.endswith("dump.json")
-    bench_path_valid = bench_path is not None and bench_path.endswith("dump.json")
-    if not npu_path_valid or not bench_path_valid:
-        logger.error(f"Please check the json path is valid. npu_path: {npu_path}, bench_path: {bench_path}")
+    dump_json_path_valid = npu_path is not None and npu_path.endswith("dump.json") and \
+                           bench_path is not None and bench_path.endswith("dump.json")
+    debug_json_path_valid = npu_path is not None and npu_path.endswith("debug.json") and \
+                            bench_path is not None and bench_path.endswith("debug.json")
+    if not dump_json_path_valid and not debug_json_path_valid:
+        logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.NPU_DUMP_DATA_DIR] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param[CompareConst.BENCH_DUMP_DATA_DIR] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+
+
+def get_file_type(file_path):
+    if not isinstance(file_path, str):
+        logger.error("get_file_type failed, check the type of file_path.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    file_type = file_suffix_to_file_type.get(file_path.split(Const.SCOPE_SEPARATOR)[-1])
+    if file_type is None:
+        logger.error("get_file_type failed, file_path is neither dump.json nor debug.json.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    return file_type
+
+
+def check_dump_json_key(json_data, device_type):
+    task = json_data.get('task', None)
+    if not task:
+        logger.error(f"Task for {device_type} is empty, please check.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    if 'data' not in json_data:
+        logger.error(f"Missing 'data' in dump.json, please check dump.json of {device_type}.")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    api_data = json_data.get('data')
+    if not isinstance(api_data, dict):
+        logger.error(f"Invalid type for 'data': expected a dict. Please check dump.json of {device_type}.")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    return task, api_data
 
 
 def get_dump_mode(input_param):
@@ -295,13 +400,10 @@ def get_dump_mode(input_param):
     bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
+    json_type = get_file_type(file_path=npu_path)
 
-    npu_task = npu_json_data.get('task', None)
-    bench_task = bench_json_data.get('task', None)
-
-    if not npu_task or not bench_task:
-        logger.error(f"Please check the dump task is correct, npu's task is {npu_task}, bench's task is {bench_task}.")
-        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    npu_task, npu_api_data = check_dump_json_key(npu_json_data, 'npu')
+    bench_task, bench_api_data = check_dump_json_key(bench_json_data, 'bench')
 
     if npu_task != bench_task:
         logger.error(f"Please check the dump task is consistent.")
@@ -314,8 +416,8 @@ def get_dump_mode(input_param):
         return Const.STRUCTURE
 
     if npu_task == Const.STATISTICS:
-        npu_md5_compare = md5_find(npu_json_data['data'])
-        bench_md5_compare = md5_find(bench_json_data['data'])
+        npu_md5_compare = md5_find(npu_api_data, json_type)
+        bench_md5_compare = md5_find(bench_api_data, json_type)
         if npu_md5_compare == bench_md5_compare:
             return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:
@@ -432,10 +534,32 @@ def get_real_step_or_rank(step_or_rank_input, obj):
 def check_init_step(step):
     if not is_int(step):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                        f"{step} must be an integer")
+                               f"{step} must be an integer")
     if not step >= 0:
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                f"{step} must be greater than or equal to 0")
+                               f"{step} must be greater than or equal to 0")
+
+
+def check_token_range(token_range):
+    if token_range is None:
+        return
+    if not isinstance(token_range, (list, tuple)):
+        logger.error("Token_range must be a list or tuple.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if len(token_range) != 2:
+        logger.error("Token_range must contains exactly 2 elements.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+    start, end = token_range
+    if not isinstance(start, int) or not isinstance(end, int):
+        logger.error("Start and end in token_range must be integer.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if start > end:
+        logger.error("Start in token_range must less than the end.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if start < 0:
+        logger.error("Start in token_range must >= 0.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
 
 def check_seed_all(seed, mode, rm_dropout):
@@ -481,36 +605,6 @@ def safe_get_value(container, index, container_name, key=None):
         raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR) from e
 
 
-# 记录工具函数递归的深度
-recursion_depth = defaultdict(int)
-
-
-# 装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。
-def recursion_depth_decorator(func_info, max_depth=Const.MAX_DEPTH):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            func_id = id(func)
-            recursion_depth[func_id] += 1
-            if recursion_depth[func_id] > max_depth:
-                msg = f"call {func_info} exceeds the recursion limit."
-                logger.error_log_with_exp(
-                    msg,
-                    MsprobeException(
-                        MsprobeException.RECURSION_LIMIT_ERROR, msg
-                    ),
-                )
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                recursion_depth[func_id] -= 1
-            return result
-
-        return wrapper
-
-    return decorator
-
-
 def check_str_param(param):
     if not re.match(Const.REGEX_PREFIX_PATTERN, param):
         logger.error('The parameter {} contains special characters.'.format(param))
@@ -524,3 +618,70 @@ class DumpPathAggregation:
     dump_tensor_data_dir = None
     free_benchmark_file_path = None
     debug_file_path = None
+
+
+def is_save_variable_valid(variable, valid_special_types, depth=0):
+    if depth > Const.DUMP_MAX_DEPTH:
+        return False
+    if isinstance(variable, valid_special_types):
+        return True
+    elif isinstance(variable, (list, tuple)):
+        return all(is_save_variable_valid(item, valid_special_types, depth + 1) for item in variable)
+    elif isinstance(variable, dict):
+        return all(isinstance(key, str) and is_save_variable_valid(value, valid_special_types, depth + 1)
+                   for key, value in variable.items())
+    else:
+        return False
+
+
+def replace_last_occurrence(text, old, new):
+    if text is None:
+        return text
+    index = text.rfind(old)
+    if index != -1:
+        return text[:index] + text[index:].replace(old, new, 1)
+    return text
+
+
+def load_stack_json(stack_path):
+    stack_dict = load_json(stack_path)
+
+    if not isinstance(stack_dict, dict):
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR,
+            "The format of the stack.json is incorrect, the outermost layer of stack.json should be a dict type."
+        )
+
+    if not stack_dict.get(Const.NEW_STACK_FLAG):
+        return stack_dict
+
+    new_stack_dict = {}
+    for stack_info in stack_dict.values():
+        if not isinstance(stack_info, list) or len(stack_info) != 2:
+            continue
+
+        api_list, stack_str = stack_info
+        if not isinstance(api_list, list):
+            continue
+
+        for api_name in api_list:
+            new_stack_dict.update({api_name: stack_str})
+    return new_stack_dict
+
+
+def analyze_api_call_stack(name):
+    try:
+        api_stack = inspect.stack()[2:]
+    except Exception as e:
+        logger.warning(f"The call stack of {name} failed to retrieve, {e}.")
+        api_stack = None
+    stack_str = []
+    if api_stack:
+        for (_, path, line, func, code, _) in api_stack:
+            if not code:
+                continue
+            stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()} \n"
+            stack_str.append(stack_line)
+    else:
+        stack_str.append(Const.WITHOUT_CALL_STACK)
+    return "".join(stack_str)

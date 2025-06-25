@@ -12,12 +12,44 @@ import openpyxl
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 
-
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.highlight import ApiBatch, CheckMaxRelativeDiff, CheckOrderMagnitude, \
-    CheckOneThousandErrorRatio, CheckCosineSimilarity, add_highlight_row_info, compare_result_df_convert, \
-    df_malicious_value_check, find_error_rows, highlight_rows_xlsx, update_highlight_err_msg, value_check
+    CheckOneThousandErrorRatio, CheckCosineSimilarity, add_highlight_row_info, HighLight
+from msprobe.core.compare.config import ModeConfig
 
+
+summary_line_input = ['Functional_batch_norm_0_forward.input.0', 'Functional_batch_norm_0_forward.input.0',
+                      'torch.float16',
+                      'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1,
+                      'Yes', '']
+summary_line_1 = ['Functional_batch_norm_0_forward.output.0', 'Functional_batch_norm_0_forward.output.0',
+                  'torch.float16',
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 10, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
+                  'Warning', '']
+summary_line_2 = ['Functional_batch_norm_0_forward.output.1', 'Functional_batch_norm_0_forward.output.1',
+                  'torch.float16',
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1,
+                  'Warning', '']
+summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_norm_0_forward.output.2',
+                  'torch.float16',
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
+                  'Warning', '']
+line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
+              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0.5, 1, 1, 0.95, 1,
+              1, 1, 1, 1, 1.01, 1, 1, 1,
+              'Yes', '']
+line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1, 1, 0.59, 1,
+          'nan', 0, 1, 1, 19, 1, 1, 1,
+          'Yes', '']
+line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 0.5, 1, 1, 0.8, 1,
+          0, 0.12, 0, 1, 1, 0.1, 1, 1,
+          'Yes', '']
+line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1.1e+10, 1, 0.85, 1,
+          9, 0.12, 0, 1, 1, 0.1, 1, 1,
+          'Yes', '']
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
 
@@ -161,7 +193,7 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input/parameters's is below 0.01"])]
+        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input/parameter's is below 0.01"])]
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
 
@@ -176,45 +208,6 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        self.assertEqual(result, None)
-
-    def test_find_error_rows_normal(self):
-        compare_result = np.array([
-            ["Functional.linear.0.forward.input.0", "Functional.linear.0.forward.input.0",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
-            ["Functional.linear.0.forward.input.1", "Functional.linear.0.forward.input.1",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
-            ["Functional.linear.0.forward.input.2", "Functional.linear.0.forward.input.2",
-             "torch.float32", "torch.float32", [2], [2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
-            ["Functional.linear.0.forward.output.0", "Functional.linear.0.forward.output.0",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
-        ], dtype=object)
-        api_batch = ApiBatch("Functional.linear.0.forward", 0)
-        api_batch.input_len = 3
-        api_batch.output_end_index = 4
-        api_batch.params_end_index = 4
-        highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
-        dump_mode = Const.ALL
-
-        find_error_rows(compare_result, api_batch, highlight_dict, dump_mode)
-
-        self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
-
-    def test_find_error_rows_md5(self):
-        compare_result = []
-        api_batch = ApiBatch("", 0)
-        api_batch.input_len = 0
-        api_batch.output_end_index = 1
-        api_batch.params_end_index = 1
-        highlight_dict = {}
-        dump_mode = Const.MD5
-
-        result = find_error_rows(compare_result, api_batch, highlight_dict, dump_mode)
-
         self.assertEqual(result, None)
 
     def test_ApiBatch_increment_input(self):
@@ -297,6 +290,48 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(api_batch.output_end_index, 5)
         self.assertEqual(api_batch.params_grad_end_index, 5)
 
+
+    def test_find_error_rows_normal(self):
+        compare_result = np.array([
+            ["Functional.linear.0.forward.input.0", "Functional.linear.0.forward.input.0",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+            ["Functional.linear.0.forward.input.1", "Functional.linear.0.forward.input.1",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+            ["Functional.linear.0.forward.input.2", "Functional.linear.0.forward.input.2",
+             "torch.float32", "torch.float32", [2], [2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+            ["Functional.linear.0.forward.output.0", "Functional.linear.0.forward.output.0",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+        ], dtype=object)
+        api_batch = ApiBatch("Functional.linear.0.forward", 0)
+        api_batch.input_len = 3
+        api_batch.output_end_index = 4
+        api_batch.params_end_index = 4
+        highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
+
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.find_error_rows(compare_result, api_batch, highlight_dict)
+
+        self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
+
+    def test_find_error_rows_md5(self):
+        compare_result = []
+        api_batch = ApiBatch("", 0)
+        api_batch.input_len = 0
+        api_batch.output_end_index = 1
+        api_batch.params_end_index = 1
+        highlight_dict = {}
+
+        mode_config = ModeConfig(dump_mode=Const.MD5)
+        highlight = HighLight(mode_config)
+        result = highlight.find_error_rows(compare_result, api_batch, highlight_dict)
+
+        self.assertEqual(result, None)
+
     @patch("msprobe.core.compare.highlight.logger")
     def test_value_check(self, mock_logger):
         value = "=functional.conv2d"
@@ -304,7 +339,9 @@ class TestUtilsMethods(unittest.TestCase):
         i = 1
         result_df_columns = CompareConst.COMPARE_RESULT_HEADER
 
-        value_check(value, api_name, i, result_df_columns)
+        mode_config = ModeConfig()
+        highlight = HighLight(mode_config)
+        highlight.value_check(value, api_name, i, result_df_columns)
 
         mock_logger.error.assert_called_once_with(
             "Malicious value [=functional.conv2d] at api_name [=functional.conv2d], column [Bench Name], "
@@ -319,11 +356,15 @@ class TestUtilsMethods(unittest.TestCase):
                 ]
         result_df = pd.DataFrame(data, columns=columns)
 
-        df_malicious_value_check(result_df, columns)
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.df_malicious_value_check(result_df, columns)
 
     def test_compare_result_df_convert(self):
         value = float("nan")
-        result = compare_result_df_convert(value)
+        mode_config = ModeConfig()
+        highlight = HighLight(mode_config)
+        result = highlight.compare_result_df_convert(value)
         self.assertEqual(result, "nan\t")
 
     def test_highlight_rows_xlsx_red(self):
@@ -335,7 +376,11 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {'red_rows': [0]}
         file_path = os.path.join(base_dir, 'result.xlsx')
-        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+
         generate_result_xlsx(base_dir)
         self.assertTrue(compare_excel_files_with_highlight(file_path, os.path.join(base_dir, 'target_result.xlsx')))
 
@@ -348,7 +393,11 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {'yellow_rows': [0]}
         file_path = os.path.join(base_dir, 'result.xlsx')
-        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+
         generate_result_xlsx(base_dir)
         self.assertTrue(compare_excel_files_with_highlight(file_path, os.path.join(base_dir, 'target_result_yellow.xlsx')))
 
@@ -366,7 +415,9 @@ class TestUtilsMethods(unittest.TestCase):
         temp_output_file = 'temp_output.txt'
         sys.stdout = open(temp_output_file, 'w')
 
-        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         with open(temp_output_file, 'r') as f:
             output = f.read()
@@ -391,7 +442,9 @@ class TestUtilsMethods(unittest.TestCase):
         temp_output_file = 'temp_output.txt'
         sys.stdout = open(temp_output_file, 'w')
 
-        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         with open(temp_output_file, 'r') as f:
             output = f.read()
@@ -429,7 +482,10 @@ class TestUtilsMethods(unittest.TestCase):
             'red_lines': [(0, ['a', 'b'])],
             'yellow_lines': [(0, ['c']), (1, ['d'])]
         }
-        update_highlight_err_msg(result_df, highlight_dict)
+
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                    'torch.float32', 'torch.float32', [2, 2], [2, 2],
@@ -449,7 +505,9 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {}
 
-        result = update_highlight_err_msg(result_df, highlight_dict)
+        mode_config = ModeConfig(dump_mode=Const.MD5)
+        highlight = HighLight(mode_config)
+        result = highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         self.assertEqual(result, None)
 
@@ -466,5 +524,43 @@ class TestUtilsMethods(unittest.TestCase):
             'red_lines': [(0, ['a', 'b'])],
             'yellow_lines': [(0, ['c']), (1, ['d'])]
         }
-        result = update_highlight_err_msg(result_df, highlight_dict)
+        mode_config = ModeConfig()
+        highlight = HighLight(mode_config)
+        result = highlight.update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
+
+    def test_find_error_rows(self):
+        api_batch = ApiBatch("Functional_batch_norm_0_forward", 0)
+        api_batch.input_len = 1
+        api_batch.output_end_index = 4
+        api_batch.params_end_index = 4
+        summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
+        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        mode_config = ModeConfig()
+        highlight = HighLight(mode_config)
+        highlight.find_error_rows(summary_result, api_batch, highlight_dict_test)
+        self.assertEqual(highlight_dict_test,
+                         {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
+
+    def test_find_compare_result_error_rows(self):
+        result = [line_input, line_1, line_2, line_3]
+        result_df = pd.DataFrame(result)
+        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        mode_config = ModeConfig(dump_mode=Const.ALL)
+        highlight = HighLight(mode_config)
+        highlight.find_compare_result_error_rows(result_df, highlight_dict_test)
+        self.assertEqual(highlight_dict_test, {
+            "red_rows": {1, 3},
+            "yellow_rows": {2},
+            "red_lines": [
+                (1, ["maximum or minimum is nan, -inf, or inf"]),
+                (3, ["maximum absolute error exceeds 1e+10"])
+            ],
+            "yellow_lines": [
+                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input/parameter's"]),
+                (3, [
+                    "maximum absolute error of both input/parameters and output exceed 1, "
+                    "with the output larger by an order of magnitude",
+                    "The output's cosine decreases by more than 0.1 compared to the input/parameter's"])
+            ]
+        })

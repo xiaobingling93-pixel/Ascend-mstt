@@ -40,7 +40,7 @@ from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.check_handler import CheckHandler
 from msprobe.mindspore.free_benchmark.handler.fix_handler import FixHandler
-from msprobe.mindspore.runtime import Runtime
+from msprobe.core.common.runtime import Runtime
 
 
 class DebuggerConfig:
@@ -96,24 +96,26 @@ class TestApiPyNativeSelfCheck(TestCase):
         mock_set_hook.assert_called_once()
 
     def test_build_hook(self):
-        _, forward_hook, backward_hook, _ = self.checker.build_hook("Functional.add.")
+        hook_set = self.checker.build_hook("Functional.add.")
 
         cell = Cell()
+        cell.msprobe_input_kwargs = {}
 
         with patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.need_wrapper_func", return_value=False):
-            self.assertIsNone(forward_hook(cell, "input", "output"))
+            self.assertIsNone(hook_set.forward_hook(cell, "input", "output"))
 
         cell = Cell()
+        cell.msprobe_input_kwargs = {}
         self.checker.api_list = ["mindspore.ops.add"]
         self.checker.ori_func["mindspore.ops.add"] = "add"
         with patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.need_wrapper_func", return_value=True), \
              patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.check_self",
                    return_value="ret") as mock_check:
-            ret = forward_hook(cell, ("input",), ("output",))
+            ret = hook_set.forward_hook(cell, ("input",), ("output",))
         self.assertEqual(ret, "ret")
         mock_check.assert_called_with("Functional.add.0", ("output",), "add", "input")
 
-        self.assertIsNone(backward_hook("cell", "grad_input", "grad_output"))
+        self.assertIsNone(hook_set.backward_hook("cell", "grad_input", "grad_output"))
 
     def test_store_original_func(self):
         self.checker.api_list = ["mindspore.ops.add"]

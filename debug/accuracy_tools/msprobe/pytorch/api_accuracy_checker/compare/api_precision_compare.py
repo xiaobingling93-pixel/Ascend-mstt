@@ -40,7 +40,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validat
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments, extract_basic_api_segments
 from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
@@ -151,6 +151,7 @@ def analyse_csv(npu_data, gpu_data, config):
         message = ''
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
+        check_op_str_pattern_valid(full_api_name_with_direction_status)
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
         api_name, api_full_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
         if not api_full_name:
@@ -430,6 +431,7 @@ def _api_precision_compare(parser=None):
     _api_precision_compare_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     _api_precision_compare_command(args)
+    logger.info("Compare task completed.")
 
 
 def _api_precision_compare_command(args):
@@ -457,8 +459,3 @@ def _api_precision_compare_parser(parser):
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The api precision compare task result out path.",
                         required=False)
-
-
-if __name__ == '__main__':
-    _api_precision_compare()
-    logger.info("Compare task completed.")

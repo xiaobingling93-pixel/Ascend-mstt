@@ -34,8 +34,10 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, i
 from msprobe.core.common.file_utils import check_link, FileChecker
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.utils import check_op_str_pattern_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 def check_tensor_overflow(x):
@@ -63,6 +65,7 @@ def check_tensor_overflow(x):
         return False
 
 
+@recursion_depth_decorator("check_data_overflow")
 def check_data_overflow(x, device):
     if isinstance(x, (tuple, list)):
         if not x:
@@ -75,6 +78,7 @@ def check_data_overflow(x, device):
             return torch_npu.npu.utils.npu_check_overflow(x)
 
 
+@recursion_depth_decorator("is_bool_output")
 def is_bool_output(x):
     if isinstance(x, (tuple, list)):
         if not x:
@@ -91,6 +95,7 @@ def run_overflow_check(forward_file):
         dump_path = os.path.dirname(forward_file)
         real_data_path = os.path.join(dump_path, Const.DUMP_TENSOR_DATA)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
+        check_op_str_pattern_valid(api_full_name)
         if is_unsupported_api(api_full_name, is_overflow_check=True):
             continue
         try:
@@ -161,6 +166,7 @@ def _run_overflow_check(parser=None):
     _run_overflow_check_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     _run_overflow_check_command(args)
+    logger.info("UT task completed.")
 
 
 def _run_overflow_check_command(args):
@@ -175,8 +181,3 @@ def _run_overflow_check_command(args):
         logger.error(f"Set NPU device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
     run_overflow_check(api_info)
-
-
-if __name__ == '__main__':
-    _run_overflow_check()
-    logger.info("UT task completed.")

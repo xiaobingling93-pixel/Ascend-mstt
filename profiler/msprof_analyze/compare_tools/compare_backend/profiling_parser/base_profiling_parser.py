@@ -19,7 +19,7 @@ from decimal import Decimal
 import ijson
 
 from msprof_analyze.compare_tools.compare_backend.compare_bean.origin_data_bean.compare_event import (
-    KernelEvent, 
+    KernelEvent,
     MemoryEvent
 )
 from msprof_analyze.compare_tools.compare_backend.compare_bean.origin_data_bean.kernel_details_bean \
@@ -30,6 +30,7 @@ from msprof_analyze.prof_common.constant import Constant
 from msprof_analyze.prof_common.file_manager import FileManager
 from msprof_analyze.prof_common.logger import get_logger
 from msprof_analyze.prof_common.path_manager import PathManager
+from msprof_analyze.prof_common.utils import convert_to_int
 
 logger = get_logger()
 
@@ -57,6 +58,9 @@ class ProfilingResult:
 
     def update_fwdbwd_data(self, flow_type: str, event: TraceEventBean):
         self.fwdbwd_dict.setdefault(event.id, {})[flow_type] = event
+
+    def update_fwdbwd_dict_data(self, fwdbwd_dict: dict):
+        self.fwdbwd_dict = fwdbwd_dict
 
     def update_kernel_dict(self, start_time: Decimal, kernel_event: TraceEventBean):
         self.kernel_dict.setdefault(start_time, []).append(KernelEvent(kernel_event, self._profiling_type))
@@ -92,6 +96,7 @@ class BaseProfilingParser(ABC):
         self._enable_communication_compare = args.enable_communication_compare
         self._enable_api_compare = args.enable_api_compare
         self._enable_kernel_compare = args.enable_kernel_compare
+        self._step_id = step_id
         self._dispatch_func = self._get_dispatch_func()
         self._result_data = ProfilingResult(self._profiling_type)
         self._memory_events = []
@@ -104,7 +109,7 @@ class BaseProfilingParser(ABC):
         self._categorize_performance_index = 0
         self._cpu_cube_op = None
         self._bwd_tid = None
-        self._step_id = step_id
+        self._step_range = None
 
     @property
     def cpu_cube_op(self):
@@ -114,6 +119,27 @@ class BaseProfilingParser(ABC):
         cpu_cube_op.sort(key=lambda x: x.start_time)
         self._cpu_cube_op = cpu_cube_op
         return self._cpu_cube_op
+
+    @property
+    def step_range(self):
+        if self._step_range is not None:
+            return self._step_range
+        self._step_range = []
+        if self._step_id == Constant.VOID_STEP:
+            return self._step_range
+        step_list = []
+        events = self._result_data.torch_op_data or self._trace_event_generator(self._profiling_type)
+        for event in events:
+            if event.is_step_profiler():
+                step_id = event.name.split("#")[-1]
+                step_list.append(step_id)
+                if convert_to_int(step_id, Constant.VOID_STEP) == int(self._step_id):
+                    self._step_range = [event.start_time, event.end_time]
+                    break
+        if not self._step_range:
+            valid_step = ", ".join(step_list)
+            raise RuntimeError(f"Invalid step id: {self._step_id}, please choose from the valid steps: {valid_step}")
+        return self._step_range
 
     @abstractmethod
     def _update_kernel_details(self):
@@ -327,15 +353,25 @@ class BaseProfilingParser(ABC):
             self._comm_list = list(filter(lambda x: x.is_nccl_name(), self._all_kernels.values()))
         self._comm_list.sort(key=lambda x: x.start_time)
         self._comm_task_list.sort(key=lambda x: x.start_time)
+        if len(self.step_range) == 2:
+            comm_list = [event
+                         for event in self._comm_list
+                         if self.step_range[0] <= event.start_time <= self.step_range[1]]
+            comm_task_list = [event
+                              for event in self._comm_task_list
+                              if self.step_range[0] <= event.start_time <= self.step_range[1]]
+        else:
+            comm_list = self._comm_list
+            comm_task_list = self._comm_task_list
         task_index = 0
-        for communication_op in self._comm_list:
+        for communication_op in comm_list:
             name_list = communication_op.lower_name.split("_")
             if len(name_list) < 2:
                 continue
-            comm_name = name_list[1]
+            comm_name = name_list[1] if name_list[0] == "hcom" else name_list[0]
             self._result_data.update_communication_dict(comm_name, communication_op.dur)
-            while task_index < len(self._comm_task_list):
-                task_event = self._comm_task_list[task_index]
+            while task_index < len(comm_task_list):
+                task_event = comm_task_list[task_index]
                 if task_event.start_time < communication_op.start_time:
                     task_index += 1
                     continue

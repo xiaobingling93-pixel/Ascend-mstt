@@ -22,10 +22,10 @@ import re
 
 import torch
 
-from msprobe.core.common.const import MonitorConst, Const
+from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
-from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
 
 
 device = "cpu"
@@ -43,7 +43,6 @@ DIRECTORY_MAX_LENGTH = 4096
 
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
-MVGradResult = namedtuple('MVGradResult', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
 
 
 class MsgConst:
@@ -102,7 +101,21 @@ def validate_ops(ops):
         default_op = MonitorConst.OP_LIST[0]
         valid_ops.append(default_op)
         logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
+    # 增加默认shape和dtype参数
+    if "shape" not in valid_ops:
+        valid_ops.append("shape")
+    if "dtype" not in valid_ops:
+        valid_ops.append("dtype")
     return valid_ops
+
+
+def validate_ndigits(ndigits):
+    if not ndigits:
+        return
+    if not is_int(ndigits) or ndigits <= 0:
+        raise ValueError(f"ndigits({ndigits}) is not a positive integer, current is: {ndigits}.")
+    if ndigits > MonitorConst.MAX_NDIGITS:
+        raise ValueError(f"The maximum supported ndigits is {MonitorConst.MAX_NDIGITS}, current value: {ndigits}.")
 
 
 def validate_ranks(ranks):
@@ -190,7 +203,7 @@ def validate_alert(alert):
             args = rule.get("args")
             if args and isinstance(args, dict):
                 threshold = args.get("threshold")
-                if not isinstance(threshold, float) or threshold < 0:
+                if not isinstance(threshold, (float, int)) or threshold < 0:
                     raise TypeError('threshold must be float and not less than 0')
     dump = alert.get('dump')
     if dump and not isinstance(dump, bool):
@@ -206,8 +219,23 @@ def validate_step_count_per_record(step_count_per_record):
         raise ValueError("step_count_per_record must smaller than 1e6")
 
 
+def validate_dynamic_on(dynamic_on):
+    if not isinstance(dynamic_on, bool):
+        raise TypeError('dynamic_on should be a bool')
+
+
+def validate_monitor_mbs_grad(monitor_mbs_grad):
+    if not isinstance(monitor_mbs_grad, bool):
+        logger.warning(f'monitor_mbs_grad should be a bool, actual value is {monitor_mbs_grad}.')
+        return False
+    return monitor_mbs_grad
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
+
+    ndigits = config.get('ndigits')
+    validate_ndigits(ndigits)
 
     eps = config.get('eps', 1e-8)
     if not isinstance(eps, float):
@@ -246,8 +274,21 @@ def validate_config(config):
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
 
+    config["start_step"] = validate_int_arg(config.get("start_step"), "start_step",
+                                            MonitorConst.DEFAULT_START_STEP, MonitorConst.DEFAULT_START_STEP)
+    config["collect_times"] = validate_int_arg(config.get("collect_times"), "collect_times",
+                                               MonitorConst.DEFAULT_MIN_COLLECT_TIMES,
+                                               MonitorConst.DEFAULT_MAX_COLLECT_TIMES)
+    config["step_interval"] = validate_int_arg(config.get("step_interval"), "step_interval",
+                                               MonitorConst.DEFAULT_STEP_INTERVAL, MonitorConst.DEFAULT_STEP_INTERVAL)
+
     squash_name = config.get('squash_name', True)
     validate_squash_name(squash_name)
+
+    config["monitor_mbs_grad"] = validate_monitor_mbs_grad(config.get('monitor_mbs_grad', False))
+
+    dynamic_on = config.get('dynamic_on', False)
+    validate_dynamic_on(dynamic_on)
 
     if not targets:
         if xy_distribution:
@@ -257,6 +298,8 @@ def validate_config(config):
 
 def time_str2time_digit(time_str):
     time_format = '%b%d_%H-%M-%S'
+    if not isinstance(time_str, str):
+        raise TypeError(f"time_str:{time_str} should be a str")
     try:
         time_digit = datetime.strptime(time_str, time_format)
     except Exception as e:
@@ -284,3 +327,40 @@ def get_target_output_dir(monitor_path, time_start, time_end):
         if start_ok and end_ok:
             result[rank] = os.path.join(monitor_path, dirname)
     return result
+
+
+def chmod_tensorboard_dir(path):
+    """
+        format配置为tensorboard时，需要补充文件权限设置
+    """
+    try:
+        recursive_chmod(path)
+    except Exception as e:
+        logger.warning(f"chmod tensorboard dir wrong because {e}, not updated, please check!!!")
+
+
+def validate_set_monitor(grad_acc_steps, start_iteration):
+    """
+    validate parameters of set_monitor.
+    """
+    grad_acc_steps = validate_int_arg(grad_acc_steps, "grad_acc_steps",
+                                      MonitorConst.DEFAULT_GRAD_ACC_STEPS, MonitorConst.DEFAULT_GRAD_ACC_STEPS)
+
+    start_iteration = validate_int_arg(start_iteration, "start_iteration",
+                                       MonitorConst.DEFAULT_START_ITERATION, MonitorConst.DEFAULT_START_ITERATION)
+    return grad_acc_steps, start_iteration
+
+
+def validate_int_arg(value, name, minimum, default_value):
+    """Validate int args, if any exception occurs, use the default value."""
+    if value is None:
+        return default_value
+    try:
+        if not is_int(value):
+            raise TypeError(f"{name} must be int")
+        if value < minimum:
+            raise ValueError(f"{name} must greater than {minimum}")
+    except Exception as e:
+        value = default_value
+        logger.warning(f"Validate {name} failed, {e}, replaced with default value {value}.")
+    return value

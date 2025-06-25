@@ -31,6 +31,7 @@ class GradConst:
     STEP = "step"
     BOUNDS = "bounds"
     OUTPUT_PATH = "output_path"
+    TIME_STAMP = "time_stamp"
 
     # level const
     LEVEL = "level"
@@ -51,7 +52,7 @@ class GradConst:
     BOUNDS_MINIMUM = -2**63
     BOUNDS_MAXIMUM = 2**63 - 1
 
-    # file safty
+    # file safety
     DATA_DIR_AUTHORITY = 0o750
     DATA_FILE_AUTHORITY = 0o640
     DIRECTORY_LENGTH = 4096

@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import inspect
 import os
 from dataclasses import dataclass, is_dataclass
-from typing import Tuple, Dict, Optional, Any
 from functools import partial
-import copy
-from typing import Union
+from typing import Tuple, Dict, Optional, Any, Union
 
 import numpy as np
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import save_npy
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, CompareException
 
@@ -79,21 +79,17 @@ class ModuleBackwardOutputs:
 
 
 class TensorStatInfo:
-    def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None, stack_tensor_stat=None):
+    def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None):
         self.max = max_val
         self.min = min_val
         self.mean = mean_val
         self.norm = norm_val
-        self.stack_tensor_stat = stack_tensor_stat
 
 
 class BaseDataProcessor:
     _recursive_key_stack = []
-    special_type = (
-        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_, np.ndarray,
-        bool, int, float, str, slice,
-        type(Ellipsis)
-    )
+    builtin_type = (bool, int, float, str, slice, type(Ellipsis))
+    np_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_, np.ndarray)
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -120,7 +116,10 @@ class BaseDataProcessor:
     @staticmethod
     def analyze_api_call_stack(name):
         try:
-            api_stack = inspect.stack()[5:]
+            if name.startswith("Primitive"):
+                api_stack = inspect.stack()[4:]
+            else:
+                api_stack = inspect.stack()[5:]
         except Exception as e:
             logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
             api_stack = None
@@ -129,12 +128,14 @@ class BaseDataProcessor:
             for (_, path, line, func, code, _) in api_stack:
                 if not code:
                     continue
+                if any(filter_path in path for filter_path in Const.STACK_FILTER_KEYWORDS) and \
+                        Const.CALL_STACK_FLAG not in path:
+                    continue
                 stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
                 stack_str.append(stack_line)
         else:
             stack_str.append(Const.WITHOUT_CALL_STACK)
-        stack_info_struct = {name: stack_str}
-        return stack_info_struct
+        return tuple(stack_str)
 
     @staticmethod
     def transfer_type(data):
@@ -178,20 +179,8 @@ class BaseDataProcessor:
                                  "invalid data_structure type or invalid index")
 
     @staticmethod
-    def _convert_numpy_to_builtin(arg):
-        type_mapping = {
-            np.integer: int,
-            np.floating: float,
-            np.bool_: bool,
-            np.complexfloating: complex,
-            np.str_: str,
-            np.byte: bytes,
-            np.unicode_: str
-        }
-        for numpy_type, builtin_type in type_mapping.items():
-            if isinstance(arg, numpy_type):
-                return builtin_type(arg), type(arg).__name__
-        return arg, ''
+    def is_distributed_op(module):
+        return getattr(module, "op_is_distributed", False)
 
     @staticmethod
     def _analyze_builtin(arg):
@@ -217,21 +206,40 @@ class BaseDataProcessor:
         return single_arg
 
     @staticmethod
-    def _analyze_numpy(ndarray, numpy_type):
+    def _analyze_numpy(arg):
+        return {"type": type(arg).__name__, "value": arg.item()}
+
+    @staticmethod
+    def _analyze_ndarray(ndarray, _):
         ndarray_json = {}
         ndarray_json.update({'type': 'numpy.ndarray'})
         ndarray_json.update({'dtype': str(ndarray.dtype)})
         ndarray_json.update({'shape': ndarray.shape})
-        if ndarray.size > 0:
-            ndarray_json.update({"Max": np.max(ndarray).item()})
-            ndarray_json.update({"Min": np.min(ndarray).item()})
-            ndarray_json.update({"Mean": np.mean(ndarray).item()})
-            ndarray_json.update({"Norm": np.linalg.norm(ndarray).item()})
-        else:
-            ndarray_json.update({"Max": None})
-            ndarray_json.update({"Min": None})
-            ndarray_json.update({"Mean": None})
-            ndarray_json.update({"Norm": None})
+
+        # 先初始化默认值
+        stats = {
+            "Max": None,
+            "Min": None,
+            "Mean": None,
+            "Norm": None
+        }
+
+        try:
+            # 只有非空时才尝试计算
+            if ndarray.size > 0:
+                stats = {
+                    "Max": np.max(ndarray).item(),
+                    "Min": np.min(ndarray).item(),
+                    "Mean": np.mean(ndarray).item(),
+                    "Norm": np.linalg.norm(ndarray).item()
+                }
+        except Exception as e:
+            # 决定打印内容或切片
+            logger.warning(f"Error analyzing ndarray stats: {e}")
+
+        # 最后一次性更新
+        ndarray_json.update(stats)
+
         return ndarray_json
 
     @staticmethod
@@ -248,12 +256,12 @@ class BaseDataProcessor:
 
     @classmethod
     def get_special_types(cls):
-        return cls.special_type
+        return cls.builtin_type + cls.np_type
 
     @classmethod
     def recursive_apply_transform(cls, args, transform, depth=0) -> Union[dict, list, None]:
-        if depth > Const.MAX_DEPTH:
-            logger.error(f"The maximum depth of recursive transform, {Const.MAX_DEPTH} is reached.")
+        if depth > Const.DUMP_MAX_DEPTH:
+            logger.error(f"The maximum depth of recursive transform, {Const.DUMP_MAX_DEPTH} is reached.")
             raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(args, cls.get_special_types()):
             arg_transform = transform(args, cls._recursive_key_stack)
@@ -303,6 +311,7 @@ class BaseDataProcessor:
 
             def real_hook_fn(grad):
                 return wrap_hook_fn(grad)
+
             element.register_hook(real_hook_fn)
 
     def if_return_forward_new_output(self):
@@ -350,6 +359,8 @@ class BaseDataProcessor:
         return api_info_struct
 
     def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        if self.is_distributed_op(module):
+            module_input_output.update_output_with_args_and_kwargs()
         api_info_struct = {}
         # check whether data_mode contains forward or input
         if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):
@@ -427,6 +438,7 @@ class BaseDataProcessor:
         api_info_struct = {}
         self.save_name = name + Const.SEP + param_name
         data_info = self.analyze_element(grad)
+        self.save_name = None
         grad_info_dict = {param_name: [data_info]}
         api_info_struct[name] = grad_info_dict
         return api_info_struct
@@ -435,10 +447,10 @@ class BaseDataProcessor:
         file_format = Const.PT_SUFFIX if self.config.framework == Const.PT_FRAMEWORK else Const.NUMPY_SUFFIX
         if self.save_name is not None:
             dump_data_name = (self.save_name + file_format)
-            self.save_name = None
         else:
-            dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
-                              suffix + file_format)
+            suffix_with_seq = (Const.SEP + suffix) if suffix else ""
+            dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + suffix_with_seq +
+                              file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
 
@@ -447,23 +459,32 @@ class BaseDataProcessor:
 
     def analyze_debug_forward(self, variable, name_with_count):
         self.current_api_or_module_name = name_with_count
-        self.api_data_category = Const.TENSOR
-        # these two attributes are used to construct tensor file name {name_with_count}.tensor.{indexes}.npy/pt
+        self.api_data_category = Const.DEBUG
+        # these two attributes are used to construct tensor file name {name_with_count}.debug.{indexes}.npy/pt
         data_info = self.analyze_element(variable)
         return data_info
 
-    def analyze_debug_backward(self, variable, grad_name_with_count, nested_data_structure):
+    def analyze_debug_backward(self, variable, grad_name_with_count_category, nested_data_structure):
         def hook_fn(grad, indexes):
             suffix = Const.SEP.join([str(index) for index in indexes])
-            self.save_name = grad_name_with_count + Const.SEP + Const.TENSOR + Const.SEP + suffix
+            suffix_with_sep = (Const.SEP + suffix) if suffix else ""
+            self.save_name = grad_name_with_count_category + suffix_with_sep
             grad_data_info = self.analyze_element(grad)
             self.save_name = None
-            full_index = [grad_name_with_count] + indexes
+            full_index = [grad_name_with_count_category] + indexes
             try:
                 self.set_value_into_nested_structure(nested_data_structure, full_index, grad_data_info)
             except (ValueError, IndexError) as e:
-                logger.warning(f"error occured while recording statistics of {grad_name_with_count} variable, "
-                               f"skip current recording, detailed infomation: {e}")
+                logger.warning(f"error occurred while recording statistics of {grad_name_with_count_category} variable,"
+                               f"skip current recording, detailed information: {e}")
             return grad
+
         wrap_register_hook_single_element = partial(self.register_hook_single_element, hook_fn=hook_fn)
         self.recursive_apply_transform(variable, wrap_register_hook_single_element)
+
+    def _analyze_and_save_ndarray(self, ndarray, suffix):
+        dump_data_name, file_path = self.get_save_file_path(suffix)
+        save_npy(ndarray, file_path)
+        ndarray_json = BaseDataProcessor._analyze_ndarray(ndarray, suffix)
+        ndarray_json.update({"data_name": dump_data_name})
+        return ndarray_json

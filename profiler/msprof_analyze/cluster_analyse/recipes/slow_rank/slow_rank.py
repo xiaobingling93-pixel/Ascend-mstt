@@ -59,13 +59,17 @@ def judge_dixon(time_list):
     # 计算狄克逊检验的检验指标，次小值和最小值差，比上最大值和最小值的差。根据数据数量改变次小值和最大值的选取
     if n <= Constant.MAX_DIXON_NUM:
         if n <= Constant.DIXON_THRESHOLD_1:
-            flag = (sorted_list[1] - sorted_list[0]) / (sorted_list[-1] - sorted_list[0])
+            flag = (sorted_list[1] - sorted_list[0]) / (sorted_list[-1] - sorted_list[0]) \
+                if (sorted_list[-1] - sorted_list[0]) else 0
         elif n <= Constant.DIXON_THRESHOLD_2:
-            flag = (sorted_list[1] - sorted_list[0]) / (sorted_list[-2] - sorted_list[0])
+            flag = (sorted_list[1] - sorted_list[0]) / (sorted_list[-2] - sorted_list[0]) \
+                if (sorted_list[-2] - sorted_list[0]) else 0
         elif n <= Constant.DIXON_THRESHOLD_3:
-            flag = (sorted_list[2] - sorted_list[0]) / (sorted_list[-2] - sorted_list[0])
+            flag = (sorted_list[2] - sorted_list[0]) / (sorted_list[-2] - sorted_list[0]) \
+                if (sorted_list[-2] - sorted_list[0]) else 0
         else:
-            flag = (sorted_list[2] - sorted_list[0]) / (sorted_list[-3] - sorted_list[0])
+            flag = (sorted_list[2] - sorted_list[0]) / (sorted_list[-3] - sorted_list[0]) \
+                if (sorted_list[-3] - sorted_list[0]) else 0
         
         # 根据数据数量查表，若计算的检验指标较大，则认为有异常值，耗时最短的卡是慢卡
         if flag > DIXON_TABLE_995[n]:
@@ -110,15 +114,22 @@ class SlowRankAnalysis(BaseRecipeAnalysis):
 
         analyzer = SlowRankVoteAnalysis(comm_ops_df)
         perpector_df = analyzer.run()
-        
+
         if self._export_type == Constant.DB:
-            self.save_db(perpector_df) 
+            self.save_db(perpector_df)
+        elif self._export_type == "notebook":
+            self.save_notebook(perpector_df)
         else:
             logger.error("SlowRank analysis is not supported for notebook export type.")
 
     def save_db(self, perpector_df):
         self.dump_data(perpector_df, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, "SlowRank")
-            
+
+    def save_notebook(self, perpector_df):
+        self.dump_data(perpector_df, "rank_stats.csv")
+        self.create_notebook("stats.ipynb")
+        self.add_helper_file("cluster_display.py")
+
     def _mapper_func(self, data_map, analysis_class):
         profiler_db_path = data_map.get(Constant.PROFILER_DB_PATH)
         step_range = data_map.get(Constant.STEP_RANGE)

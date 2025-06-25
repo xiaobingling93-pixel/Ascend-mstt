@@ -12,23 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import atexit
 import csv
 import fcntl
+import io
 import os
+import pickle
+from multiprocessing import shared_memory
 import stat
 import json
 import re
 import shutil
-from datetime import datetime, timezone
-from dateutil import parser
+import sys
+import zipfile
+import multiprocessing
 import yaml
 import numpy as np
 import pandas as pd
 
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, CompareConst
+from msprobe.core.common.global_lock import global_lock, is_main_process
+
+proc_lock = multiprocessing.Lock()
 
 
 class FileChecker:
@@ -164,6 +172,12 @@ def check_path_exists(path):
     if not os.path.exists(path):
         logger.error('The file path %s does not exist.' % path)
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
+    
+
+def check_path_not_exists(path):
+    if os.path.exists(path):
+        logger.error('The file path %s already exist.' % path)
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_readability(path):
@@ -266,6 +280,7 @@ def make_dir(dir_path):
     file_check.common_check()
 
 
+@recursion_depth_decorator('msprobe.core.common.file_utils.create_directory', max_depth=16)
 def create_directory(dir_path):
     """
     Function Description:
@@ -297,12 +312,13 @@ def check_path_before_create(path):
 def check_dirpath_before_read(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
-    if check_others_writable(dirpath):
-        logger.warning(f"The directory is writable by others: {dirpath}.")
-    try:
-        check_path_owner_consistent(dirpath)
-    except FileCheckException:
-        logger.warning(f"The directory {dirpath} is not yours.")
+    if dedup_log('check_dirpath_before_read', dirpath):
+        if check_others_writable(dirpath):
+            logger.warning(f"The directory is writable by others: {dirpath}.")
+        try:
+            check_path_owner_consistent(dirpath)
+        except FileCheckException:
+            logger.warning(f"The directory {dirpath} is not yours.")
     
 
 def check_file_or_directory_path(path, isdir=False):
@@ -330,6 +346,23 @@ def change_mode(path, mode):
     except PermissionError as ex:
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR,
                                  'Failed to change {} authority. {}'.format(path, str(ex))) from ex
+
+
+@recursion_depth_decorator('msprobe.core.common.file_utils.recursive_chmod')
+def recursive_chmod(path):
+    """
+    递归地修改目录及其子目录和文件的权限，文件修改为640，路径修改为750
+
+    :param path: 要修改权限的目录路径
+    """
+    for _, dirs, files in os.walk(path):
+        for file_name in files:
+            file_path = os.path.join(path, file_name)
+            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        for dir_name in dirs:
+            dir_path = os.path.join(path, dir_name)
+            change_mode(dir_path, FileCheckConst.DATA_DIR_AUTHORITY)
+            recursive_chmod(dir_path)
 
 
 def path_len_exceeds_limit(file_path):
@@ -427,6 +460,43 @@ def save_excel(path, data):
                 return "list"
         raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
 
+    def check_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be considered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    def malicious_check(df):
+        for row_name in df.index:
+            if not check_value_is_valid(row_name):
+                raise RuntimeError(f"Malicious value [{row_name}] not allowed to be written into the excel: {path}.")
+
+        for col_name in df.columns:
+            if not check_value_is_valid(col_name):
+                raise RuntimeError(f"Malicious value [{col_name}] not allowed to be written into the excel: {path}.")
+
+        for _, row in df.iterrows():
+            for _, value in row.items():
+                if not check_value_is_valid(value):
+                    raise RuntimeError(f"Malicious value [{value}] not allowed to be written into the excel: {path}.")
+
+    def save_in_slice(df, base_name):
+        malicious_check(df)
+        df_length = len(df)
+        if df_length < CompareConst.MAX_EXCEL_LENGTH:
+            df.to_excel(writer, sheet_name=base_name if base_name else 'Sheet1', index=False)
+        else:
+            slice_num = (df_length + CompareConst.MAX_EXCEL_LENGTH - 1) // CompareConst.MAX_EXCEL_LENGTH
+            slice_size = (df_length + slice_num - 1) // slice_num
+            for i in range(slice_num):
+                df.iloc[i * slice_size: min((i + 1) * slice_size, df_length)] \
+                    .to_excel(writer, sheet_name=f'{base_name}_part_{i}' if base_name else f'part_{i}', index=False)
+
     check_path_before_create(path)
     path = os.path.realpath(path)
 
@@ -434,18 +504,27 @@ def save_excel(path, data):
     data_type = validate_data(data)
 
     try:
-        if data_type == "single":
-            data.to_excel(path, index=False)
-        elif data_type == "list":
-            with pd.ExcelWriter(path) as writer:
+        with pd.ExcelWriter(path) as writer:
+            if data_type == "single":
+                save_in_slice(data, None)
+            elif data_type == "list":
                 for data_df, sheet_name in data:
-                    data_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                    save_in_slice(data_df, sheet_name)
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
     change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def move_directory(src_path, dst_path):
+    check_file_or_directory_path(src_path, isdir=True)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move directory {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move directory {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_DIR_AUTHORITY)
 
 
 def move_file(src_path, dst_path):
@@ -511,7 +590,7 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
         if not isinstance(value, str):
             return True
         try:
-            # -1.00 or +1.00 should be consdiered as digit numbers
+            # -1.00 or +1.00 should be considered as digit numbers
             float(value)
         except ValueError:
             # otherwise, they will be considered as formular injections
@@ -557,7 +636,7 @@ def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False
         if not isinstance(value, str):
             return True
         try:
-            # -1.00 or +1.00 should be consdiered as digit numbers
+            # -1.00 or +1.00 should be considered as digit numbers
             float(value)
         except ValueError:
             # otherwise, they will be considered as formular injections
@@ -588,8 +667,11 @@ def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False
 def remove_path(path):
     if not os.path.exists(path):
         return
+    if os.path.islink(path):
+        logger.error(f"Failed to delete {path}, it is a symbolic link.")
+        raise RuntimeError("Delete file or directory failed.")
     try:
-        if os.path.islink(path) or os.path.isfile(path):
+        if os.path.isfile(path):
             os.remove(path)
         else:
             shutil.rmtree(path)
@@ -598,7 +680,7 @@ def remove_path(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR) from err
     except Exception as e:
         logger.error("Failed to delete {}. Please check.".format(path))
-        raise RuntimeError(f"Delete {path} failed.") from e
+        raise RuntimeError("Delete file or directory failed.") from e
 
 
 def get_json_contents(file_path):
@@ -632,42 +714,238 @@ def os_walk_for_files(path, depth):
     return res
 
 
-def check_crt_valid(pem_path):
-    """
-    Check the validity of the SSL certificate.
+def check_zip_file(zip_file_path):
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+        total_size = 0
+        if len(zip_file.infolist()) > FileCheckConst.MAX_FILE_IN_ZIP_SIZE:
+            raise ValueError(f"Too many files in {os.path.basename(zip_file_path)}")
+        for file_info in zip_file.infolist():
+            if file_info.file_size > FileCheckConst.MAX_FILE_SIZE:
+                raise ValueError(f"File {file_info.filename} is too large to extract")
 
-    Load the SSL certificate from the specified path, parse and check its validity period.
-    If the certificate is expired or invalid, raise a RuntimeError.
-
-    Parameters:
-    pem_path (str): The file path of the SSL certificate.
-
-    Raises:
-    RuntimeError: If the SSL certificate is invalid or expired.
-    """
-    import OpenSSL
-    try:
-        with FileOpen(pem_path, "r") as f:
-            pem_data = f.read()
-        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
-        pem_start = parser.parse(cert.get_notBefore().decode("UTF-8"))
-        pem_end = parser.parse(cert.get_notAfter().decode("UTF-8"))
-        logger.info(f"The SSL certificate passes the verification and the validity period "
-                    f"starts from {pem_start} ends at {pem_end}.")
-    except Exception as e:
-        logger.error("Failed to parse the SSL certificate. Check the certificate.")
-        raise RuntimeError(f"The SSL certificate is invalid, {pem_path}") from e
-
-    now_utc = datetime.now(tz=timezone.utc)
-    if cert.has_expired() or not (pem_start <= now_utc <= pem_end):
-        raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")
+            total_size += file_info.file_size
+            if total_size > FileCheckConst.MAX_ZIP_SIZE:
+                raise ValueError(f"Total extracted size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
 
 
-def read_xlsx(file_path):
+def read_xlsx(file_path, sheet_name=None):
     check_file_or_directory_path(file_path)
+    check_zip_file(file_path)
     try:
-        result_df = pd.read_excel(file_path, keep_default_na=False)
+        if sheet_name:
+            result_df = pd.read_excel(file_path, keep_default_na=False, sheet_name=sheet_name)
+        else:
+            result_df = pd.read_excel(file_path, keep_default_na=False)
     except Exception as e:
         logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
         raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
     return result_df
+
+
+def create_file_with_list(result_list, filepath):
+    check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
+    try:
+        with FileOpen(filepath, 'w', encoding='utf-8') as file:
+            fcntl.flock(file, fcntl.LOCK_EX)
+            for item in result_list:
+                file.write(item + '\n')
+            fcntl.flock(file, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save list to file "{os.path.basename(filepath)}" failed.')
+        raise RuntimeError(f"Save list to file {os.path.basename(filepath)} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def create_file_with_content(data, filepath):
+    check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
+    try:
+        with FileOpen(filepath, 'w', encoding='utf-8') as file:
+            fcntl.flock(file, fcntl.LOCK_EX)
+            file.write(data)
+            fcntl.flock(file, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save content to file "{os.path.basename(filepath)}" failed.')
+        raise RuntimeError(f"Save content to file {os.path.basename(filepath)} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def add_file_to_zip(zip_file_path, file_path, arc_path=None):
+    """
+    Add a file to a ZIP archive, if zip does not exist, create one.
+
+    :param zip_file_path: Path to the ZIP archive
+    :param file_path: Path to the file to add
+    :param arc_path: Optional path inside the ZIP archive where the file should be added
+    """
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_file_size(file_path, FileCheckConst.MAX_FILE_IN_ZIP_SIZE)
+    zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
+    if zip_size + os.path.getsize(file_path) > FileCheckConst.MAX_ZIP_SIZE:
+        raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+    check_path_before_create(zip_file_path)
+    try:
+        proc_lock.acquire()
+        with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
+            zip_file.write(file_path, arc_path)
+    except Exception as e:
+        logger.error(f'add file to zip "{os.path.basename(zip_file_path)}" failed.')
+        raise RuntimeError(f"add file to zip {os.path.basename(zip_file_path)} failed.") from e
+    finally:
+        proc_lock.release()
+    change_mode(zip_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def create_file_in_zip(zip_file_path, file_name, content):
+    """
+    Create a file with content inside a ZIP archive.
+
+    :param zip_file_path: Path to the ZIP archive
+    :param file_name: Name of the file to create
+    :param content: Content to write to the file
+    """
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_path_before_create(zip_file_path)
+    zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
+    if zip_size + sys.getsizeof(content) > FileCheckConst.MAX_ZIP_SIZE:
+        raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
+    try:
+        with open(zip_file_path, 'a+') as f:  # 必须用 'a+' 模式才能 flock
+            # 2. 获取排他锁（阻塞直到成功）
+            fcntl.flock(f, fcntl.LOCK_EX)  # LOCK_EX: 独占锁
+            with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
+                zip_info = zipfile.ZipInfo(file_name)
+                zip_info.compress_type = zipfile.ZIP_DEFLATED
+                zip_file.writestr(zip_info, content)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save content to file "{os.path.basename(zip_file_path)}" failed.')
+        raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
+    change_mode(zip_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def extract_zip(zip_file_path, extract_dir):
+    """
+    Extract the contents of a ZIP archive to a specified directory.
+
+    :param zip_file_path: Path to the ZIP archive
+    :param extract_dir: Directory to extract the contents to
+    """
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    try:
+        proc_lock.acquire()
+        check_zip_file(zip_file_path)
+    except Exception as e:
+        logger.error(f'Save content to file "{os.path.basename(zip_file_path)}" failed.')
+        raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
+    finally:
+        proc_lock.release()
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+        zip_file.extractall(extract_dir)
+
+
+def split_zip_file_path(zip_file_path):
+    check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    zip_file_path = os.path.realpath(zip_file_path)
+    return os.path.dirname(zip_file_path), os.path.basename(zip_file_path)
+
+
+def dedup_log(func_name, filter_name):
+    with SharedDict() as shared_dict:
+        exist_names = shared_dict.get(func_name, set())
+        if filter_name in exist_names:
+            return False
+        exist_names.add(filter_name)
+        shared_dict[func_name] = exist_names
+        return True
+
+
+class SharedDict:
+    def __init__(self):
+        self._changed = False
+        self._dict = None
+        self._shm = None
+
+    def __enter__(self):
+        self._load_shared_memory()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if self._changed:
+                data = pickle.dumps(self._dict)
+                global_lock.acquire()
+                try:
+                    self._shm.buf[0:len(data)] = bytearray(data)
+                finally:
+                    global_lock.release()
+            self._shm.close()
+        except FileNotFoundError:
+            name = self.get_shared_memory_name()
+            logger.debug(f'close shared memory {name} failed, shared memory has already been destroyed.')
+
+    def __setitem__(self, key, value):
+        self._dict[key] = value
+        self._changed = True
+
+    def __contains__(self, item):
+        return item in self._dict
+
+    @classmethod
+    def destroy_shared_memory(cls):
+        if is_main_process():
+            name = cls.get_shared_memory_name()
+            try:
+                shm = shared_memory.SharedMemory(create=False, name=name)
+                shm.close()
+                shm.unlink()
+                logger.debug(f'destroy shared memory, name: {name}')
+            except FileNotFoundError:
+                logger.debug(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
+
+    @classmethod
+    def get_shared_memory_name(cls):
+        if is_main_process():
+            return f'shared_memory_{os.getpid()}'
+        return f'shared_memory_{os.getppid()}'
+
+    def get(self, key, default=None):
+        return self._dict.get(key, default)
+
+    def _load_shared_memory(self):
+        name = self.get_shared_memory_name()
+        try:
+            self._shm = shared_memory.SharedMemory(create=False, name=name)
+        except FileNotFoundError:
+            try:
+                # 共享内存空间增加至5M
+                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 5)
+                data = pickle.dumps({})
+                self._shm.buf[0:len(data)] = bytearray(data)
+                logger.debug(f'create shared memory, name: {name}')
+            except FileExistsError:
+                self._shm = shared_memory.SharedMemory(create=False, name=name)
+        self._safe_load()
+
+    def _safe_load(self):
+        with io.BytesIO(self._shm.buf[:]) as buff:
+            try:
+                self._dict = SafeUnpickler(buff).load()
+            except Exception as e:
+                logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
+                self._dict = {}
+                self._shm.buf[:] = bytearray(b'\x00' * len(self._shm.buf))  # 清空内存
+                self._changed = True
+
+
+class SafeUnpickler(pickle.Unpickler):
+    WHITELIST = {'builtins': {'str', 'bool', 'int', 'float', 'list', 'set', 'dict'}}
+
+    def find_class(self, module, name):
+        if module in self.WHITELIST and name in self.WHITELIST[module]:
+            return super().find_class(module, name)
+        raise pickle.PicklingError(f'Unpickling {module}.{name} is illegal!')
+
+
+atexit.register(SharedDict.destroy_shared_memory)

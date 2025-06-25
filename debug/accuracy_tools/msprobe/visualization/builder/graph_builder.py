@@ -14,9 +14,11 @@
 # limitations under the License.
 
 import re
+from dataclasses import dataclass
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.common.utils import load_stack_json
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
@@ -44,7 +46,7 @@ class GraphBuilder:
         """
         construct_dict = load_json(construct_path)
         dump_dict = load_json(data_path)
-        stack_dict = load_json(stack_path)
+        stack_dict = load_stack_json(stack_path)
         if not complete_stack:
             GraphBuilder._simplify_stack(stack_dict)
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
@@ -61,10 +63,10 @@ class GraphBuilder:
         """
         result = {}
         if config.graph_b:
-            result[GraphConst.JSON_NPU_KEY] = config.graph_n.to_dict()
-            result[GraphConst.JSON_BENCH_KEY] = config.graph_b.to_dict()
+            result[GraphConst.JSON_NPU_KEY] = config.graph_n.to_dict(config.compare_mode)
+            result[GraphConst.JSON_BENCH_KEY] = config.graph_b.to_dict(config.compare_mode)
         else:
-            result = config.graph_n.to_dict()
+            result = config.graph_n.to_dict(config.compare_mode)
         if config.tool_tip:
             result[GraphConst.JSON_TIP_KEY] = config.tool_tip
         if config.node_colors:
@@ -187,6 +189,8 @@ class GraphBuilder:
         # 数据格式："output": [[{param1}, {param2}, ...]]
         if GraphBuilder._is_valid_batch_p2p_output(param_list):
             for param in param_list[0]:
+                if not isinstance(param, dict):
+                    continue
                 info = {GraphConst.OP: param.get(GraphConst.OP), GraphConst.PEER: param.get(GraphConst.PEER),
                         GraphConst.GROUP_ID: param.get(GraphConst.GROUP_ID)}
                 node.batch_p2p_info.append(info)
@@ -254,14 +258,12 @@ class GraphBuilder:
         max_info = {prefix: 0 for prefix in prefixes}
 
         for key in graph.node_map.keys():
-            for prefix in prefixes:
-                # 构建正则表达式，匹配以 "backward.数字" 结尾的键
-                pattern = re.compile(r'^' + re.escape(prefix) + r'\.backward\.(\d+)$')
-                match = pattern.match(key)
-                if match:
-                    num = int(match.group(1))
-                    if num > max_info[prefix]:
-                        max_info[prefix] = num
+            parts = key.split(Const.SEP)
+            if len(parts) > 2 and parts[-2] == Const.BACKWARD:
+                num = int(parts[-1])
+                prefix = Const.SEP.join(parts[:-2])
+                if prefix in max_info and num > max_info[prefix]:
+                    max_info[prefix] = num
 
         for prefix, num in max_info.items():
             node_id = prefix + Const.SEP + Const.BACKWARD + Const.SEP + str(num)
@@ -277,7 +279,7 @@ class GraphBuilder:
 
 class GraphExportConfig:
     def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task='',
-                 overflow_check=False):
+                 overflow_check=False, compare_mode=None):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.tool_tip = tool_tip
@@ -285,3 +287,21 @@ class GraphExportConfig:
         self.micro_steps = micro_steps
         self.task = task
         self.overflow_check = overflow_check
+        self.compare_mode = compare_mode
+
+
+@dataclass
+class GraphInfo:
+    graph: Graph
+    construct_path: str
+    data_path: str
+    stack_path: str
+
+
+@dataclass
+class BuildGraphTaskInfo:
+    graph_info_n: GraphInfo
+    graph_info_b: GraphInfo
+    npu_rank: str
+    bench_rank: str
+    time_str: str

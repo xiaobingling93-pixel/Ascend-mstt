@@ -16,6 +16,7 @@
 import json
 import os
 import time
+import multiprocessing
 from multiprocessing import Pool
 
 import torch
@@ -52,6 +53,7 @@ class PtdbgDispatch(TorchDispatchMode):
             return
         if dump_path is None:
             logger.error("Please set dump_path when dump_mode is config!")
+            raise DispatchException("Please set dump_path when dump_mode is config!")
         check_file_or_directory_path(dump_path, True)
 
         self.device_id = torch_npu._C._npu_getDevice()
@@ -85,6 +87,11 @@ class PtdbgDispatch(TorchDispatchMode):
         self.get_ops(yaml_path)
 
         self.lock = None
+        max_process_num = max(int((multiprocessing.cpu_count() + 1) // Const.CPU_QUARTER), 1)
+        if process_num > max_process_num:
+            logger.error(f"process_num should be less than or equal to {max_process_num}, but got {process_num}!")
+            raise DispatchException(f'process_num should be less than or equal to {max_process_num}, '
+                                    f'but got {process_num}!')
         if process_num > 0:
             self.pool = Pool(process_num)
         if debug:
@@ -115,6 +122,8 @@ class PtdbgDispatch(TorchDispatchMode):
                 if len(json_line_data) == 0:
                     break
                 msg = json.loads(json_line_data)
+                if len(msg) < 2:
+                    raise ValueError("JSON data does not contain enough elements. Expected at least 2 elements.")
                 self.all_summary[msg[0]] = msg[1]
             fp_handle.close()
 
@@ -199,8 +208,10 @@ class PtdbgDispatch(TorchDispatchMode):
             dispatch_workflow(run_param, data_info)
         else:
             self.lock.acquire()
-            self.all_summary.append([])
-            self.lock.release()
+            try:
+                self.all_summary.append([])
+            finally:
+                self.lock.release()
             run_param.process_flag = True
             if self.check_fun(func, run_param):
                 data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, None, npu_out_cpu, cpu_out,

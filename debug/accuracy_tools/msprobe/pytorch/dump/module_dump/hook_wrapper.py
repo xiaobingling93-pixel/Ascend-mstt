@@ -1,0 +1,93 @@
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from functools import wraps
+
+import torch
+from torch.utils.hooks import BackwardHook
+
+from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_float8_tensor
+
+
+def wrap_setup_backward_hook(func):
+    def requires_clone(tensor):
+        return isinstance(tensor, torch.Tensor) and not is_float8_tensor(tensor) and \
+            tensor.requires_grad and torch.is_grad_enabled()
+
+    @recursion_depth_decorator("Dump: wrap_setup_backward_hook.parse_tensor", max_depth=Const.DUMP_MAX_DEPTH)
+    def parse_tensor(item, tensor_list):
+        if requires_clone(item):
+            tensor_list.append(item)
+        elif isinstance(item, (list, tuple)):
+            for value in item:
+                parse_tensor(value, tensor_list)
+        elif isinstance(item, dict):
+            for value in item.values():
+                parse_tensor(value, tensor_list)
+
+    @recursion_depth_decorator("Dump: wrap_setup_backward_hook.rebuild_args", max_depth=Const.DUMP_MAX_DEPTH)
+    def rebuild_args(item, tensor_iter):
+        if requires_clone(item):
+            result = next(tensor_iter)
+            if hasattr(result, "_base") and result._base is not None:
+                if torch._C._autograd._get_creation_meta(result) != torch._C._autograd.CreationMeta(0):
+                    torch._C._autograd._set_creation_meta(result, torch._C._autograd.CreationMeta(0))
+            return result    
+        if isinstance(item, list):
+            for index, value in enumerate(item):
+                item[index] = rebuild_args(value, tensor_iter)
+            return item
+        if isinstance(item, dict):
+            for key, value in item.items():
+                item[key] = rebuild_args(value, tensor_iter)
+            return item
+        if isinstance(item, tuple):
+            if hasattr(item, '_fields'):
+                return type(item)(*[rebuild_args(i, tensor_iter) for i in item])
+            return type(item)([rebuild_args(i, tensor_iter) for i in item])
+        return item
+
+    @wraps(func)
+    def wrap_setup_hook_func(*args, **kwargs):
+        if len(args) < 2:
+            return func(*args, **kwargs)
+
+        actual_args = args[1]
+
+        tensor_list = []
+
+        parse_tensor(actual_args, tensor_list)
+
+        new_args = args[0], tuple(tensor_list)
+        hooked_tensors = func(*new_args, **kwargs)
+
+        tensor_iter = iter(hooked_tensors)
+        try:
+            new_data = rebuild_args(actual_args, tensor_iter)
+        except Exception as e:
+            logger.debug(f"Unsupported data in setup input/output hook. The detail info: {e}")
+            new_data = actual_args
+
+        return new_data
+
+    return wrap_setup_hook_func
+
+
+def wrap_setup_input_output_hook():
+    BackwardHook.setup_input_hook = wrap_setup_backward_hook(BackwardHook.setup_input_hook)
+    BackwardHook.setup_output_hook = wrap_setup_backward_hook(BackwardHook.setup_output_hook)

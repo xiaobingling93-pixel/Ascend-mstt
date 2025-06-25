@@ -68,7 +68,7 @@ class TestImprovePrecisionPerturbation(unittest.TestCase):
         self.assertEqual(ret.dtype, target.dtype)
         self.assertFalse(self.improve_precision_pert.is_fuzzed)
 
-    @patch("msprobe.mindspore.service.Service.should_execute_hook", return_value=False)
+    @patch("msprobe.core.hook_manager.BaseHookManager._should_execute_hook", return_value=False)
     @patch.object(logger, "warning")
     def test_handle(self, mock_warning, _):
         self.improve_precision_pert.is_fuzzed = False

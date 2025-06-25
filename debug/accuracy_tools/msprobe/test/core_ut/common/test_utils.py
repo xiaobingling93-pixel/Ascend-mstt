@@ -17,12 +17,10 @@
 import json
 import os
 import tempfile
-from datetime import datetime, timezone
 import unittest
 from unittest import TestCase
 from unittest.mock import MagicMock, mock_open, patch
 
-import OpenSSL
 import numpy as np
 from pathlib import Path
 
@@ -32,7 +30,6 @@ from msprobe.core.common.file_utils import (
     FileCheckException,
     check_file_or_directory_path,
     check_file_size,
-    check_crt_valid,
     get_file_content_bytes,
     get_json_contents,
     save_json,
@@ -47,16 +44,19 @@ from msprobe.core.common.utils import (CompareException,
                                        check_regex_prefix_format_valid,
                                        set_dump_path,
                                        get_dump_mode,
-                                       get_real_step_or_rank, 
-                                       get_step_or_rank_from_string, 
+                                       get_real_step_or_rank,
+                                       get_step_or_rank_from_string,
                                        get_stack_construct_by_dump_json_path,
                                        check_seed_all,
                                        safe_get_value,
-                                       recursion_depth_decorator,
                                        MsprobeBaseException,
                                        check_str_param,
                                        is_json_file,
-                                       detect_framework_by_dump_json)
+                                       detect_framework_by_dump_json,
+                                       is_save_variable_valid,
+                                       get_file_type,
+                                       check_dump_json_key)
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class TestUtils(TestCase):
@@ -206,7 +206,7 @@ class TestUtils(TestCase):
         with self.assertRaises(CompareException) as context:
             set_dump_path(input_param)
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-        mock_error.assert_called_with("Please check the json path is valid. npu_path: None, bench_path: bench_path")
+        mock_error.assert_called_with("Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
 
     @patch.object(logger, "error")
     def test_get_dump_mode(self, mock_error):
@@ -217,26 +217,52 @@ class TestUtils(TestCase):
         npu_json = {
             "task": Const.TENSOR,
             "dump_data_dir": "dump_data_dir",
-            "data": "data"
+            "data": {"api": "value"}
         }
 
         input_param["npu_json_path"] = "npu_path"
-        with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
+                patch("msprobe.core.common.utils.get_file_type", return_value=Const.DUMP_JSON_FILE):
             dump_mode = get_dump_mode(input_param)
         self.assertEqual(dump_mode, Const.ALL)
 
         npu_json["task"] = Const.STATISTICS
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
-                patch("msprobe.core.common.utils.md5_find", return_value=True):
+                patch("msprobe.core.common.utils.md5_find", return_value=True), \
+                patch("msprobe.core.common.utils.get_file_type", return_value=Const.DUMP_JSON_FILE):
             dump_mode = get_dump_mode(input_param)
         self.assertEqual(dump_mode, Const.MD5)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
-        with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
+                patch("msprobe.core.common.utils.get_file_type", return_value=Const.DUMP_JSON_FILE):
             with self.assertRaises(CompareException) as context:
                 dump_mode = get_dump_mode(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare applies only to task is tensor or statistics")
+
+    def test_get_file_type(self):
+        # 测试有效的 file_path (dump.json)
+        file_path = 'path/to/dump.json'
+        expected_file_type = Const.DUMP_JSON_FILE
+        self.assertEqual(get_file_type(file_path), expected_file_type)
+
+        # 测试有效的 file_path (debug.json)
+        file_path = 'path/to/debug.json'
+        expected_file_type = Const.DEBUG_JSON_FILE
+        self.assertEqual(get_file_type(file_path), expected_file_type)
+
+        # 测试无效的 file_path
+        file_path = 'path/to/unknown.json'
+        with self.assertRaises(CompareException) as context:
+            get_file_type(file_path)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+
+        # 测试非字符串类型的 file_path
+        file_path = 12345  # 非字符串类型
+        with self.assertRaises(CompareException) as context:
+            get_file_type(file_path)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
 
     @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
@@ -337,7 +363,7 @@ class TestUtils(TestCase):
     def test_recursion_depth_decorator(self, mock_error):
         # 测试递归深度限制函数
         recursion_list = [[]]
-        temp_list = recursion_list[0] 
+        temp_list = recursion_list[0]
         for _ in range(Const.MAX_DEPTH):
             temp_list.append([])
             temp_list = temp_list[0]
@@ -439,60 +465,6 @@ class TestUtils(TestCase):
         self.assertFalse(is_json_file(file_path_false))
 
 
-class TestCheckCrtValid(TestCase):
-    """
-    Test the check_crt_valid function.
-    """
-
-    def setUp(self):
-        self.cert_file_path = "cert_file_path.pem"
-        if not os.path.exists(self.cert_file_path):
-            with open(self.cert_file_path, 'w') as f:
-                f.write("This is a test certificate.")
-
-    def tearDown(self):
-        if os.path.exists(self.cert_file_path):
-            os.remove(self.cert_file_path)
-
-    @patch('msprobe.core.common.file_utils.datetime')
-    @patch('OpenSSL.crypto.load_certificate')
-    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime):
-        mock_cert = MagicMock()
-        mock_cert.get_notBefore.return_value = b'20220101'
-        mock_cert.get_notAfter.return_value = b'20230101'
-        mock_cert.has_expired.return_value = False
-        mock_load_certificate.return_value = mock_cert
-        mock_datetime.now.return_value = datetime(2022, 10, 1)
-
-        check_crt_valid(self.cert_file_path)
-        mock_load_certificate.assert_called_once_with(OpenSSL.crypto.FILETYPE_PEM, 'cert_data')
-
-    @patch('datetime.datetime')
-    @patch('OpenSSL.crypto.load_certificate')
-    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime):
-        mock_cert = MagicMock()
-        mock_cert.get_notBefore.return_value = b'20220101'
-        mock_cert.get_notAfter.return_value = b'20230101'
-        mock_cert.has_expired.return_value = True
-        mock_load_certificate.return_value = mock_cert
-        mock_datetime.now.return_value = datetime(2022, 10, 1, tzinfo=timezone.utc)
-
-        with self.assertRaises(RuntimeError) as context:
-            check_crt_valid(self.cert_file_path)
-        self.assertIn('The SSL certificate has expired and needs to be replaced', str(context.exception))
-
-    @patch('OpenSSL.crypto.load_certificate')
-    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
-    def test_check_crt_valid_exception(self, mock_open_, mock_load_certificate):
-        mock_load_certificate.side_effect = Exception('Test Exception')
-
-        with self.assertRaises(RuntimeError) as context:
-            check_crt_valid(self.cert_file_path)
-        self.assertIn('The SSL certificate is invalid', str(context.exception))
-
-
 class TestDetectFrameworkByDumpJson(unittest.TestCase):
 
     @patch('msprobe.core.common.utils.load_json')
@@ -530,3 +502,89 @@ class TestDetectFrameworkByDumpJson(unittest.TestCase):
             result = detect_framework_by_dump_json(file_path)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_logger.error.assert_called_once_with(f"{file_path} must be based on the MindSpore or PyTorch framework.")
+
+
+class TestIsSaveVariableValid(unittest.TestCase):
+    def setUp(self):
+        self.valid_special_types = (int, float, str, bool)
+
+    def test_is_save_variable_valid_DepthExceeded_ReturnsFalse(self):
+        # 创建一个深度超过 Const.DUMP_MAX_DEPTH 的嵌套结构
+        nested_structure = [0] * Const.DUMP_MAX_DEPTH
+        for _ in range(Const.DUMP_MAX_DEPTH):
+            nested_structure = [nested_structure]
+        self.assertFalse(is_save_variable_valid(nested_structure, self.valid_special_types))
+
+    def test_is_save_variable_valid_ValidSpecialTypes_ReturnsTrue(self):
+        for valid_type in self.valid_special_types:
+            self.assertTrue(is_save_variable_valid(valid_type(0), self.valid_special_types))
+
+    def test_is_save_variable_valid_ListWithValidElements_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid([1, 2, 3], self.valid_special_types))
+
+    def test_is_save_variable_valid_ListWithInvalidElement_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid([1, "test", [1, slice(1)]], self.valid_special_types))
+
+    def test_is_save_variable_valid_TupleWithValidElements_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid((1, 2, 3), self.valid_special_types))
+
+    def test_is_save_variable_valid_TupleWithInvalidElement_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid((1, "test", [1, slice(1)]), self.valid_special_types))
+
+    def test_is_save_variable_valid_DictWithValidElements_ReturnsTrue(self):
+        self.assertTrue(is_save_variable_valid({"a": 1, "b": "test"}, self.valid_special_types))
+
+    def test_is_save_variable_valid_DictWithInvalidKey_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid({1: "test"}, self.valid_special_types))
+
+    def test_is_save_variable_valid_DictWithInvalidValue_ReturnsFalse(self):
+        self.assertFalse(is_save_variable_valid({"a": [1, slice(1)]}, self.valid_special_types))
+
+
+class TestCheckDumpJsonKey(unittest.TestCase):
+    def test_valid_input(self):
+        json_data = {
+            "task": "tensor",
+            "data": {"api1": "value1"}
+        }
+        task, api_data = check_dump_json_key(json_data, "NPU")
+        self.assertEqual(task, "tensor")
+        self.assertEqual(api_data, {"api1": "value1"})
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_missing_task(self, mock_logger):
+        json_data = {
+            "data": {"api1": "value1"}
+        }
+        with self.assertRaises(CompareException) as context:
+            check_dump_json_key(json_data, "bench")
+        self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
+        mock_logger.error.assert_called_once_with(
+            "Task for bench is empty, please check."
+        )
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_missing_data(self, mock_logger):
+        json_data = {
+            "task": "tensor"
+        }
+        with self.assertRaises(CompareException) as context:
+            check_dump_json_key(json_data, "npu")
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
+        mock_logger.error.assert_called_once_with(
+            "Missing 'data' in dump.json, please check dump.json of npu."
+        )
+
+    @patch("msprobe.core.common.utils.logger")
+    def test_wrong_data_type(self, mock_logger):
+        json_data = {
+            "task": "tensor",
+            "data": [1]
+        }
+        with self.assertRaises(CompareException) as context:
+            check_dump_json_key(json_data, "npu")
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
+        mock_logger.error.assert_called_once_with(
+            "Invalid type for 'data': expected a dict. Please check dump.json of npu."
+        )
+

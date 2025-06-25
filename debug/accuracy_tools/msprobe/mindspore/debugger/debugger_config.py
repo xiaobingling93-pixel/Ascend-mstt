@@ -15,12 +15,18 @@
 
 import os
 
+from mindspore import nn
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.log import logger
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.utils import is_mindtorch
+
+if is_mindtorch():
+    import torch
 
 
 class DebuggerConfig:
@@ -41,8 +47,12 @@ class DebuggerConfig:
         self.check_mode = task_config.check_mode
         self.framework = Const.MS_FRAMEWORK
         self.summary_mode = task_config.summary_mode
+        self.stat_cal_mode = task_config.stat_cal_mode if hasattr(task_config, 'stat_cal_mode') else None
+        self.device_stat_precision_mode = task_config.device_stat_precision_mode \
+                                          if hasattr(task_config, 'device_stat_precision_mode') else None
         self.async_dump = common_config.async_dump if common_config.async_dump else False
         self.check()
+        self._check_statistics_config(task_config)
         create_directory(self.dump_path)
 
         if self.task == Const.FREE_BENCHMARK:
@@ -53,12 +63,39 @@ class DebuggerConfig:
             self.stage = FreeBenchmarkConst.DEFAULT_STAGE if not task_config.fuzz_stage else task_config.fuzz_stage
             if self.handler_type == FreeBenchmarkConst.FIX and \
                     self.pert_type != FreeBenchmarkConst.DEFAULT_PERT_TYPE:
-                raise ValueError("pert_mode must be improve_precision or empty when handler_type is fix, "
-                                 f"but got {self.pert_type}.")
+                logger.error("pert_mode must be improve_precision or empty when handler_type is fix, "
+                             f"but got {self.pert_type}.")
+                raise ValueError
             if self.stage == Const.BACKWARD and self.handler_type == FreeBenchmarkConst.FIX:
-                raise ValueError("handler_type must be check or empty when fuzz_stage is backward, "
-                                 f"but got {self.handler_type}.")
+                logger.error("handler_type must be check or empty when fuzz_stage is backward, "
+                             f"but got {self.handler_type}.")
+                raise ValueError
             self.dump_level = FreeBenchmarkConst.DEFAULT_DUMP_LEVEL
+
+    @staticmethod
+    def check_model(models, token_range=None):
+        if token_range and not models:
+            error_info = "The 'model' parameter must be provided when token_range is not None"
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
+
+        target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
+        if models is None or isinstance(models, target_module_type[0]):
+            return models
+        error_model = None
+        if isinstance(models, (list, tuple)):
+            for model in models:
+                if not isinstance(model, target_module_type[0]):
+                    error_model = model
+                    break
+        else:
+            error_model = models
+
+        if error_model is not None:
+            error_info = (f"The 'model' parameter must be a {target_module_type[1]} or list[{target_module_type[1]}] "
+                          f"type, currently there is a {type(error_model)} type.")
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, error_info)
+        return models
 
     def check(self):
         if not self.dump_path:
@@ -74,8 +111,12 @@ class DebuggerConfig:
             self.check_mode = "all"
         if not isinstance(self.async_dump, bool):
             raise Exception("The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR and not self.list:
-            raise Exception("The parameters async_dump is true in tensor task, the parameters list cannot be empty.")
+        if self.async_dump and self.task == Const.TENSOR:
+            if self.level_ori == Const.LEVEL_DEBUG:
+                self.list = [] # async_dump + debug level case ignore list
+            if not self.list and self.level_ori != Const.LEVEL_DEBUG:
+                raise Exception("The parameters async_dump is true in tensor task,"
+                                " the parameters list cannot be empty.")
         if self.task == Const.STRUCTURE and self.level_ori not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
                 f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
@@ -84,15 +125,24 @@ class DebuggerConfig:
             self.level_ori = Const.LEVEL_MIX
         return True
 
-    def check_config_with_l2(self):
-        if self.level_ori != Const.LEVEL_L2:
-            return
-        if self.task != Const.TENSOR:
+    def check_config_with_l2(self, is_graph_config):
+        if not is_graph_config and self.task != Const.TENSOR:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the task must be set to tensor.")
-        if self.scope:
+        if not is_graph_config and self.scope:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the scope cannot be configured.")
-        if not self.list or len(self.list) != 1:
+        if not is_graph_config and (not self.list or len(self.list) != 1):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"When level is set to L2, the list must be configured as a list with one api name.")
+
+    def _check_statistics_config(self, task_config):
+        if self.task != Const.STATISTICS:
+            return
+        self.tensor_list = []
+        if not hasattr(task_config, "tensor_list"):
+            return
+        if self.level_ori == Const.LEVEL_DEBUG and task_config.tensor_list:
+            logger.warning_on_rank_0("When level is set to debug, the tensor_list will be invalid.")
+            return
+        self.tensor_list = task_config.tensor_list
