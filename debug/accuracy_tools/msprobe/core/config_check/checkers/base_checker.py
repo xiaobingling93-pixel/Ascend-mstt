@@ -15,6 +15,7 @@
 
 import os
 
+from msprobe.core.common.file_utils import check_path_pattern_valid
 from msprobe.core.common.framework_adapter import FmkAdp
 from msprobe.core.common.const import FileCheckConst
 
@@ -32,6 +33,7 @@ class PackInput:
             raise Exception(f"model is not torch.nn.Module/mindspore.nn.Cell or module list.")
         if not isinstance(self.output_zip_path, str) or not self.output_zip_path.endswith(FileCheckConst.ZIP_SUFFIX):
             raise Exception(f"output zip path must be a string and ends with '.zip'")
+        check_path_pattern_valid(self.output_zip_path)
 
 
 class BaseChecker:

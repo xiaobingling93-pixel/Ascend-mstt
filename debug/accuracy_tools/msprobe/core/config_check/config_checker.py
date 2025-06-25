@@ -43,8 +43,7 @@ class ConfigChecker:
 
     @staticmethod
     def compare(bench_zip_path, cmp_zip_path, output_path, fmk=Const.PT_FRAMEWORK):
-        if os.path.exists(output_path):
-            shutil.rmtree(output_path)
+        create_directory(output_path)
         bench_dir = os.path.join(output_path, "bench")
         cmp_dir = os.path.join(output_path, "cmp")
         extract_zip(bench_zip_path, bench_dir)
