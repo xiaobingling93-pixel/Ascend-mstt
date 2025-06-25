@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import threading
+import sys
 from collections import OrderedDict
 
 import torch
@@ -68,7 +69,15 @@ class ModuleProcesser:
         replace_checkpoint()
         try:
             from megatron.core.pipeline_parallel import schedules
+            origin_func_id = id(schedules.deallocate_output_tensor)
             schedules.deallocate_output_tensor = wrap_megatron_deallocate(schedules.deallocate_output_tensor)
+            for module in list(sys.modules.values()):
+                if module.__name__ == 'schedules':
+                    continue
+                for func in module.__dict__:
+                    if id(module.__dict__[func]) == origin_func_id:
+                        module.__setattr__(func, schedules.deallocate_output_tensor)
+                        logger.debug(f'patch {module.__name__}.{func}.')
             logger.info_on_rank_0("Patch megatron method success.")
         except ImportError:
             logger.info_on_rank_0("No megatron find.")
