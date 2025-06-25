@@ -771,6 +771,13 @@ def create_file_with_content(data, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def check_file_whether_exist_or_not(filepath):
+    if os.path.exists(filepath):
+        check_file_or_directory_path(filepath)
+    else:
+        check_path_before_create(filepath)
+
+
 def add_file_to_zip(zip_file_path, file_path, arc_path=None):
     """
     Add a file to a ZIP archive, if zip does not exist, create one.
@@ -779,12 +786,13 @@ def add_file_to_zip(zip_file_path, file_path, arc_path=None):
     :param file_path: Path to the file to add
     :param arc_path: Optional path inside the ZIP archive where the file should be added
     """
+    check_file_or_directory_path(file_path)
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_file_whether_exist_or_not(zip_file_path)
     check_file_size(file_path, FileCheckConst.MAX_FILE_IN_ZIP_SIZE)
     zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
     if zip_size + os.path.getsize(file_path) > FileCheckConst.MAX_ZIP_SIZE:
         raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
-    check_path_before_create(zip_file_path)
     try:
         proc_lock.acquire()
         with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
@@ -806,7 +814,7 @@ def create_file_in_zip(zip_file_path, file_name, content):
     :param content: Content to write to the file
     """
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
-    check_path_before_create(zip_file_path)
+    check_file_whether_exist_or_not(zip_file_path)
     zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
     if zip_size + sys.getsizeof(content) > FileCheckConst.MAX_ZIP_SIZE:
         raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
@@ -833,6 +841,8 @@ def extract_zip(zip_file_path, extract_dir):
     :param extract_dir: Directory to extract the contents to
     """
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_file_or_directory_path(zip_file_path)
+    create_directory(extract_dir)
     try:
         proc_lock.acquire()
         check_zip_file(zip_file_path)
@@ -841,8 +851,12 @@ def extract_zip(zip_file_path, extract_dir):
         raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
     finally:
         proc_lock.release()
-    with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
-        zip_file.extractall(extract_dir)
+    try:
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+            zip_file.extractall(extract_dir)
+    except Exception as e:
+        raise RuntimeError(f"extract zip file {os.path.basename(zip_file_path)} failed") from e
+    recursive_chmod(extract_dir)
 
 
 def split_zip_file_path(zip_file_path):
