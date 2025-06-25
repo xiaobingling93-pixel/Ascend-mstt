@@ -36,6 +36,9 @@
      该信息说明 module 挂载了被 PyTorch 框架废弃的 register_backward_hook，这与工具使用的 register_full_backward_hook 接口会产生冲突，故工具会跳过该 module 的反向数据采集。
    - 如果您希望所有 module 数据都能采集下来，可以将模型中使用的 register_backward_hook 接口改为 PyTorch 框架推荐的 register_full_backward_pre_hook 或 register_full_backward_hook 接口。
 
+
+5. 在使用 msprobe 进行 Pytorch 框架的数据采集功能时，请注意确认环境变量 NPU_ASD_ENABLE=0 ，即关闭特征值检测功能。 由于工具冲突， 在该功能开启的情况下可能导致某些 api 数据采集的缺失。
+
 # 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
