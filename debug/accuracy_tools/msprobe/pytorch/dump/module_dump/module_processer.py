@@ -71,10 +71,10 @@ class ModuleProcesser:
             from megatron.core.pipeline_parallel import schedules
             schedules.deallocate_output_tensor = wrap_megatron_deallocate(schedules.deallocate_output_tensor)
             for module in list(sys.modules.values()):
-                if 'deallocate_output_tensor' in module.__dict__:
+                if hasattr(module, 'deallocate_output_tensor'):
                     if module.__name__ == 'schedules':
                         continue
-                    module.func = schedules.deallocate_output_tensor
+                    module.deallocate_output_tensor = schedules.deallocate_output_tensor
             logger.info_on_rank_0("Patch megatron method success.")
         except ImportError:
             logger.info_on_rank_0("No megatron find.")
