@@ -19,7 +19,7 @@ from msprobe.pytorch.attl_manager import ATTLManager
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized, torch_version_above_or_equal_2
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
-from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate
+from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate, redirect_wait
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.hook_module.jit_script_wrapper import wrap_jit_script_func
 from msprobe.pytorch.hook_module.pt_hook_manager import PytorchHookManager
@@ -57,6 +57,7 @@ class PytorchService(BaseService):
     def _register_api_hook(self):
         super()._register_api_hook()
         wrap_jit_script_func()
+        redirect_wait()
 
     def _register_module_hook(self):
         ModuleProcesser.enable_module_dump = True

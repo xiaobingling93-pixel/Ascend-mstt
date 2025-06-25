@@ -73,6 +73,7 @@ class TestBaseHookManager(unittest.TestCase):
     def test_should_execute_hook_conditions(self):
         module = MagicMock()
         module.forward_data_collected = True
+        module.async_op_dump_flag = False
         Runtime.is_running = True
         self.mock_data_collector.data_processor.is_terminated = False
         self.assertTrue(self.manager._should_execute_hook(Const.MODULE, module, True, threading.get_ident()))

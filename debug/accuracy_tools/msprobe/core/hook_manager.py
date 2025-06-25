@@ -119,6 +119,8 @@ class BaseHookManager(ABC):
 
     def _should_execute_hook(self, hook_type, module, is_forward, tid):
         is_module_hook = hook_type == Const.MODULE
+        if hasattr(module, 'async_op_dump_flag') and getattr(module, 'async_op_dump_flag'):
+            return False
         if is_module_hook and not Runtime.is_running:
             return False
         elif not is_module_hook and is_forward and not Runtime.is_running:

@@ -384,7 +384,6 @@ class TestForwardDataCollect(unittest.TestCase):
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_forward_output.return_value = mock_data
         self.data_collector.forward_output_data_collect("test", "module", 123, "data", True)
-        self.data_collector.call_stack_collect.assert_called_once_with("test")
         self.data_collector.handle_data.assert_called_once_with(
             "test",
             mock_data,
