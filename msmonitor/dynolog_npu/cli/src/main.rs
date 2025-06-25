@@ -66,7 +66,7 @@ struct Opts {
     cmd: Command,
 }
 
-const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy"];
+const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy", "Communication"];
 
 fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
     let allowed_values: HashSet<&str> = ALLOWED_VALUES.iter().cloned().collect();
