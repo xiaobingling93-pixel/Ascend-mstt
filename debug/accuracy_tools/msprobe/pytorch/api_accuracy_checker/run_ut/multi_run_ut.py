@@ -76,8 +76,17 @@ def split_json_file(input_file, num_splits, filter_api):
             }
         }
         split_filename = os.path.join(input_dir, f"temp_part{i}.json")
-        save_json(split_filename, temp_data)
         split_files.append(split_filename)
+        try:
+            save_json(split_filename, temp_data)
+        except Exception as e:
+            logger.error(f"An error occurred while saving split file: {e}")
+            for file in split_files:
+                check_link(file)
+                try:
+                    remove_path(file)
+                except FileNotFoundError:
+                    logger.error(f"File not found and could not be deleted: {file}")
 
     return split_files, total_items
 
