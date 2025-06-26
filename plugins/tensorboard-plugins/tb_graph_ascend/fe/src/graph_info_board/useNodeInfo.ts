@@ -158,10 +158,10 @@ const useNodeInfo = (): UseNodeInfoType => {
     const benchstackInfo = benchNode?.stackData;
     const title = 'title';
     if (!isEmpty(npustackInfo)) {
-      stackInfo[nodeName] = safeJSONParse(npustackInfo.replace(/'/g, '"'))?.join('\n');
+      stackInfo[nodeName] = safeJSONParse(npustackInfo)?.join('\n');
     }
     if (!isEmpty(benchstackInfo)) {
-      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo.replace(/'/g, '"')).join('\n');
+      stackInfo[benchNodeName] = safeJSONParse(benchstackInfo).join('\n');
     }
     if (!isEmpty(stackInfo)) {
       stackInfo[title] = 'stackInfo';
