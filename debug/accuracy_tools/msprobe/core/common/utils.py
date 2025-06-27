@@ -233,9 +233,10 @@ def check_compare_param(input_param, output_path, dump_mode, stack_mode):
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, is_print_compare_log=True):
     arg_list = [stack_mode, auto_analyze, fuzzy_match, is_print_compare_log]
-    for arg in arg_list:
+    arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match', 'is_print_compare_log']
+    for arg, name in zip(arg_list, arg_names):
         if not isinstance(arg, bool):
-            logger.error(f"Invalid input parameter, {arg} which should be only bool type.")
+            logger.error(f"Invalid input parameter, {name} which should be only bool type.")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
