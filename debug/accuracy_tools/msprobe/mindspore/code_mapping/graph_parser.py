@@ -108,9 +108,8 @@ class Parser:
             constants = self.__class__.extract_constants(args_str)
 
             scope_pattern = re.compile(
-                r'^[ \t]*\#[ \t]*[^\r\n]{0,10000}?scope[^\r\n]{0,10000}?:[ \t]*\(([^)]{1,5000})\)[ \t]*$',
-                re.IGNORECASE | re.MULTILINE
-            )
+                r'^(?=.{0,300}$)[ \t]*\#[ \t]*[^\r\n]*?scope[^\r\n]*?:[ \t]*\(([^)\r\n]{1,200})\)[ \t]*$',
+                re.IGNORECASE | re.MULTILINE)
             scope_match = scope_pattern.search(text, end_pos)
             scope = scope_match.group(1) if scope_match else ""
 
