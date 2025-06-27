@@ -83,7 +83,6 @@ def split_json_file(input_file, num_splits, filter_api):
             logger.error(f"An error occurred while saving split file: {e}")
             for file in split_files:
                 try:
-                    check_link(file)
                     remove_path(file)
                 except FileNotFoundError:
                     logger.error(f"File not found and could not be deleted: {file}")
