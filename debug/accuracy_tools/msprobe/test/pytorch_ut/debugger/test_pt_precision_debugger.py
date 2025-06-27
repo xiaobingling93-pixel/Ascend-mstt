@@ -108,6 +108,7 @@ class TestPrecisionDebugger(unittest.TestCase):
         self.assertIsNone(checked_start)
 
     def test_start_statistics(self):
+        PrecisionDebugger._instance = None
         with patch.object(BasePrecisionDebugger, "_parse_config_path",
                           return_value=(self.statistics_common_config, self.statistics_task_config)):
             debugger = PrecisionDebugger(dump_path="./dump_path")
@@ -143,6 +144,7 @@ class TestPrecisionDebugger(unittest.TestCase):
         self.assertIsNone(checked_stop)
 
     def test_stop_statistics(self):
+        PrecisionDebugger._instance = None
         debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
         debugger.task = ''

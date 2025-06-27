@@ -186,6 +186,8 @@ class FuzzHandler(ABC):
         ratio = self.ratio_calculate(
             origin_output, perturbed_output, norm_type=NormType.ENDLESS_NORM
         )
+        if threshold == 0:
+            raise ValueError("Threshold cannot be zero. Check `get_threshold` implementation.")
         if ratio == ThresholdConfig.SYMBOL_FLIPPING:
             is_consistent = False
         else:

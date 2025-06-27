@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "MetricHcclProcess.h"
+#include "MetricCommunicationProcess.h"
 #include <numeric>
 #include <nlohmann/json.hpp>
 #include "utils.h"
@@ -22,21 +22,21 @@ namespace dynolog_npu {
 namespace ipc_monitor {
 namespace metric {
 
-std::string HcclMetric::seriesToJson()
+std::string CommunicationMetric::seriesToJson()
 {
     nlohmann::json jsonMsg;
-    jsonMsg["kind"] = "Hccl";
+    jsonMsg["kind"] = "Communication";
     jsonMsg["deviceId"] = deviceId;
     jsonMsg["duration"] = duration;
     jsonMsg["timestamp"] = timestamp;
     return jsonMsg.dump();
 }
 
-void MetricHcclProcess::ConsumeMsptiData(msptiActivity *record)
+void MetricCommunicationProcess::ConsumeMsptiData(msptiActivity *record)
 {
-    msptiActivityHccl* hcclData = ReinterpretConvert<msptiActivityHccl*>(record);
-    msptiActivityHccl* tmp = ReinterpretConvert<msptiActivityHccl*>(MsptiMalloc(sizeof(msptiActivityHccl), ALIGN_SIZE));
-    if (tmp == nullptr || memcpy_s(tmp, sizeof(msptiActivityHccl), hcclData, sizeof(msptiActivityHccl)) != EOK) {
+    msptiActivityCommunication* communicationData = ReinterpretConvert<msptiActivityCommunication*>(record);
+    msptiActivityCommunication* tmp = ReinterpretConvert<msptiActivityCommunication*>(MsptiMalloc(sizeof(msptiActivityCommunication), ALIGN_SIZE));
+    if (tmp == nullptr || memcpy_s(tmp, sizeof(msptiActivityCommunication), communicationData, sizeof(msptiActivityCommunication)) != EOK) {
         MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
         LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
         return;
@@ -47,9 +47,9 @@ void MetricHcclProcess::ConsumeMsptiData(msptiActivity *record)
     }
 }
 
-std::vector<HcclMetric> MetricHcclProcess::AggregatedData()
+std::vector<CommunicationMetric> MetricCommunicationProcess::AggregatedData()
 {
-    std::vector<std::shared_ptr<msptiActivityHccl>> copyRecords;
+    std::vector<std::shared_ptr<msptiActivityCommunication>> copyRecords;
     {
         std::unique_lock<std::mutex> lock(dataMutex);
         copyRecords = std::move(records);
@@ -58,27 +58,27 @@ std::vector<HcclMetric> MetricHcclProcess::AggregatedData()
     if (copyRecords.empty()) {
         return {};
     }
-    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityHccl>>> deviceId2HcclData =
-        groupby(copyRecords, [](const std::shared_ptr<msptiActivityHccl>& data) -> std::uint32_t {
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<msptiActivityCommunication>>> deviceId2CommunicationData =
+        groupby(copyRecords, [](const std::shared_ptr<msptiActivityCommunication>& data) -> std::uint32_t {
             return data->ds.deviceId;
         });
-    std::vector<HcclMetric> ans;
+    std::vector<CommunicationMetric> ans;
     auto curTimestamp = getCurrentTimestamp64();
-    for (auto& pair: deviceId2HcclData) {
-        HcclMetric hcclMetric{};
-        auto& hcclDatas = pair.second;
-        hcclMetric.duration = std::accumulate(hcclDatas.begin(), hcclDatas.end(), 0ULL,
-            [](uint64_t acc, std::shared_ptr<msptiActivityHccl> hccl) {
-                return acc + hccl->end - hccl->start;
+    for (auto& pair: deviceId2CommunicationData) {
+        CommunicationMetric communicationMetric{};
+        auto& communicationDatas = pair.second;
+        communicationMetric.duration = std::accumulate(communicationDatas.begin(), communicationDatas.end(), 0ULL,
+            [](uint64_t acc, std::shared_ptr<msptiActivityCommunication> communication) {
+                return acc + communication->end - communication->start;
             });
-        hcclMetric.deviceId = pair.first;
-        hcclMetric.timestamp = curTimestamp;
-        ans.emplace_back(hcclMetric);
+        communicationMetric.deviceId = pair.first;
+        communicationMetric.timestamp = curTimestamp;
+        ans.emplace_back(communicationMetric);
     }
     return ans;
 }
 
-void MetricHcclProcess::SendProcessMessage()
+void MetricCommunicationProcess::SendProcessMessage()
 {
     auto afterAggregated = AggregatedData();
     for (auto& metric: afterAggregated) {
@@ -86,7 +86,7 @@ void MetricHcclProcess::SendProcessMessage()
     }
 }
 
-void MetricHcclProcess::Clear()
+void MetricCommunicationProcess::Clear()
 {
     records.clear();
 }

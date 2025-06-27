@@ -90,6 +90,7 @@ typedef enum {
     MSPTI_ACTIVITY_KIND_MEMSET = 6,
     MSPTI_ACTIVITY_KIND_MEMCPY = 7,
     MSPTI_ACTIVITY_KIND_EXTERNAL_CORRELATION = 8,
+    MSPTI_ACTIVITY_KIND_COMMUNICATION = 9,
     MSPTI_ACTIVITY_KIND_COUNT,
     MSPTI_ACTIVITY_KIND_FORCE_INT = 0x7fffffff
 } msptiActivityKind;
@@ -127,6 +128,23 @@ typedef enum {
     MSPTI_ACTIVITY_MEMCPY_KIND_DTOD = 4,
     MSPTI_ACTIVITY_MEMCPY_KIND_DEFAULT = 5
 } msptiActivityMemcpyKind;
+
+typedef enum {
+    MSPTI_ACTIVITY_COMMUNICATION_INT8 = 0,
+    MSPTI_ACTIVITY_COMMUNICATION_INT16 = 1,
+    MSPTI_ACTIVITY_COMMUNICATION_INT32 = 2,
+    MSPTI_ACTIVITY_COMMUNICATION_FP16 = 3,
+    MSPTI_ACTIVITY_COMMUNICATION_FP32 = 4,
+    MSPTI_ACTIVITY_COMMUNICATION_INT64 = 5,
+    MSPTI_ACTIVITY_COMMUNICATION_UINT64 = 6,
+    MSPTI_ACTIVITY_COMMUNICATION_UINT8 = 7,
+    MSPTI_ACTIVITY_COMMUNICATION_UINT16 = 8,
+    MSPTI_ACTIVITY_COMMUNICATION_UINT32 = 9,
+    MSPTI_ACTIVITY_COMMUNICATION_FP64 = 10,
+    MSPTI_ACTIVITY_COMMUNICATION_BFP16 = 11,
+    MSPTI_ACTIVITY_COMMUNICATION_INT128 = 12,
+    MSPTI_ACTIVITY_COMMUNICATION_INVALID_TYPE = 0x0000FFFF
+} msptiCommunicationDataType;
 
 START_PACKED_ALIGNMENT
 
@@ -231,6 +249,22 @@ typedef struct PACKED_ALIGNMENT {
     uint64_t correlationId;
     uint8_t isAsync;
 } msptiActivityMemcpy;
+
+typedef struct PACKED_ALIGNMENT {
+    msptiActivityKind kind;
+    msptiCommunicationDataType dataType;
+    uint64_t count;
+    struct {
+        uint32_t deviceId;
+        uint32_t streamId;
+    } ds;
+    uint64_t start;
+    uint64_t end;
+    const char* algType;
+    const char* name;
+    const char* commName;
+    uint64_t correlationId;
+} msptiActivityCommunication;
 
 END_PACKED_ALIGNMENT
 

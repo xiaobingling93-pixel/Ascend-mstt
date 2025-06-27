@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+
 from mindspore.common.api import _no_grad
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import replace_last_occurrence
+from msprobe.core.common.utils import replace_last_occurrence, ThreadSafe
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputs
 from msprobe.core.hook_manager import BaseHookManager, HookSet
 from msprobe.mindspore.common.utils import has_kwargs_in_forward_hook
@@ -78,11 +80,14 @@ class MindsproeHookManager(BaseHookManager):
         def backward_pre_hook(module, grad_input):
             if self.config.level != Const.LEVEL_L2:
                 return
-            if not self._should_execute_hook(hook_type, module, False):
+            tid = threading.get_ident()
+            if not self._should_execute_hook(hook_type, module, False, tid):
                 return
-            BaseHookManager.inner_switch = True
-            module_input = ModuleBackwardInputs(grad_input=grad_input)
-            self.data_collector.update_api_or_module_name(name)
-            self.data_collector.backward_input_data_collect(name, module, self._pid, module_input)
-            BaseHookManager.inner_switch = False
+
+            with ThreadSafe():
+                BaseHookManager.inner_switch[tid] = True
+                module_input = ModuleBackwardInputs(grad_input=grad_input)
+                self.data_collector.update_api_or_module_name(name)
+                self.data_collector.backward_input_data_collect(name, module, self._pid, module_input)
+                BaseHookManager.inner_switch[tid] = False
         return backward_pre_hook

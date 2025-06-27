@@ -592,7 +592,7 @@ class TrainerMon:
                 context.param_adam_update = mv_result.update
                 context.param_adam_ratio = mv_result.ratio
 
-            self.generate_wgrad_metrics(grad_dict)
+            _, _ = self.generate_wgrad_metrics(grad_dict)
             self.generate_mv_metrics(context)
             self.generate_param_metrics(context, MonitorConst.PRE_PARAM)
 

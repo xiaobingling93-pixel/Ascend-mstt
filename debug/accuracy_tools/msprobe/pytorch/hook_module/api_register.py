@@ -44,6 +44,8 @@ torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 _inner_used_api = {}
 _supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
 _cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
+dist_data_collect_func = {}
+origin_wait = getattr(dist.Work, 'wait')
 
 _api_types = {
     Const.PT_FRAMEWORK: {
@@ -94,14 +96,33 @@ def dist_module_forward(module, *args, **kwargs):
         use_async_op_flag = False
         logger.warning(f"fail to get dist api's func signature because {e}, no wait")
 
-    if use_async_op_flag or module.api_name in ["isend", "irecv"]:
-        if handle and hasattr(handle, 'wait'):
-            handle.wait()
-    if module.api_name == "batch_isend_irecv":
+    def create_async_callback_func(catch_func):
+        def store_data():
+            module.async_op_dump_flag = False
+            catch_func(module, args, kwargs, handle)
+        return store_data
+
+    if len(module._forward_hooks.values()) == 0:
+        return handle
+    if use_async_op_flag or module.api_name in ['isend', 'irecv']:
+        module.async_op_dump_flag = True
+        dist_data_collect_func[handle] = create_async_callback_func(list(module._forward_hooks.values())[0])
+    if module.api_name == 'batch_isend_irecv':
         if isinstance(handle, list):
             for req in handle:
-                req.wait()
+                dist_data_collect_func[req] = create_async_callback_func(list(module._forward_hooks.values())[0])
     return handle
+
+
+def redirect_wait():
+    def wrapped_wait(work):
+        def wrapped_wait(*args, **kwargs):
+            origin_wait(*args, **kwargs)
+            if args[0] in dist_data_collect_func:
+                store_func = dist_data_collect_func.pop(args[0])
+                store_func()
+        return wrapped_wait
+    dist.Work.wait = wrapped_wait(dist.Work)
 
 
 def npu_module_forward(module, *args, **kwargs):
@@ -130,6 +151,7 @@ class ApiTemplate(HOOKModule):
         self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
         self.need_hook = need_hook
         self.device = device
+        self.async_op_dump_flag = False
         if self.need_hook:
             super().__init__(hook_build_func)
         if prefix == Const.DIST_API_TYPE_PREFIX:

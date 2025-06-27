@@ -111,10 +111,8 @@ def load_ssl_pem(key_file, cert_file, ca_file, crl_file):
 
     try:
         # your_private_key_password
-        passphrase = ""
-        if not passphrase:
-            import pwinput
-            passphrase = pwinput.pwinput("Enter your password: ")
+        import pwinput
+        passphrase = pwinput.pwinput("Enter your password: ")
         with FileOpen(key_file, "rb") as f:
             key = crypto.load_privatekey(crypto.FILETYPE_PEM, f.read(), passphrase.encode())
             del passphrase

@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
 import os
 import types
+from collections import defaultdict
 
 import mindspore
 from mindspore import nn
 from mindspore._c_expression import PyNativeExecutor_
+
 try:
     from mindspore.common.api import _MindsporeFunctionExecutor
 except ImportError:
@@ -27,11 +28,11 @@ except ImportError:
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import ThreadSafe
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
-
 
 _api_register = get_api_register()
 
@@ -39,7 +40,9 @@ _api_register = get_api_register()
 def dump_jit(name, in_feat, out_feat, is_forward):
     pid = os.getpid()
     name = name if name else "JitFunction"
-    if JitDump.need_dump():
+    if not JitDump.need_dump():
+        return
+    with ThreadSafe():
         if is_forward:
             if name in JitDump.jit_count:
                 JitDump.jit_count[name] += 1

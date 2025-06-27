@@ -13,12 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+import sys
 from collections import OrderedDict
 
 import torch
 from torch.utils.hooks import BackwardHook, RemovableHandle
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import ModuleQueue, ThreadSafe
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import is_torch_nn_module, register_forward_pre_hook
@@ -46,13 +49,15 @@ def wrap_megatron_deallocate(func):
             out.data = torch.empty((1,), device=out.device, dtype=out.dtype, )
             return func(out_clone, deallocate_pipeline_outputs)
         return func(out, deallocate_pipeline_outputs)
+
     return wrapper_func
 
 
 class ModuleProcesser:
+    module_queue = ModuleQueue()
     module_count = {}
-    module_stack = []
-    api_parent_node = ""
+    module_stack = {}
+    api_parent_node = {}
     module_node = {}
     module_bw_hook_kernels = {}
     module_with_backward_hook = {}
@@ -64,7 +69,15 @@ class ModuleProcesser:
         replace_checkpoint()
         try:
             from megatron.core.pipeline_parallel import schedules
+            origin_func_id = id(schedules.deallocate_output_tensor)
             schedules.deallocate_output_tensor = wrap_megatron_deallocate(schedules.deallocate_output_tensor)
+            for module in list(sys.modules.values()):
+                if module.__name__ == 'schedules':
+                    continue
+                for func in module.__dict__:
+                    if id(module.__dict__[func]) == origin_func_id:
+                        module.__setattr__(func, schedules.deallocate_output_tensor)
+                        logger.debug(f'patch {module.__name__}.{func}.')
             logger.info_on_rank_0("Patch megatron method success.")
         except ImportError:
             logger.info_on_rank_0("No megatron find.")
@@ -103,9 +116,10 @@ class ModuleProcesser:
 
     @classmethod
     def reset_module_stats(cls):
+        cls.module_queue = ModuleQueue()
         cls.module_count = {}
-        cls.module_stack = []
-        cls.api_parent_node = ""
+        cls.module_stack = {}
+        cls.api_parent_node = {}
         cls.module_node = {}
         cls.module_bw_hook_kernels = {}
         cls.enable_module_dump = False
@@ -144,6 +158,7 @@ class ModuleProcesser:
                 register_forward_pre_hook(module, forward_pre_hook)
 
     def build_module_hook(self, module_name, build_data_hook):
+        @ThreadSafe.synchronized
         def forward_pre_hook(module, args, kwargs=None):
             if kwargs is None:
                 kwargs = {}
@@ -171,15 +186,19 @@ class ModuleProcesser:
             hook_set = build_data_hook(BaseScope.Module_Type_Module, full_forward_name)
 
             def get_backward_pre_hook(full_backward_name):
+                @ThreadSafe.synchronized
                 def backward_pre_hook_fn(module, grad_output):
                     self.set_construct_info_in_pre_hook(full_backward_name)
+
                 return backward_pre_hook_fn
 
             def get_backward_hook(backward_data_hook, full_backward_name):
+                @ThreadSafe.synchronized
                 def backward_hook_fn(module, grad_input, grad_output):
                     new_output = backward_data_hook(module, grad_input, grad_output)
                     self.set_construct_info_in_hook(full_backward_name, is_forward=False)
                     return new_output
+
                 return backward_hook_fn
 
             if not ModuleProcesser.module_with_backward_hook.get(module_name):
@@ -193,6 +212,7 @@ class ModuleProcesser:
                 args = bw_hook.setup_input_hook(args)
             return (args, kwargs) if torch_version_above_or_equal_2 else args
 
+        @ThreadSafe.synchronized
         def forward_hook(module, args, kwargs_or_output, output_or_kwargs=None):
             if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
                 return output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
@@ -218,23 +238,34 @@ class ModuleProcesser:
         return forward_pre_hook
 
     def set_construct_info_in_pre_hook(self, full_name):
-        if self.module_stack:
-            ModuleProcesser.module_node[full_name] = self.module_stack[-1]
+        tid = threading.get_ident()
+        if tid not in self.module_stack:
+            ModuleProcesser.module_stack[tid] = []
+
+        if self.module_stack[tid]:
+            ModuleProcesser.module_node[full_name] = self.module_stack[tid][-1]
         else:
-            ModuleProcesser.module_node[full_name] = None
-        ModuleProcesser.module_stack.append(full_name)
-        ModuleProcesser.api_parent_node = full_name
+            parent_name = ModuleProcesser.module_queue.find_last(full_name)
+            ModuleProcesser.module_node[full_name] = parent_name
+
+        ModuleProcesser.module_queue.add_name(full_name)
+        ModuleProcesser.module_stack[tid].append(full_name)
+        ModuleProcesser.api_parent_node[tid] = full_name
         if self.scope:
             self.scope.begin_module(full_name)
 
     def set_construct_info_in_hook(self, full_name, is_forward=True):
+        tid = threading.get_ident()
         if torch_version_above_or_equal_2 or is_forward:
-            if self.module_stack:
-                ModuleProcesser.module_stack.pop()
-            ModuleProcesser.api_parent_node = ModuleProcesser.module_stack[-1] if self.module_stack else None
+            ModuleProcesser.module_queue.remove_name(full_name)
+            ModuleProcesser.api_parent_node[tid] = None
+            if self.module_stack.get(tid):
+                ModuleProcesser.module_stack[tid].pop()
+            if self.module_stack.get(tid):
+                ModuleProcesser.api_parent_node[tid] = ModuleProcesser.module_stack[tid][-1]
             if self.scope:
                 self.scope.end_module(full_name)
         else:
             if self.scope:
                 self.scope.begin_module(full_name)
-            ModuleProcesser.api_parent_node = full_name
+            ModuleProcesser.api_parent_node[tid] = full_name

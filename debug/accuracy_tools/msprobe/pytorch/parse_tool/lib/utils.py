@@ -37,8 +37,6 @@ try:
     from rich.table import Table
     from rich import print as rich_print
     from rich.columns import Columns
-
-    install()
 except ImportError as err:
     install = None
     Panel = None
@@ -228,7 +226,7 @@ class Util:
     def check_path_valid(self, path):
         path = self.path_strip(path)
         if not path or not os.path.exists(path):
-            self.log.error("The path %s does not exist." % path)
+            self.log.error("The path does not exist.")
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
         isdir = check_file_type(path) == FileCheckConst.DIR
         check_file_or_directory_path(path, isdir=isdir)
@@ -236,7 +234,7 @@ class Util:
 
     def check_files_in_path(self, path):
         if os.path.isdir(path) and len(os.listdir(path)) == 0:
-            self.log.error("No files in %s." % path)
+            self.log.error("No files found in path.")
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
 
     def npy_info(self, source_data):

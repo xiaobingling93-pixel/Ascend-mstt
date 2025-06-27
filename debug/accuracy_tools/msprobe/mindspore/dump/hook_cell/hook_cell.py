@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 from collections import defaultdict
 
 import mindspore as ms
 from mindspore import nn
 
 from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import ThreadSafe
 from msprobe.mindspore.common.utils import is_mindtorch, register_backward_hook_functions
-
 
 ms_version = ms.__version__
 
@@ -35,16 +36,17 @@ def get_cell_count(name):
 
 def __init__(self, hook_build_func) -> None:
     super(HOOKCell, self).__init__()
-    self.changed_status = False
     self.msprobe_input_kwargs = {}
-    if not HOOKCell.g_stop_hook:
-        HOOKCell.g_stop_hook = True
-        self.changed_status = True
+
+    self.tid = threading.get_ident()
+    self.stop_hook = HOOKCell.inner_stop_hook.get(self.tid, False)
+    if not self.stop_hook:
         self.forward_data_collected = False
 
         if not Runtime.is_running:
             return
         prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
+        ThreadSafe.acquire()
         if callable(hook_build_func):
             hook_set = hook_build_func(prefix)
             if ms_version < "2.6.0" and not is_mindtorch():
@@ -59,21 +61,24 @@ def __init__(self, hook_build_func) -> None:
 
 # 重载call，加全局标志。
 def __call__(self, *args, **kwargs):
+    changed = False
+    if not self.stop_hook:
+        HOOKCell.inner_stop_hook[self.tid] = True
+        changed = True
     try:
         self.msprobe_input_kwargs = kwargs
         out = super(HOOKCell, self).__call__(*args, **kwargs)
     except Exception as e:
         raise e
     finally:
-        if self.changed_status:
-            self.changed_status = False
-            HOOKCell.g_stop_hook = False
+        if changed:
+            HOOKCell.inner_stop_hook[self.tid] = False
     return out
 
 
 hook_cell_dict = {
     "cell_count": defaultdict(int),
-    "g_stop_hook": False,
+    "inner_stop_hook": defaultdict(bool),
     "add_cell_count": staticmethod(add_cell_count),
     "get_cell_count": staticmethod(get_cell_count),
     "__init__": __init__,
