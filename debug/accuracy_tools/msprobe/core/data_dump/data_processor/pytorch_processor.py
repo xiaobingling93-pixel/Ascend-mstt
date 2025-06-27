@@ -181,7 +181,7 @@ class PytorchDataProcessor(BaseDataProcessor):
 
     @staticmethod
     def _analyze_torch_size(arg):
-        return {"type": "torch.Size", "value": list(arg)}
+        return {"type": "torch.Size", "value": [int(x) for x in list(arg)]}
 
     @staticmethod
     def _analyze_memory_format(arg):
