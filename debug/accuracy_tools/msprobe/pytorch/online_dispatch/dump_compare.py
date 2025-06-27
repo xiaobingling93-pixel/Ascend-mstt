@@ -118,8 +118,8 @@ def save_temp_summary(api_index, single_api_summary, path, lock):
         check_link(summary_path)
         try:
             remove_path(summary_path)
-        except Exception as e:
-            logger.error(f'remove temp summary error:{e}')
+        except FileNotFoundError:
+            logger.error(f'file not found:{summary_path}')
     finally:
         lock.release()
 
