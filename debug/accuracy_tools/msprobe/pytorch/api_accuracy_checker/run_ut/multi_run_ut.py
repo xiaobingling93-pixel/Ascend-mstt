@@ -82,12 +82,13 @@ def split_json_file(input_file, num_splits, filter_api):
         except Exception as e:
             logger.error(f"An error occurred while saving split file: {e}")
             for file in split_files:
-                check_link(file)
                 try:
+                    check_link(file)
                     remove_path(file)
                 except FileNotFoundError:
                     logger.error(f"File not found and could not be deleted: {file}")
-
+        msg = 'ERROR: Split json file failed, please check the input file and try again.'
+        raise CompareException(CompareException.PARSE_FILE_ERROR, msg)
     return split_files, total_items
 
 
