@@ -234,7 +234,7 @@ class Util:
 
     def check_files_in_path(self, path):
         if os.path.isdir(path) and len(os.listdir(path)) == 0:
-            self.log.error("No files found in path dir.")
+            self.log.error("No files found in path.")
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
 
     def npy_info(self, source_data):
