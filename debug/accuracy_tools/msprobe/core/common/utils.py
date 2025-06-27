@@ -685,3 +685,18 @@ def analyze_api_call_stack(name):
     else:
         stack_str.append(Const.WITHOUT_CALL_STACK)
     return "".join(stack_str)
+
+
+def check_extern_input_list(input_list):
+    if not isinstance(input_list, list):
+        raise Exception("input is not a list")
+    if len(input_list) > Const.EXTERN_INPUT_LIST_MAX_LEN:
+        raise Exception(f"input list exceed max length {Const.EXTERN_INPUT_LIST_MAX_LEN}")
+
+
+def check_process_num(process_num):
+    if not is_int(process_num) or process_num <= 0:
+        raise ValueError(f"process_num({process_num}) is not a positive integer")
+    if process_num > Const.MAX_PROCESS_NUM:
+        raise ValueError(f"The maximum supported process_num is {Const.MAX_PROCESS_NUM}, current value: {process_num}.")
+

@@ -56,6 +56,9 @@ class Const:
     CPU_QUARTER = 4
     DUMP_MAX_DEPTH = 50
 
+    EXTERN_INPUT_LIST_MAX_LEN = 100
+    MAX_PROCESS_NUM = 128
+
     # dump mode
     ALL = "all"
     LIST = "list"
