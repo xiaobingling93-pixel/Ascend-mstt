@@ -213,62 +213,27 @@ class GraphUtils:
         return f"{size_bytes:.{decimal_places}f} {units[unit_index]}"
 
     @staticmethod
-    def has_group_permission(path, permission):
-        """
-        检查指定路径是否对其所属组具有指定权限。
-        
-        :param path: 要检查的文件或目录的路径。
-        :param permission: 要检查的权限，使用 stat 中定义的常量，如 stat.S_IWGRP 表示写权限。
-        :return: 如果所属组有指定权限，则返回 True；否则返回 False。
-        """
-        try:
-            # 获取文件的状态信息
-            st = os.stat(path)
-        except FileNotFoundError:
-            return False
-        
-        # 使用位运算检查权限
-        group_permissions = st.st_mode & (stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)
-        
-        # 判断指定的权限是否存在
-        if group_permissions & permission:
-            return True
-        else:
-            return False
-
-    @staticmethod
     def safe_save_data(data, run_name, tag):
         runs = GraphState.get_global_value('runs', {})
         run = runs.get(run_name) or run_name
-        safe_base_dir = GraphState.get_global_value('logdir')
         if run is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
             return None, error_message
         try:
-            # 构建文件路径并标准化
-            file_path = os.path.join(run, tag)
-            file_path = os.path.normpath(file_path)
-            # 检查 run 目录是否存在，如果不存在则创建
-            if not os.path.exists(run):
-                os.makedirs(run, exist_ok=True)
-                os.chmod(run, 0o750)
-            # 权限校验：检查目录所属组是否有写权限
-            if not os.stat(file_path).st_mode and not GraphUtils.has_group_permission(file_path, stat.stat.S_IWGRP):
-                raise PermissionError(f"No write permission for directory: {run}\n")
             # 检查 tag 是否为合法文件名
             if not re.match(FILE_NAME_REGEX, tag):
                 raise ValueError(f"Invalid tag: {tag}.")
-            # 检查文件路径是否合法，防止路径遍历攻击
-            if not file_path.startswith(os.path.abspath(run)):
-                raise ValueError(f"Invalid file path: {file_path}. Potential path traversal attack.\n")
-            # 基础路径校验
-            if not GraphUtils.is_relative_to(file_path, safe_base_dir):
-                raise ValueError(f"Path out of bounds: {file_path}")
-            if os.path.islink(file_path):
-                raise RuntimeError("The target file is a symbolic link")
-            if os.path.islink(run):
-                raise RuntimeError(f"Parent directory contains a symbolic link")
-            # # 尝试写入文件
+            # 构建文件路径并标准化
+            file_path = os.path.join(run, tag)
+            # 目录安全校验
+            success, error = GraphUtils.safe_check_save_file_path(run, True)
+            if not success:
+                raise PermissionError(error)
+            # 文件安全校验
+            success, error = GraphUtils.safe_check_save_file_path(file_path)
+            if not success:
+                raise PermissionError(error)
+            # 尝试写入文件
             with open(file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             os.chmod(file_path, 0o640)
@@ -281,7 +246,7 @@ class GraphUtils:
             return None, 'Invalid data'
         except OSError as e:
             logger.error(f"Failed to create directory: {run}. Error: {e}\n")
-            return None, 'failed to create directory {run}'
+            return None, 'failed to create directory '
         except Exception as e:
             logger.error(f'Error: File "{file_path}" is not accessible. Error: {e}')
             return None, 'failed to save file'
@@ -299,11 +264,11 @@ class GraphUtils:
             # 目录安全校验
             success, error = GraphUtils.safe_check_load_file_path(run_dir, True)
             if not success:
-                raise RuntimeError(error)
+                raise PermissionError(error)
             # 文件安全校验
             success, error = GraphUtils.safe_check_load_file_path(file_path)
             if not success:
-                raise RuntimeError(error)
+                raise PermissionError(error)
             # 读取文件比较耗时，支持onlyCheck参数，仅进行安全校验
             if only_check:
                 return True, None
@@ -318,11 +283,58 @@ class GraphUtils:
             return None, e
 
     @staticmethod
+    def safe_check_save_file_path(file_path, isDir=False):
+        PERM_GROUP_WRITE = 0o020
+        PERM_OTHER_WRITE = 0o002
+        st = os.stat(file_path)
+        file_path = os.path.normpath(file_path)  # 标准化路径
+        real_path = os.path.realpath(file_path)
+        safe_base_dir = GraphState.get_global_value('logdir')
+        try:
+            # 安全验证：路径长度检查
+            if len(file_path) > FILE_PATH_MAX_LENGTH:
+                raise PermissionError(f"Path length exceeds limit")
+            # 安全验证：基础路径校验
+            if not GraphUtils.is_relative_to(file_path, safe_base_dir):
+                raise ValueError(f"Path out of bounds: {file_path}")
+            # 安全验证：禁止符号链接文件
+            if os.path.islink(file_path):
+                raise RuntimeError("The target file is a symbolic link")
+            # 安全验证：文件大小校验
+            if not isDir and os.path.getsize(file_path) > MAX_FILE_SIZE:
+                file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))
+                max_size = GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE)
+                raise PermissionError(
+                    f"File size exceeds limit ({file_size} > {max_size})")                
+            # 安全验证：检查目录是否存在，如果不存在则创建
+            if isDir and not os.path.exists(real_path):
+                os.makedirs(real_path, exist_ok=True)
+                os.chmod(file_path, 0o640)
+            # 权限校验：检查是否有写权限
+            if not os.stat(file_path).st_mode & stat.S_IWGRP:
+                raise PermissionError(f"No write permission for directory\n")
+            # 安全验证： 非windows系统下，属主检查
+            if os.name != 'nt':
+                current_uid = os.getuid() 
+                # 如果是root用户，跳过后续权限检查
+                if current_uid == 0:
+                    return True
+                # 属主检查
+                if st.st_uid != current_uid:
+                    raise PermissionError(f"Directory is not owned by the current user")
+                # group和其他用户不可写检查
+                if st.st_mode & PERM_GROUP_WRITE or st.st_mode & PERM_OTHER_WRITE:
+                    raise PermissionError(f"Directory has group or other write permission")
+            return True, None
+        except Exception as e:
+            logger.error(e)
+            return False, e
+    
+    @staticmethod
     def safe_check_load_file_path(file_path, isDir=False):
         # 权限常量定义
         PERM_GROUP_WRITE = 0o020
         PERM_OTHER_WRITE = 0o002
-        PERM_OTHER_READ = 0o004
         file_path = os.path.normpath(file_path)  # 标准化路径
         real_path = os.path.realpath(file_path)
         safe_base_dir = GraphState.get_global_value('logdir')
@@ -330,31 +342,31 @@ class GraphUtils:
         try:
             # 安全验证：路径长度检查
             if len(real_path) > FILE_PATH_MAX_LENGTH:
-                raise RuntimeError(f"Path length exceeds limit")
+                raise PermissionError(f"Path length exceeds limit")
             # 安全验证：路径归属检查（防止越界访问）
             if not GraphUtils.is_relative_to(file_path, safe_base_dir):
-                raise RuntimeError(f"Path out of bounds")
+                raise PermissionError(f"Path out of bounds")
             # 安全检查：文件存在性验证
             if not os.path.exists(real_path):
                 raise FileNotFoundError(f"File does not exist")
             # 安全验证：禁止符号链接文件
             if os.path.islink(file_path):
-                raise RuntimeError(f"Detected symbolic link file")
+                raise PermissionError(f"Detected symbolic link file")
             # 安全验证：文件类型检查（防御TOCTOU攻击）
             # 文件类型
             if not isDir and not os.path.isfile(real_path):
-                raise RuntimeError(f"Path is not a regular file")
+                raise PermissionError(f"Path is not a regular file")
             # 目录类型
             if isDir and not Path(real_path).is_dir():
-                raise RuntimeError(f"Directory does not exist")
+                raise PermissionError(f"Directory does not exist")
             # 可读性检查
-            if not st.st_mode & PERM_OTHER_READ:
-                raise RuntimeError(f"Directory lacks read permission for others")
+            if not st.st_mode & stat.S_IRGRP:
+                raise PermissionError(f"Directory lacks read permission for others")
             # 文件大小校验
             if not isDir and os.path.getsize(file_path) > MAX_FILE_SIZE:
                 file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))
                 max_size = GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE)
-                raise RuntimeError(
+                raise PermissionError(
                     f"File size exceeds limit ({file_size} > {max_size})")
             # 非windows系统下，属主检查
             if os.name != 'nt':
@@ -364,10 +376,10 @@ class GraphUtils:
                     return True
                 # 属主检查
                 if st.st_uid != current_uid:
-                    raise RuntimeError(f"Directory is not owned by the current user")
+                    raise PermissionError(f"Directory is not owned by the current user")
                 # group和其他用户不可写检查
                 if st.st_mode & PERM_GROUP_WRITE or st.st_mode & PERM_OTHER_WRITE:
-                    raise RuntimeError(f"Directory has group or other write permission")
+                    raise PermissionError(f"Directory has group or other write permission")
             return True, None
         except Exception as e:
             logger.error(e)
