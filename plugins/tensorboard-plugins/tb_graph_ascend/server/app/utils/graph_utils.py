@@ -286,7 +286,6 @@ class GraphUtils:
     def safe_check_save_file_path(file_path, isDir=False):
         PERM_GROUP_WRITE = 0o020
         PERM_OTHER_WRITE = 0o002
-        st = os.stat(file_path)
         file_path = os.path.normpath(file_path)  # 标准化路径
         real_path = os.path.realpath(file_path)
         safe_base_dir = GraphState.get_global_value('logdir')
@@ -297,21 +296,18 @@ class GraphUtils:
             # 安全验证：基础路径校验
             if not GraphUtils.is_relative_to(file_path, safe_base_dir):
                 raise ValueError(f"Path out of bounds: {file_path}")
+            if not os.path.exists(file_path):
+                    return True, None
+            st = os.stat(file_path)
             # 安全验证：禁止符号链接文件
             if os.path.islink(file_path):
-                raise RuntimeError("The target file is a symbolic link")
-            # 安全验证：文件大小校验
-            if not isDir and os.path.getsize(file_path) > MAX_FILE_SIZE:
-                file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))
-                max_size = GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE)
-                raise PermissionError(
-                    f"File size exceeds limit ({file_size} > {max_size})")                
+                raise PermissionError("The target file is a symbolic link")            
             # 安全验证：检查目录是否存在，如果不存在则创建
             if isDir and not os.path.exists(real_path):
                 os.makedirs(real_path, exist_ok=True)
                 os.chmod(file_path, 0o640)
             # 权限校验：检查是否有写权限
-            if not os.stat(file_path).st_mode & stat.S_IWGRP:
+            if not os.stat(file_path).st_mode & stat.S_IWUSR:
                 raise PermissionError(f"No write permission for directory\n")
             # 安全验证： 非windows系统下，属主检查
             if os.name != 'nt':
@@ -360,7 +356,7 @@ class GraphUtils:
             if isDir and not Path(real_path).is_dir():
                 raise PermissionError(f"Directory does not exist")
             # 可读性检查
-            if not st.st_mode & stat.S_IRGRP:
+            if not st.st_mode & stat.S_IRUSR:
                 raise PermissionError(f"Directory lacks read permission for others")
             # 文件大小校验
             if not isDir and os.path.getsize(file_path) > MAX_FILE_SIZE:
