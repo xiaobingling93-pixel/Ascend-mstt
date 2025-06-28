@@ -41,6 +41,10 @@ SimpleJsonServerBase::SimpleJsonServerBase(int port) : port_(port)
         }
     } catch (const std::exception& e) {
         LOG(ERROR) << "Failed to initialize server: " << e.what();
+        if (sock_fd_ != -1) {
+            close(sock_fd_);
+            sock_fd_ = -1;
+        }
         throw;
     }
 }
