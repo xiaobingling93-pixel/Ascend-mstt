@@ -87,7 +87,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
         Runtime.step_count = 0
         Runtime.is_running = False
-        if enable_dynamic_kbyk_dump:
+        if enable_dynamic_kbyk_dump and self.config.level_ori == Const.LEVEL_L2:
             _dump_set_dynamic()
 
     @staticmethod
