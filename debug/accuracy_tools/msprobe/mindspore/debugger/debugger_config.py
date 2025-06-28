@@ -81,18 +81,22 @@ class DebuggerConfig:
         target_module_type = (torch.nn.Module, "torch.nn.Module") if is_mindtorch() else (nn.Cell, "mindspore.nn.Cell")
         if models is None or isinstance(models, target_module_type[0]):
             return models
-        error_model = None
         if isinstance(models, (list, tuple)):
+            error_model = None
             for model in models:
                 if not isinstance(model, target_module_type[0]):
                     error_model = model
                     break
-        else:
-            error_model = models
+            if error_model is not None:
+                error_info = (
+                    f"The 'model' parameter must be a {target_module_type[1]} or list[{target_module_type[1]}] "
+                    f"type, currently there is a {type(error_model)} type.")
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, error_info)
 
-        if error_model is not None:
+        else:
             error_info = (f"The 'model' parameter must be a {target_module_type[1]} or list[{target_module_type[1]}] "
-                          f"type, currently there is a {type(error_model)} type.")
+                          f"type, currently there is a {type(models)} type.")
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
         return models
