@@ -135,12 +135,12 @@ dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 
 npu-monitor的SUBCOMMANDS（子命令）选项如下：
 
-| 子命令                   | 参数类型 | 说明                                                                                                                                                   | PyTorch支持 | MindSpore支持 |    是否必选     |
+| 子命令                   | 参数类型 | 说明                                                                                                                                                  | PyTorch支持 | MindSpore支持 |    是否必选     |
 |-----------------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------|:---------:|:-----------:|:-----------:|
-| --npu-monitor-start   | action | 开启性能监控，设置参数后生效，默认不生效                                                                                                                                 | Y | Y | N |
-| --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                                                 | Y | Y | N |
-| --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                                        | Y | Y | N |
-| --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`, 'Communication'] , 默认值`Marker` | Y | Y | N |
+| --npu-monitor-start   | action | 开启性能监控，设置参数后生效，默认不生效                                                                                                                                | Y | Y | N |
+| --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                                                | Y | Y | N |
+| --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                                       | Y | Y | N |
+| --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`, `Communication`] , 默认值`Marker` | Y | Y | N |
 
 - npu-monitor使用方法
 
@@ -263,7 +263,7 @@ nputrace的SUBCOMMANDS（子命令）选项如下：
 | --duration-ms         | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数                                                                                                                                                                                                     |     N     |      N      | N |
 | --iterations          | i64 | 采集总迭代数，默认值-1，dynolog原生参数，需与start-step参数同时指定                                                                                                                                                                                       |     Y     |      Y      |  Y |
 | --log-file            | String | 采集落盘的路径                                                                                                                                                                                                                           |     Y     |      Y      |  Y |
-| --start-step          | u64 | 开始采集的迭代数，默认值0                                                                                                                                                                                                                     |     Y     |      Y      | N  |
+| --start-step          | u64 | 开始采集的迭代数，默认值0                                                                                                                                                                                                                     |     Y     |      Y      | Y  |
 | --record-shapes       | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集                                                                                                                                                                                        |     Y     |      Y      |  N |
 | --profile-memory      | action | 是否采集算子内存信息，设置参数采集，默认不采集                                                                                                                                                                                                           |     Y     |      Y      | N |
 | --with-stack          | action | 是否采集Python调用栈，设置参数采集，默认不采集                                                                                                                                                                                                        |     Y     |      Y      | N |
