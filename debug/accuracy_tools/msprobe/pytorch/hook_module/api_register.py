@@ -61,7 +61,7 @@ if not is_gpu:
     if torch_without_guard_version:
         _api_types.get(Const.PT_FRAMEWORK).update(
             {
-                Const.PT_API_TYPE_NPU: (torch.ops.npu, (torch_npu, torch.ops.npu))
+                Const.PT_API_TYPE_NPU: ((torch.ops.npu, torch_npu), (torch_npu, torch.ops.npu)),
             }
         )
     else:
