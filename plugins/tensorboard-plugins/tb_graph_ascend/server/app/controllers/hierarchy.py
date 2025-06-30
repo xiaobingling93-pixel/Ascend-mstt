@@ -53,15 +53,11 @@ class Hierarchy:
     def extract_label_name(node_name, node_type):
         splited_subnode_name = node_name.split('.')
         splited_label = []
-        # Module.layer1.1.relu.ReLU.forward.1 =>relu.ReLU.forward.1
-        # Module.layer1.1.relu.ReLU.forward.1 =>relu.ReLU.forward.1
         if node_type == MODULE:
             if len(splited_subnode_name) < 4:
                 return node_name
             splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
                 -4].isdigit() else splited_subnode_name[-5:]
-        # Module.layer1.1.ApiList.1 =>ApiList.1
-        # Module.layer1.1.ApiList.0.1 =>ApiList.0.1
         else:
             if len(splited_subnode_name) < 2:
                 return node_name

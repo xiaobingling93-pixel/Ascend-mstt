@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 import torch
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
-from msprobe.core.common.file_utils import FileOpen, save_npy, save_json
+from msprobe.core.common.file_utils import FileOpen, save_npy, save_json, remove_path, check_link
 from msprobe.pytorch.common.log import logger
 
 
@@ -113,6 +113,12 @@ def save_temp_summary(api_index, single_api_summary, path, lock):
     try:
         data = [api_index, single_api_summary]
         save_json(summary_path, data, mode='a')
+    except Exception as e:
+        logger.error(f'save temp summary error:{e}')
+        try:
+            remove_path(summary_path)
+        except FileNotFoundError:
+            logger.error(f'file not found:{summary_path}')
     finally:
         lock.release()
 
