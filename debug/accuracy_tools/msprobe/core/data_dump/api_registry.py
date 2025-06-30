@@ -169,9 +169,12 @@ class ApiRegistry:
         self.all_api_registered = False
 
     @staticmethod
-    def store_ori_attr(ori_api_group, api_list, api_ori_attr):
+    def store_ori_attr(ori_api_groups, api_list, api_ori_attr):
         for api in api_list:
-            api_ori_attr[api] = _get_attr(ori_api_group, api)
+            ori_api = None
+            for ori_api_group in ori_api_groups:
+                ori_api = ori_api or _get_attr(ori_api_group, api)
+            api_ori_attr[api] = ori_api
 
     @staticmethod
     def set_api_attr(api_group, attr_dict):
