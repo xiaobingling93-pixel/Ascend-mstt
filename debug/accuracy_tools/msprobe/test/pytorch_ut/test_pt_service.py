@@ -75,7 +75,7 @@ class TestPytorchService(unittest.TestCase):
         self.service._register_hook()
         mock_register_opt.assert_not_called()
     
-    @patch('msprobe.pytorch.pytorch_service.wrap_jit_script_func')
+    @patch('msprobe.pytorch.pytorch_service.wrap_script_func')
     def test_register_api_hook(self, mock_wrap_jit):
         self.service.config.level = Const.LEVEL_L1
         self.service._register_api_hook()
