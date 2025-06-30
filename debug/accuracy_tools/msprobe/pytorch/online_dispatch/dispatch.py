@@ -104,7 +104,7 @@ class PtdbgDispatch(TorchDispatchMode):
 
         if not is_npu:
             return
-        logger.info(f'start write compare csv: Rank[{self.device_id}], Pid[{os.getpid()}')
+        logger.info(f'start write compare csv: Rank[{self.device_id}], Pid[{os.getpid()}]')
 
         if self.process_num > 0:
             self.pool.close()

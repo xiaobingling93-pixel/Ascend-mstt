@@ -98,6 +98,11 @@ class DebuggerConfig:
 
     def check_model(self, instance, start_model, token_range=None):
         instance.model = start_model if start_model is not None else instance.model
+
+        if token_range and not instance.model:
+            error_info = "The 'model' parameter must be provided when token_range is not None"
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
+        
         if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX] and token_range is None:
             return
 
@@ -110,18 +115,20 @@ class DebuggerConfig:
         if is_torch_nn_module(instance.model):
             return
 
-        error_model = None
         if isinstance(instance.model, (list, tuple)):
+            error_model = None
             for model in instance.model:
                 if not is_torch_nn_module(model):
                     error_model = model
                     break
+            if error_model is not None:
+                error_info = (f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] "
+                            f"type, currently there is an unsupported {type(error_model)} type.")
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, error_info)
         else:
-            error_model = instance.model
-
-        if error_model is not None:
             error_info = (f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] "
-                          f"type, currently there is an unsupported {type(error_model)} type.")
+                          f"type, currently there is an unsupported {type(instance.model)} type.")
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, error_info)
 
