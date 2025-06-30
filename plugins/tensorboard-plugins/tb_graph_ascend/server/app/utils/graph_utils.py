@@ -296,7 +296,7 @@ class GraphUtils:
             # 安全验证：基础路径校验
             if not GraphUtils.is_relative_to(file_path, safe_base_dir):
                 raise ValueError(f"Path out of bounds: {file_path}")
-            if not os.path.exists(file_path):
+            if not isDir and not os.path.exists(file_path):
                     return True, None
             st = os.stat(file_path)
             # 安全验证：禁止符号链接文件
