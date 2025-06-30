@@ -23,7 +23,7 @@ import sys
 from functools import cmp_to_key
 from pathlib import Path
 from tensorboard.util import tb_logging
-from .global_state import GraphState, FILE_NAME_REGEX, MAX_FILE_SIZE
+from .global_state import GraphState, FILE_NAME_REGEX, MAX_FILE_SIZE, PERM_GROUP_WRITE, PERM_OTHER_WRITE
 
 logger = tb_logging.get_logger()
 FILE_PATH_MAX_LENGTH = 4096
@@ -283,9 +283,7 @@ class GraphUtils:
             return None, e
 
     @staticmethod
-    def safe_check_save_file_path(file_path, isDir=False):
-        PERM_GROUP_WRITE = 0o020
-        PERM_OTHER_WRITE = 0o002
+    def safe_check_save_file_path(file_path, is_dir=False):
         file_path = os.path.normpath(file_path)  # 标准化路径
         real_path = os.path.realpath(file_path)
         safe_base_dir = GraphState.get_global_value('logdir')
@@ -296,14 +294,14 @@ class GraphUtils:
             # 安全验证：基础路径校验
             if not GraphUtils.is_relative_to(file_path, safe_base_dir):
                 raise ValueError(f"Path out of bounds: {file_path}")
-            if not isDir and not os.path.exists(file_path):
-                    return True, None
+            if not is_dir and not os.path.exists(file_path):
+                return True, None
             st = os.stat(file_path)
             # 安全验证：禁止符号链接文件
             if os.path.islink(file_path):
                 raise PermissionError("The target file is a symbolic link")            
             # 安全验证：检查目录是否存在，如果不存在则创建
-            if isDir and not os.path.exists(real_path):
+            if is_dir and not os.path.exists(real_path):
                 os.makedirs(real_path, exist_ok=True)
                 os.chmod(file_path, 0o640)
             # 权限校验：检查是否有写权限
@@ -327,10 +325,8 @@ class GraphUtils:
             return False, e
     
     @staticmethod
-    def safe_check_load_file_path(file_path, isDir=False):
+    def safe_check_load_file_path(file_path, is_dir=False):
         # 权限常量定义
-        PERM_GROUP_WRITE = 0o020
-        PERM_OTHER_WRITE = 0o002
         file_path = os.path.normpath(file_path)  # 标准化路径
         real_path = os.path.realpath(file_path)
         safe_base_dir = GraphState.get_global_value('logdir')
@@ -350,16 +346,16 @@ class GraphUtils:
                 raise PermissionError(f"Detected symbolic link file")
             # 安全验证：文件类型检查（防御TOCTOU攻击）
             # 文件类型
-            if not isDir and not os.path.isfile(real_path):
+            if not is_dir and not os.path.isfile(real_path):
                 raise PermissionError(f"Path is not a regular file")
             # 目录类型
-            if isDir and not Path(real_path).is_dir():
+            if is_dir and not Path(real_path).is_dir():
                 raise PermissionError(f"Directory does not exist")
             # 可读性检查
             if not st.st_mode & stat.S_IRUSR:
                 raise PermissionError(f"Directory lacks read permission for others")
             # 文件大小校验
-            if not isDir and os.path.getsize(file_path) > MAX_FILE_SIZE:
+            if not is_dir and os.path.getsize(file_path) > MAX_FILE_SIZE:
                 file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))
                 max_size = GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE)
                 raise PermissionError(
@@ -397,6 +393,8 @@ class GraphUtils:
                     file.name for file in dir_path.iterdir()
                     if file.is_file() and file.name.endswith('.vis.config')
                 ]
+            else:
+                return []
         except Exception as e:
             logger.error(e)
             return []

@@ -36,6 +36,9 @@ SINGLE = 'Single'
 # 前端节点类型
 EXPAND_MODULE = 0
 UNEXPAND_NODE = 1
+# 权限码
+PERM_GROUP_WRITE = 0o020
+PERM_OTHER_WRITE = 0o002
 
 # 后端节点类型
 MODULE = 0
