@@ -28,6 +28,7 @@ from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
+from msprobe.mindspore.common.utils import is_mindtorch
 
 has_adump = True
 try:
@@ -35,9 +36,15 @@ try:
 except ImportError:
     has_adump = False
 
+if is_mindtorch():
+    from torch import distributed as dist
+
 
 class MindsporeDataProcessor(BaseDataProcessor):
-    mindspore_special_type = tuple([ms.Tensor, Number, distributed.P2POp])
+    if is_mindtorch():
+        mindspore_special_type = tuple([ms.Tensor, Number, distributed.P2POp, dist.ProcessGroup])
+    else:
+        mindspore_special_type = tuple([ms.Tensor, Number, distributed.P2POp])
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -109,6 +116,19 @@ class MindsporeDataProcessor(BaseDataProcessor):
         return hasattr(element, "register_hook") and callable(element.register_hook)
 
     @staticmethod
+    def _analyze_process_group(arg):
+        group_info = {"type": "mindspore.ProcessGroup"}
+        try:
+            group_ranks = dist.get_process_group_ranks(arg)
+            group_info.update({"group_ranks": group_ranks})
+            group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
+            group_id = f"{group_ranks_hash:08x}"
+            group_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to get process group ranks info with error info: {e}.")
+        return group_info
+
+    @staticmethod
     def process_group_hash(arg):
         group_ranks = distributed.get_process_group_ranks(arg)
         group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
@@ -149,6 +169,8 @@ class MindsporeDataProcessor(BaseDataProcessor):
             (np.ndarray, lambda e: self._analyze_ndarray(e, suffix_str)),
             (distributed.P2POp, lambda e: self._analyze_p2pop(e, suffix_str))
         ]
+        if is_mindtorch():
+            type_analyzer.append((dist.ProcessGroup, self._analyze_process_group))
         for type_key, analyze_fn in type_analyzer:
             if isinstance(element, type_key):
                 return analyze_fn(element)
