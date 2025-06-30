@@ -238,6 +238,12 @@ def merge_tensor(tensor_list, dump_mode):
     return op_dict if op_dict[CompareConst.OP_NAME] else {}
 
 
+def check_api_info_len(op_name, info_list, len_require):
+    if len(info_list) < len_require:
+        logger.error(f'Index out of bounds error, please check info of api: {op_name}.')
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+
 def print_compare_ends_info():
     total_len = len(CompareConst.COMPARE_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
     logger.info('*' * total_len)
