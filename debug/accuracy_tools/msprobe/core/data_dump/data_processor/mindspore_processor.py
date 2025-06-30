@@ -116,6 +116,12 @@ class MindsporeDataProcessor(BaseDataProcessor):
         return hasattr(element, "register_hook") and callable(element.register_hook)
 
     @staticmethod
+    def process_group_hash(arg):
+        group_ranks = distributed.get_process_group_ranks(arg)
+        group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
+        return f"{group_ranks_hash:08x}"
+
+    @staticmethod
     def _analyze_process_group(arg):
         group_info = {"type": "mindspore.ProcessGroup"}
         try:
@@ -127,12 +133,6 @@ class MindsporeDataProcessor(BaseDataProcessor):
         except Exception as e:
             logger.warning(f"Failed to get process group ranks info with error info: {e}.")
         return group_info
-
-    @staticmethod
-    def process_group_hash(arg):
-        group_ranks = distributed.get_process_group_ranks(arg)
-        group_ranks_hash = zlib.crc32(str(group_ranks).encode('utf-8'))
-        return f"{group_ranks_hash:08x}"
 
     @classmethod
     def get_special_types(cls):
