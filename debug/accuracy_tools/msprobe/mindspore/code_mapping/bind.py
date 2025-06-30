@@ -119,9 +119,17 @@ def find_npy_files(npy_path):
 
     # 如果是目录，使用Path.rglob查找所有.npy文件
     if npy_path_obj.is_dir():
-        for file in npy_path_obj.rglob(Const.NUMPY_PATTERN):
-            check_file_or_directory_path(file)
-            npy_files.append(file.resolve())
+        base_depth = len(npy_path_obj.resolve().parts)
+        for root, dirs, files in os.walk(npy_path_obj):
+            current_depth = len(Path(root).resolve().parts) - base_depth
+            if current_depth >= 10:
+                dirs[:] = []
+
+            for filename in files:
+                if filename.endswith(Const.NUMPY_SUFFIX):
+                    file_path = Path(root) / filename
+                    check_file_or_directory_path(file_path)
+                    npy_files.append(file_path.resolve())
     else:
         logger.info(f"The specified path is neither an .npy file nor a directory: {npy_path}")
 
