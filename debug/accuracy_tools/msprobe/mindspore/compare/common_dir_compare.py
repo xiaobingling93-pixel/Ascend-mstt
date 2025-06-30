@@ -114,24 +114,42 @@ def build_mirror_file_tree(npu_root: Path, bench_root: Path) -> Dict[Path, Tuple
     file_tree = {}
     
     # 遍历NPU目录构建树结构
-    for npu_path in npu_root.rglob('*.npy'):
-        dir_path = npu_path.relative_to(npu_root).parent
-        npu_dir_pair = os.path.join(npu_root, dir_path)
-        bench_dir_pair = os.path.join(bench_root, dir_path)
-        try:
-            check_file_or_directory_path(bench_dir_pair, isdir=True)
-        except FileCheckException:
+    # 使用os.walk遍历目录,限制深度为10层
+    for root, dirs, files in os.walk(npu_root):
+        # 计算当前目录深度
+        depth = len(Path(root).relative_to(npu_root).parts)
+        if depth > 10:
+            dirs.clear()  # 清空dirs列表以阻止继续递归
             continue
-        # 添加到文件树
-        if dir_path not in file_tree:
-            file_tree[dir_path] = (npu_dir_pair, bench_dir_pair)
+            
+        # 检查当前目录下是否有npy文件
+        if any(f.endswith('.npy') for f in files):
+            # 获取相对路径
+            dir_path = Path(root).relative_to(npu_root)
+            npu_dir_pair = os.path.join(npu_root, dir_path)
+            bench_dir_pair = os.path.join(bench_root, dir_path)
+            
+            try:
+                check_file_or_directory_path(bench_dir_pair, isdir=True)
+            except FileCheckException:
+                continue
+                
+            # 添加到文件树
+            if dir_path not in file_tree:
+                file_tree[dir_path] = (npu_dir_pair, bench_dir_pair)
     
     return file_tree
 
 
 def find_npy_files(directory):
     npy_files_dict = {}
-    for root, _, files in os.walk(directory):
+    # 限制递归深度为1层,即只遍历当前目录和其直接子目录
+    for root, dirs, files in os.walk(directory, topdown=True):
+        # 计算当前目录深度
+        depth = root[len(directory):].count(os.sep)
+        # 如果深度超过10层则跳过
+        if depth > 10:
+            dirs.clear()
         for file in files:
             if file.endswith(".npy"):
                 # 分割文件名并去掉最后两个元素
