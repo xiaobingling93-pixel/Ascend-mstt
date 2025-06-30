@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
 import types
+import torch
 from torch._dynamo.convert_frame import convert_frame as _orig_convert_frame, Hooks
 from msprobe.pytorch.hook_module.api_register import get_api_register
 
