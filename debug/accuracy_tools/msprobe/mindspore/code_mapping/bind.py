@@ -254,7 +254,18 @@ def bind_code_info_for_data(input_dir: str, nodes: Dict[str, GraphNode]) -> Dict
                 corresponding_name = None
             name_without_ext = os.path.splitext(corresponding_name)[0]
         npy_path = os.path.realpath(npy_file)
-        node_scope = name_without_ext.split(".")[1]
+
+        parts = name_without_ext.split(".")
+        if len(parts) < 2:
+            logger.error(
+                f'File name "{file_name}" in "{directory}" '
+                f'does not conform to expected format (missing scope separator ".")!'
+            )
+            raise Exception(
+                f'File name "{file_name}" has incorrect format, cannot extract node scope!'
+            )
+        node_scope = parts[1]
+
         trie = Trie()
         for key, value in match_dict.items():
             trie.insert(key, value)

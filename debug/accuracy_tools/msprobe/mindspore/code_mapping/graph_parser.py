@@ -91,7 +91,7 @@ class Parser:
 
     def parse_nodes(self, text: str, subgraph_info: GraphNode) -> None:
         node_pattern = re.compile(
-            r'(%\d{1,10000})\(([A-Za-z0-9_\.]{1,100000})\)\s*=\s*([A-Za-z_][A-Za-z0-9_]{0,10000})\(')
+            r'(%\d{1,10000})\(([A-Za-z0-9_\.]{1,10000})\)\s*=\s*([A-Za-z_][A-Za-z0-9_]{0,10000})\(')
         matches = list(node_pattern.finditer(text))
         for i, match in enumerate(matches):
             series_number = match.group(1)
