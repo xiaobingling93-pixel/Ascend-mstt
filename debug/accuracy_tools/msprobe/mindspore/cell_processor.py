@@ -262,6 +262,7 @@ class CellProcessor:
 
     def set_construct_info_in_hook(self, full_name):
         tid = threading.get_ident()
+        CellProcessor.cell_queue.remove_name(full_name)
         CellProcessor.api_parent_node[tid] = None
         if self.cell_stack.get(tid):
             CellProcessor.cell_stack[tid].pop()
