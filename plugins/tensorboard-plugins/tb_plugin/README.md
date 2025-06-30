@@ -1,43 +1,20 @@
 # PyTorch Profiler TensorBoard NPU Plugin
 
+### 下架说明
+本插件代码已不再维护，推荐使用[MindStudio Insight](https://www.hiascend.com/document/detail/zh/mindstudio/80RC1/GUI_baseddevelopmenttool/msascendinsightug/)工具获取更为强大的调优体验。
+
 ### 介绍
 此工具是PyTorch profiling数据以及可视化的TensorBoard的插件。 \
-它支持将Ascend平台采集、解析的Pytorch Profiling数据可视化呈现，也兼容GPU数据采集、解析可视化，现已支持PyTorch 2.0GPU版本的profiling数据可视化。同时集成了精度比对的功能，支持查看loss曲线和比对两个网络的loss收敛趋势。
+它支持将Ascend平台采集、解析的Pytorch Profiling数据可视化呈现，也兼容GPU数据采集、解析可视化，支持PyTorch 2.0GPU版本的profiling数据可视化。同时集成了精度比对的功能，支持查看loss曲线和比对两个网络的loss收敛趋势。
 
 ### 快速安装说明
 * 相关依赖：
   pandas >= 1.0.0 ，tensorboard >= 2.11.0，protobuf <= 3.20.3
 * 安装方式
-  1. pip安装（推荐） \
-    * 现本插件已经上传到pypi社区，用户可在python环境下直接通过以下pip指令进行安装：\
+    * 本插件已经上传到pypi社区，用户可在python环境下直接通过以下pip指令进行安装：\
     `pip install torch-tb-profiler-ascend`
     * 也可在pypi社区上下载离线whl包，传输到无法访问公网的环境上离线安装使用。访问[下载链接](https://pypi.org/project/torch-tb-profiler-ascend/#files)选择whl包进行下载，之后便可使用指令安装（此处{version}为whl包实际版本）\
     `pip install torch-tb-profiler_ascend_{version}_py3_none_any.whl`
-
-  2. 从源代码安装
-     * 从仓库下载源码:
-
-       `git clone https://gitee.com/ascend/mstt.git`
-
-     * 进入目录 `/plugins/tensorboard-plugins/tb_plugin` 下.
-     * 编译前端代码
-       ```
-        cd fe
-        # 此步骤为安装前端依赖
-        yarn
-        # 回到上层目录执行构建指令
-        cd ..
-        python setup.py build_fe
-       ```
-     **注意**: 编译前端步骤需要安装[Node.js](https://nodejs.org/zh-cn/download)和[yarn](https://yarn.bootcss.com/docs/install/index.html)环境
-     * 执行安装命令可直接安装:
-       - `pip install .`
-     * 或： 构建whl包安装
-       - `python setup.py build_fe sdist bdist_wheel`
-
-       在 `/tb_plugins/profiling/tb_plugin/dist` 目录下取出whl包，使用以下指令安装（此处{version}为whl包实际版本）
-
-       `pip install torch-tb-profiler-ascend-{version}-py3-none-any.whl`
 
 ### 解析数据说明
 

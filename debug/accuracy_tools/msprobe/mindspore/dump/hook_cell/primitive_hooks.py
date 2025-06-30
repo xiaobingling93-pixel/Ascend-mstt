@@ -14,13 +14,16 @@
 # limitations under the License.
 
 import os
+import threading
 
 from mindspore import ops
 from mindspore.common.tensor import Tensor
-
-from msprobe.core.common.utils import Const, DumpException
-from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputs, ModuleBackwardOutputs,
-                                                        ModuleForwardInputsOutputs)
+from msprobe.core.common.utils import Const, DumpException, ThreadSafe
+from msprobe.core.data_dump.data_processor.base import (
+    ModuleBackwardInputs,
+    ModuleBackwardOutputs,
+    ModuleForwardInputsOutputs
+)
 from msprobe.core.hook_manager import BaseHookManager
 from msprobe.mindspore.common.log import logger
 
@@ -56,10 +59,13 @@ class PrimitiveHookService:
                 callable: 反向 hook 函数。
             """
 
+            @ThreadSafe.synchronized
             def backward_hook(grad):
+                tid = threading.get_ident()
+                BaseHookManager.inner_switch[tid] = True
+
                 captured_grads.extend(grad)
                 backward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
-                self.service_instance.inner_switch = True
                 try:
                     if hook_type == Const.INPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
@@ -78,7 +84,7 @@ class PrimitiveHookService:
                     logger.error(f"This is a primitive op {hook_type}_backward dump error: {exception}, "
                                  f"updated_primitive_name: {updated_primitive_name}")
                     raise DumpException(DumpException.BACKWARD_DATA_COLLECTION_ERROR) from exception
-                self.service_instance.inner_switch = False
+                BaseHookManager.inner_switch[tid] = False
 
             return backward_hook
 
@@ -137,9 +143,13 @@ class PrimitiveHookService:
                 return tuple(hooked_outputs)
             return out
 
+        @ThreadSafe.synchronized
         def pre_forward_hook(primitive_name, primitive_instance, args, kwargs):
+            tid = threading.get_ident()
+            BaseHookManager.inner_switch[tid] = True
+
+            self.service_instance.data_collector.update_api_or_module_name(primitive_name)
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
-            self.service_instance.inner_switch = True
             try:
                 self.service_instance.data_collector.forward_input_data_collect(
                     primitive_name,
@@ -151,11 +161,15 @@ class PrimitiveHookService:
                 logger.error(f"This is a primitive op dump error during forward input data collection: {exception}, "
                              f"primitive_name: {primitive_name}")
                 raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
-            self.service_instance.inner_switch = False
+            BaseHookManager.inner_switch[tid] = False
 
+        @ThreadSafe.synchronized
         def post_forward_hook(primitive_name, primitive_instance, args, kwargs, output):
+            tid = threading.get_ident()
+            BaseHookManager.inner_switch[tid] = True
+
+            self.service_instance.data_collector.update_api_or_module_name(primitive_name)
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
-            self.service_instance.inner_switch = True
             try:
                 self.service_instance.data_collector.forward_output_data_collect(
                     primitive_name,
@@ -167,7 +181,7 @@ class PrimitiveHookService:
                 logger.error(f"This is a primitive op dump error during forward output data collection: {exception}, "
                              f"primitive_name: {primitive_name}")
                 raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
-            self.service_instance.inner_switch = False
+            BaseHookManager.inner_switch[tid] = False
 
         def wrapped_primitive_call(instance_self, *args, **kwargs):
             """
@@ -185,7 +199,8 @@ class PrimitiveHookService:
             current_count = self.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}{Const.SEP}{primitive_name}{Const.SEP}{current_count}"
 
-            if not self.service_instance.primitive_switch or BaseHookManager.inner_switch:
+            tid = threading.get_ident()
+            if not self.service_instance.primitive_switch or BaseHookManager.inner_switch[tid]:
                 return origin_func(*args, **kwargs)
 
             captured_grads_input, captured_grads_output = [], []
@@ -198,8 +213,6 @@ class PrimitiveHookService:
                 raise DumpException(DumpException.INPUT_HOOK_ERROR) from exception
 
             forward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.FORWARD}"
-            self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
-
             pre_forward_hook(forward_primitive_name, instance_self, hooked_inputs, kwargs)
             try:
                 out = origin_func(*hooked_inputs, **kwargs)
@@ -220,6 +233,7 @@ class PrimitiveHookService:
 
         return wrapped_primitive_call
 
+    @ThreadSafe.synchronized
     def update_primitive_counters(self, primitive_name):
         if primitive_name not in self.primitive_counters:
             self.primitive_counters[primitive_name] = 0

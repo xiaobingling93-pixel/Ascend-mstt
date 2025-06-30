@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -85,8 +87,8 @@ class TestCellProcessor(unittest.TestCase):
 
     def test_reset_cell_stats(self):
         CellProcessor.cell_count['cell'] = 0
-        CellProcessor.cell_stack.append('cell')
-        CellProcessor.api_parent_node = 'cell'
+        CellProcessor.cell_stack['tid'] = 'cell'
+        CellProcessor.api_parent_node['tid'] = 'cell'
         CellProcessor.module_node['cell'] = 'null'
         CellProcessor.cell_bw_hook_kernels['cell'] = 'bw'
         CellProcessor.cell_backward_pre_hook.append('backward_pre_hook')
@@ -94,8 +96,8 @@ class TestCellProcessor(unittest.TestCase):
 
         CellProcessor.reset_cell_stats()
         self.assertEqual(CellProcessor.cell_count, {})
-        self.assertEqual(CellProcessor.cell_stack, [])
-        self.assertIsNone(CellProcessor.api_parent_node)
+        self.assertEqual(CellProcessor.cell_stack, {})
+        self.assertEqual(CellProcessor.api_parent_node, {})
         self.assertEqual(CellProcessor.module_node, {})
         self.assertEqual(CellProcessor.cell_bw_hook_kernels, {})
         self.assertEqual(CellProcessor.cell_backward_pre_hook, [])
@@ -182,7 +184,7 @@ class TestCellProcessor(unittest.TestCase):
 
         with patch.object(_inner_ops, 'CellBackwardHook') as mock_CellBackwardHook:
             forward_pre_hook = self.processor.build_cell_hook(cell_name, mock_build_data_hook)
-            forward_hook = forward_pre_hook.__closure__[2].cell_contents
+            forward_hook = forward_pre_hook.__closure__[1].cell_contents.__closure__[2].cell_contents
 
             mock_bw = mock_CellBackwardHook.return_value
             mock_bw.return_value = (Tensor([0.0]),)
@@ -193,8 +195,8 @@ class TestCellProcessor(unittest.TestCase):
             # call testing function - forward_pre_hook
             ret = forward_pre_hook(mock_cell, args)
             self.assertIsNone(CellProcessor.module_node[full_forward_name])
-            self.assertEqual(CellProcessor.cell_stack, [full_forward_name])
-            self.assertEqual(CellProcessor.api_parent_node, full_forward_name)
+            self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], [full_forward_name])
+            self.assertEqual(CellProcessor.api_parent_node[threading.get_ident()], full_forward_name)
             self.scope.begin_module.assert_called_with(full_forward_name)
             mock_build_data_hook.assert_called_with('Module', full_forward_name)
             self.assertEqual(len(CellProcessor.cell_backward_hook), 1)
@@ -211,8 +213,8 @@ class TestCellProcessor(unittest.TestCase):
             ret = backward_hook(mock_cell, grad_input, grad_output)
             mock_backward_data_hook.assert_called_with(mock_cell, grad_input, grad_output)
             self.assertFalse(mock_cell.has_pre_hook_called)
-            self.assertEqual(CellProcessor.cell_stack, [])
-            self.assertIsNone(CellProcessor.api_parent_node)
+            self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], [])
+            self.assertIsNone(CellProcessor.api_parent_node[threading.get_ident()])
             self.scope.end_module.assert_called_with(full_backward_name)
             self.assertTrue((ret[0] == target_grad_output[0]).all())
 
@@ -222,16 +224,16 @@ class TestCellProcessor(unittest.TestCase):
             # call testing function - forward_pre_hook
             ret = forward_pre_hook(mock_cell, args)
             self.assertIsNone(CellProcessor.module_node[full_forward_name])
-            self.assertEqual(CellProcessor.cell_stack, [full_forward_name])
-            self.assertEqual(CellProcessor.api_parent_node, full_forward_name)
+            self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], [full_forward_name])
+            self.assertEqual(CellProcessor.api_parent_node[threading.get_ident()], full_forward_name)
             self.scope.begin_module.assert_called_with(full_forward_name)
             self.assertEqual(len(CellProcessor.cell_backward_hook), 1)
             mock_build_data_hook.assert_not_called()
 
             full_forward_name = f'{cell_name}{Const.FORWARD}.0'
             CellProcessor.cell_count = {cell_name: 0}
-            CellProcessor.cell_stack = [full_forward_name]
-            CellProcessor.api_parent_node = full_forward_name
+            CellProcessor.cell_stack[threading.get_ident()] = [full_forward_name]
+            CellProcessor.api_parent_node[threading.get_ident()] = full_forward_name
             CellProcessor.module_node = {full_forward_name: None}
             self.scope.reset_mock()
             mock_CellBackwardHook.reset_mock()
@@ -249,8 +251,8 @@ class TestCellProcessor(unittest.TestCase):
             # call testing function - forward_hook
             ret = forward_hook(mock_cell, args, output)
             self.assertEqual(CellProcessor.cell_count.get(cell_name), 0)
-            self.assertEqual(CellProcessor.cell_stack, [])
-            self.assertIsNone(CellProcessor.api_parent_node)
+            self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], [])
+            self.assertIsNone(CellProcessor.api_parent_node[threading.get_ident()])
             self.scope.end_module.assert_called_with(full_forward_name)
             self.assertEqual(mock_bw.call_count, 2)
             self.assertEqual(mock_bw.call_args_list[0][0][0], output)
@@ -266,16 +268,16 @@ class TestCellProcessor(unittest.TestCase):
             ret = backward_pre_hook(mock_cell, grad_output)
             self.assertTrue(mock_cell.has_pre_hook_called)
             self.scope.begin_module.assert_called_with(full_backward_name)
-            self.assertEqual(CellProcessor.cell_stack, [full_backward_name])
-            self.assertEqual(CellProcessor.api_parent_node, full_backward_name)
+            self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], [full_backward_name])
+            self.assertEqual(CellProcessor.api_parent_node[threading.get_ident()], full_backward_name)
             self.assertEqual(CellProcessor.module_node, {full_forward_name: None, full_backward_name: None})
             self.scope.begin_module.assert_called_with(full_backward_name)
             mock_backward_data_hook.assert_not_called()
             self.assertIsNone(ret)
 
             CellProcessor.cell_count = {cell_name: 0}
-            CellProcessor.cell_stack = [full_forward_name]
-            CellProcessor.api_parent_node = full_forward_name
+            CellProcessor.cell_stack[threading.get_ident()] = [full_forward_name]
+            CellProcessor.api_parent_node[threading.get_ident()] = full_forward_name
             CellProcessor.module_node = {full_forward_name: None}
             mock_bw.reset_mock()
             args = (Tensor([1.0]),)
@@ -290,8 +292,8 @@ class TestCellProcessor(unittest.TestCase):
             self.assertTrue((ret[0] == target_output[0]).all())
 
             CellProcessor.cell_count = {cell_name: 0}
-            CellProcessor.cell_stack = [full_forward_name]
-            CellProcessor.api_parent_node = full_forward_name
+            CellProcessor.cell_stack[threading.get_ident()] = [full_forward_name]
+            CellProcessor.api_parent_node[threading.get_ident()] = full_forward_name
             CellProcessor.module_node = {full_forward_name: None}
             CellProcessor.cell_bw_hook_kernels.clear()
             CellProcessor.cell_backward_pre_hook.clear()
@@ -313,8 +315,8 @@ class TestCellProcessor(unittest.TestCase):
             self.assertFalse(mock_cell.has_pre_hook_called)
             self.scope.begin_module.assert_called_with(full_backward_name)
             mock_backward_data_hook.assert_called_with(mock_cell, (), grad_output)
-            self.assertEqual(CellProcessor.cell_stack, [])
-            self.assertIsNone(CellProcessor.api_parent_node)
+            self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], [])
+            self.assertIsNone(CellProcessor.api_parent_node[threading.get_ident()])
             self.assertEqual(CellProcessor.module_node, {full_forward_name: None, full_backward_name: None})
             self.scope.end_module.assert_called_with(full_backward_name)
             self.assertIsNone(ret)
@@ -325,15 +327,15 @@ class TestCellProcessor(unittest.TestCase):
         CellProcessor.reset_cell_stats()
         self.processor.set_construct_info_in_pre_hook('full_name')
         self.assertEqual(CellProcessor.module_node['full_name'], None)
-        self.assertEqual(CellProcessor.cell_stack, ['full_name'])
-        self.assertEqual(CellProcessor.api_parent_node, 'full_name')
+        self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], ['full_name'])
+        self.assertEqual(CellProcessor.api_parent_node[threading.get_ident()], 'full_name')
         self.scope.begin_module.assert_called_with('full_name')
 
         self.scope.begin_module.reset_mock()
         self.processor.set_construct_info_in_pre_hook('sub_cell_name')
         self.assertEqual(CellProcessor.module_node, {'full_name': None, 'sub_cell_name': 'full_name'})
-        self.assertEqual(CellProcessor.cell_stack, ['full_name', 'sub_cell_name'])
-        self.assertEqual(CellProcessor.api_parent_node, 'sub_cell_name')
+        self.assertEqual(CellProcessor.cell_stack[threading.get_ident()], ['full_name', 'sub_cell_name'])
+        self.assertEqual(CellProcessor.api_parent_node[threading.get_ident()], 'sub_cell_name')
         self.scope.begin_module.assert_called_with('sub_cell_name')
 
         CellProcessor.reset_cell_stats()
@@ -341,21 +343,21 @@ class TestCellProcessor(unittest.TestCase):
     def test_set_construct_info_in_hook(self):
         CellProcessor.reset_cell_stats()
         self.processor.set_construct_info_in_hook('full_name')
-        self.assertIsNone(CellProcessor.api_parent_node)
+        self.assertIsNone(CellProcessor.api_parent_node[threading.get_ident()])
         self.scope.end_module.assert_called_with('full_name')
 
         self.scope.end_module.reset_mock()
-        CellProcessor.cell_stack = ['full_name']
+        CellProcessor.cell_stack[threading.get_ident()] = ['full_name']
         self.processor.set_construct_info_in_hook('full_name')
-        self.assertEqual(CellProcessor.cell_stack, [])
-        self.assertIsNone(CellProcessor.api_parent_node)
+        self.assertEqual(CellProcessor.cell_stack, {threading.get_ident(): []})
+        self.assertIsNone(CellProcessor.api_parent_node[threading.get_ident()])
         self.scope.end_module.assert_called_with('full_name')
 
         self.scope.end_module.reset_mock()
-        CellProcessor.cell_stack = ['Cell.0', 'Cell.1']
+        CellProcessor.cell_stack[threading.get_ident()] = ['Cell.0', 'Cell.1']
         self.processor.set_construct_info_in_hook('full_name')
-        self.assertEqual(CellProcessor.cell_stack, ['Cell.0'])
-        self.assertEqual(CellProcessor.api_parent_node, 'Cell.0')
+        self.assertEqual(CellProcessor.cell_stack, {threading.get_ident():['Cell.0']})
+        self.assertEqual(CellProcessor.api_parent_node[threading.get_ident()], 'Cell.0')
         self.scope.end_module.assert_called_with('full_name')
 
         CellProcessor.reset_cell_stats()

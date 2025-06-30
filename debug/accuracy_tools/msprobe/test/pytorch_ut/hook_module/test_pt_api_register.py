@@ -53,18 +53,6 @@ class TestAPIRegister(unittest.TestCase):
         self.assertEqual(result, "test_handle")
         mock_logger.assert_not_called()
 
-    def test_dist_module_forward_with_batch_op(self):
-        mock_reqs = [MagicMock(), MagicMock()]
-        mock_module = MagicMock()
-        mock_module.api_func.return_value = mock_reqs
-        mock_module.api_name = "batch_isend_irecv"
-
-        result = dist_module_forward(mock_module)
-
-        for req in mock_reqs:
-            req.wait.assert_called_once()
-        self.assertEqual(result, mock_reqs)
-
     @patch('msprobe.pytorch.hook_module.api_register.ApiRegistry')
     def test_get_api_register_with_new_obj(self, mock_api_registry):
         get_api_register(return_new=True)

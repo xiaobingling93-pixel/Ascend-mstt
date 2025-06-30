@@ -42,7 +42,7 @@ class LayoutHierarchyController:
 
     @staticmethod
     def update_hierarchy_data(graph_type):
-        if LayoutHierarchyController.hierarchy[graph_type]:
+        if LayoutHierarchyController.hierarchy.get(graph_type, None):
             return LayoutHierarchyController.hierarchy[graph_type].update_hierarchy_data()
         else:
             return {}

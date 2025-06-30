@@ -15,6 +15,7 @@
 
 import atexit
 import os
+import threading
 import traceback
 
 from msprobe.core.data_dump.scope import ScopeFactory
@@ -117,6 +118,7 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
+            self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
         except Exception:
@@ -138,7 +140,6 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
-            self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
         except Exception:
@@ -255,7 +256,9 @@ class DataCollector:
             else:
                 if self.config.level == Const.LEVEL_MIX and \
                   not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
-                    self.data_writer.update_construct({name: self.module_processor.api_parent_node})
+                    self.data_writer.update_construct(
+                        {name: self.module_processor.api_parent_node.get(threading.get_ident())}
+                    )
 
             self.data_writer.update_construct(self.module_processor.module_node)
 

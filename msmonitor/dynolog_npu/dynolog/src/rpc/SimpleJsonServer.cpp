@@ -30,8 +30,6 @@ constexpr char DEL_ASCII = 127;
 
 namespace dynolog {
 
-void secure_clear_password(std::string& password);
-
 SimpleJsonServerBase::SimpleJsonServerBase(int port) : port_(port)
 {
     try {
@@ -43,6 +41,10 @@ SimpleJsonServerBase::SimpleJsonServerBase(int port) : port_(port)
         }
     } catch (const std::exception& e) {
         LOG(ERROR) << "Failed to initialize server: " << e.what();
+        if (sock_fd_ != -1) {
+            close(sock_fd_);
+            sock_fd_ = -1;
+        }
         throw;
     }
 }
@@ -753,18 +755,6 @@ void SimpleJsonServerBase::configure_context(SSL_CTX* ctx)
 
     // 9. 设置证书验证选项
     SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
-}
-
-void secure_clear_password(std::string& password)
-{
-    if (!password.empty()) {
-        // 使用随机数据覆盖密码
-        std::generate(password.begin(), password.end(), std::rand);
-        // 清空字符串
-        password.clear();
-        // 收缩字符串容量，释放内存
-        password.shrink_to_fit();
-    }
 }
 
 } // namespace dynolog

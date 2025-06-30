@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import read_csv, create_directory, remove_path, recursive_chmod
-from msprobe.core.common.utils import is_int
+from msprobe.core.common.utils import check_process_num
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import get_target_output_dir
@@ -33,7 +33,6 @@ all_data_type_list = [
     "grad_unreduced", "grad_reduced", "param_origin", "param_updated"
 ]
 CSV_FILE_SUFFIX = r"_\d+-\d+\.csv"
-MAX_PROCESS_NUM = 128
 
 
 def parse_step_line(line, ops):
@@ -117,13 +116,6 @@ def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
                 all_step_result = update_dict(all_step_result, parse_step_result)
             if all_step_result:
                 write_step(output_dirpath, all_step_result, rank, data_type)
-
-
-def check_process_num(process_num):
-    if not is_int(process_num) or process_num <= 0:
-        raise ValueError(f"process_num({process_num}) is not a positive integer")
-    if process_num > MAX_PROCESS_NUM:
-        raise ValueError(f"The maximum supported process_num is {MAX_PROCESS_NUM}, current value: {process_num}.")
 
 
 def check_data_type_list(data_type_list):

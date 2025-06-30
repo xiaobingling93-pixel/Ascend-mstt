@@ -17,7 +17,7 @@ from torch.utils.data import dataloader
 
 from msprobe.core.common.const import Const, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.utils import check_token_range
+from msprobe.core.common.utils import check_token_range, ThreadSafe
 from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import check_save_param, is_torch_nn_module
@@ -81,6 +81,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         return func_wrapper
 
     @classmethod
+    @ThreadSafe.synchronized
     def start(cls, model=None, token_range=None):
         instance = cls._get_instance()
         if instance is None:
@@ -95,6 +96,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             instance.service.start(instance.model, token_range)
 
     @classmethod
+    @ThreadSafe.synchronized
     def stop(cls):
         instance = cls._get_instance()
         if instance is None:
@@ -105,6 +107,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             instance.service.stop()
 
     @classmethod
+    @ThreadSafe.synchronized
     def step(cls):
         instance = cls._get_instance()
         if instance is None:
@@ -112,6 +115,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         cls._instance.service.step()
 
     @classmethod
+    @ThreadSafe.synchronized
     def monitor(cls, model):
         if not cls._instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
@@ -120,6 +124,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         cls._instance.gm.monitor(model)
 
     @classmethod
+    @ThreadSafe.synchronized
     def save(cls, variable, name, save_backward=True):
         instance = cls._instance
         if not instance:
@@ -143,6 +148,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             dataloader._BaseDataLoaderIter.__next__ = self._iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
 
+@ThreadSafe.synchronized
 def module_dump(module, dump_name):
     if not is_torch_nn_module(module):
         raise MsprobeException(
@@ -164,6 +170,7 @@ def module_dump(module, dump_name):
     instance.module_dumper.start_module_dump(module, dump_name)
 
 
+@ThreadSafe.synchronized
 def module_dump_end():
     instance = PrecisionDebugger._instance
     if not instance:

@@ -86,7 +86,8 @@ public:
         Py_INCREF(Py_None);
         ptr = Py_None;
     }
-    PythonObject(PyObject* o) : ptr(o) {
+    PythonObject(PyObject* o) : ptr(o)
+    {
         if (ptr == nullptr) {
             ptr = Py_None;
         }

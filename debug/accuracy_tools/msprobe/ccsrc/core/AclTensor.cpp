@@ -273,7 +273,7 @@ size_t SizeOfTensor(const AclTensorInfo& tensor, bool host)
     return num * eleSize;
 }
 
-static inline int64_t GetCubeSizeByType(const AclDtype& dtype) 
+static inline int64_t GetCubeSizeByType(const AclDtype& dtype)
 {
     if (dtype == AclDtype::DT_UINT8 || dtype == AclDtype::DT_INT8) {
         return CUBE_32;
@@ -842,7 +842,8 @@ static DebuggerErrno TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* 
 static DebuggerErrno TransInt4ToInt8(const uint8_t* input,
                                      size_t elemNums,
                                      uint8_t* output,
-                                     size_t bufferSize) {
+                                     size_t bufferSize)
+{
     // 输出缓冲区要能容纳 elemNums 个 int8_t
     if (bufferSize < elemNums * sizeof(int8_t)) {
         LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW,

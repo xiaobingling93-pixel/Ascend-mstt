@@ -17,4 +17,3 @@ chrono = "0.4"
 num-bigint = "0.4"
 openssl = { version = "0.10", features = ["vendored"] }
 rpassword = "7.2.0"
-

@@ -210,25 +210,29 @@ class ParseData:
             # 遍历单个API的所有item
             for index, op_name in enumerate(op_name_reorder):
                 result[CompareConst.OP_NAME].append(op_name)
-                if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
-                    struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
-                elif CompareConst.OUTPUT_PATTERN in op_name:
-                    struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
-                elif CompareConst.PARAMS_PATTERN in op_name:
-                    struct = merge_list[CompareConst.PARAMS_STRUCT].pop(0)
-                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
-                    struct = merge_list[CompareConst.PARAMS_GRAD_STRUCT].pop(0)
-                else:
-                    struct = merge_list[CompareConst.DEBUG_STRUCT].pop(0)
-                result[Const.DTYPE].append(struct[0])
-                result[Const.SHAPE].append(struct[1])
-                if self.mode_config.dump_mode == Const.MD5:
-                    result[Const.MD5].append(struct[2])
-                result[Const.SUMMARY].append(summary_reorder.pop(0))
-                result[Const.STACK_INFO].append(
-                    merge_list[Const.STACK_INFO][0] if index == 0 and self.mode_config.stack_mode else None)
-                if self.mode_config.dump_mode == Const.ALL:
-                    result['data_name'].append(data_name_reorder.pop(0))
+                try:
+                    if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
+                        struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
+                    elif CompareConst.OUTPUT_PATTERN in op_name:
+                        struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
+                    elif CompareConst.PARAMS_PATTERN in op_name:
+                        struct = merge_list[CompareConst.PARAMS_STRUCT].pop(0)
+                    elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
+                        struct = merge_list[CompareConst.PARAMS_GRAD_STRUCT].pop(0)
+                    else:
+                        struct = merge_list[CompareConst.DEBUG_STRUCT].pop(0)
+                    result[Const.DTYPE].append(struct[0])
+                    result[Const.SHAPE].append(struct[1])
+                    if self.mode_config.dump_mode == Const.MD5:
+                        result[Const.MD5].append(struct[2])
+                    result[Const.SUMMARY].append(summary_reorder.pop(0))
+                    result[Const.STACK_INFO].append(
+                        merge_list[Const.STACK_INFO][0] if index == 0 and self.mode_config.stack_mode else None)
+                    if self.mode_config.dump_mode == Const.ALL:
+                        result['data_name'].append(data_name_reorder.pop(0))
+                except IndexError as e:
+                    logger.error(f'Index out of bounds error, please check info of api: {op_name}.')
+                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
             progress_bar.update(1)
         progress_bar.close()

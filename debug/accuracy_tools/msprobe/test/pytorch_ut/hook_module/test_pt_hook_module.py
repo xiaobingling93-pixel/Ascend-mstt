@@ -26,14 +26,14 @@ class TestHOOKModule(unittest.TestCase):
     def setUp(self):
         self.mock_build_hook = MagicMock(return_value=HookSet(MagicMock(), MagicMock(), MagicMock()))
         HOOKModule.module_count = defaultdict(int)
-        HOOKModule.inner_stop_hook = {}
+        HOOKModule.inner_stop_hook = defaultdict(bool)
 
     def test_init_with_stop_hook(self):
-        expected_thread = threading.current_thread().ident
+        expected_thread = threading.get_ident()
         HOOKModule.inner_stop_hook[expected_thread] = True
 
         module1 = HOOKModule(self.mock_build_hook)
-        current_thread = module1.current_thread
+        current_thread = module1.tid
 
         self.assertEqual(current_thread, expected_thread)
         self.assertTrue(module1.inner_stop_hook[current_thread])
@@ -42,8 +42,8 @@ class TestHOOKModule(unittest.TestCase):
 
     def test_init_with_start_hook(self):
         module1 = HOOKModule(self.mock_build_hook)
-        current_thread = module1.current_thread
-        expected_thread = threading.current_thread().ident
+        current_thread = module1.tid
+        expected_thread = threading.get_ident()
 
         self.assertEqual(current_thread, expected_thread)
         self.assertFalse(module1.inner_stop_hook[current_thread])

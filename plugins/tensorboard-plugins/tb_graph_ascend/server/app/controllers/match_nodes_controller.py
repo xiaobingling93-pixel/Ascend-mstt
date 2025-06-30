@@ -270,10 +270,8 @@ class MatchNodesController:
     @staticmethod
     def process_md5_task_delete(graph_data, npu_node_name, bench_node_name):
         config_data = GraphState.get_global_value("config_data")
-        npu_match_nodes_list = config_data.get('npuMatchNodes', {})
-        bench_match_nodes_list = config_data.get('benchMatchNodes', {})
-        if npu_match_nodes_list.get(npu_node_name) != bench_node_name or bench_match_nodes_list.get(
-                bench_node_name) != npu_node_name:
+        manual_match_nodes = config_data.get('manualMatchNodes', {})
+        if manual_match_nodes.get(npu_node_name) != bench_node_name:
             return {
                 'success': False,
                 'error': "操作失败：节点未匹配，请先匹配节点",
@@ -294,10 +292,8 @@ class MatchNodesController:
     @staticmethod
     def process_summary_task_delete(graph_data, npu_node_name, bench_node_name):
         config_data = GraphState.get_global_value("config_data")
-        npu_match_nodes_list = config_data.get('npuMatchNodes', {})
-        bench_match_nodes_list = config_data.get('benchMatchNodes', {})
-        if npu_match_nodes_list.get(npu_node_name) != bench_node_name or bench_match_nodes_list.get(
-                bench_node_name) != npu_node_name:
+        manual_match_nodes = config_data.get('manualMatchNodes', {})
+        if manual_match_nodes.get(npu_node_name) != bench_node_name:
             return {
                 'success': False,
                 'error': "操作失败：节点未匹配，请先匹配节点",

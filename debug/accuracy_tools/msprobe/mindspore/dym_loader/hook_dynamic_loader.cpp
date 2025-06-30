@@ -29,7 +29,8 @@ HookDynamicLoader &HookDynamicLoader::GetInstance()
     return instance;
 }
 
-bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionName) {
+bool HookDynamicLoader::LoadFunction(void *handle, const std::string &functionName)
+{
     void *func = dlsym(handle, functionName.c_str());
     if (!func) {
         MS_LOG(WARNING) << "Could not load function: " << functionName << ", error: " << dlerror();

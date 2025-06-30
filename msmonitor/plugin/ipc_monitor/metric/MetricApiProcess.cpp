@@ -38,7 +38,7 @@ void MetricApiProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityApi* apiData = ReinterpretConvert<msptiActivityApi*>(record);
     msptiActivityApi* tmp = ReinterpretConvert<msptiActivityApi*>(MsptiMalloc(sizeof(msptiActivityApi), ALIGN_SIZE));
-    if (memcpy_s(tmp, sizeof(msptiActivityApi), apiData, sizeof(msptiActivityApi)) != EOK) {
+    if (tmp == nullptr || memcpy_s(tmp, sizeof(msptiActivityApi), apiData, sizeof(msptiActivityApi)) != EOK) {
         MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
         LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
         return;

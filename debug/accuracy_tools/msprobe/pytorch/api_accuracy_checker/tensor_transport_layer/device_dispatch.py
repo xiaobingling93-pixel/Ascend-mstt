@@ -43,9 +43,9 @@ CommonCompareConfig = namedtuple('CommonCompareConfig', ['compare', 'handle_func
 
 
 def get_gpu_device():
+    is_gpu = False
     try:
         import torch_npu
-        is_gpu = False
     except ImportError:
         is_gpu = True
     return is_gpu

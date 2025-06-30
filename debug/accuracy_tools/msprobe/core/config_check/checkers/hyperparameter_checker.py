@@ -20,12 +20,13 @@ from difflib import SequenceMatcher
 from typing import Union, List, Dict, Any
 import pandas as pd
 
+from msprobe.core.common.utils import check_extern_input_list
 from msprobe.core.config_check.checkers.base_checker import BaseChecker
 from msprobe.core.config_check.config_checker import register_checker_item
 from msprobe.core.config_check.utils.utils import compare_dict, config_checking_print, update_dict
 from msprobe.core.config_check.utils.hyperparameter_parser import ParserFactory
-from msprobe.core.common.file_utils import (os_walk_for_files, create_file_in_zip, load_json, create_file_with_list,
-                                            FileOpen, load_yaml)
+from msprobe.core.common.file_utils import (check_file_or_directory_path, create_file_in_zip, load_json,
+                                            load_yaml)
 from msprobe.core.common.const import Const
 
 
@@ -47,13 +48,13 @@ class HyperparameterChecker(BaseChecker):
         output_zip_path = pack_input.output_zip_path
 
         if shell_path:
-            if not isinstance(shell_path, list):
-                raise TypeError("shell_path should be a list of file paths.")
+            check_extern_input_list(shell_path)
 
             hyperparameters = {}
             parser_factory = ParserFactory()
             for script_path in shell_path:
                 if os.path.isfile(script_path):
+                    check_file_or_directory_path(script_path)
                     parser = parser_factory.get_parser(os.path.splitext(script_path)[1])
                     update_dict(hyperparameters, parser.run(os.path.realpath(script_path)))
                 else:

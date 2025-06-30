@@ -53,15 +53,11 @@ class Hierarchy:
     def extract_label_name(node_name, node_type):
         splited_subnode_name = node_name.split('.')
         splited_label = []
-        # Module.layer1.1.relu.ReLU.forward.1 =>relu.ReLU.forward.1
-        # Module.layer1.1.relu.ReLU.forward.1 =>relu.ReLU.forward.1
         if node_type == MODULE:
             if len(splited_subnode_name) < 4:
                 return node_name
             splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
                 -4].isdigit() else splited_subnode_name[-5:]
-        # Module.layer1.1.ApiList.1 =>ApiList.1
-        # Module.layer1.1.ApiList.0.1 =>ApiList.0.1
         else:
             if len(splited_subnode_name) < 2:
                 return node_name
@@ -137,7 +133,7 @@ class Hierarchy:
             self.resize_hierarchy(child_name)
         max_child_width = 0
         total_height = INNER_HIGHT
-        for group_type, children in self.group_children(node['children']):
+        for group_type, children in self.group_children(node.get('children')):
             if group_type == UNEXPAND_NODE:
                 # 横向布局：分批处理每行最多MAX_PER_ROW个
                 rows = [children[i:i + MAX_PER_ROW] for i in range(0, len(children), MAX_PER_ROW)]
@@ -172,12 +168,12 @@ class Hierarchy:
         node = self.current_hierarchy.get(current_name, {})
         if not node or not node.get('children'):
             return
-        parent_x = node['x']
-        parent_width = node['width']
-        current_y = node['y'] + INNER_HIGHT + VERTICAL_SPACING  # 初始Y坐标
+        parent_x = node.get('x')
+        parent_width = node.get('width')
+        current_y = node.get('y') + INNER_HIGHT + VERTICAL_SPACING  # 初始Y坐标
 
         # 按类型分组处理子节点
-        for group_type, children in self.group_children(node['children']):
+        for group_type, children in self.group_children(node.get('children')):
             if group_type == UNEXPAND_NODE:
                 # 横向布局：分批处理每行最多MAX_PER_ROW个
                 rows = [children[i:i + MAX_PER_ROW] for i in range(0, len(children), MAX_PER_ROW)]
@@ -207,9 +203,9 @@ class Hierarchy:
                 # 纵向布局：每个子节点单独占一行且居中
                 for child_name in children:
                     child = self.current_hierarchy.get(child_name, {})
-                    child['x'] = parent_x + (parent_width - child['width']) // 2
+                    child['x'] = parent_x + (parent_width - child.get('width')) // 2
                     child['y'] = current_y
-                    current_y += child['height'] + VERTICAL_SPACING
+                    current_y += child.get('height') + VERTICAL_SPACING
                     if (child.get('expand', False)):
                         self.layout_hierarchy(child_name)  # 递归处理子节点
 
@@ -224,10 +220,10 @@ class Hierarchy:
             if not child:
                 continue
             # 类型变化时创建新组
-            if current_type is not None and child['nodeType'] != current_type:
+            if current_type is not None and child.get('nodeType') != current_type:
                 groups.append((current_type, current_group))
                 current_group = []
-            current_type = child['nodeType']
+            current_type = child.get('nodeType')
             current_group.append(name)
         # 添加最后一组
         if current_group:
@@ -282,7 +278,7 @@ class Hierarchy:
         result[name] = filtered_value
         new_hierarchy[name] = node
         # 递归处理子节点
-        if (node['expand']):
+        if (node.get('expand')):
             for child_name in node.get('children', []):
                 self.get_connected_graph(child_name, result, new_hierarchy)
 

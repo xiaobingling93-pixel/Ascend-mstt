@@ -135,31 +135,6 @@ class GraphUtils:
             return default_value
 
     @staticmethod   
-    def safe_json_load(file_obj, default_value=None):
-        """
-        安全地从文件对象读取 JSON 内容，带长度限制。
-        :param file_obj: 文件对象（支持 read() 方法）
-        :param default_value: 如果解析失败返回的默认值
-        :return: 解析后的 Python 对象 或 default_value
-        """
-
-        try:
-            json_data = file_obj.read(MAX_FILE_SIZE + 1)
-            if len(json_data) > MAX_FILE_SIZE:
-                logger.error(f"File content exceeds {MAX_FILE_SIZE} bytes.")
-                return default_value
-            
-            result = json.load(json_data)
-            GraphUtils.remove_prototype_pollution(result)
-            return result
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {e}")
-            return default_value
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            return default_value
-
-    @staticmethod   
     def remove_prototype_pollution(obj, current_depth=1, max_depth=200):
         """
         递归删除对象中的原型污染字段，如 '__proto__', 'constructor', 'prototype'。
@@ -328,7 +303,7 @@ class GraphUtils:
                 return True, None
             # 尝试解析 JSON 文件,校验文件内容是否合理
             with open(file_path, 'r', encoding='utf-8') as f:
-                return GraphUtils.safe_json_load(f), None
+                return json.load(f), None
         except json.JSONDecodeError:
             logger.error(f'Error: File "{file_path}" is not a valid JSON file!')
             return None, "File is not a valid JSON file!"

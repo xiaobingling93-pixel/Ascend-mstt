@@ -384,7 +384,7 @@ def check_file_type(path):
     elif os.path.isfile(path):
         return FileCheckConst.FILE
     else:
-        logger.error(f'{path} does not exist, please check!')
+        logger.error(f'path does not exist, please check!')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
@@ -460,7 +460,33 @@ def save_excel(path, data):
                 return "list"
         raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
 
+    def check_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be considered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    def malicious_check(df):
+        for row_name in df.index:
+            if not check_value_is_valid(row_name):
+                raise RuntimeError(f"Malicious value [{row_name}] not allowed to be written into the excel: {path}.")
+
+        for col_name in df.columns:
+            if not check_value_is_valid(col_name):
+                raise RuntimeError(f"Malicious value [{col_name}] not allowed to be written into the excel: {path}.")
+
+        for _, row in df.iterrows():
+            for _, value in row.items():
+                if not check_value_is_valid(value):
+                    raise RuntimeError(f"Malicious value [{value}] not allowed to be written into the excel: {path}.")
+
     def save_in_slice(df, base_name):
+        malicious_check(df)
         df_length = len(df)
         if df_length < CompareConst.MAX_EXCEL_LENGTH:
             df.to_excel(writer, sheet_name=base_name if base_name else 'Sheet1', index=False)
@@ -745,6 +771,13 @@ def create_file_with_content(data, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def check_file_whether_exist_or_not(filepath):
+    if os.path.exists(filepath):
+        check_file_or_directory_path(filepath)
+    else:
+        check_path_before_create(filepath)
+
+
 def add_file_to_zip(zip_file_path, file_path, arc_path=None):
     """
     Add a file to a ZIP archive, if zip does not exist, create one.
@@ -753,12 +786,13 @@ def add_file_to_zip(zip_file_path, file_path, arc_path=None):
     :param file_path: Path to the file to add
     :param arc_path: Optional path inside the ZIP archive where the file should be added
     """
+    check_file_or_directory_path(file_path)
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_file_whether_exist_or_not(zip_file_path)
     check_file_size(file_path, FileCheckConst.MAX_FILE_IN_ZIP_SIZE)
     zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
     if zip_size + os.path.getsize(file_path) > FileCheckConst.MAX_ZIP_SIZE:
         raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
-    check_path_before_create(zip_file_path)
     try:
         proc_lock.acquire()
         with zipfile.ZipFile(zip_file_path, 'a') as zip_file:
@@ -780,7 +814,7 @@ def create_file_in_zip(zip_file_path, file_name, content):
     :param content: Content to write to the file
     """
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
-    check_path_before_create(zip_file_path)
+    check_file_whether_exist_or_not(zip_file_path)
     zip_size = os.path.getsize(zip_file_path) if os.path.exists(zip_file_path) else 0
     if zip_size + sys.getsizeof(content) > FileCheckConst.MAX_ZIP_SIZE:
         raise RuntimeError(f"ZIP file size exceeds the limit of {FileCheckConst.MAX_ZIP_SIZE} bytes")
@@ -807,6 +841,8 @@ def extract_zip(zip_file_path, extract_dir):
     :param extract_dir: Directory to extract the contents to
     """
     check_file_suffix(zip_file_path, FileCheckConst.ZIP_SUFFIX)
+    check_file_or_directory_path(zip_file_path)
+    create_directory(extract_dir)
     try:
         proc_lock.acquire()
         check_zip_file(zip_file_path)
@@ -815,8 +851,12 @@ def extract_zip(zip_file_path, extract_dir):
         raise RuntimeError(f"Save content to file {os.path.basename(zip_file_path)} failed.") from e
     finally:
         proc_lock.release()
-    with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
-        zip_file.extractall(extract_dir)
+    try:
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_file:
+            zip_file.extractall(extract_dir)
+    except Exception as e:
+        raise RuntimeError(f"extract zip file {os.path.basename(zip_file_path)} failed") from e
+    recursive_chmod(extract_dir)
 
 
 def split_zip_file_path(zip_file_path):

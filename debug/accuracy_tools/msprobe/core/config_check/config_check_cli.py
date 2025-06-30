@@ -29,7 +29,7 @@ def compare(bench_zip_path, cmp_zip_path, output_path, framework):
 def _config_checking_parser(parser):
     parser.add_argument('-d', '--dump', nargs='*', help='Collect the train config into a zip file')
     parser.add_argument('-c', '--compare', nargs=2, help='Compare two zip files or checkpoints')
-    parser.add_argument('-o', '--output', help='output path, default is current directory')
+    parser.add_argument('-o', '--output', help='output path, default is ./config_check_result')
 
 
 def _run_config_checking_command(args):

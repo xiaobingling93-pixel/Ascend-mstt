@@ -52,5 +52,5 @@ class TestOverflowCheckToolFactory(TestCase):
                                              f"when level is {config.level}.")
 
         config.level = "kernel"
-        dumper = OverflowCheckToolFactory.create(config)
+        dumper = OverflowCheckToolFactory.create(config)[0]
         self.assertEqual(dumper.dump_json["common_dump_settings"]["file_format"], "npy")

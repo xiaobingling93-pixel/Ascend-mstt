@@ -78,3 +78,11 @@ export const PREFIX_MAP = {
   NPU: NPU_PREFIX,
   Bench: BENCH_PREFIX,
 };
+
+export const PRECISION_DESC = {
+  "summary": "节点中调试侧和标杆侧输出的统计量相对误差，值越大精度差距越大，颜色标记越深,相对误差指标（RelativeErr）：| (调试值 - 标杆值) / 标杆值 |",
+
+  "all": "节点中所有输入的最小双千指标和所有输出的最小双千分之一指标的差值，反映了双千指标的下降情况，值越大精度差距越大，颜色标记越深，双千分之一精度指标（One Thousandth Err Ratio）：Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的比例占总元素个数的比例，比例越接近1越好",
+
+  "md5": "节点中任意输入输出的md5值不同则标记为红色"
+}

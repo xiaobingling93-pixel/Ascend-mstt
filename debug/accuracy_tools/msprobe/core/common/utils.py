@@ -14,21 +14,22 @@
 # limitations under the License.
 
 import collections
+import functools
+import inspect
 import os
 import re
-import subprocess
+import threading
 import time
-import inspect
+from collections import OrderedDict
 from datetime import datetime, timezone
 
 import numpy as np
 
-from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.decorator import recursion_depth_decorator
-
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
+from msprobe.core.common.log import logger
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
@@ -112,6 +113,82 @@ class DumpException(MsprobeBaseException):
         return f"Dump Error Code {self.code}: {self.error_info}"
 
 
+class ThreadSafe:
+    """
+    线程安全控制工具类，提供三种使用方式：
+    1.上下文管理器：with ThreadSafe()
+    2.主动加锁与释放锁：ThreadSafe.acquire()/ThreadSafe.release()
+    3.方法装饰器：@ThreadSafe.synchronized
+    """
+    _lock = threading.RLock()
+
+    def __enter__(self):
+        self.__class__._lock.acquire()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__class__._lock.release()
+
+    @classmethod
+    def acquire(cls):
+        cls._lock.acquire()
+
+    @classmethod
+    def release(cls):
+        cls._lock.release()
+
+    @classmethod
+    def synchronized(cls, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            with cls._lock:
+                return func(*args, **kwargs)
+
+        return wrapper
+
+
+class ModuleQueue:
+    def __init__(self):
+        self.queue = OrderedDict()
+
+    def add_name(self, name):
+        self.queue[name] = True
+
+    def remove_name(self, name):
+        if name in self.queue:
+            del self.queue[name]
+
+    def find_last(self, name):
+        """
+        在队列中找到当前 Module/Cell 的父节点名称并返回，若找不到则返回None
+
+        Args:
+            name: 需要寻找父节点的 Module/Cell 的名称
+
+        Returns:
+            返回父节点名称，找不到则返回None
+
+        Examples:
+            父节点名称格式: Module.module1.module1.forward.0
+            子节点名称格式: Module.module1.module2.Module2.forward.0
+            匹配关系: Module/Cell 的名称总能被点(.)分割符分成5个部分及以上，子节点截断后4个点和父节点截断后3个点的前缀名称是匹配的
+        """
+        child_parts = name.split('.')
+        if len(child_parts) < 5:
+            return None
+        child_name_prefix = '.'.join(child_parts[:-4])
+        if child_name_prefix in Const.MODULE_PREFIX:
+            return None
+
+        for parent_name in reversed(self.queue):
+            parent_parts = parent_name.split('.')
+            if len(parent_parts) < 5:
+                return None
+            parent_name_prefix = '.'.join(parent_parts[:-3])
+            if parent_name_prefix == child_name_prefix:
+                return parent_name
+        return None
+
+
 def is_json_file(file_path):
     if isinstance(file_path, str) and file_path.lower().endswith('.json'):
         return True
@@ -156,9 +233,10 @@ def check_compare_param(input_param, output_path, dump_mode, stack_mode):
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, is_print_compare_log=True):
     arg_list = [stack_mode, auto_analyze, fuzzy_match, is_print_compare_log]
-    for arg in arg_list:
+    arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match', 'is_print_compare_log']
+    for arg, name in zip(arg_list, arg_names):
         if not isinstance(arg, bool):
-            logger.error(f"Invalid input parameter, {arg} which should be only bool type.")
+            logger.error(f"Invalid input parameter, {name} which should be only bool type.")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
@@ -282,9 +360,9 @@ def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
     dump_json_path_valid = npu_path is not None and npu_path.endswith("dump.json") and \
-        bench_path is not None and bench_path.endswith("dump.json")
+                           bench_path is not None and bench_path.endswith("dump.json")
     debug_json_path_valid = npu_path is not None and npu_path.endswith("debug.json") and \
-        bench_path is not None and bench_path.endswith("debug.json")
+                            bench_path is not None and bench_path.endswith("debug.json")
     if not dump_json_path_valid and not debug_json_path_valid:
         logger.error(f"Please check the json path is valid and ensure that neither npu_path nor bench_path is None.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
@@ -457,10 +535,10 @@ def get_real_step_or_rank(step_or_rank_input, obj):
 def check_init_step(step):
     if not is_int(step):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                        f"{step} must be an integer")
+                               f"{step} must be an integer")
     if not step >= 0:
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                f"{step} must be greater than or equal to 0")
+                               f"{step} must be greater than or equal to 0")
 
 
 def check_token_range(token_range):
@@ -568,14 +646,25 @@ def replace_last_occurrence(text, old, new):
 
 def load_stack_json(stack_path):
     stack_dict = load_json(stack_path)
+
+    if not isinstance(stack_dict, dict):
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR,
+            "The format of the stack.json is incorrect, the outermost layer of stack.json should be a dict type."
+        )
+
     if not stack_dict.get(Const.NEW_STACK_FLAG):
         return stack_dict
 
     new_stack_dict = {}
     for stack_info in stack_dict.values():
-        if len(stack_info) != 2:
+        if not isinstance(stack_info, list) or len(stack_info) != 2:
             continue
+
         api_list, stack_str = stack_info
+        if not isinstance(api_list, list):
+            continue
+
         for api_name in api_list:
             new_stack_dict.update({api_name: stack_str})
     return new_stack_dict
@@ -597,3 +686,18 @@ def analyze_api_call_stack(name):
     else:
         stack_str.append(Const.WITHOUT_CALL_STACK)
     return "".join(stack_str)
+
+
+def check_extern_input_list(input_list):
+    if not isinstance(input_list, list):
+        raise Exception("input is not a list")
+    if len(input_list) > Const.EXTERN_INPUT_LIST_MAX_LEN:
+        raise Exception(f"input list exceed max length {Const.EXTERN_INPUT_LIST_MAX_LEN}")
+
+
+def check_process_num(process_num):
+    if not is_int(process_num) or process_num <= 0:
+        raise ValueError(f"process_num({process_num}) is not a positive integer")
+    if process_num > Const.MAX_PROCESS_NUM:
+        raise ValueError(f"The maximum supported process_num is {Const.MAX_PROCESS_NUM}, current value: {process_num}.")
+

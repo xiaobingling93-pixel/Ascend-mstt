@@ -45,13 +45,18 @@ def get_max(x: torch.tensor):
 
 @torch.no_grad()
 def get_zeros(x: torch.tensor, eps: float):
+    if x.numel() == 0:
+        return torch.tensor(float('nan'))
     return torch.sum(torch.abs(x) < eps) / x.numel()
 
 
 @torch.no_grad()
 def get_sign_matches(x: torch.tensor, y: torch.tensor):
+    if y.numel() == 0:
+        return torch.tensor(1.)
     xs = x.sign()
     ys = y.sign()
+
     try:
         same_direction_ratio = ((xs * ys).sum() / ys.numel() + 1) / 2
     except RuntimeError as e:

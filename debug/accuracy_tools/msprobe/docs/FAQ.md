@@ -58,6 +58,8 @@
    debugger.stop()
    ```
 
+6. 在使用 msprobe 进行 Pytorch 框架的数据采集功能时，请注意确认环境变量 NPU_ASD_ENABLE=0 ，即关闭特征值检测功能。 由于工具冲突， 在该功能开启的情况下可能导致某些 api 数据采集的缺失。
+
 # 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？

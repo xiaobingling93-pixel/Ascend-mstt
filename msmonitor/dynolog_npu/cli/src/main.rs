@@ -66,7 +66,7 @@ struct Opts {
     cmd: Command,
 }
 
-const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy"];
+const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy", "Communication"];
 
 fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
     let allowed_values: HashSet<&str> = ALLOWED_VALUES.iter().cloned().collect();
@@ -518,6 +518,20 @@ fn create_dyno_client_with_no_certs(
     Ok(DynoClient::Insecure(stream))
 }
 
+// 安全清除密码的函数
+fn secure_clear_password(password: &mut Vec<u8>) {
+    if !password.is_empty() {
+        // 使用零覆盖密码数据
+        for byte in password.iter_mut() {
+            *byte = 0;
+        }
+        // 清空向量
+        password.clear();
+        // 收缩向量容量，释放内存
+        password.shrink_to_fit();
+    }
+}
+
 fn create_dyno_client_with_certs(
     host: &str, 
     port: u16,
@@ -597,12 +611,12 @@ fn create_dyno_client_with_certs(
     // 根据是否加密来加载私钥
     let keys = if is_encrypted {
         // 如果私钥是加密的，请求用户输入密码
-        let mut password = prompt_password("Please enter the certificate password: ")?;
-        let pkey = PKey::private_key_from_pem_passphrase(&key_data, password.as_bytes())
+        let mut password = prompt_password("Please enter the certificate password: ")?.into_bytes();
+        let pkey = PKey::private_key_from_pem_passphrase(&key_data, &password)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to decrypt private key: {}", e)))?;
         
-        // 清除密码
-        password.clear();
+        // 手动清除密码
+        secure_clear_password(&mut password);
         
         // 返回私钥
         vec![pkey.private_key_to_der()

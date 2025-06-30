@@ -465,8 +465,8 @@ DebuggerErrno OpenFile(const std::string& path, std::ofstream& ofs, std::ios::op
         }
     }
 
-    if (!IsPathExist(path)) {
-        int fd = open(path.c_str(), O_CREAT | O_WRONLY, permission);
+    if (!IsPathExist(realPath)) {
+        int fd = open(realPath.c_str(), O_CREAT | O_WRONLY, permission);
         if (fd < 0) {
             return DebuggerErrno::ERROR_FAILED_TO_OPEN_FILE;
         }

@@ -22,20 +22,19 @@ import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
 from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import ThreadSafe
 from msprobe.pytorch.common.utils import is_float8_tensor, register_forward_pre_hook, register_forward_hook
 
 
 class HOOKModule(nn.Module):
     module_count = defaultdict(int)
-    inner_stop_hook = {}
+    inner_stop_hook = defaultdict(bool)
 
     def __init__(self, hook_build_func) -> None:
         super(HOOKModule, self).__init__()
         self.has_overflow = False
-        self.current_thread = threading.current_thread().ident
-        if self.current_thread not in HOOKModule.inner_stop_hook:
-            HOOKModule.inner_stop_hook[self.current_thread] = False
-        self.stop_hook = HOOKModule.inner_stop_hook.get(self.current_thread, False)
+        self.tid = threading.get_ident()
+        self.stop_hook = HOOKModule.inner_stop_hook.get(self.tid, False)
 
         if not self.stop_hook:
             self.forward_data_collected = False
@@ -43,6 +42,7 @@ class HOOKModule(nn.Module):
             if not Runtime.is_running:
                 return
             prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
+            ThreadSafe.acquire()
             if callable(hook_build_func):
                 hook_set = hook_build_func(prefix)
                 register_forward_pre_hook(self, hook_set.forward_pre_hook)
@@ -52,11 +52,11 @@ class HOOKModule(nn.Module):
     def __call__(self, *args, **kwargs):
         changed = False
         if not self.stop_hook:
-            HOOKModule.inner_stop_hook[self.current_thread] = True
+            HOOKModule.inner_stop_hook[self.tid] = True
             changed = True
         result = self._call_func(*args, **kwargs)
         if changed:
-            HOOKModule.inner_stop_hook[self.current_thread] = False
+            HOOKModule.inner_stop_hook[self.tid] = False
         return result
 
     @staticmethod

@@ -23,6 +23,7 @@ from tqdm import tqdm
 
 from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, save_excel
 from msprobe.core.common.log import logger
+from msprobe.core.common.utils import check_process_num
 
 
 @dataclass
@@ -57,6 +58,7 @@ class SingleComparator:
         data_dir2 = os.path.join(dir2, "data")
         check_file_or_directory_path(data_dir1, isdir=True)
         check_file_or_directory_path(data_dir2, isdir=True)
+        check_process_num(num_processes)
         # 确保输出目录存在，如果不存在则创建
         if not os.path.exists(output_path):
             create_directory(output_path)

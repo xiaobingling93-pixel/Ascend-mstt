@@ -20,7 +20,7 @@ import mindspore as ms
 from mindspore._c_expression import MSContext
 
 from msprobe.core.common.const import Const, MsgConst
-from msprobe.core.common.utils import check_token_range
+from msprobe.core.common.utils import check_token_range, ThreadSafe
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.mindspore.cell_processor import CellProcessor
@@ -57,18 +57,14 @@ ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task", "dump_
 
 class PrecisionDebugger(BasePrecisionDebugger):
 
-    def __new__(cls, config_path=None, task=None, dump_path=None,
-                level=None, step=None, opt=None):
-        if not cls._instance:
-            cls._instance = super().__new__(cls)
-            cls._instance.initialized = False
-            cls._instance.config = None
-            cls.service = None
-            cls.first_start = False
-        return cls._instance
-
-    def __init__(self, config_path=None, task=None, dump_path=None,
-                 level=None, step=None):
+    def __init__(
+            self,
+            config_path=None,
+            task=None,
+            dump_path=None,
+            level=None,
+            step=None
+    ):
         if self.initialized:
             return
         set_register_backward_hook_functions()
@@ -91,7 +87,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
         Runtime.step_count = 0
         Runtime.is_running = False
-        if enable_dynamic_kbyk_dump:
+        if enable_dynamic_kbyk_dump and self.config.level_ori == Const.LEVEL_L2:
             _dump_set_dynamic()
 
     @staticmethod
@@ -135,10 +131,11 @@ class PrecisionDebugger(BasePrecisionDebugger):
             check_token_range(token_range)
             instance.config.execution_mode = cls._get_execution_mode()
             if cls._need_service():
-                if not instance.service:
-                    instance.service = MindsporeService(instance.config)
-                instance.config.check_model(model, token_range)
-                instance.service.start(model, token_range)
+                with ThreadSafe():
+                    if not instance.service:
+                        instance.service = MindsporeService(instance.config)
+                    instance.config.check_model(model, token_range)
+                    instance.service.start(model, token_range)
             else:
                 if not instance.first_start:
                     get_api_register().restore_all_api()
@@ -156,14 +153,15 @@ class PrecisionDebugger(BasePrecisionDebugger):
         if instance.task == Const.GRAD_PROBE:
             instance.gm.stop()
         if instance.service:
-            instance.service.stop()
+            with ThreadSafe():
+                instance.service.stop()
         else:
             Runtime.is_running = False
         if enable_dynamic_kbyk_dump:
             _dump_stop()
         if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
-    
+
     @classmethod
     def step(cls):
         instance = cls._get_instance()
@@ -171,7 +169,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
             return
 
         if instance.service:
-            instance.service.step()
+            with ThreadSafe():
+                instance.service.step()
         if is_graph_mode_cell_dump_allowed(instance.config):
             GraphModeCellDump.step()
         if enable_dynamic_kbyk_dump:
@@ -184,6 +183,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         Runtime.step_count += 1
 
     @classmethod
+    @ThreadSafe.synchronized
     def monitor(cls, opt):
         instance = cls._instance
         if not instance:
@@ -193,6 +193,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         instance.gm.monitor(opt)
 
     @classmethod
+    @ThreadSafe.synchronized
     def save(cls, variable, name, save_backward=True):
         instance = cls._instance
         if not instance:
@@ -221,17 +222,17 @@ class PrecisionDebugger(BasePrecisionDebugger):
             return False
         else:
             return instance.config.task != Const.FREE_BENCHMARK
-        
+
     @classmethod
     def _is_kernel_dump(cls):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         return instance.config.level_ori == Const.LEVEL_L2
-    
+
     @classmethod
     def _start_kernel_dump(cls):
-        instance = cls.get_instance()
+        instance = cls._get_instance()
         is_graph_config = cls._is_graph_dump(instance.config)
         instance.config.check_config_with_l2(is_graph_config)
         if not is_graph_config:

@@ -13,6 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union
+)
 import os
 import numpy as np
 import mindspore
@@ -38,6 +45,22 @@ if torch_mindtorch_importer.is_valid_pt_mt_env:
     from msprobe.mindspore.api_accuracy_checker.torch_mindtorch_importer import torch
 else:
     import torch
+
+# 为了可读性，我们先给每种返回形态起个别名
+ForwardResult = Tuple[
+    List[ComputeElement],
+    Tuple[Any, ...],
+    Dict[str, Any],
+    Tuple[Any, ...],
+]
+
+BackwardResultMT = Tuple[
+    List[ComputeElement],
+    Union[Any, Tuple[Any, ...]],
+    Tuple[Any, ...],
+]
+
+PyTorchBackward = List[ComputeElement]
 
 
 class ApiInputAggregation:
@@ -179,7 +202,12 @@ class ApiRunner:
         return api_instance
 
     @staticmethod
-    def run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform):
+    def run_api(
+        api_instance,
+        api_input_aggregation,
+        forward_or_backward: str,
+        api_platform: str,
+    ) -> Union[ForwardResult, BackwardResultMT, PyTorchBackward]:
         inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
                        for compute_element in api_input_aggregation.inputs)
         kwargs = {key: value.get_parameter(get_origin=False, tensor_platform=api_platform)

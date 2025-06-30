@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+
 import unittest
 from unittest.mock import MagicMock, patch
 from contextlib import nullcontext
@@ -31,7 +33,7 @@ class TestPytorchHookManager(unittest.TestCase):
             self.mock_data_collector, 
             self.mock_config
         )
-        BaseHookManager.inner_switch = False
+        BaseHookManager.inner_switch[threading.get_ident()] = False
 
     def test_properties(self):
         with patch('msprobe.pytorch.hook_module.pt_hook_manager.is_recomputation', return_value=True):

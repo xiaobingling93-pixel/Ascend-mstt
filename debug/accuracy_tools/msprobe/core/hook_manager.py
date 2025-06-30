@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from abc import ABC, abstractmethod
 import os
+import threading
+from abc import ABC, abstractmethod
+from collections import defaultdict
 
 from msprobe.core.common.runtime import Runtime
-from msprobe.core.common.utils import Const
+from msprobe.core.common.utils import Const, ThreadSafe
 from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs)
 
 
@@ -31,7 +32,7 @@ class HookSet:
 
 
 class BaseHookManager(ABC):
-    inner_switch = False
+    inner_switch = defaultdict(bool)
     hook_handle_dict = {}
     params_grad_info = {}
 
@@ -86,7 +87,7 @@ class BaseHookManager(ABC):
         grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
         # 首次执行前向hook时，添加params_grad_name属性，并注册参数hook
         setattr(module, 'params_grad_name', grad_name)
-         # data_mode为forward时，不注册参数hook
+        # data_mode为forward时，不注册参数hook
         if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
             for param_name, param in params_dict.items():
                 if param.requires_grad:
@@ -116,15 +117,17 @@ class BaseHookManager(ABC):
                 # 记录当前模块的参数梯度信息已占位
                 BaseHookManager.params_grad_info[grad_name] = True
 
-    def _should_execute_hook(self, hook_type, module, is_forward):
+    def _should_execute_hook(self, hook_type, module, is_forward, tid):
         is_module_hook = hook_type == Const.MODULE
+        if hasattr(module, 'async_op_dump_flag') and getattr(module, 'async_op_dump_flag'):
+            return False
         if is_module_hook and not Runtime.is_running:
             return False
         elif not is_module_hook and is_forward and not Runtime.is_running:
             return False
         elif not is_module_hook and not is_forward and not module.forward_data_collected:
             return False
-        if BaseHookManager.inner_switch:
+        if BaseHookManager.inner_switch[tid]:
             return False
         if not self.data_collector or self.data_collector.data_processor.is_terminated:
             return False
@@ -132,30 +135,38 @@ class BaseHookManager(ABC):
 
     def _build_grad_hook(self, module, ori_name, param_name):
         def hook_fn(grad):
-            if not self._should_execute_hook(Const.MODULE, module, False):
+            tid = threading.get_ident()
+            if not self._should_execute_hook(Const.MODULE, module, False, tid):
                 return
-            BaseHookManager.inner_switch = True
-            self.data_collector.params_data_collect(ori_name, param_name, self._pid, grad)
-            BaseHookManager.inner_switch = False
+            with ThreadSafe():
+                BaseHookManager.inner_switch[tid] = True
+                self.data_collector.params_data_collect(ori_name, param_name, self._pid, grad)
+                BaseHookManager.inner_switch[tid] = False
             return
+
         return hook_fn
 
     def _build_forward_pre_hook(self, hook_type, full_name, api_name):
         def forward_pre_hook(module, args, kwargs=None):
             if hook_type == Const.MODULE:
                 return
-            if not self._should_execute_hook(hook_type, module, True):
+
+            tid = threading.get_ident()
+            if not self._should_execute_hook(hook_type, module, True, tid):
+                ThreadSafe.release()
                 return
+
             if kwargs is None:
                 kwargs = module.msprobe_input_kwargs if hasattr(module, 'msprobe_input_kwargs') else {}
             with self._no_grad_context():
-                BaseHookManager.inner_switch = False
+                BaseHookManager.inner_switch[tid] = False
                 module.forward_data_collected = True
                 self._add_count(api_name)
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.update_api_or_module_name(full_name)
                 if getattr(self.config, "online_run_ut", False):
-                    BaseHookManager.inner_switch = False
+                    BaseHookManager.inner_switch[tid] = False
+                    ThreadSafe.release()
                     return
                 self.data_collector.forward_input_data_collect(
                     full_name,
@@ -164,79 +175,89 @@ class BaseHookManager(ABC):
                     module_input_output,
                     self._is_recompute
                 )
-                BaseHookManager.inner_switch = False
+                BaseHookManager.inner_switch[tid] = False
+                ThreadSafe.release()
+
         return forward_pre_hook
 
     def _build_forward_hook(self, hook_type, full_name):
         def forward_hook(module, args, kwargs_or_output, output_or_kwargs=None):
-            if not self._should_execute_hook(hook_type, module, True):
+            tid = threading.get_ident()
+            if not self._should_execute_hook(hook_type, module, True, tid):
                 self._clear_input_kwargs(module)
                 return None
-            kwargs, output = self._process_kwargs_and_output(module, hook_type, kwargs_or_output, output_or_kwargs)
-            BaseHookManager.inner_switch = True
-            self.data_collector.update_api_or_module_name(full_name)
-            module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
-            with self._no_grad_context():
-                if getattr(self.config, "online_run_ut", False):
-                    if self.data_collector.scope and not self.data_collector.scope.check(full_name):
+
+            with ThreadSafe():
+                kwargs, output = self._process_kwargs_and_output(module, hook_type, kwargs_or_output, output_or_kwargs)
+                BaseHookManager.inner_switch[tid] = True
+                self.data_collector.update_api_or_module_name(full_name)
+                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+                with self._no_grad_context():
+                    if getattr(self.config, "online_run_ut", False):
+                        if self.data_collector.scope and not self.data_collector.scope.check(full_name):
+                            return None
+                        if self.attl_manager:
+                            self.attl_manager.attl_send(full_name, args, kwargs, output)
+                        BaseHookManager.inner_switch[tid] = False
                         return None
-                    if self.attl_manager:
-                        self.attl_manager.attl_send(full_name, args, kwargs, output)
-                    BaseHookManager.inner_switch = False
-                    return None
-                if hook_type == Const.MODULE:
-                    params_dict = self._get_params_dict(module)
-                    setattr(module_input_output, Const.PARAMS, params_dict)
-                    if params_dict:
-                        self._register_param_hook(full_name, module, params_dict)
-                    self.data_collector.update_api_or_module_name(full_name)
-                    self.data_collector.forward_data_collect(
-                        full_name,
-                        module,
-                        self._pid,
-                        module_input_output,
-                        self._is_recompute
-                    )
-                    self._init_params_grad_info(module, params_dict)
-                else:
-                    self.data_collector.forward_output_data_collect(
-                        full_name,
-                        module,
-                        self._pid,
-                        module_input_output,
-                        self._is_recompute
-                    )
-                self._clear_input_kwargs(module)
+                    if hook_type == Const.MODULE:
+                        params_dict = self._get_params_dict(module)
+                        setattr(module_input_output, Const.PARAMS, params_dict)
+                        if params_dict:
+                            self._register_param_hook(full_name, module, params_dict)
+                        self.data_collector.update_api_or_module_name(full_name)
+                        self.data_collector.forward_data_collect(
+                            full_name,
+                            module,
+                            self._pid,
+                            module_input_output,
+                            self._is_recompute
+                        )
+                        self._init_params_grad_info(module, params_dict)
+                    else:
+                        self.data_collector.forward_output_data_collect(
+                            full_name,
+                            module,
+                            self._pid,
+                            module_input_output,
+                            self._is_recompute
+                        )
+                    self._clear_input_kwargs(module)
 
-                if self.data_collector.if_return_forward_new_output():
-                    forward_new_output = self.data_collector.get_forward_new_output()
-                    BaseHookManager.inner_switch = False
-                    return forward_new_output
+                    if self.data_collector.if_return_forward_new_output():
+                        forward_new_output = self.data_collector.get_forward_new_output()
+                        BaseHookManager.inner_switch[tid] = False
+                        return forward_new_output
 
-                BaseHookManager.inner_switch = False
-                return output
+                    BaseHookManager.inner_switch[tid] = False
+                    return output
+
         return forward_hook
 
     def _build_backward_hook(self, hook_type, full_name):
         def backward_hook(module, grad_input, grad_output):
-            if not self._should_execute_hook(hook_type, module, False):
+            tid = threading.get_ident()
+            if not self._should_execute_hook(hook_type, module, False, tid):
                 return
-            BaseHookManager.inner_switch = True
-            self.data_collector.update_api_or_module_name(full_name)
-            if getattr(self.config, "online_run_ut", False):
-                BaseHookManager.inner_switch = False
-                return
-            need_exchange = self._need_exchange(module) if hook_type == Const.MODULE else True
-            if need_exchange:
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
-            else:
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
-            self.data_collector.backward_data_collect(
+
+            with ThreadSafe():
+                BaseHookManager.inner_switch[tid] = True
+                self.data_collector.update_api_or_module_name(full_name)
+                if getattr(self.config, "online_run_ut", False):
+                    BaseHookManager.inner_switch[tid] = False
+                    return
+                need_exchange = self._need_exchange(module) if hook_type == Const.MODULE else True
+                if need_exchange:
+                    module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                else:
+                    module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
+                self.data_collector.backward_data_collect(
                     full_name,
                     module,
                     self._pid,
                     module_input_output,
                     self._is_recompute
                 )
-            BaseHookManager.inner_switch = False
+                BaseHookManager.inner_switch[tid] = False
+
         return backward_hook
