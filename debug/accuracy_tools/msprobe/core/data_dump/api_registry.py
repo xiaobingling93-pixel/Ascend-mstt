@@ -100,9 +100,9 @@ class ApiWrapper:
                 api_template = api_templates[index]
                 index += 1
                 for api_name in self.api_names.get(framework, {}).get(api_type, []):
-                    ori_modules = list(api_modules[0]) if isinstance(api_modules[0], tuple) else [api_modules[0]]
-                    for module in ori_modules:
-                        ori_api = _get_attr(module, api_name)
+                    ori_api = None
+                    for module in api_modules[0]:
+                        ori_api = ori_api or _get_attr(module, api_name) 
                     if callable(ori_api):
                         def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
                             def api_function(*args, **kwargs):
@@ -137,8 +137,7 @@ class ApiWrapper:
                     if f'{key_in_file}.{api_name}' in self.backlist:
                         continue
                     target_attr = api_name
-                    target_modules = list(api_modules[0]) if isinstance(api_modules[0], tuple) else [api_modules[0]]
-                    for module in target_modules:
+                    for module in api_modules[0]:
                         if Const.SEP in api_name:
                             sub_module_name, target_attr = api_name.rsplit(Const.SEP, 1)
                             target_module = getattr(module, sub_module_name, None)

@@ -49,11 +49,11 @@ origin_wait = getattr(dist.Work, 'wait')
 
 _api_types = {
     Const.PT_FRAMEWORK: {
-        Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, (torch.nn.functional,)),
-        Const.PT_API_TYPE_TENSOR: (torch.Tensor, (torch.Tensor,)),
-        Const.PT_API_TYPE_TORCH: (torch, (torch,)),
-        Const.PT_API_TYPE_VF: (torch._C._VariableFunctionsClass, (torch._VF,)),
-        Const.PT_API_TYPE_DIST: (dist, (dist, dist.distributed_c10d))
+        Const.PT_API_TYPE_FUNCTIONAL: ((torch.nn.functional,), (torch.nn.functional,)),
+        Const.PT_API_TYPE_TENSOR: ((torch.Tensor,), (torch.Tensor,)),
+        Const.PT_API_TYPE_TORCH: ((torch,), (torch,)),
+        Const.PT_API_TYPE_VF: ((torch._C._VariableFunctionsClass,), (torch._VF,)),
+        Const.PT_API_TYPE_DIST: ((dist,), (dist, dist.distributed_c10d))
     }
 }
 if not is_gpu:
@@ -66,16 +66,16 @@ if not is_gpu:
         )
     else:
         _api_types.get(Const.PT_FRAMEWORK).update(
-            {Const.PT_API_TYPE_NPU: (torch_npu._C._VariableFunctionsClass, (torch_npu,))}
+            {Const.PT_API_TYPE_NPU: ((torch_npu._C._VariableFunctionsClass,), (torch_npu,))}
         )
         _api_types.get(Const.PT_FRAMEWORK).update(
             {
-                Const.PT_API_TYPE_NPU_DIST: (torch_npu.distributed, (torch_npu.distributed,
+                Const.PT_API_TYPE_NPU_DIST: ((torch_npu.distributed,), (torch_npu.distributed,
                                                                      torch_npu.distributed.distributed_c10d))
             }
         )
     if mindspeed_enable:
-        _api_types.get(Const.PT_FRAMEWORK).update({Const.PT_API_TYPE_MINDSPEED: (mindspeed.ops, (mindspeed.ops,))})
+        _api_types.get(Const.PT_FRAMEWORK).update({Const.PT_API_TYPE_MINDSPEED: ((mindspeed.ops,), (mindspeed.ops,))})
         mindspeed_op_list = load_yaml(_supported_api_list_path[0]).get(Const.PT_API_TYPE_MINDSPEED)
         mindspeed_op_file_list = [op.split(Const.SEP)[0] + Const.PY_SUFFIX for op in mindspeed_op_list]
         dynamic_import_op(mindspeed.ops, mindspeed_op_file_list)

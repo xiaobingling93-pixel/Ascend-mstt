@@ -40,17 +40,17 @@ cur_path = os.path.dirname(os.path.realpath(__file__))
 if not is_mindtorch():
     _api_types = {
         Const.MS_FRAMEWORK: {
-            Const.MS_API_TYPE_OPS: (ops, (ops,)),
-            Const.MS_API_TYPE_TENSOR: (Tensor, (Tensor,)),
-            Const.MS_API_TYPE_MINT: (mint, (mint,)),
-            Const.MS_API_TYPE_MINT_FUNC: (functional, (functional,)),
-            Const.MS_API_TYPE_COM: (comm_func, (comm_func,)),
-            Const.MS_API_TYPE_MINT_DIST: (distributed, (distributed,))
+            Const.MS_API_TYPE_OPS: ((ops,), (ops,)),
+            Const.MS_API_TYPE_TENSOR: ((Tensor,), (Tensor,)),
+            Const.MS_API_TYPE_MINT: ((mint,), (mint,)),
+            Const.MS_API_TYPE_MINT_FUNC: ((functional,), (functional,)),
+            Const.MS_API_TYPE_COM: ((comm_func,), (comm_func,)),
+            Const.MS_API_TYPE_MINT_DIST: ((distributed,), (distributed,))
         }
     }
     if stub_tensor_existed:
         _api_types.get(Const.MS_FRAMEWORK).update(
-            {Const.MS_API_TYPE_STUB_TENSOR: (StubTensor, (StubTensor,))}
+            {Const.MS_API_TYPE_STUB_TENSOR: ((StubTensor,), (StubTensor,))}
         )
 
     _supported_api_list_path = (os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE),)
@@ -60,11 +60,11 @@ else:
     import torch_npu
     _api_types = {
         Const.MT_FRAMEWORK: {
-            Const.PT_API_TYPE_FUNCTIONAL: (torch.nn.functional, (torch.nn.functional,)),
-            Const.PT_API_TYPE_TENSOR: (torch.Tensor, (torch.Tensor,)),
-            Const.PT_API_TYPE_TORCH: (torch, (torch,)),
-            Const.PT_API_TYPE_NPU: (torch_npu, (torch_npu,)),
-            Const.PT_API_TYPE_DIST: (torch.distributed, (torch.distributed, torch.distributed.distributed_c10d))
+            Const.PT_API_TYPE_FUNCTIONAL: ((torch.nn.functional,), (torch.nn.functional,)),
+            Const.PT_API_TYPE_TENSOR: ((torch.Tensor,), (torch.Tensor,)),
+            Const.PT_API_TYPE_TORCH: ((torch,), (torch,)),
+            Const.PT_API_TYPE_NPU: ((torch_npu,), (torch_npu,)),
+            Const.PT_API_TYPE_DIST: ((torch.distributed,), (torch.distributed, torch.distributed.distributed_c10d))
         }
     }
     _supported_api_list_path = (os.path.join(cur_path, '../../../pytorch/hook_module',
