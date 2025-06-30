@@ -21,7 +21,7 @@ from msprobe.pytorch.common.utils import get_rank_if_initialized, torch_version_
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate, redirect_wait
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
-from msprobe.pytorch.hook_module.script_wrapper import wrap_script_func
+from msprobe.pytorch.hook_module.script_wrapper import wrap_script_func, wrap_jit_script_func
 from msprobe.pytorch.hook_module.pt_hook_manager import PytorchHookManager
 from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
 
