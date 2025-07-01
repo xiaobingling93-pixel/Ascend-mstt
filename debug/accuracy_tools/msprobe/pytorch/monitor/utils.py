@@ -231,6 +231,13 @@ def validate_monitor_mbs_grad(monitor_mbs_grad):
     return monitor_mbs_grad
 
 
+def validate_append_output(append_output):
+    if not isinstance(append_output, list):
+        raise TypeError('append_output should be a list')
+    if len(append_output) > 0 and len(append_output) != 2:
+        raise ValueError('append_output should be empty or contain exactly 2 elements')
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -284,6 +291,9 @@ def validate_config(config):
 
     squash_name = config.get('squash_name', True)
     validate_squash_name(squash_name)
+
+    time_tags = config.get("append_output", [])
+    validate_append_output(time_tags)
 
     config["monitor_mbs_grad"] = validate_monitor_mbs_grad(config.get('monitor_mbs_grad', False))
 

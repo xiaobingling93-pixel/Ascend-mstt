@@ -250,7 +250,6 @@ class TrainerMon:
         self.has_collect_times = 0  # 重设采集计数器
         self.print_struct = self.config.get("print_struct", False)
         self.targets = self.config.get("targets", None)
-        self.is_select = self.config.get("is_select", False)
         self.module_rank_list = self.config.get("module_ranks", [])
         self.format = self.config.get('format', MonitorConst.CSV)  # only csv supported in mindspore
         self.eps = self.config.get('eps', 1e-8)

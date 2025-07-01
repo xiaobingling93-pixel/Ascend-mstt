@@ -153,6 +153,15 @@ def validate_param_distribution(param_distribution):
         raise TypeError('param_distribution should be a bool')
 
 
+def validate_ndigits(ndigits):
+    if not ndigits:
+        return
+    if not is_int(ndigits) or ndigits <= 0:
+        raise ValueError(f"ndigits({ndigits}) is not a positive integer, current is: {ndigits}.")
+    if ndigits > MonitorConst.MAX_NDIGITS:
+        raise ValueError(f"The maximum supported ndigits is {MonitorConst.MAX_NDIGITS}, current value: {ndigits}.")
+
+
 def validate_cc_distribution(cc_distribution):
     if not isinstance(cc_distribution, dict):
         raise TypeError('cc_distribution should be a dictionary')
@@ -235,8 +244,23 @@ def validate_monitor_mbs_grad(monitor_mbs_grad):
     return monitor_mbs_grad
 
 
+def validate_squash_name(squash_name):
+    if not isinstance(squash_name, bool):
+        raise TypeError('squash_name should be a bool')
+
+
+def validate_append_output(append_output):
+    if not isinstance(append_output, list):
+        raise TypeError('append_output should be a list')
+    if len(append_output) > 0 and len(append_output) != 2:
+        raise ValueError('append_output should be empty or contain exactly 2 elements')
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
+
+    ndigits = config.get('ndigits')
+    validate_ndigits(ndigits)
 
     eps = config.get('eps', 1e-8)
     if not isinstance(eps, float):
@@ -277,12 +301,17 @@ def validate_config(config):
 
     start_step = config.get('start_step', 0)
     validate_start_step(start_step)
-
     step_interval = config.get('step_interval', 1)
     validate_step_interval(step_interval)
 
     collect_times = config.get('collect_times', int(1e8))
     validate_collect_times(collect_times)
+
+    squash_name = config.get('squash_name', True)
+    validate_squash_name(squash_name)
+
+    time_tags = config.get("append_output", [])
+    validate_append_output(time_tags)
 
     config["monitor_mbs_grad"] = validate_monitor_mbs_grad(config.get('monitor_mbs_grad', False))
 
@@ -293,9 +322,6 @@ def validate_config(config):
         if xy_distribution:
             config["all_xy"] = True
         config["targets"] = {"": {}}
-        config["is_select"] = False
-    else:
-        config["is_select"] = True
 
 
 def time_str2time_digit(time_str):
