@@ -238,6 +238,7 @@ class Const:
     NORM = 'Norm'
     DATA_NAME = 'data_name'
     TENSOR_STAT_INDEX = 'tensor_stat_index'
+    SUMMARY_METRICS_LIST = [MAX, MIN, MEAN, NORM]
 
     CODE_STACK = 'Code Stack'
     OP_NAME = 'Op Name'
