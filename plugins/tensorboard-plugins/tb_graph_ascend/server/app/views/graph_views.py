@@ -135,7 +135,8 @@ class GraphView:
         npu_node_name = request.args.get("npuNodeName")
         bench_node_name = request.args.get("benchNodeName")
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
-        match_result = GraphService.add_match_nodes(npu_node_name, bench_node_name, meta_data)
+        is_match_children = GraphUtils.safe_json_loads(request.args.get("isMatchChildren"))
+        match_result = GraphService.add_match_nodes(npu_node_name, bench_node_name, meta_data, is_match_children)
         return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 取消节点匹配
@@ -145,7 +146,8 @@ class GraphView:
         npu_node_name = request.args.get("npuNodeName")
         bench_node_name = request.args.get("benchNodeName")
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
-        match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data)
+        is_unmatch_children = GraphUtils.safe_json_loads(request.args.get("isUnMatchChildren"))
+        match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data, is_unmatch_children)
         return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 保存匹配节点列表

@@ -23,8 +23,8 @@ export type MetaDirType = Record<string, Array<string>>;
 
 export interface UseMatchedType {
   saveMatchedNodesLink: (selection: any) => Promise<any>;
-  addMatchedNodesLink: (npuNodeName: string, benchNodeName: string, selection: any) => Promise<MatchResultType>;
-  deleteMatchedNodesLink: (npuNodeName: string, benchNodeName: string, selection: any) => Promise<MatchResultType>;
+  addMatchedNodesLink: (npuNodeName: string, benchNodeName: string, selection: any, isMatchChildren: boolean) => Promise<MatchResultType>;
+  deleteMatchedNodesLink: (npuNodeName: string, benchNodeName: string, selection: any, isUnMatchChildren: boolean) => Promise<MatchResultType>;
   saveMatchedRelations: (selection: any) => Promise<any>;
   addMatchedNodesLinkByConfigFile: (condfigFile: string, selection: any) => Promise<MatchResultType>;
 }

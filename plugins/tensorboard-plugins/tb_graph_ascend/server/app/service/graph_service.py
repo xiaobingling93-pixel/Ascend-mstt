@@ -262,17 +262,30 @@ class GraphService:
             return {'success': False, 'error': '获取节点信息失败:' + str(e), 'data': None}
 
     @staticmethod
-    def add_match_nodes(npu_node_name, bench_node_name, meta_data):
+    def add_match_nodes(npu_node_name, bench_node_name, meta_data, is_match_children):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
         task = graph_data.get('task')
+        result = {}
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_add_child_layer(graph_data,
-                                                                npu_node_name, bench_node_name, task)
-                return result
+                if(is_match_children):
+                    result = MatchNodesController.process_task_add_child_layer(graph_data,
+                                                                    npu_node_name, bench_node_name, task)
+                    return result
+                else:
+                    result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+                    if result.get('success'):
+                        config_data = GraphState.get_global_value("config_data")
+                        result['data'] = {
+                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                        }
+                    return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
@@ -298,16 +311,28 @@ class GraphService:
             return {'success': False, 'error': '操作失败', 'data': None}
 
     @staticmethod
-    def delete_match_nodes(npu_node_name, bench_node_name, meta_data):
+    def delete_match_nodes(npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
         task = graph_data.get('task')
+        result = {}
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
+                if(is_unmatch_children):
+                    result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
                                                                               bench_node_name, task)
+                else:
+                    result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
+                    if result.get('success'):
+                        config_data = GraphState.get_global_value("config_data")
+                        result['data'] = {
+                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                        }
                 return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
