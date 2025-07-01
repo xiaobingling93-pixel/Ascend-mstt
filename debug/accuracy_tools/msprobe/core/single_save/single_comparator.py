@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, save_excel
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, load_npy, save_excel
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import check_process_num
 
@@ -191,8 +191,8 @@ class SingleComparator:
         common_keys = set(path_dict1.keys()) & set(path_dict2.keys())
         for key in common_keys:
             try:
-                array1 = np.load(path_dict1[key])
-                array2 = np.load(path_dict2[key])
+                array1 = load_npy(path_dict1[key])
+                array2 = load_npy(path_dict2[key])
                 result = cls.compare_arrays(array1, array2)
                 step, rank, micro_step, array_id = key
                 data.append([
