@@ -196,7 +196,7 @@ def result_process(compare_result_path_list, api_list):
         compare_index_dict = {}
         result_df = read_xlsx(compare_result_path)
 
-        rank_pattern = r"compare_result_rank(\d+)-rank"
+        rank_pattern = r"compare_result_rank(\d+)"
         rank_num = int(re.search(rank_pattern, os.path.basename(compare_result_path)).group(1))
         logger.info(f"Parsing rank{rank_num} compare result...")
         if not result_df.empty:
