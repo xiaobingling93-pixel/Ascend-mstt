@@ -77,7 +77,7 @@ class Parser:
 
     @staticmethod
     def extract_constants(inputs_str: str) -> List[str]:
-        constant_pattern = re.compile(r'\b(\w+\(.*?\))')
+        constant_pattern = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]{0,10000})\(([A-Za-z0-9_\s,.\-+/]{0,10000})\)')
         constants = constant_pattern.findall(inputs_str)
         return constants
 
@@ -90,7 +90,8 @@ class Parser:
             self.nodes[func_name] = func_graph_info
 
     def parse_nodes(self, text: str, subgraph_info: GraphNode) -> None:
-        node_pattern = re.compile(r'(%\d+)\((\S+)\)\s*=\s*(\S+)\(')
+        node_pattern = re.compile(
+            r'(%\d{1,10000})\(([A-Za-z0-9_\.]{1,10000})\)\s*=\s*([A-Za-z_][A-Za-z0-9_]{0,10000})\(')
         matches = list(node_pattern.finditer(text))
         for i, match in enumerate(matches):
             series_number = match.group(1)
@@ -106,8 +107,9 @@ class Parser:
 
             constants = self.__class__.extract_constants(args_str)
 
-            scope_pattern = re.compile(r'# .*scope.*:\s*\((.*?)\)', re.IGNORECASE | re.MULTILINE)
-
+            scope_pattern = re.compile(
+                r'^(?=.{0,300}$)[ \t]*\#[ \t]*[^\r\n]*?scope[^\r\n]*?:[ \t]*\(([^)\r\n]{1,200})\)[ \t]*$',
+                re.IGNORECASE | re.MULTILINE)
             scope_match = scope_pattern.search(text, end_pos)
             scope = scope_match.group(1) if scope_match else ""
 
