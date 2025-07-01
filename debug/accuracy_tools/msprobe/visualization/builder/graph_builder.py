@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.core.common.utils import load_stack_json
+from msprobe.core.common.log import logger
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
@@ -45,6 +46,11 @@ class GraphBuilder:
         Returns: Graph，代表图的数据结构
         """
         construct_dict = load_json(construct_path)
+        if not construct_dict:
+            logger.error("The content of 'construct.json' is empty, failed to build graph. "
+                         "When dumping data, it is necessary to select level L0 or mix in order to "
+                         "collect model structure data, that is, the content of 'construct.json' is not empty.")
+            raise RuntimeError
         dump_dict = load_json(data_path)
         stack_dict = load_stack_json(stack_path)
         if not complete_stack:
