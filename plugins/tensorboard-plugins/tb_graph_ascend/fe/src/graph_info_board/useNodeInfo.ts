@@ -167,20 +167,6 @@ const useNodeInfo = (): UseNodeInfoType => {
       stackInfo[title] = 'stackInfo';
       detailData.push(stackInfo);
     }
-    // 获取suggestions
-    const suggestion: Record<string, unknown> = {};
-    const npusuggestion = npuNode?.suggestions;
-    const benchsuggestion = benchNode?.suggestions;
-    if (!isEmpty(npusuggestion)) {
-      suggestion[nodeName] = converObjectToString(npusuggestion);
-    }
-    if (!isEmpty(benchsuggestion)) {
-      suggestion[benchNodeName] = converObjectToString(benchsuggestion);
-    }
-    if (!isEmpty(suggestion)) {
-      suggestion[title] = 'suggestions';
-      detailData.push(suggestion);
-    }
     // 获取parallel_merge_info
     const parallelMergeInfo: Record<string, unknown> = {};
     const npuparallelMergeInfo = npuNode?.parallelMergeInfo;
