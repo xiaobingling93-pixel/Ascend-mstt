@@ -41,7 +41,7 @@ class TestFunctions(TestCase):
 class TestApiWrapper(TestCase):
     api_types = {
         Const.PT_FRAMEWORK: {
-            Const.PT_API_TYPE_TORCH: (torch, torch),
+            Const.PT_API_TYPE_TORCH: ((torch,), torch),
         }
     }
     supported_api_list_path = (Const.SUPPORT_API_FILE_NAME,)
