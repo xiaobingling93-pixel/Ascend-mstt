@@ -228,7 +228,10 @@ def merge_tensor(tensor_list, dump_mode):
             op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
         else:
             op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-        op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
+
+        # 当统计量为None时，转成字符串None，避免后续操作list放到pd中时None被默认转成NaN
+        op_dict[Const.SUMMARY].append(
+            [str(tensor[key]) if tensor[key] is None else tensor[key] for key in Const.SUMMARY_METRICS_LIST])
 
         if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
