@@ -145,7 +145,7 @@ class GraphService:
                 config['colors'] = config_data_run.get('colors')
             # 读取目录下配置文件列表
             config_files = GraphUtils.find_config_files(run)
-            config['matchedConfigFiles'] = config_files
+            config['matchedConfigFiles'] = config_files or []
             config['task'] = graph_data.get('task')
             return {'success': True, 'data': config}
         except Exception as e:
@@ -364,7 +364,7 @@ class GraphService:
             config_data_run['colors'] = colors
             config_data[run] = config_data_run
             GraphState.set_global_value("config_data", config_data)
-            GraphUtils.safe_save_data(first_file_data, run, first_run_tag)
+            GraphUtils.safe_save_data(first_file_data, run, f"{first_run_tag}.vis")
             return {'success': True, 'error': None, 'data': {}}
         except Exception as e:
             return {'success': False, 'error': str(e), 'data': None}
