@@ -27,6 +27,7 @@ except ImportError:
 
 NAN_TENSOR_ON_DEVICE = None
 
+
 def get_nan_tensor():
     global NAN_TENSOR_ON_DEVICE
     if not NAN_TENSOR_ON_DEVICE:

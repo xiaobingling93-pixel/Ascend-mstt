@@ -25,11 +25,6 @@ from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
 
 
-NAN_TENSOR_ON_DEVICE = None
-FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
-FILE_NAME_MAX_LENGTH = 255
-DIRECTORY_MAX_LENGTH = 4096
-
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
 
