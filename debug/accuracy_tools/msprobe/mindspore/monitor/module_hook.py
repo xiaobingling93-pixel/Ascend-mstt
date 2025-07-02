@@ -28,11 +28,12 @@ from mindspore import nn, _no_grad
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.monitor.utils import validate_config, get_output_base_dir, get_target_output_dir
 from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank
-from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
-    is_skip_step, get_metrics, get_target_output_dir
+from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, step_accumulates_one, is_skip_step, \
+    get_metrics
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.mindspore.monitor.data_writers import CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate

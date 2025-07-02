@@ -16,7 +16,7 @@
 
 from mindspore import nn
 from mindspore import communication
-from msprobe.mindspore.monitor.utils import logger
+from msprobe.core.common.log import logger
 from msprobe.mindspore.common.utils import is_mindtorch
 if is_mindtorch():
     import torch
