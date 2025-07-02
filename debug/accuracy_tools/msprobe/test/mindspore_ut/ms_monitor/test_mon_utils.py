@@ -82,7 +82,7 @@ class TestMonitorUtils(unittest.TestCase):
         self.assertTrue(is_skip_step(12, 10, 2, has_collect_times=5, collect_times=5))
 
     def test_validate_ops(self):
-        from msprobe.mindspore.monitor.utils import validate_ops
+        from msprobe.core.monitor.utils import validate_ops
         
         # 测试输入不是list的情况
         with self.assertRaises(TypeError):
@@ -105,7 +105,7 @@ class TestMonitorUtils(unittest.TestCase):
         self.assertIn("dtype", result)
 
     def test_validate_ranks(self):
-        from msprobe.mindspore.monitor.utils import validate_ranks
+        from msprobe.core.monitor.utils import validate_ranks
         
         # 测试输入不是list的情况
         with self.assertRaises(TypeError):
@@ -122,7 +122,7 @@ class TestMonitorUtils(unittest.TestCase):
             self.fail(f"validate_ranks raised unexpected exception: {e}")
 
     def test_validate_targets(self):
-        from msprobe.mindspore.monitor.utils import validate_targets
+        from msprobe.core.monitor.utils import validate_targets
         
         # 测试输入不是dict的情况
         with self.assertRaises(TypeError):
@@ -143,7 +143,7 @@ class TestMonitorUtils(unittest.TestCase):
             self.fail(f"validate_targets raised unexpected exception: {e}")
 
     def test_validate_config(self):
-        from msprobe.mindspore.monitor.utils import validate_config
+        from msprobe.core.monitor.utils import validate_config
         
         # 测试基本配置验证
         config = {
@@ -185,7 +185,7 @@ class TestMonitorUtils(unittest.TestCase):
             validate_config(invalid_config)
 
     def test_time_str2time_digit(self):
-        from msprobe.mindspore.monitor.utils import time_str2time_digit
+        from msprobe.core.monitor.utils import time_str2time_digit
         
         # 测试有效时间字符串
         time_str = "Dec03_21-34-40"
@@ -201,7 +201,7 @@ class TestMonitorUtils(unittest.TestCase):
             time_str2time_digit(invalid_time_str)
 
     def test_get_target_output_dir(self):
-        from msprobe.mindspore.monitor.utils import get_target_output_dir
+        from msprobe.core.monitor.utils import get_target_output_dir
         
         # 测试不带时间范围的情况
         result = get_target_output_dir(self.temp_dir, None, None)

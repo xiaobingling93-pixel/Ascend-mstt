@@ -9,7 +9,7 @@ from msprobe.pytorch.monitor.optimizer_collect import OptimizerMon, \
     MegatronChainedDistributedOptimizerMon, MegatronChainedMixPrecisionOptimizerMon, \
     DeepSpeedZeroOptimizerMon, DeepSpeedZeroOptimizerStage0Mon, \
     DeepSpeedZeroOptimizerStage1or2Mon, DeepSpeedZeroOptimizerStage3Mon
-from msprobe.pytorch.monitor.utils import MVResult
+from msprobe.core.monitor.utils import MVResult
 
 
 def setup_param_groups(num_groups=2, params_per_group=5):
