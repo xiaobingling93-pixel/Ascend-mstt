@@ -51,7 +51,8 @@ class GraphView:
     @wrappers.Request.application
     def load_meta_dir(request):
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
-        result = GraphService.load_meta_dir()
+        is_safe_check = GraphUtils.safe_json_loads(request.args.get("isSafeCheck"))
+        result = GraphService.load_meta_dir(is_safe_check)
         response = http_util.Respond(request, result, "application/json")
         return response
 

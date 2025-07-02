@@ -14,15 +14,26 @@
  * limitations under the License.
  */
 import request from '../utils/request';
+import { loadGraphFileInfoListType } from './type';
 const useGraphAscend = () => {
-    const loadGraphFileInfoList = async (): Promise<any> => {
+
+    const loadGraphFileInfoList = async (isSafeCheck: boolean): Promise<loadGraphFileInfoListType> => {
         try {
-            const result = await request({ url: 'load_meta_dir', method: 'GET' });
-            return result;
+            const params = {
+                isSafeCheck
+            };
+            const result = await request({ url: 'load_meta_dir', method: 'GET', params: params });
+            return result as unknown as loadGraphFileInfoListType;
         } catch (err) {
             return {
-                success: false,
-                error: '加载文件信息失败',
+                data: {},
+                error: [
+                    {
+                        run: '',
+                        tag: '',
+                        info: '加载文件列表失败',
+                    }
+                ],
             };
         }
     };

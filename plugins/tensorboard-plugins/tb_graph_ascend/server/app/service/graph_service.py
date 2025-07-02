@@ -29,12 +29,13 @@ logger = tb_logging.get_logger()
 class GraphService:
 
     @staticmethod
-    def load_meta_dir():
+    def load_meta_dir(is_safe_check):
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
         logdir = GraphState.get_global_value('logdir')
         runs = GraphState.get_global_value('runs', {})
         first_run_tags = GraphState.get_global_value('first_run_tags', {})
         meta_dir = {}
+        error = []
         for root, _, files in GraphUtils.walk_with_max_depth(logdir, 2):
             for file in files:
                 if file.endswith('.vis'):  # check for .vis extension
@@ -42,7 +43,12 @@ class GraphService:
                     run = os.path.basename(run_abs)  # 不允许同名目录，否则有问题
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
                     _, error = GraphUtils.safe_load_data(run_abs, f"{tag}.vis", True)
-                    if error:
+                    if error and is_safe_check:
+                        error.append({
+                            'run': run,
+                            'tag': tag,
+                            'info': error
+                        })
                         logger.error(f'Error: File run:"{run_abs},tag:{tag}" is not accessible. Error: {error}')
                         continue
                     runs[run] = run_abs
@@ -52,7 +58,11 @@ class GraphService:
             first_run_tags[run] = tags[0]
         GraphState.set_global_value('runs', runs)
         GraphState.set_global_value('first_run_tags', first_run_tags)
-        return meta_dir
+        result = {
+            'data': meta_dir,
+            'error': error
+        }
+        return result
 
     @staticmethod
     def load_graph_data(run_name, tag):

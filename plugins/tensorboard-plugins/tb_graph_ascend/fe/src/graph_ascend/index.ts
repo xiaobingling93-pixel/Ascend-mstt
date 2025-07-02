@@ -17,12 +17,17 @@
 import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
+import { loadGraphFileInfoListType } from './type';
 import useGraphAscend from './useGraphAscend';
 import { formatBytes, safeJSONParse } from '../utils';
+import { isEmpty } from 'lodash';
 import '../graph_board/index';
 import '../graph_info_board/index';
 import '../graph_controls_board/index';
 import '../common/graph-board-layout';
+import '@vaadin/confirm-dialog'
+import { Notification } from '@vaadin/notification';
+
 import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
 
 @customElement('graph-ascend')
@@ -82,7 +87,21 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 </graph-info-board>
             </div>
         </graph-board-layout>
-
+        <vaadin-confirm-dialog
+          id="safe-dialog"
+          header="文件权限异常，是否关闭默认安全模式继续?"
+          cancel-button-visible
+          cancel-text="继续"
+          confirm-text="取消"
+          opened="[[safeDialogOpened]]"
+          cancel="[[onSafeDialogCancel]]"
+        >
+        <div class='file-list-error'>
+            <template is="dom-repeat" items="{{fileListError}}">
+                <div>[[item.tag]]:[[item.info]]</div>
+            </template>
+        </div>
+        </vaadin-confirm-dialog>
         <style>
             :host /deep/ {
                 font-family: 'Roboto', sans-serif;
@@ -120,7 +139,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 height: 80%;
                 position: relative;
             }
-
             vaadin-progress-bar {
                 width: 80%;
                 height: 14px;
@@ -184,6 +202,12 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     @property({ type: Object })
     task: string = '';
 
+    @property({ type: Boolean })
+    safeDialogOpened: boolean = false;
+
+    @property({ type: Array })
+    fileListError: Array<loadGraphFileInfoListType['error']> = [];
+
     private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
     private eventSource: EventSource | null = null;
@@ -204,13 +228,32 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     override async ready(): Promise<void> {
         super.ready();
-        const metaDir = await this.useGraphAscend.loadGraphFileInfoList();
-        this.set('metaDir', metaDir);
+        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(true);
+        const safeDialog = this.shadowRoot?.querySelector('#safe-dialog') as HTMLElement;
+        safeDialog.addEventListener('cancel', this.onSafeDialogCancel as any);
+        if (isEmpty(error)) {
+            this.set('safeDialogOpened', true);
+            this.set('fileListError', error);
+        }
+        this.set('metaDir', data);
         document.addEventListener(
             'contextMenuTag-changed',
             (event: any) => this.set('jumpToNode', event.detail?.nodeName),
             { passive: true },
         );
+    }
+    // 关闭默认安全模式继续
+    onSafeDialogCancel = async () => {
+        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(false);
+        if (!isEmpty(error)) {
+            Notification.show('文件列表加载失败', {
+                position: 'middle',
+                duration: 2000,
+                theme: 'error',
+            });
+            return;
+        }
+        this.set('metaDir', data);
     }
 
     loadGraphData = (run, tag) => {

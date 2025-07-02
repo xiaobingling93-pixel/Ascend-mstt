@@ -19,3 +19,8 @@ vaadin-combo-box-item {
 vaadin-select-item {
   font-size: 14px;
 }
+
+.file-list-error{
+    max-height: 360px;
+    overflow-y:auto;
+}
