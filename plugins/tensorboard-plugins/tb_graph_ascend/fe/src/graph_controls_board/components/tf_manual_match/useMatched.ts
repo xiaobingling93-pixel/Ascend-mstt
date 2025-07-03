@@ -20,21 +20,23 @@ import { safeJSONParse } from '../../../utils';
 import request from '../../../utils/request';
 import { UseMatchedType, MatchResultType } from '../../type';
 const useMatched = (): UseMatchedType => {
-  const requestAddMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
+  const requestAddMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any, isMatchChildren: boolean): Promise<any> => {
     const params = {
       npuNodeName: npuNodeName,
       benchNodeName: benchNodeName,
       metaData: JSON.stringify(metaData),
+      isMatchChildren
     };
     const mactchResult = await request({ url: 'addMatchNodes', method: 'GET', params: params });
     return mactchResult;
   };
 
-  const requestDeleteMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any): Promise<any> => {
+  const requestDeleteMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any, isUnMatchChildren: boolean): Promise<any> => {
     const params = {
       npuNodeName: npuNodeName,
       benchNodeName: benchNodeName,
       metaData: JSON.stringify(metaData),
+      isUnMatchChildren
     };
     const mactchResult = await request({ url: 'deleteMatchNodes', method: 'GET', params: params });
     return mactchResult;
@@ -89,6 +91,7 @@ const useMatched = (): UseMatchedType => {
     npuNodeName: string,
     benchNodeName: string,
     selection: any,
+    isMatchChildren: boolean
   ): Promise<MatchResultType> => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
@@ -100,11 +103,11 @@ const useMatched = (): UseMatchedType => {
       run: selection.run,
       tag: selection.tag,
     };
-    const matchResult: MatchResultType = await requestAddMatchNodes(npuNodeName, benchNodeName, metaData);
+    const matchResult: MatchResultType = await requestAddMatchNodes(npuNodeName, benchNodeName, metaData, isMatchChildren);
     return matchResult;
   };
 
-  const deleteMatchedNodesLink = async (npuNodeName: string, benchNodeName: string, selection: any): Promise<any> => {
+  const deleteMatchedNodesLink = async (npuNodeName: string, benchNodeName: string, selection: any, isUnMatchChildren: boolean): Promise<any> => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
         success: false,
@@ -115,7 +118,7 @@ const useMatched = (): UseMatchedType => {
       run: selection.run,
       tag: selection.tag,
     };
-    const matchResult: MatchResultType = await requestDeleteMatchNodes(npuNodeName, benchNodeName, metaData);
+    const matchResult: MatchResultType = await requestDeleteMatchNodes(npuNodeName, benchNodeName, metaData, isUnMatchChildren);
     return matchResult;
   };
 

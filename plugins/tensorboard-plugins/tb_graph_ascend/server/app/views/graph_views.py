@@ -51,7 +51,8 @@ class GraphView:
     @wrappers.Request.application
     def load_meta_dir(request):
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
-        result = GraphService.load_meta_dir()
+        is_safe_check = GraphUtils.safe_json_loads(request.args.get("isSafeCheck"))
+        result = GraphService.load_meta_dir(is_safe_check)
         response = http_util.Respond(request, result, "application/json")
         return response
 
@@ -135,7 +136,8 @@ class GraphView:
         npu_node_name = request.args.get("npuNodeName")
         bench_node_name = request.args.get("benchNodeName")
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
-        match_result = GraphService.add_match_nodes(npu_node_name, bench_node_name, meta_data)
+        is_match_children = GraphUtils.safe_json_loads(request.args.get("isMatchChildren"))
+        match_result = GraphService.add_match_nodes(npu_node_name, bench_node_name, meta_data, is_match_children)
         return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 取消节点匹配
@@ -145,7 +147,8 @@ class GraphView:
         npu_node_name = request.args.get("npuNodeName")
         bench_node_name = request.args.get("benchNodeName")
         meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
-        match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data)
+        is_unmatch_children = GraphUtils.safe_json_loads(request.args.get("isUnMatchChildren"))
+        match_result = GraphService.delete_match_nodes(npu_node_name, bench_node_name, meta_data, is_unmatch_children)
         return http_util.Respond(request, json.dumps(match_result), "application/json")
 
     # 保存匹配节点列表

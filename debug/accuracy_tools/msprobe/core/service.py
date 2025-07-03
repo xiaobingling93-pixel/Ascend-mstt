@@ -303,7 +303,8 @@ class BaseService(ABC):
                 self.logger.info(
                     f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
             self.cur_token_id += 1
-        if isinstance(root_model, list):
+        # 此处root_model可以保证为 Module/Cell类型 或 [Module/Cell]类型
+        if root_model and isinstance(root_model, list):
             root_model = root_model[0]
             self.logger.warning("Infer model can only input one to support token_range, choose the first one.")
         if self._is_online_run_ut:

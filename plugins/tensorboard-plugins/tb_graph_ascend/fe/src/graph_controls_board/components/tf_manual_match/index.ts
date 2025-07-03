@@ -19,6 +19,7 @@ import '@vaadin/details';
 import '@vaadin/combo-box';
 import '@vaadin/tooltip';
 import '@vaadin/progress-bar';
+import '@vaadin/checkbox';
 import { isEmpty } from 'lodash';
 import { Notification } from '@vaadin/notification';
 import { PolymerElement, html } from '@polymer/polymer';
@@ -63,14 +64,15 @@ class Legend extends PolymerElement {
       tf-search-combox.matched-node::part(arraw-button) {
         margin-top: 28px !important;
       }
-
+      .match-checkbox {
+        font-size: 14px;
+      }
       .vaadin-details-title {
         font-size: 14px;
         color: #333333;
         font-weight: 600;
         margin-bottom: 0;
       }
-
       .vaadin-details vaadin-details-summary {
         font-size: 15px;
         color: #333333;
@@ -160,6 +162,7 @@ class Legend extends PolymerElement {
         <template is="dom-if" if="[[matchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
+        <vaadin-checkbox class="match-checkbox" label="操作选中节点及其子节点" checked={{isMatchChildren}}></vaadin-checkbox>
         <div class="match-button">
           <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">点击匹配</vaadin-button>
         </div>
@@ -183,6 +186,7 @@ class Legend extends PolymerElement {
         <template is="dom-if" if="[[unmatchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
+        <vaadin-checkbox class="match-checkbox" label="操作选中节点及其子节点" checked={{isUnMatchChildren}}></vaadin-checkbox>
         <div class="match-button">
           <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink">取消匹配</vaadin-button>
         </div>
@@ -284,6 +288,12 @@ class Legend extends PolymerElement {
 
   @property({ type: String })
   selectedConfigFile: string = '';
+
+  @property({ type: Boolean })
+  isMatchChildren: boolean = true;
+
+  @property({ type: Boolean })
+  isUnMatchChildren: boolean = true;
 
   useMatched: UseMatchedType = useMatched();
   npuMatchedNodeList = {};
@@ -414,6 +424,7 @@ class Legend extends PolymerElement {
       this.selectedNpuMatchedNode,
       this.selectedBenchMatchedNode,
       this.selection,
+      this.isUnMatchChildren
     );
     this.set('unmatchLoading', false);
     if (success) {
@@ -534,6 +545,7 @@ class Legend extends PolymerElement {
       this.selectedNpuUnMatchedNode,
       this.selectedBenchUnMatchedNode,
       this.selection,
+      this.isMatchChildren,
     );
     this.set('matchLoading', false);
     if (success) {
