@@ -89,7 +89,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         </graph-board-layout>
         <vaadin-confirm-dialog
           id="safe-dialog"
-          header="文件权限异常，是否关闭默认安全模式继续?"
+          header="您尝试访问的文件或路径未通过系统的安全校验，是否关闭默认安全模式继续?"
           cancel-button-visible
           cancel-text="继续"
           confirm-text="取消"
@@ -97,9 +97,14 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
           cancel="[[onSafeDialogCancel]]"
         >
         <div class='file-list-error'>
-            <template is="dom-repeat" items="{{fileListError}}">
-                <div>[[item.tag]]:[[item.info]]</div>
-            </template>
+            <p> <vaadin-icon id="safe-warning" icon="vaadin:warning"></vaadin-icon>如果您仍坚持继续，请知悉以下风险：</p>
+            <div>文件可能包含恶意内容，可能导致系统异常或数据泄露。 非授权路径访问可能违反公司信息安全策略。 文件过大或格式异常，可能导致性能问题或服务中断。路径中存在软链接或权限不当，可能存在越权访问风险。</div>
+            <P>继续操作将由您自行承担相关后果。如非明确知晓风险，请取消操作并联系管理员处理。</p>
+            <div class="error-info">
+                <template is="dom-repeat" items="{{fileListError}}">
+                    <div><span class='file-path'>[[item.run]]/[[item.tag]]：</span>[[item.info]]</div>
+                </template>
+            </div>
         </div>
         </vaadin-confirm-dialog>
         <style>
@@ -112,6 +117,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 display: flex;
                 height: 100%;
             }
+ 
 
             .center {
                 height: 100%;
@@ -231,7 +237,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(true);
         const safeDialog = this.shadowRoot?.querySelector('#safe-dialog') as HTMLElement;
         safeDialog.addEventListener('cancel', this.onSafeDialogCancel as any);
-        if (isEmpty(error)) {
+        if (!isEmpty(error)) {
             this.set('safeDialogOpened', true);
             this.set('fileListError', error);
         }
@@ -264,13 +270,13 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         this.eventSource = new EventSource(`loadGraphData?run=${run}&tag=${tag}`);
         this.eventSource.onmessage = async (e) => {
             const data = safeJSONParse(e.data);
-            if (data.error) {
+            if (data?.error) {
                 this.progreesError('初始化图失败', data.error);
             }
-            if (data.status === 'reading') {
+            if (data?.status === 'reading') {
                 this.progressReading('正在读取文件', data);
             }
-            if (data.status === 'loading') {
+            if (data?.status === 'loading') {
                 if (data.done) {
                     this.eventSource?.close();
                     this.eventSource = null;

@@ -318,7 +318,7 @@ class GraphUtils:
                     raise PermissionError(f"Directory is not owned by the current user")
                 # group和其他用户不可写检查
                 if st.st_mode & PERM_GROUP_WRITE or st.st_mode & PERM_OTHER_WRITE:
-                    raise PermissionError(f"Directory has group or other write permission")
+                    raise PermissionError(f"Directory has group or other write permission,there may be a risk of data tampering.")
             return True, None
         except Exception as e:
             logger.error(e)

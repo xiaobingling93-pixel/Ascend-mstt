@@ -35,7 +35,7 @@ class GraphService:
         runs = GraphState.get_global_value('runs', {})
         first_run_tags = GraphState.get_global_value('first_run_tags', {})
         meta_dir = {}
-        error = []
+        error_list = []
         for root, _, files in GraphUtils.walk_with_max_depth(logdir, 2):
             for file in files:
                 if file.endswith('.vis'):  # check for .vis extension
@@ -44,10 +44,10 @@ class GraphService:
                     tag = os.path.splitext(file)[0]  # Use the filename without extension as tag
                     _, error = GraphUtils.safe_load_data(run_abs, f"{tag}.vis", True)
                     if error and is_safe_check:
-                        error.append({
+                        error_list.append({
                             'run': run,
                             'tag': tag,
-                            'info': error
+                            'info': f'Error: {error}'
                         })
                         logger.error(f'Error: File run:"{run_abs},tag:{tag}" is not accessible. Error: {error}')
                         continue
@@ -60,7 +60,7 @@ class GraphService:
         GraphState.set_global_value('first_run_tags', first_run_tags)
         result = {
             'data': meta_dir,
-            'error': error
+            'error': error_list
         }
         return result
 
@@ -68,11 +68,6 @@ class GraphService:
     def load_graph_data(run_name, tag):
         runs = GraphState.get_global_value('runs')
         run = runs.get(run_name)
-        is_safe, error = GraphUtils.safe_load_data(run_name, f"{tag}.vis", True)
-        if (not is_safe or not run):
-            logger.error(f'Error: File run:"{run},tag:{tag}" is not accessible. Error: {error}')
-            yield f"data: {{\"error\": 读取文件失败}}\n\n"
-            return
         buffer = ""
         read_bytes = 0
         chunk_size = 1024 * 1024 * 60  # 缓冲区
@@ -120,7 +115,6 @@ class GraphService:
             return {'success': False, 'error': error_message}
         config = {}
         try:
-
             # 读取全局信息,tag层面
             if graph_data.get('MicroSteps', {}):
                 config['microSteps'] = graph_data.get('MicroSteps')
