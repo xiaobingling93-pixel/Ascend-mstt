@@ -64,7 +64,7 @@ class Legend extends PolymerElement {
       tf-search-combox.matched-node::part(arraw-button) {
         margin-top: 28px !important;
       }
-      .match-checkbox{
+      .match-checkbox {
         font-size: 14px;
       }
       .vaadin-details-title {
