@@ -319,7 +319,7 @@ class GraphUtils:
                 # group和其他用户不可写检查
                 if st.st_mode & PERM_GROUP_WRITE or st.st_mode & PERM_OTHER_WRITE:
                     raise PermissionError(
-                        f"Directory has group or other write permission,there may be a risk of data tampering.")
+                        f"Directory has group or other write permission, there may be a risk of data tampering.")
             return True, None
         except Exception as e:
             logger.error(e)
@@ -355,7 +355,7 @@ class GraphUtils:
             # 可读性检查
             if not st.st_mode & stat.S_IRUSR:
                 raise PermissionError(
-                    f"Directory lacks read permission for others,there may be a risk of data tampering.")
+                    f"Directory lacks read permission for others, there may be a risk of data tampering.")
             # 文件大小校验
             if not is_dir and os.path.getsize(file_path) > MAX_FILE_SIZE:
                 file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))

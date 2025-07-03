@@ -62,13 +62,13 @@ export interface UnmatchedNodeType {
 
 export interface loadGraphFileInfoListType {
     data: {
-        [string]: string[]
-    }
+        [string]: string[];
+    };
     error: [
         {
             run: string;
             tag: string;
             info: string;
         }
-    ]
+    ];
 }
