@@ -17,6 +17,7 @@ import os
 from collections import defaultdict, namedtuple
 
 import mindspore as ms
+from mindspore.ops.operations import _inner_ops as inner
 from mindspore._c_expression import MSContext
 
 from msprobe.core.common.const import Const, MsgConst
@@ -28,7 +29,8 @@ from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import (
     set_register_backward_hook_functions,
     check_save_param,
-    is_graph_mode_cell_dump_allowed
+    is_graph_mode_cell_dump_allowed,
+    wrap_backward_hook_call_func
 )
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
@@ -76,6 +78,9 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.common_config.level = level if level else self.common_config.level
         self.common_config.dump_path = dump_path if dump_path else self.common_config.dump_path
         self.config = DebuggerConfig(self.common_config, self.task_config)
+
+        setattr(inner.CellBackwardHook, '__call__',
+                wrap_backward_hook_call_func(getattr(inner.CellBackwardHook, '__call__')))
 
         if self._is_kernel_dump() and _msprobe_c:
             os.environ["MS_HOOK_ENABLE"] = "on"

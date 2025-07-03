@@ -42,6 +42,7 @@ else:
 mindtorch_check_result = None
 register_backward_hook_functions = {}
 kwargs_exist_in_forward_hook = None
+is_output_of_backward_hook_a_view = None
 
 
 class MsprobeStep(ms.train.Callback):
@@ -329,3 +330,43 @@ def has_kwargs_in_forward_hook():
         return kwargs_exist_in_forward_hook
 
     return kwargs_exist_in_forward_hook
+
+
+def is_backward_hook_output_a_view():
+    global is_output_of_backward_hook_a_view
+
+    if is_output_of_backward_hook_a_view is None:
+        is_output_of_backward_hook_a_view = False
+        if getattr(ms, '__version__', '2.4.0') < '2.7.0':
+            return is_output_of_backward_hook_a_view
+        try:
+            from mindspore.ops.operations import _inner_ops as inner
+            call_func = getattr(inner.CellBackwardHook, '__call__')
+            func_params = inspect.signature(call_func).parameters
+        except Exception:
+            return is_output_of_backward_hook_a_view
+        if 'args' in func_params and func_params['args'].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            is_output_of_backward_hook_a_view = True
+
+    return is_output_of_backward_hook_a_view
+
+
+def wrap_backward_hook_call_func(call_func):
+    if not is_backward_hook_output_a_view():
+        return call_func
+
+    from mindspore.common.api import _pynative_executor as executor
+    from mindspore._c_expression import CreationType
+
+    def new_call(self, args):
+        outputs = call_func(self, args)
+        if isinstance(outputs, ms.Tensor):
+            executor.set_creation_type(outputs, CreationType.DEFAULT)
+        elif isinstance(outputs, tuple):
+            for item in outputs:
+                if isinstance(item, ms.Tensor):
+                    executor.set_creation_type(item, CreationType.DEFAULT)
+        return outputs
+    new_call.__name__ = '__call__'
+
+    return new_call

@@ -44,8 +44,10 @@ importlib.reload(mindspore_service)
 importlib.reload(common_func)
 reset_torch_tensor()
 
+
 def register_backward_pre_hook(*args, **kwargs):
     pass
+
 
 register_backward_hook_functions['full'] = ms.nn.Cell.register_backward_hook
 register_backward_hook_functions["pre"] = register_backward_pre_hook
