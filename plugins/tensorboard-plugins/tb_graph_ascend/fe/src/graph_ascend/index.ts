@@ -98,7 +98,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         >
         <div class='file-list-error'>
             <p> <vaadin-icon id="safe-warning" icon="vaadin:warning"></vaadin-icon>如果您仍坚持继续，请知悉以下风险：</p>
-            <div>文件可能包含恶意内容，可能导致系统异常或数据泄露。 非授权路径访问可能违反公司信息安全策略。 文件过大或格式异常，可能导致性能问题或服务中断。路径中存在软链接或权限不当，可能存在越权访问风险。</div>
+            <div>非授权路径访问可能存在信息泄露和文件内容篡改。 文件过大或格式异常，可能导致性能问题或服务中断。路径中存在软链接或权限不当，可能存在越权访问和数据篡改风险。</div>
             <P>继续操作将由您自行承担相关后果。如非明确知晓风险，请取消操作并联系管理员处理。</p>
             <div class="error-info">
                 <template is="dom-repeat" items="{{fileListError}}">

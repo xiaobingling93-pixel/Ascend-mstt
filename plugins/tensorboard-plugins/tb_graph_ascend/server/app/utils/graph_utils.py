@@ -353,7 +353,7 @@ class GraphUtils:
                 raise PermissionError(f"Directory does not exist")
             # 可读性检查
             if not st.st_mode & stat.S_IRUSR:
-                raise PermissionError(f"Directory lacks read permission for others")
+                raise PermissionError(f"Directory lacks read permission for others,there may be a risk of data tampering.")
             # 文件大小校验
             if not is_dir and os.path.getsize(file_path) > MAX_FILE_SIZE:
                 file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))
