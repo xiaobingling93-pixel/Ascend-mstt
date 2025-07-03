@@ -28,11 +28,12 @@ from mindspore import nn, _no_grad
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.monitor.utils import validate_config, get_output_base_dir, get_target_output_dir
 from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
 from msprobe.mindspore.common.utils import is_mindtorch
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank
-from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, validate_config, step_accumulates_one, \
-    is_skip_step, get_metrics, get_target_output_dir
+from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, step_accumulates_one, is_skip_step, \
+    get_metrics
 from msprobe.mindspore.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.mindspore.monitor.data_writers import CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.mindspore.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
@@ -250,7 +251,6 @@ class TrainerMon:
         self.has_collect_times = 0  # 重设采集计数器
         self.print_struct = self.config.get("print_struct", False)
         self.targets = self.config.get("targets", None)
-        self.is_select = self.config.get("is_select", False)
         self.module_rank_list = self.config.get("module_ranks", [])
         self.format = self.config.get('format', MonitorConst.CSV)  # only csv supported in mindspore
         self.eps = self.config.get('eps', 1e-8)

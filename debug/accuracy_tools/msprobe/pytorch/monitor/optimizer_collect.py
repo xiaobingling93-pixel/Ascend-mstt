@@ -17,7 +17,7 @@ from abc import abstractmethod
 import torch
 
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.monitor.utils import MVResult
+from msprobe.core.monitor.utils import MVResult
 from msprobe.core.common.const import MonitorConst
 
 
