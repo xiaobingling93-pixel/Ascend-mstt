@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 import request from '../utils/request';
-import { loadGraphFileInfoListType } from './type';
+import { LoadGraphFileInfoListType } from './type';
 const useGraphAscend = () => {
 
-    const loadGraphFileInfoList = async (isSafeCheck: boolean): Promise<loadGraphFileInfoListType> => {
+    const loadGraphFileInfoList = async (isSafeCheck: boolean): Promise<LoadGraphFileInfoListType> => {
         try {
             const params = {
                 isSafeCheck
             };
             const result = await request({ url: 'load_meta_dir', method: 'GET', params: params });
-            return result as unknown as loadGraphFileInfoListType;
+            return result as unknown as LoadGraphFileInfoListType;
         } catch (err) {
             return {
                 data: {},

@@ -17,7 +17,7 @@
 import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
-import { loadGraphFileInfoListType } from './type';
+import { LoadGraphFileInfoListType } from './type';
 import useGraphAscend from './useGraphAscend';
 import { formatBytes, safeJSONParse } from '../utils';
 import { isEmpty } from 'lodash';
@@ -212,7 +212,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     safeDialogOpened: boolean = false;
 
     @property({ type: Array })
-    fileListError: Array<loadGraphFileInfoListType['error']> = [];
+    fileListError: Array<LoadGraphFileInfoListType['error']> = [];
 
     private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
