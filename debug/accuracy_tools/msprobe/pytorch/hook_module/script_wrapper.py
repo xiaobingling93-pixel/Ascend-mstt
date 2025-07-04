@@ -63,7 +63,8 @@ def wrap_compile_script_func():
                                                                               hooks)  # type: ignore[attr-defined]
         return _wrapped
 
-    torch._dynamo.convert_frame = _patched_convert_frame
+    import torch._dynamo.convert_frame as _cf_mod
+    _cf_mod.convert_frame = _patched_convert_frame
 
 
 def wrap_script_func():
