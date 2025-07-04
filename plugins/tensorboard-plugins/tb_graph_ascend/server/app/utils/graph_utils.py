@@ -312,7 +312,7 @@ class GraphUtils:
                 current_uid = os.getuid() 
                 # 如果是root用户，跳过后续权限检查
                 if current_uid == 0:
-                    return True
+                    return True, None
                 # 属主检查
                 if st.st_uid != current_uid:
                     raise PermissionError(f"Directory is not owned by the current user")
@@ -367,7 +367,7 @@ class GraphUtils:
                 current_uid = os.getuid() 
                 # 如果是root用户，跳过后续权限检查
                 if current_uid == 0:
-                    return True
+                    return True, None
                 # 属主检查
                 if st.st_uid != current_uid:
                     raise PermissionError(f"Directory is not owned by the current user")

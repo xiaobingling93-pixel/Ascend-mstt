@@ -60,7 +60,7 @@ export interface UnmatchedNodeType {
     benchNodeList: string[];
 }
 
-export interface loadGraphFileInfoListType {
+export interface LoadGraphFileInfoListType {
     data: {
         [string]: string[];
     };
