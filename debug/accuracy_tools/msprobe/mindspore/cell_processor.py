@@ -31,7 +31,8 @@ from msprobe.mindspore.common.utils import (
     is_mindtorch,
     get_cells_and_names_with_index,
     has_kwargs_in_forward_hook,
-    is_graph_mode_cell_dump_allowed
+    is_graph_mode_cell_dump_allowed,
+    is_backward_hook_output_a_view
 )
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
@@ -174,7 +175,7 @@ class CellProcessor:
                 bw_hook.register_backward_hook()
                 CellProcessor.cell_bw_hook_kernels[full_forward_name] = bw_hook
 
-                args = bw_hook(*args)
+                args = bw_hook(args) if is_backward_hook_output_a_view() else bw_hook(*args)
 
             return args
 
@@ -199,12 +200,15 @@ class CellProcessor:
                     logger.warning("For backward hooks to be called,"
                                    " cell output should be a Tensor or a tuple of Tensors"
                                    f" but received {type(outputs)}")
-                if isinstance(outputs, tuple):
-                    new_outputs = bw_hook(*outputs)
-                else:
+                if is_backward_hook_output_a_view():
                     new_outputs = bw_hook(outputs)
-                if isinstance(outputs, tuple) and len(outputs) == 1:
-                    new_outputs = (new_outputs,)
+                else:
+                    if isinstance(outputs, tuple):
+                        new_outputs = bw_hook(*outputs)
+                    else:
+                        new_outputs = bw_hook(outputs)
+                    if isinstance(outputs, tuple) and len(outputs) == 1:
+                        new_outputs = (new_outputs,)
                 outputs = new_outputs
 
             def get_backward_pre_hook(full_backward_name, backward_data_hook):
@@ -227,18 +231,21 @@ class CellProcessor:
                                                  self.cell_backward_pre_hook[-1])
             bw_pre_hook.register_backward_pre_hook()
 
-            if isinstance(outputs, tuple):
-                result = bw_pre_hook(*outputs)
-            else:
+            if is_backward_hook_output_a_view():
                 result = bw_pre_hook(outputs)
-            if isinstance(outputs, tuple):
-                if len(outputs) == 1:
-                    result = (result,)
-                if len(result) != len(outputs):
-                    raise TypeError(
-                        f"The backward pre hook return value size is {len(result)} "
-                        f"not equal to output size {len(outputs)}"
-                    )
+            else:
+                if isinstance(outputs, tuple):
+                    result = bw_pre_hook(*outputs)
+                else:
+                    result = bw_pre_hook(outputs)
+                if isinstance(outputs, tuple):
+                    if len(outputs) == 1:
+                        result = (result,)
+                    if len(result) != len(outputs):
+                        raise TypeError(
+                            f"The backward pre hook return value size is {len(result)} "
+                            f"not equal to output size {len(outputs)}"
+                        )
             return result
 
         return forward_pre_hook

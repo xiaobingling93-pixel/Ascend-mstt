@@ -93,6 +93,8 @@ from torch.nn.modules.module import (_global_backward_pre_hooks, _global_backwar
                                      _global_forward_hooks, _global_forward_hooks_always_called)
 from torch.utils.hooks import RemovableHandle
 
+from msprobe.mindspore.common.utils import is_backward_hook_output_a_view
+
 
 def _call_impl(self, *args, **kwargs):
     forward_call = self.forward
@@ -245,11 +247,14 @@ def _get_backward_hooks(self):
 
 
 def apply_backward_hook_on_tensors(cell_backward_hook, args):
-    is_tuple = True
-    if not isinstance(args, tuple):
-        args = (args,)
-        is_tuple = False
-    hooked_args = cell_backward_hook(*args)
-    if is_tuple and len(args) == 1:
-        hooked_args = (hooked_args, )
+    if is_backward_hook_output_a_view():
+        hooked_args = cell_backward_hook(args)
+    else:
+        is_tuple = True
+        if not isinstance(args, tuple):
+            args = (args,)
+            is_tuple = False
+        hooked_args = cell_backward_hook(*args)
+        if is_tuple and len(args) == 1:
+            hooked_args = (hooked_args, )
     return hooked_args
