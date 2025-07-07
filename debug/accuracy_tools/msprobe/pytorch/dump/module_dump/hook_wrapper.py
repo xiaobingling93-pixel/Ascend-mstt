@@ -21,13 +21,11 @@ from torch.utils.hooks import BackwardHook
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import is_float8_tensor
 
 
 def wrap_setup_backward_hook(func):
     def requires_clone(tensor):
-        return isinstance(tensor, torch.Tensor) and not is_float8_tensor(tensor) and \
-            tensor.requires_grad and torch.is_grad_enabled()
+        return isinstance(tensor, torch.Tensor) and tensor.requires_grad and torch.is_grad_enabled()
 
     @recursion_depth_decorator("Dump: wrap_setup_backward_hook.parse_tensor", max_depth=Const.DUMP_MAX_DEPTH)
     def parse_tensor(item, tensor_list):

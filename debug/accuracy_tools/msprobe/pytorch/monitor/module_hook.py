@@ -34,7 +34,7 @@ from msprobe.core.common.utils import analyze_api_call_stack
 from msprobe.core.monitor.utils import validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import is_recomputation, is_float8_tensor
+from msprobe.pytorch.common.utils import is_recomputation
 from msprobe.pytorch.monitor.utils import get_param_struct
 from msprobe.pytorch.monitor.data_writers import SummaryWriterWithAD, CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
@@ -764,7 +764,7 @@ class TrainerMon:
         def clone_if_tensor(args):
             if isinstance(args, tuple):
                 return tuple([clone_if_tensor(arg) for arg in args])
-            elif isinstance(args, torch.Tensor) and not is_float8_tensor(args):
+            elif isinstance(args, torch.Tensor):
                 return args.clone()
             else:
                 return args
@@ -1171,8 +1171,6 @@ class TrainerMon:
                     grad = param.main_grad
                 else:
                     grad = param.grad
-                if is_float8_tensor(grad):
-                    grad = grad.float()
                 context_dict[key] = grad.clone()
 
             if param.micro_step == self.micro_batch_number:

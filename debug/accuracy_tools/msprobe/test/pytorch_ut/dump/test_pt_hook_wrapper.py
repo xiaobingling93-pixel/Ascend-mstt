@@ -79,14 +79,3 @@ class TestWrapSetupBackwardHook(unittest.TestCase):
         self.assertTrue(torch.equal(result[1]["dict"], test_tensor1))
         self.assertTrue(torch.equal(result[2][0], test_tensor2))
         self.assertTrue(torch.equal(result[3][0], test_tensor3))
-
-    @patch('msprobe.pytorch.common.utils.is_float8_tensor', return_value=True)
-    def test_float8_tensor_handling(self, _):
-        test_data = [torch.randn(3, requires_grad=True)]
-
-        mock_self = MagicMock()
-        self.mock_func.return_value = []
-        result = self.decorated_func(mock_self, test_data)
-
-        self.assertIsInstance(result, list)
-        self.assertListEqual(result, test_data)

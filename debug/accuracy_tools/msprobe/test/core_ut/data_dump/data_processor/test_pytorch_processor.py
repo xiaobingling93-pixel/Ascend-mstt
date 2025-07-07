@@ -369,16 +369,6 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result['shape'], torch.Size([0]))
         self.assertEqual(result['requires_grad'], False)
 
-    def test_cast_to_float_if_fp8(self):
-        tensor = MagicMock()
-        tensor.dtype = "torch.float8_e5m2"
-        _, dtype = self.processor._cast_to_float_if_fp8(tensor)
-        self.assertEqual(dtype, "torch.float8_e5m2")
-
-        tensor.dtype = "torch.float8_e4m3fn"
-        _, dtype = self.processor._cast_to_float_if_fp8(tensor)
-        self.assertEqual(dtype, "torch.float8_e4m3fn")
-
 
 class TestTensorDataProcessor(unittest.TestCase):
 
