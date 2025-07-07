@@ -19,3 +19,25 @@ vaadin-combo-box-item {
 vaadin-select-item {
   font-size: 14px;
 }
+
+.file-list-error {
+    max-height: 360px;
+}
+
+#safe-warning {
+    color: red;
+    font-size: 14px;
+    margin-right: 10px;
+    margin-bottom: 4px;
+}
+.error-info {
+  height: 100px;
+  overflow: auto;
+  border: 1px solid #ccc;
+  padding: 6px;
+  font-size: 14px;
+}
+.file-path {
+  color: red;
+  font-weight: 400;
+}

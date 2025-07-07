@@ -39,7 +39,7 @@ class TfVaadinTable extends PolymerElement {
       .copyable-input {
         gap: 8px;
         width: 100%;
-        height: 160px;
+        height: 260px;
         font-family: Roboto, sans-serif;
         font-weight: 400;
       }

@@ -59,3 +59,16 @@ export interface UnmatchedNodeType {
     npuNodeList: string[];
     benchNodeList: string[];
 }
+
+export interface LoadGraphFileInfoListType {
+    data: {
+        [string]: string[];
+    };
+    error: [
+        {
+            run: string;
+            tag: string;
+            info: string;
+        }
+    ];
+}

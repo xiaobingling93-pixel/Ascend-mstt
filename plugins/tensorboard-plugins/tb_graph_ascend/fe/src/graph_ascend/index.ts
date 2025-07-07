@@ -17,12 +17,17 @@
 import { customElement, observe, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
+import { LoadGraphFileInfoListType } from './type';
 import useGraphAscend from './useGraphAscend';
 import { formatBytes, safeJSONParse } from '../utils';
+import { isEmpty } from 'lodash';
 import '../graph_board/index';
 import '../graph_info_board/index';
 import '../graph_controls_board/index';
 import '../common/graph-board-layout';
+import '@vaadin/confirm-dialog'
+import { Notification } from '@vaadin/notification';
+
 import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
 
 @customElement('graph-ascend')
@@ -82,7 +87,26 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 </graph-info-board>
             </div>
         </graph-board-layout>
-
+        <vaadin-confirm-dialog
+          id="safe-dialog"
+          header="您尝试访问的文件或路径未通过系统的安全校验，是否关闭默认安全模式继续?"
+          cancel-button-visible
+          cancel-text="继续"
+          confirm-text="取消"
+          opened="[[safeDialogOpened]]"
+          cancel="[[onSafeDialogCancel]]"
+        >
+        <div class='file-list-error'>
+            <p> <vaadin-icon id="safe-warning" icon="vaadin:warning"></vaadin-icon>如果您仍坚持继续，请知悉以下风险：</p>
+            <div>非授权路径访问可能存在信息泄露和文件内容篡改。 文件过大或格式异常，可能导致性能问题或服务中断。路径中存在软链接或权限不当，可能存在越权访问和数据篡改风险。</div>
+            <P>继续操作将由您自行承担相关后果。如非明确知晓风险，请取消操作并联系管理员处理。</p>
+            <div class="error-info">
+                <template is="dom-repeat" items="{{fileListError}}">
+                    <div><span class='file-path'>[[item.run]]/[[item.tag]]：</span>[[item.info]]</div>
+                </template>
+            </div>
+        </div>
+        </vaadin-confirm-dialog>
         <style>
             :host /deep/ {
                 font-family: 'Roboto', sans-serif;
@@ -93,6 +117,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 display: flex;
                 height: 100%;
             }
+ 
 
             .center {
                 height: 100%;
@@ -120,7 +145,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 height: 80%;
                 position: relative;
             }
-
             vaadin-progress-bar {
                 width: 80%;
                 height: 14px;
@@ -184,6 +208,12 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     @property({ type: Object })
     task: string = '';
 
+    @property({ type: Boolean })
+    safeDialogOpened: boolean = false;
+
+    @property({ type: Array })
+    fileListError: Array<LoadGraphFileInfoListType['error']> = [];
+
     private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
     private eventSource: EventSource | null = null;
@@ -204,13 +234,32 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     override async ready(): Promise<void> {
         super.ready();
-        const metaDir = await this.useGraphAscend.loadGraphFileInfoList();
-        this.set('metaDir', metaDir);
+        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(true);
+        const safeDialog = this.shadowRoot?.querySelector('#safe-dialog') as HTMLElement;
+        safeDialog.addEventListener('cancel', this.onSafeDialogCancel as any);
+        if (!isEmpty(error)) {
+            this.set('safeDialogOpened', true);
+            this.set('fileListError', error);
+        }
+        this.set('metaDir', data);
         document.addEventListener(
             'contextMenuTag-changed',
             (event: any) => this.set('jumpToNode', event.detail?.nodeName),
             { passive: true },
         );
+    }
+    // 关闭默认安全模式继续
+    onSafeDialogCancel = async () => {
+        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(false);
+        if (!isEmpty(error)) {
+            Notification.show('文件列表加载失败', {
+                position: 'middle',
+                duration: 2000,
+                theme: 'error',
+            });
+            return;
+        }
+        this.set('metaDir', data);
     }
 
     loadGraphData = (run, tag) => {
@@ -221,13 +270,13 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         this.eventSource = new EventSource(`loadGraphData?run=${run}&tag=${tag}`);
         this.eventSource.onmessage = async (e) => {
             const data = safeJSONParse(e.data);
-            if (data.error) {
+            if (data?.error) {
                 this.progreesError('初始化图失败', data.error);
             }
-            if (data.status === 'reading') {
+            if (data?.status === 'reading') {
                 this.progressReading('正在读取文件', data);
             }
-            if (data.status === 'loading') {
+            if (data?.status === 'loading') {
                 if (data.done) {
                     this.eventSource?.close();
                     this.eventSource = null;
@@ -260,7 +309,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     };
 
     loadGraphConfig = async (run, tag) => {
-        const { success, data } = await this.useGraphAscend.loadGraphConfig(run, tag);
+        const { success, data, error } = await this.useGraphAscend.loadGraphConfig(run, tag);
         const config = data as GraphConfigType;
         if (success) {
             this.set('colors', config.colors);
@@ -280,11 +329,17 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             } else {
                 this.set('microsteps', []);
             }
+        } else {
+            Notification.show(`图配置加载失败:${error}`, {
+                position: 'middle',
+                duration: 2000,
+                theme: 'error',
+            });
         }
     };
 
     loadGraphAllNodeList = async (run, tag, microStep) => {
-        const { success, data } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
+        const { success, data, error } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
         const allNodeList = data as GraphAllNodeType;
         if (success) {
             const nodelist = {} as NodeListType;
@@ -301,6 +356,12 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('benchMatchNodes', allNodeList?.benchMatchNodes);
             this.set('nodelist', nodelist);
             this.set('unmatched', unmatched);
+        } else {
+            Notification.show(`图节点列表加载失败:${error}`, {
+                position: 'middle',
+                duration: 2000,
+                theme: 'error',
+            });
         }
     };
 
