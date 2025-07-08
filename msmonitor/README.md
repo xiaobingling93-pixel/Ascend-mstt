@@ -2,6 +2,58 @@
 
 ## 安装方式
 
+### 下载包安装
+
+1. 压缩包下载
+| msmonitor版本 | 发布日期       | 下载链接                                                                                                                                            | 校验码                                                       |
+|------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------| ------------------------------------------------------------ |
+| 8.1.0       | 2025-07-11 | [aarch64_8.1.0.zip](https://ptdbg.obs.cn-north-4.myhuaweicloud.com/profiler/msmonitor/8.1.0/aarch64_8.1.0.zip)             | ce136120c0288291cc0a7803b1efc8c8416c6105e9d54c17ccf2e2510869fada |
+|             | 2025-07-11 | [x86_8.1.0.zip](https://ptdbg.obs.cn-north-4.myhuaweicloud.com/profiler/msmonitor/8.1.0/x86_8.1.0.zip)             | 097d11c7994793b6389b19259269ceb3b6b7ac5ed77da3949b3f09da2103b7f2 |
+
+2. 包校验。
+
+   1. 根据以上下载链接下载包到Linux安装环境。
+
+   2. 进入zip包所在目录，执行如下命令。
+
+      ```
+      sha256sum {name}.zip
+      ```
+
+      {name}为zip包名称。
+
+      若回显呈现对应版本zip包一致的**校验码**，则表示下载了正确的性能工具zip安装包。示例如下：
+
+      ```bash
+      sha256sum aarch64_8.1.0.zip
+      ```
+
+3. 包安装(以x86为例)
+
+   1. 解压压缩包
+   ```bash
+   mkdir x86
+   unzip x86_8.1.0.zip -d x86
+   ```
+   
+   2. 进入目录
+   ```bash 
+   cd x86
+   ```
+   
+   3. 安装whl包
+   ```bash
+   pip install msmonitor_plugin-*-cp39-*.whl
+   ```
+   
+   4. 安装dynolog deb或rpm包
+   ```
+   rpm -ivh dynolog-*.rpm --nodeps
+   # deb包则为 dpkg -i --force-overwrite dynolog*.deb
+   ```
+
+### 源码安装
+
 ### 1. clone 代码
 
 ```bash
@@ -155,7 +207,7 @@ sudo systemctl start dynolog
 # 方法2：命令行执行
 dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 
-# 使用Prometheus上报数据需要指定参数：--use_prometheus
+# 使用Tensorboard上报数据需要指定参数：--metric_log_dir, 指定Tensorboard文件落盘文件
 # dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
 
@@ -202,11 +254,20 @@ dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start --report-int
 dyno --certs-dir /home/client_certs --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 ```
 
-Step6: 观测Prometheus上报数据
+Step6: 观测Tensorboard上报数据
 ```
-# Prometheus默认端口为8080
-curl 127.0.0.1:8080/metrics
+# Tensorboard存储数据路径在指定参数metric_log_dir下
+# 请确保安装了Tensorboard：
+
+pip install tensorboard
+
+# 然后运行：
+# metric_log_dir为启动守护进程时所指定参数
+tensorboard --logdir={metric_log_dir} 
+
+# 打开浏览器访问http://localhost:6006即可看到对应可视化图表, 其中6006为tensorboard默认端口
 ```
+> tensorboard 具体使用参数见https://github.com/tensorflow/tensorboard
 
 ### Profiler trace dump功能
 Profiler trace dump功能基于dynolog开发，实现类似于动态profiling的动态触发Ascend Pytorch Profiler采集profiling的功能。用户基于dyno CLI命令行可以动态触发指定节点的训练进程trace dump。
