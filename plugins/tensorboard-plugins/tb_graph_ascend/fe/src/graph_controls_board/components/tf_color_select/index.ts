@@ -15,6 +15,7 @@
  */
 
 import '@vaadin/combo-box';
+import '@vaadin/text-field';
 import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
 import { Notification } from '@vaadin/notification';
@@ -25,7 +26,7 @@ import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
 import { PRECISION_DESC } from '../../../common/constant';
-
+import '../tf_filter_precision_error/index'
 const UNMATCHED_NODE_NAME = '无匹配节点';
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
@@ -179,6 +180,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   ></vaadin-tooltip>
                   </div>
                   <div style="margin-left: auto; display: flex; gap: 8px;">
+                     <vaadin-icon icon="vaadin:funnel" on-click="_clickFilter"></vaadin-icon>
                     <vaadin-icon icon="vaadin:cog-o" on-click="_clickSetting"></vaadin-icon>
                     <template is="dom-if" if="[[showSwitchIcon]]">
                       <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
@@ -320,10 +322,14 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           </template>
         </div>
       </template>
+        <tf-filter-precision-error filter-dialog-opened={{filterDialogOpened}} />
     `;
 
   @property({ type: Boolean })
   _colorSetting: boolean = true; // 颜色设置按钮
+
+  @property({ type: Boolean })
+  filterDialogOpened: boolean = false;
 
   @property({ type: Boolean })
   isSingleGraph = false;
@@ -470,6 +476,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   toggleVisibility(): void {
     this.set('_colorSetting', !this._colorSetting);
+  }
+
+  _clickFilter(event): void {
+    event.stopPropagation();
+    this.set('filterDialogOpened', true);
   }
 
   _clickSetting(event): void {

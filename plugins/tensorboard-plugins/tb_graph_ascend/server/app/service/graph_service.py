@@ -230,6 +230,11 @@ class GraphService:
             return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
 
     @staticmethod
+    def update_precision_error(filter_value):
+        print(filter_value)
+        return {'success': True, 'data': {}}
+        
+    @staticmethod
     def update_hierarchy_data(graph_type):
         if (graph_type == NPU or graph_type == BENCH):
             hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
