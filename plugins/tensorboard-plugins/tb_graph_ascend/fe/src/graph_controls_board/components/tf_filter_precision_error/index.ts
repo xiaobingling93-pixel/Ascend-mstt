@@ -3,9 +3,10 @@ import '@vaadin/confirm-dialog'
 import '@vaadin/checkbox-group';
 import '@vaadin/text-field';
 import { Notification } from '@vaadin/notification';
-import { customElement, property } from '@polymer/decorators';
+import { customElement, property, observe } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import request from '../../../utils/request';
+import { isEmpty } from 'lodash';
 
 @customElement('tf-filter-precision-error')
 class TfFilterPrecisionError extends PolymerElement {
@@ -39,10 +40,18 @@ class TfFilterPrecisionError extends PolymerElement {
     @property({ type: Array })
     filterValue: string[] = [];
 
+    @property({ type: Object })
+    selection: any;
+
     MAX_RELATIVE_ERR = "0";
     MIN_RELATIVE_ERR = "1";
     MEAN_RELATIVE_ERR = "2";
     NORM_RELATIVE_ERR = "3";
+
+    @observe('selection')
+    _selectionChanged() {
+        this.set('filterValue', [this.MAX_RELATIVE_ERR, this.MIN_RELATIVE_ERR, this.MEAN_RELATIVE_ERR, this.NORM_RELATIVE_ERR]);
+    }
     override ready(): void {
         super.ready();
         const filterDialog = this.shadowRoot?.querySelector('#filter-dialog') as HTMLElement;
@@ -50,7 +59,14 @@ class TfFilterPrecisionError extends PolymerElement {
         this.set('filterValue', [this.MAX_RELATIVE_ERR, this.MIN_RELATIVE_ERR, this.MEAN_RELATIVE_ERR, this.NORM_RELATIVE_ERR]);
     }
     onFlterDialogConfirm = async (e: any) => {
-        this.set('filterDialogOpened', false);
+        if (isEmpty(this.filterValue)) {
+            Notification.show(`请选择精度误差计算指标`, {
+                position: 'middle',
+                duration: 3000,
+                theme: 'error',
+            });
+            return;
+        }
         const data = {
             filterValue: (this.filterValue)
         };
@@ -58,6 +74,7 @@ class TfFilterPrecisionError extends PolymerElement {
         if (success) {
             const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
             this.dispatchEvent(updateHierarchyData);
+            this.set('filterDialogOpened', false);
         }
         else {
             Notification.show(`精度误差计算错误${error}`, {

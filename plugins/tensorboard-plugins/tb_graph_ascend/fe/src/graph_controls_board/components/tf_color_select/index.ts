@@ -180,7 +180,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   ></vaadin-tooltip>
                   </div>
                   <div style="margin-left: auto; display: flex; gap: 8px;">
-                     <vaadin-icon icon="vaadin:funnel" on-click="_clickFilter"></vaadin-icon>
+                    <vaadin-icon icon="vaadin:funnel" on-click="_clickFilter"></vaadin-icon>
                     <vaadin-icon icon="vaadin:cog-o" on-click="_clickSetting"></vaadin-icon>
                     <template is="dom-if" if="[[showSwitchIcon]]">
                       <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
@@ -322,7 +322,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           </template>
         </div>
       </template>
-        <tf-filter-precision-error filter-dialog-opened={{filterDialogOpened}} />
+      <tf-filter-precision-error filter-dialog-opened="{{filterDialogOpened}}"  selection="[[selection]]"/>
     `;
 
   @property({ type: Boolean })
