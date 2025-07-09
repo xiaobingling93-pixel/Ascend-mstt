@@ -46,6 +46,12 @@ API = 1
 MULTI_COLLECTION = 8
 API_LIST = 9
 
+# 计算指标
+MAX_RELATIVE_ERR = "0"
+MIN_RELATIVE_ERR = "1"
+MEAN_RELATIVE_ERR = "2"
+NORM_RELATIVE_ERR = "3"
+
 
 class GraphState:
     # 模块级全局变量

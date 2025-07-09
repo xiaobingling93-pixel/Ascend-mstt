@@ -22,6 +22,7 @@ from ..utils.global_state import GraphState
 from ..controllers.match_nodes_controller import MatchNodesController
 from ..controllers.layout_hierarchy_controller import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
+from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 
 logger = tb_logging.get_logger()
 
@@ -231,8 +232,33 @@ class GraphService:
 
     @staticmethod
     def update_precision_error(filter_value):
-        print(filter_value)
-        return {'success': True, 'data': {}}
+        try:
+            graph_data = GraphState.get_global_value('current_file_data')
+            npu_node_list = graph_data.get(NPU, {}).get('node', {})
+            for _, node_info in npu_node_list.items():
+                output_statistical_diff = node_info.get('output_data', None)
+                if not node_info.get('matched_node_link'):
+                    continue
+                max_rel_error = -1
+                #  根据filter_value 的选择指标计算新的误差值
+                for _, diff_values in output_statistical_diff.items():
+                    filter_diff_rel = []
+                    if MAX_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(GraphUtils.convert_to_float(diff_values.get('MaxRelativeErr', float('nan'))))
+                    if MIN_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(GraphUtils.convert_to_float(diff_values.get('MinRelativeErr', float('nan'))))
+                    if NORM_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(GraphUtils.convert_to_float(diff_values.get('NormRelativeErr', float('nan'))))
+                    if MEAN_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(GraphUtils.convert_to_float(diff_values.get('MeanRelativeErr', float('nan'))))
+                    max_rel_error_for_key = max(filter_diff_rel)
+                    max_rel_error = max(max_rel_error, max_rel_error_for_key)
+                if max_rel_error != -1:
+                    node_info.setdefault('data', {})['precision_index'] = max_rel_error
+            return {'success': True, 'data': {}}
+        except Exception as e:
+            logger.error('更新精度误差失败:' + str(e))
+            return {'success': False, 'error': str(e)}
         
     @staticmethod
     def update_hierarchy_data(graph_type):

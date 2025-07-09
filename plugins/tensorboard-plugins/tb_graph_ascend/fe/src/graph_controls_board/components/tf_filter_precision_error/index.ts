@@ -2,13 +2,13 @@ import '@vaadin/checkbox';
 import '@vaadin/confirm-dialog'
 import '@vaadin/checkbox-group';
 import '@vaadin/text-field';
-import { customElement, observe, property } from '@polymer/decorators';
+import { Notification } from '@vaadin/notification';
+import { customElement, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
-import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
 import request from '../../../utils/request';
 
 @customElement('tf-filter-precision-error')
-class TfFilterPrecisionError extends LegacyElementMixin(PolymerElement) {
+class TfFilterPrecisionError extends PolymerElement {
     static readonly template = html`
         <vaadin-confirm-dialog
           id="filter-dialog"
@@ -21,7 +21,7 @@ class TfFilterPrecisionError extends LegacyElementMixin(PolymerElement) {
           confirm="[[onFlterDialogConfirm]]"
         >
             <vaadin-checkbox-group
-                label="计算指标"
+                label=""
                 value="{{filterValue}}"
                 theme="vertical"
             >
@@ -54,7 +54,18 @@ class TfFilterPrecisionError extends LegacyElementMixin(PolymerElement) {
         const data = {
             filterValue: (this.filterValue)
         };
-        const mactchResult = await request({ url: 'updatePrecisionError', method: 'POST', data });
+        const { success, error } = await request({ url: 'updatePrecisionError', method: 'POST', data });
+        if (success) {
+            const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
+            this.dispatchEvent(updateHierarchyData);
+        }
+        else {
+            Notification.show(`精度误差计算错误${error}`, {
+                position: 'middle',
+                duration: 3000,
+                theme: 'error',
+            });
+        }
     }
 
 }
