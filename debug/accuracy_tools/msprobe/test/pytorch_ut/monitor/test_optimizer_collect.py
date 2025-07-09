@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch, MagicMock
 import torch
 from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMon, \
-    OptimizerMonFactory, MixPrecisionOptimizerMon, MegatronDistributedOptimizerMon, \
+    OptimizerMonFactory, MegatronMixPrecisionOptimizerMon, MegatronDistributedOptimizerMon, \
     MegatronChainedDistributedOptimizerMon, MegatronChainedMixPrecisionOptimizerMon, \
     DeepSpeedZeroOptimizerMon, DeepSpeedZeroOptimizerStage0Mon, \
     DeepSpeedZeroOptimizerStage1or2Mon, DeepSpeedZeroOptimizerStage3Mon
@@ -84,7 +84,7 @@ class TestMixPrecisionOptimizerMon(unittest.TestCase):
         self.mix_prec_opt = MagicMock()
         self.mix_prec_opt.float16_groups = [MagicMock()]
         self.mix_prec_opt.fp32_from_float16_groups = [MagicMock()]
-        self.optimizer = MixPrecisionOptimizerMon(self.torch_opt)
+        self.optimizer = MegatronMixPrecisionOptimizerMon(self.torch_opt)
         self.optimizer.fp16_to_fp32_param = {}
 
         # Mock fetch_mv method and set a fixed return value
@@ -372,7 +372,7 @@ class TestOptimizerMonFactory(unittest.TestCase):
         mix_optimizer_class.__name__ = "Float16OptimizerWithFloat16Params"
         mix_optimizer.__class__ = mix_optimizer_class
         self.assertIsInstance(OptimizerMonFactory.create_optimizer_mon(mix_optimizer),
-                              MixPrecisionOptimizerMon)
+                              MegatronMixPrecisionOptimizerMon)
         dis_optimizer = MagicMock()
         dis_optimizer_class = MagicMock()
         dis_optimizer_class.__name__ = "DistributedOptimizer"

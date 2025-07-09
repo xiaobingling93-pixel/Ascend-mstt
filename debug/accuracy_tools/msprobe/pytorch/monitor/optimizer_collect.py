@@ -18,6 +18,7 @@ import torch
 
 from msprobe.pytorch.common.log import logger
 from msprobe.core.monitor.utils import MVResult
+from msprobe.pytorch.monitor.module_metric import get_metrics
 from msprobe.core.common.const import MonitorConst
 
 
@@ -26,6 +27,8 @@ class OptimizerMon(object):
         self.fp16_to_fp32_param = {}
         self.torch_opt = torch_opt
         self.state = {}
+        self.origin_funcs = []
+        self.bucket_class = None
 
     def narrow_from_flatten(self, param, flatten_state):
         return flatten_state
@@ -120,6 +123,59 @@ class OptimizerMon(object):
                     monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
         return MVResult(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict)
     
+    def patch_grad_sync(self, monitor):
+        def patch_sync(sync_grad_func):
+            def wrapper(bucket):
+                grad_dict = {}
+                # Megatron between core_r0.6.0 and core_r0.8.0, this bucket is Bucket.
+                # When megatron is core_r0.9.0, this bucket is _ParamAndGradBucketGroup.
+                # In megatron version core_r0.9.0, func start_grad_sync from Bucket moved to _ParamAndGradBucketGroup.
+                bucket_params_id_list = [id(params) for params in bucket.params]
+                for param, name in monitor.param2name.items():
+                    if id(param) not in bucket_params_id_list:
+                        continue
+                    grad = param.main_grad if monitor.params_have_main_grad else param.grad
+                    if grad is None:
+                        logger.warning(f"grad is None: {name}, maybe something wrong happened.")
+                        continue
+                    tag = monitor.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
+                    if tag is None:
+                        continue
+                    grad_dict[tag] = grad
+                    monitor.register_param_call_id("sync_grad_func", tag)
+                get_metrics(monitor.ops, grad_dict, monitor.eps, monitor.grad_context.pre)
+                out = sync_grad_func(bucket)
+                return out
+
+            return wrapper
+    
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import Bucket
+            self.origin_funcs.append(Bucket.start_grad_sync)
+            self.bucket_class = Bucket
+            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)
+            monitor.enable_megatron = True
+            logger.info("megatron version is >= core_r0.6.0 <= core_r0.8.0")
+        except ImportError:
+            monitor.enable_megatron = False
+
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
+            self.origin_funcs.append(_ParamAndGradBucketGroup.start_grad_sync)
+            self.bucket_class = _ParamAndGradBucketGroup
+            _ParamAndGradBucketGroup.start_grad_sync = patch_sync(_ParamAndGradBucketGroup.start_grad_sync)
+            monitor.enable_megatron = True
+            logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
+        except ImportError:
+            monitor.enable_megatron = False | monitor.enable_megatron
+
+    def restore_grad_sync(self, monitor):
+        if not monitor.enable_megatron:
+            return
+        
+        self.bucket_class.start_grad_sync = self.origin_funcs[0]
+        
+
     def _get_single_state(self, torch_opt):
         state = {}
         if hasattr(torch_opt, 'param_to_cpu_states_map'):
@@ -131,7 +187,7 @@ class OptimizerMon(object):
         self.state.update(state)
 
 
-class MixPrecisionOptimizerMon(OptimizerMon):
+class MegatronMixPrecisionOptimizerMon(OptimizerMon):
     """
     混合精度优化器监控类。在混合精度训练中监控和管理优化器。
     混合精度训练通过适当降低某些计算的精度来加速训练过程并减少内存消耗。
@@ -161,7 +217,7 @@ class MegatronChainedDistributedOptimizerMon(MegatronDistributedOptimizerMon):
             super().map_fp16_to_fp32_param(opt)
 
 
-class MegatronChainedMixPrecisionOptimizerMon(MixPrecisionOptimizerMon):
+class MegatronChainedMixPrecisionOptimizerMon(MegatronMixPrecisionOptimizerMon):
     def map_fp16_to_fp32_param(self, torch_opt):
         for opt in torch_opt.chained_optimizers:
             super().map_fp16_to_fp32_param(opt)
@@ -248,6 +304,12 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
             grad_dict[tag] = grad
 
         return grad_dict
+    
+    def patch_grad_sync(self, monitor):
+        pass
+
+    def restore_grad_sync(self, monitor):
+        pass
 
 
 class DeepSpeedZeroOptimizerStage0Mon(DeepSpeedZeroOptimizerMon):
@@ -291,6 +353,47 @@ class DeepSpeedZeroOptimizerStage1or2Mon(DeepSpeedZeroOptimizerMon):
                     break
 
 
+    def patch_grad_sync(self, monitor):
+        def patch_sync(reduce_func):
+            def wrapper(zero_optimizer, *args, **kwargs):
+                grad_dict = {}
+                for i, param, _ in zero_optimizer.params_in_ipg_bucket:
+                    if isinstance(param, int): # for ds >= 0.17.0
+                        param = zero_optimizer.bit16_groups[i][param] # for ds >= 0.17.0
+                    name = monitor.param2name[param]
+                    tag = monitor.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
+                    grad_dict[tag] = zero_optimizer.get_gradient_for_reduction(param)
+                    monitor.register_param_call_id("sync_grad_func", tag)
+                get_metrics(monitor.ops, grad_dict, monitor.eps, monitor.grad_context.pre)
+                out = reduce_func(zero_optimizer, *args, **kwargs)
+                return out
+            
+            return wrapper
+        try:
+            from deepspeed.runtime.zero.stage_1_and_2 import DeepSpeedZeroOptimizer
+            self.origin_funcs = [
+                DeepSpeedZeroOptimizer.average_tensor, 
+                DeepSpeedZeroOptimizer.buffered_reduce_fallback
+                ]
+            DeepSpeedZeroOptimizer.average_tensor = patch_sync(DeepSpeedZeroOptimizer.average_tensor)
+            DeepSpeedZeroOptimizer.buffered_reduce_fallback = \
+                patch_sync(DeepSpeedZeroOptimizer.buffered_reduce_fallback)
+            monitor.enable_deepspeed = True | monitor.enable_deepspeed
+            logger.info('deepspeed enabled')
+        except Exception as e:
+            monitor.enable_deepspeed = False | monitor.enable_deepspeed
+            logger.warning('Seems using deepspeed zero 1 or 2. But patch average tensor failed')
+
+    def restore_grad_sync(self, monitor):
+        if not monitor.enable_deepspeed:
+            return
+    
+        from deepspeed.runtime.zero.stage_1_and_2 import DeepSpeedZeroOptimizer
+        DeepSpeedZeroOptimizer.average_tensor = self.origin_funcs[0]
+        DeepSpeedZeroOptimizer.buffered_reduce_fallback = self.origin_funcs[1]
+
+
+
 class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
     def __init__(self, torch_opt):
         super().__init__(torch_opt)
@@ -314,7 +417,7 @@ class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
 class OptimizerMonFactory:
     _optimizer_mon_map = {
         "FP32Optimizer": OptimizerMon,
-        "Float16OptimizerWithFloat16Params": MixPrecisionOptimizerMon,
+        "Float16OptimizerWithFloat16Params": MegatronMixPrecisionOptimizerMon,
         "DistributedOptimizer": MegatronDistributedOptimizerMon,
         "SwapDistributedOptimizer": MegatronDistributedOptimizerMon,
         "ChainedDistributedOptimizer": MegatronChainedDistributedOptimizerMon,
