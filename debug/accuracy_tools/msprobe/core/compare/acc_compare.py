@@ -25,7 +25,7 @@ from tqdm import tqdm
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import load_json, remove_path, create_directory
+from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
     set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type
@@ -43,6 +43,7 @@ class ComparisonConfig:
     stack_mode: bool
     auto_analyze: bool
     fuzzy_match: bool
+    highlight: bool
     data_mapping: dict
     suffix: str
     cell_mapping: dict
@@ -114,11 +115,18 @@ class Comparator:
             result_df = compare_real_data.do_multi_process(input_param, result_df)
 
         # highlight suspicious API
-        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        highlight = HighLight(self.mode_config)
-        if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
-            highlight.find_compare_result_error_rows(result_df, highlight_dict)
-        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
+        if self.mode_config.highlight:
+            if len(result_df) > CompareConst.MAX_EXCEL_LENGTH:
+                save_excel(file_path, result_df)
+            else:
+                highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+                highlight = HighLight(self.mode_config)
+                if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+                    highlight.find_compare_result_error_rows(result_df, highlight_dict)
+                highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        else:
+            save_excel(file_path, result_df)
 
         # output compare analysis suggestions
         if self.mode_config.auto_analyze:
@@ -718,6 +726,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             stack_mode=False,
             auto_analyze=kwargs.get('auto_analyze', True),
             fuzzy_match=kwargs.get('fuzzy_match', False),
+            highlight=kwargs.get('highlight', True),
             data_mapping=kwargs.get('data_mapping', {}),
             suffix=kwargs.get('suffix', ''),
             cell_mapping=kwargs.get('cell_mapping', {}),
@@ -736,7 +745,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         else:
             config.stack_mode = set_stack_json_path(input_param)
 
-        check_configuration_param(config.stack_mode, config.auto_analyze, config.fuzzy_match,
+        check_configuration_param(config.stack_mode, config.auto_analyze, config.fuzzy_match, config.highlight,
                                   input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, config.dump_mode, config.stack_mode)
