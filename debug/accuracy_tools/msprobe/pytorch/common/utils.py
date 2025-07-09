@@ -264,10 +264,6 @@ class Const:
     NPU = 'NPU'
     DISTRIBUTED = 'Distributed'
 
-    HIFLOAT8_TYPE = "torch_npu.HiFloat8Tensor"
-    FLOAT8_E5M2_TYPE = "torch.float8_e5m2"
-    FLOAT8_E4M3FN_TYPE = "torch.float8_e4m3fn"
-
     RAISE_PRECISION = {
         torch.float16: torch.float32,
         torch.bfloat16: torch.float32,
@@ -481,18 +477,6 @@ def check_save_param(variable, name, save_backward):
 
 def is_torch_nn_module(variable):
     return isinstance(variable, torch.nn.Module) and not isinstance(variable, torch.jit.ScriptModule)
-
-
-def is_hifloat8_tensor(tensor):
-    if not is_gpu and hasattr(torch_npu, "HiFloat8Tensor") and isinstance(tensor, torch_npu.HiFloat8Tensor):
-        return True
-    return False
-
-
-def is_float8_tensor(tensor):
-    if str(tensor.dtype) in [Const.FLOAT8_E5M2_TYPE, Const.FLOAT8_E4M3FN_TYPE]:
-        return True
-    return is_hifloat8_tensor(tensor)
 
 
 def register_forward_pre_hook(module, forward_pre_hook):

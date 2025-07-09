@@ -30,7 +30,7 @@ from msprobe.core.common.utils import convert_tuple
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from msprobe.pytorch.common.utils import Const as PtConst, save_pt, is_hifloat8_tensor, is_float8_tensor
+from msprobe.pytorch.common.utils import save_pt
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 is_gpu = False
@@ -210,18 +210,6 @@ class PytorchDataProcessor(BaseDataProcessor):
             logger.warning(f"Failed to get value of torch.distributed.ReduceOp with error info: {e}.")
         return {"type": "torch.distributed.ReduceOp", "value": op_type}
 
-    @staticmethod
-    def _cast_to_float_if_fp8(tensor):
-        dtype = str(tensor.dtype)
-        if is_float8_tensor(tensor):
-            dtype = PtConst.HIFLOAT8_TYPE if is_hifloat8_tensor(tensor) else dtype
-            logger.debug(
-                f"The {dtype} tensor analyzing/saving is unsupported in dump function."
-                f"Casting to float for processing."
-            )
-            tensor = tensor.float()
-        return tensor, dtype
-
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
@@ -268,11 +256,10 @@ class PytorchDataProcessor(BaseDataProcessor):
         return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
-        tensor, dtype = self._cast_to_float_if_fp8(tensor)
         tensor_stat = self.get_stat_info(tensor, self.config.async_dump)
         tensor_json = {}
         tensor_json.update({'type': 'torch.Tensor'})
-        tensor_json.update({'dtype': dtype})
+        tensor_json.update({'dtype': str(tensor.dtype)})
         tensor_json.update({"shape": tensor.shape})
 
         stat_values = [
@@ -295,7 +282,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        tensor, _ = self._cast_to_float_if_fp8(tensor)
         if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.clone().detach()
         else:
@@ -396,7 +382,6 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             self._analyze_maybe_overflow_flag()
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
-                tensor, _ = self._cast_to_float_if_fp8(tensor)
                 save_pt(tensor.clone().contiguous().detach(), file_path)
             self.real_overflow_nums += 1
             if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
@@ -588,11 +573,6 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
     )
     def clone_and_detach_tensor(self, input_params):
         if isinstance(input_params, torch.Tensor):
-            if is_float8_tensor(input_params):
-                raise MsprobeException(
-                    MsprobeException.UNSUPPORTED_TYPE_ERROR,
-                    f"L2 backward dump does not support float8 type."
-                )
             if input_params.requires_grad:
                 return input_params.clone().detach().requires_grad_()
             return input_params.clone()
@@ -607,8 +587,6 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
 
     def analyze_single_element(self, element, suffix_stack):
         if isinstance(element, torch.Tensor):
-            if is_float8_tensor(element):
-                return {}
             if not self.is_found_output_tensor:
                 if element.requires_grad:
                     self.forward_output_tensor = element
