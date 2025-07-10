@@ -16,6 +16,8 @@
 import os
 from collections import OrderedDict
 import mindspore as ms
+from mindspore import hal, ops, Tensor
+from mindspore.ops.primitive import _run_op
 
 
 def _iterate_items(data):
@@ -121,3 +123,10 @@ def save_grad(save_dir, name, data):
     dump_dir = generate_dump_dir(save_dir)
     suffix_name = name + '_grad'
     return _SaveGradCell(dump_dir, suffix_name)(data)
+
+
+def step():
+    hal.synchronize()
+    temp_tensor = Tensor([1], dtype=ms.float32)
+    step_flag = "<tensordump-update-step>"
+    _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
