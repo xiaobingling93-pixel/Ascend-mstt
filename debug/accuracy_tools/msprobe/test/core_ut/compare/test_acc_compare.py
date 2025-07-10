@@ -353,22 +353,25 @@ class TestUtilsMethods(unittest.TestCase):
             'summary': [[1, 1, 1, 1]]
         }
 
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        config_dict = {
+            'stack_mode':  True,
+            'auto_analyze': True,
+            'fuzzy_match': False,
+            'dump_mode': Const.SUMMARY,
+        }
+        mode_config = ModeConfig(**config_dict)
 
         result = ParseData(mode_config).gen_merge_list(json_data, op_name, stack_json_data)
         self.assertEqual(result, merge_list)
 
     def test_check_op_item_fuzzy(self):
-        stack_mode = False
-        auto_analyze = True
-        dump_mode = Const.SUMMARY
-
-        fuzzy_match = True
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        config_dict = {
+            'stack_mode': False,
+            'auto_analyze': True,
+            'fuzzy_match': True,
+            'dump_mode': Const.SUMMARY,
+        }
+        mode_config = ModeConfig(**config_dict)
         mapping_config = MappingConfig()
 
         match = Match(mode_config, mapping_config, cross_frame=False)
@@ -381,11 +384,13 @@ class TestUtilsMethods(unittest.TestCase):
         file_list = [os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'dump.json'),
                      os.path.join(base_dir, 'stack.json')]
 
-        stack_mode = True
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        config_dict = {
+            'stack_mode': True,
+            'auto_analyze': True,
+            'fuzzy_match': False,
+            'dump_mode': Const.SUMMARY,
+        }
+        mode_config = ModeConfig(**config_dict)
         mapping_config = MappingConfig()
 
         from msprobe.pytorch.compare.pt_compare import read_real_data
@@ -760,11 +765,13 @@ class TestMatch(unittest.TestCase):
         self.assertTrue(match_result.equals(expected))
 
     def test_match_op_both_last_element(self):
-        stack_mode = False
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        config_dict = {
+            'stack_mode': False,
+            'auto_analyze': True,
+            'fuzzy_match': False,
+            'dump_mode': Const.SUMMARY,
+        }
+        mode_config = ModeConfig(**config_dict)
         mapping_config = MappingConfig()
 
         match = Match(mode_config, mapping_config, cross_frame=False)
@@ -773,11 +780,13 @@ class TestMatch(unittest.TestCase):
         self.assertEqual(b, 0)
 
     def test_match_op_only_npu_last_element(self):
-        stack_mode = False
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        config_dict = {
+            'stack_mode': False,
+            'auto_analyze': True,
+            'fuzzy_match': False,
+            'dump_mode': Const.SUMMARY,
+        }
+        mode_config = ModeConfig(**config_dict)
         mapping_config = MappingConfig()
 
         match = Match(mode_config, mapping_config, cross_frame=False)
@@ -786,11 +795,13 @@ class TestMatch(unittest.TestCase):
         self.assertEqual(b, 0)
 
     def test_match_op_only_bench_last_element(self):
-        stack_mode = False
-        auto_analyze = True
-        fuzzy_match = False
-        dump_mode = Const.SUMMARY
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        config_dict = {
+            'stack_mode': False,
+            'auto_analyze': True,
+            'fuzzy_match': False,
+            'dump_mode': Const.SUMMARY,
+        }
+        mode_config = ModeConfig(**config_dict)
         mapping_config = MappingConfig()
 
         match = Match(mode_config, mapping_config, cross_frame=False)
