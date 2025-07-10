@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.core.common.const import Const, FileCheckConst
+import re
+
+from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import get_real_step_or_rank
@@ -67,6 +69,7 @@ class BaseConfig:
         self.if_preheat = json_config.get("if_preheat")
         self.preheat_step = json_config.get("preheat_step")
         self.max_sample = json_config.get("max_sample")
+        self.is_regex_valid = True
 
     @staticmethod
     def _check_str_list_config(config_item, config_name):
@@ -83,6 +86,7 @@ class BaseConfig:
         self._check_str_list_config(self.scope, "scope")
         self._check_str_list_config(self.list, "list")
         self._check_data_mode()
+        self._check_regex_in_list()
 
     def _check_data_mode(self):
         if self.data_mode is not None:
@@ -118,3 +122,13 @@ class BaseConfig:
                         f"summary_mode is invalid, summary_mode is not in {Const.SUMMARY_MODE}.",
                         MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
                     )
+
+    def _check_regex_in_list(self):
+        if self.list:
+            for name in self.list:
+                if name.startswith('name-regex(') and name.endswith(')'):
+                    try:
+                        re.compile(name[len('name-regex('):-1])
+                    except re.error:
+                        self.is_regex_valid = False
+                        break
