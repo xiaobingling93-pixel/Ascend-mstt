@@ -114,12 +114,13 @@ class Comparator:
             compare_real_data = CompareRealData(self.file_reader, self.mode_config, self.cross_frame)
             result_df = compare_real_data.do_multi_process(input_param, result_df)
 
-        # highlight suspicious API
+        # save result excel file
         logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
         if self.mode_config.highlight:
             if len(result_df) > CompareConst.MAX_EXCEL_LENGTH:
                 save_excel(file_path, result_df)
             else:
+                # highlight suspicious API
                 highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
                 highlight = HighLight(self.mode_config)
                 if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
