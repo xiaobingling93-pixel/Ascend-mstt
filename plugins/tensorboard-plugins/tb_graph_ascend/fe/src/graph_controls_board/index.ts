@@ -21,6 +21,7 @@ import '@vaadin/icons';
 import '@vaadin/select';
 import '@vaadin/button';
 
+
 import * as _ from 'lodash';
 import { customElement, property } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
@@ -29,6 +30,7 @@ import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import { PaperCheckboxElement } from '../polymer/irons_and_papers';
 import '../polymer/irons_and_papers';
 
+import i18next from '../common/i18n'
 import './components/tf_main_controler';
 import './components/tf_manual_match/index';
 import './components/tf_color_select/index';
@@ -75,12 +77,16 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       }
       .minimap-control {
         font-size: var(--tb-graph-controls-title-font-size);
-        height: 36px;
-        line-height: 36px;
+        height: 42px;
+        display: flex;
+        flex-wrap: wrap;
       }
-      .right-checkbox {
-        margin-left: 8px;
+
+      .left-checkbox {
+        margin-right: 12px;
       }
+
+
 
       .icon-button {
         font-size: var(--tb-graph-controls-title-font-size);
@@ -109,6 +115,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
       .tabs {
         display: flex;
+        height: 40px;
         border-bottom: 1px solid #ccc;
       }
 
@@ -141,6 +148,17 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         font-weight: 400;
         cursor: pointer;
       }
+      .setting-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .language-button{
+        font-size: var(--tb-graph-controls-title-font-size);
+        font-weight: 400;
+        cursor: pointer;
+        color: black;
+      }
 
       .hidden {
         display: none;
@@ -152,23 +170,26 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     </style>
 
     <div class="tabs">
-      <button class="tab-button" on-tap="_showNodeControls">设置</button>
-      <button class="tab-button" on-tap="_showMatch">匹配</button>
+      <button class="tab-button" on-tap="_showNodeControls">[[t('settings')]]</button>
+      <button class="tab-button" on-tap="_showMatch">[[t('match')]]</button>
     </div>
     <div id="nodes-content" class="tab-content">
-      <div class="fit-screen">
-        <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
-        <vaadin-button theme="tertiary contrast" on-click="_fit">自适应屏幕</vaadin-button>
+      <div class='setting-title'>
+        <div class="fit-screen">
+          <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
+          <vaadin-button theme="tertiary contrast" on-click="_fit">[[t('fit')]]</vaadin-button>
+        </div>
+        <vaadin-button class='language-button' theme="tertiary-inline" on-click="changeLanguage">中|en</vaadin-button>
       </div>
-
       <div class="minimap-control">
-        <paper-checkbox checked on-change="_toggleNpuMinimap">调试侧缩略图</paper-checkbox>
+        <paper-checkbox class="left-checkbox" checked on-change="_toggleNpuMinimap">[[t('show_debug_minimap')]]</paper-checkbox>
         <template is="dom-if" if="[[!isSingleGraph]]">
-          <paper-checkbox class="right-checkbox" checked on-click="_toggleBenchMinimap">标杆侧缩略图</paper-checkbox>
+          <paper-checkbox  checked on-click="_toggleBenchMinimap">[[t('show_bench_minimap')]]</paper-checkbox>
         </template>
       </div>
       <div class="container-wrapper">
         <tf-main-controler
+          t="[[t]]"
           meta-dir="[[metaDir]]"
           selection="{{selection}}"
           microsteps="[[microsteps]]"
@@ -206,6 +227,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       ></tf-manual-match>
     </div>
   `;
+
+  @property({ type: Object })
+  t: Function = (key) => i18next.t(key);
 
   @property({ type: Object })
   metaDir: MetaDirType = {} as MetaDirType;
@@ -247,7 +271,18 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   override ready(): void {
     super.ready();
-    this._showTabContent('设置', 'nodes-content');
+    this._showTabContent(this.t('settings'), 'nodes-content');
+  }
+
+  changeLanguage() {
+    const currentLang = i18next.language === 'en' ? 'zh-CN' : 'en';
+    i18next.changeLanguage(currentLang).then(() => {
+      //更新语言后重新渲染
+      const t = this.t;
+      this.set('t', null);
+      this.set('t', t);
+
+    });
   }
 
   _showTabContent(buttonText, contentId): void {
@@ -278,11 +313,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   // 使用示例
   _showNodeControls(): void {
-    this._showTabContent('设置', 'nodes-content');
+    this._showTabContent(this.t('settings'), 'nodes-content');
   }
 
   _showMatch(): void {
-    this._showTabContent('匹配', 'match-content');
+    this._showTabContent(this.t('match'), 'match-content');
   }
 
   _fit(): void {

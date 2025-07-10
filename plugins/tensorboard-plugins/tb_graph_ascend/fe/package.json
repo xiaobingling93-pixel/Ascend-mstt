@@ -71,6 +71,8 @@
     "css-loader": "^7.1.2",
     "d3": "5.7.0",
     "dagre": "^0.8.5",
+    "i18next": "^25.3.2",
+    "i18next-browser-languagedetector": "^8.2.0",
     "lodash": "^4.17.21",
     "prettier": "^3.4.2",
     "style-loader": "^4.0.0"
