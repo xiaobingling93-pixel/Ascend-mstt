@@ -359,7 +359,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(DeepSpeedZeroOptimizerMon):
                 grad_dict = {}
                 for i, param, _ in zero_optimizer.params_in_ipg_bucket:
                     if isinstance(param, int): # for ds >= 0.17.0
-                        param = zero_optimizer.bit16_groups[i][param] # for ds >= 0.17.0
+                        param = zero_optimizer.bit16_groups[i][param]
                     name = monitor.param2name[param]
                     tag = monitor.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
                     grad_dict[tag] = zero_optimizer.get_gradient_for_reduction(param)
@@ -378,7 +378,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(DeepSpeedZeroOptimizerMon):
             DeepSpeedZeroOptimizer.average_tensor = patch_sync(DeepSpeedZeroOptimizer.average_tensor)
             DeepSpeedZeroOptimizer.buffered_reduce_fallback = \
                 patch_sync(DeepSpeedZeroOptimizer.buffered_reduce_fallback)
-            monitor.enable_deepspeed = True | monitor.enable_deepspeed
+            monitor.enable_deepspeed = True
             logger.info('deepspeed enabled')
         except Exception as e:
             monitor.enable_deepspeed = False | monitor.enable_deepspeed
