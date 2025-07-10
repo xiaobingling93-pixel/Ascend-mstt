@@ -115,7 +115,7 @@ msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用
 ## 使用方式
 
 - **说明**：
-- 1. **NPU Monitor**功能和**Profiler trace dump** 功能不能**同时开启。
+- 1. **NPU Monitor**功能和**Profiler trace dump** 功能不能同时开启。
 - 2. **NPU Monitor**功能暂不支持图模式场景
 
 ### NPU Monitor功能
@@ -161,7 +161,7 @@ dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 
 Step 2：在训练任务拉起窗口使能dynolog环境变量
 ```bash
-export KINETO_USE_DAEMON=1
+export MSMONITOR_USE_DAEMON=1
 ```
 
 Step 3: 配置Msmonitor日志路径(可选，默认路径为当前目录下的msmonitor_log)
@@ -305,7 +305,7 @@ dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 
 Step 2：在训练任务拉起窗口使能dynolog环境变量
 ```bash
-export KINETO_USE_DAEMON=1
+export MSMONITOR_USE_DAEMON=1
 ```
 
 Step 3: 拉起训练任务
