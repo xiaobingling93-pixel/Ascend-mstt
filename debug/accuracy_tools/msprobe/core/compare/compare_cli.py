@@ -32,7 +32,7 @@ def compare_cli(args):
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     frame_name = args.framework
     auto_analyze = not args.compare_only
-    highlight = args.highlight == 'true'
+
     if frame_name == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import compare
         from msprobe.pytorch.compare.distributed_compare import compare_distributed
@@ -44,7 +44,7 @@ def compare_cli(args):
     common_kwargs = {
         "auto_analyze": auto_analyze,
         "fuzzy_match": args.fuzzy_match,
-        "highlight": highlight,
+        "highlight": args.highlight,
         "data_mapping": args.data_mapping,
     }
 
