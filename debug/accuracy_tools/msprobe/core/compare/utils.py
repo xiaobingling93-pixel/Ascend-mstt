@@ -94,10 +94,13 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 
 def read_op(op_data, op_name):
+    if not isinstance(op_name, str):
+        logger.error(f"api name error: {op_name} is not a string, please check.")
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
     split_name = op_name.split(Const.SEP)
-    if Const.DEBUG in split_name:
+    if split_name[-1] == Const.DEBUG:
         op_parsed_list = op_item_parse(op_data, op_name, Const.DEBUG)
-    elif Const.PARAMS_GRAD in split_name:
+    elif split_name[-1] == Const.PARAMS_GRAD:
         op_parsed_list = op_item_parse(op_data, op_name, Const.PARAMS_GRAD)
     else:
         op_parsed_list = []
