@@ -159,12 +159,12 @@ def is_leaf_data(op_data):
 def gen_op_item(op_data, op_name, state):
     op_item = {}
     op_item.update(op_data)
-    data_name = op_data.get('data_name') if op_data.get('data_name') else '-1'  # 如果是""也返回-1
-    op_item['data_name'] = data_name
+    data_name = op_data.get(Const.DATA_NAME) if op_data.get(Const.DATA_NAME) else '-1'  # 如果是""也返回-1
+    op_item[Const.DATA_NAME] = data_name
     op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
     op_item[Const.STATE] = state
 
-    params = ['Max', 'Min', 'Mean', 'Norm']
+    params = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     for i in params:
         if i not in op_item:
             op_item[i] = None
