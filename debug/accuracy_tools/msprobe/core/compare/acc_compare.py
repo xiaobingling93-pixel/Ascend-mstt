@@ -727,7 +727,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             stack_mode=False,
             auto_analyze=kwargs.get('auto_analyze', True),
             fuzzy_match=kwargs.get('fuzzy_match', False),
-            highlight=kwargs.get('highlight', True),
+            highlight=kwargs.get('highlight', False),
             data_mapping=kwargs.get('data_mapping', {}),
             suffix=kwargs.get('suffix', ''),
             cell_mapping=kwargs.get('cell_mapping', {}),
