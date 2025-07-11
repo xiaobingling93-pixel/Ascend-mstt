@@ -234,8 +234,10 @@ class MatchNodesController:
 
     @staticmethod
     def process_md5_task_add(graph_data, npu_node_name, bench_node_name):
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        if not npu_node_data or not bench_node_data:
+            return {'success': False, 'error': '节点不存在'}
         # 去除节点名称前缀
         npu_input_data = GraphUtils.remove_prefix(npu_node_data.get('input_data', {}), npu_node_name + '.')
         bench_input_data = GraphUtils.remove_prefix(bench_node_data.get('input_data', {}), bench_node_name + '.')
@@ -261,6 +263,8 @@ class MatchNodesController:
         # 节点信息提取
         npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
         bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        if not npu_node_data or not bench_node_data:
+            return {'success': False, 'error': '节点不存在'}
         # 计算统计误差
         intput_statistical_diff = MatchNodesController.calculate_statistical_diff(
             npu_node_data.get('input_data'), bench_node_data.get('input_data'), npu_node_name, bench_node_name
@@ -304,8 +308,13 @@ class MatchNodesController:
                 'success': False,
                 'error': "操作失败：节点未匹配，请先匹配节点",
             }
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        if not npu_node_data or not bench_node_data:
+            return {
+                'success': False,
+                'error': "操作失败：节点不存在",
+            }
         # 在原始数据上，删除匹配节点，和匹配节点信息
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []
@@ -328,8 +337,13 @@ class MatchNodesController:
                 'success': False,
                 'error': "操作失败：节点未匹配，请先匹配节点",
             }
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        if not npu_node_data or not bench_node_data:
+            return {
+                'success': False,
+                'error': "操作失败：节点不存在",
+            }
         # 在原始数据上，删除匹配节点，和匹配节点信息
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []
