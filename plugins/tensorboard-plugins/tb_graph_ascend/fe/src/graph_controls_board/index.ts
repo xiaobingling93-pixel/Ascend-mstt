@@ -197,13 +197,15 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       </div>
       <div class="container-wrapper">
         <tf-linkage-search-combox
-          nodelist="[[nodelist]]"
+          t="[[t]]"
+          nodelist="[[nodelist]]"           
           selected-node="{{selectedNode}}"
           is-compare-graph="[[!isSingleGraph]]"
         >
         </tf-linkage-search-combox>
       </div>
       <tf-color-select
+        t="[[t]]"
         colors="{{colors}}"
         task=[[task]]
         is-overflow-filter="{{isOverflowFilter}}"
@@ -217,6 +219,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     <div id="directory-content" class="tab-content hidden"></div>
     <div id="match-content" class="tab-content hidden">
       <tf-manual-match
+        t="[[t]]"
         unmatched="[[unmatched]]"
         selected-node="{{selectedNode}}"
         selection="[[selection]]"

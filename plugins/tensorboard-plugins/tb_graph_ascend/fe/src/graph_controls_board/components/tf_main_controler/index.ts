@@ -157,7 +157,7 @@ class MainController extends PolymerElement {
   _getTagChanged(event): void {
     const detail = event.detail;
     if (!detail?.rankId || detail?.rankId >= this.tags.length) {
-      Notification.show(this.t('invalid rank id'), {
+      Notification.show(this.t('invalid_rank_id'), {
         position: 'middle',
         duration: 2000,
         theme: 'warning',
