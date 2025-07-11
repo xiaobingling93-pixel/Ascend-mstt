@@ -103,7 +103,7 @@ class TestCompareRealData(unittest.TestCase):
         # index error
         with self.assertRaises(CompareException) as context:
             result = compare_real_data.read_dump_data(pd.DataFrame())
-        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+        self.assertEqual(context.exception.code, CompareException.INVALID_KEY_ERROR)
 
     def test_save_cmp_result_success(self):
         file_reader = read_real_data

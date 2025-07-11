@@ -37,19 +37,19 @@ summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
               'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0.5, 1, 1, 0.95, 1,
               1, 1, 1, 1, 1.01, 1, 1, 1,
-              'Yes', '']
+              'Yes', '', 'input', 'Functional.batch.norm.0.forward']
 line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1, 1, 0.59, 1,
           'nan', 0, 1, 1, 19, 1, 1, 1,
-          'Yes', '']
+          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 0.5, 1, 1, 0.8, 1,
           0, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '']
+          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1.1e+10, 1, 0.85, 1,
           9, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '']
+          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
 

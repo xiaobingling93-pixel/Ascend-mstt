@@ -13,7 +13,7 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
-    stack_column_process, table_value_is_valid, get_name_and_state, reorder_op_name_list, reorder_op_x_list, gen_op_item
+    stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item
 
 # test_read_op_1
 op_data = {
@@ -31,15 +31,15 @@ op_name = "Tensor.add_0.0.forward"
 op_result = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.input.0'},
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.input.0', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481, 'data_name': '-1',
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.forward.input.1'},
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.forward.input.1', 'state': 'input'},
     {'full_op_name': 'Tensor.add_0.0.forward.input.alpha', 'dtype': "<class 'float'>", 'shape': '[]', 'md5': '0dae4479',
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'type': 'float', 'value': -0.1},
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'type': 'float', 'value': -0.1, 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0'}]
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0', 'state': 'output'}]
 
 # test_read_op_1
 op_data_b = {
@@ -56,13 +56,13 @@ op_name_b = "Tensor.add_0.0.backward"
 op_result_b = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.input.0'},
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.input.0', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.backward.input.1'},
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.backward.input.1', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.output.0'}]
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.output.0', 'state': 'output'}]
 
 # test_op_item_parse
 parse_item = [
@@ -78,12 +78,12 @@ parse_top_bool = True
 o_result_parse = [
     {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': False,
      'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0',
-     'data_name': '-1', 'md5': '00000000'},
+     'data_name': '-1', 'md5': '00000000', 'state': 'input'},
     {'full_op_name': 'Distributed.broadcast.0.forward.input.1', 'dtype': "<class 'int'>", 'shape': '[]',
-     'md5': 'f4dbdf21', 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1', 'type': 'int', 'value': 0},
+     'md5': 'f4dbdf21', 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1', 'type': 'int', 'value': 0, 'state': 'input'},
     {'Max': None, 'Mean': None, 'Min': None, 'Norm': None, 'data_name': '-1', 'dtype': 'slice', 'type': 'slice',
      'full_op_name': 'Distributed.broadcast.0.forward.input.2', 'md5': '5fbbe87f', 'shape': '(3,)',
-     'value': [None, None, None]}
+     'value': [None, None, None], 'state': 'input'}
 ]
 
 # test_resolve_api_special_parameters
@@ -254,15 +254,15 @@ o_result_unmatch_3 = [
 tensor_list = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'Max': 0.33033010363578796,
      'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'Norm': 2.2533628940582275, 'requires_grad': True,
-     'full_op_name': 'Tensor.add_.0.forward.input.0'},
+     'full_op_name': 'Tensor.add_.0.forward.input.0', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.1'},
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.1', 'state': 'input'},
     {'full_op_name': 'Tensor.add_.0.forward.input.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0'}
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'state': 'output'}
 ]
 result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.input.1',
                               'Tensor.add_.0.forward.input.alpha.0', 'Tensor.add_.0.forward.output.0'],
@@ -277,17 +277,18 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                                0.02844562754034996],
                               [-0.1, -0.1, -0.1, -0.1],
                               [0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275]],
-                  'stack_info': []}
+                  'stack_info': [],
+                  'state': ['input', 'input', 'input', 'output']}
 
 tensor_list_md5 = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1},
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1, 'state': 'input'},
     {'full_op_name': 'Tensor.add_.0.forward.kwargs.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 2}
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 2, 'state': 'output'}
 ]
 result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.kwargs.alpha.0',
                                   'Tensor.add_.0.forward.output.0'],
@@ -300,7 +301,8 @@ result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.
                           [0.003992878366261721, -0.008102823048830032, -0.0002002553956117481, 0.02844562754034996],
                           [-0.1, -0.1, -0.1, -0.1],
                           [0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275]],
-                      'stack_info': []}
+                      'stack_info': [],
+                      'state': ['input', 'input', 'output']}
 
 base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils1')
 base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils2')
@@ -363,12 +365,12 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, op_result_b)
 
     def test_op_item_parse(self):
-        result = op_item_parse(parse_item, parse_op_name)
+        result = op_item_parse(parse_item, parse_op_name, 'input')
         self.assertEqual(result, o_result_parse)
 
     def test_op_item_parse_max_depth(self):
         with self.assertRaises(CompareException) as context:
-            op_item_parse(parse_item, parse_op_name, depth=11)
+            op_item_parse(parse_item, parse_op_name, 'input', depth=11)
         self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
 
     def test_get_rela_diff_summary_mode_float_or_int(self):
@@ -554,57 +556,34 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertFalse(result)
 
 
-class TestGetNameAndState(unittest.TestCase):
-    def test_valid_forward_input(self):
-        name = 'conv2d.forward.1.input.0'
-        expected_api = 'conv2d.forward.1.'
-        expected_state = 'input'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_valid_backward_output(self):
-        name = 'Functional.pad.0.backward.output.0'
-        expected_api = 'Functional.pad.0.backward.'
-        expected_state = 'output'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_valid_with_kwargs(self):
-        name = 'layer.norm.2.forward.kwargs.attr'
-        expected_api = 'layer.norm.2.forward.'
-        expected_state = 'kwargs'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_no_numeric_index(self):
-        name = 'conv2d.forward.input.0'
-        expected_api = 'conv2d.forward.'
-        expected_state = 'input'
-        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-    def test_invalid__state(self):
-        name = 'conv2d.forward.1.invalidstate.0'
-        with self.assertRaises(CompareException) as context:
-            get_name_and_state(name)
-        self.assertIn('Invalid name string', str(context.exception.code))
-
-
 class TestReorderOpNameList(unittest.TestCase):
     def test_reorder_op_name_list(self):
         # 标准顺序
         op_name_list = ["op.forward.input.0.0", "op.forward.output.0", "op.forward.output.1", "op.forward.parameters.1", "op.forward.parameters.2", "op.parameters_grad.0"]
-        result = reorder_op_name_list(op_name_list)
-        expected = ["op.forward.input.0.0", "op.forward.parameters.1", "op.forward.parameters.2", "op.forward.output.0", "op.forward.output.1", "op.parameters_grad.0"]
-        self.assertEqual(result, expected)
+        state_list = ["input", "output", "output", "parameters", "parameters", "parameters_grad"]
+        op_name_reorder, state_reorder = reorder_op_name_list(op_name_list, state_list)
+        expected_result = ["op.forward.input.0.0", "op.forward.parameters.1", "op.forward.parameters.2", "op.forward.output.0", "op.forward.output.1", "op.parameters_grad.0"]
+        expected_state = ["input", "parameters", "parameters", "output", "output", "parameters_grad"]
+        self.assertEqual(op_name_reorder, expected_result)
+        self.assertEqual(state_reorder, expected_state)
 
         # 只有输入元素
         op_name_list = ["op.forward.input.0", "op.forward.input.1"]
-        result = reorder_op_name_list(op_name_list)
-        expected = ["op.forward.input.0", "op.forward.input.1"]
-        self.assertEqual(result, expected)
+        state_list = ["input", "input"]
+        op_name_reorder, state_reorder = reorder_op_name_list(op_name_list, state_list)
+        expected_result = ["op.forward.input.0", "op.forward.input.1"]
+        expected_state = ["input", "input"]
+        self.assertEqual(op_name_reorder, expected_result)
+        self.assertEqual(state_reorder, expected_state)
 
         # 输入为空
         op_name_list = []
-        result = reorder_op_name_list(op_name_list)
-        expected = []
-        self.assertEqual(result, expected)
+        state_list = []
+        op_name_reorder, state_reorder = reorder_op_name_list(op_name_list, state_list)
+        expected_result = []
+        expected_state = []
+        self.assertEqual(op_name_reorder, expected_result)
+        self.assertEqual(state_reorder, expected_state)
 
 
 class TestReorderOpXList(unittest.TestCase):
@@ -613,37 +592,45 @@ class TestReorderOpXList(unittest.TestCase):
         op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = ["data1", "data2", "data3"]
-        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        state_list = ["input", "output", "parameters"]
+        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, ["data1", "data3", "data2"])
+        self.assertEqual(result_state, ["input", "parameters", "output"])
 
         # 空 op_name_list 或 summary_list
         op_name_list = []
         summary_list = []
         data_name_list = ["data1", "data2", "data3"]
-        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        state_list = []
+        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
         self.assertEqual(result_op_name, [])
         self.assertEqual(result_summary, [])
         self.assertEqual(result_data_name, ["data1", "data2", "data3"])
+        self.assertEqual(result_state, [])
 
         # 空 data_name_list
         op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = []
-        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        state_list = ["input", "output", "parameters"]
+        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, [])
+        self.assertEqual(result_state, ["input", "parameters", "output"])
 
         # data_name_list 为 None
         op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = None
-        result_op_name, result_summary, result_data_name = reorder_op_x_list(op_name_list, summary_list, data_name_list)
+        state_list = ["input", "output", "parameters"]
+        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, None)
+        self.assertEqual(result_state, ["input", "parameters", "output"])
 
 
 class TestGenOpItem(unittest.TestCase):
@@ -661,7 +648,7 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         self.assertEqual(result['data_name'], 'test_data')
         self.assertEqual(result['full_op_name'], 'test_data')
@@ -672,6 +659,7 @@ class TestGenOpItem(unittest.TestCase):
         self.assertEqual(result['Mean'], 2)
         self.assertEqual(result['Norm'], 2)
         self.assertEqual(result['md5'], f"{zlib.crc32(str(op_data['value']).encode()):08x}")
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_empty_data_name(self):
         op_data = {
@@ -681,11 +669,12 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         # data_name为空时，应该被设置为'-1'
         self.assertEqual(result['data_name'], '-1')
         self.assertEqual(result['full_op_name'], op_name)
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_none_data_name(self):
         op_data = {
@@ -695,11 +684,12 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         # data_name为None时，应该被设置为'-1'
         self.assertEqual(result['data_name'], '-1')
         self.assertEqual(result['full_op_name'], op_name)
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_type_torch_size(self):
         op_data = {
@@ -709,7 +699,7 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         self.assertEqual(result['dtype'], 'torch.Size')
         self.assertEqual(result['shape'], '[2, 3, 4]')
@@ -717,6 +707,7 @@ class TestGenOpItem(unittest.TestCase):
         self.assertEqual(result['Min'], None)
         self.assertEqual(result['Mean'], None)
         self.assertEqual(result['Norm'], None)
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_type_slice(self):
         op_data = {
@@ -726,10 +717,11 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         self.assertEqual(result['dtype'], 'slice')
         self.assertEqual(result['shape'], str(np.shape(np.array(op_data['value']))))
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_type_ellipsis(self):
         op_data = {
@@ -739,7 +731,7 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         self.assertEqual(result['dtype'], 'ellipsis')
         self.assertEqual(result['shape'], '[]')
@@ -747,6 +739,7 @@ class TestGenOpItem(unittest.TestCase):
         self.assertEqual(result['Min'], '...')
         self.assertEqual(result['Mean'], '...')
         self.assertEqual(result['Norm'], '...')
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_type_torch_process_group(self):
         op_data = {
@@ -756,7 +749,7 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         self.assertEqual(result['dtype'], 'torch.ProcessGroup')
         self.assertEqual(result['shape'], '[]')
@@ -764,6 +757,7 @@ class TestGenOpItem(unittest.TestCase):
         self.assertEqual(result['Min'], '[0, 1]')
         self.assertEqual(result['Mean'], '[0, 1]')
         self.assertEqual(result['Norm'], '[0, 1]')
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_default_dtype(self):
         op_data = {
@@ -773,10 +767,11 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         self.assertEqual(result['dtype'], str(type(op_data['value'])))
         self.assertEqual(result['shape'], '[]')
+        self.assertEqual(result['state'], 'input')
 
     def test_gen_op_item_with_md5(self):
         op_data = {
@@ -786,7 +781,8 @@ class TestGenOpItem(unittest.TestCase):
         }
         op_name = 'op_test'
 
-        result = gen_op_item(op_data, op_name)
+        result = gen_op_item(op_data, op_name, 'input')
 
         expected_md5 = f"{zlib.crc32(str(op_data['value']).encode()):08x}"
         self.assertEqual(result['md5'], expected_md5)
+        self.assertEqual(result['state'], 'input')
