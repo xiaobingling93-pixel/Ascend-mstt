@@ -56,9 +56,9 @@ class MatchNodesController:
                 'success': False,
                 'error': 'task类型错误'
             }
-        result['success'] = result.get('success') or opposite_result.get('success')
+
         if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
+            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error") if opposite_result.get("error") else "匹配成功"}'
         return result
 
     @staticmethod
@@ -78,9 +78,8 @@ class MatchNodesController:
                 'success': False,
                 'error': 'task类型错误'
             }
-        result['success'] = result.get('success') or opposite_result.get('success')
         if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
+            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error") if opposite_result.get("error") else "取消匹配成功"}'
         return result
 
     @staticmethod
