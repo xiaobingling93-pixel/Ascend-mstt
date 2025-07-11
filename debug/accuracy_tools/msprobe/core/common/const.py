@@ -237,6 +237,8 @@ class Const:
     MEAN = 'Mean'
     NORM = 'Norm'
     DATA_NAME = 'data_name'
+    STATE = 'state'
+    API_ORIGIN_NAME = 'api_origin_name'
     TENSOR_STAT_INDEX = 'tensor_stat_index'
     SUMMARY_METRICS_LIST = [MAX, MIN, MEAN, NORM]
 
@@ -642,9 +644,9 @@ class CompareConst:
 
     OP_NAME_X = 'op_name_x'
     MATCH_RESULT_COLUMNS = [
-        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'state_x', 'api_origin_name_x', 'data_name_x',
         CMP_KEY, CMP_SHAPE,
-        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'state_y', 'api_origin_name_y', 'data_name_y'
     ]
 
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'

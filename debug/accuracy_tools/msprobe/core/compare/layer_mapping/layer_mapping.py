@@ -208,7 +208,8 @@ def generate_data_mapping(npu_json_path, bench_json_path, api_mapping, output_pa
     def read_full_op_names(data, op_name):
         op_parsed_list = read_op(data.get(op_name, {}), op_name)
         full_op_names = [op_parsed.get('full_op_name') for op_parsed in op_parsed_list]
-        return full_op_names
+        states = [op_parsed.get(Const.STATE) for op_parsed in op_parsed_list]
+        return full_op_names, states
 
     def generate_op_data_mapping(npu_op_name, npu_full_op_names, bench_op_name, bench_full_op_names):
         suffix_to_full_op_name = {}
@@ -228,10 +229,10 @@ def generate_data_mapping(npu_json_path, bench_json_path, api_mapping, output_pa
     for npu_op_name, bench_op_name in api_mapping.items():
         if not npu_op_name:
             continue
-        npu_full_op_names = read_full_op_names(npu_data, npu_op_name)
-        bench_full_op_names = read_full_op_names(bench_data, bench_op_name)
-        npu_full_op_names_reorder = reorder_op_name_list(npu_full_op_names)
-        bench_full_op_names_reorder = reorder_op_name_list(bench_full_op_names)
+        npu_full_op_names, npu_states = read_full_op_names(npu_data, npu_op_name)
+        bench_full_op_names, bench_states = read_full_op_names(bench_data, bench_op_name)
+        npu_full_op_names_reorder, _ = reorder_op_name_list(npu_full_op_names, npu_states)
+        bench_full_op_names_reorder, _ = reorder_op_name_list(bench_full_op_names, bench_states)
         mapping = generate_op_data_mapping(npu_op_name, npu_full_op_names_reorder,
                                            bench_op_name, bench_full_op_names_reorder)
         data_mapping.update(mapping)

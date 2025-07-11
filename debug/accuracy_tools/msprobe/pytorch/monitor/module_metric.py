@@ -16,7 +16,6 @@ import re
 
 import torch
 
-from msprobe.pytorch.common.utils import is_float8_tensor
 from msprobe.pytorch.monitor.features import get_max, get_min, get_zeros, get_nans, get_norm, get_mean
 from msprobe.pytorch.monitor.utils import get_nan_tensor
 
@@ -181,8 +180,6 @@ def get_metrics(ops, tag2tensor, eps, out_dict=None):
             # Non-tensor in/output filled with nan.
             out_dict[tag].update({metric_name: get_nan_tensor() for metric_name in ops})
             continue
-        if is_float8_tensor(tensor):
-            tensor = tensor.float()
         for metric_name in ops:
             fun_metric = config_metric_registry.get(metric_name)
             out_dict[tag][metric_name] = fun_metric.get_metric(tensor, eps)

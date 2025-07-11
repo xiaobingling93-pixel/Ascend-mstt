@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, patch
 import torch
 import torch.distributed as dist
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.file_utils import FileCheckConst
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.utils import (
     parameter_adapter,
@@ -35,9 +34,7 @@ from msprobe.pytorch.common.utils import (
     save_api_data,
     load_api_data,
     save_pkl,
-    load_pkl,
-    is_float8_tensor,
-    is_hifloat8_tensor
+    load_pkl
 )
 
 
@@ -311,24 +308,3 @@ class TestSavePkl(unittest.TestCase):
             load_pkl(self.filepath)
         self.assertIn("Unsupported object type: os.system", str(context.exception))
         os.remove(self.filepath)
-
-class TestFloat8Tensor(unittest.TestCase):
-    def setUp(self):
-        self.tensor = MagicMock()
-
-    def test_is_float8_tensor(self):
-        self.tensor.dtype = "torch.float8_e5m2"
-        res = is_float8_tensor(self.tensor)
-        self.assertTrue(res)
-
-        self.tensor.dtype = "torch.float8_e4m3fn"
-        res = is_float8_tensor(self.tensor)
-        self.assertTrue(res)
-
-    def test_is_not_float8_tensor(self):
-        self.tensor.dtype = 123
-        res = is_float8_tensor(self.tensor)
-        self.assertFalse(res)
-
-        res = is_hifloat8_tensor(self.tensor)
-        self.assertFalse(res)

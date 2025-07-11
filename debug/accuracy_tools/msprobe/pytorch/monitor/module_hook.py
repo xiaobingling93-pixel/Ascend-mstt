@@ -34,7 +34,7 @@ from msprobe.core.common.utils import analyze_api_call_stack
 from msprobe.core.monitor.utils import validate_config, validate_ops, \
     get_output_base_dir, get_target_output_dir, chmod_tensorboard_dir, validate_set_monitor
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import is_recomputation, is_float8_tensor
+from msprobe.pytorch.common.utils import is_recomputation
 from msprobe.pytorch.monitor.utils import get_param_struct
 from msprobe.pytorch.monitor.data_writers import SummaryWriterWithAD, CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
@@ -159,7 +159,6 @@ class TrainerMon:
         self.params_have_main_grad = params_have_main_grad
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
-        self.origin_start_grad_sync = None
         self.fsdp_post_backward_hook = None
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
@@ -195,6 +194,7 @@ class TrainerMon:
         self.dp_group = None
         self.tp_group = None
         self.enable_megatron = False
+        self.enable_deepspeed = False
         self.fsdp_wrapped_module = False
         self.micro_batch_number = 1
         self.optimizer_mon = None
@@ -764,7 +764,7 @@ class TrainerMon:
         def clone_if_tensor(args):
             if isinstance(args, tuple):
                 return tuple([clone_if_tensor(arg) for arg in args])
-            elif isinstance(args, torch.Tensor) and not is_float8_tensor(args):
+            elif isinstance(args, torch.Tensor):
                 return args.clone()
             else:
                 return args
@@ -804,20 +804,9 @@ class TrainerMon:
             bwd_context.reset()
         self.grad_context.reset()  # 权重梯度和激活值梯度都在这
 
-        if self.origin_start_grad_sync:  # megatron
-            try:
-                from megatron.core.distributed.param_and_grad_buffer import Bucket
-                Bucket.start_grad_sync = self.origin_start_grad_sync
-                logger.info("remove Bucket start_grad_sync")
-            except ImportError:
-                pass
-            try:
-                from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
-                _ParamAndGradBucketGroup.start_grad_sync = self.origin_start_grad_sync
-                logger.info("remove _ParamAndGradBucketGroup start_grad_sync")
-            except ImportError:
-                pass
-        elif self.fsdp_post_backward_hook:  # fsdp
+
+        self.optimizer_mon.restore_grad_sync(self)
+        if self.fsdp_post_backward_hook:  # fsdp
             torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
             logger.info("remove patch_post_backward_hook in fsdp.")
         else:  # not megatron and not fsdp
@@ -896,7 +885,6 @@ class TrainerMon:
         squash_name = prefix + squash_param_name(param_name, self.squash_name)
         for target in self.config['targets'].keys():
             if param_name.startswith(target) or squash_name.startswith(target) or name.startswith(target):
-                setattr(param, "zero_out_wgrad", True)
                 return True
 
         return False
@@ -1059,31 +1047,6 @@ class TrainerMon:
         return hooked_count
 
     def _patch_grad_sync(self):
-        def patch_sync(sync_grad_func):
-            def wrapper(bucket):
-                grad_dict = {}
-                # Megatron between core_r0.6.0 and core_r0.8.0, this bucket is Bucket.
-                # When megatron is core_r0.9.0, this bucket is _ParamAndGradBucketGroup.
-                # In megatron version core_r0.9.0, func start_grad_sync from Bucket moved to _ParamAndGradBucketGroup.
-                bucket_params_id_list = [id(params) for params in bucket.params]
-                for param, name in self.param2name.items():
-                    if id(param) not in bucket_params_id_list:
-                        continue
-                    grad = param.main_grad if self.params_have_main_grad else param.grad
-                    if grad is None:
-                        logger.warning(f"grad is None: {name}, maybe something wrong happened.")
-                        continue
-                    tag = self.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
-                    if tag is None:
-                        continue
-                    grad_dict[tag] = grad
-                    self.register_param_call_id("sync_grad_func", tag)
-                get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
-                out = sync_grad_func(bucket)
-                return out
-
-            return wrapper
-
         if not self.wg_distribution:
             return
         if self.fsdp_wrapped_module:
@@ -1094,24 +1057,10 @@ class TrainerMon:
         if self.monitor_mbs_grad:
             self._hook_weights()
             return
-        try:
-            from megatron.core.distributed.param_and_grad_buffer import Bucket
-            self.origin_start_grad_sync = Bucket.start_grad_sync
-            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)
-            self.enable_megatron = True
-            logger.info("megatron version is >= core_r0.6.0 <= core_r0.8.0")
-        except ImportError:
-            self.enable_megatron = False
+        
+        self.optimizer_mon.patch_grad_sync(self)
 
-        try:
-            from megatron.core.distributed.param_and_grad_buffer import _ParamAndGradBucketGroup
-            self.origin_start_grad_sync = _ParamAndGradBucketGroup.start_grad_sync
-            _ParamAndGradBucketGroup.start_grad_sync = patch_sync(_ParamAndGradBucketGroup.start_grad_sync)
-            self.enable_megatron = True
-            logger.info("megatron version is > core_r0.8.0 <= core_r0.9.0")
-        except ImportError:
-            self.enable_megatron = False | self.enable_megatron
-        if self.enable_megatron:
+        if self.enable_megatron or self.enable_deepspeed:
             return
 
         # default hook weights
@@ -1171,8 +1120,6 @@ class TrainerMon:
                     grad = param.main_grad
                 else:
                     grad = param.grad
-                if is_float8_tensor(grad):
-                    grad = grad.float()
                 context_dict[key] = grad.clone()
 
             if param.micro_step == self.micro_batch_number:

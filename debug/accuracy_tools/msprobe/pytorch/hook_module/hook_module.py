@@ -23,7 +23,7 @@ import torch.utils.hooks as full_hooks
 
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import ThreadSafe
-from msprobe.pytorch.common.utils import is_float8_tensor, register_forward_pre_hook, register_forward_hook
+from msprobe.pytorch.common.utils import register_forward_pre_hook, register_forward_hook
 
 
 class HOOKModule(nn.Module):
@@ -104,7 +104,7 @@ class HOOKModule(nn.Module):
                 else:
                     return result
 
-            if is_float8_tensor(var) or not (var.requires_grad and torch.is_grad_enabled()):
+            if not (var.requires_grad and torch.is_grad_enabled()):
                 return result
 
             grad_fn = var.grad_fn

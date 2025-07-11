@@ -94,8 +94,8 @@ class CompareRealData:
     @staticmethod
     def read_dump_data(result_df):
         try:
-            npu_dump_name_list = result_df.iloc[0:, 0].tolist()
-            dump_tensor_pair_list = result_df.iloc[0:, -1].tolist()
+            npu_dump_name_list = result_df.loc[0:, CompareConst.NPU_NAME].tolist()
+            dump_tensor_pair_list = result_df.loc[0:, CompareConst.DATA_NAME].tolist()
             op_name_mapping_dict = {}
             for index, npu_dump_name in enumerate(npu_dump_name_list):
                 dump_tensor_pair = dump_tensor_pair_list[index]
@@ -104,9 +104,9 @@ class CompareRealData:
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
-        except IndexError as e:
+        except KeyError as e:
             logger.error('result dataframe elements can not be access.')
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+            raise CompareException(CompareException.INVALID_KEY_ERROR) from e
 
     @staticmethod
     def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):

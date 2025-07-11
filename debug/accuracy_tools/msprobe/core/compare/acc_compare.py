@@ -116,17 +116,17 @@ class Comparator:
 
         # save result excel file
         logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
-        if self.mode_config.highlight:
-            if len(result_df) > CompareConst.MAX_EXCEL_LENGTH:
-                save_excel(file_path, result_df)
-            else:
-                # highlight suspicious API
-                highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-                highlight = HighLight(self.mode_config)
-                if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
-                    highlight.find_compare_result_error_rows(result_df, highlight_dict)
-                highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        if self.mode_config.highlight and len(result_df) <= CompareConst.MAX_EXCEL_LENGTH:
+            # highlight if not too long
+            highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+            highlight = HighLight(self.mode_config)
+            if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+                highlight.find_compare_result_error_rows(result_df, highlight_dict)
+            result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
+            highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
         else:
+            # fallback to simple save without highlight
+            result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
             save_excel(file_path, result_df)
 
         # output compare analysis suggestions
@@ -188,10 +188,12 @@ class ParseData:
             Const.DTYPE: [],
             Const.SHAPE: [],
             Const.SUMMARY: [],
-            Const.STACK_INFO: []
+            Const.STACK_INFO: [],
+            Const.STATE: [],
+            Const.API_ORIGIN_NAME: []
         }
         if self.mode_config.dump_mode == Const.ALL:
-            result['data_name'] = []
+            result[Const.DATA_NAME] = []
         elif self.mode_config.dump_mode == Const.MD5:
             result[Const.MD5] = []
 
@@ -212,20 +214,22 @@ class ParseData:
 
             op_name_list = merge_list.get(CompareConst.OP_NAME)
             summary_list = merge_list.get(Const.SUMMARY)
-            data_name_list = merge_list.get('data_name')
-            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
-                                                                                    summary_list,
-                                                                                    data_name_list)
+            data_name_list = merge_list.get(Const.DATA_NAME)
+            state_list = merge_list.get(Const.STATE)
+            op_name_reorder, summary_reorder, data_name_reorder, state_reorder = reorder_op_x_list(op_name_list,
+                                                                                                   summary_list,
+                                                                                                   data_name_list,
+                                                                                                   state_list)
             # 遍历单个API的所有item
-            for index, op_name in enumerate(op_name_reorder):
+            for index, (op_name, state) in enumerate(zip(op_name_reorder, state_reorder)):
                 result[CompareConst.OP_NAME].append(op_name)
-                if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
+                if state == Const.INPUT or state == Const.KWARGS:
                     info_list = merge_list[CompareConst.INPUT_STRUCT]
-                elif CompareConst.OUTPUT_PATTERN in op_name:
+                elif state == Const.OUTPUT:
                     info_list = merge_list[CompareConst.OUTPUT_STRUCT]
-                elif CompareConst.PARAMS_PATTERN in op_name:
+                elif state == Const.PARAMS:
                     info_list = merge_list[CompareConst.PARAMS_STRUCT]
-                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
+                elif state == Const.PARAMS_GRAD:
                     info_list = merge_list[CompareConst.PARAMS_GRAD_STRUCT]
                 else:
                     info_list = merge_list[CompareConst.DEBUG_STRUCT]
@@ -250,7 +254,10 @@ class ParseData:
 
                 if self.mode_config.dump_mode == Const.ALL:
                     check_api_info_len(op_name, data_name_reorder, 1)
-                    result['data_name'].append(data_name_reorder.pop(0))
+                    result[Const.DATA_NAME].append(data_name_reorder.pop(0))
+
+                result[Const.STATE].append(state)
+                result[Const.API_ORIGIN_NAME].append(data_name)
             progress_bar.update(1)
         progress_bar.close()
         return pd.DataFrame(result)
@@ -422,8 +429,8 @@ class Match:
     @staticmethod
     def put_unmatched_in_table(match_result, npu_op_item):
         npu_columns = npu_op_item.index.tolist()[:-2]
-        new_columns = [name[:-1] + 'y' for name in npu_columns]
-        na_series = pd.Series([CompareConst.N_A] * len(new_columns), index=new_columns)
+        bench_columns = [name + '_y' for name in npu_columns]
+        na_series = pd.Series([CompareConst.N_A] * len(bench_columns), index=bench_columns)
         new_result_item = pd.concat([npu_op_item, na_series]).to_frame().T
         new_result_item.columns = CompareConst.MATCH_RESULT_COLUMNS
         match_result = pd.concat([match_result, new_result_item])
@@ -619,7 +626,9 @@ class CreateTable:
                                'md5_x': CompareConst.NPU_MD5,
                                'md5_y': CompareConst.BENCH_MD5,
                                'data_name_x': CompareConst.DATA_NAME,
-                               'stack_info_x': CompareConst.STACK}, inplace=True)
+                               'stack_info_x': CompareConst.STACK,
+                               'state_x': Const.STATE,
+                               'api_origin_name_x': Const.API_ORIGIN_NAME}, inplace=True)
 
         # process summary data
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
@@ -632,6 +641,7 @@ class CreateTable:
             result[npu_summary] = result['summary_x'].apply(self.set_summary).tolist()
             result[bench_summary] = result['summary_y'].apply(self.set_summary).tolist()
 
+        header.extend([Const.STATE, Const.API_ORIGIN_NAME])
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:
