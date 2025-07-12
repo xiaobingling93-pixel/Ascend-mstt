@@ -84,6 +84,7 @@ class TestDebuggerConfig(unittest.TestCase):
         self.common_config.task = Const.TENSOR
         self.common_config.level = Const.LEVEL_MIX
         self.task_config.list = []
+        self.task_config.summary_mode = Const.SUMMARY_MODE
         with self.assertRaises(MsprobeException) as context:
             DebuggerConfig(self.common_config, self.task_config, None, None, None)
         self.assertIn(f"the parameters list cannot be empty.", str(context.exception))
@@ -93,6 +94,15 @@ class TestDebuggerConfig(unittest.TestCase):
         self.common_config.level = Const.LEVEL_L1
         config = DebuggerConfig(self.common_config, self.task_config, None, None, None)
         self.assertEqual(config.level, Const.LEVEL_MIX)
+
+    def test_check_async_dump_and_md5(self):
+        self.common_config.async_dump = True
+        self.common_config.task = Const.STATISTICS
+        self.common_config.level = Const.LEVEL_L1
+        self.task_config.summary_mode = Const.MD5
+        with self.assertRaises(MsprobeException) as context:
+            DebuggerConfig(self.common_config, self.task_config, None, None, None)
+        self.assertIn(f"the parameters summary_mode cannot be md5.", str(context.exception))
 
     def test_check_model_with_model_is_none(self):
         self.common_config.level = Const.LEVEL_L0

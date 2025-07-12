@@ -49,7 +49,7 @@ class DebuggerConfig:
         self.summary_mode = task_config.summary_mode
         self.stat_cal_mode = task_config.stat_cal_mode if hasattr(task_config, 'stat_cal_mode') else None
         self.device_stat_precision_mode = task_config.device_stat_precision_mode \
-                                          if hasattr(task_config, 'device_stat_precision_mode') else None
+            if hasattr(task_config, 'device_stat_precision_mode') else None
         self.async_dump = common_config.async_dump if common_config.async_dump else False
         self.check()
         self._check_statistics_config(task_config)
@@ -115,18 +115,28 @@ class DebuggerConfig:
             self.check_mode = "all"
         if not isinstance(self.async_dump, bool):
             raise Exception("The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR:
-            if self.level_ori == Const.LEVEL_DEBUG:
-                self.list = [] # async_dump + debug level case ignore list
-            if not self.list and self.level_ori != Const.LEVEL_DEBUG:
-                raise Exception("The parameters async_dump is true in tensor task,"
-                                " the parameters list cannot be empty.")
         if self.task == Const.STRUCTURE and self.level_ori not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
                 f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
                 f"If not, the default level is {Const.LEVEL_MIX}."
             )
             self.level_ori = Const.LEVEL_MIX
+        if self.async_dump:
+            if self.task == Const.TENSOR:
+                if self.level_ori == Const.LEVEL_DEBUG:
+                    self.list = []  # async_dump + debug level case ignore list
+                if not self.list and self.level_ori != Const.LEVEL_DEBUG:
+                    raise MsprobeException(
+                        MsprobeException.INVALID_PARAM_ERROR,
+                        "The parameters async_dump is true in tensor task, the parameters list cannot be empty."
+                    )
+            is_unsupported_mode = self.summary_mode == Const.MD5 or \
+                                  isinstance(self.summary_mode, list) and Const.MD5 in self.summary_mode
+            if is_unsupported_mode:
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR,
+                    f"The parameters async_dump is true, the parameters summary_mode cannot be/contain md5."
+                )
         return True
 
     def check_config_with_l2(self, is_graph_config):

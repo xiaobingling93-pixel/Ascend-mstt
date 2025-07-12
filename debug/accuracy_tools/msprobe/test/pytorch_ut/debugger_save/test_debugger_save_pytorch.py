@@ -244,37 +244,6 @@ class TestDebuggerSave(unittest.TestCase):
         debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
         assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
 
-    def test_async_save_md5(self):
-        # async_dump case, md5 configuration not working,only save statistics
-        data = {"a": torch.Tensor([1., 2.])}
-        step = []
-        async_dump = True
-        mode = "md5"
-        dump_path = os.path.join(test_dir, "debug_save")
-        config_file_path = os.path.join(test_dir, "config.json")
-        self.write_config_json(step, async_dump, mode, dump_path, config_file_path)
-        debugger =  PrecisionDebugger(config_file_path)
-        PrecisionDebugger.save(data, "data_dict", save_backward=False)
-        PrecisionDebugger.step()
-        # check debug json
-        target_debug_info = {
-            "a": {
-                "type": "torch.Tensor",
-                "dtype": "torch.float32",
-                "shape": [
-                2
-                ],
-                "Max": 2.0,
-                "Min": 1.0,
-                "Mean": 1.5,
-                "Norm": 2.2360680103302,
-                "requires_grad": False,
-            }
-        }
-        debug_json_path = os.path.join(dump_path, "step0", "rank", "debug.json")
-        debug_json_dict = self.read_debug_json_into_dict(debug_json_path)
-        assert deep_compare(debug_json_dict["data"]["data_dict.0.debug"], target_debug_info)
-
     def test_save_multiple_times(self):
         data = {"a": torch.Tensor([1., 2.])}
         step = []
