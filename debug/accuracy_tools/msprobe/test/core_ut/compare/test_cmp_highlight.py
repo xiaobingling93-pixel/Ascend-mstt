@@ -19,37 +19,37 @@ from msprobe.core.compare.config import ModeConfig
 
 
 summary_line_input = ['Functional_batch_norm_0_forward.input.0', 'Functional_batch_norm_0_forward.input.0',
-                      'torch.float16',
-                      'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1,
-                      'Yes', '']
+                      'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+                      0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1,
+                      True, 'Yes', '']
 summary_line_1 = ['Functional_batch_norm_0_forward.output.0', 'Functional_batch_norm_0_forward.output.0',
-                  'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 10, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
-                  'Warning', '']
+                  'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+                  10, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
+                  True, 'Warning', '']
 summary_line_2 = ['Functional_batch_norm_0_forward.output.1', 'Functional_batch_norm_0_forward.output.1',
-                  'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1,
-                  'Warning', '']
+                  'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+                  0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1,
+                  True, 'Warning', '']
 summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_norm_0_forward.output.2',
-                  'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
-                  'Warning', '']
+                  'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+                  0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
+                  True, 'Warning', '']
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
-              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0.5, 1, 1, 0.95, 1,
-              1, 1, 1, 1, 1.01, 1, 1, 1,
-              'Yes', '', 'input', 'Functional.batch.norm.0.forward']
+              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+              1, 0.5, 1, 1, 0.95, 1, 1, 1, 1, 1, 1.01, 1, 1, 1,
+              True, 'Yes', '', 'input', 'Functional.batch.norm.0.forward']
 line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1, 1, 0.59, 1,
-          'nan', 0, 1, 1, 19, 1, 1, 1,
-          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+          0.8, 0.5, 1, 1, 0.59, 1, 'nan', 0, 1, 1, 19, 1, 1, 1,
+          True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 0.5, 1, 1, 0.8, 1,
-          0, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+          0.9, 0.5, 1, 1, 0.8, 1, 0, 0.12, 0, 1, 1, 0.1, 1, 1,
+          True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
-          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1.1e+10, 1, 0.85, 1,
-          9, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
+          0.8, 0.5, 1.1e+10, 1, 0.85, 1, 9, 0.12, 0, 1, 1, 0.1, 1, 1,
+          True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
 
@@ -57,8 +57,8 @@ base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highl
 def generate_result_xlsx(base_dir):
     data_path = os.path.join(base_dir, 'target_result.xlsx')
     data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-             'torch.float32', 'torch.float32', [2, 2], [2, 2],
-             '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+             'torch.float32', 'torch.float32', [2, 2], [2, 2], 'True', 'True',
+             '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'True', 'Yes', '', '-1']
             ]
     columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
     result_df = pd.DataFrame(data, columns=columns)
@@ -122,8 +122,8 @@ class TestUtilsMethods(unittest.TestCase):
             shutil.rmtree(base_dir)
 
     def test_CheckOrderMagnitude_normal(self):
-        api_in = [1, 1, 1, 1, 1, 1, 5, 1, 1]
-        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        api_in = [1, 1, 1, 1, 1, 1, True, True, 5, 1, 1]
+        api_out = [1, 1, 1, 1, 1, 1, True, True, 1, 1, 1]
         info = (api_in, api_out, 1)
         color_columns = ()
         dump_mode = Const.SUMMARY
@@ -133,8 +133,8 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, None)
 
     def test_CheckOneThousandErrorRatio_str(self):
-        api_in = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, "unsupported"]
-        api_out = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, "unsupported"]
+        api_in = [1, 1, 1, 1, 1, 1, True, True, 0.9, 0.5, 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, True, True, 0.9, 0.5, 1, 1, "unsupported"]
         info = (api_in, api_out, 1)
         color_columns = ()
         dump_mode = Const.ALL
@@ -145,8 +145,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     @patch("msprobe.core.compare.highlight.add_highlight_row_info")
     def test_CheckOneThousandErrorRatio_red(self, mock_add_highlight_row_info):
-        api_in = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, 1]
-        api_out = [1, 1, 1, 1, 1, 1, 0.9, 0.5, 1, 1, 0.5]
+        api_in = [1, 1, 1, 1, 1, 1, True, True, 0.9, 0.5, 1, 1, 1]
+        api_out = [1, 1, 1, 1, 1, 1, True, True, 0.9, 0.5, 1, 1, 0.5]
         info = (api_in, api_out, 1)
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
         color_columns = ColorColumns(red=[], yellow=[])
@@ -157,8 +157,8 @@ class TestUtilsMethods(unittest.TestCase):
         mock_add_highlight_row_info.assert_called_once()
 
     def test_CheckCosineSimilarity_str(self):
-        api_in = [1, 1, 1, 1, 1, 1, "unsupported", 1, 1, "unsupported"]
-        api_out = [1, 1, 1, 1, 1, 1, "unsupported", 1, 1, "unsupported"]
+        api_in = [1, 1, 1, 1, 1, 1, True, True, "unsupported", 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, True, True, "unsupported", 1, 1, "unsupported"]
         info = (api_in, api_out, 1)
         color_columns = ()
         dump_mode = Const.ALL
@@ -173,8 +173,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {6: 0, 18: 1}
-        api_out = {6: 0.6, 18: 1}
+        api_in = {8: 0, 20: 1}
+        api_out = {8: 0.6, 20: 1}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -188,8 +188,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {6: 0.001, 18: 1}
-        api_out = {6: 0.2, 18: 1}
+        api_in = {8: 0.001, 20: 1}
+        api_out = {8: 0.2, 20: 1}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -203,8 +203,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {6: 0.001, 18: np.nan}
-        api_out = {6: 0.2, 18: 1}
+        api_in = {8: 0.001, 20: np.nan}
+        api_out = {8: 0.2, 20: 1}
         num = 1
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -351,8 +351,8 @@ class TestUtilsMethods(unittest.TestCase):
     def test_df_malicious_value_check(self):
         columns = CompareConst.COMPARE_RESULT_HEADER
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '']
                 ]
         result_df = pd.DataFrame(data, columns=columns)
 
@@ -369,8 +369,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_highlight_rows_xlsx_red(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -386,8 +386,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_highlight_rows_xlsx_yellow(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -404,8 +404,8 @@ class TestUtilsMethods(unittest.TestCase):
     @patch("msprobe.core.compare.highlight.save_workbook")
     def test_highlight_rows_xlsx_malicious_columns(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['=Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -428,11 +428,11 @@ class TestUtilsMethods(unittest.TestCase):
     @patch("msprobe.core.compare.highlight.save_workbook")
     def test_highlight_rows_xlsx_malicious_type(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 '=torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                 '=torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1'],
                 ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 '=torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 '=torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -468,11 +468,11 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_update_highlight_err_msg(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1'],
                 ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', '-1']
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -488,18 +488,18 @@ class TestUtilsMethods(unittest.TestCase):
         highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                   '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'a\nb', '-1'],
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                   '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', 'a\nb', '-1'],
                   ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                   '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'd', '-1']
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                   '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', 'd', '-1']
                   ]
         target_result_df = pd.DataFrame(t_data, columns=columns)
         self.assertTrue(result_df.equals(target_result_df))
 
     def test_update_highlight_err_msg_md5(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2], 'abc', 'abc', 'pass']
+                 'torch.float32', 'torch.float32', True, True, [2, 2], [2, 2], 'abc', 'abc', True, 'pass']
                 ]
         columns = CompareConst.MD5_COMPARE_RESULT_HEADER
         result_df = pd.DataFrame(data, columns=columns)

@@ -15,15 +15,15 @@ from msprobe.pytorch.compare.pt_compare import read_real_data
 from test_acc_compare import generate_dump_json, generate_pt, generate_stack_json
 
 data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-         'torch.float32', 'torch.float32', [2, 2], [2, 2],
+         'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
          '', '', '', '', '', '',
          1, 1, 1, 1, 1, 1, 1, 1,
-         'Yes', '', ['-1', '-1']]]
+         True, 'Yes', '', ['-1', '-1']]]
 o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-           'torch.float32', 'torch.float32', [2, 2], [2, 2],
+           'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
            'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
            1, 1, 1, 1, 1, 1, 1, 1,
-           'None', 'No bench data matched.', ['-1', '-1']]]
+           True, 'None', 'No bench data matched.', ['-1', '-1']]]
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
 result_df = pd.DataFrame(data, columns=columns)
 o_result = pd.DataFrame(o_data, columns=columns)
@@ -216,12 +216,12 @@ class TestCompareRealData(unittest.TestCase):
 
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', ['-1', '-1']]]
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', ['-1', '-1']]]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
                    'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                   1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', ['-1', '-1']]]
+                   1, 1, 1, 1, 1, 1, 1, 1, True, 'None', 'No bench data matched.', ['-1', '-1']]]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
         o_result = pd.DataFrame(o_data, columns=columns)

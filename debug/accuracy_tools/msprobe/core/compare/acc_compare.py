@@ -182,7 +182,8 @@ class ParseData:
             Const.SUMMARY: [],
             Const.STACK_INFO: [],
             Const.STATE: [],
-            Const.API_ORIGIN_NAME: []
+            Const.API_ORIGIN_NAME: [],
+            Const.REQ_GRAD: []
         }
         if self.mode_config.dump_mode == Const.ALL:
             result[Const.DATA_NAME] = []
@@ -208,10 +209,9 @@ class ParseData:
             summary_list = merge_list.get(Const.SUMMARY)
             data_name_list = merge_list.get(Const.DATA_NAME)
             state_list = merge_list.get(Const.STATE)
-            op_name_reorder, summary_reorder, data_name_reorder, state_reorder = reorder_op_x_list(op_name_list,
-                                                                                                   summary_list,
-                                                                                                   data_name_list,
-                                                                                                   state_list)
+            requires_grad_list = merge_list.get(Const.REQ_GRAD)
+            op_name_reorder, summary_reorder, data_name_reorder, state_reorder, requires_grad_reorder = (
+                reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list, requires_grad_list))
             # 遍历单个API的所有item
             for index, (op_name, state) in enumerate(zip(op_name_reorder, state_reorder)):
                 result[CompareConst.OP_NAME].append(op_name)
@@ -231,9 +231,6 @@ class ParseData:
                 check_api_info_len(op_name, struct, 2)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])
-                if self.mode_config.dump_mode == Const.MD5:
-                    check_api_info_len(op_name, struct, 3)
-                    result[Const.MD5].append(struct[2])
 
                 check_api_info_len(op_name, summary_reorder, 1)
                 result[Const.SUMMARY].append(summary_reorder.pop(0))
@@ -244,12 +241,18 @@ class ParseData:
                 else:
                     result[Const.STACK_INFO].append(None)
 
+                if self.mode_config.dump_mode == Const.MD5:
+                    check_api_info_len(op_name, struct, 3)
+                    result[Const.MD5].append(struct[2])
                 if self.mode_config.dump_mode == Const.ALL:
                     check_api_info_len(op_name, data_name_reorder, 1)
                     result[Const.DATA_NAME].append(data_name_reorder.pop(0))
 
                 result[Const.STATE].append(state)
                 result[Const.API_ORIGIN_NAME].append(data_name)
+                check_api_info_len(op_name, requires_grad_reorder, 1)
+                result[Const.REQ_GRAD].append(requires_grad_reorder.pop(0))
+
             progress_bar.update(1)
         progress_bar.close()
         return pd.DataFrame(result)
@@ -620,12 +623,19 @@ class CreateTable:
                                'data_name_x': CompareConst.DATA_NAME,
                                'stack_info_x': CompareConst.STACK,
                                'state_x': Const.STATE,
-                               'api_origin_name_x': Const.API_ORIGIN_NAME}, inplace=True)
+                               'api_origin_name_x': Const.API_ORIGIN_NAME,
+                               'requires_grad_x': CompareConst.NPU_REQ_GRAD,
+                               'requires_grad_y': CompareConst.BENCH_REQ_GRAD
+                               },
+                      inplace=True)
 
         # process summary data
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
         bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
                          CompareConst.BENCH_NORM]
+        # process requires_grad
+        result[CompareConst.REQ_GRAD_CONSIST] = result[CompareConst.NPU_REQ_GRAD] == result[CompareConst.BENCH_REQ_GRAD]
+
         if result.empty:
             result[npu_summary] = pd.DataFrame(columns=npu_summary)
             result[bench_summary] = pd.DataFrame(columns=bench_summary)
