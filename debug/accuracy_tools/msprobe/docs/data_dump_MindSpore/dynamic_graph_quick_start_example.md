@@ -35,7 +35,7 @@ import os
 import numpy as np
 import mindspore as ms
 from mindspore import nn, ops
-from mindspore import context
+from mindspore import context, set_device, set_deterministic
 from mindspore import Tensor
 from msprobe.mindspore import PrecisionDebugger, seed_all
 
@@ -50,7 +50,11 @@ config_path = os.path.join(script_dir, 'config.json')
 debugger = PrecisionDebugger(config_path=config_path)
 
 # 设置 MindSpore 设备上下文
-context.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", device_id=0)
+context.set_context(mode=ms.PYNATIVE_MODE)
+
+set_device("Ascend", 0)
+
+set_deterministic(True)
 print("Context set successfully. Please wait for the training task.")
 
 # 定义卷积层
