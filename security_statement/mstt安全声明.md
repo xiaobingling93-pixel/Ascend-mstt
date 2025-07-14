@@ -41,6 +41,9 @@
 | 密钥组件、私钥、证书、加密密文     | 600（rw-------）    |
 | 加解密接口、加解密脚本             | 500（r-x------）    |
 
+## 漏洞安全声明
+[mstt漏洞机制声明](#公网地址)
+
 ## 数据安全声明
 
 ​    工具使用过程中需要加载和保存数据，部分接口直接或间接使用风险模块pickle，可能存在数据风险，如torch.load等接口，可参考[torch.load](https://pytorch.org/docs/main/generated/torch.load.html#torch.load)了解具体风险。
