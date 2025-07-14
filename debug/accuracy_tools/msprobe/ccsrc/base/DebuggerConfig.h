@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@
 #include <utility>
 #include <memory>
 #include <set>
-#include <regex>
 #include <stdexcept>
 #include <nlohmann/json.hpp>
 
@@ -125,7 +124,7 @@ public:
 
 private:
     std::vector<std::string> fullNameList;
-    std::vector<std::regex> regexList;
+    std::vector<std::string> regexList;
 };
 
 /* 说明：config类作为基础的配置解析查询类，对外应该是只读的，外部仅能通过Parse接口解析配置文件，而不应该直接修改配置字段，此处用以下方式防止外部误操作

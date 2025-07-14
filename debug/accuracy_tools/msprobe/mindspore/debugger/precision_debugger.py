@@ -79,6 +79,9 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.common_config.dump_path = dump_path if dump_path else self.common_config.dump_path
         self.config = DebuggerConfig(self.common_config, self.task_config)
 
+        if self._is_kernel_dump() and not self.task_config.is_regex_valid:
+            raise ValueError('Illegal regular expressions exist in the list.')
+
         setattr(inner.CellBackwardHook, '__call__',
                 wrap_backward_hook_call_func(getattr(inner.CellBackwardHook, '__call__')))
 
