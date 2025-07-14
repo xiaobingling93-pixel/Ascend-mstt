@@ -212,12 +212,9 @@ class PrecisionDebugger(BasePrecisionDebugger):
             check_save_param(variable, name, save_backward)
         except ValueError:
             return
-
-        instance.config.execution_mode = cls._get_execution_mode()
-        if cls._need_service():
-            if not instance.service:
-                instance.service = MindsporeService(instance.config)
-            instance.service.save(variable, name, save_backward)
+        if not instance.service:
+            instance.service = MindsporeService(instance.config)
+        instance.service.save(variable, name, save_backward)
 
     @classmethod
     def _need_service(cls):
