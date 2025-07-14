@@ -130,3 +130,5 @@ def step():
     temp_tensor = Tensor([1], dtype=ms.float32)
     step_flag = "<tensordump-update-step>"
     _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
+    ops.tensordump(step_flag, temp_tensor)
+    hal.synchronize()

@@ -152,21 +152,22 @@ def find_npy_files(directory):
             dirs.clear()
         for file in files:
             if file.endswith(".npy"):
-                file_name = file.strip('.npy')
-                key = None
-                if '_' in file_name:
-                    # 分割文件名并去掉最后两个元素
-                    file_name = file_name.split('_')
-                elif '.' in file_name:
-                    file_name = file_name.split('.')
-                if len(file_name) < 2:
-                        continue
-                key = '_'.join(file_name[:-2])
+                # 正确移除文件扩展名
+                file_name = os.path.splitext(file)[0]
+                logger.info(f"Generating file info for file: {file}")
+                
+                # 使用一致的分割逻辑
+                file_ele = file_name.split('_')
+                
+                if len(file_ele) < 2:
+                    continue
+                    
+                key = '_'.join(file_ele[:-2])
                 if key:
-                     # 文件的完整路径
+                    # 文件的完整路径
                     value = os.path.join(root, file)
                     # 添加到字典中
-                    if not npy_files_dict.get(key):
+                    if key not in npy_files_dict:
                         npy_files_dict[key] = []
                     npy_files_dict[key].append(value)
     return npy_files_dict
