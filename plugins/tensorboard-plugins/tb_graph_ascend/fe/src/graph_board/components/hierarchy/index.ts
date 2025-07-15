@@ -228,16 +228,16 @@ class Hierarchy extends PolymerElement {
         const newTransform = d3.zoomIdentity
             .translate(initialTransform.x, initialTransform.y)
             .scale(initialTransform.scale);
-        const mainZoom = d3.zoom().on('zoom', () => {
-            this._zoomTransform = (d3 as any).event.transform;
+        const mainZoom = d3.zoom().on('zoom', (event: d3.D3ZoomEvent<SVGElement, unknown>) => {
+            this._zoomTransform = event.transform;
             if (!this._zoomStartCoords) {
                 this._zoomStartCoords = this._zoomTransform;
             }
             if (this.container) {
-                d3.select(this.container as HTMLElement).attr('transform', (d3 as any).event.transform.toString());
+                d3.select(this.container as HTMLElement).attr('transform', event.transform.toString());
             }
             this.renderGraph(this.hierarchyData, this.hightLightNodeName);
-            this.minimap?.zoom((d3 as any).event.transform); // Notify the minimap.
+            this.minimap?.zoom(event.transform); // Notify the minimap.
         });
 
         this.minimap = (minimapEle as any)?.init(this.graph, this.container, mainZoom, 160, 10);
@@ -253,7 +253,7 @@ class Hierarchy extends PolymerElement {
         const prefix = PREFIX_MAP[this.graphType];
         const selectedNodeName = selectedNode.startsWith(prefix) ? selectedNode : `${prefix}${selectedNode}`; // 加上前缀
         const config = { colors: this.colors, isOverflowFilter: this.isOverflowFilter, graphType: this.graphType };
-        const renderData = this.useGraph.preProcessData(data, selectedNodeName, config, transform);
+        const renderData = this.useGraph.preProcessData(this.hierarchyObject, data, selectedNodeName, config, transform);
         this.useGraph.bindInnerRect(container, renderData);
         this.useGraph.bindOuterRect(container, renderData);
         this.useGraph.bindText(container, renderData);

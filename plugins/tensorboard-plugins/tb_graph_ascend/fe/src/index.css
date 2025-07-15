@@ -41,3 +41,6 @@ vaadin-select-item {
   color: red;
   font-weight: 400;
 }
+vaadin-confirm-dialog-overlay {
+  z-index: 1000;
+}

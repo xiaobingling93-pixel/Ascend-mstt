@@ -117,7 +117,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 display: flex;
                 height: 100%;
             }
- 
 
             .center {
                 height: 100%;
