@@ -309,7 +309,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     };
 
     loadGraphConfig = async (run, tag) => {
-        const { success, data } = await this.useGraphAscend.loadGraphConfig(run, tag);
+        const { success, data, error } = await this.useGraphAscend.loadGraphConfig(run, tag);
         const config = data as GraphConfigType;
         if (success) {
             this.set('colors', config.colors);
@@ -329,11 +329,17 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             } else {
                 this.set('microsteps', []);
             }
+        } else {
+            Notification.show(`图配置加载失败:${error}`, {
+                position: 'middle',
+                duration: 2000,
+                theme: 'error',
+            });
         }
     };
 
     loadGraphAllNodeList = async (run, tag, microStep) => {
-        const { success, data } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
+        const { success, data, error } = await this.useGraphAscend.loadGraphAllNodeList(run, tag, microStep);
         const allNodeList = data as GraphAllNodeType;
         if (success) {
             const nodelist = {} as NodeListType;
@@ -350,6 +356,12 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('benchMatchNodes', allNodeList?.benchMatchNodes);
             this.set('nodelist', nodelist);
             this.set('unmatched', unmatched);
+        } else {
+            Notification.show(`图节点列表加载失败:${error}`, {
+                position: 'middle',
+                duration: 2000,
+                theme: 'error',
+            });
         }
     };
 

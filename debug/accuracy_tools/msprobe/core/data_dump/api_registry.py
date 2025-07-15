@@ -100,7 +100,9 @@ class ApiWrapper:
                 api_template = api_templates[index]
                 index += 1
                 for api_name in self.api_names.get(framework, {}).get(api_type, []):
-                    ori_api = _get_attr(api_modules[0], api_name)
+                    ori_api = None
+                    for module in api_modules[0]:
+                        ori_api = ori_api or _get_attr(module, api_name) 
                     if callable(ori_api):
                         def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
                             def api_function(*args, **kwargs):
@@ -135,12 +137,14 @@ class ApiWrapper:
                     if f'{key_in_file}.{api_name}' in self.backlist:
                         continue
                     target_attr = api_name
-                    target_module = api_modules[0]
-                    if Const.SEP in api_name:
-                        sub_module_name, target_attr = api_name.rsplit(Const.SEP, 1)
-                        target_module = getattr(api_modules[0], sub_module_name, None)
-                    if target_module and target_attr in dir(target_module):
-                        names.add(api_name)
+                    for module in api_modules[0]:
+                        if Const.SEP in api_name:
+                            sub_module_name, target_attr = api_name.rsplit(Const.SEP, 1)
+                            target_module = getattr(module, sub_module_name, None)
+                        else:
+                            target_module = module
+                        if target_module and target_attr in dir(target_module):
+                            names.add(api_name)
                 valid_names[api_type] = names
             api_names[framework] = valid_names
 
@@ -165,9 +169,12 @@ class ApiRegistry:
         self.all_api_registered = False
 
     @staticmethod
-    def store_ori_attr(ori_api_group, api_list, api_ori_attr):
+    def store_ori_attr(ori_api_groups, api_list, api_ori_attr):
         for api in api_list:
-            api_ori_attr[api] = _get_attr(ori_api_group, api)
+            ori_api = None
+            for ori_api_group in ori_api_groups:
+                ori_api = ori_api or _get_attr(ori_api_group, api)
+            api_ori_attr[api] = ori_api
 
     @staticmethod
     def set_api_attr(api_group, attr_dict):

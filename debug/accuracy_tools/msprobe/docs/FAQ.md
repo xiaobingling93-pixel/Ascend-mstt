@@ -36,8 +36,29 @@
      该信息说明 module 挂载了被 PyTorch 框架废弃的 register_backward_hook，这与工具使用的 register_full_backward_hook 接口会产生冲突，故工具会跳过该 module 的反向数据采集。
    - 如果您希望所有 module 数据都能采集下来，可以将模型中使用的 register_backward_hook 接口改为 PyTorch 框架推荐的 register_full_backward_pre_hook 或 register_full_backward_hook 接口。
 
+5. 在vllm场景下进行数据dump时，发现报错：`RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cpu and npu:0!`
+   - 这是因为工具的debugger实例化早于LLM实例化导致的，解决方法就需要将debugger的实例化移至LLM实例化之后进行，可参考下方示例：
+   ```python
+   from vllm import LLM, SamplingParams
+   from msprobe.pytorch import PrecisionDebugger
+   prompts = [
+      "Hello, my name is",
+      "The president of the United States is",
+      "The capital of France is",
+      "The future of AI is",
+   ]
 
-5. 在使用 msprobe 进行 Pytorch 框架的数据采集功能时，请注意确认环境变量 NPU_ASD_ENABLE=0 ，即关闭特征值检测功能。 由于工具冲突， 在该功能开启的情况下可能导致某些 api 数据采集的缺失。
+   sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
+   llm = LLM(model="Qwen/Qwen2.5-0.5B-Instruct")
+   
+   debugger = PrecisionDebugger("./config.json")  # debugger实例化晚于LLM实例化
+   
+   debugger.start()
+   outputs = llm.generate(prompts, sampling_params)
+   debugger.stop()
+   ```
+
+6. 在使用 msprobe 进行 PyTorch 框架的数据采集功能时，请注意确认环境变量 NPU_ASD_ENABLE=0 ，即关闭特征值检测功能。 由于工具冲突， 在该功能开启的情况下可能导致某些 api 数据采集的缺失。
 
 # 2 精度预检(PyTorch)
 

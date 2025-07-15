@@ -1260,6 +1260,12 @@ torch_npu:
   - npu_scatter_nd_update
   - npu_prefetch
   - npu_dynamic_block_quant
+  - npu_add_rms_norm
+  - _npu_flash_attention
+  - _npu_rotary_embedding
+  - _npu_reshape_and_cache
+  - _npu_paged_attention
+  - npu_moe_gating_top_k
 
 aten:
   - signbit

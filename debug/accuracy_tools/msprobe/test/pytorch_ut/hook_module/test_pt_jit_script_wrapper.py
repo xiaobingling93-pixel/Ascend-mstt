@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import torch
-from msprobe.pytorch.hook_module.jit_script_wrapper import wrap_jit_script_func
+from msprobe.pytorch.hook_module.script_wrapper import wrap_jit_script_func
 
 
 class TestWrapJitScriptFunc(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestWrapJitScriptFunc(unittest.TestCase):
         torch.jit.script = self.original_script
 
     @patch('torch.jit.script', new_callable=MagicMock)
-    @patch('msprobe.pytorch.hook_module.jit_script_wrapper.get_api_register', return_value=MagicMock())
+    @patch('msprobe.pytorch.hook_module.script_wrapper.get_api_register', return_value=MagicMock())
     def test_patched_script(self, mock_get_api, mock_original_script):
         mock_original_script.return_value = "mocked_result"
         mock_get_api.return_value = self.mock_api_register

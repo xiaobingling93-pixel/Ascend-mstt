@@ -66,7 +66,7 @@ def _compare_graph_result(input_param, args):
     # 对两个数据进行构图
     graph_n = _build_graph_info(input_param.get('npu_path'), args)
     graph_b = _build_graph_info(input_param.get('bench_path'), args)
-    logger.info('Model graphs built successfully, start Comparing graphs...')
+    logger.info('Model graphs built successfully, start comparing graphs...')
     # 基于graph、stack和data进行比较
     graph_comparator = _compare_graph(graph_n, graph_b, input_param, args)
     # 增加micro step标记

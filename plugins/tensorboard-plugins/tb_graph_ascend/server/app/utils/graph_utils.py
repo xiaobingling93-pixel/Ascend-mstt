@@ -84,6 +84,7 @@ class GraphUtils:
         if str(micro_step) == str(-1):
             return graph_nodes
         splited_graph_data = {}
+        node_list = []  # 存储已遍历的列表
 
         def traverse_npu(graph_nodes, subnodes):
             for node_name in subnodes:
@@ -91,10 +92,14 @@ class GraphUtils:
                 micro_step_id = node_data.get('micro_step_id')
                 if str(micro_step_id) == str(micro_step) or micro_step_id is None:
                     splited_graph_data[node_name] = (node_data)
+                    if node_name in node_list:
+                        raise ValueError(f"检测到循环引用：节点 {node_name} 已存在于路径中")
+                    node_list.append(node_name)
                     traverse_npu(graph_nodes, node_data.get('subnodes', []))
 
         root = graph_data.get('root')
         root_subnodes = graph_nodes.get(root, {}).get('subnodes', [])
+        node_list.append(root)
         traverse_npu(graph_nodes, root_subnodes)
         return splited_graph_data
 

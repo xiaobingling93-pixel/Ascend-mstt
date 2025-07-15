@@ -16,6 +16,7 @@
 import inspect
 import os
 import random
+import sys
 import types
 
 import mindspore as ms
@@ -176,6 +177,8 @@ def is_mindtorch():
     global mindtorch_check_result
     if mindtorch_check_result is None:
         mindtorch_check_result = False
+        if 'torch' not in sys.modules:
+            return mindtorch_check_result
         try:
             import torch
         except ImportError:
