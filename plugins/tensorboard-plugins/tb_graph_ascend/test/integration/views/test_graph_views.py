@@ -72,7 +72,7 @@ class TestGraphViews:
                              [
                                 {"case_id": "1",
                                  "description": "test_load_meta_dir",
-                                 "excepted":{'st_test_cases': [mock_vis_tag]}
+                                 "excepted":{'data': {'st_test_cases': ['mock_compare_resnet_data']}, 'error': []}
                                 }
                               ],
                              ids=lambda c: f"{c['case_id']}:{c['description']}")
@@ -85,6 +85,7 @@ class TestGraphViews:
         excepted = test_case['excepted']
         # 获取响应内容
         response_body = json.loads(b''.join(response_iter).decode('utf-8'))
+        print(response_body)
         assert response_body == excepted
         assert TestGraphViews.captured.status == "200 OK"
         assert TestGraphViews.captured.headers["Content-Type"] == "application/json"
