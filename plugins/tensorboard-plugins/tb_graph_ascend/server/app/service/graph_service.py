@@ -244,24 +244,24 @@ class GraphService:
                 for _, diff_values in output_statistical_diff.items():
                     filter_diff_rel = []
                     if MAX_RELATIVE_ERR in filter_value:
-                        filter_diff_rel.append(diff_values.get('MaxRelativeErr', ''))
+                        filter_diff_rel.append(diff_values.get('MaxRelativeErr'))
                     if MIN_RELATIVE_ERR in filter_value:
-                        filter_diff_rel.append(diff_values.get('MinRelativeErr', ''))
+                        filter_diff_rel.append(diff_values.get('MinRelativeErr'))
                     if NORM_RELATIVE_ERR in filter_value:
-                        filter_diff_rel.append(diff_values.get('NormRelativeErr', ''))
+                        filter_diff_rel.append(diff_values.get('NormRelativeErr'))
                     if MEAN_RELATIVE_ERR in filter_value:
-                        filter_diff_rel.append(diff_values.get('MeanRelativeErr', ''))
+                        filter_diff_rel.append(diff_values.get('MeanRelativeErr'))
                     # 过滤掉N/A
-                    filter_diff_rel = [x for x in filter_diff_rel if x != 'N/A']
+                    filter_diff_rel = [x for x in filter_diff_rel if x and x != 'N/A']
                     # 如果output指标中存在 Nan/inf/-inf, 直接标记为最大值
                     if "Nan" in filter_diff_rel or "inf" in filter_diff_rel or "-inf" in filter_diff_rel:
                         max_rel_error = 1
                         break
                     filter_diff_rel = [GraphUtils.convert_to_float(x) for x in filter_diff_rel]
-                    max_rel_error_for_key = max(filter_diff_rel)
+                    max_rel_error_for_key = max(filter_diff_rel) if filter_diff_rel else 0
                     max_rel_error = max(max_rel_error, max_rel_error_for_key)
                 if max_rel_error != -1:
-                    node_info.setdefault('data', {})['precision_index'] = max_rel_error
+                    node_info.setdefault('data', {})['precision_index'] = min(max_rel_error, 1)
             return {'success': True, 'data': {}}
         except Exception as e:
             logger.error('更新精度误差失败:' + str(e))
