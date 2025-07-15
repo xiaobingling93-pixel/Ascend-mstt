@@ -231,7 +231,7 @@ def check_compare_param(input_param, output_path, dump_mode, stack_mode):
             _check_json(stack_json, input_param.get("stack_json_path"))
 
 
-def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, highlight=True,
+def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, highlight=False,
                               is_print_compare_log=True):
     arg_list = [stack_mode, auto_analyze, fuzzy_match, highlight, is_print_compare_log]
     arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match', 'highlight', 'is_print_compare_log']
