@@ -367,6 +367,8 @@ class GraphService:
 
     @staticmethod
     def save_data(meta_data):
+        if not meta_data:
+            return {'success': False, 'error': '参数为空'}
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
@@ -383,6 +385,8 @@ class GraphService:
 
     @staticmethod
     def save_matched_relations(meta_data):
+        if not meta_data:
+            return {'success': False, 'error': '参数为空'}
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
         npu_match_nodes_list = config_data.get('manualMatchNodes', {})
