@@ -23,7 +23,8 @@ from server.app.controllers.layout_hierarchy_controller import LayoutHierarchyCo
 @pytest.mark.unit
 class TestLayoutHierarchyController:
     
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_change_expand_state_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_change_expand_state_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_change_expand_state(self, test_case):
         graph_type = test_case['input']['graph_type']
         if graph_type == SINGLE:
@@ -35,7 +36,8 @@ class TestLayoutHierarchyController:
         actual = LayoutHierarchyController.change_expand_state(node_name, graph_type, graph, micro_step)
         assert actual == excepted
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_update_hierarchy_data_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_update_hierarchy_data_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_update_hierarchy_data(self, test_case):
         graph_type = test_case['input']['graph_type']
         excepted = test_case['expected']
