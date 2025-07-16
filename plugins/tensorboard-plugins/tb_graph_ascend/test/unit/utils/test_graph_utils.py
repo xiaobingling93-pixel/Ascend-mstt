@@ -105,13 +105,13 @@ class TestGraphUtils:
                                     "case_id": "2",
                                     "description": "相同前缀，数字部分较小",
                                     "input": {"a": "item_3_part", "b": "item_12_part"},
-                                    "expected":-1
+                                    "expected": "-1"
                                 },
                                 {
                                     "case_id": "3",
                                     "description": "路径比较，a/b/c 小于 a/b/d",
                                     "input": {"a": "a/b/c", "b": "a/b/d"},
-                                    "expected":-1
+                                    "expected": "-1"
                                 },
                                 {
                                     "case_id": "4",
@@ -123,13 +123,13 @@ class TestGraphUtils:
                                     "case_id": "5",
                                     "description": "子路径多一级，a/b 小于 a/b/c",
                                     "input": {"a": "a/b", "b": "a/b/c"},
-                                    "expected":-1
+                                    "expected": "-1"
                                 },
                                 {
                                     "case_id": "6",
                                     "description": "数字 vs 字母，数字优先",
                                     "input": {"a": "file_1", "b": "file_a"},
-                                    "expected":-1
+                                    "expected": "-1"
                                 },
                                 {
                                     "case_id": "7",
@@ -141,7 +141,7 @@ class TestGraphUtils:
                                     "case_id": "8",
                                     "description": "字母 vs 数字，字母在后",
                                     "input": {"a": "a2b", "b": "a10"},
-                                    "expected":-1
+                                    "expected": "-1"
                                 }
                             ],
                             ids=lambda c: f"{c['case_id']}:{c['description']}")
@@ -151,7 +151,7 @@ class TestGraphUtils:
             return 0 if val == 0 else (1 if val > 0 else -1)
 
         a, b = test_case['input'].values()
-        expected = test_case['expected']
+        expected = int(test_case['expected'])
         actual = GraphUtils.compare_tag_names(a, b)
         assert normalize(actual) == expected
 

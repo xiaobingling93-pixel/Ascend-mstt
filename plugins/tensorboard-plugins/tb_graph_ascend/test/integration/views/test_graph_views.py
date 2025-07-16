@@ -14,10 +14,12 @@
 # limitations under the License.
 # ==============================================================================
 
-import pytest
 import json
-from types import SimpleNamespace
 from  pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 from data.test_case_factory import TestCaseFactory
@@ -72,10 +74,10 @@ class TestGraphViews:
                              [
                                 {"case_id": "1",
                                  "description": "test_load_meta_dir",
-                                 "excepted":{'data': {'st_test_cases': ['mock_compare_resnet_data']}, 'error': []}
+                                 "excepted": {'data': {'st_test_cases': ['mock_compare_resnet_data']}, 'error': []}
                                 }
                               ],
-                             ids=lambda c: f"{c['case_id']}:{c['description']}")
+                             ids=lambda c: f"{c['case_id']}: {c['description']}")
     def test_load_meta_dir(self, test_case):
         logdir = Path(__file__).resolve().parent.parent.parent / 'data' / 'st_test_cases'
         GraphState.set_global_value('logdir', str(logdir))
@@ -89,9 +91,11 @@ class TestGraphViews:
         assert TestGraphViews.captured.status == "200 OK"
         assert TestGraphViews.captured.headers["Content-Type"] == "application/json"
         
-    @pytest.mark.parametrize("test_case", [{"case_id": "2", "description": "test_load_graph_data"}], ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case", [{"case_id": "2", "description": "test_load_graph_data"}],
+                             ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_load_graph_data(self, test_case):
-        request = TestGraphViews.create_mock_request(f"/data/plugin/graph_ascend/load_graph_data?run=st_test_cases&tag={TestGraphViews.mock_vis_tag}")
+        request = TestGraphViews.create_mock_request(
+            f"/data/plugin/graph_ascend/load_graph_data?run=st_test_cases&tag={TestGraphViews.mock_vis_tag}")
         response_iter = GraphView.load_graph_data(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter)
         runs = GraphState.get_global_value('runs')
@@ -102,45 +106,49 @@ class TestGraphViews:
         assert TestGraphViews.captured.status == "200 OK"
         assert TestGraphViews.captured.headers["Content-Type"] == "text/event-stream; charset=utf-8"
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_load_graph_config_info_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+            TestCaseFactory.get_load_graph_config_info_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_load_graph_config_info(self, test_case):
-        request = TestGraphViews.create_mock_request(f"/data/plugin/graph_ascend/load_graph_config_info?run=st_test_cases&tag={TestGraphViews.mock_vis_tag}")
+        request = TestGraphViews.create_mock_request(
+            f"/data/plugin/graph_ascend/load_graph_config_info?run=st_test_cases&tag={TestGraphViews.mock_vis_tag}")
         response_iter = GraphView.load_graph_config_info(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         excepted = test_case['expected']
         assert response_body == json.dumps(excepted)
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_load_graph_all_node_list_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")    
+    @pytest.mark.parametrize("test_case",
+            TestCaseFactory.get_load_graph_all_node_list_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")    
     def test_load_graph_all_node_list(self, test_case):
-        request = TestGraphViews.create_mock_request(f"/data/plugin/graph_ascend/load_graph_all_node_list?run=st_test_cases&tag={TestGraphViews.mock_vis_tag}")
+        request = TestGraphViews.create_mock_request(
+            f"/data/plugin/graph_ascend/load_graph_all_node_list?run=st_test_cases&tag={TestGraphViews.mock_vis_tag}")
         response_iter = GraphView.load_graph_all_node_list(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         excepted = test_case['expected']
         assert response_body == json.dumps(excepted)
         
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_change_node_expand_state_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")        
+    @pytest.mark.parametrize("test_case",
+            TestCaseFactory.get_change_node_expand_state_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")        
     def test_change_node_expand_state(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.change_node_expand_state(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_add_match_nodes_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+            TestCaseFactory.get_test_add_match_nodes_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_add_match_nodes(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.add_match_nodes(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_update_hierarchy_data_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_test_update_hierarchy_data_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_update_hierarchy_data(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.update_hierarchy_data(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
@@ -154,44 +162,48 @@ class TestGraphViews:
         }
         ], ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_save_matched_relations(self, test_case):
-        request = TestGraphViews.create_mock_request("/data/plugin/graph_ascend/saveMatchedRelations?metaData={\"run\":\"st_test_cases\",\"tag\":\"mock_compare_resnet_data\"}")
+        url = """
+                data/plugin/graph_ascend/saveMatchedRelations?
+                metaData={"run":"st_test_cases","tag":"mock_compare_resnet_data"}
+              """
+        request = TestGraphViews.create_mock_request(url)
         response_iter = GraphView.save_matched_relations(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         excepted = test_case['expected']
         assert response_body == json.dumps(excepted)
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_add_match_nodes_by_config_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_test_add_match_nodes_by_config_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_add_match_nodes_by_config(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(input=test_case['input'])
         response_iter = GraphView.add_match_nodes_by_config(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
         
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_delete_match_nodes_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_test_delete_match_nodes_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_delete_match_nodes(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.delete_match_nodes(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_update_colors_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_test_update_colors_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_update_colors(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.update_colors(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
 
-    @pytest.mark.parametrize("test_case", TestCaseFactory.get_test_get_node_info_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
+    @pytest.mark.parametrize("test_case",
+        TestCaseFactory.get_test_get_node_info_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_get_node_info(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.get_node_info(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
@@ -200,7 +212,8 @@ class TestGraphViews:
         {
             "case_id": "1",
             "description": "测试save_data接口",
-            "input": "/data/plugin/graph_ascend/saveData?metaData={\"run\":\"st_test_cases\",\"tag\":\"mock_compare_resnet_data\"}",
+            "input": """/data/plugin/graph_ascend/saveData?metaData=
+                        {\"run\":\"st_test_cases\",\"tag\":\"mock_compare_resnet_data\"}""",
             "expected": {"success": True}
         }
         ], ids=lambda c: f"{c['case_id']}:{c['description']}")
