@@ -33,10 +33,10 @@ class MatchNodesController:
     @staticmethod
     def process_task_add(graph_data, npu_node_name, bench_node_name, task):
         if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
-                return {
-                    'success': False,
-                    'error': '节点类型不一致,无法添加匹配关系'
-                }
+            return {
+                'success': False,
+                'error': '节点类型不一致,无法添加匹配关系'
+            }
             
         result = {}
         if task == 'md5':
