@@ -154,19 +154,17 @@ class TestGraphViews:
         assert response_body == json.dumps(excepted)
 
     @pytest.mark.parametrize("test_case", [
-        {
-            "case_id": "1",
-            "description": "测试save_matched_relations接口",
-            "expected": {"success": True, "data": "mock_compare_resnet_data.vis.config"}
-            
-        }
+            {
+                "case_id": "1",
+                "description": "测试save_matched_relations接口",
+                "expected": {"success": True, "data": "mock_compare_resnet_data.vis.config"}
+            }
         ], ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_save_matched_relations(self, test_case):
-        url = """
-                data/plugin/graph_ascend/saveMatchedRelations?
-                metaData={"run":"st_test_cases","tag":"mock_compare_resnet_data"}
-              """
-        request = TestGraphViews.create_mock_request(url)
+        url = 'data/plugin/graph_ascend/saveMatchedRelations'
+        params = 'metaData={"run":"st_test_cases","tag":"mock_compare_resnet_data"}'
+        request_url = f"{url}?{params}"
+        request = TestGraphViews.create_mock_request(request_url)
         response_iter = GraphView.save_matched_relations(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         excepted = test_case['expected']
@@ -176,7 +174,7 @@ class TestGraphViews:
         TestCaseFactory.get_test_add_match_nodes_by_config_cases(), ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_add_match_nodes_by_config(self, test_case):
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input=test_case['input'])
+        request = TestGraphViews.create_mock_request(test_case['input'])
         response_iter = GraphView.add_match_nodes_by_config(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
@@ -212,15 +210,15 @@ class TestGraphViews:
         {
             "case_id": "1",
             "description": "测试save_data接口",
-            "input": """/data/plugin/graph_ascend/saveData?metaData=
-                        {\"run\":\"st_test_cases\",\"tag\":\"mock_compare_resnet_data\"}""",
             "expected": {"success": True}
         }
         ], ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_save_data(self, test_case):
-        input = test_case['input']
         excepted = test_case['expected']
-        request = TestGraphViews.create_mock_request(input)
+        url = 'data/plugin/graph_ascend/saveData'
+        params = 'metaData={"run":"st_test_cases","tag":"mock_compare_resnet_data"}'
+        request_url = f"{url}?{params}"
+        request = TestGraphViews.create_mock_request(request_url)
         response_iter = GraphView.save_data(request, TestGraphViews.start_response)
         response_body = b''.join(response_iter).decode('utf-8')
         assert response_body == json.dumps(excepted)
