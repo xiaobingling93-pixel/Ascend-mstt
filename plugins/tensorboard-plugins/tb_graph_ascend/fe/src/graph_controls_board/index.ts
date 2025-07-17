@@ -94,6 +94,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         height: 26px;
         margin-right: 5px;
         color: var(--paper-orange-500);
+        font-weight: 500;
       }
 
       .allcontrols .control-holder {
@@ -135,6 +136,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         display: flex;
         align-items: center;
       }
+      .fit-screen vaadin-icon {
+        margin-right: 10px;
+        cursor: pointer;
+        color: var(--paper-orange-500);
+      }
       .fit-screen vaadin-button {
         margin-top: 6px;
         font-size: var(--tb-graph-controls-title-font-size);
@@ -157,7 +163,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     </div>
     <div id="nodes-content" class="tab-content">
       <div class="fit-screen">
-        <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
+        <vaadin-icon icon="vaadin:viewport" on-click="_clickSetting"></vaadin-icon>
         <vaadin-button theme="tertiary contrast" on-click="_fit">自适应屏幕</vaadin-button>
       </div>
 
