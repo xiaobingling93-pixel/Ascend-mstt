@@ -46,7 +46,7 @@ class DataWriter:
         self.cache_debug = {}
         self.stat_stack_list = []
         self._error_log_initialized = False
-        self._logged_error_types = set()
+        self._cache_logged_error_types = set()
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -108,6 +108,7 @@ class DataWriter:
         self.cache_stack = {}
         self.cache_construct = {}
         self.cache_debug = {}
+        self._cache_logged_error_types = set()
 
     def initialize_json_file(self, **kwargs):
         if kwargs["level"] == Const.LEVEL_DEBUG and not self.cache_debug:
@@ -156,10 +157,10 @@ class DataWriter:
           - 在 message 后写入当前的调用栈（方便追踪日志来源）
         """
         # 如果同类型错误已经记录过，跳过
-        if error_type in self._logged_error_types:
+        if error_type in self._cache_logged_error_types:
             return
         # 否则添加到已记录集合，并继续写日志
-        self._logged_error_types.add(error_type)
+        self._cache_logged_error_types.add(error_type)
 
         try:
             mode = "w" if not self._error_log_initialized else "a"
