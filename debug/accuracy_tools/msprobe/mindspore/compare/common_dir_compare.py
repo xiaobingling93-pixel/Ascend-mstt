@@ -154,21 +154,34 @@ def find_npy_files(directory):
             dirs.clear()
         for file in files:
             if file.endswith(".npy"):
-                # 分割文件名并去掉最后两个元素
-                file_name = file.split('_')
-                if len(file_name) < 2:
+                # 正确移除文件扩展名
+                base_name = os.path.splitext(file)
+                if not base_name or len(base_name) < 1:
+                    logger.warning("Invalid file encountered.")
                     continue
-                key = '_'.join(file_name[:-2])
-                # 文件的完整路径
-                value = os.path.join(root, file)
-                # 添加到字典中
-                if not npy_files_dict.get(key):
-                    npy_files_dict[key] = []
-                npy_files_dict[key].append(value)
+                file_name = base_name[0]
+
+                logger.info(f"Generating file info for file: {file}")
+                
+                # 使用一致的分割逻辑
+                file_ele = file_name.split('_')
+                
+                if len(file_ele) < 2:
+                    continue
+                    
+                key = '_'.join(file_ele[:-2])
+                if key:
+                    # 文件的完整路径
+                    value = os.path.join(root, file)
+                    # 添加到字典中
+                    if key not in npy_files_dict:
+                        npy_files_dict[key] = []
+                    npy_files_dict[key].append(value)
     return npy_files_dict
 
 
 def generate_map_dict(npu_file_dict, bench_file_dict, name_map_dict=None):
+    result_dict = {}
     for k, npu_file_list in npu_file_dict.items():
         bench_file_list = bench_file_dict.get(k)
         if not bench_file_list and k in name_map_dict:
@@ -176,7 +189,6 @@ def generate_map_dict(npu_file_dict, bench_file_dict, name_map_dict=None):
         bench_length = len(bench_file_list)
         if not (bench_file_list and bench_length):
             continue
-        result_dict = {}
         for i, npu_file in enumerate(npu_file_list):
             if i >= bench_length:
                 break
