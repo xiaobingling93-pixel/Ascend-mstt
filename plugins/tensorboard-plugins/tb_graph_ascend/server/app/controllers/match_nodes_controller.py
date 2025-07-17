@@ -52,7 +52,7 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_delete(graph_data, npu_node_name, bench_node_name, task):
-
+        result = {}
         if task == 'md5':
             result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
         elif task == 'summary':
