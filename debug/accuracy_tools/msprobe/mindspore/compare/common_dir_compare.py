@@ -153,7 +153,12 @@ def find_npy_files(directory):
         for file in files:
             if file.endswith(".npy"):
                 # 正确移除文件扩展名
-                file_name = os.path.splitext(file)[0]
+                base_name = os.path.splitext(file)
+                if not base_name or len(base_name) < 1:
+                    logger.warning("Invalid file encountered.")
+                    continue
+                file_name = base_name[0]
+
                 logger.info(f"Generating file info for file: {file}")
                 
                 # 使用一致的分割逻辑
