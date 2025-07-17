@@ -9,7 +9,7 @@ set(BUILD_DEPENDENCY_PATH "$ENV{PROJECT_ROOT_PATH}/build_dependency/${PKG_NAME}"
 if (NOT ${PKG_NAME}_FOUND)
 
 file(GLOB RE2_INCLUDE "${BUILD_DEPENDENCY_PATH}/include/${PKG_NAME}/re2.h")
-file(GLOB RE2_LIB "${BUILD_DEPENDENCY_PATH}/lib64/libre2.a")
+file(GLOB_RECURSE RE2_LIB "${BUILD_DEPENDENCY_PATH}/*libre2.a")
 if (RE2_INCLUDE AND RE2_LIB)
     include_directories(${BUILD_DEPENDENCY_PATH}/include)
     set(${PKG_NAME}_LIBRARIES "${RE2_LIB}")
@@ -46,7 +46,7 @@ execute_process(
 )
 
 file(GLOB RE2_INCLUDE "${BUILD_DEPENDENCY_PATH}/include/${PKG_NAME}/re2.h")
-file(GLOB RE2_LIB "${BUILD_DEPENDENCY_PATH}/lib64/libre2.a")
+file(GLOB_RECURSE RE2_LIB "${BUILD_DEPENDENCY_PATH}/*libre2.a")
 if (NOT RE2_INCLUDE OR NOT RE2_LIB)
     message(FATAL_ERROR "Failed to build re2.")
 endif()
