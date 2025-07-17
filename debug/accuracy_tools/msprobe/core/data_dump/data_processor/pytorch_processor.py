@@ -104,7 +104,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.max = torch.any(data)
             tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
         else:
             if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
@@ -127,7 +127,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.max = torch.any(data)
             tensor_stat.min = torch.all(data)
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
         else:
             if data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
