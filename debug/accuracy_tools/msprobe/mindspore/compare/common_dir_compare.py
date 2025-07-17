@@ -30,9 +30,10 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import check_file_or_directory_path, write_df_to_csv, create_directory, \
                                            check_path_before_create, load_npy
-from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply
 from msprobe.core.compare.multiprocessing_compute import check_accuracy
+from msprobe.mindspore.compare.utils import check_name_map_dict
 
 
 def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataFrame]:
@@ -49,6 +50,7 @@ def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataF
     npu_root = Path(input_params.get('npu_path'))
     bench_root = Path(input_params.get('bench_path'))
     name_map_dict = input_params.get('map_dict', {})
+    check_name_map_dict(name_map_dict)
     file_tree = build_mirror_file_tree(npu_root, bench_root)
     
     # 处理文件比对

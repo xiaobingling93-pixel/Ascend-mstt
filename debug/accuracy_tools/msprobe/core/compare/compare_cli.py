@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import json
-from msprobe.core.common.file_utils import check_file_type, load_json
+from msprobe.core.common.file_utils import check_file_type, load_json, check_file_or_directory_path
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
@@ -22,6 +22,9 @@ from msprobe.core.common.log import logger
 
 def compare_cli(args):
     input_param = load_json(args.input_path)
+    if not isinstance(input_param, dict):
+        logger.error("input_param should be dict, please check!")
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     if not npu_path:
@@ -47,6 +50,8 @@ def compare_cli(args):
     }
 
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
+        check_file_or_directory_path(npu_path)
+        check_file_or_directory_path(bench_path)
         input_param["npu_json_path"] = input_param.pop("npu_path")
         input_param["bench_json_path"] = input_param.pop("bench_path")
         if "stack_path" not in input_param:
@@ -68,6 +73,8 @@ def compare_cli(args):
             }
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
+        check_file_or_directory_path(npu_path, isdir=True)
+        check_file_or_directory_path(bench_path, isdir=True)
         kwargs = {
             **common_kwargs,
             "stack_mode": args.stack_mode,
@@ -79,7 +86,8 @@ def compare_cli(args):
         if input_param.get("rank_id") is not None:
             ms_graph_compare(input_param, args.output_path)
             return
-        if input_param.get('common', False):
+        common = input_param.get("common", False)
+        if isinstance(common, bool) and common:
             common_dir_compare(input_param, args.output_path)
             return
         if frame_name == Const.PT_FRAMEWORK:
