@@ -121,9 +121,9 @@ class DataCollector:
             self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
+        except Exception as e:
             # 取异常类名作为“类型”做去重
-            error_type = type(Exception).__name__
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] forward_input_data_collect failed: name={name}, pid={pid}\n{tb}",
@@ -145,9 +145,9 @@ class DataCollector:
                 return
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
+        except Exception as e:
             # 取异常类名作为“类型”做去重
-            error_type = type(Exception).__name__
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] forward_output_data_collect failed: name={name}, pid={pid}\n{tb}",
@@ -160,9 +160,9 @@ class DataCollector:
                 return
             self.data_processor.analyze_forward(name, module, module_input_output)
 
-        except Exception:
+        except Exception as e:
             # 取异常类名作为“类型”做去重
-            error_type = type(Exception).__name__
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] forward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}",
@@ -182,8 +182,8 @@ class DataCollector:
             self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
-            error_type = type(Exception).__name__
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] forward_data_collect failed: name={name}, pid={pid}\n{tb}",
@@ -196,8 +196,8 @@ class DataCollector:
                 return
             self.data_processor.analyze_backward(name, module, module_input_output)
 
-        except Exception:
-            error_type = type(Exception).__name__
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}",
@@ -219,8 +219,8 @@ class DataCollector:
                 self.backward_module_names[module_name] = True
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
-            error_type = type(Exception).__name__
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] backward_data_collect failed: name={name}, pid={pid}\n{tb}",
@@ -238,8 +238,8 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
 
-        except Exception:
-            error_type = type(Exception).__name__
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] backward_input_data_collect failed: name={name}, pid={pid}\n{tb}",
@@ -257,8 +257,8 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
 
-        except Exception:
-            error_type = type(Exception).__name__
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] backward_output_data_collect failed: name={name}, pid={pid}\n{tb}",
@@ -310,8 +310,8 @@ class DataCollector:
                 return
             data_info = self.data_processor.analyze_params(grad_name, param_name, data)
             self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
-        except Exception:
-            error_type = type(Exception).__name__
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] params_data_collect failed: "
