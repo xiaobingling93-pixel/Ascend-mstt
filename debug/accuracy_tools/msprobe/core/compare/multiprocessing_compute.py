@@ -157,11 +157,13 @@ class CompareRealData:
         用于读取excel中的NPU_Name和Bench_Name，根据映射关系找到npy或pt文件，然后读取文件中的数据进行比较，计算余弦相似度、欧式距离
         最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率并生成错误信息
         """
-        error_file, relative_err, error_flag, err_msg = None, None, False, None
+        relative_err, error_flag, err_msg = None, False, None
 
         data_name_pair = op_name_mapping_dict.get(npu_op_name)
         npu_data_name = data_name_pair[0]
         bench_data_name = data_name_pair[1]
+
+        error_file = data_name_pair
 
         if str(npu_data_name) == CompareConst.NO_REAL_DATA_FLAG:  # 没有npu真实数据
             n_value, b_value, error_flag = CompareConst.NO_REAL_DATA, CompareConst.NO_REAL_DATA, True

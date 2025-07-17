@@ -56,10 +56,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
     """判断数据是否有异常并返回异常的n_value, b_value，同时返回error_flag和error_msg"""
     err_msg = ""
     if error_flag:
-        if error_file:
-            err_msg = f"Dump file: {error_file} not found or read failed."
-        else:
-            err_msg = CompareConst.NO_BENCH
+        err_msg = f"Dump file: {error_file} not found or read failed."
         return CompareConst.READ_NONE, CompareConst.READ_NONE, error_flag, err_msg
 
     if n_value.size == 0:  # 判断读取到的数据是否为空
