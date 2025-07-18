@@ -289,28 +289,19 @@ class HighLight:
 
         self.update_highlight_err_msg(result_df, highlight_dict)  # add highlight err_msg
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-
-        # write header
-        logger.info('Initializing Excel file.')
-
         self.handle_multi_process_malicious_value_check(self.df_malicious_value_check, result_df)
 
+        wb = openpyxl.Workbook()
+        ws = wb.active
         result_df_convert = result_df.applymap(self.compare_result_df_convert)
-
         for row in dataframe_to_rows(result_df_convert, index=False, header=True):
             ws.append(row)
 
         # 对可疑数据标色
         logger.info('Coloring Excel in progress.')
+        red_fill = PatternFill(start_color=CompareConst.RED, end_color=CompareConst.RED, fill_type="solid")
+        yellow_fill = PatternFill(start_color=CompareConst.YELLOW, end_color=CompareConst.YELLOW, fill_type="solid")
         col_len = len(result_df.columns)
-        red_fill = PatternFill(
-            start_color=CompareConst.RED, end_color=CompareConst.RED, fill_type="solid"
-        )
-        yellow_fill = PatternFill(
-            start_color=CompareConst.YELLOW, end_color=CompareConst.YELLOW, fill_type="solid",
-        )
         for i in highlight_dict.get("red_rows", []):
             for j in range(1, col_len + 1):
                 ws.cell(row=i + 2, column=j).fill = red_fill  # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
@@ -318,7 +309,6 @@ class HighLight:
             for j in range(1, col_len + 1):
                 ws.cell(row=i + 2, column=j).fill = yellow_fill
 
-        logger.info('Saving Excel file to disk: %s' % file_path)
         save_workbook(wb, file_path)
 
     def handle_multi_process_malicious_value_check(self, func, result_df):

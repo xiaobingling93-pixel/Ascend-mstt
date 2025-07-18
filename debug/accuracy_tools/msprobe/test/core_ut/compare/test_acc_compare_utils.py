@@ -31,15 +31,15 @@ op_name = "Tensor.add_0.0.forward"
 op_result = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.input.0', 'state': 'input'},
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.forward.input.0', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481, 'data_name': '-1',
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.forward.input.1', 'state': 'input'},
+     'Norm': 0.02844562754034996, 'requires_grad': 'False', 'full_op_name': 'Tensor.add_0.0.forward.input.1', 'state': 'input'},
     {'full_op_name': 'Tensor.add_0.0.forward.input.alpha', 'dtype': "<class 'float'>", 'shape': '[]', 'md5': '0dae4479',
      'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'type': 'float', 'value': -0.1, 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0', 'state': 'output'}]
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.forward.output.0', 'state': 'output'}]
 
 # test_read_op_1
 op_data_b = {
@@ -56,13 +56,13 @@ op_name_b = "Tensor.add_0.0.backward"
 op_result_b = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.input.0', 'state': 'input'},
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.backward.input.0', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.backward.input.1', 'state': 'input'},
+     'Norm': 0.02844562754034996, 'requires_grad': 'False', 'full_op_name': 'Tensor.add_0.0.backward.input.1', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.output.0', 'state': 'output'}]
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.backward.output.0', 'state': 'output'}]
 
 # test_op_item_parse
 parse_item = [
@@ -76,7 +76,7 @@ parse_index = None
 parse_item_list = None
 parse_top_bool = True
 o_result_parse = [
-    {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': False,
+    {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': 'False',
      'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0',
      'data_name': '-1', 'md5': '00000000', 'state': 'input'},
     {'full_op_name': 'Distributed.broadcast.0.forward.input.1', 'dtype': "<class 'int'>", 'shape': '[]',

@@ -31,8 +31,16 @@ def compare(input_param, output_path, **kwargs):
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     config = setup_comparison(input_param, output_path, **kwargs)
 
-    mode_config = ModeConfig(config.stack_mode, config.auto_analyze, config.fuzzy_match,
-                             config.dump_mode, config.first_diff_analyze, config.compared_file_type)
+    config_dict = {
+        'stack_mode': config.stack_mode,
+        'auto_analyze': config.auto_analyze,
+        'fuzzy_match': config.fuzzy_match,
+        'highlight': config.highlight,
+        'dump_mode': config.dump_mode,
+        'first_diff_analyze': config.first_diff_analyze,
+        'compared_file_type': config.compared_file_type
+    }
+    mode_config = ModeConfig(**config_dict)
     mapping_config = MappingConfig(data_mapping=config.data_mapping)
     pt_comparator = Comparator(read_real_data, mode_config, mapping_config)
     pt_comparator.compare_core(input_param, output_path, suffix=config.suffix)
