@@ -157,6 +157,9 @@ class Hierarchy extends PolymerElement {
     @property({ type: Boolean })
     minimapVis: boolean = true;
 
+    @property({ type: Boolean })
+    isSyncExpand: boolean = true;
+
     @property({ type: Object })
     contextMenuItems: Array<ContextMenuItem> = [];
 
@@ -512,7 +515,7 @@ class Hierarchy extends PolymerElement {
             await this.changeNodeExpandState(nodeInfo);
             const { matchedNodeName } = this.findMatchedNodeName(nodeName);
             // 如果是点击展开，触发同步展开事件，通知展开对应节点
-            if (isClickGraph) {
+            if (isClickGraph && this.isSyncExpand) {
                 const changeMatchNodeExpandState = new CustomEvent('changeMatchNodeExpandState', {
                     detail: {
                         nodeName: matchedNodeName, // 通知通信图展开对应节点

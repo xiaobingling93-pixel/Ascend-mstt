@@ -151,6 +151,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       .hidden {
         display: none;
       }
+
+      .sync-expand-checkbox {
+        font-size: var(--tb-graph-controls-title-font-size);
+        margin-left: -4px;
+      }
       paper-checkbox {
         --paper-checkbox-unchecked-color: gray; /* 选中时的颜色 */
         user-select: none;
@@ -173,6 +178,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           <paper-checkbox class="right-checkbox" checked on-click="_toggleBenchMinimap">标杆侧缩略图</paper-checkbox>
         </template>
       </div>
+      <vaadin-checkbox class="sync-expand-checkbox" label="是否同步展开对应侧节点" checked={{isSyncExpand}}></vaadin-checkbox>
       <div class="container-wrapper">
         <tf-main-controler
           meta-dir="[[metaDir]]"
@@ -246,6 +252,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   @property({ type: Object, notify: true })
   minimapVis: MinimapVis = { npu: true, bench: true };
+
+  @property({ type: Boolean, notify: true })
+  isSyncExpand: boolean = true;
 
   // 颜色数据
   @property({ type: Object, notify: true })

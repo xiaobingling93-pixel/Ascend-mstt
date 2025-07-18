@@ -810,7 +810,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
         setTimeout(() => {
           this._observePrecsionNode();
-        }, 1000)
+        }, 200)
       } catch (e) {
         Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
           position: 'middle',
