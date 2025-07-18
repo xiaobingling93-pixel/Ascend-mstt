@@ -277,6 +277,61 @@ def table_value_is_valid(value: str) -> bool:
     return True
 
 
+class ApiBatch:
+    def __init__(self, api_name: str, start: int):
+        self.api_name = api_name
+        self.start = start
+        self.input_len = 1  # input的数量
+        self.params_end_index = start + 1  # params的结束index
+        self.output_end_index = start + 1  # output的结束index
+        self.params_grad_end_index = start + 1  # params_grad的结束index
+        # 内部state的标志("input", "output", "parameters", "parameters_grad"),
+        # 用于控制计算input_len, output_end_index, params_end_index, self.params_grad_end_index
+        self._state = Const.INPUT  # api_batch初始化为input
+
+    def set_state(self, state: str):
+        """设置当前状态"""
+        if state in {Const.INPUT, Const.OUTPUT, Const.KWARGS, Const.PARAMS, Const.PARAMS_GRAD}:
+            self._state = state
+        else:
+            raise ValueError(f"Invalid state: {state}")
+
+    def increment(self, state: str):
+        self.set_state(state)
+        if self._state == Const.INPUT or self._state == Const.KWARGS:
+            self.input_len += 1
+            self.params_end_index += 1
+            self.output_end_index += 1
+        if self._state == Const.PARAMS:
+            self.params_end_index += 1
+            self.output_end_index += 1
+        if self._state == Const.OUTPUT:
+            self.output_end_index += 1
+        self.params_grad_end_index += 1
+
+
+def api_batches_update(api_batches, api_name, state, index):
+    """
+    当一个api的所有item更新完后，input, output的索引范围：
+    input: [start: start+input_len]
+    output: [start+input_len: output_end_index]
+    params: [output_end_index: params_end_index]
+    """
+    if not api_batches:
+        api_batches.append(ApiBatch(api_name, index))
+    else:
+        api_batch = api_batches[-1]
+        if api_batch.api_name == api_name or (
+                not re.search(Const.REGEX_FORWARD_BACKWARD, api_name) and api_name in api_batch.api_name):
+            try:
+                api_batch.increment(state)
+            except ValueError as e:
+                logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
+                raise CompareException(CompareException.INVALID_STATE_ERROR) from e
+        else:
+            api_batches.append(ApiBatch(api_name, index))
+
+
 def reorder_op_name_list(op_name_list, state_list):
     if not op_name_list:
         return op_name_list, state_list

@@ -82,6 +82,8 @@ class MsprobeBaseException(Exception):
     INVALID_STATE_ERROR = 35
     INVALID_API_NAME_ERROR = 36
     CROSS_FRAME_ERROR = 37
+    MISSING_THRESHOLD_ERROR = 38
+    WRONG_THRESHOLD_ERROR = 38
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -281,6 +283,10 @@ def add_time_as_suffix(name):
 
 def add_time_with_xlsx(name):
     return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+
+
+def add_time_with_json(name):
+    return '{}_{}.json'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
 def add_time_with_yaml(name):
