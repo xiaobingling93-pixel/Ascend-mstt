@@ -27,8 +27,8 @@ from tqdm import tqdm
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import get_header_index, safe_get_value
-from msprobe.core.compare.utils import table_value_is_valid, api_batches_update
+from msprobe.core.common.utils import get_header_index
+from msprobe.core.compare.utils import table_value_is_valid, gen_api_batches
 from msprobe.core.compare.config import ModeConfig
 
 
@@ -217,11 +217,7 @@ class HighLight:
     def find_compare_result_error_rows(self, result_df, highlight_dict):
         """将dataframe根据API分组，并找到有误差的算子用于高亮"""
         result = result_df.values
-        api_batches = []
-        for i, res_i in enumerate(result):
-            api_name = safe_get_value(res_i, -1, "res_i")  # 内部定义倒数第一个元素必是api_origin_name
-            state = safe_get_value(res_i, -2, "res_i")  # 内部定义倒数第二个元素必是state
-            api_batches_update(api_batches, api_name, state, i)
+        api_batches = gen_api_batches(result)
         with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
             for api_batch in api_batches:
                 self.find_error_rows(result[api_batch.start: api_batch.params_grad_end_index], api_batch,

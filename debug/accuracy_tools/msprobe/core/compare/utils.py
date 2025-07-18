@@ -586,6 +586,15 @@ def make_result_table(result, dump_mode, stack_mode):
     return result_df
 
 
+def gen_api_batches(result: np.ndarray):
+    api_batches = []
+    for i, res_i in enumerate(result):
+        api_name = safe_get_value(res_i, -1, "res_i")  # 内部定义倒数第一个元素必是api_origin_name
+        state = safe_get_value(res_i, -2, "res_i")  # 内部定义倒数第二个元素必是state
+        api_batches_update(api_batches, api_name, state, i)
+    return api_batches
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)

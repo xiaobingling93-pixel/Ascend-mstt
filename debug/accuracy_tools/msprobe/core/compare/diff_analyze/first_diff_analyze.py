@@ -16,10 +16,10 @@
 import os
 
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.core.common.utils import safe_get_value, logger, CompareException
+from msprobe.core.common.utils import logger, CompareException
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.compare.config import ModeConfig
-from msprobe.core.compare.utils import api_batches_update
+from msprobe.core.compare.utils import gen_api_batches
 
 
 cur_dir = os.path.dirname(os.path.realpath(__file__))
@@ -105,11 +105,7 @@ class FirstDiffAnalyze:
         result = result_df.values
         header = result_df.columns.tolist()
 
-        api_batches = []
-        for i, res_i in enumerate(result):
-            api_full_name = safe_get_value(res_i, 0, "res_i")
-            api_name, state = get_name_and_state(api_full_name)
-            api_batches_update(api_batches, api_name, state, i)
+        api_batches = gen_api_batches(result)
 
         check_result = {}
         for api_batch in api_batches:
