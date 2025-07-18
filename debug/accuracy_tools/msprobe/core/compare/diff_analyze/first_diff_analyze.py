@@ -15,9 +15,12 @@
 
 import os
 
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import safe_get_value, logger, CompareException
 from msprobe.core.common.file_utils import load_yaml
-from msprobe.core.compare.utils import api_batches_update, get_name_and_state
+from msprobe.core.compare.config import ModeConfig
+from msprobe.core.compare.utils import api_batches_update
+
 
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 diff_threshold_yaml_path = os.path.join(cur_dir, 'diff_analyze_threshold.yaml')
@@ -26,6 +29,9 @@ cmp_metrics = thresholds.get('compare_metrics')
 
 
 class FirstDiffAnalyze:
+    def __init__(self, mode_config: ModeConfig):
+        self.mode_config = mode_config
+
     @staticmethod
     def single_metric_diff_check(cmp_metric, metric_value):
         threshold = thresholds.get(cmp_metric, None)
@@ -64,11 +70,16 @@ class FirstDiffAnalyze:
             }
             single_check_result['op_items'].append(op_item)
 
-            for cmp_metric in cmp_metrics:
-                metric_value = line[column_indices[cmp_metric]]
-                if self.single_metric_diff_check(cmp_metric, metric_value):
+            # set is_same
+            if self.mode_config.dump_mode == Const.MD5:
+                if line[column_indices[CompareConst.RESULT]] == CompareConst.DIFF:
                     single_check_result['is_same'] = False
-                    break
+            else:
+                for cmp_metric in cmp_metrics:
+                    metric_value = line[column_indices[cmp_metric]]
+                    if self.single_metric_diff_check(cmp_metric, metric_value):
+                        single_check_result['is_same'] = False
+                        break
         return single_check_result
 
     def check(self, result_df):

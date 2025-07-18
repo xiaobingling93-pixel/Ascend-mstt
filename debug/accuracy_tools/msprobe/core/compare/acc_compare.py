@@ -113,9 +113,9 @@ class Comparator:
             return
 
         if self.mode_config.first_diff_analyze:
-            first_diff_analyze = FirstDiffAnalyze()
+            first_diff_analyze = FirstDiffAnalyze(self.mode_config)
             check_result = first_diff_analyze.check(result_df)
-            save_json(file_path, check_result)
+            save_json(file_path, check_result, indent=4)
             logger.info(f"Saving json file to disk: {file_path}")
             return
 
