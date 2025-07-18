@@ -495,9 +495,14 @@ class Hierarchy extends PolymerElement {
             }
             else {
                 selectedNode = event.detail.nodeName;
+                selectedNode = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')
                 const graphType = event.detail.graphType;
+
+                const orginNodeExpandState = event.detail.npdeExpandState;
+                const targetNodeExpandState = this.hierarchyObject[selectedNode]?.expand;
                 //也会触发当前侧图展开才操作，所以需要判断一下
-                if (graphType === this.graphType) {
+                //保持展开状态同步,如果一侧展开，一侧为展开，则不触发对应测的展开或者收起的操作
+                if (graphType === this.graphType || (orginNodeExpandState === targetNodeExpandState)) {
                     return;
                 }
             }
@@ -513,12 +518,13 @@ class Hierarchy extends PolymerElement {
                 return;
             }
             await this.changeNodeExpandState(nodeInfo);
-            const { matchedNodeName } = this.findMatchedNodeName(nodeName);
+            const findRes = this.findMatchedNodeName(nodeName);
             // 如果是点击展开，触发同步展开事件，通知展开对应节点
             if (isClickGraph && this.isSyncExpand) {
                 const changeMatchNodeExpandState = new CustomEvent('changeMatchNodeExpandState', {
                     detail: {
-                        nodeName: matchedNodeName, // 通知通信图展开对应节点
+                        nodeName: findRes.matchedNodeName, // 通知通信图展开对应节点
+                        npdeExpandState: findRes?.selectedNode?.expand,
                         graphType: this.graphType,
                     },
                     bubbles: true, // 允许事件冒泡
