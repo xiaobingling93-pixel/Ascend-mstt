@@ -85,13 +85,14 @@ class TestUtilsMethods(unittest.TestCase):
         n_value = np.array([1, 2, np.inf, 4])
         b_value = np.array([1, 2, 3, 4])
         error_flag = True
+        error_file = 'fake file'
 
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
+        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag, error_file=error_file)
 
         self.assertEqual(n_value, CompareConst.READ_NONE)
         self.assertEqual(b_value, CompareConst.READ_NONE)
         self.assertTrue(error_flag)
-        self.assertEqual(err_msg, CompareConst.NO_BENCH)
+        self.assertEqual(err_msg, "Dump file: fake file not found or read failed.")
 
     def test_get_error_flag_and_msg_none(self):
         n_value = np.array([])

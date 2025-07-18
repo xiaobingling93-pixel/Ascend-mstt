@@ -157,20 +157,23 @@ class CompareRealData:
         用于读取excel中的NPU_Name和Bench_Name，根据映射关系找到npy或pt文件，然后读取文件中的数据进行比较，计算余弦相似度、欧式距离
         最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率并生成错误信息
         """
-        error_file, relative_err, error_flag = None, None, False
+        relative_err, error_flag, err_msg = None, False, None
 
         data_name_pair = op_name_mapping_dict.get(npu_op_name)
         npu_data_name = data_name_pair[0]
         bench_data_name = data_name_pair[1]
 
+        error_file = data_name_pair
+
         if str(npu_data_name) == CompareConst.NO_REAL_DATA_FLAG:  # 没有npu真实数据
-            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
+            n_value, b_value, error_flag = CompareConst.NO_REAL_DATA, CompareConst.NO_REAL_DATA, True
+            err_msg = "NPU does not have data file."
         elif str(bench_data_name) == CompareConst.NO_REAL_DATA_FLAG:  # 没有bench真实数据
-            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
-            error_file = 'no_bench_data'
+            n_value, b_value, error_flag = CompareConst.NO_REAL_DATA, CompareConst.NO_REAL_DATA, True
+            err_msg = "Bench does not have data file."
         elif str(bench_data_name) == CompareConst.N_A:  # bench没匹配
-            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
-            error_file = None
+            n_value, b_value, error_flag = CompareConst.API_UNMATCH, CompareConst.API_UNMATCH, True
+            err_msg = "Bench api/module unmatched."
         else:
             npu_dir = input_param.get(CompareConst.NPU_DUMP_DATA_DIR)
             bench_dir = input_param.get(CompareConst.BENCH_DUMP_DATA_DIR)
@@ -187,8 +190,9 @@ class CompareRealData:
                 error_flag = True
 
         # 通过n_value, b_value同时得到错误标志和错误信息
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value,
-                                                                       error_flag=error_flag, error_file=error_file)
+        if not err_msg:
+            n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag,
+                                                                           error_file=error_file)
 
         result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg)
 
@@ -218,11 +222,16 @@ class CompareRealData:
                 = self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
 
             if is_print_compare_log:
-                logger.info(
-                    "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
-                    one_thousand_err_ratio {}, "
-                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
-                                                        err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
+                if "does not have data file" in err_msg:
+                    logger.info(f"[{npu_op_name}] Compare result: {err_msg} ")
+                elif "Bench api/module unmatched" in err_msg:
+                    logger.info(f"[{npu_op_name}] Compare result: {err_msg} ")
+                else:
+                    logger.info(
+                        "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
+                        one_thousand_err_ratio {}, "
+                        "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
+                                                            err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
             cos_result.append(cos_sim)
             euc_dist_result.append(euc_dist)
             max_err_result.append(max_abs_err)

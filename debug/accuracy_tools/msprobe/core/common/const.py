@@ -557,6 +557,8 @@ class CompareConst:
     ULP_FLOAT16_THRESHOLD = 1
 
     # compare result data
+    NO_REAL_DATA = 'No real data'
+    API_UNMATCH = 'api unmatched'
     READ_NONE = 'No data'
     NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
@@ -588,6 +590,7 @@ class CompareConst:
 
     # error message
     NO_BENCH = "No bench data matched."
+
 
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]
