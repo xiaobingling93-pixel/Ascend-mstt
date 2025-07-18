@@ -440,7 +440,7 @@ class CompareConst:
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
-    MAX_EXCEL_LENGTH = 1048576
+    MAX_EXCEL_LENGTH = 1048500
     YES = "Yes"
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4

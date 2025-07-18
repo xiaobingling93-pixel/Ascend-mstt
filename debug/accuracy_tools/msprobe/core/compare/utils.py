@@ -158,7 +158,7 @@ def is_leaf_data(op_data):
 
 def gen_op_item(op_data, op_name, state):
     op_item = {}
-    op_item.update(op_data)
+    op_item.update({key: str(value) if isinstance(value, bool) else value for key, value in op_data.items()})
     data_name = op_data.get(Const.DATA_NAME) if op_data.get(Const.DATA_NAME) else '-1'  # 如果是""也返回-1
     op_item[Const.DATA_NAME] = data_name
     op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
@@ -543,6 +543,8 @@ def _compare_parser(parser):
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-hl", "--highlight", dest="highlight", action="store_true",
+                        help="<optional> Whether to set result highlighting.", required=False)
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
