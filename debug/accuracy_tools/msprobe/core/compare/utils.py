@@ -184,7 +184,7 @@ def gen_op_item(op_data, op_name, state):
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = op_data.get('value')
-        elif op_name.split(Const.SEP)[-1] in ['src', 'dst']:
+        elif op_name.split(Const.SEP)[-1] in ['src', 'dst', 'group_src', 'group_dst']:
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = '[]'
             for i in params:
