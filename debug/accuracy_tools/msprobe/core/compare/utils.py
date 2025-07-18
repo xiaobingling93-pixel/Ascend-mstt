@@ -159,16 +159,19 @@ def is_leaf_data(op_data):
 def gen_op_item(op_data, op_name, state):
     op_item = {}
     op_item.update(op_data)
+
     data_name = op_data.get(Const.DATA_NAME) if op_data.get(Const.DATA_NAME) else '-1'  # 如果是""也返回-1
     op_item[Const.DATA_NAME] = data_name
     op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
     op_item[Const.STATE] = state
 
+    # 补齐统计量字段
     params = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     for i in params:
         if i not in op_item:
             op_item[i] = None
 
+    # special cases
     if not op_item.get('dtype'):
         if op_item.get('type') == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
@@ -181,11 +184,18 @@ def gen_op_item(op_data, op_name, state):
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = op_data.get('value')
+        elif op_name.split(Const.SEP)[-1] in ['src', 'dst']:
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = '[]'
+            for i in params:
+                op_item[i] = str(op_data.get('value'))
+            op_item['md5'] = str(op_data.get('value'))
         elif op_item.get('type') == 'torch.ProcessGroup':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = str(op_data.get('group_ranks'))
+            op_item['md5'] = str(op_data.get('group_ranks'))
         else:
             op_item['dtype'] = str(type(op_data.get('value')))
             op_item['shape'] = '[]'
