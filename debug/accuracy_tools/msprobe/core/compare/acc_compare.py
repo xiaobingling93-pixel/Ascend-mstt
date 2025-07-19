@@ -169,6 +169,8 @@ class Comparator:
         match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
 
         # organize compare result table by renaming columns
+        if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
+            self.mode_config.dump_mode = Const.SUMMARY
         create_table = CreateTable(self.mode_config)
         result_df, header = create_table.make_result_df(match_result)
 

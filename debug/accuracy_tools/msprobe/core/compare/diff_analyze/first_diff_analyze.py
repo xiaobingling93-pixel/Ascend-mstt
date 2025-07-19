@@ -84,7 +84,7 @@ class FirstDiffAnalyze:
 
     def check(self, result_df):
         """
-        比对后循环遍历api检查norm差异
+        比对后循环遍历api检查差异
         example：
         {
             'Functional.conv2d.0.forward': {
@@ -110,6 +110,6 @@ class FirstDiffAnalyze:
         check_result = {}
         for api_batch in api_batches:
             result_slice = result[api_batch.start: api_batch.params_grad_end_index]
-            check_result[api_batch.api_name[: -1]] = self.single_api_check(result_slice, header)
+            check_result[api_batch.api_name] = self.single_api_check(result_slice, header)
 
         return check_result
