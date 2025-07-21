@@ -385,6 +385,9 @@ class Const:
     MATCH_MODE_NAME = "pure name"
     MATCH_MODE_MAPPING = "mapping"
     MATCH_MODE_SIMILARITY = "similarity"
+    CONFIG_CHECK_PASS = "pass"
+    CONFIG_CHECK_WARNING = "warning"
+    CONFIG_CHECK_ERROR = "error"
 
 
 class CompareConst:

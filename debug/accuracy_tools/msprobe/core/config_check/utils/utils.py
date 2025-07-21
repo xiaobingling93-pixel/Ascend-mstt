@@ -19,6 +19,7 @@ import hashlib
 
 from msprobe.core.common.framework_adapter import FmkAdp
 from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
 
 
 def merge_keys(dir_0, dir_1):
@@ -105,3 +106,12 @@ def update_dict(ori_dict, new_dict):
                 ori_dict[key] = {"description": "duplicate_value", "values": [ori_dict[key], new_dict[key]]}
         else:
             ori_dict[key] = value
+
+
+def process_pass_check(data):
+    if Const.CONFIG_CHECK_ERROR in data:
+        return Const.CONFIG_CHECK_ERROR
+    elif Const.CONFIG_CHECK_WARNING in data:
+        return Const.CONFIG_CHECK_WARNING
+    else:
+        return Const.CONFIG_CHECK_PASS

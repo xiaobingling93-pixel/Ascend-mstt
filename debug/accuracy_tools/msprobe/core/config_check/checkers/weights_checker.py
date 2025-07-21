@@ -22,6 +22,7 @@ from msprobe.core.config_check.checkers.base_checker import BaseChecker
 from msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
 from msprobe.core.config_check.utils.utils import config_checking_print, get_tensor_features
 from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.const import Const
 
 
 def collect_weights_data(model):
@@ -143,5 +144,5 @@ class WeightsChecker(BaseChecker):
         bench_weight_pack_path = os.path.join(bench_dir, WeightsChecker.target_name_in_zip)
         cmp_weight_pack_path = os.path.join(cmp_dir, WeightsChecker.target_name_in_zip)
         df = compare_weight(bench_weight_pack_path, cmp_weight_pack_path)
-        pass_check = False not in df['equal'].values
+        pass_check = Const.CONFIG_CHECK_PASS if False not in df['equal'].values else Const.CONFIG_CHECK_ERROR
         return WeightsChecker.target_name_in_zip, pass_check, df
