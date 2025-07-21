@@ -151,9 +151,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         }
 
         .search-number{
-          display:inline-block;
-          width:80px;
-          height:14px;
+          display: inline-block;
+          width: 80px;
+          height: 14px;
           background-color: #fff;
           font-size: 14px;
           color: red;
@@ -806,7 +806,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.set('precisionmenu', precisionmenu);
         // 更新数据绑定
         this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
-        // 清除精度筛选输入框W
+        // 清除精度筛选输入框
         this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
         setTimeout(() => {
           this._observePrecsionNode();
