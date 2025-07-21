@@ -277,7 +277,7 @@ class GraphService:
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                if(is_match_children):
+                if is_match_children:
                     result = MatchNodesController.process_task_add_child_layer(graph_data,
                                                                     npu_node_name, bench_node_name, task)
                     return result
@@ -326,7 +326,7 @@ class GraphService:
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                if(is_unmatch_children):
+                if is_unmatch_children:
                     result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
                                                                               bench_node_name, task)
                 else:
