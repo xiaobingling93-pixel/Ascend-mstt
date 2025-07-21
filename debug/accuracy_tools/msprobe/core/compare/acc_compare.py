@@ -705,7 +705,7 @@ class CalcStatsDiff:
         # 相对误差转成百分比字符串
         cond_ref_err = cond_not_nan_diff & ~condition_pt_zero
         result_df.loc[cond_ref_err, rel_err_name] = (
-                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err] * 100)
+                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err].astype(float) * 100)
         result_df.loc[cond_ref_err, rel_err_name] = (result_df.loc[cond_ref_err, rel_err_name].abs().astype(str) + '%')
 
         magnitude = self.get_number(result_df[diff_name]).abs() / (pd.Series(
