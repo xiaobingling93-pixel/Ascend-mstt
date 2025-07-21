@@ -488,7 +488,7 @@ class Hierarchy extends PolymerElement {
             let target;
             let selectedNode;
             //判断是点击展开，还是同步展开
-            const isClickGraph = isEmpty(event.detail);
+            const isClickGraph = isEmpty(event.detail?.nodeName);
             if (isClickGraph) {
                 target = event.target as HTMLElement;
                 selectedNode = target.getAttribute('name');
@@ -518,9 +518,10 @@ class Hierarchy extends PolymerElement {
                 return;
             }
             await this.changeNodeExpandState(nodeInfo);
-            const findRes = this.findMatchedNodeName(nodeName);
             // 如果是点击展开，触发同步展开事件，通知展开对应节点
-            if (isClickGraph && this.isSyncExpand) {
+            if (isClickGraph && this.isSyncExpand && this.graphType !== "Single") {
+
+                const findRes = this.findMatchedNodeName(nodeName);
                 const changeMatchNodeExpandState = new CustomEvent('changeMatchNodeExpandState', {
                     detail: {
                         nodeName: findRes.matchedNodeName, // 通知通信图展开对应节点
@@ -545,6 +546,7 @@ class Hierarchy extends PolymerElement {
         return () => {
             container.removeEventListener('dblclick', throttleDoubleClickNodeEvent);
             this.graph?.removeEventListener('dblclick', onDoubleClickGraphEvent);
+            document.removeEventListener('changeMatchNodeExpandState', throttleDoubleClickNodeEvent);
         };
     }
 
