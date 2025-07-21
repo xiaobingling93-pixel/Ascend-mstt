@@ -95,29 +95,17 @@ class PytorchDataProcessor(BaseDataProcessor):
         return {"type": "torch.dtype", "value": str(element)}
 
     @staticmethod
-    def get_stat_info_async(data):
+    def get_stat_info(data, async_dump=False, precision=Const.DUMP_PRECISION_HIGH):
         tensor_stat = TensorStatInfo()
-        if torch.is_complex(data):
-            logger.warning("Async dump do not support complex data!")
+        if data.is_meta:
             return tensor_stat
-        elif data.dtype == torch.bool:
-            tensor_stat.max = torch.any(data)
-            tensor_stat.min = torch.all(data)
-        elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
-        else:
-            if data.dtype == torch.float64 or not data.is_floating_point():
-                data = data.float()
-            tensor_stat.max = torch.max(data)
-            tensor_stat.min = torch.min(data)
-            tensor_stat.mean = torch.mean(data)
-            tensor_stat.norm = torch.norm(data)
-        return tensor_stat
-
-    @staticmethod
-    def get_stat_info_sync(data):
-        tensor_stat = TensorStatInfo()
+        data_clone = data.detach()
+        if not data_clone.numel() or not data_clone.data_ptr():
+            return tensor_stat
         if torch.is_complex(data):
+            if async_dump:
+                logger.warning("Async dump do not support complex data!")
+                return tensor_stat
             data_np = data.cpu().numpy()
             data_abs = np.abs(data_np)
             tensor_stat.max = np.max(data_abs).item()
@@ -129,27 +117,13 @@ class PytorchDataProcessor(BaseDataProcessor):
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
         else:
-            if data.dtype == torch.float64 or not data.is_floating_point():
+            if precision == Const.DUMP_PRECISION_HIGH or data.dtype == torch.float64 or not data.is_floating_point():
                 data = data.float()
             tensor_stat.max = torch.max(data)
             tensor_stat.min = torch.min(data)
             tensor_stat.mean = torch.mean(data)
             tensor_stat.norm = torch.norm(data)
         return tensor_stat
-
-    @staticmethod
-    def get_stat_info(data, async_dump=False):
-        tensor_stat = TensorStatInfo()
-        if data.is_meta:
-            return tensor_stat
-        data_clone = data.detach()
-        if not data_clone.numel() or not data_clone.data_ptr():
-            return tensor_stat
-        else:
-            if data_clone.device.type == Const.CPU_LOWERCASE or not async_dump:
-                return PytorchDataProcessor.get_stat_info_sync(data_clone)
-            else:
-                return PytorchDataProcessor.get_stat_info_async(data_clone)
 
     @staticmethod
     def handle_tensor_extremum_nan_inf(tensor, operator):
@@ -256,7 +230,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
-        tensor_stat = self.get_stat_info(tensor, self.config.async_dump)
+        tensor_stat = self.get_stat_info(tensor, self.config.async_dump, self.config.precision)
         tensor_json = {}
         tensor_json.update({'type': 'torch.Tensor'})
         tensor_json.update({'dtype': str(tensor.dtype)})

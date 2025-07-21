@@ -51,6 +51,7 @@ class DebuggerConfig:
         self.device_stat_precision_mode = task_config.device_stat_precision_mode \
             if hasattr(task_config, 'device_stat_precision_mode') else None
         self.async_dump = common_config.async_dump if common_config.async_dump else False
+        self.precision = common_config.precision if common_config.precision else Const.DUMP_PRECISION_HIGH
         self.check()
         self._check_statistics_config(task_config)
         create_directory(self.dump_path)

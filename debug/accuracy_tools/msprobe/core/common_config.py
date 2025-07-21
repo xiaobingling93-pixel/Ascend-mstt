@@ -30,6 +30,7 @@ class CommonConfig:
         self.level = json_config.get('level')
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self.async_dump = json_config.get("async_dump", False)
+        self.precision = json_config.get("precision", Const.DUMP_PRECISION_HIGH)
         self._check_config()
 
     def _check_config(self):
@@ -50,6 +51,10 @@ class CommonConfig:
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         elif self.async_dump:
             logger.warning("async_dump is True, it may cause OOM when dumping large tensor.")
+
+        if self.precision not in Const.DUMP_PRECISION_LIST:
+            logger.error_log_with_exp("precision is invalid, it should be one of {}".format(Const.DUMP_PRECISION_LIST),
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
 
 
 class BaseConfig:
