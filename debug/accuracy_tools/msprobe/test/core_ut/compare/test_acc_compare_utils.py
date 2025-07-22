@@ -13,7 +13,7 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
-    stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item
+    stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item, ApiBatch
 
 # test_read_op_1
 op_data = {
@@ -786,3 +786,85 @@ class TestGenOpItem(unittest.TestCase):
         expected_md5 = f"{zlib.crc32(str(op_data['value']).encode()):08x}"
         self.assertEqual(result['md5'], expected_md5)
         self.assertEqual(result['state'], 'input')
+
+
+class TestApiBatch(unittest.TestCase):
+    def test_ApiBatch_increment_input(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.INPUT)
+
+        self.assertEqual(api_batch._state, Const.INPUT)
+        self.assertEqual(api_batch.input_len, 2)
+        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
+    def test_ApiBatch_increment_output(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.OUTPUT)
+
+        self.assertEqual(api_batch._state, Const.OUTPUT)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 3)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
+    def test_ApiBatch_increment_kwargs(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.KWARGS)
+
+        self.assertEqual(api_batch._state, Const.KWARGS)
+        self.assertEqual(api_batch.input_len, 2)
+        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
+    def test_ApiBatch_increment_params(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.PARAMS)
+
+        self.assertEqual(api_batch._state, Const.PARAMS)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 4)
+        self.assertEqual(api_batch.output_end_index, 4)
+        self.assertEqual(api_batch.params_grad_end_index, 4)
+
+    def test_ApiBatch_increment_multiple_input(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.INPUT)
+        api_batch.increment(Const.INPUT)
+
+        self.assertEqual(api_batch._state, Const.INPUT)
+        self.assertEqual(api_batch.input_len, 3)
+        self.assertEqual(api_batch.params_end_index, 5)
+        self.assertEqual(api_batch.output_end_index, 5)
+        self.assertEqual(api_batch.params_grad_end_index, 5)
+
+    def test_ApiBatch_increment_multiple_output(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.OUTPUT)
+        api_batch.increment(Const.OUTPUT)
+
+        self.assertEqual(api_batch._state, Const.OUTPUT)
+        self.assertEqual(api_batch.input_len, 1)
+        self.assertEqual(api_batch.params_end_index, 3)
+        self.assertEqual(api_batch.output_end_index, 5)
+        self.assertEqual(api_batch.params_grad_end_index, 5)

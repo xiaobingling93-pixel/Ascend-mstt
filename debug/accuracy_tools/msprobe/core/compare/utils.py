@@ -164,11 +164,13 @@ def gen_op_item(op_data, op_name, state):
     op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
     op_item[Const.STATE] = state
 
+    # 补齐统计量字段
     params = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     for i in params:
         if i not in op_item:
             op_item[i] = None
 
+    # special cases
     if not op_item.get('dtype'):
         if op_item.get('type') == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
@@ -181,11 +183,18 @@ def gen_op_item(op_data, op_name, state):
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = op_data.get('value')
+        elif op_name.split(Const.SEP)[-1] in ['src', 'dst', 'group_src', 'group_dst']:
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = '[]'
+            for i in params:
+                op_item[i] = str(op_data.get('value'))
+            op_item['md5'] = str(op_data.get('value'))
         elif op_item.get('type') == 'torch.ProcessGroup':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = str(op_data.get('group_ranks'))
+            op_item['md5'] = str(op_data.get('group_ranks'))
         else:
             op_item['dtype'] = str(type(op_data.get('value')))
             op_item['shape'] = '[]'
@@ -275,6 +284,61 @@ def table_value_is_valid(value: str) -> bool:
         # otherwise, they will be considered as formular injections
         return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
     return True
+
+
+class ApiBatch:
+    def __init__(self, api_name: str, start: int):
+        self.api_name = api_name
+        self.start = start
+        self.input_len = 1  # input的数量
+        self.params_end_index = start + 1  # params的结束index
+        self.output_end_index = start + 1  # output的结束index
+        self.params_grad_end_index = start + 1  # params_grad的结束index
+        # 内部state的标志("input", "output", "parameters", "parameters_grad"),
+        # 用于控制计算input_len, output_end_index, params_end_index, self.params_grad_end_index
+        self._state = Const.INPUT  # api_batch初始化为input
+
+    def set_state(self, state: str):
+        """设置当前状态"""
+        if state in {Const.INPUT, Const.OUTPUT, Const.KWARGS, Const.PARAMS, Const.PARAMS_GRAD}:
+            self._state = state
+        else:
+            raise ValueError(f"Invalid state: {state}")
+
+    def increment(self, state: str):
+        self.set_state(state)
+        if self._state == Const.INPUT or self._state == Const.KWARGS:
+            self.input_len += 1
+            self.params_end_index += 1
+            self.output_end_index += 1
+        if self._state == Const.PARAMS:
+            self.params_end_index += 1
+            self.output_end_index += 1
+        if self._state == Const.OUTPUT:
+            self.output_end_index += 1
+        self.params_grad_end_index += 1
+
+
+def api_batches_update(api_batches, api_name, state, index):
+    """
+    当一个api的所有item更新完后，input, output的索引范围：
+    input: [start: start+input_len]
+    output: [start+input_len: output_end_index]
+    params: [output_end_index: params_end_index]
+    """
+    if not api_batches:
+        api_batches.append(ApiBatch(api_name, index))
+    else:
+        api_batch = api_batches[-1]
+        if api_batch.api_name == api_name or (
+                not re.search(Const.REGEX_FORWARD_BACKWARD, api_name) and api_name in api_batch.api_name):
+            try:
+                api_batch.increment(state)
+            except ValueError as e:
+                logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
+                raise CompareException(CompareException.INVALID_STATE_ERROR) from e
+        else:
+            api_batches.append(ApiBatch(api_name, index))
 
 
 def reorder_op_name_list(op_name_list, state_list):
@@ -531,6 +595,15 @@ def make_result_table(result, dump_mode, stack_mode):
     return result_df
 
 
+def gen_api_batches(result: np.ndarray):
+    api_batches = []
+    for i, res_i in enumerate(result):
+        api_name = safe_get_value(res_i, -1, "res_i")  # 内部定义倒数第一个元素必是api_origin_name
+        state = safe_get_value(res_i, -2, "res_i")  # 内部定义倒数第二个元素必是state
+        api_batches_update(api_batches, api_name, state, i)
+    return api_batches
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
@@ -556,6 +629,9 @@ def _compare_parser(parser):
 
 
 def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
+    if not isinstance(kwargs.get('first_diff_analyze', False), bool):
+        logger.error('kwargs: first_diff_analyze should be bool, please check!')
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
     if kwargs.get('suffix'):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)

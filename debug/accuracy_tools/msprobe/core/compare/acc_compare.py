@@ -25,16 +25,18 @@ from tqdm import tqdm
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel
+from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type
+    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type, \
+    add_time_with_json
 from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path, check_api_info_len
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.highlight import HighLight
+from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 
 
 @dataclass
@@ -50,6 +52,7 @@ class ComparisonConfig:
     api_mapping: dict
     layer_mapping: dict
     compared_file_type: str
+    first_diff_analyze: bool
 
 
 class Comparator:
@@ -58,17 +61,18 @@ class Comparator:
         self.mode_config = mode_config
         self.mapping_config = mapping_config
         self.cross_frame = is_cross_framework
-
         self.mapping_dict = MappingDict(mapping_config)
 
-    @staticmethod
-    def process_output_file(output_path, suffix, compared_file_type):
+    def process_output_file(self, output_path, suffix, compared_file_type):
         file_name_prefix_mapping = {
             Const.DUMP_JSON_FILE: "compare_result",
             Const.DEBUG_JSON_FILE: "debug_compare_result"
         }
         file_name_prefix = file_name_prefix_mapping.get(compared_file_type, "compare_result")
-        file_name = add_time_with_xlsx(file_name_prefix + suffix)
+        if self.mode_config.first_diff_analyze:
+            file_name = add_time_with_json("compare_result" + suffix)
+        else:
+            file_name = add_time_with_xlsx(file_name_prefix + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         if os.path.exists(file_path):
             logger.warning(f"{file_path} will be deleted.")
@@ -107,6 +111,13 @@ class Comparator:
         result_df = self.compare_statistics([npu_json, bench_json, stack_json])
         if not result_df.values.tolist():
             logger.warning("Can`t match any op. No compare result file generated.")
+            return
+
+        if self.mode_config.first_diff_analyze:
+            first_diff_analyze = FirstDiffAnalyze(self.mode_config)
+            check_result = first_diff_analyze.check(result_df)
+            save_json(file_path, check_result, indent=4)
+            logger.info(f"Saving json file to disk: {file_path}")
             return
 
         # compare real data
@@ -158,6 +169,8 @@ class Comparator:
         match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
 
         # organize compare result table by renaming columns
+        if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
+            self.mode_config.dump_mode = Const.SUMMARY
         create_table = CreateTable(self.mode_config)
         result_df, header = create_table.make_result_df(match_result)
 
@@ -692,7 +705,7 @@ class CalcStatsDiff:
         # 相对误差转成百分比字符串
         cond_ref_err = cond_not_nan_diff & ~condition_pt_zero
         result_df.loc[cond_ref_err, rel_err_name] = (
-                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err] * 100)
+                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err].astype(float) * 100)
         result_df.loc[cond_ref_err, rel_err_name] = (result_df.loc[cond_ref_err, rel_err_name].abs().astype(str) + '%')
 
         magnitude = self.get_number(result_df[diff_name]).abs() / (pd.Series(
@@ -709,7 +722,7 @@ class CalcStatsDiff:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
             result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
             result_df.loc[~condition_md5_equal & ~condition_no_bench, CompareConst.RESULT] = CompareConst.DIFF
-        elif self.mode_config.dump_mode == Const.SUMMARY:
+        elif self.mode_config.first_diff_analyze or self.mode_config.dump_mode == Const.SUMMARY:
             warning_list = [
                 self.calc_summary_diff(result_df, condition_no_bench, stats_index)
                 for stats_index in ['max', 'min', 'mean', 'l2norm']
@@ -743,6 +756,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             cell_mapping=kwargs.get('cell_mapping', {}),
             api_mapping=kwargs.get('api_mapping', {}),
             layer_mapping=kwargs.get('layer_mapping', {}),
+            first_diff_analyze=kwargs.get('first_diff_analyze', False),
             compared_file_type='',
         )
 

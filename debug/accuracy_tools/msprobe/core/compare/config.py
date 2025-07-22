@@ -26,6 +26,7 @@ class ModeConfig:
         self.fuzzy_match = kwargs.get('fuzzy_match', False)
         self.highlight = kwargs.get('highlight', False)
         self.dump_mode = kwargs.get('dump_mode', Const.SUMMARY)
+        self.first_diff_analyze = kwargs.get('first_diff_analyze', False)
         self.compared_file_type = kwargs.get('compared_file_type', Const.DUMP_JSON_FILE)
 
 
