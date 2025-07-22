@@ -292,7 +292,7 @@ class Hierarchy:
         for node_name, node_info in self.current_hierarchy.items():
             graph_node_info = self.graph.get('node', {}).get(node_name, {})
             node_info['matchedNodeLink'] = graph_node_info.get('matched_node_link', [])
-            node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN"),  # 精度
+            node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
         return self.current_hierarchy
 
     def get_hierarchy(self):

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ * Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 
 #include <map>
 #include <fstream>
+#include <sstream>
 #include <cstring>
 #include <numeric>
+#include <re2/re2.h>
 
 #include "include/ErrorCode.h"
 #include "include/Macro.h"
@@ -211,6 +213,7 @@ constexpr char REGEX_PREFIX[] = "name-regex(";
 constexpr char REGEX_SUFFIX[] = ")";
 constexpr size_t REGEX_PREFIX_LEN = sizeof(REGEX_PREFIX) - 1;
 constexpr size_t REGEX_SUFFIX_LEN = sizeof(REGEX_SUFFIX) - 1;
+constexpr size_t REGEX_INDEX = REGEX_PREFIX_LEN - 1;
 
 void KernelListMatcher::Parse(const std::vector<std::string>& expressions)
 {
@@ -219,7 +222,7 @@ void KernelListMatcher::Parse(const std::vector<std::string>& expressions)
         if (strncmp(expression.c_str(), REGEX_PREFIX, REGEX_PREFIX_LEN) == 0 &&
             strncmp(expression.c_str() + (len - REGEX_SUFFIX_LEN), REGEX_SUFFIX, REGEX_SUFFIX_LEN) == 0) {
             /* name-regex(xxx)表示正则表达式 */
-            regexList.emplace_back(expression.substr(REGEX_PREFIX_LEN, len - REGEX_PREFIX_LEN - REGEX_SUFFIX_LEN));
+            regexList.emplace_back(expression.substr(REGEX_INDEX, len - REGEX_INDEX));
         } else {
             /* 否则认为是full scope name */
             fullNameList.emplace_back(expression);
@@ -236,11 +239,15 @@ std::vector<std::string> KernelListMatcher::GenRealKernelList(const char** fullK
     }
     output = fullNameList;
 
-    for (auto& reg : regexList) {
-        for (const char** ss = fullKernelList; *ss != nullptr; ++ss) {
-            if (std::regex_search(*ss, reg)) {
-                output.emplace_back(*ss);
-            }
+    for (auto& pattern : regexList) {
+        re2::RE2 reg(pattern, re2::RE2::Quiet);
+        if (reg.ok()) {
+            for (const char** ss = fullKernelList; *ss != nullptr; ++ss) {
+                std::string ret;
+                if (re2::RE2::FullMatch(*ss, reg, &ret)) {
+                    output.emplace_back(*ss);
+                }
+            }  
         }
     }
 

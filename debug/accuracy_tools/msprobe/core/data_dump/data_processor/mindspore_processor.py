@@ -73,7 +73,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.copy()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             data_abs = np.abs(data.asnumpy())
             tensor_stat.max = np.max(data_abs).item()
@@ -97,7 +97,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.max = mint.any(data)
             tensor_stat.min = mint.all(data)
         elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.copy()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             logger.warning("Async dump do not support complex data!")
             return tensor_stat

@@ -473,16 +473,3 @@ class GraphUtils:
 
         return sorted_data
 
-    @staticmethod
-    def process_vis_file(dir_path, file, run_tag_pairs):
-        file_path = os.path.join(dir_path, file)
-        if os.path.isfile(file_path) and file.endswith('.vis'):
-            run = dir_path
-            run_name = os.path.basename(run)
-            GraphState.set_global_value('runs', run, run_name)
-            tag = file[:-4]  # Use the filename without extension as tag
-            _, error = GraphUtils.safe_load_data(run_name, tag, True)
-            if error:
-                logger.error(f'Error: File run:"{run}, tag:{tag}" is not accessible. Error: {error}')
-                return
-            run_tag_pairs.setdefault(run_name, []).append(tag)

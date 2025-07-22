@@ -25,12 +25,19 @@ class MatchNodesController:
     def is_same_node_type(graph_data, npu_node_name, bench_node_name):
         npu_node_type = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {}).get('node_type')
         bench_node_type = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {}).get('node_type')
+
         if npu_node_type is None or bench_node_type is None or npu_node_type != bench_node_type:
             return False
         return True
 
     @staticmethod
     def process_task_add(graph_data, npu_node_name, bench_node_name, task):
+        if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
+            return {
+                'success': False,
+                'error': '节点类型不一致,无法添加匹配关系'
+            }
+            
         result = {}
         if task == 'md5':
             result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
@@ -125,7 +132,6 @@ class MatchNodesController:
             for key in common_keys:
                 npu_subnode_list = npu_match_names.get(key, [])
                 bench_subnode_list = bench_match_names.get(key, [])
-                
                 # 多个节点可能有一个module name
                 for npu_subnode_name, bench_subnode_name in zip(npu_subnode_list, bench_subnode_list):
                     result = MatchNodesController.process_task_add(graph_data, npu_subnode_name, bench_subnode_name,
@@ -193,6 +199,7 @@ class MatchNodesController:
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
+
         if result.get('success') and npu_subnodes and bench_subnodes:
             process_child_layer(npu_subnodes)
         if result.get('success'):
@@ -233,8 +240,8 @@ class MatchNodesController:
     @staticmethod
     def process_summary_task_add(graph_data, npu_node_name, bench_node_name):
         # 节点信息提取
-        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
-        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
+        npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {})
         # 计算统计误差
         intput_statistical_diff = MatchNodesController.calculate_statistical_diff(
             npu_node_data.get('input_data'), bench_node_data.get('input_data'), npu_node_name, bench_node_name

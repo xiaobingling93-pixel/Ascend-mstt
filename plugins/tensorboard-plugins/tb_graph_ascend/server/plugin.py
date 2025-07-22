@@ -47,6 +47,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
           context: A base_plugin.TBContext instance.
         """
         super().__init__(context)
+        GraphState.reset_global_state()
         self._data_provider = context.data_provider
         self.logdir = os.path.abspath(os.path.expanduser(context.logdir.rstrip('/')))
         # 将logdir赋值给global_state中的logdir属性,方便其他模块使用

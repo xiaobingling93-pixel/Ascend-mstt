@@ -26,6 +26,10 @@ except ImportError:
     distributed = MagicMock()
     setattr(mint, 'distributed', distributed)
 
+from mindspore.common.api import _pynative_executor
+mock_requires_grad = MagicMock(return_value=True)
+setattr(_pynative_executor, "requires_grad", mock_requires_grad)
+
 from mindspore import ops
 if not hasattr(ops, 'DumpGradient'):
     DumpGradient = MagicMock()
@@ -56,5 +60,6 @@ register_backward_hook_functions["pre"] = register_backward_pre_hook
 class SetUp(TestCase):
     def test_case(self):
         self.assertTrue(hasattr(mint, 'distributed'))
+        self.assertTrue(hasattr(_pynative_executor, 'requires_grad'))
         self.assertTrue(is_mindtorch())
         utils.mindtorch_check_result = None

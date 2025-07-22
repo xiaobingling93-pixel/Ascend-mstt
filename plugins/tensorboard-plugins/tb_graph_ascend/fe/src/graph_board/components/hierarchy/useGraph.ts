@@ -37,6 +37,7 @@ import {
 } from '../../../common/constant';
 const useGraph = (): UseGraphType => {
     const preProcessData: UseGraphType['preProcessData'] = (
+        hierarchyObject: { [key: string]: HierarchyNodeType },
         data: Array<HierarchyNodeType>,
         selectedNode,
         config: PreProcessDataConfigType,
@@ -55,9 +56,7 @@ const useGraph = (): UseGraphType => {
         virtualNodes.forEach((d) => {
             let node: HierarchyNodeType | undefined = d;
             while (node?.parentNode) {
-                const parent = data.find(
-                    (dInner) => node?.parentNode === dInner.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''),
-                );
+                const parent = hierarchyObject[node.parentNode];
                 if (parent && virtualNodes.indexOf(parent) === -1 && parentsVirtualNodes.indexOf(parent) === -1) {
                     parentsVirtualNodes.push(parent);
                 }

@@ -88,24 +88,26 @@ export class Minimap {
     let $minimapSvg = $shadowRoot.select('svg');
     // Make the viewpoint rectangle draggable.
     let $viewpoint = $minimapSvg.select('rect');
-    let dragmove = (d): void => {
-      this.viewpointCoord.x = (<DragEvent>(d3 as any).event).x;
-      this.viewpointCoord.y = (<DragEvent>(d3 as any).event).y;
+    let dragmove = (event: d3.D3DragEvent<any, any, any>): void => {
+      let width = Number($viewpoint.attr('width'));
+      let height = Number($viewpoint.attr('height'));
+      this.viewpointCoord.x = event.x- (width / 2);;
+      this.viewpointCoord.y = event.y- (height / 2);;
       this.updateViewpoint();
     };
     this.viewpointCoord = { x: 0, y: 0 };
     let drag = d3.drag().subject(Object).on('drag', dragmove);
     $viewpoint.datum(this.viewpointCoord as any).call(drag as any);
     // Make the minimap clickable.
-    $minimapSvg.on('click', (): void => {
-      if ((<Event>(d3 as any).event).defaultPrevented) {
+    $minimapSvg.on('click', (event: Event): void => {
+      if (event.defaultPrevented) {
         // This click was part of a drag event, so suppress it.
         return;
       }
       // Update the coordinates of the viewpoint.
       let width = Number($viewpoint.attr('width'));
       let height = Number($viewpoint.attr('height'));
-      let clickCoords = (d3 as any).mouse($minimapSvg.node() as any);
+      let clickCoords = d3.pointer(event, $minimapSvg.node() as any);
       this.viewpointCoord.x = clickCoords[0] - (width / 2);
       this.viewpointCoord.y = clickCoords[1] - (height / 2);
       this.updateViewpoint();

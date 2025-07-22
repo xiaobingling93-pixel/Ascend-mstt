@@ -444,7 +444,7 @@ class CompareConst:
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
-    MAX_EXCEL_LENGTH = 1048576
+    MAX_EXCEL_LENGTH = 1048500
     YES = "Yes"
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4
@@ -569,6 +569,8 @@ class CompareConst:
     ULP_FLOAT16_THRESHOLD = 1
 
     # compare result data
+    NO_REAL_DATA = 'No real data'
+    API_UNMATCH = 'api unmatched'
     READ_NONE = 'No data'
     NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
@@ -600,6 +602,7 @@ class CompareConst:
 
     # error message
     NO_BENCH = "No bench data matched."
+
 
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]
@@ -689,6 +692,7 @@ class FileCheckConst:
     IR_SUFFIX = ".ir"
     ZIP_SUFFIX = ".zip"
     SHELL_SUFFIX = ".sh"
+    LOG_SUFFIX = ".log"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -701,6 +705,7 @@ class FileCheckConst:
     MAX_FILE_IN_ZIP_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_FILE_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
+    MAX_LOG_SIZE = 10737418240  # 1 * 1024 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750
@@ -714,7 +719,8 @@ class FileCheckConst:
         XLSX_SUFFIX: MAX_XLSX_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE,
         IR_SUFFIX: MAX_IR_SIZE,
-        ZIP_SUFFIX: MAX_ZIP_SIZE
+        ZIP_SUFFIX: MAX_ZIP_SIZE,
+        LOG_SUFFIX: MAX_LOG_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 

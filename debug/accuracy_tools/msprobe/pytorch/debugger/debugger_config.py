@@ -65,7 +65,7 @@ class DebuggerConfig:
             self.is_backward_kernel_dump = False
             self._check_and_adjust_config_with_l2()
 
-    def check_kwargs(self):
+    def check(self):
         if self.task and self.task not in Const.TASK_LIST:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The task <{self.task}> is not in the {Const.TASK_LIST}.")
@@ -78,22 +78,26 @@ class DebuggerConfig:
         if not isinstance(self.async_dump, bool):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The parameters async_dump should be bool.")
-        if self.async_dump and self.task == Const.TENSOR:
-            if self.level == Const.LEVEL_DEBUG:
-                self.list = [] # async_dump + debug level case ignore list
-            if not self.list and self.level != Const.LEVEL_DEBUG:
-                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                    f"The parameters async_dump is true in tensor task, the parameters list cannot be "
-                                    f"empty.")
         if self.task == Const.STRUCTURE and self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             logger.warning_on_rank_0(
                 f"When the task is set to structure, the level should be one of {[Const.LEVEL_L0, Const.LEVEL_MIX]}. "
                 f"If not, the default level is {Const.LEVEL_MIX}."
             )
             self.level = Const.LEVEL_MIX
-
-    def check(self):
-        self.check_kwargs()
+        if self.async_dump:
+            if self.task == Const.TENSOR:
+                if self.level == Const.LEVEL_DEBUG:
+                    self.list = []  # async_dump + debug level case ignore list
+                if not self.list and self.level != Const.LEVEL_DEBUG:
+                    raise MsprobeException(
+                        MsprobeException.INVALID_PARAM_ERROR,
+                        f"The parameters async_dump is true in tensor task, the parameters list cannot be empty."
+                    )
+            if self.summary_mode == Const.MD5:
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR,
+                    f"The parameters async_dump is true, the parameters summary_mode cannot be md5."
+                )
         return True
 
     def check_model(self, instance, start_model, token_range=None):
@@ -102,7 +106,7 @@ class DebuggerConfig:
         if token_range and not instance.model:
             error_info = "The 'model' parameter must be provided when token_range is not None"
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, error_info)
-        
+
         if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX] and token_range is None:
             return
 
@@ -123,7 +127,7 @@ class DebuggerConfig:
                     break
             if error_model is not None:
                 error_info = (f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] "
-                            f"type, currently there is an unsupported {type(error_model)} type.")
+                              f"type, currently there is an unsupported {type(error_model)} type.")
                 raise MsprobeException(
                     MsprobeException.INVALID_PARAM_ERROR, error_info)
         else:
