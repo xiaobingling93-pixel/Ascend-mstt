@@ -23,7 +23,7 @@ o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.i
            'torch.float32', 'torch.float32', [2, 2], [2, 2],
            'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
            1, 1, 1, 1, 1, 1, 1, 1,
-           'None', 'No bench data matched.', ['-1', '-1']]]
+           'None', 'NPU does not have data file.', ['-1', '-1']]]
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
 result_df = pd.DataFrame(data, columns=columns)
 o_result = pd.DataFrame(o_data, columns=columns)
@@ -160,7 +160,7 @@ class TestCompareRealData(unittest.TestCase):
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', 'No bench data matched.'])
+                                  'unsupported', 'NPU does not have data file.'])
 
         pt_name = 'Functional.linear.0.forward.input.0.pt'
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
@@ -173,7 +173,7 @@ class TestCompareRealData(unittest.TestCase):
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, [1.0, 0.0, 0.0, 0.0, 1.0, 1.0, ''])
 
-    def test_compare_by_op_bench_na(self):
+    def test_compare_by_op_bench_no_npu_real_data(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
         bench_op_name = 'N/A'
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
@@ -186,7 +186,7 @@ class TestCompareRealData(unittest.TestCase):
 
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', 'No bench data matched.'])
+                                  'unsupported', 'NPU does not have data file.'])
 
     def test_compare_ops(self):
         generate_dump_json(base_dir3)
@@ -221,7 +221,7 @@ class TestCompareRealData(unittest.TestCase):
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                    'torch.float32', 'torch.float32', [2, 2], [2, 2],
                    'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                   1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', ['-1', '-1']]]
+                   1, 1, 1, 1, 1, 1, 1, 1, 'None', 'NPU does not have data file.', ['-1', '-1']]]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
         o_result = pd.DataFrame(o_data, columns=columns)

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.log import logger
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
 from msprobe.pytorch.compare.utils import read_pt_data
 
@@ -24,10 +26,21 @@ def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tup
 
 
 def compare(input_param, output_path, **kwargs):
+    if not isinstance(input_param, dict):
+        logger.error("input_param should be dict, please check!")
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     config = setup_comparison(input_param, output_path, **kwargs)
 
-    mode_config = ModeConfig(config.stack_mode, config.auto_analyze, config.fuzzy_match,
-                             config.dump_mode, config.compared_file_type)
+    config_dict = {
+        'stack_mode': config.stack_mode,
+        'auto_analyze': config.auto_analyze,
+        'fuzzy_match': config.fuzzy_match,
+        'highlight': config.highlight,
+        'dump_mode': config.dump_mode,
+        'first_diff_analyze': config.first_diff_analyze,
+        'compared_file_type': config.compared_file_type
+    }
+    mode_config = ModeConfig(**config_dict)
     mapping_config = MappingConfig(data_mapping=config.data_mapping)
     pt_comparator = Comparator(read_real_data, mode_config, mapping_config)
     pt_comparator.compare_core(input_param, output_path, suffix=config.suffix)

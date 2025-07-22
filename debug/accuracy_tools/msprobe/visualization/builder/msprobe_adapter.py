@@ -54,7 +54,13 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
         framework: 框架类型, pytorch或mindspore
         is_cross_frame: 是否进行跨框架比对，仅支持mindspore比pytorch, 其中pytorch为标杆
     """
-    mode_config = ModeConfig(stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=Const.ALL)
+    config_dict = {
+        'stack_mode': False,
+        'auto_analyze': True,
+        'fuzzy_match': False,
+        'dump_mode': Const.ALL
+    }
+    mode_config = ModeConfig(**config_dict)
 
     if framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import read_real_data

@@ -168,8 +168,13 @@ class GraphMSComparator:
         self.output_path = output_path
         self.base_npu_path = input_param.get('npu_path', None)
         self.base_bench_path = input_param.get('bench_path', None)
-        self.rank_list = [convert_to_int(rank_id) for rank_id in input_param.get('rank_id', [])]
-        self.step_list = [convert_to_int(step_id) for step_id in input_param.get('step_id', [])]
+        rank_id_list = input_param.get('rank_id', [])
+        step_id_list = input_param.get('step_id', [])
+        if not isinstance(rank_id_list, list) or not isinstance(step_id_list, list):
+            logger.error("'rank_id' and 'step_id' should both be lists, please check!")
+            raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+        self.rank_list = [convert_to_int(rank_id) for rank_id in rank_id_list]
+        self.step_list = [convert_to_int(step_id) for step_id in step_id_list]
         # split by rank and step, generate rank step path
         self.npu_rank_step_dict = self.generate_rank_step_path(self.base_npu_path)
         self.bench_rank_step_dict = self.generate_rank_step_path(self.base_bench_path)

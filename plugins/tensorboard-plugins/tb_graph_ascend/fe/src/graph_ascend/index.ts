@@ -59,6 +59,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 unmatched="[[unmatched]]"
                 matchedlist="[[matchedlist]]"
                 minimap-vis="{{minimapVis}}"
+                is-sync-expand="{{isSyncExpand}}"
                 is-single-graph="{{isSingleGraph}}"
                 task="[[task]]"
                 is-overflow-filter="{{isOverflowFilter}}"
@@ -73,6 +74,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                         selected-node="{{selectedNode}}"
                         highlighted-node="{{_highlightedNode}}"
                         minimap-vis="[[minimapVis]]"
+                        is-sync-expand="{{isSyncExpand}}"
                         is-single-graph="[[isSingleGraph]]"
                         is-overflow-filter="{{isOverflowFilter}}"
                     ></graph-board>

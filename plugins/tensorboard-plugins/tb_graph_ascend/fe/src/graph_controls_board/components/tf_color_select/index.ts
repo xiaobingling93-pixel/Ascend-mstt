@@ -150,6 +150,20 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           left: 2px;
         }
 
+        .search-number{
+          display: inline-block;
+          width: 80px;
+          height: 14px;
+          background-color: #fff;
+          font-size: 14px;
+          color: red;
+          font-weight: bold;
+          position: relative;
+          top: 30px;
+          left: 114px;
+          z-index: 10;
+        }
+
         /* Vaadin 组合框样式 */
         vaadin-combo-box {
           flex: 1;
@@ -206,6 +220,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                     </div>
                   </template>
                 </div>
+                <span class="search-number">([[precisionmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
                     label="符合精度误差节点([[precisionmenu.length]])"
@@ -231,9 +246,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                     </div>
                   </div>
                 </template>
+                <span class="search-number">([[precisionmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
-                    label="溢出筛选节点([[overflowmenu.length]])"
+                    label="符合溢出筛选节点([[overflowmenu.length]])"
                     items="[[overflowmenu]]"
                     selected-value="{{selectedOverflowNode}}"
                     on-select-change="[[_observeOverFlowNode]]"
@@ -788,6 +804,13 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         const screenStr = fetchPbTxt(screenPath);
         const precisionmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
         this.set('precisionmenu', precisionmenu);
+        // 更新数据绑定
+        this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
+        // 清除精度筛选输入框
+        this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
+        setTimeout(() => {
+          this._observePrecsionNode();
+        }, 200)
       } catch (e) {
         Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
           position: 'middle',
@@ -795,10 +818,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           theme: 'error',
         });
       }
-      // 更新数据绑定
-      this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
-      // 清除精度筛选输入框
-      this.set('selectedPrecisionNode', '');
+
     } else {
       if (overflowCheckbox.checked) {
         this.overflowLevel.push(item[1]); // 添加选中的颜色
@@ -837,6 +857,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
 
   _observePrecsionNode = () => {
+    if (!this.selectedPrecisionNode) {
+      return;
+    }
     let prefix = NPU_PREFIX;
     const node = prefix + this.selectedPrecisionNode;
     this.set('selectedNode', node);
