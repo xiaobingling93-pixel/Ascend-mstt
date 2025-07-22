@@ -727,6 +727,7 @@ class CalcStatsDiff:
         condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
         result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
         result_df.loc[condition_no_bench, CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
+        condition_req_grad_consist = result_df[CompareConst.NPU_REQ_GRAD] == result_df[CompareConst.BENCH_REQ_GRAD]
 
         if self.mode_config.dump_mode == Const.MD5:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
@@ -740,14 +741,16 @@ class CalcStatsDiff:
             warning_flag = pd.DataFrame(warning_list).any()
             result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
-            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
+            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy. '
+            result_df.loc[~condition_req_grad_consist, CompareConst.ERROR_MESSAGE] += 'Requires_grad inconsistent. '
         else:
             fill_cols = [CompareConst.COSINE, CompareConst.EUC_DIST,
                          CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
                          CompareConst.ERROR_MESSAGE]
-            result_df.loc[~condition_no_bench, fill_cols] = ''
+            result_df.loc[~condition_no_bench, fill_cols] = ''  # 默认填充'', df默认省缺值为nan，不便后续处理，容易出现意外情况
             result_df.loc[~condition_no_bench, CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
+            result_df.loc[~condition_req_grad_consist, CompareConst.ERROR_MESSAGE] = 'Requires_grad inconsistent. '
 
         return result_df[header]
 

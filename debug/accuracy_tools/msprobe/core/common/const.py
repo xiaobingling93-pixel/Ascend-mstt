@@ -359,22 +359,22 @@ class Const:
     }
 
     def _fused_adamw_(
-        self,
-        grads,
-        exp_avgs,
-        exp_avg_sqs,
-        max_exp_avg_sqs,
-        state_steps,
-        *,
-        lr,
-        beta1,
-        beta2,
-        weight_decay,
-        eps,
-        amsgrad,
-        maximize,
-        grad_scale=None,
-        found_inf=None
+            self,
+            grads,
+            exp_avgs,
+            exp_avg_sqs,
+            max_exp_avg_sqs,
+            state_steps,
+            *,
+            lr,
+            beta1,
+            beta2,
+            weight_decay,
+            eps,
+            amsgrad,
+            maximize,
+            grad_scale=None,
+            found_inf=None
     ):
         pass
 
@@ -492,29 +492,21 @@ class CompareConst:
 
     ULP_ERR_STATUS = "ulp_err_status"
 
-    COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_REQ_GRAD, BENCH_REQ_GRAD,
-        COSINE, EUC_DIST, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
-        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM,
-        REQ_GRAD_CONSIST,
-        ACCURACY, ERROR_MESSAGE
-    ]
+    ALL_COMPARE_INDEX = [COSINE, EUC_DIST, MAX_ABS_ERR, MAX_RELATIVE_ERR,
+                         ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO]
+    SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
+                             MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
+    MD5_COMPARE_INDEX = [RESULT]
 
-    SUMMARY_COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_REQ_GRAD, BENCH_REQ_GRAD,
-        MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
-        MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR,
-        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM,
-        REQ_GRAD_CONSIST,
-        RESULT, ERROR_MESSAGE
-    ]
+    BASIC_INFO = [NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_REQ_GRAD, BENCH_REQ_GRAD]
+    SUMMARY_INFO = [NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM]
 
-    MD5_COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_REQ_GRAD, BENCH_REQ_GRAD,
-        NPU_MD5, BENCH_MD5,
-        REQ_GRAD_CONSIST,
-        RESULT
-    ]
+    COMPARE_RESULT_HEADER = BASIC_INFO + ALL_COMPARE_INDEX + SUMMARY_INFO + [REQ_GRAD_CONSIST, ACCURACY, ERROR_MESSAGE]
+
+    SUMMARY_COMPARE_RESULT_HEADER = BASIC_INFO + SUMMARY_COMPARE_INDEX + SUMMARY_INFO + [REQ_GRAD_CONSIST, RESULT,
+                                                                                         ERROR_MESSAGE]
+
+    MD5_COMPARE_RESULT_HEADER = BASIC_INFO + [NPU_MD5, BENCH_MD5, REQ_GRAD_CONSIST] + MD5_COMPARE_INDEX
 
     COMPARE_RESULT_HEADER_STACK = COMPARE_RESULT_HEADER + [STACK]
 
@@ -527,11 +519,6 @@ class CompareConst:
         Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
         Const.MD5: MD5_COMPARE_RESULT_HEADER
     }
-
-    ALL_COMPARE_INDEX = [COSINE, EUC_DIST, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO,
-                         FIVE_THOUSANDTHS_ERR_RATIO]
-    SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
-                             MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
 
     # dtype match
 
@@ -602,7 +589,6 @@ class CompareConst:
 
     # error message
     NO_BENCH = "No bench data matched."
-
 
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]

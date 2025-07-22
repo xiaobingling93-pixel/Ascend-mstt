@@ -352,7 +352,7 @@ class TestUtilsMethods(unittest.TestCase):
             'stack_info': [['File']],
             'summary': [[1, 1, 1, 1]],
             'state': ['input'],
-            'requires_grad': [False]
+            'requires_grad': ['False']
         }
 
         config_dict = {
@@ -400,7 +400,7 @@ class TestUtilsMethods(unittest.TestCase):
         result = comparator.compare_statistics(file_list)
         o_data = [
             ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-             'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', False, False,
+             'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', 'False', 'False',
              0, 0, 0, 0, '0.0%', 'N/A', '0.0%', '0.0%', 2, 0, 1, 1, 2, 0, 1, 1,
              True, '', '', ['File'], 'input', 'Functional.linear.0.forward'
              ]
@@ -435,7 +435,7 @@ class TestParseData(unittest.TestCase):
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
-              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', False]],
+              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False']],
             columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad']
         )
         self.assertTrue(npu_df.equals(target_df))
@@ -454,7 +454,7 @@ class TestParseData(unittest.TestCase):
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32',
-              [2, 2], [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', False]],
+              [2, 2], [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False']],
             columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad']
         )
         self.assertTrue(npu_df.equals(target_df))
@@ -472,7 +472,7 @@ class TestParseData(unittest.TestCase):
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
-              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', False, 'Functional.linear.0.forward.input.0.pt']],
+              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False', 'Functional.linear.0.forward.input.0.pt']],
             columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad', 'data_name']
         )
         self.assertTrue(npu_df.equals(target_df))
@@ -490,7 +490,7 @@ class TestParseData(unittest.TestCase):
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
-              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', False, 123456]],
+              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False', 123456]],
             columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad', 'md5']
         )
         self.assertTrue(npu_df.equals(target_df))
@@ -516,7 +516,7 @@ class TestParseData(unittest.TestCase):
             'stack_info': [['File']],
             'summary': [[2, 0, 1, 1]],
             'state': ['input'],
-            'requires_grad': [False]
+            'requires_grad': ['False']
         }
         self.assertEqual(merge_list, target_dict)
 

@@ -131,7 +131,7 @@ def format_node_data(data_dict, node_id=None, compare_mode=None):
     """
     删除节点数据中不需要展示的字段
     """
-    del_list = ['requires_grad', 'full_op_name']
+    del_list = ['state', 'full_op_name']
     if GraphConst.MD5_COMPARE != compare_mode:
         del_list.append(Const.MD5)
     if node_id and GraphConst.BATCH_P2P in node_id:

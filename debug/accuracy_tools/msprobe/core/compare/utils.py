@@ -535,6 +535,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                                                                                   bench_summary_data, err_msg)
 
             result_item.append(req_grad_consist)
+            err_msg += "Requires_grad inconsistent." if not req_grad_consist else ""
             result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
             result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)

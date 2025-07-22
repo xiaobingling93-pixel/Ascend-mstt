@@ -21,19 +21,19 @@ from msprobe.core.compare.utils import ApiBatch
 
 summary_line_input = ['Functional_batch_norm_0_forward.input.0', 'Functional_batch_norm_0_forward.input.0',
                       'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-                      0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1,
+                      0.01, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%', 1, 1, 1, 1, 1.01, 1, 1, 1,
                       True, 'Yes', '']
 summary_line_1 = ['Functional_batch_norm_0_forward.output.0', 'Functional_batch_norm_0_forward.output.0',
                   'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-                  10, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
+                  10, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%', 2, 0, 1, 1, 1, 1, 1, 1,
                   True, 'Warning', '']
 summary_line_2 = ['Functional_batch_norm_0_forward.output.1', 'Functional_batch_norm_0_forward.output.1',
                   'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-                  0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1,
+                  0.02, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%', 0.12, 0, 1, 1, 0.1, 1, 1, 1,
                   True, 'Warning', '']
 summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_norm_0_forward.output.2',
                   'torch.float16', 'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-                  0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1,
+                  0, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%', 2, 0, 1, 1, 1, 1, 1, 1,
                   True, 'Warning', '']
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
               'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
@@ -214,17 +214,21 @@ class TestUtilsMethods(unittest.TestCase):
     def test_find_error_rows_normal(self):
         compare_result = np.array([
             ["Functional.linear.0.forward.input.0", "Functional.linear.0.forward.input.0",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 'True', 'True',
+             0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, True, "", ""],
             ["Functional.linear.0.forward.input.1", "Functional.linear.0.forward.input.1",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 'True', 'True',
+             0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, True, "", ""],
             ["Functional.linear.0.forward.input.2", "Functional.linear.0.forward.input.2",
-             "torch.float32", "torch.float32", [2], [2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+             "torch.float32", "torch.float32", [2], [2], 'True', 'True',
+             0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, True, "", ""],
             ["Functional.linear.0.forward.output.0", "Functional.linear.0.forward.output.0",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
-             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 'True', 'True',
+             0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, True, "", ""],
         ], dtype=object)
         api_batch = ApiBatch("Functional.linear.0.forward", 0)
         api_batch.input_len = 3
