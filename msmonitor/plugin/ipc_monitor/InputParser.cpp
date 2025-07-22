@@ -61,7 +61,7 @@ std::set<msptiActivityKind> str2Kinds(const std::string& kindStrs)
 
 MsptiMonitorCfg InputParser::DynoLogGetOpts(std::unordered_map<std::string, std::string>& cmd)
 {
-    if (cmd.count("NPU_MONITOR_SRART")) {
+    if (!cmd.count(NPU_MONITOR_START_KEY)) {
         return {{MSPTI_ACTIVITY_KIND_INVALID}, 0, false, false, false};
     }
     auto activityKinds = str2Kinds(cmd[MSPTI_ACTIVITY_KIND_KEY]);
