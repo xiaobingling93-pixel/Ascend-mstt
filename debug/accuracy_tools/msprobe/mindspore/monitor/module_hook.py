@@ -76,7 +76,8 @@ def param_is_data_parallel_duplicate(dp_group):
 
 
 def squash_param_name(param_name):
-    for pattern in ['layers?\.(.*)', 'embeddings?\.(.*)', 'final.*', 'output.*', 'norm.*']:
+    for pattern in ['^.*\.(layers?\..*)', '^.*\.(embeddings?\..*)', '^.*\.(final.*)', '^.*\.(output.*)',
+                    '^.*\.(norm.*)']:
         match = re.findall(pattern, param_name)
         if match:
             return match[0]

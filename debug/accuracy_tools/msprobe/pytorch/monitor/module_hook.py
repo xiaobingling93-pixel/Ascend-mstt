@@ -870,14 +870,11 @@ class TrainerMon:
             logger.info(msg)
 
     def _save_module_struct(self):
-        save_module_struct = (not dist.is_initialized()
-                              or (self.module_rank_list and dist.get_rank() == min(self.module_rank_list))
-                              or (not self.module_rank_list and dist.get_rank() == 0))
-
-        if save_module_struct:
-            module_struct_file = os.path.realpath(os.path.join(get_output_base_dir(), 'module_struct.json'))
-            save_json(module_struct_file, self.module_struct, indent=2)
-            logger.info(f"> save module struct to {module_struct_file}")
+        output_dir = os.path.join(get_output_base_dir(), 'module_struct', f'rank{self.rank}')
+        os.makedirs(output_dir, exist_ok=True)
+        module_struct_file = os.path.realpath(os.path.join(output_dir, 'module_struct.json'))
+        save_json(module_struct_file, self.module_struct, indent=2)
+        logger.info(f"> save module struct to {module_struct_file}")
         self.struct_printed = True
 
     def _is_target_param(self, param_name, param, prefix):
