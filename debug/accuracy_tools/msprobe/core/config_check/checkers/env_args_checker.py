@@ -21,7 +21,7 @@ import pandas as pd
 from msprobe.core.common.file_utils import load_json, load_yaml, create_file_with_content, create_file_in_zip
 from msprobe.core.config_check.checkers.base_checker import BaseChecker
 from msprobe.core.config_check.config_checker import register_checker_item
-from msprobe.core.config_check.utils.utils import config_checking_print
+from msprobe.core.config_check.utils.utils import config_checking_print, process_pass_check
 from msprobe.core.common.const import Const
 
 
@@ -59,17 +59,17 @@ def compare_env_data(npu_path, bench_path):
             cmp_env_name = cmp_env["name"]
             cmp_value = cmp_data.get(cmp_env_name, value[cmp_type]["default_value"])
             if not bench_env:
-                data.append(["only cmp has this env", cmp_env["name"], "", cmp_value, "warning"])
+                data.append(["only cmp has this env", cmp_env["name"], "", cmp_value, Const.CONFIG_CHECK_WARNING])
                 continue
             bench_env_name = bench_env["name"]
             bench_value = bench_data.get(bench_env_name, value[bench_type]["default_value"])
             if cmp_value != bench_value:
-                data.append([bench_env_name, cmp_env_name, bench_value, cmp_value, "error"])
+                data.append([bench_env_name, cmp_env_name, bench_value, cmp_value, Const.CONFIG_CHECK_ERROR])
         else:
             bench_env_name = bench_env["name"]
             bench_value = bench_data.get(bench_env_name) if bench_data.get(bench_env_name) else value[bench_type][
                 "default_value"]
-            data.append([bench_env_name, "only bench has this env", bench_value, "", "warning"])
+            data.append([bench_env_name, "only bench has this env", bench_value, "", Const.CONFIG_CHECK_WARNING])
     df = pd.DataFrame(data, columns=EnvArgsChecker.result_header)
     return df
 
@@ -92,5 +92,5 @@ class EnvArgsChecker(BaseChecker):
         bench_env_data = os.path.join(bench_dir, EnvArgsChecker.target_name_in_zip)
         cmp_env_data = os.path.join(cmp_dir, EnvArgsChecker.target_name_in_zip)
         df = compare_env_data(bench_env_data, cmp_env_data)
-        pass_check = "error" not in df['level'].values
+        pass_check = process_pass_check(df['level'].values)
         return EnvArgsChecker.target_name_in_zip, pass_check, df

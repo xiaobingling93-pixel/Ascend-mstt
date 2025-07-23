@@ -23,7 +23,7 @@ import pandas as pd
 from msprobe.core.common.utils import check_extern_input_list
 from msprobe.core.config_check.checkers.base_checker import BaseChecker
 from msprobe.core.config_check.config_checker import register_checker_item
-from msprobe.core.config_check.utils.utils import compare_dict, config_checking_print, update_dict
+from msprobe.core.config_check.utils.utils import compare_dict, config_checking_print, update_dict, process_pass_check
 from msprobe.core.config_check.utils.hyperparameter_parser import ParserFactory
 from msprobe.core.common.file_utils import (check_file_or_directory_path, create_file_in_zip, load_json,
                                             load_yaml)
@@ -86,7 +86,7 @@ class HyperparameterChecker(BaseChecker):
                 all_diffs.extend(
                     HyperparameterChecker.compare_param(bench_hyperparameters, cmp_hyperparameters, file_name))
         df = pd.DataFrame(all_diffs, columns=HyperparameterChecker.result_header)
-        pass_check = "error" not in df["level"].values
+        pass_check = process_pass_check(df["level"].values)
         return HyperparameterChecker.target_name_in_zip, pass_check, df
 
     @staticmethod
@@ -102,13 +102,15 @@ class HyperparameterChecker(BaseChecker):
                 if bench_param_value != cmp_param_value:
                     all_diffs.append(
                         [file_name, bench_param_name, matched_cmp_param_name, bench_param_value, cmp_param_value,
-                         matched_with, "error"])
+                         matched_with, Const.CONFIG_CHECK_ERROR])
                 del cmp_params[matched_cmp_param_name]
             else:
                 all_diffs.append(
-                    [file_name, bench_param_name, "Only in benchmark", bench_param_value, "", "", "warning"])
+                    [file_name, bench_param_name, "Only in benchmark", bench_param_value, "", "",
+                     Const.CONFIG_CHECK_WARNING])
         for cmp_param_name, cmp_param_value in cmp_params.items():
-            all_diffs.append([file_name, "Only in comparison", cmp_param_name, "", cmp_param_value, "", "warning"])
+            all_diffs.append(
+                [file_name, "Only in comparison", cmp_param_name, "", cmp_param_value, "", Const.CONFIG_CHECK_WARNING])
         all_diffs.sort()
         return all_diffs
 
