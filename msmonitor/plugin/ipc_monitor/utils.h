@@ -23,6 +23,7 @@
 #include <utility>
 #include <unordered_map>
 #include <sys/types.h>
+#include <memory>
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -75,6 +76,20 @@ inline T ReinterpretConvert(V ptr)
 {
     return reinterpret_cast<T>(ptr);
 }
+
+template<typename Types, typename... Args>
+inline void MakeSharedPtr(std::shared_ptr<Types>& ptr, Args&&... args)
+{
+    try {
+        ptr = std::make_shared<Types>(std::forward<Args>(args)...);
+    } catch(std::bad_alloc& e) {
+        throw;
+    } catch (...) {
+        ptr = nullptr;
+        return;
+    }
+}
+
 template <typename Container, typename KeyFunc>
 auto groupby(const Container& vec, KeyFunc keyFunc)
 {

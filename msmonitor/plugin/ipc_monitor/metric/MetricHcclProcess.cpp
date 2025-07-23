@@ -35,15 +35,15 @@ std::string HcclMetric::seriesToJson()
 void MetricHcclProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityHccl* hcclData = ReinterpretConvert<msptiActivityHccl*>(record);
-    msptiActivityHccl* tmp = ReinterpretConvert<msptiActivityHccl*>(MsptiMalloc(sizeof(msptiActivityHccl), ALIGN_SIZE));
-    if (tmp == nullptr || memcpy_s(tmp, sizeof(msptiActivityHccl), hcclData, sizeof(msptiActivityHccl)) != EOK) {
-        MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
-        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+    std::shared_ptr<msptiActivityHccl> tmp;
+    MakeSharedPtr(tmp);
+    if (tmp == nullptr || memcpy_s(tmp.get(), sizeof(msptiActivityHccl), hcclData, sizeof(msptiActivityHccl)) != EOK) {
+        LOG(ERROR) << "memcpy_s failed " << IPC_ERROR(ErrCode::MEMORY);
         return;
     }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
-        records.emplace_back(tmp);
+        records.emplace_back(std::move(tmp));
     }
 }
 

@@ -56,13 +56,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
     """判断数据是否有异常并返回异常的n_value, b_value，同时返回error_flag和error_msg"""
     err_msg = ""
     if error_flag:
-        if error_file == "no_bench_data":
-            err_msg = "Bench does not have data file."
-        elif error_file:
-            err_msg = f"Dump file: {error_file} not found or read failed."
-        else:
-            err_msg = CompareConst.NO_BENCH
-        error_flag = True
+        err_msg = f"Dump file: {error_file} not found or read failed."
         return CompareConst.READ_NONE, CompareConst.READ_NONE, error_flag, err_msg
 
     if n_value.size == 0:  # 判断读取到的数据是否为空
@@ -290,7 +284,8 @@ class CompareOps:
 
 
 def error_value_process(n_value):
-    if n_value in [CompareConst.READ_NONE, CompareConst.UNREADABLE, CompareConst.NONE]:
+    if n_value in [CompareConst.READ_NONE, CompareConst.UNREADABLE, CompareConst.NONE,
+                   CompareConst.NO_REAL_DATA, CompareConst.API_UNMATCH]:
         return CompareConst.UNSUPPORTED, ""
     if n_value == CompareConst.SHAPE_UNMATCH:
         return CompareConst.SHAPE_UNMATCH, ""
@@ -304,7 +299,7 @@ def compare_ops_apply(n_value, b_value, error_flag, err_msg):
     if error_flag:
         result, msg = error_value_process(n_value)
         result_list = [result] * len(CompareOps.compare_ops)
-        err_msg += msg * len(CompareOps.compare_ops)
+        err_msg += msg
         return result_list, err_msg
 
     relative_err = get_relative_err(n_value, b_value)

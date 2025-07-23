@@ -38,7 +38,7 @@ class TestMatchNodesController:
                              ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_process_task_delete(self, test_case):
         """测试删除节点功能"""
-        if(test_case.get('config', None)):
+        if test_case.get('config', None):
             GraphState.set_global_value("config_data", test_case['config'])
         graph_data, npu_node_name, bench_node_name, task = test_case['input'].values()
         expected = test_case['expected']
@@ -58,7 +58,7 @@ class TestMatchNodesController:
                              ids=lambda c: f"{c['case_id']}:{c['description']}")
     def test_process_task_delete_child_layer(self, test_case):
         """测试删除子节点层功能"""
-        if(test_case.get('config', None)):
+        if test_case.get('config', None):
             GraphState.set_global_value("config_data", test_case['config'])
         graph_data, npu_node_name, bench_node_name, task = test_case['input'].values()
         excepted = test_case['expected']

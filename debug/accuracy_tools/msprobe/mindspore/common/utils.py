@@ -97,6 +97,9 @@ def save_tensor_as_npy(tensor, file_path):
 
 
 def convert_to_int(value):
+    if isinstance(value, bool):
+        logger.error('The value in rank_id or step should be int, please check!')
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     try:
         return int(value)
     except Exception:

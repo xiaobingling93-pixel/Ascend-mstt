@@ -82,6 +82,8 @@ class MsprobeBaseException(Exception):
     INVALID_STATE_ERROR = 35
     INVALID_API_NAME_ERROR = 36
     CROSS_FRAME_ERROR = 37
+    MISSING_THRESHOLD_ERROR = 38
+    WRONG_THRESHOLD_ERROR = 38
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -231,9 +233,10 @@ def check_compare_param(input_param, output_path, dump_mode, stack_mode):
             _check_json(stack_json, input_param.get("stack_json_path"))
 
 
-def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, is_print_compare_log=True):
-    arg_list = [stack_mode, auto_analyze, fuzzy_match, is_print_compare_log]
-    arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match', 'is_print_compare_log']
+def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, highlight=False,
+                              is_print_compare_log=True):
+    arg_list = [stack_mode, auto_analyze, fuzzy_match, highlight, is_print_compare_log]
+    arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match', 'highlight', 'is_print_compare_log']
     for arg, name in zip(arg_list, arg_names):
         if not isinstance(arg, bool):
             logger.error(f"Invalid input parameter, {name} which should be only bool type.")
@@ -281,6 +284,10 @@ def add_time_as_suffix(name):
 
 def add_time_with_xlsx(name):
     return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+
+
+def add_time_with_json(name):
+    return '{}_{}.json'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
 def add_time_with_yaml(name):
@@ -700,4 +707,3 @@ def check_process_num(process_num):
         raise ValueError(f"process_num({process_num}) is not a positive integer")
     if process_num > Const.MAX_PROCESS_NUM:
         raise ValueError(f"The maximum supported process_num is {Const.MAX_PROCESS_NUM}, current value: {process_num}.")
-

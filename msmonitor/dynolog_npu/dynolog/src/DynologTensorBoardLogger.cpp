@@ -38,12 +38,10 @@ DynologTensorBoardLogger::DynologTensorBoardLogger(const std::string& metric_log
     : logPath_(metric_log_dir)
 {
     if (!validateLogDir(logPath_)) {
-        std::runtime_error("Unable to record logs in the target folder");
+        throw std::runtime_error("Unable to record logs in the target folder");
     }
-  
-    // logger = std::make_unique<TensorBoardLogger>(FLAGS_metric_log_dir);
-    LOG(INFO) << "Initialized tensorboard logger on = "
-              << FLAGS_metric_log_dir;
+
+    LOG(INFO) << "Initialized tensorboard logger on = " << logPath_;
 }
 
 void DynologTensorBoardLogger::finalize()
@@ -64,6 +62,19 @@ void DynologTensorBoardLogger::finalize()
 bool DynologTensorBoardLogger::validateLogDir(const std::string& path)
 {
     std::filesystem::path log_path(path);
+
+    static const std::unordered_map<std::string, std::string> INVALID_CHAR = {
+        {"\n", "\\n"}, {"\f", "\\f"}, {"\r", "\\r"}, {"\b", "\\b"}, {"\t", "\\t"},
+        {"\v", "\\v"}, {"\u007F", "\\u007F"}, {"\"", "\\\""}, {"'", "\'"},
+        {"\\", "\\\\"}, {"%", "\\%"}, {">", "\\>"}, {"<", "\\<"}, {"|", "\\|"},
+        {"&", "\\&"}, {"$", "\\$"}, {";", "\\;"}, {"`", "\\`"}
+    };
+    for (auto &item: INVALID_CHAR) {
+        if (path.find(item.first) != std::string::npos) {
+            LOG(ERROR) << "The path contains invalid character: " << item.second;
+            return false;
+        }
+    }
 
     if (!std::filesystem::exists(log_path)) {
         LOG(ERROR) << "Error: Path does not exist: " << path;

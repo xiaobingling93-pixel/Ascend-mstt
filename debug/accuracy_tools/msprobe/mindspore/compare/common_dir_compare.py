@@ -30,9 +30,10 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import check_file_or_directory_path, write_df_to_csv, create_directory, \
                                            check_path_before_create, load_npy
-from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply
 from msprobe.core.compare.multiprocessing_compute import check_accuracy
+from msprobe.mindspore.compare.utils import check_name_map_dict
 
 
 def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataFrame]:
@@ -49,6 +50,7 @@ def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataF
     npu_root = Path(input_params.get('npu_path'))
     bench_root = Path(input_params.get('bench_path'))
     name_map_dict = input_params.get('map_dict', {})
+    check_name_map_dict(name_map_dict)
     file_tree = build_mirror_file_tree(npu_root, bench_root)
     
     # 处理文件比对
@@ -152,21 +154,34 @@ def find_npy_files(directory):
             dirs.clear()
         for file in files:
             if file.endswith(".npy"):
-                # 分割文件名并去掉最后两个元素
-                file_name = file.split('_')
-                if len(file_name) < 2:
+                # 正确移除文件扩展名
+                base_name = os.path.splitext(file)
+                if not base_name or len(base_name) < 1:
+                    logger.warning("Invalid file encountered.")
                     continue
-                key = '_'.join(file_name[:-2])
-                # 文件的完整路径
-                value = os.path.join(root, file)
-                # 添加到字典中
-                if not npy_files_dict.get(key):
-                    npy_files_dict[key] = []
-                npy_files_dict[key].append(value)
+                file_name = base_name[0]
+
+                logger.info(f"Generating file info for file: {file}")
+                
+                # 使用一致的分割逻辑
+                file_ele = file_name.split('_')
+                
+                if len(file_ele) < 2:
+                    continue
+                    
+                key = '_'.join(file_ele[:-2])
+                if key:
+                    # 文件的完整路径
+                    value = os.path.join(root, file)
+                    # 添加到字典中
+                    if key not in npy_files_dict:
+                        npy_files_dict[key] = []
+                    npy_files_dict[key].append(value)
     return npy_files_dict
 
 
 def generate_map_dict(npu_file_dict, bench_file_dict, name_map_dict=None):
+    result_dict = {}
     for k, npu_file_list in npu_file_dict.items():
         bench_file_list = bench_file_dict.get(k)
         if not bench_file_list and k in name_map_dict:
@@ -174,7 +189,6 @@ def generate_map_dict(npu_file_dict, bench_file_dict, name_map_dict=None):
         bench_length = len(bench_file_list)
         if not (bench_file_list and bench_length):
             continue
-        result_dict = {}
         for i, npu_file in enumerate(npu_file_list):
             if i >= bench_length:
                 break
