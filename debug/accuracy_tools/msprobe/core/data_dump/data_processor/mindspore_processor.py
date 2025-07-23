@@ -66,52 +66,6 @@ class MindsporeDataProcessor(BaseDataProcessor):
         return {"type": "mindspore.dtype", "value": str(element)}
 
     @staticmethod
-    def get_stat_info_sync(data):
-        tensor_stat = TensorStatInfo()
-        if data.dtype == ms.bool_:
-            data_np = data.asnumpy()
-            tensor_stat.max = np.max(data_np).item()
-            tensor_stat.min = np.min(data_np).item()
-        elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.copy()
-        elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
-            data_abs = np.abs(data.asnumpy())
-            tensor_stat.max = np.max(data_abs).item()
-            tensor_stat.min = np.min(data_abs).item()
-            tensor_stat.mean = np.mean(data_abs).item()
-            tensor_stat.norm = np.linalg.norm(data_abs).item()
-        else:
-            if not ops.is_floating_point(data) or data.dtype == ms.float64:
-                data = data.to(ms.float32)
-            get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
-            tensor_stat.max = mint.max(data)
-            tensor_stat.min = mint.min(data)
-            tensor_stat.mean = mint.mean(data)
-            tensor_stat.norm = get_norm_value(data)
-        return tensor_stat
-
-    @staticmethod
-    def get_stat_info_async(data):
-        tensor_stat = TensorStatInfo()
-        if data.dtype == ms.bool_:
-            tensor_stat.max = mint.any(data)
-            tensor_stat.min = mint.all(data)
-        elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.copy()
-        elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
-            logger.warning("Async dump do not support complex data!")
-            return tensor_stat
-        else:
-            if not ops.is_floating_point(data) or data.dtype == ms.float64:
-                data = data.to(ms.float32)
-            get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
-            tensor_stat.max = mint.max(data)
-            tensor_stat.min = mint.min(data)
-            tensor_stat.mean = mint.mean(data)
-            tensor_stat.norm = get_norm_value(data)
-        return tensor_stat
-
-    @staticmethod
     def is_hookable_element(element):
         return hasattr(element, "register_hook") and callable(element.register_hook)
 
@@ -147,14 +101,37 @@ class MindsporeDataProcessor(BaseDataProcessor):
         self.api_register.restore_inner_used_api()
         tensor_stat = TensorStatInfo()
         if data.numel() == 0:
-            stat_info = tensor_stat
-        else:
+            pass
+        elif data.dtype == ms.bool_:
             if self.config.async_dump:
-                stat_info = MindsporeDataProcessor.get_stat_info_async(data)
+                tensor_stat.max = mint.any(data)
+                tensor_stat.min = mint.all(data)
             else:
-                stat_info = MindsporeDataProcessor.get_stat_info_sync(data)
+                data_np = data.asnumpy()
+                tensor_stat.max = np.max(data_np).item()
+                tensor_stat.min = np.min(data_np).item()
+        elif not data.shape:
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.copy()
+        elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
+            if self.config.async_dump:
+                logger.warning("Async dump do not support complex data!")
+            else:
+                data_abs = np.abs(data.asnumpy())
+                tensor_stat.max = np.max(data_abs).item()
+                tensor_stat.min = np.min(data_abs).item()
+                tensor_stat.mean = np.mean(data_abs).item()
+                tensor_stat.norm = np.linalg.norm(data_abs).item()
+        else:
+            if self.config.precision == Const.DUMP_PRECISION_HIGH or not ops.is_floating_point(
+                    data) or data.dtype == ms.float64:
+                data = data.to(ms.float32)
+            get_norm_value = mint.norm if hasattr(mint, "norm") else ops.norm
+            tensor_stat.max = mint.max(data)
+            tensor_stat.min = mint.min(data)
+            tensor_stat.mean = mint.mean(data)
+            tensor_stat.norm = get_norm_value(data)
         self.api_register.register_inner_used_api()
-        return stat_info
+        return tensor_stat
 
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.mindspore_object_key:
