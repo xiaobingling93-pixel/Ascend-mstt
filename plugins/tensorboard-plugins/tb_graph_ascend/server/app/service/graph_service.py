@@ -22,6 +22,7 @@ from ..utils.global_state import GraphState
 from ..controllers.match_nodes_controller import MatchNodesController
 from ..controllers.layout_hierarchy_controller import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
+from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 
 logger = tb_logging.get_logger()
 
@@ -232,6 +233,43 @@ class GraphService:
             return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
 
     @staticmethod
+    def update_precision_error(filter_value):
+        try:
+            graph_data = GraphState.get_global_value('current_file_data')
+            npu_node_list = graph_data.get(NPU, {}).get('node', {})
+            for _, node_info in npu_node_list.items():
+                output_statistical_diff = node_info.get('output_data', None)
+                if not node_info.get('matched_node_link'):
+                    continue
+                max_rel_error = -1
+                #  根据filter_value 的选择指标计算新的误差值
+                for _, diff_values in output_statistical_diff.items():
+                    filter_diff_rel = []
+                    if MAX_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('MaxRelativeErr'))
+                    if MIN_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('MinRelativeErr'))
+                    if NORM_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('NormRelativeErr'))
+                    if MEAN_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('MeanRelativeErr'))
+                    # 过滤掉N/A
+                    filter_diff_rel = [x for x in filter_diff_rel if x and x != 'N/A']
+                    # 如果output指标中存在 Nan/inf/-inf, 直接标记为最大值
+                    if "Nan" in filter_diff_rel or "inf" in filter_diff_rel or "-inf" in filter_diff_rel:
+                        max_rel_error = 1
+                        break
+                    filter_diff_rel = [GraphUtils.convert_to_float(x) for x in filter_diff_rel]
+                    max_rel_error_for_key = max(filter_diff_rel) if filter_diff_rel else 0
+                    max_rel_error = max(max_rel_error, max_rel_error_for_key)
+                if max_rel_error != -1:
+                    node_info.setdefault('data', {})['precision_index'] = min(max_rel_error, 1)
+            return {'success': True, 'data': {}}
+        except Exception as e:
+            logger.error('更新精度误差失败:' + str(e))
+            return {'success': False, 'error': str(e)}
+        
+    @staticmethod
     def update_hierarchy_data(graph_type):
         if (graph_type == NPU or graph_type == BENCH):
             hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
@@ -277,7 +315,7 @@ class GraphService:
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                if(is_match_children):
+                if is_match_children:
                     result = MatchNodesController.process_task_add_child_layer(graph_data,
                                                                     npu_node_name, bench_node_name, task)
                     return result
@@ -326,7 +364,7 @@ class GraphService:
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                if(is_unmatch_children):
+                if is_unmatch_children:
                     result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
                                                                               bench_node_name, task)
                 else:

@@ -70,7 +70,7 @@ class TfVaadinTable extends PolymerElement {
         cursor: pointer;
         position: relative;
         right: 58px;
-        bottom: 106px;
+        bottom: 180px;
       }
       .copy-button:hover {
         background: #0056b3;

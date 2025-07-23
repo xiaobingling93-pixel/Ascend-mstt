@@ -80,6 +80,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
             '/saveData': GraphView.save_data,
             '/updateColors': GraphView.update_colors,
             '/saveMatchedRelations': GraphView.save_matched_relations,
+            '/updatePrecisionError': GraphView.update_precision_error,
         }
 
     def is_active(self):

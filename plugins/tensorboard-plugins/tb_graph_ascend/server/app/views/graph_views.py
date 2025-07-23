@@ -93,13 +93,23 @@ class GraphView:
         result = GraphService.load_graph_all_node_list(run, tag, micro_step)
         response = http_util.Respond(request, result, "application/json")
         return response
+    
+    # 更新误差节点
+    @staticmethod
+    @wrappers.Request.application
+    def update_precision_error(request):
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
+        filter_value = data.get("filterValue")
+        result = GraphService.update_precision_error(filter_value)
+        return http_util.Respond(request, result, "application/json")
 
     # 展开关闭节点
     @staticmethod
     @wrappers.Request.application
     def change_node_expand_state(request):
-        node_info = GraphUtils.safe_json_loads(request.args.get("nodeInfo"))
-        meta_data = GraphUtils.safe_json_loads(request.args.get("metaData"))
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
+        node_info = data.get("nodeInfo")
+        meta_data = data.get("metaData")
         hierarchy = GraphService.change_node_expand_state(node_info, meta_data)
         return http_util.Respond(request, json.dumps(hierarchy), "application/json")
 
