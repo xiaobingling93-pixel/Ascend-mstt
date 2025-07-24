@@ -36,6 +36,8 @@ class BaseNode:
         self.overflow_level = None
         self.matched_distributed = {}
         self.batch_p2p_info = []
+        self.rank = 0
+        self.parallel_merge_info = []
 
     def __str__(self):
         info = f'id:\t{self.id}'
@@ -107,6 +109,8 @@ class BaseNode:
         result['data'] = self.data
         if self.matched_distributed:
             result[GraphConst.MATCHED_DISTRIBUTED] = self.matched_distributed
+        if self.parallel_merge_info:
+            result['parallel_merge_info'] = self.parallel_merge_info
         return result
 
     def get_ancestors(self):
