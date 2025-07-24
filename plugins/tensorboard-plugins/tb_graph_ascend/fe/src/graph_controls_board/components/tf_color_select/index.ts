@@ -338,7 +338,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           </template>
         </div>
       </template>
-      <tf-filter-precision-error filter-dialog-opened="{{filterDialogOpened}}"  selection="[[selection]]"/>
+      <tf-filter-precision-error filter-dialog-opened="{{filterDialogOpened}}" update-filter-data="{{updateFilterData}}" selection="[[selection]]"/>
     `;
 
   @property({ type: Boolean })
@@ -487,6 +487,31 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       } else {
         this.set('enableConfig', false);
       }
+    }
+  }
+  // 请求后端接口，更新筛选数据
+  updateFilterData = async () => {
+    if (_.isEmpty(this.selectColor)) {
+      return;
+    }
+    try {
+      const params = {
+        run: this.selection.run,
+        tag: this.selection.tag,
+        microStep: this.selection.microStep,
+        precision_index: this.selectColor.join(','),
+      };
+
+      const precisionmenu = await request({ url: 'screen', method: 'GET', params: params });
+      this.set('precisionmenu', precisionmenu);
+      this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
+    }
+    catch (error) {
+      Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+        position: 'middle',
+        duration: 4000,
+        theme: 'error',
+      });
     }
   }
 

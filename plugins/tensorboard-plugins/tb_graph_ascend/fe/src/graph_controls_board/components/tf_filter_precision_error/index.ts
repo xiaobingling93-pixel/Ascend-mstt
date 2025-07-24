@@ -43,6 +43,9 @@ class TfFilterPrecisionError extends PolymerElement {
     @property({ type: Object })
     selection: any;
 
+    @property({ type: Object })
+    updateFilterData: Function = () => { };
+
     MAX_RELATIVE_ERR = "0";
     MIN_RELATIVE_ERR = "1";
     MEAN_RELATIVE_ERR = "2";
@@ -75,6 +78,7 @@ class TfFilterPrecisionError extends PolymerElement {
             const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
             this.dispatchEvent(updateHierarchyData);
             this.set('filterDialogOpened', false);
+            this.updateFilterData();
         }
         else {
             Notification.show(`精度误差计算错误${error}`, {
