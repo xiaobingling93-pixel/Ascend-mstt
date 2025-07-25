@@ -35,13 +35,15 @@ class GraphComparator:
         self.fuzzy_match = args.fuzzy_match
         self.pattern = re.compile(r'\.\d+\.')
         self.is_cross_framework = is_cross_framework
+        self.parallel_merge = args.parallel_merge if hasattr(args, 'parallel_merge') else False
+        self.rank_pattern = re.compile(r"_rank\d+")
 
     def compare(self):
         """
         比较函数，初始化结束后单独调用。比较结果写入graph_n
         """
         if self.fuzzy_match:
-            self._compare_nodes_fuzzy(self.graph_n.root)
+            self._compare_nodes_fuzzy(self.graph_n.root, False if self.parallel_merge else True)
         else:
             self._compare_nodes(self.graph_n.root)
         self._postcompare()
@@ -98,11 +100,12 @@ class GraphComparator:
         while node_list:
             compare_single_node(node_list.pop(0))
 
-    def _compare_nodes_fuzzy(self, node_root):
+    def _compare_nodes_fuzzy(self, node_root, check_shape=True):
         def compare_single_nodes_fuzzy(node_n):
             if node_n.op != NodeOp.function_api:
                 # 模块经过模糊匹配
-                node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node_n, self.graph_b.node_map.get(node_n.id))
+                node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node_n, self.graph_b.node_map.get(node_n.id),
+                                                                     check_shape)
                 if node_b:
                     self._process_matched_nodes(node_n, node_b, ancestors_n, ancestors_b)
                     # 匹配上的两个模块中的所有api, 忽略dump调用次数，按照名称一致+模块中的调用顺序进行匹配
@@ -113,7 +116,7 @@ class GraphComparator:
                         if not api_node_n:
                             continue
                         api_node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(
-                            api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)))
+                            api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)), check_shape)
                         if api_node_b:
                             self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
             node_list.extend(node_n.subnodes)
@@ -147,21 +150,26 @@ class GraphComparator:
         api集合的指标, md5模式使用集合中所有api最小的指标，statistics和tensor模式使用集合中所有api最大的指标
         md5模式下指标为0代表最差，statistics和tensor模式下指标为1代表最差
         """
+        def handle_api_collection_index(api_collection_node):
+            precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                else GraphConst.MIN_INDEX_KEY
+            for api in api_collection_node.subnodes:
+                precision_index = min(precision_index,
+                                      api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
+                    if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                    else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
+            api_collection_node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+
         for node in self.graph_n.root.subnodes:
-            if node.op == NodeOp.api_collection:
-                precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
-                    else GraphConst.MIN_INDEX_KEY
-                for api in node.subnodes:
-                    precision_index = min(precision_index,
-                                          api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
-                        if self.ma.compare_mode == GraphConst.MD5_COMPARE \
-                        else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
-                node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+            if node.op == NodeOp.api_collection and node.id.startswith(GraphConst.APIS_BETWEEN_MODULES_ALL_RANKS):
+                for sub_node in node.subnodes:
+                    handle_api_collection_index(sub_node)
+                handle_api_collection_index(node)
+            elif node.op == NodeOp.api_collection:
+                handle_api_collection_index(node)
 
     def _get_and_add_result(self, node_n, node_b):
-        compare_result_list = compare_node([node_n.id, node_b.id],
-                                           [self.data_n_dict, self.data_b_dict],
-                                           self.stack_json_data, self.ma.compare_mode)
+        compare_result_list = compare_node(node_n, node_b, self.ma.compare_mode)
         if compare_result_list:
             self.ma.add_csv_data(compare_result_list)
             self.add_compare_result_to_node(node_n, compare_result_list)
@@ -178,6 +186,8 @@ class GraphComparator:
             if sub_node.op == NodeOp.function_api:
                 # 忽略dump调用次数
                 count_removed_id = self.pattern.sub(Const.SEP, sub_node.id)
+                if self.rank_pattern.search(count_removed_id):
+                    count_removed_id = self.rank_pattern.sub('', count_removed_id)
                 node_count[count_removed_id] = node_count.get(count_removed_id, 0) + 1
                 # 赋予模块中的调用顺序
                 recount_node_id = count_removed_id + str(node_count.get(count_removed_id))

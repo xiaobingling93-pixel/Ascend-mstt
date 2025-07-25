@@ -146,31 +146,27 @@ def format_node_data(data_dict, node_id=None, compare_mode=None):
     return data_dict
 
 
-def compare_node(node_ids, data_dicts, stack_json_data, compare_mode):
+def compare_node(node_n, node_b, compare_mode):
     """
     调用acc_compare.py中的get_accuracy获得精度对比指标
     真实数据对比模式无法获得精度对比指标，需要调用多进程比对接口
     Returns: 包含参数信息和对比指标（真实数据对比模式除外）的list
     """
-    merge_n = _parse_node(node_ids[0], data_dicts[0], stack_json_data, compare_mode)
-    merge_b = _parse_node(node_ids[1], data_dicts[1], stack_json_data, compare_mode)
-    result = []
     dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
+    merge_n = _parse_node(node_n, dump_mode)
+    merge_b = _parse_node(node_b, dump_mode)
+    result = []
     get_accuracy(result, merge_n, merge_b, dump_mode)
     return result
 
 
-def _parse_node(node_id, data_dict, stack_json_data, compare_mode):
+def _parse_node(node, dump_mode):
     """
     转换节点，使其能够作为acc_compare.py中的get_accuracy的入参
     """
-    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
-    op_parsed_list = read_op(data_dict.get(node_id, {}), node_id)
-    if node_id in stack_json_data:
-        op_parsed_list.append(
-            {'full_op_name': node_id, 'full_info': stack_json_data[node_id]})
-    else:
-        op_parsed_list.append({'full_op_name': node_id, 'full_info': None})
+    op_parsed_list = []
+    op_parsed_list.extend(node.input_data.values())
+    op_parsed_list.extend(node.output_data.values())
     result = merge_tensor(op_parsed_list, dump_mode)
     if not result:
         result['op_name'] = []
