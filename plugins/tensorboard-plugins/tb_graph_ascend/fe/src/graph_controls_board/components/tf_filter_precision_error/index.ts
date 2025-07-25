@@ -63,11 +63,14 @@ class TfFilterPrecisionError extends PolymerElement {
     }
     onFlterDialogConfirm = async (e: any) => {
         if (isEmpty(this.filterValue)) {
-            Notification.show(`请选择精度误差计算指标`, {
+            Notification.show(`错误: 精度误差计算指标为空，请选择指标`, {
                 position: 'middle',
-                duration: 3000,
+                duration: 1800,
                 theme: 'error',
             });
+            setTimeout(() => {
+                this.set('filterDialogOpened', true);
+            }, 1800)
             return;
         }
         const data = {
@@ -79,13 +82,21 @@ class TfFilterPrecisionError extends PolymerElement {
             this.dispatchEvent(updateHierarchyData);
             this.set('filterDialogOpened', false);
             this.updateFilterData();
+            Notification.show(`操作成功：精度误差值已更新`, {
+                position: 'middle',
+                duration: 2000,
+                theme: 'success',
+            });
         }
         else {
             Notification.show(`精度误差计算错误${error}`, {
                 position: 'middle',
-                duration: 3000,
+                duration: 1800,
                 theme: 'error',
             });
+            setTimeout(() => {
+                this.set('filterDialogOpened', true);
+            }, 1800)
         }
     }
 
