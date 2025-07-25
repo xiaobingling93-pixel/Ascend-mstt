@@ -36,10 +36,9 @@ class BaseHookManager(ABC):
     hook_handle_dict = {}
     params_grad_info = {}
 
-    def __init__(self, data_collector, config, attl_manager=None):
+    def __init__(self, data_collector, config):
         self.data_collector = data_collector
         self.config = config
-        self.attl_manager = attl_manager
 
     @property
     def _pid(self):
@@ -164,10 +163,7 @@ class BaseHookManager(ABC):
                 self._add_count(api_name)
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.update_api_or_module_name(full_name)
-                if getattr(self.config, "online_run_ut", False):
-                    BaseHookManager.inner_switch[tid] = False
-                    ThreadSafe.release()
-                    return
+
                 self.data_collector.forward_input_data_collect(
                     full_name,
                     module,
@@ -193,13 +189,7 @@ class BaseHookManager(ABC):
                 self.data_collector.update_api_or_module_name(full_name)
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 with self._no_grad_context():
-                    if getattr(self.config, "online_run_ut", False):
-                        if self.data_collector.scope and not self.data_collector.scope.check(full_name):
-                            return None
-                        if self.attl_manager:
-                            self.attl_manager.attl_send(full_name, args, kwargs, output)
-                        BaseHookManager.inner_switch[tid] = False
-                        return None
+
                     if hook_type == Const.MODULE:
                         params_dict = self._get_params_dict(module)
                         setattr(module_input_output, Const.PARAMS, params_dict)
@@ -243,9 +233,7 @@ class BaseHookManager(ABC):
             with ThreadSafe():
                 BaseHookManager.inner_switch[tid] = True
                 self.data_collector.update_api_or_module_name(full_name)
-                if getattr(self.config, "online_run_ut", False):
-                    BaseHookManager.inner_switch[tid] = False
-                    return
+
                 need_exchange = self._need_exchange(module) if hook_type == Const.MODULE else True
                 if need_exchange:
                     module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)

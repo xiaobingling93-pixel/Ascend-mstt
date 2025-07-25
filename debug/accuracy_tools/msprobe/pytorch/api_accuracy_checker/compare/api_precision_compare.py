@@ -117,30 +117,6 @@ def api_precision_compare(config):
     change_mode(config.details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def online_api_precision_compare(online_config):
-    rank = online_config.rank
-    result_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.result_csv_path).replace(
-                    "_rank*.csv", f"_rank{rank}.csv")
-    details_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.details_csv_path).replace(
-                    "_rank*.csv", f"_rank{rank}.csv")
-    detail_csv_title = [ApiPrecisionCompareColumn.get_detail_csv_title()]
-    result_csv_title = [ApiPrecisionCompareColumn.get_result_csv_title()]
-    if not os.path.exists(result_csv_path):
-        write_csv(result_csv_title, result_csv_path)
-    if not os.path.exists(details_csv_path):
-        write_csv(detail_csv_title, details_csv_path)
-    config = CompareConfig("", "", result_csv_path, details_csv_path)
-    try:
-        npu_data, gpu_data = online_config.npu_data, online_config.gpu_data
-        check_csv_columns(npu_data.columns, "npu_csv")
-        check_csv_columns(gpu_data.columns, "gpu_csv")
-        analyse_csv(npu_data, gpu_data, config)
-    except Exception as err:
-        logger.error(f"Online api precision compare Error: {str(err)}")
-    change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
-
-
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
     last_api_name, last_api_dtype, last_api_full_name = None, None, None
