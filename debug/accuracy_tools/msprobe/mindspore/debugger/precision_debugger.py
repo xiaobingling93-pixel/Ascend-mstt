@@ -43,6 +43,7 @@ from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 try:
     from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
+    import mindspore as ms
 except ImportError:
     enable_dynamic_kbyk_dump = False
 else:
@@ -166,6 +167,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         else:
             Runtime.is_running = False
         if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
+            ms.runtime.synchronize()
             _dump_stop()
         if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
