@@ -130,8 +130,8 @@ def load_parallel_param(input_param):
     config_n = parallel_merge.get('npu', {})
     config_b = parallel_merge.get('bench', {})
     return (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp')),) if not config_b else \
-        (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp')),
-         ParallelParam(config_b.get('rank_size'), config_b.get('tp'), config_b.get('pp')))
+        (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp'), config_n.get('vpp', 1)),
+         ParallelParam(config_b.get('rank_size'), config_b.get('tp'), config_b.get('pp'), config_b.get('vpp', 1)))
 
 
 def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
@@ -145,7 +145,7 @@ def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
         logger.error(f'{log_prefix} The parallel params "tp/pp/rank_size" must not be null!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if any(x <= 0 for x in params):
-        logger.error(f'{log_prefix} The parallel params "tp/pp/rank_size" must be greater than 0!')
+        logger.error(f'{log_prefix} The parallel params "tp/pp/vpp/rank_size" must be greater than 0!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if parallel_param.tp > parallel_param.rank_size:
         logger.error(f'{log_prefix} The parallel param "tp" must be less than or equal to "rank_size"!')
@@ -162,13 +162,16 @@ def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
     if parallel_param.tp * parallel_param.pp > parallel_param.rank_size:
         logger.error(f'{log_prefix} The parallel params "tp * pp" must be less than or equal to "rank_size"!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.vpp > 1 and parallel_param.pp < 2:
+        logger.error(f'{log_prefix} When configuring the parallel param "vpp", the "pp" param must be greater than 1!')
 
 
 class ParallelParam:
-    def __init__(self, rank_size, tp, pp):
+    def __init__(self, rank_size, tp, pp, vpp=1):
         self.rank_size = rank_size
         self.tp = tp
         self.pp = pp
+        self.vpp = vpp
 
 
 class ToolTip:
@@ -260,6 +263,7 @@ class GraphConst:
     
     IGNORE_PRECISION_INDEX = {'empty', 'empty_like', 'empty_with_format', 'new_empty_strided', 'new_empty',
                               'empty_strided'}
+    VPP_CHUNK_0 = '0'
 
 
 def is_serializable(obj):
