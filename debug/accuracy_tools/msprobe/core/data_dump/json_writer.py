@@ -20,6 +20,7 @@ import threading
 import traceback
 from datetime import datetime, timezone, timedelta
 
+import concurrent
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json, check_path_before_create
 from msprobe.core.common.log import logger
@@ -47,6 +48,45 @@ class DataWriter:
         self.stat_stack_list = []
         self._error_log_initialized = False
         self._cache_logged_error_types = set()
+        self.crc32_stack_list = []
+        self._crc_flush_threshold = 50
+
+    def append_crc32_to_buffer(self, future: concurrent.futures.Future) -> int:
+        """
+        把一个计算 CRC32 的 Future 放入队列，返回占位符索引
+        """
+        idx = len(self.crc32_stack_list)
+        self.crc32_stack_list.append(future)
+        return idx
+
+    def flush_crc32_stack(self):
+        """
+        等待所有 CRC32 计算完成，返回结果列表
+        """
+        if not self.crc32_stack_list:
+            return []
+        results = [f.result() for f in self.crc32_stack_list]
+        self.crc32_stack_list = []
+        return results
+
+    def _replace_crc32_placeholders(self, data, crc32_results):
+        """
+        遍历 JSON 结构，将所有 md5_index 占位符替换成真实的 CRC32
+        """
+        if isinstance(data, dict):
+            for k, v in list(data.items()):
+                if k == Const.MD5_INDEX and isinstance(v, int):
+                    idx = v
+                    # 防越界
+                    crc = crc32_results[idx] if idx < len(crc32_results) else None
+                    # 删除占位符，改成真实字段
+                    del data[k]
+                    data[Const.MD5] = crc
+                else:
+                    self._replace_crc32_placeholders(v, crc32_results)
+        elif isinstance(data, (list, tuple)):
+            for item in data:
+                self._replace_crc32_placeholders(item, crc32_results)
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -279,6 +319,14 @@ class DataWriter:
                 self._replace_stat_placeholders(self.cache_data, stat_result)
                 if self.cache_debug:
                     self._replace_stat_placeholders(self.cache_debug, stat_result)
+
+            # 2) 再 flush CRC32
+            crc32_result = self.flush_crc32_stack()
+            if crc32_result:
+                self._replace_crc32_placeholders(self.cache_data, crc32_result)
+                if self.cache_debug:
+                    self._replace_crc32_placeholders(self.cache_debug, crc32_result)
+
             if self.cache_data:
                 self.write_data_json(self.dump_file_path)
             if self.cache_stack:

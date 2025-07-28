@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 
+import os
 import zlib
 
 import mindspore as ms
@@ -22,6 +23,7 @@ from mindspore._c_expression.typing import Number
 import numpy as np
 
 from msprobe.core.common.const import Const
+from concurrent.futures import ThreadPoolExecutor
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
 from msprobe.core.common.file_utils import path_len_exceeds_limit
@@ -53,6 +55,15 @@ class MindsporeDataProcessor(BaseDataProcessor):
         }
         self._async_dump_cache = {}
         self.api_register = get_api_register()
+        # self._crc_executor = ThreadPoolExecutor(max_workers=4)
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count())
+
+    @staticmethod
+    def compute_crc32_bytes(tensor_bytes):
+        # 纯函数，方便多进程调用
+        # import zlib
+        print("1111")
+        return f"{zlib.crc32(tensor_bytes):08x}"
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -188,8 +199,17 @@ class MindsporeDataProcessor(BaseDataProcessor):
         tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
-            tensor_md5 = self.get_md5_for_tensor(tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
+            # 拷贝并搬到 CPU
+            tensor_bytes = tensor.asnumpy().tobytes()
+
+            future = self._crc_executor.submit(
+                MindsporeDataProcessor.compute_crc32_bytes,
+                tensor_bytes
+            )
+
+            crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+            tensor_json[Const.MD5_INDEX] = crc_placeholder
+
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):
