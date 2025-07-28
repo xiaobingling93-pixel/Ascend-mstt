@@ -15,6 +15,7 @@
 import json
 import os
 import uuid
+import importlib
 from collections import defaultdict
 from datetime import datetime
 from functools import partial
@@ -160,6 +161,7 @@ class TrainerMon:
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.fsdp_post_backward_hook = None
+        self.fsdp2_foreach_reduce = None
         self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
@@ -196,6 +198,7 @@ class TrainerMon:
         self.enable_megatron = False
         self.enable_deepspeed = False
         self.fsdp_wrapped_module = False
+        self.fsdp2_wrapped_module = False
         self.micro_batch_number = 1
         self.optimizer_mon = None
         self.optimizer_trans = None
@@ -210,6 +213,7 @@ class TrainerMon:
         self.param2name = defaultdict(str)
         self.name2indices = defaultdict()
         self.name2param = {}
+        self.origin2squash = {}
         self.duplicate_param = {}
         self.name2tag = {}
         self.param_name_call_id = {}
@@ -804,11 +808,13 @@ class TrainerMon:
             bwd_context.reset()
         self.grad_context.reset()  # 权重梯度和激活值梯度都在这
 
-
         self.optimizer_mon.restore_grad_sync(self)
         if self.fsdp_post_backward_hook:  # fsdp
             torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
             logger.info("remove patch_post_backward_hook in fsdp.")
+        if self.fsdp2_foreach_reduce:  # fsdp
+            torch.distributed.fsdp._fully_shard._fsdp_collectives.foreach_reduce = self.fsdp2_foreach_reduce
+            logger.info("remove patch_foreach_reduce_hook in fsdp2.")
         else:  # not megatron and not fsdp
             for handle in self.handles['wgrads']:
                 handle.remove()
@@ -892,12 +898,15 @@ class TrainerMon:
                 continue
             if not self.fsdp_wrapped_module and param_name.startswith("_fsdp_wrapped_module"):
                 self.fsdp_wrapped_module = True
+            if not self.fsdp2_wrapped_module and param.__class__.__name__ == "DTensor":
+                self.fsdp2_wrapped_module = True
             if self._is_target_param(param_name, param, prefix):
                 name = prefix + squash_param_name(param_name, self.squash_name)
                 if name in self.param2name.values():
                     name = prefix + param_name
                 self.param2name[param] = name
                 self.name2param[name] = param
+                self.origin2squash[param_name] = name
 
                 if self.tp_group and not param_is_not_tensor_parallel_duplicate(param, self.tp_group):
                     self.duplicate_param[name] = True
@@ -1051,6 +1060,11 @@ class TrainerMon:
             self._patch_fsdp_post_backward_hook()
             return
 
+        if self.fsdp2_wrapped_module:
+            # patch fsdp _runtime_utils._post_backward_hook
+            self._patch_fsdp2_foreach_reduce()
+            return
+
         if self.monitor_mbs_grad:
             self._hook_weights()
             return
@@ -1095,6 +1109,29 @@ class TrainerMon:
         self.fsdp_post_backward_hook = torch.distributed.fsdp._runtime_utils._post_backward_hook
         torch.distributed.fsdp._runtime_utils._post_backward_hook = \
             patch_post_backward_hook(torch.distributed.fsdp._runtime_utils._post_backward_hook)
+
+    def _patch_fsdp2_foreach_reduce(self):
+        def patch_foreach_reduce(foreach_reduce):
+            def wrapper(fsdp_params, unsharded_grads, *unused):
+                grad_dict = {}
+                for param, grad in zip(fsdp_params, unsharded_grads):
+                    tag = self.name2tag.get(self.origin2squash[param._param_fqn], {}).get(MonitorConst.PRE_GRAD)
+                    if tag is None:
+                        continue
+                    grad_dict[tag] = grad
+                    self.register_param_call_id("foreach_reduce", tag)
+                get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                out = foreach_reduce(fsdp_params, unsharded_grads, *unused)
+                return out
+
+            return wrapper
+
+        logger.info("Patch fsdp foreach_reduce, collect pre_grad metrics.")
+        import torch.distributed.fsdp._fully_shard._fsdp_param_group as _fsdp_param_group
+        import torch.distributed.fsdp._fully_shard._fsdp_collectives as _fsdp_collectives
+        self.fsdp_foreach_reduce = _fsdp_collectives.foreach_reduce
+        _fsdp_collectives.foreach_reduce = patch_foreach_reduce(_fsdp_collectives.foreach_reduce)
+        importlib.reload(_fsdp_param_group)  # 关键操作，不然会因为torch一开始就import foreach_reduce导致patch失效
 
     def _hook_weights(self):
         """

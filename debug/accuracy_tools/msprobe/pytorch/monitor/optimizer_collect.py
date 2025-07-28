@@ -56,7 +56,7 @@ class OptimizerMon(object):
             if param.numel() != element_in_cur_partition:
                 if first_param:
                     grad = grad.flatten()[-element_in_cur_partition:]
-                else: # supposed to be the last one
+                else:  # supposed to be the last one
                     grad = grad.flatten()[:element_in_cur_partition]
             first_param = False
 
