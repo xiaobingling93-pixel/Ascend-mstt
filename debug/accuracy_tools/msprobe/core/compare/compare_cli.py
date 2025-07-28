@@ -28,10 +28,10 @@ def compare_cli(args):
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     if not npu_path:
-        logger.error(f"Missing npu_path in configuration file {args.input_path}, please check!")
+        logger.error(f"Missing npu_path in input configuration file, please check!")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     if not bench_path:
-        logger.error(f"Missing bench_path in configuration file {args.input_path}, please check!")
+        logger.error(f"Missing bench_path in input configuration file, please check!")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     frame_name = args.framework
     auto_analyze = not args.compare_only
