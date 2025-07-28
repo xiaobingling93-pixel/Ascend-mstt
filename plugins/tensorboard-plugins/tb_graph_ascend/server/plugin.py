@@ -26,12 +26,14 @@ from tensorboard.util import tb_logging
 from . import constants
 from .app.views.graph_views import GraphView
 from .app.utils.graph_utils import GraphUtils
-from .app.utils.global_state import GraphState
+from .app.utils.global_state import GraphState, Extension
 
 logger = tb_logging.get_logger()
 
 PLUGIN_NAME = 'graph_ascend'
 PLUGIN_NAME_RUN_METADATA_WITH_GRAPH = 'graph_ascend_run_metadata_graph'
+DB_EXT = Extension.DB.value
+JSON_EXT = Extension.JSON.value
 
 
 class GraphsPlugin(base_plugin.TBPlugin):
@@ -84,13 +86,16 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
     def is_active(self):
         """The graphs plugin is active if any run has a graph."""
+        def _is_vis(path, file_name):
+            return os.path.isfile(path) and (file_name.endswith(DB_EXT) or file_name.endswith(JSON_EXT))
+
         for content in os.listdir(self.logdir):
             content_path = os.path.join(self.logdir, content)
-            if os.path.isfile(content_path) and content.endswith('.vis'):
+            if _is_vis(content_path, content):
                 return True
             if os.path.isdir(content_path):
                 for file in os.listdir(content_path):
-                    if os.path.isfile(os.path.join(content_path, file)) and file.endswith('.vis'):
+                    if _is_vis(os.path.join(content_path, file), file):
                         return True
         return False
 

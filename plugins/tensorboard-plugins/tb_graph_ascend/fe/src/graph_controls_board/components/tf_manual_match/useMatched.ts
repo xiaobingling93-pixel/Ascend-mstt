@@ -15,8 +15,6 @@
  */
 
 import { isEmpty } from 'lodash';
-import { fetchPbTxt } from '../../../utils';
-import { safeJSONParse } from '../../../utils';
 import request from '../../../utils/request';
 import { UseMatchedType, MatchResultType } from '../../type';
 const useMatched = (): UseMatchedType => {
@@ -24,10 +22,10 @@ const useMatched = (): UseMatchedType => {
     const params = {
       npuNodeName: npuNodeName,
       benchNodeName: benchNodeName,
-      metaData: JSON.stringify(metaData),
+      metaData,
       isMatchChildren
     };
-    const mactchResult = await request({ url: 'addMatchNodes', method: 'GET', params: params });
+    const mactchResult = await request({ url: 'addMatchNodes', method: 'POST', data: params });
     return mactchResult;
   };
 
@@ -35,54 +33,34 @@ const useMatched = (): UseMatchedType => {
     const params = {
       npuNodeName: npuNodeName,
       benchNodeName: benchNodeName,
-      metaData: JSON.stringify(metaData),
+      metaData,
       isUnMatchChildren
     };
-    const mactchResult = await request({ url: 'deleteMatchNodes', method: 'GET', params: params });
+    const mactchResult = await request({ url: 'deleteMatchNodes', method: 'POST', data: params });
     return mactchResult;
   };
 
   const saveMatchedNodesLink = async (selection: any): Promise<any> => {
-    const metaData = {
-      run: selection.run,
-      tag: selection.tag,
-    };
-    const params = new URLSearchParams();
-    params.set('metaData', JSON.stringify(metaData));
-    const precisionPath = `saveData?${String(params)}`;
-    const precisionStr = await fetchPbTxt(precisionPath); // 获取异步的 ArrayBuffer
-    const decoder = new TextDecoder();
-    const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
-    const saveResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
+    const saveResult = await request({ url: 'saveData', method: 'POST', data: { metaData: selection } });
     return saveResult;
   };
   const saveMatchedRelations = async (selection: any): Promise<any> => {
-    const metaData = {
-      run: selection.run,
-      tag: selection.tag,
-    };
-    const params = new URLSearchParams();
-    params.set('metaData', JSON.stringify(metaData));
-    const precisionPath = `saveMatchedRelations?${String(params)}`;
-    const precisionStr = await fetchPbTxt(precisionPath); // 获取异步的 ArrayBuffer
-    const decoder = new TextDecoder();
-    const decodedStr = decoder.decode(precisionStr); // 解码 ArrayBuffer 到字符串
-    const saveResult = safeJSONParse(decodedStr.replace(/"None"/g, '{}'));
+    const saveResult = await request({ url: 'saveMatchedRelations', method: 'POST', data: { metaData: selection } });
     return saveResult;
   };
 
-  const addMatchedNodesLinkByConfigFile = async (condfigFile: string, selection: any): Promise<MatchResultType> => {
-    if (isEmpty(condfigFile)) {
+  const addMatchedNodesLinkByConfigFile = async (configFile: string, selection: any): Promise<MatchResultType> => {
+    if (isEmpty(configFile)) {
       return {
         success: false,
         error: '请选择配置文件',
       };
     }
     const params = {
-      configFile: condfigFile,
-      metaData: JSON.stringify(selection),
+      configFile: configFile,
+      metaData: selection,
     };
-    const mactchResult = await request({ url: 'addMatchNodesByConfig', method: 'GET', params: params });
+    const mactchResult = await request({ url: 'addMatchNodesByConfig', method: 'POST', data: params });
 
     return mactchResult as MatchResultType;
   };
@@ -99,11 +77,7 @@ const useMatched = (): UseMatchedType => {
         error: '调试侧节点或标杆节点为空',
       };
     }
-    const metaData = {
-      run: selection.run,
-      tag: selection.tag,
-    };
-    const matchResult: MatchResultType = await requestAddMatchNodes(npuNodeName, benchNodeName, metaData, isMatchChildren);
+    const matchResult: MatchResultType = await requestAddMatchNodes(npuNodeName, benchNodeName, selection, isMatchChildren);
     return matchResult;
   };
 
@@ -114,11 +88,7 @@ const useMatched = (): UseMatchedType => {
         error: '调试侧节点或标杆节点为空',
       };
     }
-    const metaData = {
-      run: selection.run,
-      tag: selection.tag,
-    };
-    const matchResult: MatchResultType = await requestDeleteMatchNodes(npuNodeName, benchNodeName, metaData, isUnMatchChildren);
+    const matchResult: MatchResultType = await requestDeleteMatchNodes(npuNodeName, benchNodeName, selection, isUnMatchChildren);
     return matchResult;
   };
 
