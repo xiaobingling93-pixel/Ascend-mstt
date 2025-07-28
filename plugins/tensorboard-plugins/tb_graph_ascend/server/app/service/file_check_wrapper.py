@@ -14,6 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 from tensorboard.backend import http_util
+from werkzeug.wrappers.request import Request
 
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import DataType
@@ -24,8 +25,8 @@ def check_file_type(func):
         if len(args) <= 0:
             raise RuntimeError('Illegal function call, at least 1 parameter is required but got 0')
         request = args[0]
-        if not hasattr(request, 'get_data'):
-            raise RuntimeError('Invalid parameters, "request" should have a "get_data" method')
+        if not isinstance(request, Request):
+            raise RuntimeError('The request "parameter" is not in a format supported by werkzeug')
         meta_data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {}).get('metaData')
 
         result = {'success': False, 'error': ''}
