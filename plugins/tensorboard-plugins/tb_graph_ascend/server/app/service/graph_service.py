@@ -239,7 +239,7 @@ class GraphService:
             npu_node_list = graph_data.get(NPU, {}).get('node', {})
             for _, node_info in npu_node_list.items():
                 output_statistical_diff = node_info.get('output_data', None)
-                if not node_info.get('matched_node_link'):
+                if not node_info.get('matched_node_link') or not output_statistical_diff:
                     continue
                 max_rel_error = -1
                 #  根据filter_value 的选择指标计算新的误差值
