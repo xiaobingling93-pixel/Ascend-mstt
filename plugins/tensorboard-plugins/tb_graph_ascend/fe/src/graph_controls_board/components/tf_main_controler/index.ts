@@ -106,7 +106,7 @@ class MainController extends PolymerElement {
     if (isEmpty(this.metaDir)) {
       return;
     }
-    const tags = this.metaDir[this.selectedRun];
+    const { type, tags } = this.metaDir[this.selectedRun];
     this.set('tags', tags);
     this.set('selectedTag', tags[0]);
     const selection = {
@@ -114,6 +114,7 @@ class MainController extends PolymerElement {
       run: this.selectedRun,
       tag: tags[0],
       microStep: -1,
+      type
     };
     this.set('selectedTag', tags[0]);
     this.set('selectedMicroStep', -1);

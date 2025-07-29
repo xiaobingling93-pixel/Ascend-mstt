@@ -282,7 +282,7 @@ const useGraph = (): UseGraphType => {
         try {
             const metaDataSafe = safeJSONParse(JSON.stringify(metaData));
             const params = {
-                nodeInfo: nodeInfo,
+                nodeInfo,
                 metaData: metaDataSafe,
             };
             const result = await request({

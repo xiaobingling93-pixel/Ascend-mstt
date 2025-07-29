@@ -22,7 +22,8 @@ from msprobe.core.common.file_utils import (check_file_type, create_directory, F
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException, get_dump_mode
 from msprobe.visualization.compare.graph_comparator import GraphComparator
-from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs
+from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs, load_parallel_param, \
+    sort_rank_number_strings, check_whether_parallel_merge, validate_parallel_param, extract_rank_number
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
@@ -30,6 +31,7 @@ from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_map
 from msprobe.core.compare.utils import check_and_return_dir_contents
 from msprobe.core.common.utils import detect_framework_by_dump_json
 from msprobe.visualization.graph.distributed_analyzer import DistributedAnalyzer
+from msprobe.visualization.builder.graph_merger import GraphMerger
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 
@@ -101,14 +103,15 @@ def _export_compare_graph_result(args, result):
         return output_file_name
 
 
-def _build_graph_info(dump_path, args):
+def _build_graph_info(dump_path, args, graph=None):
     construct_path = FileChecker(os.path.join(dump_path, GraphConst.CONSTRUCT_FILE), FileCheckConst.FILE,
                                  FileCheckConst.READ_ABLE).common_check()
     data_path = FileChecker(os.path.join(dump_path, GraphConst.DUMP_FILE), FileCheckConst.FILE,
                             FileCheckConst.READ_ABLE).common_check()
     stack_path = FileChecker(os.path.join(dump_path, GraphConst.STACK_FILE), FileCheckConst.FILE,
                              FileCheckConst.READ_ABLE).common_check()
-    graph = GraphBuilder.build(construct_path, data_path, stack_path, complete_stack=args.complete_stack)
+    if not graph:
+        graph = GraphBuilder.build(construct_path, data_path, stack_path, complete_stack=args.complete_stack)
     return GraphInfo(graph, construct_path, data_path, stack_path)
 
 
@@ -298,11 +301,12 @@ def _compare_graph_steps(input_param, args):
         input_param['npu_path'] = os.path.join(dump_step_n, folder_step)
         input_param['bench_path'] = os.path.join(dump_step_b, folder_step)
 
-        _compare_graph_ranks(input_param, args, step=folder_step)
+        _compare_graph_ranks(input_param, args, step=folder_step) if not args.parallel_merge \
+            else _compare_graph_ranks_parallel(input_param, args, step=folder_step)
 
 
 def _build_graph_ranks(dump_ranks_path, args, step=None):
-    ranks = sorted(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
+    ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     serializable_args = SerializableArgs(args)
     with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
         def err_call(err):
@@ -319,13 +323,20 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
                                                       error_callback=err_call))
         build_graph_results = [task.get() for task in build_graph_tasks]
 
-        if len(build_graph_results) > 1:
+        if args.parallel_params:
+            validate_parallel_param(args.parallel_params[0], dump_ranks_path)
+            build_graph_results = GraphMerger(build_graph_results, args.parallel_params[0]).merge_graph()
+
+        if len(build_graph_results) > 1 and not args.parallel_merge:
             DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results},
                                 args.overflow_check).distributed_match()
 
         create_directory(args.output_path)
         export_build_graph_tasks = []
-        for result in build_graph_results:
+        for i, result in enumerate(build_graph_results):
+            if args.parallel_params:
+                result.output_file_name = f'build_{step}_merged{i}_{current_time}.vis' \
+                    if step else f'build_merged{i}_{current_time}.vis'
             export_build_graph_tasks.append(pool.apply_async(_export_build_graph_result,
                                                              args=(serializable_args, result),
                                                              error_callback=err_call))
@@ -337,13 +348,82 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
             logger.info(f'Successfully exported build graph results.')
 
 
-
 def _build_graph_steps(dump_steps_path, args):
     steps = sorted(check_and_return_dir_contents(dump_steps_path, Const.STEP))
     for step in steps:
         logger.info(f'Start processing data for {step}...')
         dump_ranks_path = os.path.join(dump_steps_path, step)
         _build_graph_ranks(dump_ranks_path, args, step)
+
+
+def _compare_and_export_graph(graph_task_info, input_param, args, output_file_name):
+    result = _run_graph_compare(graph_task_info, input_param, args, output_file_name)
+    return _export_compare_graph_result(args, result)
+
+
+def _compare_graph_ranks_parallel(input_param, args, step=None):
+    args.fuzzy_match = True
+    npu_path = input_param.get('npu_path')
+    bench_path = input_param.get('bench_path')
+    ranks_n = sort_rank_number_strings(check_and_return_dir_contents(npu_path, Const.RANK))
+    ranks_b = sort_rank_number_strings(check_and_return_dir_contents(bench_path, Const.RANK))
+    parallel_params = load_parallel_param(input_param)
+    if len(parallel_params) != 2:
+        raise RuntimeError('Parallel params error in compare graph!')
+    validate_parallel_param(parallel_params[0], npu_path)
+    validate_parallel_param(parallel_params[1], bench_path, '[Bench]')
+    serializable_args = SerializableArgs(args)
+
+    with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
+        def err_call(err):
+            logger.error(f'Error occurred while comparing graph ranks: {err}')
+            try:
+                pool.close()
+            except OSError as e:
+                logger.error(f'Error occurred while terminating the pool: {e}')
+
+        # 1.并行构图
+        build_graph_tasks_n = []
+        build_graph_tasks_b = []
+        for rank in ranks_n:
+            build_graph_tasks_n.append(pool.apply_async(_run_build_graph_single,
+                                                        args=(npu_path, rank, step, serializable_args),
+                                                        error_callback=err_call))
+        for rank in ranks_b:
+            build_graph_tasks_b.append(pool.apply_async(_run_build_graph_single,
+                                                        args=(bench_path, rank, step, serializable_args),
+                                                        error_callback=err_call))
+        graph_results_n = [task.get() for task in build_graph_tasks_n]
+        graph_results_b = [task.get() for task in build_graph_tasks_b]
+
+        # 2.图合并
+        build_graph_results_n = GraphMerger(graph_results_n, parallel_params[0]).merge_graph()
+        build_graph_results_b = GraphMerger(graph_results_b, parallel_params[1], True).merge_graph()
+        if len(build_graph_results_n) != len(build_graph_results_b):
+            raise RuntimeError(f'Parallel merge failed because the dp of npu: {len(build_graph_results_n)} '
+                               f'is inconsistent with that of bench: {len(build_graph_results_b)}!')
+        # 3.并行图比对和输出
+        export_res_task_list = []
+        create_directory(args.output_path)
+        for i, result_n in enumerate(build_graph_results_n):
+            graph_n = result_n.graph
+            graph_b = build_graph_results_b[i].graph
+            graph_task_info = BuildGraphTaskInfo(
+                _build_graph_info(os.path.join(npu_path, f'rank{graph_n.root.rank}'), args, graph_n),
+                _build_graph_info(os.path.join(bench_path, f'rank{graph_b.root.rank}'), args, graph_b),
+                f'rank{graph_n.root.rank}', f'rank{graph_b.root.rank}', current_time)
+            output_file_name = f'compare_{step}_merged{i}_{current_time}.vis' \
+                if step else f'compare_merged{i}_{current_time}.vis'
+            export_res_task_list.append(pool.apply_async(_compare_and_export_graph,
+                                                         args=(graph_task_info, input_param, serializable_args,
+                                                               output_file_name),
+                                                         error_callback=err_call))
+        export_res_list = [res.get() for res in export_res_task_list]
+        if any(export_res_list):
+            failed_names = list(filter(lambda x: x, export_res_list))
+            logger.error(f'Unable to export compare graph results: {", ".join(failed_names)}.')
+        else:
+            logger.info('Successfully exported compare graph results.')
 
 
 def _graph_service_parser(parser):
@@ -365,6 +445,8 @@ def _graph_service_command(args):
     input_param = load_json(args.input_path)
     npu_path = input_param.get("npu_path")
     bench_path = input_param.get("bench_path")
+    args.parallel_merge = check_whether_parallel_merge(input_param)
+    args.parallel_params = load_parallel_param(input_param) if args.parallel_merge else None
     check_file_or_directory_path(npu_path, isdir=True)
     if bench_path:
         check_file_or_directory_path(bench_path, isdir=True)
@@ -386,7 +468,10 @@ def _graph_service_command(args):
         if content_n != content_b:
             raise ValueError('The directory structures of npu_path and bench_path are inconsistent.')
         if content_n == GraphConst.RANKS:
-            _compare_graph_ranks(input_param, args)
+            if args.parallel_merge:
+                _compare_graph_ranks_parallel(input_param, args)
+            else:
+                _compare_graph_ranks(input_param, args)
         elif content_n == GraphConst.STEPS:
             _compare_graph_steps(input_param, args)
         else:
@@ -427,7 +512,7 @@ class CompareGraphResult:
 
 
 class BuildGraphResult:
-    def __init__(self, graph, micro_steps, rank=0, output_file_name=''):
+    def __init__(self, graph, micro_steps=0, rank=0, output_file_name=''):
         self.graph = graph
         self.micro_steps = micro_steps
         self.rank = rank

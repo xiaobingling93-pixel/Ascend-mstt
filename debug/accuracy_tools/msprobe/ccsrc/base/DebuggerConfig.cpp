@@ -247,7 +247,7 @@ std::vector<std::string> KernelListMatcher::GenRealKernelList(const char** fullK
                 if (re2::RE2::FullMatch(*ss, reg, &ret)) {
                     output.emplace_back(*ss);
                 }
-            }  
+            }
         }
     }
 

@@ -34,6 +34,7 @@ class DebuggerConfig:
         self.overflow_nums = task_config.overflow_nums if task_config.overflow_nums else 1
         self.framework = Const.PT_FRAMEWORK
         self.async_dump = common_config.async_dump if common_config.async_dump else False
+        self.precision = common_config.precision if common_config.precision else Const.DUMP_PRECISION_HIGH
 
         if self.task == Const.FREE_BENCHMARK:
             self.fuzz_device = task_config.fuzz_device

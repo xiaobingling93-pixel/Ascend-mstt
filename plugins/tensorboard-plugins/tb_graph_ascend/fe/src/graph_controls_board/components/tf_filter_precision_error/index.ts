@@ -74,7 +74,8 @@ class TfFilterPrecisionError extends PolymerElement {
             return;
         }
         const data = {
-            filterValue: (this.filterValue)
+            metaData: this.selection,
+            filterValue: this.filterValue
         };
         const { success, error } = await request({ url: 'updatePrecisionError', method: 'POST', data });
         if (success) {
