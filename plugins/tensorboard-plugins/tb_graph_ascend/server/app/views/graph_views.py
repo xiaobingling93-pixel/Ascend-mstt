@@ -93,6 +93,27 @@ class GraphView:
         result = GraphService.load_graph_all_node_list(run, tag, micro_step)
         response = http_util.Respond(request, result, "application/json")
         return response
+    
+    # 根据精度误差搜索节点
+    @staticmethod
+    @wrappers.Request.application
+    def search_node(request):
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
+        print(data)
+        meta_data = data.get("metaData")
+        type = data.get("type")
+        values = data.get("values")
+        result = {}
+        if(type == 'precision'):
+            result = GraphService.search_node_by_precision(meta_data, values)
+        elif(type == 'overflow'):
+            result = GraphService.search_node_by_overflow(meta_data, values)
+        else:
+            result = {
+                'success': False,
+                'message': "type error"
+            }
+        return http_util.Respond(request, result, "application/json") 
 
     # 展开关闭节点
     @staticmethod

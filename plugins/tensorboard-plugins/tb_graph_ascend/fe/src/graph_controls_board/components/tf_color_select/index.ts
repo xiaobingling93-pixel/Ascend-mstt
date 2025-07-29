@@ -765,7 +765,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
 
   async _toggleCheckbox(this, event): Promise<void> {
-    const { run, tag, microStep } = this.selection;
     const item = event.model.item;
     let checkbox;
     let overflowCheckbox;
@@ -774,14 +773,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     } else {
       overflowCheckbox = this.shadowRoot?.getElementById(`overflowCheckbox-${event.model.index}`) as HTMLInputElement;
     }
-    const params = new URLSearchParams();
-    if (run) {
-      params.set('run', run);
-    }
-    if (tag) {
-      params.set('tag', tag);
-    }
-    params.set('microStep', String(microStep));
     // 更新 selectColor 数组
     if (checkbox) {
       if (checkbox.checked) {
@@ -798,27 +789,30 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.precisionmenu = [];
         return;
       }
-      params.set('precision_index', this.selectColor.join(','));
-      const screenPath = `screen?${String(params)}`;
-      try {
-        const screenStr = fetchPbTxt(screenPath);
-        const precisionmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
-        this.set('precisionmenu', precisionmenu);
+      const params = {
+        metaData: this.selection,
+        type: 'precision',
+        values: this.selectColor,
+      };
+      const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
+      if (success) {
+        this.set('precisionmenu', data);
         // 更新数据绑定
         this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
         // 清除精度筛选输入框
-        this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
+        this.set('selectedPrecisionNode', data?.[0] || '');
+        // 选中第一个选项
         setTimeout(() => {
           this._observePrecsionNode();
         }, 200)
-      } catch (e) {
-        Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+      }
+      else {
+        Notification.show(`Error:${error}`, {
           position: 'middle',
           duration: 4000,
           theme: 'error',
         });
       }
-
     } else {
       if (overflowCheckbox.checked) {
         this.overflowLevel.push(item[1]); // 添加选中的颜色
@@ -832,12 +826,15 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.overflowmenu = [];
         return;
       }
-      params.set('overflow_level', this.overflowLevel.join(','));
-      const screenPath = `screen?${String(params)}`;
 
       try {
-        const screenStr = fetchPbTxt(screenPath);
-        this.overflowmenu = safeJSONParse(new TextDecoder().decode(await screenStr).replace(/'/g, '"')) as object;
+        const params = {
+          metaData: this.selection,
+          type: 'overflow',
+          values: this.overflowLevel,
+        };
+        const overflowmenu = await request({ url: 'screen', method: 'POST', data: params });
+        this.set('overflowmenu', overflowmenu);
       } catch (e) {
         Notification.show(`获取溢出菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
           position: 'middle',

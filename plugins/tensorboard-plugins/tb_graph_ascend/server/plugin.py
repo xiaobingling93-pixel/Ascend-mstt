@@ -67,7 +67,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
             '/index.js': GraphView.static_file_route,
             '/index.html': GraphView.static_file_route,
             "/load_meta_dir": GraphView.load_meta_dir,
-            "/screen": self.get_all_screen_nodes,
+            "/screen": GraphView.search_node,
             '/loadGraphData': GraphView.load_graph_data,
             '/loadGraphConfigInfo': GraphView.load_graph_config_info,
             '/loadGraphAllNodeList': GraphView.load_graph_all_node_list,

@@ -232,6 +232,31 @@ class GraphService:
             return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
 
     @staticmethod
+    def search_node_by_precision(meta_data, values):
+        # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
+        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+        if error_message:
+            return {'success': False, 'error': error_message}
+        try:
+            precision = []
+            is_filter_unmatch_nodes = True if '无匹配节点' in values else False
+            if is_filter_unmatch_nodes:
+                values.remove('无匹配节点')
+            for node_name, node in graph_data.get(NPU, {}).get('node', {}).items():
+                subnodes = node.get("subnodes", None)
+                if subnodes != [] and subnodes != None:
+                   continue 
+                matched_node_link = node.get('matched_node_link', None)
+                if is_filter_unmatch_nodes and matched_node_link == None or matched_node_link == []:
+                    precision.append(node_name)
+                if any(low <= node.get('data', {}).get("precision_index", -1) < high for low, high in values):
+                    precision.append(node_name)
+            return { 'success': True, 'data': precision}
+        except Exception as e:
+            logger.error('获取精度误差失败:' + str(e))
+            return {'success': False, 'error': '获取精度误差失败:' + str(e)}
+    
+    @staticmethod
     def update_hierarchy_data(graph_type):
         if (graph_type == NPU or graph_type == BENCH):
             hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
