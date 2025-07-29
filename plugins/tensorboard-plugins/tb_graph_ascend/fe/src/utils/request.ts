@@ -34,6 +34,11 @@ export default async function request<T = any>(options: RequestOptions): Promise
     const controller = new AbortController();
     const signal = controller.signal;
     const timeoutId = setTimeout(() => controller.abort(), timeout);
+    if (typeof params === 'object' && params !== null) {
+      if ('metaData' in params) {
+        params.metaData.type = 'rank' in params.metaData ? 'db' : 'json';
+      }
+    }
     const response: AxiosResponse<T> = await axios({
       url,
       method,

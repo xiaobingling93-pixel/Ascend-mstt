@@ -28,6 +28,7 @@ using namespace MindStudioDebugger;
 
 constexpr const char* LIB_ASCEND_CL_NAME = "libascendcl.so";
 constexpr const char* LIB_MS_ASCEND_NAME = "libmindspore_ascend.so.2";
+constexpr const char* LIB_ASCEND_DUMP_NAME = "libascend_dump.so";
 
 using AclInitFuncType = aclError (*)(const char *);
 using AclmdlInitDumpFuncType = aclError (*)();
@@ -41,7 +42,16 @@ static AclmdlInitDumpFuncType g_aclmdlInitDumpFunc = nullptr;
 static AclmdlSetDumpFuncType g_aclmdlSetDumpFunc = nullptr;
 static AclmdlFinalizeDumpFuncType g_aclmdlFinalizeDumpFunc = nullptr;
 static AcldumpRegCallbackFuncType g_acldumpRegCallbackFunc = nullptr;
+static AcldumpRegCallbackFuncType g_acldumpRegCallbackFuncInSo = nullptr;
 static AclrtSynchronizeDeviceFuncType g_aclrtSynchronizeDeviceFunc = nullptr;
+
+static const std::map<const char*, void**> functionMap = {
+    {"aclInit", reinterpret_cast<void**>(&g_aclInitFunc)},
+    {"aclmdlInitDump", reinterpret_cast<void**>(&g_aclmdlInitDumpFunc)},
+    {"aclmdlSetDump", reinterpret_cast<void**>(&g_aclmdlSetDumpFunc)},
+    {"aclmdlFinalizeDump", reinterpret_cast<void**>(&g_aclmdlFinalizeDumpFunc)},
+    {"aclrtSynchronizeDevice", reinterpret_cast<void**>(&g_aclrtSynchronizeDeviceFunc)},
+};
 
 DebuggerErrno LoadAclApi()
 {
@@ -59,18 +69,8 @@ DebuggerErrno LoadAclApi()
         return DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND;
     }
 
-    static const std::map<const char*, void**> functionMap = {
-        {"aclInit", reinterpret_cast<void**>(&g_aclInitFunc)},
-        {"aclmdlInitDump", reinterpret_cast<void**>(&g_aclmdlInitDumpFunc)},
-        {"aclmdlSetDump", reinterpret_cast<void**>(&g_aclmdlSetDumpFunc)},
-        {"aclmdlFinalizeDump", reinterpret_cast<void**>(&g_aclmdlFinalizeDumpFunc)},
-        {"aclrtSynchronizeDevice", reinterpret_cast<void**>(&g_aclrtSynchronizeDeviceFunc)},
-    };
-
     for (auto& iter : functionMap) {
-        if (*(iter.second) != nullptr) {
-            continue;
-        }
+        if (*(iter.second) != nullptr) { continue; }
         *(iter.second) = dlsym(hLibAscendcl, iter.first);
         if (*(iter.second) == nullptr) {
             LOG_ERROR(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load function " +
@@ -92,13 +92,24 @@ DebuggerErrno LoadAclApi()
 
     g_acldumpRegCallbackFunc = reinterpret_cast<AcldumpRegCallbackFuncType>(dlsym(handler, "acldumpRegCallback"));
     if (g_acldumpRegCallbackFunc == nullptr) {
-        LOG_ERROR(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load function acldumpRegCallback from " +
-                  libName + ".");
+        LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load function acldumpRegCallback from " +
+                    libName + ".");
     }
-    LOG_DEBUG("Load function acldumpRegCallback from " + libName);
+    LOG_DEBUG("Load function acldumpRegCallback from " + libName + ".");
 
-    if (handler != hLibAscendcl) {
-        dlclose(handler);
+    if (handler != hLibAscendcl) { dlclose(handler); }
+
+    void* dumpHandler = dlopen(LIB_ASCEND_DUMP_NAME, RTLD_LAZY | RTLD_NOLOAD);
+    if (dumpHandler == nullptr) {
+        LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load libascend_dump.so.");
+    } else {
+        g_acldumpRegCallbackFuncInSo = reinterpret_cast<AcldumpRegCallbackFuncType>(dlsym(dumpHandler, "acldumpRegCallback"));
+        if (g_acldumpRegCallbackFuncInSo == nullptr) {
+            LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND,
+                        "Failed to load function acldumpRegCallback from libascend_dump.so.");
+        }
+        LOG_DEBUG("Load function acldumpRegCallback from libascend_dump.so.");
+        dlclose(dumpHandler);
     }
 
     return DebuggerErrno::OK;
@@ -138,10 +149,21 @@ aclError AclApiAclmdlFinalizeDump()
 
 aclError AclApiAcldumpRegCallback(AclDumpCallbackFuncType messageCallback, int32_t flag)
 {
-    if (g_acldumpRegCallbackFunc == nullptr) {
+    if (g_acldumpRegCallbackFunc == nullptr && g_acldumpRegCallbackFuncInSo == nullptr) {
         throw std::runtime_error("API acldumpRegCallback does not have a definition.");
     }
-    return g_acldumpRegCallbackFunc(messageCallback, flag);
+    aclError staticAclRet = -1;
+    aclError dynamicAclRet = -1;
+    if (g_acldumpRegCallbackFunc != nullptr) {
+        staticAclRet = g_acldumpRegCallbackFunc(messageCallback, flag);
+    }
+    if (g_acldumpRegCallbackFuncInSo != nullptr) {
+        dynamicAclRet = g_acldumpRegCallbackFuncInSo(messageCallback, flag);
+    }
+    if (staticAclRet != ACL_SUCCESS && dynamicAclRet != ACL_SUCCESS) {
+        return dynamicAclRet;
+    }
+    return ACL_SUCCESS;
 }
 
 aclError AclApiAclrtSynchronizeDevice()

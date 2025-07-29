@@ -59,8 +59,17 @@ std::string IpcClient::IpcClientNpuConfig()
     for (size_t i = 0; i < size; i++) {
         req->pids[i] = pids_[i];
     }
-    std::unique_ptr<Message> message = Message::ConstructMessage<NpuRequest, int32_t>(*req, MSG_TYPE_REQUEST, size);
-    if (!SyncSendMessage(*message, DYNO_IPC_NAME)) {
+    std::unique_ptr<Message> message;
+    try{
+        message = Message::ConstructMessage<NpuRequest, int32_t>(*req, MSG_TYPE_REQUEST, size);
+    }
+    catch (const std::exception &e) {
+        LOG(ERROR) << "ConstructMessage failed: " << e.what();
+        free(req);
+        req = nullptr;
+        throw;
+    }
+    if (!message || !SyncSendMessage(*message, DYNO_IPC_NAME)) {
         LOG(WARNING) << "Failed to send config to dyno server";
         free(req);
         req = nullptr;

@@ -27,7 +27,7 @@ from mindspore import nn, _no_grad
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import MonitorConst, Const
-from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.common.file_utils import load_json, save_json, make_dir
 from msprobe.core.monitor.utils import validate_config, get_output_base_dir, get_target_output_dir
 from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
 from msprobe.mindspore.common.utils import is_mindtorch
@@ -77,7 +77,8 @@ def param_is_data_parallel_duplicate(dp_group):
 
 
 def squash_param_name(param_name):
-    for pattern in ['layers?\.(.*)', 'embeddings?\.(.*)', 'final.*', 'output.*', 'norm.*']:
+    for pattern in ['^.*\.(layers?\..*)', '^.*\.(embeddings?\..*)', '^.*\.(final.*)', '^.*\.(output.*)',
+                    '^.*\.(norm.*)']:
         match = re.findall(pattern, param_name)
         if match:
             return match[0]
@@ -700,14 +701,11 @@ class TrainerMon:
                 index += 1
 
     def _save_module_struct(self):
-        save_module_struct = (not comm_is_initialized()
-                              or (self.module_rank_list and get_rank() == min(self.module_rank_list))
-                              or (not self.module_rank_list and get_rank() == 0))
-
-        if save_module_struct:
-            module_struct_file = os.path.realpath(os.path.join(get_output_base_dir(), 'module_struct.json'))
-            save_json(module_struct_file, self.module_struct, indent=2)
-            logger.info(f"> save module struct to {module_struct_file}")
+        output_dir = os.path.join(get_output_base_dir(), 'module_struct', f'rank{self.rank}')
+        make_dir(output_dir)
+        module_struct_file = os.path.realpath(os.path.join(output_dir, 'module_struct.json'))
+        save_json(module_struct_file, self.module_struct, indent=2)
+        logger.info(f"> save module struct to {module_struct_file}")
         self.struct_printed = True
 
     def _hook_module(self, target_names, module, vpp_stage=''):
