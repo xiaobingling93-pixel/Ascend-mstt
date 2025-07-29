@@ -41,11 +41,11 @@ class GraphMerger:
         elif param.tp == param.rank_size:
             return TPMerger(results, param, is_bench)
         elif param.pp == param.rank_size:
-            return PPMerger(results, param, is_bench)
+            return PPMerger(results, param, is_bench) if param.vpp == 1 else VPPMerger(results, param, is_bench)
         elif param.pp == 1:
             return TPMerger(results, param, is_bench)
         elif param.tp == 1:
-            return PPMerger(results, param, is_bench)
+            return PPMerger(results, param, is_bench) if param.vpp == 1 else VPPMerger(results, param, is_bench)
         elif param.tp * param.pp == param.rank_size:
             return TPPPMerger(results, param, is_bench)
         else:
@@ -804,7 +804,8 @@ class NoParallelMerger(BaseGraphMerger):
 class TPPPMerger(BaseGraphMerger):
     def merge_graphs(self):
         tp_merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
-        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
+        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench) \
+            if self.parallel_param.vpp == 1 else VPPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
         pp_groups = pp_merger.get_groups()
         tp_groups = tp_merger.get_groups()
         # 进入TP+PP混合处理器，PP和TP必然大于1
@@ -826,7 +827,8 @@ class TPPPMerger(BaseGraphMerger):
 class FullMerger(BaseGraphMerger):
     def merge_graphs(self):
         tp_merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
-        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
+        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench) \
+            if self.parallel_param.vpp == 1 else VPPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
         pp_groups = pp_merger.get_groups()
         tp_groups = tp_merger.get_groups()
         tp_merge_mapping = {}
@@ -860,3 +862,155 @@ class FullMerger(BaseGraphMerger):
             self.sort_merged_api_collection(tp_merged_result[0].graph)
             tp_results.extend(tp_merged_result)
         return tp_results
+
+
+class VPPMerger(PPMerger):
+    LAYERS_NUM_PATTERN = re.compile(r"(layers\.|layer\.)(\d+)(\.)")
+    FORWARD_PATTERN = re.compile(r'\.forward\.\d+$')
+
+    @staticmethod
+    def _replace_vpp_id(s, vpp_id):
+        parts = s.split(Const.SEP)
+        if len(parts) < 2 or not parts[1].isdigit():
+            return s
+        parts[1] = str(vpp_id)
+        return Const.SEP.join(parts)
+
+    def merge_pp_graphs(self, results):
+        if not results or len(results) < 2:
+            return results
+        graphs = [x.graph for x in results]
+        main_graph_result = results[0]
+        for main_node in main_graph_result.graph.root.subnodes:
+            if main_node.op == NodeOp.module and main_node.id not in self.unmerged_module:
+                self._merge_nodes(main_graph_result.graph, main_node, graphs[1:])
+                self._sort_nodes(main_graph_result.graph, main_node)
+        self._merge_vpp_data(main_graph_result.graph)
+        self._merge_vpp_chunks(main_graph_result.graph)
+        return [main_graph_result]
+
+    def _merge_vpp_data(self, graph):
+        """
+        所有chunk的数据都合并到chunk0，前向chunk0的输出使用最后一个chunk的输出，反向chunk0的输入使用最后一个chunk的输入
+        """
+        module_list = []
+        for node in reversed(graph.root.subnodes):
+            parts = node.id.split(Const.SEP)
+            if len(parts) < 2:
+                continue
+            if parts[1] in [GraphConst.VPP_CHUNK_0, str(self.parallel_param.vpp - 1)]:
+                module_list.append(node)
+        if not module_list:
+            return
+        stack = module_list[:]
+        while stack:
+            current_node = stack.pop()
+            if hasattr(current_node, 'is_pp_merged') or hasattr(current_node,
+                                                                'pp_index') or current_node.op != NodeOp.module:
+                continue
+            is_forward = self.FORWARD_PATTERN.search(current_node.id)
+            stack.extend(reversed(current_node.subnodes))
+            target_id = self._replace_vpp_id(current_node.id, self.parallel_param.vpp - 1)
+            target_node = graph.node_map.get(target_id)
+            if not target_node:
+                continue
+            if is_forward:
+                current_node.output_data = self._update_node_data_key(target_node.id, current_node.id,
+                                                                      target_node.output_data)
+            else:
+                current_node.input_data = self._update_node_data_key(target_node.id, current_node.id,
+                                                                     target_node.input_data)
+
+    def _merge_vpp_chunks(self, graph):
+        """
+        所有chunk都合并到chunk0，layers层搬到chunk0并重排序号
+        """
+        chunk_id_list = [i for i in range(1, self.parallel_param.vpp)]
+        chunk_0_list = []
+        for node in reversed(graph.root.subnodes):
+            parts = node.id.split(Const.SEP)
+            if len(parts) < 2:
+                continue
+            if parts[1] == GraphConst.VPP_CHUNK_0:
+                chunk_0_list.append(node)
+        if not chunk_0_list:
+            return
+        stack = chunk_0_list[:]
+        layers_need_merge_dict = {}
+        while stack:
+            current_node = stack.pop()
+            if hasattr(current_node, 'is_pp_merged') or hasattr(current_node, 'pp_index') \
+                    and current_node.upnode.id not in layers_need_merge_dict:
+                layers_need_merge_dict[current_node.upnode.id] = current_node.upnode
+                continue
+            stack.extend(reversed(current_node.subnodes))
+        for node in layers_need_merge_dict.values():
+            is_forward = self.FORWARD_PATTERN.search(node.id)
+            for vpp_id in chunk_id_list:
+                target_node = graph.node_map.get(self._replace_vpp_id(node.id, vpp_id))
+                if not target_node:
+                    continue
+                # 其他chunk的layers都搬到chunk0，forward追加到后面，backward追加到前面
+                if is_forward:
+                    node.subnodes.extend(target_node.subnodes)
+                else:
+                    node.subnodes = target_node.subnodes + node.subnodes
+                for sub_node in target_node.subnodes:
+                    sub_node.upnode = node
+                # 获取其他chunk的层级链路，删除所有父节点，不在前端展示已合并的其他chunk节点
+                ancestors = target_node.get_ancestors()
+                if len(ancestors) < 2:
+                    continue
+                for module_id in ancestors[1:]:
+                    graph.node_map.pop(module_id, None)
+                graph.root.subnodes = [node for node in graph.root.subnodes if node.id != ancestors[1]]
+            # layers层重排序号
+            self._sort_layers(node.subnodes, graph, is_forward)
+
+    def _sort_layers(self, node_list, graph, is_forward):
+        if not is_forward:
+            node_list = list(reversed(node_list))
+        index = -1
+        for node in node_list:
+            match = self.LAYERS_NUM_PATTERN.search(node.id)
+            if match:
+                index += 1
+            parts = node.id.split(Const.SEP)
+            # Module.0.xxx代表第一个chunk，不必重排序
+            if len(parts) < 2 or parts[1] == GraphConst.VPP_CHUNK_0:
+                continue
+            # layers层修改chunk号和layers序号，非layers层修改chunk号
+            new_node_id_prefix = ''
+            if match:
+                prefix, number, dot = match.groups()
+                new_string = prefix + str(index) + dot
+                start, end = match.span()
+                new_node_id_prefix = node.id[:start] + new_string
+                new_node_id_prefix = self._replace_vpp_id(new_node_id_prefix, GraphConst.VPP_CHUNK_0)
+                new_node_id = new_node_id_prefix + node.id[end:]
+            else:
+                new_node_id = self._replace_vpp_id(node.id, GraphConst.VPP_CHUNK_0)
+            graph.node_map.pop(node.id, None)
+            node.input_data = self._update_node_data_key(node.id, new_node_id, node.input_data)
+            node.output_data = self._update_node_data_key(node.id, new_node_id, node.output_data)
+            node.id = new_node_id
+            graph.node_map[new_node_id] = node
+            stack = node.subnodes[:]
+            while stack:
+                current_node = stack.pop()
+                if current_node.op != NodeOp.module:
+                    continue
+                stack.extend(reversed(current_node.subnodes))
+                match = self.LAYERS_NUM_PATTERN.search(current_node.id)
+                if match:
+                    _, e = match.span()
+                    new_current_node_id = new_node_id_prefix + current_node.id[e:]
+                else:
+                    new_current_node_id = self._replace_vpp_id(current_node.id, GraphConst.VPP_CHUNK_0)
+                current_node.input_data = self._update_node_data_key(current_node.id, new_current_node_id,
+                                                                     current_node.input_data)
+                current_node.output_data = self._update_node_data_key(current_node.id, new_current_node_id,
+                                                                      current_node.output_data)
+                graph.node_map.pop(current_node.id, None)
+                current_node.id = new_current_node_id
+                graph.node_map[new_current_node_id] = current_node
