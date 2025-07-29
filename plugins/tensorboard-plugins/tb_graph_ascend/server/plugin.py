@@ -18,14 +18,10 @@
 """The TensorBoard Graphs plugin."""
 
 import os
-from werkzeug import wrappers
-from tensorboard.backend import http_util
 from tensorboard.plugins import base_plugin
 from tensorboard.util import tb_logging
 
-from . import constants
 from .app.views.graph_views import GraphView
-from .app.utils.graph_utils import GraphUtils
 from .app.utils.global_state import GraphState
 
 logger = tb_logging.get_logger()
@@ -38,7 +34,6 @@ class GraphsPlugin(base_plugin.TBPlugin):
     """Graphs Plugin for TensorBoard."""
 
     plugin_name = PLUGIN_NAME
-    headers = [('X-Content-Type-Options', 'nosniff')]
 
     def __init__(self, context):
         """Instantiates GraphsPlugin via TensorBoard core.
