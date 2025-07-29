@@ -99,11 +99,9 @@ class GraphView:
     @wrappers.Request.application
     def search_node(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
-        print(data)
         meta_data = data.get("metaData")
         type = data.get("type")
         values = data.get("values")
-        result = {}
         if(type == 'precision'):
             result = GraphService.search_node_by_precision(meta_data, values)
         elif(type == 'overflow'):

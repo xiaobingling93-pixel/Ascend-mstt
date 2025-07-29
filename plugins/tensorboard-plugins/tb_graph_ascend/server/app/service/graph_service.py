@@ -242,19 +242,50 @@ class GraphService:
             is_filter_unmatch_nodes = True if '无匹配节点' in values else False
             if is_filter_unmatch_nodes:
                 values.remove('无匹配节点')
-            for node_name, node in graph_data.get(NPU, {}).get('node', {}).items():
+            # 单图
+            if not graph_data.get(NPU):
+                node_list = graph_data.get('node', {})
+            # 多图
+            else:
+                node_list = graph_data.get(NPU, {}).get('node', {})
+            for node_name, node in node_list.items():
                 subnodes = node.get("subnodes", None)
                 if subnodes != [] and subnodes != None:
                    continue 
                 matched_node_link = node.get('matched_node_link', None)
-                if is_filter_unmatch_nodes and matched_node_link == None or matched_node_link == []:
+                if is_filter_unmatch_nodes and (matched_node_link == None or matched_node_link == []):
                     precision.append(node_name)
                 if any(low <= node.get('data', {}).get("precision_index", -1) < high for low, high in values):
                     precision.append(node_name)
             return { 'success': True, 'data': precision}
         except Exception as e:
-            logger.error('获取精度误差失败:' + str(e))
-            return {'success': False, 'error': '获取精度误差失败:' + str(e)}
+            logger.error('获取符合精度误差节点失败:' + str(e))
+            return {'success': False, 'error': '获取符合精度误差节点失败:' + str(e)}
+    
+    @staticmethod
+    def search_node_by_overflow(meta_data, values):
+        # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
+        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+        if error_message:
+            return {'success': False, 'error': error_message}
+        try:
+            overflow = []
+            # 单图
+            if not graph_data.get(NPU):
+                node_list = graph_data.get('node', {})
+           
+                for node_name, node in node_list.items():
+                    subnodes = node.get("subnodes", None)
+                    if subnodes != [] and subnodes != None:
+                        continue 
+                    if node.get('data', {}).get("overflow_level", -1) in values:
+                        overflow.append(node_name)
+                return { 'success': True, 'data': overflow}
+            else:
+                return {'success': False, 'error': '多图模式下不支持溢出检测'}
+        except Exception as e:
+            logger.error('获取符合溢出检测节点失败:' + str(e))
+            return {'success': False, 'error': '获取符合溢出检测节点失败:' + str(e)}
     
     @staticmethod
     def update_hierarchy_data(graph_type):
