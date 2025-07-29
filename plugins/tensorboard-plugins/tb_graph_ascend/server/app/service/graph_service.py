@@ -244,10 +244,10 @@ class GraphService:
                 values.remove('无匹配节点')
             # 单图
             if not graph_data.get(NPU):
-                node_list = graph_data.get('node', {})
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}), meta_data.get("microStep", -1))
             # 多图
             else:
-                node_list = graph_data.get(NPU, {}).get('node', {})
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get(NPU), meta_data.get("microStep", -1))
             for node_name, node in node_list.items():
                 subnodes = node.get("subnodes", None)
                 if subnodes != [] and subnodes != None:
@@ -272,8 +272,7 @@ class GraphService:
             overflow = []
             # 单图
             if not graph_data.get(NPU):
-                node_list = graph_data.get('node', {})
-           
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}), meta_data.get("microStep", -1))
                 for node_name, node in node_list.items():
                     subnodes = node.get("subnodes", None)
                     if subnodes != [] and subnodes != None:

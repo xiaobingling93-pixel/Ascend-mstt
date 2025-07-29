@@ -19,7 +19,6 @@ import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
 import { Notification } from '@vaadin/notification';
 import { customElement, property, observe } from '@polymer/decorators';
-import { fetchPbTxt, safeJSONParse } from '../../../utils';
 import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects } from '../../../common/constant';
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
@@ -787,6 +786,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       }
       if (this.selectColor.length === 0) {
         this.precisionmenu = [];
+        this.set('selectedPrecisionNode', '');
         return;
       }
       const params = {
