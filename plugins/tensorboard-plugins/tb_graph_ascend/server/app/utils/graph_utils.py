@@ -468,8 +468,7 @@ class GraphUtils:
         sorted_keys = sorted(data.keys(), key=cmp_to_key(GraphUtils.compare_tag_names))
         for k in sorted_keys:
             # 对每个键对应的值列表进行排序
-            sorted_values = sorted(data[k], key=cmp_to_key(GraphUtils.compare_tag_names))
-            sorted_data[k] = sorted_values
+            sorted_values = sorted(data.get(k, {}).get('tags'), key=cmp_to_key(GraphUtils.compare_tag_names))
+            sorted_data[k] = {'type': data.get(k, {}).get('type'), 'tags': sorted_values}
 
         return sorted_data
-

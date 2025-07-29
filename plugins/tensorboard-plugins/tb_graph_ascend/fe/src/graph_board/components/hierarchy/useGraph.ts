@@ -282,13 +282,13 @@ const useGraph = (): UseGraphType => {
         try {
             const metaDataSafe = safeJSONParse(JSON.stringify(metaData));
             const params = {
-                nodeInfo: JSON.stringify(nodeInfo),
-                metaData: JSON.stringify(metaDataSafe),
+                nodeInfo,
+                metaData: metaDataSafe,
             };
             const result = await request({
                 url: 'changeNodeExpandState',
-                method: 'GET',
-                params: params,
+                method: 'POST',
+                data: params,
                 timeout: 10000,
             });
             return result;
