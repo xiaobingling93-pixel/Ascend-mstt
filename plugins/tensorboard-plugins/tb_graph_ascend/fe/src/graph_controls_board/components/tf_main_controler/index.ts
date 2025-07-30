@@ -108,7 +108,6 @@ class MainController extends PolymerElement {
     }
     const { type, tags } = this.metaDir[this.selectedRun];
     this.set('tags', tags);
-    this.set('selectedTag', tags[0]);
     const selection = {
       ...this.selection,
       run: this.selectedRun,
@@ -116,9 +115,10 @@ class MainController extends PolymerElement {
       microStep: -1,
       type
     };
+
+    this.set('selection', selection);
     this.set('selectedTag', tags[0]);
     this.set('selectedMicroStep', -1);
-    this.set('selection', selection);
   }
 
   @observe('selectedTag')
@@ -131,8 +131,9 @@ class MainController extends PolymerElement {
       tag: this.selectedTag,
       microStep: -1,
     };
-    this.set('selectedMicroStep', -1);
+
     this.set('selection', selection);
+    this.set('selectedMicroStep', -1);
   }
 
   @observe('selectedMicroStep')

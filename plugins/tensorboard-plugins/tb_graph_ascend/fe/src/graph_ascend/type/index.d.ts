@@ -24,7 +24,7 @@ export interface ProgressType {
 export interface SelectionType {
     run: string;
     tag: string;
-    type: string;
+    type: 'json' | 'db';
     microStep?: number;
     step?: string;
     rank?: string;

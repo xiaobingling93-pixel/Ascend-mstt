@@ -13,15 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
 from .base_graph_service import GraphServiceStrategy
+from ..repositories.graph_repo import GraphRepo
+from ..utils.global_state import GraphState
 
 
 class DbGraphService(GraphServiceStrategy):
+
     def __init__(self, run_path, tag):
         super().__init__(run_path, tag)
+        runs = GraphState.get_global_value('runs')
+        db_path = os.path.join(runs.get(self.run), f"{tag}.vis.db")
+        self.repo = GraphRepo(db_path)
 
     def load_graph_data(self):
-        pass
+        result = self.repo.query_all_nodes()
+        return {
+            'success': True,
+            'data':[]
+        }
 
     def load_graph_config_info(self):
         pass
@@ -30,6 +41,12 @@ class DbGraphService(GraphServiceStrategy):
         pass
 
     def change_node_expand_state(self, node_info, meta_data):
+        pass
+
+    def search_node_by_precision(self, meta_data, values):
+        pass
+    
+    def search_node_by_overflow(self, meta_data, values):
         pass
     
     def get_node_info(self, node_info, meta_data):

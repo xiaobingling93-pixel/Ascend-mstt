@@ -21,6 +21,7 @@ from werkzeug import wrappers, Response, exceptions
 from tensorboard.backend import http_util
 from ..service import ServiceFactory, GraphServiceStrategy, check_file_type
 from ..utils.graph_utils import GraphUtils
+from ..utils.global_state import DataType
 
 
 class GraphView:
@@ -63,9 +64,14 @@ class GraphView:
     def load_graph_data(request):
         meta_data = {
             'run': request.args.get('run'),
-            'tag': request.args.get('tag')
+            'tag': request.args.get('tag'),
+            'type': request.args.get('type'),
         }
         strategy = GraphView._get_strategy(meta_data)
+        if meta_data.get('type') == DataType.DB.value:
+            result = strategy.load_graph_data()
+            response = http_util.Respond(request, result, "application/json")
+            return response
         return Response(
             strategy.load_graph_data(),
             mimetype='text/event-stream',
