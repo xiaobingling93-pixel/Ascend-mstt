@@ -96,9 +96,6 @@ const useGraph = (): UseGraphType => {
         if (!colors || !graphType) {
             return NO_MATCHED_NODE_COLOR;
         }
-        if (graphType === 'Bench') {
-            return BENCH_NODE_COLOR;
-        }
         if (isEmpty(node.matchedNodeLink)) {
             return Object.keys(colors).find((color) => colors[color].value === '无匹配节点') ?? NO_MATCHED_NODE_COLOR;
         }
