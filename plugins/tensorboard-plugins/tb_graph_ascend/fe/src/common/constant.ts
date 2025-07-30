@@ -20,6 +20,9 @@ export const BENCH_PREFIX = 'B___';
 // 未匹配节点颜色
 export const UNMATCHED_COLOR = '#C7C7C7';
 
+export const JSON_TYPE = 'json'
+export const DB_TYPE = 'db'
+
 // 双图下单个图形的最小宽度
 export const MIN_GRAPG_WIDTH = 200;
 

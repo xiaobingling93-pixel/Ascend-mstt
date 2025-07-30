@@ -17,6 +17,8 @@ import os
 from .base_graph_service import GraphServiceStrategy
 from ..repositories.graph_repo import GraphRepo
 from ..utils.global_state import GraphState
+from tensorboard.util import tb_logging
+logger = tb_logging.get_logger()
 
 
 class DbGraphService(GraphServiceStrategy):
@@ -24,19 +26,20 @@ class DbGraphService(GraphServiceStrategy):
     def __init__(self, run_path, tag):
         super().__init__(run_path, tag)
         runs = GraphState.get_global_value('runs')
-        db_path = os.path.join(runs.get(self.run), f"{tag}.vis.db")
+        db_path = os.path.join(self.run, f"{tag}.vis.db")
         self.repo = GraphRepo(db_path)
 
     def load_graph_data(self):
-        result = self.repo.query_all_nodes()
-        return {
-            'success': True,
-            'data':[]
-        }
-
-    def load_graph_config_info(self):
         pass
 
+    def load_graph_config_info(self):
+        try:
+            config_info = self.repo.query_config_info()
+            return {'success': True, 'data': config_info}
+        except Exception as e:
+            logger.error(f"load graph config info failed, {e}")
+            return {'success': False, 'error': 'load graph config info failed, {e}'}
+        
     def load_graph_all_node_list(self, meta_data):
         pass
 

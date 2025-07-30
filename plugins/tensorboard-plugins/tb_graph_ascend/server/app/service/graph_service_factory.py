@@ -19,6 +19,7 @@ from ..utils.global_state import GraphState, DataType
 
 
 class ServiceFactory:
+
     def __init__(self):
         self.run = ''
         self.tag = ''

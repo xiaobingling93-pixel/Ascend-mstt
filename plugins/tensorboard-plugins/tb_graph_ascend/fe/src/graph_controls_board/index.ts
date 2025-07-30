@@ -184,6 +184,8 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           meta-dir="[[metaDir]]"
           selection="{{selection}}"
           microsteps="[[microsteps]]"
+          ranks="[[ranks]]"
+          steps="[[steps]]"
         ></tf-main-controler>
       </div>
       <div class="container-wrapper">

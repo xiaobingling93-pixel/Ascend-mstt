@@ -26,8 +26,8 @@ export interface SelectionType {
     tag: string;
     type: 'json' | 'db';
     microStep?: number;
-    step?: string;
-    rank?: string;
+    step?: number;
+    rank?: number;
 }
 
 export interface GraphConfigType {
@@ -41,6 +41,8 @@ export interface GraphConfigType {
     isSingleGraph: boolean;
     matchedConfigFiles: string[];
     task: string;
+    rankNum: number;
+    stepNum: number;
 }
 
 export interface GraphAllNodeType {

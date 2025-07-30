@@ -14,6 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 import sqlite3
+from ..utils.graph_utils import GraphUtils
 from tensorboard.util import tb_logging
 logger = tb_logging.get_logger()
 
@@ -26,7 +27,6 @@ class GraphRepo:
 
     def _initialize_db_connection(self):
         try:
-            print(self.db_path)
             self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
             self.is_db_connected = self.conn is not None
@@ -69,3 +69,29 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query Bench nodes: {e}")
             return []
+
+    # 查询配置表信息
+    def query_config_info(self):
+        try:
+            query = f"SELECT * FROM tb_config"
+            with self.conn as c:
+                cursor = c.execute(query)
+                rows = cursor.fetchall()
+            record = dict(rows[0])
+            # 构建最终的 data 对象
+            config_info = {
+                "microSteps": record.get('micro_steps', 1),
+                "tooltips": GraphUtils.safe_json_loads(record.get('tool_tip')),
+                "overflowCheck": bool(record.get('overflow_check', 1)),
+                "isSingleGraph": not record.get('graph_type') == 'compare',
+                "colors": GraphUtils.safe_json_loads(record.get('node_colors')),
+                "matchedConfigFiles": [],
+                "task": record.get('task', ''),
+                "rankNum": record.get('rank_num', 7),
+                "stepNum": record.get('step_num', 7),
+            }
+            return config_info
+        except Exception as e:
+            logger.error(f"Failed to query config info: {e}")
+            return []
+    # 查询step 

@@ -51,6 +51,8 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 colors="{{colors}}"
                 colorset="[[colorset]]"
                 overflowcheck="[[overflowcheck]]"
+                steps="[[steps]]"
+                ranks="[[ranks]]"
                 microsteps="[[microsteps]]"
                 npu-match-nodes="[[npuMatchNodes]]"
                 bench-match-nodes="[[benchMatchNodes]]"
@@ -186,8 +188,15 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     @property({ type: Boolean })
     isSingleGraph: boolean = false;
 
-    @property({ type: Object })
-    microsteps: any;
+    @property({ type: Array })
+    microsteps: number[] = [];
+
+    @property({ type: Array })
+    steps: number[] = [];
+
+    @property({ type: Array })
+    ranks: number[] = [];
+
 
     @property({ type: Array })
     overflowcheck;
@@ -224,9 +233,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         if (!this.selection?.run || !this.selection?.tag) {
             return;
         }
-        if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
-            console.log('selection changed', this.selection);
-
+        const isChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
+        const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
+        if (isChange || isDBChange) {
             switch (this.selection?.type) {
                 case 'json':
                     this.loadJSONGraphData(this.selection);
@@ -338,15 +347,30 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('task', config.task);
             this.set('matchedConfigFiles', ['未选择', ...config.matchedConfigFiles]);
             const microstepsCount = Number(config.microSteps);
+            const ranksCount = Number(config.rankNum);
+            const stepsCount = Number(config.stepNum);
             if (microstepsCount) {
                 const microstepsArray = Array.from({ length: microstepsCount + 1 }, (_, index) => ({
                     label: index === 0 ? 'ALL' : String(index - 1),
                     value: index - 1,
                 }));
                 this.set('microsteps', microstepsArray);
-            } else {
-                this.set('microsteps', []);
             }
+            if (ranksCount >= 0) {
+                const ranksArray = Array.from({ length: ranksCount + 1 }, (_, index) => ({
+                    label: index,
+                    value: index,
+                }));
+                this.set('ranks', ranksArray);
+            }
+            if (stepsCount >= 0) {
+                const stepsArray = Array.from({ length: stepsCount + 1 }, (_, index) => ({
+                    label: index,
+                    value: index,
+                }));
+                this.set('steps', stepsArray);
+            }
+
         } else {
             Notification.show(`图配置加载失败:${error}`, {
                 position: 'middle',

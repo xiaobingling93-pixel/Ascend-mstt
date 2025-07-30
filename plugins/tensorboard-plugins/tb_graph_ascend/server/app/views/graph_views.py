@@ -68,10 +68,7 @@ class GraphView:
             'type': request.args.get('type'),
         }
         strategy = GraphView._get_strategy(meta_data)
-        if meta_data.get('type') == DataType.DB.value:
-            result = strategy.load_graph_data()
-            response = http_util.Respond(request, result, "application/json")
-            return response
+
         return Response(
             strategy.load_graph_data(),
             mimetype='text/event-stream',
@@ -87,11 +84,19 @@ class GraphView:
     @wrappers.Request.application
     @check_file_type
     def load_graph_config_info(request):
+        db_meta_data = {
+            'run': 'C:\\code\\db',
+            'tag': 'compare_20250527163634',
+            'type': 'db',
+        }
+        db_strategy = GraphView._get_strategy(db_meta_data)
+        db_result = db_strategy.load_graph_config_info()
+        GraphView._get_strategy(db_meta_data)
         meta_data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {}).get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.load_graph_config_info()
         # 创建响应对象
-        response = http_util.Respond(request, result, "application/json")
+        response = http_util.Respond(request, db_result, "application/json")
         return response
 
     # 获取当前图所有节点列表
