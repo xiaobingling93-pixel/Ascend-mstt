@@ -87,8 +87,8 @@ class GraphRepo:
                 "colors": GraphUtils.safe_json_loads(record.get('node_colors')),
                 "matchedConfigFiles": [],
                 "task": record.get('task', ''),
-                "rankNum": record.get('rank_num', 7),
-                "stepNum": record.get('step_num', 7),
+                "rankNum": record.get('rank_num', 0),
+                "stepNum": record.get('step_num', 0     ),
             }
             return config_info
         except Exception as e:
