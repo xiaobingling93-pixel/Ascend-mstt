@@ -15,8 +15,11 @@
 
 import types
 import torch
-from torch._dynamo.convert_frame import convert_frame as _orig_convert_frame, Hooks
 from msprobe.pytorch.hook_module.api_register import get_api_register
+from msprobe.pytorch.common.utils import torch_version_above_or_equal_2
+
+if torch_version_above_or_equal_2:
+    from torch._dynamo.convert_frame import convert_frame as _orig_convert_frame, Hooks
 
 
 def wrap_jit_script_func():
@@ -69,4 +72,5 @@ def wrap_compile_script_func():
 
 def wrap_script_func():
     wrap_jit_script_func()
-    wrap_compile_script_func()
+    if torch_version_above_or_equal_2:
+        wrap_compile_script_func()
