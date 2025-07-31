@@ -812,7 +812,7 @@ class TrainerMon:
         if self.fsdp_post_backward_hook:  # fsdp
             torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
             logger.info("remove patch_post_backward_hook in fsdp.")
-        if self.fsdp2_foreach_reduce:  # fsdp
+        if self.fsdp2_foreach_reduce:  # fsdp2
             torch.distributed.fsdp._fully_shard._fsdp_collectives.foreach_reduce = self.fsdp2_foreach_reduce
             logger.info("remove patch_foreach_reduce_hook in fsdp2.")
         else:  # not megatron and not fsdp
