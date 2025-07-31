@@ -773,6 +773,11 @@ class MonitorConst:
     DEFAULT_STEP_INTERVAL = 1
 
     OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean", "shape", "dtype"]
+    OP_MONVIS_SUPPORTED = [
+        "norm", "min", "max", "zeros", "nans", "mean",
+        "entropy", "softmax_max", "sr", "kernel_norm", "std_x", "jacobian",
+        "proxy", "token_similarity"
+    ]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
