@@ -813,7 +813,11 @@ class TrainerMon:
             torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
             logger.info("remove patch_post_backward_hook in fsdp.")
         if self.fsdp2_foreach_reduce:  # fsdp2
-            torch.distributed.fsdp._fully_shard._fsdp_collectives.foreach_reduce = self.fsdp2_foreach_reduce
+            import torch.distributed.fsdp._fully_shard._fsdp_param_group as _fsdp_param_group
+            import torch.distributed.fsdp._fully_shard._fsdp_collectives as _fsdp_collectives
+            _fsdp_collectives.foreach_reduce = self.fsdp2_foreach_reduce
+            importlib.reload(_fsdp_param_group)
+
             logger.info("remove patch_foreach_reduce_hook in fsdp2.")
         else:  # not megatron and not fsdp
             for handle in self.handles['wgrads']:
@@ -1061,7 +1065,7 @@ class TrainerMon:
             return
 
         if self.fsdp2_wrapped_module:
-            # patch fsdp _runtime_utils._post_backward_hook
+            # patch fsdp _fully_shard._fsdp_collectives.foreach_reduce
             self._patch_fsdp2_foreach_reduce()
             return
 
@@ -1102,7 +1106,6 @@ class TrainerMon:
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = _post_backward_hook(state, handle, *unused)
                 return out
-
             return wrapper
 
         logger.info("Patch fsdp _post_backward_hook, collect pre_grad metrics.")
@@ -1123,13 +1126,12 @@ class TrainerMon:
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = foreach_reduce(fsdp_params, unsharded_grads, *unused)
                 return out
-
             return wrapper
 
         logger.info("Patch fsdp foreach_reduce, collect pre_grad metrics.")
         import torch.distributed.fsdp._fully_shard._fsdp_param_group as _fsdp_param_group
         import torch.distributed.fsdp._fully_shard._fsdp_collectives as _fsdp_collectives
-        self.fsdp_foreach_reduce = _fsdp_collectives.foreach_reduce
+        self.fsdp2_foreach_reduce = _fsdp_collectives.foreach_reduce
         _fsdp_collectives.foreach_reduce = patch_foreach_reduce(_fsdp_collectives.foreach_reduce)
         importlib.reload(_fsdp_param_group)  # 关键操作，不然会因为torch一开始就import foreach_reduce导致patch失效
 
