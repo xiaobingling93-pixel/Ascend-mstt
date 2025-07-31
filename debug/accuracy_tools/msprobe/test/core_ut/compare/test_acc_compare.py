@@ -686,14 +686,16 @@ class TestMatch(unittest.TestCase):
         match = Match(mode_config, mapping_config, cross_frame=False)
 
         match_result = pd.DataFrame(columns=CompareConst.MATCH_RESULT_COLUMNS)
-        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'op_origin', 'data_name', 'op', [1, 2]],
+        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info',
+                                 'input', 'op_origin', 'False', 'data_name', 'op', [1, 2]],
                                 index=['op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x',
-                                       'state_x', 'api_origin_name_x', 'data_name_x',
+                                       'state_x', 'api_origin_name_x', 'data_name_x', 'requires_grad_x',
                                        'compare_key', 'compare_shape']
                                 )
         match_result = match.put_unmatched_in_table(match_result, npu_op_item)
-        target_match_result = pd.DataFrame([['op', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'op_origin', 'data_name', 'op', [1, 2],
-                                             'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A']],
+        target_match_result = pd.DataFrame([['op', 'float32', [1, 2], 'summary', 'stack_info',
+                                             'input', 'op_origin', 'False', 'data_name', 'op', [1, 2],
+                                             'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A']],
                                            columns=CompareConst.MATCH_RESULT_COLUMNS)
         self.assertTrue(match_result.equals(target_match_result))
 
@@ -703,17 +705,23 @@ class TestMatch(unittest.TestCase):
         match = Match(mode_config, mapping_config, cross_frame=False)
 
         match_result = pd.DataFrame(columns=CompareConst.MATCH_RESULT_COLUMNS)
-        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'op_origin', 'data_name', 'op', [1, 2]],
-                                index=['op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'state_x', 'api_origin_name_x', 'data_name_x',
+        npu_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info',
+                                 'input', 'op_origin', 'False', 'data_name', 'op', [1, 2]],
+                                index=['op_name_x', 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x',
+                                       'state_x', 'api_origin_name_x', 'requires_grad_x', 'data_name_x',
                                        'compare_key', 'compare_shape']
                                 )
-        bench_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'op_origin', 'data_name', 'op', [1, 2]],
-                                  index=['op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'state_y', 'api_origin_name_y', 'data_name_y',
+        bench_op_item = pd.Series(['op', 'float32', [1, 2], 'summary', 'stack_info',
+                                   'input', 'op_origin', 'False', 'data_name', 'op', [1, 2]],
+                                  index=['op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y',
+                                         'state_y', 'api_origin_name_y', 'requires_grad_y', 'data_name_y',
                                          'compare_key', 'compare_shape']
                                   )
         match_result = match.put_matched_in_table(match_result, npu_op_item, bench_op_item)
-        target_match_result = pd.DataFrame([['op', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'op_origin', 'data_name', 'op', [1, 2],
-                                             'op', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'op_origin', 'data_name']],
+        target_match_result = pd.DataFrame([['op', 'float32', [1, 2], 'summary', 'stack_info',
+                                             'input', 'op_origin', 'False', 'data_name', 'op', [1, 2],
+                                             'op', 'float32', [1, 2], 'summary', 'stack_info',
+                                             'input', 'op_origin', 'False', 'data_name']],
                                            columns=CompareConst.MATCH_RESULT_COLUMNS)
         self.assertTrue(match_result.equals(target_match_result))
 
@@ -756,19 +764,38 @@ class TestMatch(unittest.TestCase):
         match = Match(mode_config, mapping_config, cross_frame=False)
 
         npu_df = pd.DataFrame([
-            ['Functional.conv2d.3.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.conv2d.3.forward','Functional.conv2d.3.forward.input.0.pt', 'Functional.conv2d.3.forward.input.0', [1, 2]],
-            ['Functional.amax.1.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.amax.1.forward', 'Functional.amax.0.forward.input.0.pt', 'Functional.amax.1.forward.input.0', [1, 2]]
-        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'data_name', 'compare_key', 'compare_shape'])
+            ['Functional.conv2d.3.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+             'input', 'Functional.conv2d.3.forward', 'True', 'Functional.conv2d.3.forward.input.0.pt',
+             'Functional.conv2d.3.forward.input.0', [1, 2]],
+            ['Functional.amax.1.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+             'input', 'Functional.amax.1.forward', 'True', 'Functional.amax.0.forward.input.0.pt',
+             'Functional.amax.1.forward.input.0', [1, 2]]
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info',
+                    'state', 'api_origin_name', 'requires_grad', 'data_name',
+                    'compare_key', 'compare_shape'])
         bench_df = pd.DataFrame([
-            ['Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.conv2d.0.forward', 'Functional.conv2d.0.forward.input.0.pt', 'Functional.conv2d.0.forward.input.0', [1, 2]],
-            ['Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.amax.0.forward', 'Functional.amax.0.forward.input.0.pt', 'Functional.amax.0.forward.input.0', [1, 2]]
-        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'data_name', 'compare_key', 'compare_shape'])
+            ['Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+             'input', 'Functional.conv2d.0.forward', 'True', 'Functional.conv2d.0.forward.input.0.pt',
+             'Functional.conv2d.0.forward.input.0', [1, 2]],
+            ['Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+             'input', 'Functional.amax.0.forward', 'True', 'Functional.amax.0.forward.input.0.pt',
+             'Functional.amax.0.forward.input.0', [1, 2]]
+        ], columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info',
+                    'state', 'api_origin_name', 'requires_grad', 'data_name', 'compare_key', 'compare_shape'])
 
         match_result = match.process_fuzzy_match(npu_df, bench_df)
         expected = pd.DataFrame(
             [
-                ['Functional.conv2d.3.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.conv2d.3.forward', 'Functional.conv2d.3.forward.input.0.pt', 'Functional.conv2d.3.forward.input.0', [1, 2], 'Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.conv2d.0.forward', 'Functional.conv2d.0.forward.input.0.pt'],
-                ['Functional.amax.1.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.amax.1.forward', 'Functional.amax.0.forward.input.0.pt', 'Functional.amax.1.forward.input.0', [1, 2], 'Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info', 'input', 'Functional.amax.0.forward', 'Functional.amax.0.forward.input.0.pt']
+                ['Functional.conv2d.3.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+                 'input', 'Functional.conv2d.3.forward', 'True', 'Functional.conv2d.3.forward.input.0.pt',
+                 'Functional.conv2d.3.forward.input.0', [1, 2],
+                 'Functional.conv2d.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+                 'input', 'Functional.conv2d.0.forward', 'True', 'Functional.conv2d.0.forward.input.0.pt'],
+                ['Functional.amax.1.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+                 'input', 'Functional.amax.1.forward', 'True', 'Functional.amax.0.forward.input.0.pt',
+                 'Functional.amax.1.forward.input.0', [1, 2],
+                 'Functional.amax.0.forward.input.0', 'float32', [1, 2], 'summary', 'stack_info',
+                 'input', 'Functional.amax.0.forward', 'True', 'Functional.amax.0.forward.input.0.pt']
             ]
         , columns=CompareConst.MATCH_RESULT_COLUMNS)
 
