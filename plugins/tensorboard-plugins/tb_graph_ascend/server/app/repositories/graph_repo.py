@@ -34,40 +34,45 @@ class GraphRepo:
             logger.error("Failed to connect to database")
             return None
     
-    def query_all_nodes(self):
+    def query_graph_nodes(self, graph_type, rank, step):
+        """根据graph_type, rank, step 查询当前图所有节点信息"""
         try:
-            query = f"SELECT * FROM tb_nodes"
+            query = f"SELECT * FROM tb_nodes WHERE data_source='{graph_type}' AND rank='{rank}' AND step='{step}'"
             with self.conn as c:
                 cursor = c.execute(query)
                 rows = cursor.fetchall()
-            return [dict(row) for row in rows]
+            root_nodes = ""
+            nodes = {}
+            for row in rows:
+                data = dict(row)
+                if not data.get('id'):
+                    continue
+                if not data.get('up_node'):
+                    root_nodes = data.get('node_name')
+                node = {
+                    "id": data.get('node_name'),
+                    "node_type": data.get('node_type'),
+                    "output_data": GraphUtils.safe_json_loads(data.get('output_data') or "{}"),
+                    "input_data": GraphUtils.safe_json_loads(data.get('input_data') or "{}"),
+                    "upnode":data.get('up_node'),
+                    "subnodes":GraphUtils.safe_json_loads(data.get('sub_nodes') or "[]"),
+                    "matched_node_link":GraphUtils.safe_json_loads(data.get('matched_node_link') or "[]"),
+                    "stack_info":GraphUtils.safe_json_loads(data.get('stack_info') or "[]"),
+                    "data":{
+                        "precision_index": data.get('precision_index'),
+                    },
+                    "parallel_merge_info": GraphUtils.safe_json_loads(data.get('parallel_merge_info') or "[]"),
+                    "matched_distributed": GraphUtils.safe_json_loads(data.get('matched_distributed') or "[]"),
+                    "modified": data.get('modified'),
+                }
+                nodes[data.get('node_name')] = node
+            return {
+                "root": root_nodes,
+                "node": nodes
+            }
             
         except Exception as e:
             logger.error(f"Failed to query nodes: {e}")
-            return []
-    
-    def query_npu_nodes(self):
-        try:
-            query = f"SELECT * FROM tb_nodes WHERE data_source='NPU'"
-            with self.conn as c:
-                cursor = c.execute(query)
-                rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-
-        except Exception as e:
-            logger.error(f"Failed to query NPU nodes: {e}")
-            return []
-
-    def query_bench_nodes(self):
-        try:
-            query = f"SELECT * FROM tb_nodes WHERE data_source='Bench'"
-            with self.conn as c:
-                cursor = c.execute(query)
-                rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-
-        except Exception as e:
-            logger.error(f"Failed to query Bench nodes: {e}")
             return []
 
     # 查询配置表信息
@@ -88,7 +93,7 @@ class GraphRepo:
                 "matchedConfigFiles": [],
                 "task": record.get('task', ''),
                 "rankNum": record.get('rank_num', 0),
-                "stepNum": record.get('step_num', 0     ),
+                "stepNum": record.get('step_num', 0),
             }
             return config_info
         except Exception as e:

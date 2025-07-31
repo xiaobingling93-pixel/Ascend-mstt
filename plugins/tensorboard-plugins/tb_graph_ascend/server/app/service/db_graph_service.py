@@ -17,6 +17,9 @@ import os
 from .base_graph_service import GraphServiceStrategy
 from ..repositories.graph_repo import GraphRepo
 from ..utils.global_state import GraphState
+from ..utils.graph_utils import GraphUtils
+from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
+from ..model_db.layout_hierarchy_model import LayoutHierarchyModel
 from tensorboard.util import tb_logging
 logger = tb_logging.get_logger()
 
@@ -39,12 +42,36 @@ class DbGraphService(GraphServiceStrategy):
         except Exception as e:
             logger.error(f"load graph config info failed, {e}")
             return {'success': False, 'error': 'load graph config info failed, {e}'}
-        
+
     def load_graph_all_node_list(self, meta_data):
-        pass
+        pass    
 
     def change_node_expand_state(self, node_info, meta_data):
-        pass
+        try:
+            config_info = self.repo.query_config_info()
+            graph_type = node_info.get('nodeType')
+            node_name = node_info.get('nodeName')
+            micro_step = meta_data.get('microStep')
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            # 单图
+            graph_data = self.repo.query_graph_nodes(graph_type, rank, step)
+            GraphUtils.safe_save_data(graph_data, 'C:\\code\\vis', 'graph_data.json')
+            if config_info.get('isSingleGraph'):
+               hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, graph_data, micro_step)
+            # NPU
+            elif graph_type == NPU:
+               hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, graph_data, micro_step)
+            # 标杆
+            elif graph_type == BENCH:
+               hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, graph_data, micro_step)
+            else:
+                return {'success': True, 'data': {}}
+            GraphUtils.safe_save_data(hierarchy, 'C:\\code\\vis', f'{graph_type}_graph_data.json')
+            return {'success': True, 'data': hierarchy}
+        except Exception as e:
+            logger.error('节点展开或收起发生错误:' + str(e))
+            return {'success': False, 'error': f'节点展开或收起发生错误', 'data': None}
 
     def search_node_by_precision(self, meta_data, values):
         pass

@@ -21,8 +21,8 @@ from tensorboard.util import tb_logging
 from .db_graph_service import DbGraphService
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState
-from ..controllers.match_nodes_controller import MatchNodesController
-from ..controllers.layout_hierarchy_controller import LayoutHierarchyController
+from ..model_vis.match_nodes_model import MatchNodesController
+from ..model_vis.layout_hierarchy_model import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from .base_graph_service import GraphServiceStrategy
 

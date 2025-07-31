@@ -86,7 +86,7 @@ class GraphView:
     def load_graph_config_info(request):
         db_meta_data = {
             'run': 'C:\\code\\db',
-            'tag': 'compare_20250527163634',
+            'tag': 'compare_20250731154056',
             'type': 'db',
         }
         db_strategy = GraphView._get_strategy(db_meta_data)
@@ -135,12 +135,20 @@ class GraphView:
     @wrappers.Request.application
     @check_file_type
     def change_node_expand_state(request):
+        db_meta_data = {
+            'run': 'C:\\code\\db',
+            'tag': 'compare_20250731154056',
+            'type': 'db',
+        }
+        
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = data.get('nodeInfo')
-        meta_data = data.get('metaData')
-        strategy = GraphView._get_strategy(meta_data)
-        hierarchy = strategy.change_node_expand_state(node_info, meta_data)
-        return http_util.Respond(request, json.dumps(hierarchy), "application/json")
+        meta_data = data.get('metaData')    
+        db_strategy = GraphView._get_strategy(db_meta_data)
+        db_result = db_strategy.change_node_expand_state(node_info, meta_data)
+        # strategy = GraphView._get_strategy(meta_data)
+        # hierarchy = strategy.change_node_expand_state(node_info, meta_data)
+        return http_util.Respond(request, json.dumps(db_result), "application/json")
 
     # 更新当前图节点信息
     @staticmethod
@@ -236,6 +244,7 @@ class GraphView:
     def _get_strategy(meta_data, no_tag=False):
         run = meta_data.get('run')
         data_type = meta_data.get('type')
+        print("run: {}, type: {}".format(run, data_type))
         if no_tag:
             return GraphView.service_factory.create_strategy_without_tag(data_type, run)
         

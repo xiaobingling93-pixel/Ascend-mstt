@@ -233,9 +233,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         if (!this.selection?.run || !this.selection?.tag) {
             return;
         }
-        const isChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
+
         const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
-        if (isChange || isDBChange) {
+        if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
             switch (this.selection?.type) {
                 case 'json':
                     this.loadJSONGraphData(this.selection);
@@ -246,7 +246,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 default:
                     break;
             }
-        } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
+        } else if (isDBChange || this.currentSelection?.microStep !== this.selection?.microStep) {
             this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
             this.loadGraphAllNodeList(this.selection);
         }
