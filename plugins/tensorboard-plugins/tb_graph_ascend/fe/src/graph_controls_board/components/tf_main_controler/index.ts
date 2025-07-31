@@ -136,7 +136,7 @@ class MainController extends PolymerElement {
       microStep: -1,
       type
     };
-    const isDBType = type !== DB_TYPE;
+    const isDBType = type == DB_TYPE;
 
     this.set('selectedTag', tags[0]);
     if (isDBType) {

@@ -83,20 +83,12 @@ class GraphView:
     @staticmethod
     @wrappers.Request.application
     @check_file_type
-    def load_graph_config_info(request):
-        db_meta_data = {
-            'run': 'C:\\code\\db',
-            'tag': 'compare_20250731154056',
-            'type': 'db',
-        }
-        db_strategy = GraphView._get_strategy(db_meta_data)
-        db_result = db_strategy.load_graph_config_info()
-        GraphView._get_strategy(db_meta_data)
+    def load_graph_config_info(request): 
         meta_data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {}).get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.load_graph_config_info()
         # 创建响应对象
-        response = http_util.Respond(request, db_result, "application/json")
+        response = http_util.Respond(request, result, "application/json")
         return response
 
     # 获取当前图所有节点列表
@@ -147,20 +139,12 @@ class GraphView:
     @wrappers.Request.application
     @check_file_type
     def change_node_expand_state(request):
-        db_meta_data = {
-            'run': 'C:\\code\\db',
-            'tag': 'compare_20250731154056',
-            'type': 'db',
-        }
-        
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = data.get('nodeInfo')
         meta_data = data.get('metaData')    
-        db_strategy = GraphView._get_strategy(db_meta_data)
-        db_result = db_strategy.change_node_expand_state(node_info, meta_data)
-        # strategy = GraphView._get_strategy(meta_data)
-        # hierarchy = strategy.change_node_expand_state(node_info, meta_data)
-        return http_util.Respond(request, json.dumps(db_result), "application/json")
+        strategy = GraphView._get_strategy(meta_data)
+        hierarchy = strategy.change_node_expand_state(node_info, meta_data)
+        return http_util.Respond(request, json.dumps(hierarchy), "application/json")
 
     # 更新当前图节点信息
     @staticmethod

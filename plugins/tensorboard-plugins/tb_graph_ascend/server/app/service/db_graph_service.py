@@ -29,7 +29,7 @@ class DbGraphService(GraphServiceStrategy):
     def __init__(self, run_path, tag):
         super().__init__(run_path, tag)
         runs = GraphState.get_global_value('runs')
-        db_path = os.path.join(self.run, f"{tag}.vis.db")
+        db_path = os.path.join(runs.get(self.run), f"{tag}.vis.db")
         self.repo = GraphRepo(db_path)
 
     def load_graph_data(self):
@@ -56,7 +56,7 @@ class DbGraphService(GraphServiceStrategy):
             step = meta_data.get('step')
             # 单图
             graph_data = self.repo.query_graph_nodes(graph_type, rank, step)
-            GraphUtils.safe_save_data(graph_data, 'C:\\code\\vis', 'graph_data.json')
+            # GraphUtils.safe_save_data(graph_data, 'C:\\code\\vis', 'graph_data.json')
             if config_info.get('isSingleGraph'):
                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, graph_data, micro_step)
             # NPU
@@ -67,7 +67,7 @@ class DbGraphService(GraphServiceStrategy):
                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, graph_data, micro_step)
             else:
                 return {'success': True, 'data': {}}
-            GraphUtils.safe_save_data(hierarchy, 'C:\\code\\vis', f'{graph_type}_graph_data.json')
+            # GraphUtils.safe_save_data(hierarchy, 'C:\\code\\vis', f'{graph_type}_graph_data.json')
             return {'success': True, 'data': hierarchy}
         except Exception as e:
             logger.error('节点展开或收起发生错误:' + str(e))

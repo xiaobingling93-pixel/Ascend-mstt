@@ -248,7 +248,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             }
         } else if (isDBChange || this.currentSelection?.microStep !== this.selection?.microStep) {
             this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
-            this.loadGraphAllNodeList(this.selection);
+            // this.loadGraphAllNodeList(this.selection);
         }
         this.currentSelection = this.selection;
     };
@@ -283,12 +283,14 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         this.set('metaDir', data);
     }
     loadDBGraphData = async (metaData: SelectionType) => {
-        const params = {
-            run: metaData.run,
-            tag: metaData.tag,
-            type: metaData.type
-        }
-        const result = await request({ url: 'loadGraphData', method: 'GET', params }); // 获取异步的 ArrayBuffer
+        this.set("ProgressData", { progress: 100, progressValue: 100, done: true });
+        await Promise.all([
+            this.loadGraphConfig(metaData),
+            // this.loadGraphAllNodeList(metaData),
+        ]);
+        this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
+        this.progreesLoading('初始化完成', '请稍后', { progress: 100, progressValue: 100, done: true });
+
     }
 
 
