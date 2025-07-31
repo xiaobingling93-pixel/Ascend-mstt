@@ -55,11 +55,9 @@ class TestBaseHookManager(unittest.TestCase):
         self.mock_data_collector = MagicMock()
         self.mock_config = MagicMock()
         self.mock_config.data_mode = ["all"]
-        self.mock_attl_manager = MagicMock()
         self.manager = self.MockBaseHookManager(
             self.mock_data_collector,
-            self.mock_config,
-            self.mock_attl_manager
+            self.mock_config
         )
         BaseHookManager.inner_switch[threading.get_ident()] = False
         BaseHookManager.hook_handle_dict = {}
@@ -68,7 +66,6 @@ class TestBaseHookManager(unittest.TestCase):
     def test_init(self):
         self.assertEqual(self.manager.data_collector, self.mock_data_collector)
         self.assertEqual(self.manager.config, self.mock_config)
-        self.assertEqual(self.manager.attl_manager, self.mock_attl_manager)
 
     def test_should_execute_hook_conditions(self):
         module = MagicMock()
@@ -130,7 +127,6 @@ class TestBaseHookManager(unittest.TestCase):
     def test_forward_pre_hook_behavior(self, mock_should_execute_hook, mock_release):
         mock_should_execute_hook.return_value = True
         mock_release.return_value = None
-        self.manager.config.online_run_ut = None
         hook = self.manager._build_forward_pre_hook(Const.API, "api_name", "func_name")
         module = MagicMock()
         module.msprobe_input_kwargs = {"kwarg": "value"}
@@ -154,11 +150,6 @@ class TestBaseHookManager(unittest.TestCase):
         kwargs = {"kwargs": []}
         output = MagicMock()
 
-        self.manager.config.online_run_ut = True
-        hook(module, args, output)
-        self.mock_attl_manager.attl_send.assert_called_once()
-
-        self.manager.config.online_run_ut = None
         self.mock_data_collector.if_return_forward_new_output.return_value = False
         with patch.object(self.manager, '_get_params_dict', return_value={}):
             result = hook(module, args, kwargs, output)
@@ -175,7 +166,6 @@ class TestBaseHookManager(unittest.TestCase):
     @patch.object(BaseHookManager, "_should_execute_hook")
     def test_backward_hook_behavior(self, mock_should_execute_hook):
         mock_should_execute_hook.return_value = True
-        self.manager.config.online_run_ut = None
         hook = self.manager._build_backward_hook(Const.API, "api_name")
         module = MagicMock()
         grad_input = (MagicMock(),)

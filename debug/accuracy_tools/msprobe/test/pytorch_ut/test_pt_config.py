@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from msprobe.core.common.const import Const
-from msprobe.pytorch.pt_config import parse_json_config, parse_task_config, TensorConfig, \
+from msprobe.pytorch.pt_config import parse_json_config, parse_task_config, \
     StatisticsConfig, OverflowCheckConfig, FreeBenchmarkCheckConfig, RunUTConfig, GradToolConfig
 
 
@@ -80,83 +80,6 @@ class TestPtConfig(unittest.TestCase):
             self.assertEqual(result.white_list, ["conv2d"])
             self.assertEqual(result.black_list, ["matmul"])
             self.assertEqual(result.error_data_path, '/home/dump_path')
-
-
-class TestTensorConfig(unittest.TestCase):
-
-    def setUp(self):
-        self.json_config = {
-            "online_run_ut": False,
-            "host": "127.0.0.1",
-            "port": 8080
-        }
-        self.config = TensorConfig(self.json_config)
-
-    def test_check_file_format_valid(self):
-        self.config.file_format = "npy"
-        self.config._check_file_format()
-
-        self.config.file_format = "bin"
-        self.config._check_file_format()
-
-    def test_check_file_format_invalid(self):
-        self.config.file_format = "invalid_format"
-        with self.assertRaises(Exception) as context:
-            self.config._check_file_format()
-        self.assertIn(str(context.exception), "file_format is invalid")
-
-    def test_check_online_run_ut(self):
-
-        self.config.online_run_ut = "True"
-        with self.assertRaises(Exception) as context:
-            self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), f"online_run_ut: {self.config.online_run_ut} is invalid.")
-        self.config.online_run_ut = True
-
-        self.config.online_run_ut_recompute = "True"
-        with self.assertRaises(Exception) as context:
-            self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), f"online_run_ut_recompute: {self.config.online_run_ut} is invalid.")
-        self.config.online_run_ut_recompute = False
-
-        self.config.nfs_path = "./nfs_path"
-        with self.assertRaises(Exception) as context:
-            self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), "[msprobe] 非法文件路径： ")
-        self.config.nfs_path = ""
-
-        self.config.tls_path = "./tls_path"
-        with self.assertRaises(Exception) as context:
-            self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), "[msprobe] 非法文件路径： ")
-
-        os.makedirs(self.config.tls_path)
-        with open(os.path.join(self.config.tls_path, "client.key"), 'w') as file:
-            file.write("1")
-        with open(os.path.join(self.config.tls_path, "client.crt"), 'w') as file:
-            file.write("1")
-        with open(os.path.join(self.config.tls_path, "ca.crt"), 'w') as file:
-            file.write("1")
-        with open(os.path.join(self.config.tls_path, "crl.pem"), 'w') as file:
-            file.write("1")
-        self.config._check_online_run_ut()
-        shutil.rmtree(self.config.tls_path)
-        self.config.tls_path = ""
-
-        self.config.host = "invalid_host"
-        with self.assertRaises(Exception) as context:
-            self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), f"host: {self.config.host} is invalid.")
-        self.config.host = "127.0.0.1"
-
-        self.config.port = -1
-        with self.assertRaises(Exception) as context:
-            self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), f"port: {self.config.port} is invalid, port range 0-65535.")
-        self.config.port = 6123
-
-        # all config right
-        self.config._check_online_run_ut()
 
 
 class TestStatisticsConfig(unittest.TestCase):
@@ -363,60 +286,6 @@ class TestFreeBenchmarkCheckConfig(unittest.TestCase):
         config = FreeBenchmarkCheckConfig(invalid_config)
         config._check_fix_config()
         self.assertIn("The pert_mode when opening fix handler must be one of", str(mock_error.call_args))
-
-
-class TestRunUTConfig(unittest.TestCase):
-
-    @patch('msprobe.pytorch.hook_module.utils.get_ops', return_value=['relu', 'gelu', 'conv2d'])
-    def setUp(self, mock_get_ops):
-        self.config = RunUTConfig({
-            "white_list": ["relu"],
-            "black_list": ["gelu"]
-        })
-
-    def test_check_filter_list_config_invalid_type(self):
-        with self.assertRaises(Exception) as context:
-            RunUTConfig.check_filter_list_config(Const.WHITE_LIST, "not_a_list")
-        self.assertIn("must be a list type", str(context.exception))
-
-    def test_check_filter_list_element_config_invalid_type(self):
-        with self.assertRaises(Exception) as context:
-            RunUTConfig.check_filter_list_config("white_list", [1, 1])
-        self.assertIn("All elements in ", str(context.exception))
-
-    def test_check_filter_list_config_invalid_item(self):
-        with self.assertRaises(Exception) as context:
-            RunUTConfig.check_filter_list_config("white_list", ["api1"])
-        self.assertIn("Invalid api in white_list:", str(context.exception))
-
-    @patch('os.path.exists', return_value=False)
-    def test_check_error_data_path_config_not_exist(self, mock_exists):
-        with self.assertRaises(Exception) as context:
-            RunUTConfig.check_error_data_path_config("./invalid_path")
-        self.assertIn("does not exist", str(context.exception))
-
-    @patch('os.path.exists', return_value=False)
-    def test_check_nfs_path_config_not_exist(self, mock_exists):
-        with self.assertRaises(Exception) as context:
-            RunUTConfig.check_nfs_path_config("./invalid_nfs")
-        self.assertIn("[msprobe] 非法文件路径：", str(context.exception))
-
-    @patch('os.path.exists', return_value=False)
-    def test_check_tls_path_config_not_exist(self, mock_exists):
-        with self.assertRaises(Exception) as context:
-            RunUTConfig.check_tls_path_config("./invalid_tls")
-        self.assertIn("[msprobe] 非法文件路径：", str(context.exception))
-
-    def test_check_run_ut_config(self):
-        with patch.object(RunUTConfig, 'check_filter_list_config') as mock_filter, \
-                patch.object(RunUTConfig, 'check_error_data_path_config') as mock_error, \
-                patch.object(RunUTConfig, 'check_nfs_path_config') as mock_nfs, \
-                patch.object(RunUTConfig, 'check_tls_path_config') as mock_tls:
-            self.config.check_run_ut_config()
-            mock_filter.assert_called()
-            mock_error.assert_called()
-            mock_nfs.assert_called()
-            mock_tls.assert_called()
 
 
 class TestGradToolConfig(unittest.TestCase):

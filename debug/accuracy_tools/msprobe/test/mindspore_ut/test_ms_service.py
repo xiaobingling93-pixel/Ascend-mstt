@@ -131,14 +131,12 @@ class TestMindsporeService(unittest.TestCase):
     @patch('msprobe.mindspore.mindspore_service.JitDump')
     def test_start_jit_enabled(self, mock_jit_dump):
         self.service.data_collector.data_processor.is_terminated = False
-        self.service.config.online_run_ut = None
         model_mock = MagicMock()
         self.service.start(model=model_mock)
         self.assertTrue(mock_jit_dump.jit_dump_switch)
     
     @patch('msprobe.mindspore.mindspore_service.JitDump')
     def test_stop_jit_disabled(self, mock_jit_dump):
-        self.service.config.online_run_ut = None
         self.config.level = Const.LEVEL_MIX
         self.service.current_iter = 1
         self.service.current_rank = 0

@@ -24,6 +24,7 @@ from ..utils.global_state import GraphState
 from ..model_vis.match_nodes_model import MatchNodesController
 from ..model_vis.layout_hierarchy_model import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
+from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 from .base_graph_service import GraphServiceStrategy
 
 logger = tb_logging.get_logger()
@@ -198,66 +199,51 @@ class JsonGraphService(GraphServiceStrategy):
                 node_type_name = '调试侧' if graph_type == NPU else '标杆侧'
             return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
 
-    def search_node_by_precision(self, meta_data, values):
-        # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
-        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
-        if error_message:
-            return {'success': False, 'error': error_message}
+    def update_precision_error(self, meta_data, filter_value):
         try:
-            precision = []
-            is_filter_unmatch_nodes = True if '无匹配节点' in values else False
-            if is_filter_unmatch_nodes:
-                values.remove('无匹配节点')
-            # 单图
-            if not graph_data.get(NPU):
-                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}), meta_data.get("microStep", -1))
-            # 多图
-            else:
-                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get(NPU), meta_data.get("microStep", -1))
-            for node_name, node in node_list.items():
-                subnodes = node.get("subnodes", None)
-                if subnodes != [] and subnodes != None:
-                   continue 
-                matched_node_link = node.get('matched_node_link', None)
-                if is_filter_unmatch_nodes and (matched_node_link == None or matched_node_link == []):
-                    precision.append(node_name)
-                if any(low <= node.get('data', {}).get("precision_index", -1) < high for low, high in values):
-                    precision.append(node_name)
-            return { 'success': True, 'data': precision}
+            graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+            if error_message:
+                return {'success': False, 'error': error_message}
+            npu_node_list = graph_data.get(NPU, {}).get('node', {})
+            for _, node_info in npu_node_list.items():
+                output_statistical_diff = node_info.get('output_data', None)
+                if not node_info.get('matched_node_link') or not output_statistical_diff:
+                    continue
+                max_rel_error = -1
+                #  根据filter_value 的选择指标计算新的误差值
+                for _, diff_values in output_statistical_diff.items():
+                    filter_diff_rel = []
+                    if MAX_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('MaxRelativeErr'))
+                    if MIN_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('MinRelativeErr'))
+                    if NORM_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('NormRelativeErr'))
+                    if MEAN_RELATIVE_ERR in filter_value:
+                        filter_diff_rel.append(diff_values.get('MeanRelativeErr'))
+                    # 过滤掉N/A
+                    filter_diff_rel = [x for x in filter_diff_rel if x and x != 'N/A']
+                    # 如果output指标中存在 Nan/inf/-inf, 直接标记为最大值
+                    if "Nan" in filter_diff_rel or "inf" in filter_diff_rel or "-inf" in filter_diff_rel:
+                        max_rel_error = 1
+                        break
+                    filter_diff_rel = [GraphUtils.convert_to_float(x) for x in filter_diff_rel]
+                    max_rel_error_for_key = max(filter_diff_rel) if filter_diff_rel else 0
+                    max_rel_error = max(max_rel_error, max_rel_error_for_key)
+                if max_rel_error != -1:
+                    node_info.setdefault('data', {})['precision_index'] = min(max_rel_error, 1)
+            return {'success': True, 'data': {}}
         except Exception as e:
-            logger.error('获取符合精度误差节点失败:' + str(e))
-            return {'success': False, 'error': '获取符合精度误差节点失败:' + str(e)}
-    
-    def search_node_by_overflow(self, meta_data, values):
-        # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
-        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
-        if error_message:
-            return {'success': False, 'error': error_message}
-        try:
-            overflow = []
-            # 单图
-            if not graph_data.get(NPU):
-                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}), meta_data.get("microStep", -1))
-                for node_name, node in node_list.items():
-                    subnodes = node.get("subnodes", None)
-                    if subnodes != [] and subnodes != None:
-                        continue 
-                    if node.get('data', {}).get("overflow_level", -1) in values:
-                        overflow.append(node_name)
-                return { 'success': True, 'data': overflow}
-            else:
-                return {'success': False, 'error': '多图模式下不支持溢出检测'}
-        except Exception as e:
-            logger.error('获取符合溢出检测节点失败:' + str(e))
-            return {'success': False, 'error': '获取符合溢出检测节点失败:' + str(e)}
-    
+            logger.error('更新精度误差失败:' + str(e))
+            return {'success': False, 'error': str(e)}
+
     def update_hierarchy_data(self, graph_type):
         if (graph_type == NPU or graph_type == BENCH):
             hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
             return {'success': True, 'data': hierarchy}
         else:
             return {'success': False, 'error': '节点类型错误'}
-
+ 
     def get_node_info(self, node_info, meta_data):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:

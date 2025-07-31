@@ -61,7 +61,6 @@ class TestBaseService(unittest.TestCase):
         self.config.task = Const.STATISTICS
         self.config.async_dump = True
         self.config.tensor_list = []
-        self.config.online_run_ut = False
         self.config.framework = "test_framwork"
         
         with patch('msprobe.core.service.build_data_collector'):
@@ -314,12 +313,9 @@ class TestBaseService(unittest.TestCase):
     def test_need_stop_service_conditions(self):
         self.service.current_iter = 4
         self.service.config.step = [1, 2, 3]
-        self.service.config.online_run_ut = True
-        self.service.attl_manager = MagicMock()
         self.assertTrue(self.service._need_stop_service())
         self.assertFalse(Runtime.is_running)
         self.assertFalse(self.service.primitive_switch)
-        self.service.attl_manager.attl_stop.assert_called()
 
         self.service.current_iter = 1
         self.service.data_collector.data_processor.is_terminated = True

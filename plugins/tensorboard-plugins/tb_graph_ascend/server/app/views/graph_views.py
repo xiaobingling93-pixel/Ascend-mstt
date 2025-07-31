@@ -129,6 +129,18 @@ class GraphView:
                 'message': "type error"
             }
         return http_util.Respond(request, result, "application/json") 
+    
+    # 更新误差节点
+    @staticmethod
+    @wrappers.Request.application
+    @check_file_type
+    def update_precision_error(request):
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
+        meta_data = data.get('metaData')
+        filter_value = data.get("filterValue")
+        strategy = GraphView._get_strategy(meta_data)
+        result = strategy.update_precision_error(meta_data, filter_value)
+        return http_util.Respond(request, result, "application/json")
 
     # 展开关闭节点
     @staticmethod
