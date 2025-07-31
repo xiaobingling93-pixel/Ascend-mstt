@@ -56,13 +56,13 @@ class MindsporeDataProcessor(BaseDataProcessor):
         self._async_dump_cache = {}
         self.api_register = get_api_register()
         # self._crc_executor = ThreadPoolExecutor(max_workers=4)
-        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count())
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
 
     @staticmethod
     def compute_crc32_bytes(tensor_bytes):
         # 纯函数，方便多进程调用
         # import zlib
-        print("1111")
+
         return f"{zlib.crc32(tensor_bytes):08x}"
 
     @staticmethod

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import zlib
 from dataclasses import asdict
 from typing import List
@@ -23,6 +24,7 @@ from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
 from msprobe.core.common.const import Const
+from concurrent.futures import ThreadPoolExecutor
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
@@ -65,6 +67,15 @@ class PytorchDataProcessor(BaseDataProcessor):
             "dtype": self.analyze_dtype_in_kwargs
         }
         self._async_dump_cache = {}
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
+
+
+    @staticmethod
+    def compute_crc32_bytes(tensor_bytes):
+        # 纯函数，方便多进程调用
+        # import zlib
+
+        return f"{zlib.crc32(tensor_bytes):08x}"
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -248,8 +259,16 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_json.update({"requires_grad": tensor.requires_grad})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
-            tensor_md5 = self.get_md5_for_tensor(tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
+            # 拷贝并搬到 CPU
+            tensor_bytes = tensor.asnumpy().tobytes()
+
+            future = self._crc_executor.submit(
+                PytorchDataProcessor.compute_crc32_bytes,
+                tensor_bytes
+            )
+
+            crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+            tensor_json[Const.MD5_INDEX] = crc_placeholder
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):
