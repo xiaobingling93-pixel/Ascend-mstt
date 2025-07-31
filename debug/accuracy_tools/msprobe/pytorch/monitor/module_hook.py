@@ -813,10 +813,8 @@ class TrainerMon:
             torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
             logger.info("remove patch_post_backward_hook in fsdp.")
         if self.fsdp2_foreach_reduce:  # fsdp2
-            import torch.distributed.fsdp._fully_shard._fsdp_param_group as _fsdp_param_group
-            import torch.distributed.fsdp._fully_shard._fsdp_collectives as _fsdp_collectives
-            _fsdp_collectives.foreach_reduce = self.fsdp2_foreach_reduce
-            importlib.reload(_fsdp_param_group)
+            torch.distributed.fsdp._fully_shard._fsdp_collectives.foreach_reduce = self.fsdp2_foreach_reduce
+            importlib.reload(torch.distributed.fsdp._fully_shard._fsdp_param_group)
 
             logger.info("remove patch_foreach_reduce_hook in fsdp2.")
         else:  # not megatron and not fsdp
