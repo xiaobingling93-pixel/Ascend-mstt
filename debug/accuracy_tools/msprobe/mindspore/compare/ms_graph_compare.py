@@ -331,7 +331,7 @@ class GraphMSComparator:
             bench_data_list.extend(data_list)
 
         if npu_mode == GraphMode.ERROR_MODE or bench_mode == GraphMode.ERROR_MODE:
-            logger.warning(f"Data_path {npu_data_path} or {bench_data_path} is not exist.")
+            logger.warning(f"Data path: npu_data_path or bench_data_path does not exist.")
             return [], ''
         if npu_mode != bench_mode:
             logger.error(f"NPU mode {npu_mode} not equal to MATCH mode {bench_mode}.")

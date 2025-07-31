@@ -651,7 +651,7 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
             npu_path = extract_json(npu_data_dir, file_type)
             bench_path = extract_json(bench_data_dir, file_type)
             if npu_path == "" or bench_path == "":
-                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
+                logger.debug(f'Did not find paired {file_type} in {nr} and {br},'
                              ' skip comparing.')
                 continue
             dump_result_param = {
