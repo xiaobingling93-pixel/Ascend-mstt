@@ -260,7 +260,11 @@ class PytorchDataProcessor(BaseDataProcessor):
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             # 拷贝并搬到 CPU
-            tensor_bytes = tensor.asnumpy().tobytes()
+            if tensor.dtype == torch.bfloat16:
+                tensor = tensor.float()
+            tensor_bytes = tensor.cpu().detach().numpy().tobytes()
+
+            # tensor_bytes = tensor.asnumpy().tobytes()
 
             future = self._crc_executor.submit(
                 PytorchDataProcessor.compute_crc32_bytes,
