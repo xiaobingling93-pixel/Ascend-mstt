@@ -127,7 +127,7 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
     }
 
 
-def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: List[str], workers: int = 1) -> Dict[int, List[str]]:
+def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: List[str], workers: int = 1):
     """Pre-scan all targets, metrics, and statistics"""
     logger.info("Scanning dimensions...")
     rank_files = defaultdict(list)
@@ -293,8 +293,8 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                 metric_id_dict,
                 target_dict,
                 monitor_db.step_partition_size,
-                monitor_db.db_path
-            ): rank for rank, files in rank_tasks.items()
+                monitor_db.db_path): rank 
+                for rank, files in rank_tasks.items()
         }
 
         with tqdm(as_completed(futures), total=len(futures), desc="Import progress") as pbar:
@@ -307,7 +307,6 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                 except Exception as e:
                     logger.error(
                         f"Failed to process Rank {rank}: {str(e)}")
-    return True
 
 
 def csv2db(config: CSV2DBConfig) -> None:
