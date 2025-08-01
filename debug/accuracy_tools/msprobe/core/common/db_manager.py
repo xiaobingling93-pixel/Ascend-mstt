@@ -20,25 +20,27 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import check_path_before_create, change_mode
 from msprobe.core.common.const import FileCheckConst
 
+
 def _db_operation(func):
-        """数据库操作装饰器，自动管理连接"""
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            conn, curs = None, None
-            try:
-                conn, curs = self._get_connection()
-                result = func(self, conn, curs, *args, **kwargs)
-                return result  # 显式返回正常结果
-                
-            except sqlite3.Error as err:
-                logger.error(f"Database operation failed: {err}")
-                if conn:
-                    conn.rollback()
-                return None  # 显式返回错误情况下的None
-                
-            finally:
-                self._release_connection(conn, curs)
-        return wrapper
+    """数据库操作装饰器，自动管理连接"""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        conn, curs = None, None
+        try:
+            conn, curs = self._get_connection()
+            result = func(self, conn, curs, *args, **kwargs)
+            return result  # 显式返回正常结果
+            
+        except sqlite3.Error as err:
+            logger.error(f"Database operation failed: {err}")
+            if conn:
+                conn.rollback()
+            return None  # 显式返回错误情况下的None
+            
+        finally:
+            self._release_connection(conn, curs)
+    return wrapper
+
 
 class DBManager:
     """
