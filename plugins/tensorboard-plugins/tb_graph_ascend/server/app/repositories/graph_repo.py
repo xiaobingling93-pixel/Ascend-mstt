@@ -19,6 +19,7 @@ from tensorboard.util import tb_logging
 from ..utils.global_state import SINGLE, NPU
 from idlelib.idle_test.test_query import QueryTest
 logger = tb_logging.get_logger()
+import time
 
 
 class GraphRepo:
@@ -40,6 +41,7 @@ class GraphRepo:
     def query_config_info(self):
         try:
             query = f"SELECT * FROM tb_config"
+            start = time.perf_counter()
             with self.conn as c:
                 cursor = c.execute(query)
                 rows = cursor.fetchall()
@@ -56,6 +58,8 @@ class GraphRepo:
                 "rankNum": record.get('rank_num', 0),
                 "stepNum": record.get('step_num', 0),
             }
+            end = time.perf_counter()
+            print("query_config_info time:", end - start)
             return config_info
         except Exception as e:
             logger.error(f"Failed to query config info: {e}")
@@ -65,6 +69,7 @@ class GraphRepo:
     def query_root_nodes(self, graph_type, rank, step):
         try:
             type = graph_type if graph_type != SINGLE else NPU
+            start = time.perf_counter()
             query = """
             SELECT 
                 node_name,
@@ -86,6 +91,8 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step))
                 rows = cursor.fetchall()
+            end = time.perf_counter()
+            print("query_root_nodes time:", end - start)
             if len(rows) > 0:
                 return self.convert_db_to_object(dict(rows[0]))
             else:
@@ -97,6 +104,7 @@ class GraphRepo:
     # DB：查询当前节点的父节点信息
     def query_up_nodes(self, node_name, graph_type, rank, step):
         try:
+            start = time.perf_counter()
             type = graph_type if graph_type != SINGLE else NPU
             # 现根据节点名称查询节点信息，根据up_node字段得到父节点名称
             # 再根据父节点名称查询父节点信息
@@ -126,6 +134,8 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
+            end = time.perf_counter()
+            print("query_up_nodes time:", end - start)
             if len(rows) > 0:
                 return self.convert_db_to_object(dict(rows[0]))
             else:
@@ -137,6 +147,7 @@ class GraphRepo:
     # DB: 查询所有以当前为父节点的子节点
     def query_sub_nodes(self, node_name, graph_type, rank, step):
         try:
+            start = time.perf_counter()
             type = graph_type if graph_type != SINGLE else NPU
             query = """
                 SELECT 
@@ -163,6 +174,8 @@ class GraphRepo:
             for row in rows:
                 dict_row = self.convert_db_to_object(dict(row))
                 sub_nodes[row['node_name']] = dict_row
+            end = time.perf_counter()
+            print("query_sub_nodes time:", end - start)
             return sub_nodes
         except Exception as e:
             logger.error(f"Failed to query sub nodes: {e}")
@@ -171,6 +184,7 @@ class GraphRepo:
     # DB：根据graph_type查询节点名称列表
     def query_node_name_list(self, graph_type, rank, step, micro_step):
         try:
+            start = time.perf_counter()
             type = graph_type if graph_type != SINGLE else NPU
             query = """
                 SELECT 
@@ -186,6 +200,8 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
                 rows = cursor.fetchall()
+            end = time.perf_counter()
+            print("query_node_name_list time:", end - start)
             return [row['node_name'] for row in rows]
         except Exception as e:
             logger.error(f"Failed to query node names: {e}")
@@ -194,6 +210,7 @@ class GraphRepo:
     # DB: 查询当前节点信息
     def query_node_info(self, node_name, graph_type, rank, step):
         try:
+            start = time.perf_counter()
             type = graph_type if graph_type != SINGLE else NPU
             query = """
                 SELECT 
@@ -209,6 +226,8 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
+            end = time.perf_counter()
+            print("query_node_info time:", end - start)
             if len(rows) > 0:
                 return self.convert_db_to_object(dict(rows[0]))
             else:

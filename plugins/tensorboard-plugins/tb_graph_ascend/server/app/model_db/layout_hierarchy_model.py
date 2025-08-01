@@ -14,6 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 from .hierarchy import Hierarchy
+import time
 
 
 class LayoutHierarchyModel:
@@ -30,11 +31,24 @@ class LayoutHierarchyModel:
     @staticmethod
     def change_expand_state(node_name, graph_type, repo, micro_step, rank, step):
         if node_name == 'root':
+            start = time.perf_counter()
             LayoutHierarchyModel.hierarchy[graph_type] = Hierarchy(graph_type, repo, micro_step, rank, step)
+            end = time.perf_counter()
+            print("root change_expand_state time: ", end - start)
+            
         elif LayoutHierarchyModel.hierarchy.get(graph_type, None):
+            start = time.perf_counter()
             LayoutHierarchyModel.hierarchy[graph_type].update_graph_data(node_name)
+            end = time.perf_counter()
+            print("node update_graph_data time: ", end - start)
+            start = time.perf_counter()
             LayoutHierarchyModel.hierarchy[graph_type].update_graph_shape()
+            end = time.perf_counter()
+            print("node update_graph_shape time: ", end - start)
+            start = time.perf_counter()
             LayoutHierarchyModel.hierarchy[graph_type].update_graph_position()
+            end = time.perf_counter()
+            print("node update_graph_position time: ", end - start)
         else:
             return {}
         return LayoutHierarchyModel.hierarchy[graph_type].get_hierarchy()
