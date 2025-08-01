@@ -39,7 +39,7 @@ class MonitorSql:
     """数据库表参数类"""
 
     @staticmethod
-    def _create_monitoring_targets_table():
+    def create_monitoring_targets_table():
         """监控目标表"""
         return """
         CREATE TABLE IF NOT EXISTS monitoring_targets (
@@ -51,7 +51,7 @@ class MonitorSql:
         )"""
 
     @staticmethod
-    def _create_monitoring_metrics_table():
+    def create_monitoring_metrics_table():
         """监控指标表"""
         return """
         CREATE TABLE IF NOT EXISTS monitoring_metrics (
@@ -69,7 +69,7 @@ class MonitorSql:
         """
 
     @staticmethod
-    def _create_metric_stats_table():
+    def create_metric_stats_table():
         """指标统计表"""
         return """
         CREATE TABLE IF NOT EXISTS metric_stats (
@@ -80,7 +80,7 @@ class MonitorSql:
         ) WITHOUT ROWID"""
 
     @staticmethod
-    def _create_global_stat_table():
+    def create_global_stat_table():
         return """
         CREATE TABLE IF NOT EXISTS global_stats (
             stat_name TEXT PRIMARY KEY,
@@ -96,10 +96,10 @@ class MonitorSql:
         :raises ValueError: 当表名不存在时
         """
         table_creators = {
-            "monitoring_targets": cls._create_monitoring_targets_table,
-            "monitoring_metrics": cls._create_monitoring_metrics_table,
-            "metric_stats": cls._create_metric_stats_table,
-            "global_stats": cls._create_global_stat_table,
+            "monitoring_targets": cls.create_monitoring_targets_table,
+            "monitoring_metrics": cls.create_monitoring_metrics_table,
+            "metric_stats": cls.create_metric_stats_table,
+            "global_stats": cls.create_global_stat_table,
         }
         if not table_name:
             return [table_creators.get(table, lambda x:"")() for table in table_creators]

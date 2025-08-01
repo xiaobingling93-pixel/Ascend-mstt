@@ -218,5 +218,3 @@ class DBManager:
         except sqlite3.Error as err:
             logger.error(f"Failed to release database connection: {err}")
         change_mode(self.db_path, FileCheckConst.DATA_FILE_AUTHORITY)
-
-    
