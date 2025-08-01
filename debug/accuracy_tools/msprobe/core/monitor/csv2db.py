@@ -102,7 +102,7 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
 
         metrics.add(metric_name)
         min_step = min(
-            step_start if min_step in None else min_step, step_start)
+            step_start if min_step is None else min_step, step_start)
         max_step = max(max_step, step_end)
 
         data = read_csv(file_path)
