@@ -28,20 +28,25 @@ MAX_PER_ROW = 5  # 横向每行最大数
 
 class Hierarchy:
     
-    def __init__(self, graph_type, graph, micro_step):
-        root_node_name = graph.get('root')
-        node_info = graph.get('node', {}).get(root_node_name, {})
+    def __init__(self, graph_type, repo, micro_step, rank, step):
+        # DB：查询根节点信息
+        node_info = repo.query_root_nodes(graph_type, rank, step)
+        if(not node_info):
+            logger.error("No root node info found in database.")
+            return
+        root_node_name = node_info.get('node_name')
         name_prefix = NPU_PREFIX if graph_type == NPU else BENCH_PREFIX
         name_prefix = '' if graph_type == SINGLE else name_prefix
+        self.repo = repo
         self.name_prefix = name_prefix
         self.root_name = root_node_name
         self.graph_type = graph_type
         self.micro_step_id = micro_step
         self.current_hierarchy = {
-            root_node_name: self.get_basic_rende_info(root_node_name, node_info, graph)
+            root_node_name: self.get_basic_rende_info(root_node_name, node_info)
         }
         # 默认展开根节点
-        self.update_graph_data(self.root_name, graph)
+        self.update_graph_data(self.root_name)
         self.update_graph_shape()
         self.update_graph_position()
 
@@ -71,14 +76,14 @@ class Hierarchy:
                 -2].isdigit() else splited_subnode_name[-3:]
         return ('.').join(splited_label)
 
-    def update_graph_data(self, node_name, graph):
+    def update_graph_data(self, node_name):
         target_node = self.current_hierarchy.get(node_name, {})
         if node_name == self.root_name or target_node:
-            self.process_click_expand(node_name, graph)
+            self.process_click_expand(node_name)
         else:  # 如果图中不存在该节点，说明是选中节点，需要递归展开该节点的所有父节点
-            self.process_select_expand(node_name, graph)
+            self.process_select_expand(node_name, {})
 
-    def process_click_expand(self, node_name, graph):
+    def process_click_expand(self, node_name):
         target_node = self.current_hierarchy.get(node_name, {})
         target_node_children = target_node.get("children", [])
         if not target_node or not target_node_children:
@@ -86,17 +91,19 @@ class Hierarchy:
         if not target_node.get('expand', False):
             # 1.将target_node的expand置为true
             # 2.将node_name的子节点信息初始化，并添加到current_hierarchy中
-            for subnode_name in target_node_children:
+            sub_nodes = self.repo.query_sub_nodes(node_name)
+            for subnode_name, node_info in sub_nodes.items():
                 if self.current_hierarchy.get(subnode_name):
                     continue
-                node_info = graph.get('node', {}).get(subnode_name, {})
-                render_info = self.get_basic_rende_info(subnode_name, node_info, graph)
+                # DB: 查询所有以当前为父节点的子节点
+                render_info = self.get_basic_rende_info(subnode_name, node_info)
                 self.current_hierarchy[subnode_name] = render_info
             target_node['expand'] = True
         else:
             target_node['expand'] = False if node_name != self.root_name else True  # 根节点默认展开
 
     def process_select_expand(self, node_name, graph):
+        # DB：查询当前节点的父节点信息
         parent_node_name = graph.get('node', {}).get(node_name, {}).get("upnode")
         parent_node = self.current_hierarchy.get(parent_node_name)
         # 递归展开父节点
@@ -112,6 +119,7 @@ class Hierarchy:
                 break
             if parent_node_name == self.root_name:
                 break
+            # DB：查询当前节点的父节点信息
             parent_node_name = graph.get('node', {}).get(parent_node_name, {}).get("upnode")
             parent_node = self.current_hierarchy.get(parent_node_name)
 
@@ -236,15 +244,15 @@ class Hierarchy:
             groups.append((current_type, current_group))
         return groups
 
-    def get_basic_rende_info(self, node_name, node_info, graph):
+    def get_basic_rende_info(self, node_name, node_info):
         if not node_info:
             return {}
         label = node_name
         children = []
         if node_name == self.root_name:  # 根节点，根据micro_step获取子节点
-            target_node_children = node_info.get('subnodes', [])
-            for subnode_name in target_node_children:
-                child_node = graph.get('node', {}).get(subnode_name, {})
+            sub_nodes = self.repo.query_sub_nodes(node_name)
+            # DB：查询以根节点为父节点的所有子节点
+            for subnode_name, child_node in sub_nodes.items():
                 child_micro_step_id = child_node.get('micro_step_id', -1)  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
                 is_append_all_node = int(self.micro_step_id) == -1 or child_micro_step_id == -1
                 is_append_split_node = int(self.micro_step_id) != -1 and int(child_micro_step_id) == int(

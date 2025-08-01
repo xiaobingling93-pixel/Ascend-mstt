@@ -28,11 +28,11 @@ class LayoutHierarchyModel:
     }
 
     @staticmethod
-    def change_expand_state(node_name, graph_type, graph, micro_step):
+    def change_expand_state(node_name, graph_type, repo, micro_step, rank, step):
         if node_name == 'root':
-            LayoutHierarchyModel.hierarchy[graph_type] = Hierarchy(graph_type, graph, micro_step)
+            LayoutHierarchyModel.hierarchy[graph_type] = Hierarchy(graph_type, repo, micro_step, rank, step)
         elif LayoutHierarchyModel.hierarchy.get(graph_type, None):
-            LayoutHierarchyModel.hierarchy[graph_type].update_graph_data(node_name, graph)
+            LayoutHierarchyModel.hierarchy[graph_type].update_graph_data(node_name)
             LayoutHierarchyModel.hierarchy[graph_type].update_graph_shape()
             LayoutHierarchyModel.hierarchy[graph_type].update_graph_position()
         else:

@@ -16,6 +16,7 @@
 import sqlite3
 from ..utils.graph_utils import GraphUtils
 from tensorboard.util import tb_logging
+from ..utils.global_state import SINGLE, NPU
 logger = tb_logging.get_logger()
 
 
@@ -33,47 +34,6 @@ class GraphRepo:
         except:
             logger.error("Failed to connect to database")
             return None
-    
-    def query_graph_nodes(self, graph_type, rank, step):
-        """根据graph_type, rank, step 查询当前图所有节点信息"""
-        try:
-            query = f"SELECT * FROM tb_nodes WHERE data_source='{graph_type}' AND rank='{rank}' AND step='{step}'"
-            with self.conn as c:
-                cursor = c.execute(query)
-                rows = cursor.fetchall()
-            root_nodes = ""
-            nodes = {}
-            for row in rows:
-                data = dict(row)
-                if not data.get('id'):
-                    continue
-                if not data.get('up_node'):
-                    root_nodes = data.get('node_name')
-                node = {
-                    "id": data.get('node_name'),
-                    "node_type": data.get('node_type'),
-                    "output_data": GraphUtils.safe_json_loads(data.get('output_data') or "{}"),
-                    "input_data": GraphUtils.safe_json_loads(data.get('input_data') or "{}"),
-                    "upnode":data.get('up_node'),
-                    "subnodes":GraphUtils.safe_json_loads(data.get('sub_nodes') or "[]"),
-                    "matched_node_link":GraphUtils.safe_json_loads(data.get('matched_node_link') or "[]"),
-                    "stack_info":GraphUtils.safe_json_loads(data.get('stack_info') or "[]"),
-                    "data":{
-                        "precision_index": data.get('precision_index'),
-                    },
-                    "parallel_merge_info": GraphUtils.safe_json_loads(data.get('parallel_merge_info') or "[]"),
-                    "matched_distributed": GraphUtils.safe_json_loads(data.get('matched_distributed') or "[]"),
-                    "modified": data.get('modified'),
-                }
-                nodes[data.get('node_name')] = node
-            return {
-                "root": root_nodes,
-                "node": nodes
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to query nodes: {e}")
-            return []
 
     # 查询配置表信息
     def query_config_info(self):
@@ -99,4 +59,67 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query config info: {e}")
             return []
-    # 查询step 
+
+    # DB：查询根节点信息
+    def query_root_nodes(self, graph_type, rank, step):
+        try:
+            type = graph_type if graph_type != SINGLE else NPU
+            query = """
+                SELECT * FROM tb_nodes 
+                WHERE up_node = "" 
+                AND data_source = ? 
+                AND rank = ? 
+                AND step = ?
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (type, rank, step))
+                rows = cursor.fetchall()
+            if len(rows) > 0:
+                return self.convert_db_to_object(dict(rows[0]))
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Failed to query root nodes: {e}")
+            return []
+    
+    # DB：查询当前节点的父节点信息
+    def query_up_nodes(self):
+        pass
+
+    # DB: 查询所有以当前为父节点的子节点
+    def query_sub_nodes(self, node_name):
+        try:
+            query = f"SELECT * FROM tb_nodes WHERE up_node= ?"
+            with self.conn as c:
+                cursor = c.execute(query, (node_name,))
+                rows = cursor.fetchall()
+            sub_nodes = {}
+            for row in rows:
+                dict_row = self.convert_db_to_object(dict(row))
+                sub_nodes[row['node_name']] = dict_row
+            return sub_nodes
+        except Exception as e:
+            logger.error(f"Failed to query sub nodes: {e}")
+            return {}
+    
+    def convert_db_to_object(self, data):
+        object = {
+            "id": data.get('node_name'),
+            "node_name": data.get('node_name'),
+            "node_type": data.get('node_type'),
+            "output_data": GraphUtils.safe_json_loads(data.get('output_data') or "{}"),
+            "input_data": GraphUtils.safe_json_loads(data.get('input_data') or "{}"),
+            "upnode":data.get('up_node'),
+            "subnodes":GraphUtils.safe_json_loads(data.get('sub_nodes') or "[]"),
+            "matched_node_link":GraphUtils.safe_json_loads(data.get('matched_node_link') or "[]"),
+            "stack_info":GraphUtils.safe_json_loads(data.get('stack_info') or "[]"),
+            "micro_step_id": data.get('micro_step_id') or -1,
+            "data":{
+                "precision_index": data.get('precision_index'),
+            },
+            "parallel_merge_info": GraphUtils.safe_json_loads(data.get('parallel_merge_info') or "[]"),
+            "matched_distributed": GraphUtils.safe_json_loads(data.get('matched_distributed') or "[]"),
+            "modified": data.get('modified'),
+        }
+        return object
+    
