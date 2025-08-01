@@ -101,7 +101,8 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
         step_start, step_end = int(step_start), int(step_end)
 
         metrics.add(metric_name)
-        min_step = min(min_step or step_start, step_start)
+        min_step = min(
+            step_start if min_step in None else min_step, step_start)
         max_step = max(max_step, step_end)
 
         data = read_csv(file_path)
@@ -174,7 +175,9 @@ def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: 
         max_rank = max(max_rank, rank_result['max_rank'])
         metrics.update(rank_result['metrics'])
         min_step = min(
-            min_step or rank_result['min_step'], rank_result['min_step'])
+            min_step if min_step is not None else rank_result['min_step'],
+            rank_result['min_step']
+        )
         max_step = max(max_step, rank_result['max_step'])
 
         for metric, stats in rank_result['metric_stats'].items():
