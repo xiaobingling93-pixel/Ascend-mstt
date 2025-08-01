@@ -336,7 +336,7 @@ class Hierarchy extends PolymerElement {
     // 总绑定事件方法，管理所有事件的绑定和解绑
     bindEventLisetener = () => {
         const cleanDragEvent = this.bindDragEvent(this.container);
-        // const cleanSelectedNodeEvent = this.bindSelectedNodeEvent(this.container);
+        const cleanSelectedNodeEvent = this.bindSelectedNodeEvent(this.container);
         const cleanChangeNodeExpandStateEvent = this.bindChangeNodeExpandStateEvent(this.container);
         const cleanWheelEvent = this.bindWheelEvent();
         const cleanKeyboardEvent = this.bindKeyboardEvent(this.container);
@@ -344,7 +344,7 @@ class Hierarchy extends PolymerElement {
         const cleanUpdateHierarchyDataEvent = this.bindUpdateHierarchyDataEvent();
         return () => {
             cleanDragEvent();
-            // cleanSelectedNodeEvent();
+            cleanSelectedNodeEvent();
             cleanChangeNodeExpandStateEvent();
             cleanWheelEvent();
             cleanKeyboardEvent();

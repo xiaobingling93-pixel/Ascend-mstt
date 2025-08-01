@@ -31,31 +31,54 @@ class DbGraphService(GraphServiceStrategy):
         runs = GraphState.get_global_value('runs')
         db_path = os.path.join(runs.get(self.run), f"{tag}.vis.db")
         self.repo = GraphRepo(db_path)
+        self.config_info = {}
 
     def load_graph_data(self):
         pass
 
     def load_graph_config_info(self):
         try:
-            config_info = self.repo.query_config_info()
-            return {'success': True, 'data': config_info}
+            self.config_info = self.repo.query_config_info()
+            return {'success': True, 'data':self.config_info}
         except Exception as e:
             logger.error(f"load graph config info failed, {e}")
             return {'success': False, 'error': 'load graph config info failed, {e}'}
 
     def load_graph_all_node_list(self, meta_data):
-        pass    
+        try:
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            micro_step = meta_data.get('microStep')
+            result = {}
+            if not self.config_info:
+                self.config_info = self.repo.query_config_info() 
+            # 单图
+            if self.config_info.get('isSingleGraph'):
+                # DB：根据graphType rank step micro_step 查询节点列表
+                return {'success': True, 'data': result} 
+            # 双图
+            else:
+                # DB：根据 rank step micro_step 查询节点列表
+                result['npuNodeList'] = self.repo.query_node_name_list(NPU, rank, step, micro_step)
+                result['benchNodeList'] = self.repo.query_node_name_list(BENCH, rank, step, micro_step)
+                result['npuUnMatchNodes'] = []
+                result['benchUnMatchNodes'] = []
+                result['npuMatchedNodes'] = []
+                result['benchMatchedNodes'] = []
+                return {'success': True, 'data': result}
+        except Exception as e:
+            logger.error(f"load graph all node list failed, {e}")
+            return {'success': False, 'error': 'load graph all node list failed, {e}'}
 
     def change_node_expand_state(self, node_info, meta_data):
         try:
-            config_info = self.repo.query_config_info()
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
-            micro_step = meta_data.get('microStep')
             rank = meta_data.get('rank')
             step = meta_data.get('step')
+            micro_step = meta_data.get('microStep')
             # 单图
-            if config_info.get('isSingleGraph'):
+            if self.config_info.get('isSingleGraph'):
                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step, rank, step)
             # NPU
             elif graph_type == NPU:
@@ -77,7 +100,30 @@ class DbGraphService(GraphServiceStrategy):
         pass
     
     def get_node_info(self, node_info, meta_data):
-        pass
+        try:
+            graph_type = node_info.get('nodeType')
+            node_name = node_info.get('nodeName')
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            result = {}
+            if self.config_info.get('isSingleGraph') or graph_type == SINGLE:
+                result['npu'] = self.repo.query_node_info(node_name, graph_type, rank, step)
+            else:
+                matched_node_type = BENCH if graph_type == NPU else NPU
+                node = self.repo.query_node_info(node_name, graph_type, rank, step)
+                matched_node_link = node.get('matched_node_link', []) if isinstance(node.get('matched_node_link', []),
+                                                                                    list) else []
+                matched_node_name = matched_node_link[-1]
+                if matched_node_name:
+                    matched_node = self.repo.query_node_info(matched_node_name, matched_node_type, rank, step)
+                else:
+                    matched_node = None
+                result['npu'] = node if graph_type == NPU else matched_node
+                result['bench'] = node if graph_type == BENCH else matched_node
+            return {'success': True, 'data': result}
+        except Exception as e:
+            logger.error('获取节点信息失败:' + str(e))
+            return {'success': False, 'error': '获取节点信息失败:' + str(e), 'data': None}
 
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
         pass

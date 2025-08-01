@@ -66,8 +66,19 @@ class GraphRepo:
         try:
             type = graph_type if graph_type != SINGLE else NPU
             query = """
-                SELECT * FROM tb_nodes 
-                WHERE up_node = ''
+            SELECT 
+                node_name,
+                up_node,
+                sub_nodes,
+                node_type,
+                matched_node_link,
+                precision_index,
+                overflow_level,
+                matched_distributed 
+            FROM 
+                tb_nodes 
+            WHERE 
+                up_node = ''   
                 AND data_source = ? 
                 AND rank = ? 
                 AND step = ?
@@ -86,11 +97,19 @@ class GraphRepo:
     # DB：查询当前节点的父节点信息
     def query_up_nodes(self, node_name, graph_type, rank, step):
         try:
+            type = graph_type if graph_type != SINGLE else NPU
             # 现根据节点名称查询节点信息，根据up_node字段得到父节点名称
             # 再根据父节点名称查询父节点信息
             query = """
                 SELECT 
-                    parent.*
+                    parent.node_name,
+                    parent.up_node,
+                    parent.sub_nodes,
+                    parent.node_type,
+                    parent.matched_node_link,
+                    parent.precision_index,
+                    parent.overflow_level,
+                    parent.matched_distributed 
                 FROM 
                     tb_nodes child
                 LEFT JOIN 
@@ -105,7 +124,7 @@ class GraphRepo:
                     AND child.step= ?
             """ 
             with self.conn as c:
-                cursor = c.execute(query, (node_name, graph_type, rank, step))
+                cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
             if len(rows) > 0:
                 return self.convert_db_to_object(dict(rows[0]))
@@ -118,15 +137,27 @@ class GraphRepo:
     # DB: 查询所有以当前为父节点的子节点
     def query_sub_nodes(self, node_name, graph_type, rank, step):
         try:
+            type = graph_type if graph_type != SINGLE else NPU
             query = """
-                SELECT * FROM tb_nodes 
-                WHERE up_node = ?
-                AND data_source = ? 
-                AND rank = ? 
-                AND step = ?
+                SELECT 
+                    node_name,
+                    up_node,
+                    sub_nodes,
+                    node_type,
+                    matched_node_link,
+                    precision_index,
+                    overflow_level,
+                    matched_distributed 
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    up_node = ?
+                    AND data_source = ? 
+                    AND rank = ? 
+                    AND step = ?
             """
             with self.conn as c:
-                cursor = c.execute(query, (node_name, graph_type, rank, step))
+                cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
             sub_nodes = {}
             for row in rows:
@@ -136,6 +167,55 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query sub nodes: {e}")
             return {}
+    
+    # DB：根据graph_type查询节点名称列表
+    def query_node_name_list(self, graph_type, rank, step, micro_step):
+        try:
+            type = graph_type if graph_type != SINGLE else NPU
+            query = """
+                SELECT 
+                    node_name 
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    data_source = ? 
+                    AND rank = ? 
+                    AND step = ?
+                    AND (? = -1 OR micro_step_id = ?)
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
+                rows = cursor.fetchall()
+            return [row['node_name'] for row in rows]
+        except Exception as e:
+            logger.error(f"Failed to query node names: {e}")
+            return []
+
+    # DB: 查询当前节点信息
+    def query_node_info(self, node_name, graph_type, rank, step):
+        try:
+            type = graph_type if graph_type != SINGLE else NPU
+            query = """
+                SELECT 
+                    * 
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    node_name = ?
+                    AND data_source = ? 
+                    AND rank = ? 
+                    AND step = ?
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (node_name, type, rank, step))
+                rows = cursor.fetchall()
+            if len(rows) > 0:
+                return self.convert_db_to_object(dict(rows[0]))
+            else:
+                return {}
+        except Exception as e:
+            logger.error(f"Failed to query node info: {e}")
+            return None
     
     def convert_db_to_object(self, data):
         object = {
