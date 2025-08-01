@@ -20,6 +20,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import check_path_before_create, change_mode
 from msprobe.core.common.const import FileCheckConst
 
+
 class DBManager:
     """
     数据库管理类，封装常用数据库操作
@@ -37,29 +38,7 @@ class DBManager:
         """
         self.db_path = db_path
 
-    def _get_connection(self) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
-        """获取数据库连接和游标"""
-        check_path_before_create(self.db_path)
-        try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row  # 使用Row工厂获取字典形式的结果
-            curs = conn.cursor()
-            return conn, curs
-        except sqlite3.Error as err:
-            logger.error(f"Database connection failed: {err}")
-            raise
-
-    def _release_connection(self, conn: sqlite3.Connection, curs: sqlite3.Cursor) -> None:
-        """释放数据库连接"""
-        try:
-            if curs is not None:
-                curs.close()
-            if conn is not None:
-                conn.close()
-        except sqlite3.Error as err:
-            logger.error(f"Failed to release database connection: {err}")
-        change_mode(self.db_path, FileCheckConst.DATA_FILE_AUTHORITY)
-
+    @staticmethod
     def _db_operation(func):
         """数据库操作装饰器，自动管理连接"""
         @wraps(func)
@@ -74,6 +53,7 @@ class DBManager:
                     conn.rollback()
             finally:
                 self._release_connection(conn, curs)
+            return
         return wrapper
 
     @staticmethod
@@ -143,7 +123,7 @@ class DBManager:
         sql = f"SELECT {cols} FROM {table_name}"
 
         where_sql, where_parems = self._get_where_sql(where)
-        curs.execute(sql+where_sql, where_parems)
+        curs.execute(sql + where_sql, where_parems)
 
         return [dict(row) for row in curs.fetchall()]
 
@@ -166,7 +146,7 @@ class DBManager:
 
         where_sql, where_parems = self._get_where_sql(where)
 
-        curs.execute(sql+where_sql, params + where_parems)
+        curs.execute(sql + where_sql, params + where_parems)
         conn.commit()
         return curs.rowcount
 
@@ -212,3 +192,26 @@ class DBManager:
                 results.append([dict(row) for row in curs.fetchall()])
         conn.commit()
         return results
+
+    def _get_connection(self) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
+        """获取数据库连接和游标"""
+        check_path_before_create(self.db_path)
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row  # 使用Row工厂获取字典形式的结果
+            curs = conn.cursor()
+            return conn, curs
+        except sqlite3.Error as err:
+            logger.error(f"Database connection failed: {err}")
+            raise
+
+    def _release_connection(self, conn: sqlite3.Connection, curs: sqlite3.Cursor) -> None:
+        """释放数据库连接"""
+        try:
+            if curs is not None:
+                curs.close()
+            if conn is not None:
+                conn.close()
+        except sqlite3.Error as err:
+            logger.error(f"Failed to release database connection: {err}")
+        change_mode(self.db_path, FileCheckConst.DATA_FILE_AUTHORITY)
