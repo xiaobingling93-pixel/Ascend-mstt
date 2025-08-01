@@ -343,10 +343,9 @@ def csv2db(config: CSV2DBConfig) -> None:
     )
     recursive_chmod(config.output_dirpath)
     if result:
-        logger.info("Data import completed. Output saved to: %s", config.output_dirpath)
+        logger.info(f"Data import completed. Output saved to: {config.output_dirpath}")
     else:
         logger.warning(
-            "Data import may be incomplete. Output directory: %s "
-            "(Some records might have failed)", 
-            config.output_dirpath
+            f"Data import may be incomplete. Output directory: {config.output_dirpath} "
+            f"(Some records might have failed)"
         )
