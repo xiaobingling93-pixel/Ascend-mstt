@@ -219,9 +219,9 @@ class GraphConst:
     INPUT = '.input.'
     OUTPUT = '.output.'
     STR_MAX_LEN = 50
-    MD5_INDEX_LIST = [CompareConst.RESULT]
-    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX
-    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX
+    MD5_INDEX_LIST = CompareConst.MD5_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
+    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
+    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     APIS_BETWEEN_MODULES_ALL_RANKS = 'Apis_Between_Modules_All_Ranks'
     NULL = 'null'

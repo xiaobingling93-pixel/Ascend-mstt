@@ -136,7 +136,7 @@ class CompareRealData:
                     result.five_thousand_err_ratio_result)[i]
                 result_df.loc[process_index, CompareConst.ACCURACY] = (
                     check_accuracy(result.cos_result[i], result.max_err_result[i]))
-                result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
+                result_df.loc[process_index, CompareConst.ERROR_MESSAGE] += result.err_msgs[i]
             return result_df
         except ValueError as e:
             logger.error('result dataframe is not found.')
@@ -228,10 +228,11 @@ class CompareRealData:
                     logger.info(f"[{npu_op_name}] Compare result: {err_msg} ")
                 else:
                     logger.info(
-                        "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
-                        one_thousand_err_ratio {}, "
-                        "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
-                                                            err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
+                        f"[{npu_op_name}] Compare result: cosine {cos_sim}, euc_dist {euc_dist}, "
+                        f"max_abs_err {max_abs_err}, max_relative_err {max_relative_err}, "
+                        f"one_thousand_err_ratio {one_thousand_err_ratio}, "
+                        f"five_thousand_err_ratio {five_thousand_err_ratio}, {err_msg}"
+                    )
             cos_result.append(cos_sim)
             euc_dist_result.append(euc_dist)
             max_err_result.append(max_abs_err)

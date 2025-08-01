@@ -31,15 +31,19 @@ op_name = "Tensor.add_0.0.forward"
 op_result = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
-     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.forward.input.0', 'state': 'input'},
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.forward.input.0',
+     'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481, 'data_name': '-1',
-     'Norm': 0.02844562754034996, 'requires_grad': 'False', 'full_op_name': 'Tensor.add_0.0.forward.input.1', 'state': 'input'},
+     'Norm': 0.02844562754034996, 'requires_grad': 'False', 'full_op_name': 'Tensor.add_0.0.forward.input.1',
+     'state': 'input'},
     {'full_op_name': 'Tensor.add_0.0.forward.input.alpha', 'dtype': "<class 'float'>", 'shape': '[]', 'md5': '0dae4479',
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'type': 'float', 'value': -0.1, 'state': 'input'},
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'requires_grad': None, 'data_name': '-1', 'type': 'float',
+     'value': -0.1, 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
-     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.forward.output.0', 'state': 'output'}]
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.forward.output.0',
+     'state': 'output'}]
 
 # test_read_op_1
 op_data_b = {
@@ -56,13 +60,16 @@ op_name_b = "Tensor.add_0.0.backward"
 op_result_b = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.backward.input.0', 'state': 'input'},
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.backward.input.0',
+     'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': 'False', 'full_op_name': 'Tensor.add_0.0.backward.input.1', 'state': 'input'},
+     'Norm': 0.02844562754034996, 'requires_grad': 'False', 'full_op_name': 'Tensor.add_0.0.backward.input.1',
+     'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.backward.output.0', 'state': 'output'}]
+     'Norm': 2.2533628940582275, 'requires_grad': 'True', 'full_op_name': 'Tensor.add_0.0.backward.output.0',
+     'state': 'output'}]
 
 # test_op_item_parse
 parse_item = [
@@ -80,10 +87,11 @@ o_result_parse = [
      'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0',
      'data_name': '-1', 'md5': '00000000', 'state': 'input'},
     {'full_op_name': 'Distributed.broadcast.0.forward.input.1', 'dtype': "<class 'int'>", 'shape': '[]',
-     'md5': 'f4dbdf21', 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1', 'type': 'int', 'value': 0, 'state': 'input'},
+     'md5': 'f4dbdf21', 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1', 'type': 'int', 'value': 0,
+     'state': 'input', 'requires_grad': None},
     {'Max': None, 'Mean': None, 'Min': None, 'Norm': None, 'data_name': '-1', 'dtype': 'slice', 'type': 'slice',
      'full_op_name': 'Distributed.broadcast.0.forward.input.2', 'md5': '5fbbe87f', 'shape': '(3,)',
-     'value': [None, None, None], 'state': 'input'}
+     'value': [None, None, None], 'state': 'input', 'requires_grad': None}
 ]
 
 # test_resolve_api_special_parameters
@@ -118,7 +126,8 @@ npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2
                         [1.0, 1.0, 1.0, 1.0],
                         [1.0, 1.0, 1.0, 1.0],
                         [1.0, 1.0, 1.0, 1.0]],
-            'stack_info': []}
+            'stack_info': [],
+            'requires_grad': [True, False, True, True, True, True, True, True]}
 bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                           'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output.0',
                           'Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.bias',
@@ -136,39 +145,42 @@ bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.con
                           [1.0, 1.0, 1.0, 1.0],
                           [1.0, 1.0, 1.0, 1.0],
                           [1.0, 1.0, 1.0, 1.0]],
-              'stack_info': []}
+              'stack_info': [],
+              'requires_grad': [True, False, True, True, True, True, True, True]}
 highlight_dict = {'red_rows': [], 'yellow_rows': []}
 o_result = [
     ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.0', 'torch.float32', 'torch.float32',
-     [1, 1, 28, 28], [1, 1, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     [1, 1, 28, 28], [1, 1, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0,
-     3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0,'', '', 'None'],
+     3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0, True, '', '', 'None'],
     ['Functional.conv2d.0.forward.input.1', 'Functional.conv2d.0.forward.input.1', 'torch.float32', 'torch.float32',
-     [16, 1, 5, 5], [16, 1, 5, 5], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     [16, 1, 5, 5], [16, 1, 5, 5], False, False, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0,
-     0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, '', '', 'None'],
+     0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, True, '', '', 'None'],
     ['Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.input.2', 'torch.float32', 'torch.float32',
-     [16], [16], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     [16], [16], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0,
-     0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, '', '', 'None'],
+     0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, True, '', '', 'None'],
     ['Functional.conv2d.0.forward.parameters.weight', 'Functional.conv2d.0.forward.parameters.weight', 'torch.float32',
      'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+     [1, 16, 28, 28], [1, 16, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, True, '', '', 'None'],
     ['Functional.conv2d.0.forward.parameters.bias', 'Functional.conv2d.0.forward.parameters.bias', 'torch.float32',
      'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+     [1, 16, 28, 28], [1, 16, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, True, '', '', 'None'],
     ['Functional.conv2d.0.forward.output.0', 'Functional.conv2d.0.forward.output.0', 'torch.float32', 'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     [1, 16, 28, 28], [1, 16, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
      2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0,
-     2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, '', '', 'None'],
-    ['Functional.conv2d.0.parameters_grad.weight', 'Functional.conv2d.0.parameters_grad.weight', 'torch.float32', 'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
-    ['Functional.conv2d.0.parameters_grad.bias', 'Functional.conv2d.0.parameters_grad.bias', 'torch.float32', 'torch.float32',
-     [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, '', '', 'None'],
+     2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, True, '', '', 'None'],
+    ['Functional.conv2d.0.parameters_grad.weight', 'Functional.conv2d.0.parameters_grad.weight', 'torch.float32',
+     'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, True, '', '', 'None'],
+    ['Functional.conv2d.0.parameters_grad.bias', 'Functional.conv2d.0.parameters_grad.bias', 'torch.float32',
+     'torch.float32',
+     [1, 16, 28, 28], [1, 16, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, True, '', '', 'None'],
 ]
 
 # test_get_un_match_accuracy
@@ -186,9 +198,11 @@ o_result_unmatch_1 = [
      'None'],
     ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
      'None'],
-    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
      'None'],
-    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
      'None']
 ]
 o_result_unmatch_2 = [
@@ -196,10 +210,12 @@ o_result_unmatch_2 = [
      'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 1.0, 'N/A', 'N/A',
      'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 1.0, 'N/A',
+     'N/A',
      'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, 'N/A', 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 1.0, 'N/A', 'N/A',
+     'N/A',
      'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.parameters.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A',
      'N/A', 'N/A',
@@ -210,12 +226,15 @@ o_result_unmatch_2 = [
      'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
     ['Functional.conv2d.0.forward.output.0', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
-     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, 'N/A', 'N/A',
+     'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 1.0, 'N/A',
+     'N/A',
      'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
-    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+    ['Functional.conv2d.0.parameters_grad.weight', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
-    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A',
+    ['Functional.conv2d.0.parameters_grad.bias', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A',
+     'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 1.0, 1.0, 1.0, 1.0, 'N/A',
      'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None']
 ]
@@ -257,12 +276,14 @@ tensor_list = [
      'full_op_name': 'Tensor.add_.0.forward.input.0', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.1', 'state': 'input'},
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.1',
+     'state': 'input'},
     {'full_op_name': 'Tensor.add_.0.forward.input.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
      'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'state': 'output'}
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0',
+     'state': 'output'}
 ]
 result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.input.1',
                               'Tensor.add_.0.forward.input.alpha.0', 'Tensor.add_.0.forward.output.0'],
@@ -278,17 +299,20 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                               [-0.1, -0.1, -0.1, -0.1],
                               [0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275]],
                   'stack_info': [],
-                  'state': ['input', 'input', 'input', 'output']}
+                  'state': ['input', 'input', 'input', 'output'],
+                  'requires_grad': [True, False, None, True]}
 
 tensor_list_md5 = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1, 'state': 'input'},
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1,
+     'state': 'input'},
     {'full_op_name': 'Tensor.add_.0.forward.kwargs.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
      'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'state': 'input'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 2, 'state': 'output'}
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 2,
+     'state': 'output'}
 ]
 result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.kwargs.alpha.0',
                                   'Tensor.add_.0.forward.output.0'],
@@ -302,7 +326,9 @@ result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.
                           [-0.1, -0.1, -0.1, -0.1],
                           [0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275]],
                       'stack_info': [],
-                      'state': ['input', 'input', 'output']}
+                      'state': ['input', 'input', 'output'],
+                      'requires_grad': [False, None, True]
+                      }
 
 base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils1')
 base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils2')
@@ -374,35 +400,35 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
 
     def test_get_rela_diff_summary_mode_float_or_int(self):
-        result_item = [0] * 14
+        result_item = [0] * 16
         err_msg = ''
         npu_summary_data = [1, 1, 1, 1]
-        bench_summary_data = [1, 1, 1, 1]
+        bench_summary_data = [2, 2, 2, 2]
         result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                           bench_summary_data, err_msg)
-        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%'])
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, '50.0%', '50.0%', '50.0%', '50.0%'])
         self.assertEqual(accuracy_check, '')
         self.assertEqual(err_msg, '')
 
     def test_get_rela_diff_summary_mode_bool(self):
-        result_item = [0] * 14
+        result_item = [0] * 16
         err_msg = ''
         npu_summary_data = [True, True, True, True]
         bench_summary_data = [True, True, True, True]
         result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                           bench_summary_data, err_msg)
-        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
         self.assertEqual(accuracy_check, '')
         self.assertEqual(err_msg, '')
 
     def test_get_rela_diff_summary_mode_nan(self):
-        result_item = [0] * 14
+        result_item = [0] * 16
         err_msg = ''
         npu_summary_data = [float('nan')]
         bench_summary_data = [float('nan')]
         result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                           bench_summary_data, err_msg)
-        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'Nan', 0, 0, 0, 'Nan', 0, 0, 0])
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, 'Nan', 0, 0, 0, 'Nan', 0, 0, 0])
         self.assertEqual(accuracy_check, '')
         self.assertEqual(err_msg, '')
 
@@ -496,19 +522,21 @@ class TestUtilsMethods(unittest.TestCase):
         b_name = 'Tensor.add.0.forward.input.0'
         b_struct = ('torch.float32', [96])
         bench_stack_info = ['abc']
+        requires_grad_pair = [True, True]
         n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
         b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
 
         dump_mode = Const.ALL
-        result_item = result_item_init(n_info, b_info, dump_mode)
+        result_item = result_item_init(n_info, b_info, requires_grad_pair, dump_mode)
         self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
-                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' ', ' '])
+                                       'torch.float32', 'torch.float32', [96], [96], True, True,
+                                       ' ', ' ', ' ', ' ', ' ', ' '])
 
         dump_mode = Const.SUMMARY
-        result_item = result_item_init(n_info, b_info, dump_mode)
+        result_item = result_item_init(n_info, b_info, requires_grad_pair, dump_mode)
         self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
-                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' ', ' ', ' ',
-                                       ' '])
+                                       'torch.float32', 'torch.float32', [96], [96], True, True,
+                                       ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
 
     def test_result_item_init_md5(self):
         n_name = 'Tensor.add.0.forward.input.0'
@@ -517,13 +545,15 @@ class TestUtilsMethods(unittest.TestCase):
         b_name = 'Tensor.add.0.forward.input.0'
         b_struct = ('torch.float32', [96], 'e87000dc')
         bench_stack_info = ['abc']
+        requires_grad_pair = [True, True]
         n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
         b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
 
         dump_mode = Const.MD5
-        result_item = result_item_init(n_info, b_info, dump_mode)
+        result_item = result_item_init(n_info, b_info, requires_grad_pair, dump_mode)
         self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
-                                       'torch.float32', 'torch.float32', [96], [96], 'e87000dc', 'e87000dc', 'pass'])
+                                       'torch.float32', 'torch.float32', [96], [96], True, True,
+                                       'e87000dc', 'e87000dc', True, 'pass'])
 
     def test_result_item_init_md5_index_error(self):
         n_name = 'Tensor.add.0.forward.input.0'
@@ -532,12 +562,13 @@ class TestUtilsMethods(unittest.TestCase):
         b_name = 'Tensor.add.0.forward.input.0'
         b_struct = ('torch.float32', [96])
         bench_stack_info = ['abc']
+        requires_grad_pair = [True, True]
         n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
         b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
 
         dump_mode = Const.MD5
         with self.assertRaises(CompareException) as context:
-            result_item = result_item_init(n_info, b_info, dump_mode)
+            result_item = result_item_init(n_info, b_info, requires_grad_pair, dump_mode)
         self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
     def test_table_value_is_valid_int(self):
@@ -559,10 +590,12 @@ class TestUtilsMethods(unittest.TestCase):
 class TestReorderOpNameList(unittest.TestCase):
     def test_reorder_op_name_list(self):
         # 标准顺序
-        op_name_list = ["op.forward.input.0.0", "op.forward.output.0", "op.forward.output.1", "op.forward.parameters.1", "op.forward.parameters.2", "op.parameters_grad.0"]
+        op_name_list = ["op.forward.input.0.0", "op.forward.output.0", "op.forward.output.1", "op.forward.parameters.1",
+                        "op.forward.parameters.2", "op.parameters_grad.0"]
         state_list = ["input", "output", "output", "parameters", "parameters", "parameters_grad"]
         op_name_reorder, state_reorder = reorder_op_name_list(op_name_list, state_list)
-        expected_result = ["op.forward.input.0.0", "op.forward.parameters.1", "op.forward.parameters.2", "op.forward.output.0", "op.forward.output.1", "op.parameters_grad.0"]
+        expected_result = ["op.forward.input.0.0", "op.forward.parameters.1", "op.forward.parameters.2",
+                           "op.forward.output.0", "op.forward.output.1", "op.parameters_grad.0"]
         expected_state = ["input", "parameters", "parameters", "output", "output", "parameters_grad"]
         self.assertEqual(op_name_reorder, expected_result)
         self.assertEqual(state_reorder, expected_state)
@@ -593,44 +626,53 @@ class TestReorderOpXList(unittest.TestCase):
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = ["data1", "data2", "data3"]
         state_list = ["input", "output", "parameters"]
-        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
+        requires_grad_list = [True, None, False]
+        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
+            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, ["data1", "data3", "data2"])
         self.assertEqual(result_state, ["input", "parameters", "output"])
+        self.assertEqual(result_requires_grad, [True, False, None])
 
         # 空 op_name_list 或 summary_list
         op_name_list = []
         summary_list = []
         data_name_list = ["data1", "data2", "data3"]
         state_list = []
-        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
+        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
+            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
         self.assertEqual(result_op_name, [])
         self.assertEqual(result_summary, [])
         self.assertEqual(result_data_name, ["data1", "data2", "data3"])
         self.assertEqual(result_state, [])
+        self.assertEqual(result_requires_grad, [True, None, False])
 
         # 空 data_name_list
         op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = []
         state_list = ["input", "output", "parameters"]
-        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
+        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
+            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, [])
         self.assertEqual(result_state, ["input", "parameters", "output"])
+        self.assertEqual(result_requires_grad, [True, False, None])
 
         # data_name_list 为 None
         op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
         summary_list = ["summary1", "summary2", "summary3"]
         data_name_list = None
         state_list = ["input", "output", "parameters"]
-        result_op_name, result_summary, result_data_name, result_state = reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list)
+        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
+            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
         self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
         self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
         self.assertEqual(result_data_name, None)
         self.assertEqual(result_state, ["input", "parameters", "output"])
+        self.assertEqual(result_requires_grad, [True, False, None])
 
 
 class TestGenOpItem(unittest.TestCase):
