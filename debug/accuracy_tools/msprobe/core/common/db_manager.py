@@ -20,6 +20,25 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import check_path_before_create, change_mode
 from msprobe.core.common.const import FileCheckConst
 
+def _db_operation(func):
+        """数据库操作装饰器，自动管理连接"""
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            conn, curs = None, None
+            try:
+                conn, curs = self._get_connection()
+                result = func(self, conn, curs, *args, **kwargs)
+                return result  # 显式返回正常结果
+                
+            except sqlite3.Error as err:
+                logger.error(f"Database operation failed: {err}")
+                if conn:
+                    conn.rollback()
+                return None  # 显式返回错误情况下的None
+                
+            finally:
+                self._release_connection(conn, curs)
+        return wrapper
 
 class DBManager:
     """
@@ -53,28 +72,7 @@ class DBManager:
                 where_sql = " WHERE " + " AND ".join(where_clauses)
         return where_sql, tuple(where_values)
 
-    def db_operation(self, func):
-        """数据库操作装饰器，自动管理连接"""
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            conn, curs = None, None
-            try:
-                conn, curs = self._get_connection()
-                result = func(self, conn, curs, *args, **kwargs)
-                return result  # 显式返回正常结果
-                
-            except sqlite3.Error as err:
-                logger.error(f"Database operation failed: {err}")
-                if conn:
-                    conn.rollback()
-                return None  # 显式返回错误情况下的None
-                
-            finally:
-                self._release_connection(conn, curs)
-                
-        return wrapper
-
-    @db_operation
+    @_db_operation
     def insert_data(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     table_name: str, data: List[Tuple], key_list: List[str] = None) -> int:
         """
@@ -109,7 +107,7 @@ class DBManager:
         conn.commit()
         return inserted_rows
 
-    @db_operation
+    @_db_operation
     def select_data(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     table_name: str,
                     columns: List[str] = None,
@@ -130,7 +128,7 @@ class DBManager:
 
         return [dict(row) for row in curs.fetchall()]
 
-    @db_operation
+    @_db_operation
     def update_data(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     table_name: str, updates: Dict[str, Any],
                     where: dict = None) -> int:
@@ -153,7 +151,7 @@ class DBManager:
         conn.commit()
         return curs.rowcount
 
-    @db_operation
+    @_db_operation
     def execute_sql(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     sql: str, params: Tuple = None) -> List[Dict]:
         """
@@ -180,7 +178,7 @@ class DBManager:
         )
         return len(result) > 0
 
-    @db_operation
+    @_db_operation
     def execute_multi_sql(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                           sql_commands: List[str]) -> List[List[Dict]]:
         """
