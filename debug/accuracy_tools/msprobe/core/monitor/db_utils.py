@@ -179,7 +179,7 @@ class MonitorDB:
             )
 
             # Create metric tables for each partition
-            if min_step and max_step:
+            if min_step is not None and max_step is not None:
                 first_partition = min_step // self.step_partition_size
                 last_partition = max_step // self.step_partition_size
 
