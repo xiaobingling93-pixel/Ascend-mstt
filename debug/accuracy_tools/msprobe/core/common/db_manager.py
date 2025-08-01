@@ -53,7 +53,7 @@ class DBManager:
                 where_sql = " WHERE " + " AND ".join(where_clauses)
         return where_sql, tuple(where_values)
 
-    def db_operation(func):
+    def db_operation(self, func):
         """数据库操作装饰器，自动管理连接"""
         @wraps(func)
         def wrapper(self, *args, **kwargs):

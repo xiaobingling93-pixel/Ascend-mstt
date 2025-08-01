@@ -310,6 +310,7 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                     return False
     return True
 
+
 def csv2db(config: CSV2DBConfig) -> None:
     """Main function to convert CSV files to database"""
     validate_process_num(config.process_num)
