@@ -25,7 +25,7 @@ class LayoutHierarchyModel:
         'NPU': npu_hierarchy,
         'Bench': bench_hierarchy,
         'Single': single_hierarchy
-    }
+    }    
 
     @staticmethod
     def change_expand_state(node_name, graph_type, repo, micro_step, rank, step):

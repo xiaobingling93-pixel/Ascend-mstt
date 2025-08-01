@@ -240,7 +240,6 @@ class GraphView:
     def _get_strategy(meta_data, no_tag=False):
         run = meta_data.get('run')
         data_type = meta_data.get('type')
-        print("run: {}, type: {}".format(run, data_type))
         if no_tag:
             return GraphView.service_factory.create_strategy_without_tag(data_type, run)
         

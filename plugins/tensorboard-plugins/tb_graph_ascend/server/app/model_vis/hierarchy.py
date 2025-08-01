@@ -46,12 +46,10 @@ class Hierarchy:
         self.update_graph_shape()
         self.update_graph_position()
 
-    @staticmethod
-    def measure_text_width(text):
+    def measure_text_width(self, text):
         return len(text) * 6  # 假设每个字符宽度为6
 
-    @staticmethod
-    def extract_label_name(node_name, node_type):
+    def extract_label_name(self, node_name, node_type):
         splited_subnode_name = node_name.split('.')
         splited_label = []
         # 在展开层级时，将父级层级名称相关去除，仅保留子节点本身名称信息
@@ -133,7 +131,7 @@ class Hierarchy:
             return
         if not node.get('expand', False):
             # 未展开的父节点按文字宽度
-            node['width'] = Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
+            node['width'] = self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
             node['height'] = INNER_HIGHT
             return
         for child_name in node.get('children', []):
@@ -167,7 +165,7 @@ class Hierarchy:
         # 最终尺寸计算
         node['width'] = max(
             max_child_width + HORIZONTAL_SPACING * 2,  # 子节点最大宽度 + 边距
-            Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
+            self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
         )
         node['height'] = total_height + VERTICAL_SPACING  # 总高度 + 边距
 
@@ -255,11 +253,11 @@ class Hierarchy:
         else:
             children = node_info.get('subnodes', [])
         if node_info.get('upnode', '') != self.root_name:  # 首层节点不处理显示内容
-            label = Hierarchy.extract_label_name(node_name, node_info.get('node_type'))
+            label = self.extract_label_name(node_name, node_info.get('node_type'))
         render_info = {
             'x': 0,
             'y': 0,
-            'width': Hierarchy.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
+            'width': self.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
             'height': INNER_HIGHT,
             'expand': False,
             'isRoot': node_name == self.root_name,

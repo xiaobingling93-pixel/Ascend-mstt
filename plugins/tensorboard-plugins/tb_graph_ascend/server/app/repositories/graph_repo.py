@@ -17,6 +17,7 @@ import sqlite3
 from ..utils.graph_utils import GraphUtils
 from tensorboard.util import tb_logging
 from ..utils.global_state import SINGLE, NPU
+from idlelib.idle_test.test_query import QueryTest
 logger = tb_logging.get_logger()
 
 
@@ -66,7 +67,7 @@ class GraphRepo:
             type = graph_type if graph_type != SINGLE else NPU
             query = """
                 SELECT * FROM tb_nodes 
-                WHERE up_node = "" 
+                WHERE up_node = ''
                 AND data_source = ? 
                 AND rank = ? 
                 AND step = ?
@@ -83,15 +84,49 @@ class GraphRepo:
             return []
     
     # DB：查询当前节点的父节点信息
-    def query_up_nodes(self):
-        pass
+    def query_up_nodes(self, node_name, graph_type, rank, step):
+        try:
+            # 现根据节点名称查询节点信息，根据up_node字段得到父节点名称
+            # 再根据父节点名称查询父节点信息
+            query = """
+                SELECT 
+                    parent.*
+                FROM 
+                    tb_nodes child
+                LEFT JOIN 
+                    tb_nodes parent ON child.up_node = parent.node_name 
+                    AND child.data_source=parent.data_source
+                    AND child.rank=parent.rank
+                    AND child.step=parent.step
+                WHERE 
+                    child.node_name = ?
+                    AND child.data_source= ?
+                    AND child.rank= ?
+                    AND child.step= ?
+            """ 
+            with self.conn as c:
+                cursor = c.execute(query, (node_name, graph_type, rank, step))
+                rows = cursor.fetchall()
+            if len(rows) > 0:
+                return self.convert_db_to_object(dict(rows[0]))
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Failed to query up nodes: {e}")
+            return {}
 
     # DB: 查询所有以当前为父节点的子节点
-    def query_sub_nodes(self, node_name):
+    def query_sub_nodes(self, node_name, graph_type, rank, step):
         try:
-            query = f"SELECT * FROM tb_nodes WHERE up_node= ?"
+            query = """
+                SELECT * FROM tb_nodes 
+                WHERE up_node = ?
+                AND data_source = ? 
+                AND rank = ? 
+                AND step = ?
+            """
             with self.conn as c:
-                cursor = c.execute(query, (node_name,))
+                cursor = c.execute(query, (node_name, graph_type, rank, step))
                 rows = cursor.fetchall()
             sub_nodes = {}
             for row in rows:

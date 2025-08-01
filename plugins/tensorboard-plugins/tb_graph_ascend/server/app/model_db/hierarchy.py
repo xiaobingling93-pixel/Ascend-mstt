@@ -41,6 +41,8 @@ class Hierarchy:
         self.name_prefix = name_prefix
         self.root_name = root_node_name
         self.graph_type = graph_type
+        self.rank = rank
+        self.step = step
         self.micro_step_id = micro_step
         self.current_hierarchy = {
             root_node_name: self.get_basic_rende_info(root_node_name, node_info)
@@ -50,12 +52,10 @@ class Hierarchy:
         self.update_graph_shape()
         self.update_graph_position()
 
-    @staticmethod
-    def measure_text_width(text):
+    def measure_text_width(self, text):
         return len(text) * 6  # 假设每个字符宽度为6
 
-    @staticmethod
-    def extract_label_name(node_name, node_type):
+    def extract_label_name(self, node_name, node_type):
         splited_subnode_name = node_name.split('.')
         splited_label = []
         # 在展开层级时，将父级层级名称相关去除，仅保留子节点本身名称信息
@@ -81,7 +81,7 @@ class Hierarchy:
         if node_name == self.root_name or target_node:
             self.process_click_expand(node_name)
         else:  # 如果图中不存在该节点，说明是选中节点，需要递归展开该节点的所有父节点
-            self.process_select_expand(node_name, {})
+            self.process_select_expand(node_name)
 
     def process_click_expand(self, node_name):
         target_node = self.current_hierarchy.get(node_name, {})
@@ -91,7 +91,7 @@ class Hierarchy:
         if not target_node.get('expand', False):
             # 1.将target_node的expand置为true
             # 2.将node_name的子节点信息初始化，并添加到current_hierarchy中
-            sub_nodes = self.repo.query_sub_nodes(node_name)
+            sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
             for subnode_name, node_info in sub_nodes.items():
                 if self.current_hierarchy.get(subnode_name):
                     continue
@@ -102,26 +102,27 @@ class Hierarchy:
         else:
             target_node['expand'] = False if node_name != self.root_name else True  # 根节点默认展开
 
-    def process_select_expand(self, node_name, graph):
+    def process_select_expand(self, node_name):
         # DB：查询当前节点的父节点信息
-        parent_node_name = graph.get('node', {}).get(node_name, {}).get("upnode")
-        parent_node = self.current_hierarchy.get(parent_node_name)
+        up_node = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
+        parent_node_name = up_node.get('node_name')
+        parent_node = self.current_hierarchy.get(parent_node_name, '')
         # 递归展开父节点
         while not parent_node or not parent_node.get('expand', False):
-            if not parent_node:  # 如果父节点不存在，则初始化父节点
-                node_info = graph.get('node', {}).get(parent_node_name)
-                render_info = self.get_basic_rende_info(parent_node_name, node_info, graph)
+            if not parent_node:  # 如果父节点不存在图中，则初始化父节点
+                render_info = self.get_basic_rende_info(up_node.get('node_name'), up_node)
                 self.current_hierarchy[parent_node_name] = render_info
             try:
-                self.process_click_expand(parent_node_name, graph)  # 展开父节点
+                self.process_click_expand(parent_node_name)  # 展开父节点
             except Exception as e:
                 logger.error(f"Failed to expand parent node {parent_node_name}: {e}")
                 break
             if parent_node_name == self.root_name:
                 break
             # DB：查询当前节点的父节点信息
-            parent_node_name = graph.get('node', {}).get(parent_node_name, {}).get("upnode")
-            parent_node = self.current_hierarchy.get(parent_node_name)
+            up_node = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
+            parent_node_name = up_node.get('node_name')
+            parent_node = self.current_hierarchy.get(up_node.get('node_name'), '')
 
     def update_graph_shape(self):
         self.resize_hierarchy(self.root_name)
@@ -140,7 +141,7 @@ class Hierarchy:
             return
         if not node.get('expand', False):
             # 未展开的父节点按文字宽度
-            node['width'] = Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
+            node['width'] = self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
             node['height'] = INNER_HIGHT
             return
         for child_name in node.get('children', []):
@@ -174,7 +175,7 @@ class Hierarchy:
         # 最终尺寸计算
         node['width'] = max(
             max_child_width + HORIZONTAL_SPACING * 2,  # 子节点最大宽度 + 边距
-            Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
+            self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
         )
         node['height'] = total_height + VERTICAL_SPACING  # 总高度 + 边距
 
@@ -250,7 +251,7 @@ class Hierarchy:
         label = node_name
         children = []
         if node_name == self.root_name:  # 根节点，根据micro_step获取子节点
-            sub_nodes = self.repo.query_sub_nodes(node_name)
+            sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
             # DB：查询以根节点为父节点的所有子节点
             for subnode_name, child_node in sub_nodes.items():
                 child_micro_step_id = child_node.get('micro_step_id', -1)  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
@@ -262,11 +263,11 @@ class Hierarchy:
         else:
             children = node_info.get('subnodes', [])
         if node_info.get('upnode', '') != self.root_name:  # 首层节点不处理显示内容
-            label = Hierarchy.extract_label_name(node_name, node_info.get('node_type'))
+            label = self.extract_label_name(node_name, node_info.get('node_type'))
         render_info = {
             'x': 0,
             'y': 0,
-            'width': Hierarchy.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
+            'width': self.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
             'height': INNER_HIGHT,
             'expand': False,
             'isRoot': node_name == self.root_name,
