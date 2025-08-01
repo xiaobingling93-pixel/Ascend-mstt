@@ -307,7 +307,8 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                 except Exception as e:
                     logger.error(
                         f"Failed to process Rank {rank}: {str(e)}")
-
+                    return False
+    return True
 
 def csv2db(config: CSV2DBConfig) -> None:
     """Main function to convert CSV files to database"""
@@ -333,12 +334,18 @@ def csv2db(config: CSV2DBConfig) -> None:
 
     db = MonitorDB(db_path, step_partition_size=config.step_partition)
 
-    import_data(
+    result = import_data(
         db,
         target_output_dirs,
         config.data_type_list if config.data_type_list else all_data_type_list,
         workers=config.process_num
     )
-
     recursive_chmod(config.output_dirpath)
-    logger.info(f"Output has been saved to: {config.output_dirpath}")
+    if result:
+        logger.info("Data import completed. Output saved to: %s", config.output_dirpath)
+    else:
+        logger.warning(
+            "Data import may be incomplete. Output directory: %s "
+            "(Some records might have failed)", 
+            config.output_dirpath
+        )
