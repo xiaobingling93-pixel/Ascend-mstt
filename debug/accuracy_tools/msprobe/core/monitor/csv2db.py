@@ -226,7 +226,7 @@ def process_single_rank(
                     continue
 
                 step = int(row['step'])
-                table_name = db.get_metric_table_name(metric_id, step)
+                table_name, _, _ = db.get_metric_table_name(metric_id, step)
                 # Prepare row data
                 row_data = [rank, step, target_id]
                 row_data.extend(
