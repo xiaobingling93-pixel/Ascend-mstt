@@ -106,7 +106,7 @@ class DBManager:
         columns = len(data[0])
         if key_list and columns != len(key_list):
             raise ValueError(
-                f"When inserting into table {table_name}, the length of key list ({key_name})"
+                f"When inserting into table {table_name}, the length of key list ({key_list})"
                 f"does not match the data({columns}).")
 
         batch_size = self.DEFAULT_INSERT_SIZE
