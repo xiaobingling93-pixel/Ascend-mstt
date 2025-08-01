@@ -1,3 +1,17 @@
+# Copyright (c) 2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Dict, List, Optional, Set, Tuple
@@ -44,6 +58,15 @@ class MonitorSql:
             metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
             metric_name TEXT UNIQUE NOT NULL
         )"""
+    
+    @staticmethod
+    def get_metric_mapping_sql():
+        return """
+        SELECT m.metric_id, m.metric_name, GROUP_CONCAT(ms.stat_name) as stats 
+        FROM monitoring_metrics m 
+        LEFT JOIN metric_stats ms ON m.metric_id = ms.metric_id
+        GROUP BY m.metric_id
+        """
 
     @staticmethod
     def _create_metric_stats_table():
@@ -79,15 +102,15 @@ class MonitorSql:
             "global_stats": cls._create_global_stat_table,
         }
         if not table_name:
-            return [table_creators[table]() for table in table_creators]
+            return [table_creators.get(table, lambda x:"")() for table in table_creators]
         if table_name not in table_creators:
             raise ValueError(f"Unsupported table name: {table_name}")
         return table_creators[table_name]()
 
     @classmethod
-    def get_metric_table_definition(cls, table_name, stats, patition=[]):
+    def get_metric_table_definition(cls, table_name, stats, patition=None):
         stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
-        if len(patition) == 2:
+        if patition and len(patition) == 2:
             partition_start_step, partition_end_step = patition
             step_column = f"""step INTEGER NOT NULL CHECK(step BETWEEN {partition_start_step} 
                     AND {partition_end_step}),"""
@@ -104,15 +127,6 @@ class MonitorSql:
             ) WITHOUT ROWID
             """
         return create_sql
-
-    @staticmethod
-    def get_metric_mapping_sql():
-        return """
-        SELECT m.metric_id, m.metric_name, GROUP_CONCAT(ms.stat_name) as stats 
-        FROM monitoring_metrics m 
-        LEFT JOIN metric_stats ms ON m.metric_id = ms.metric_id
-        GROUP BY m.metric_id
-        """
 
 
 class MonitorDB:
