@@ -101,45 +101,62 @@ class GraphRepo:
             logger.error(f"Failed to query root nodes: {e}")
             return []
     
-    # DB：查询当前节点的父节点信息
+    # DB：查询当前节点的所有父节点信息
     def query_up_nodes(self, node_name, graph_type, rank, step):
         try:
             start = time.perf_counter()
             type = graph_type if graph_type != SINGLE else NPU
             # 现根据节点名称查询节点信息，根据up_node字段得到父节点名称
             # 再根据父节点名称查询父节点信息
+            # 递归查询父节点，直到根节点
             query = """
-                SELECT 
-                    parent.node_name,
-                    parent.up_node,
-                    parent.sub_nodes,
-                    parent.node_type,
-                    parent.matched_node_link,
-                    parent.precision_index,
-                    parent.overflow_level,
-                    parent.matched_distributed 
-                FROM 
-                    tb_nodes child
-                LEFT JOIN 
-                    tb_nodes parent ON child.up_node = parent.node_name 
-                    AND child.data_source=parent.data_source
-                    AND child.rank=parent.rank
-                    AND child.step=parent.step
-                WHERE 
-                    child.node_name = ?
-                    AND child.data_source= ?
-                    AND child.rank= ?
-                    AND child.step= ?
+                WITH RECURSIVE parent_chain AS (
+                        SELECT child.id, child.node_name, child.up_node, child.data_source, child.rank, child.step, 0 AS level
+                        FROM tb_nodes child
+                        WHERE child.node_name = ?
+                        AND child.data_source = ?
+                        AND child.rank = ?
+                        AND child.step = ?
+
+                        UNION ALL
+
+                        SELECT parent.id, parent.node_name, parent.up_node, parent.data_source, parent.rank, parent.step, pc.level + 1
+                        FROM tb_nodes parent
+                        INNER JOIN parent_chain pc 
+                            ON parent.data_source = pc.data_source
+                        AND parent.node_name  = pc.up_node
+                        AND parent.rank = pc.rank
+                        AND parent.step = pc.step
+                        WHERE pc.up_node IS NOT NULL AND pc.up_node != ''
+                    )
+                    SELECT 
+                        tb_nodes.id,
+                        tb_nodes.data_source,
+                        tb_nodes.node_name,
+                        tb_nodes.up_node,
+                        tb_nodes.sub_nodes,
+                        tb_nodes.node_type,
+                        tb_nodes.matched_node_link,
+                        tb_nodes.precision_index,
+                        tb_nodes.overflow_level,
+                        tb_nodes.matched_distributed
+                    FROM tb_nodes
+                    WHERE id IN (SELECT id FROM parent_chain)
+                    ORDER BY (
+                        SELECT level FROM parent_chain pc 
+                        WHERE pc.node_name = tb_nodes.node_name) ASC
             """ 
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
+    
+            up_nodes = {}
+            for row in rows:
+                dict_row = self.convert_db_to_object(dict(row))
+                up_nodes[row['node_name']] = dict_row
             end = time.perf_counter()
             print("query_up_nodes time:", end - start)
-            if len(rows) > 0:
-                return self.convert_db_to_object(dict(rows[0]))
-            else:
-                return None
+            return up_nodes
         except Exception as e:
             logger.error(f"Failed to query up nodes: {e}")
             return {}

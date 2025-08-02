@@ -103,14 +103,18 @@ class Hierarchy:
             target_node['expand'] = False if node_name != self.root_name else True  # 根节点默认展开
 
     def process_select_expand(self, node_name):
+        # DB：逻辑
+        # 1.查询当前节点及其的所有父节点，知道没有父节点位置{}
+        
         # DB：查询当前节点的父节点信息
-        up_node = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
-        parent_node_name = up_node.get('node_name')
+        up_nodes = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
+        parent_node_name = up_nodes.get(node_name, {}).get('upnode')
         parent_node = self.current_hierarchy.get(parent_node_name, '')
         # 递归展开父节点
         while not parent_node or not parent_node.get('expand', False):
             if not parent_node:  # 如果父节点不存在图中，则初始化父节点
-                render_info = self.get_basic_rende_info(up_node.get('node_name'), up_node)
+              
+                render_info = self.get_basic_rende_info(parent_node_name, up_nodes.get(parent_node_name))
                 self.current_hierarchy[parent_node_name] = render_info
             try:
                 self.process_click_expand(parent_node_name)  # 展开父节点
@@ -119,10 +123,8 @@ class Hierarchy:
                 break
             if parent_node_name == self.root_name:
                 break
-            # DB：查询当前节点的父节点信息
-            up_node = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
-            parent_node_name = up_node.get('node_name')
-            parent_node = self.current_hierarchy.get(up_node.get('node_name'), '')
+            parent_node_name = up_nodes.get(parent_node_name, {}).get('upnode')
+            parent_node = self.current_hierarchy.get(parent_node_name, '')
 
     def update_graph_shape(self):
         self.resize_hierarchy(self.root_name)
