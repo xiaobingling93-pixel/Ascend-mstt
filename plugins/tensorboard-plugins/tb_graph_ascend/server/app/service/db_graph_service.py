@@ -61,10 +61,10 @@ class DbGraphService(GraphServiceStrategy):
                 # DB：根据 rank step micro_step 查询节点列表
                 result['npuNodeList'] = self.repo.query_node_name_list(NPU, rank, step, micro_step)
                 result['benchNodeList'] = self.repo.query_node_name_list(BENCH, rank, step, micro_step)
-                result['npuUnMatchNodes'] = []
-                result['benchUnMatchNodes'] = []
-                result['npuMatchedNodes'] = []
-                result['benchMatchedNodes'] = []
+                result['npuUnMatchNodes'] = self.repo.query_unmatched_nodes(NPU, rank, step, micro_step)
+                result['benchUnMatchNodes'] = self.repo.query_unmatched_nodes(BENCH, rank, step, micro_step)
+                result['npuMatchNodes'] = self.repo.query_matched_nodes(NPU, rank, step, micro_step)
+                result['benchMatchNodes'] = self.repo.query_matched_nodes(BENCH, rank, step, micro_step)
                 return {'success': True, 'data': result}
         except Exception as e:
             logger.error(f"load graph all node list failed, {e}")

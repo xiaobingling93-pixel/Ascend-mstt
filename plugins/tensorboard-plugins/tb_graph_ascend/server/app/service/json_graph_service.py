@@ -287,6 +287,7 @@ class JsonGraphService(GraphServiceStrategy):
                 else:
                     result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
                     if result.get('success'):
+                        # DB： 如果成功则将匹配关系写入数据库,并且查数据
                         config_data = GraphState.get_global_value("config_data")
                         result['data'] = {
                             'npuMatchNodes': config_data.get('npuMatchNodes', {}),

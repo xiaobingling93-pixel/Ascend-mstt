@@ -17,7 +17,6 @@ import sqlite3
 from ..utils.graph_utils import GraphUtils
 from tensorboard.util import tb_logging
 from ..utils.global_state import SINGLE, NPU
-from idlelib.idle_test.test_query import QueryTest
 logger = tb_logging.get_logger()
 import time
 
@@ -37,7 +36,7 @@ class GraphRepo:
             logger.error("Failed to connect to database")
             return None
 
-    # 查询配置表信息
+    # DB: 查询配置表信息
     def query_config_info(self):
         try:
             query = f"SELECT * FROM tb_config"
@@ -45,6 +44,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query)
                 rows = cursor.fetchall()
+                self.conn.commit()
             record = dict(rows[0])
             # 构建最终的 data 对象
             config_info = {
@@ -91,6 +91,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step))
                 rows = cursor.fetchall()
+                self.conn.commit()
             end = time.perf_counter()
             print("query_root_nodes time:", end - start)
             if len(rows) > 0:
@@ -149,7 +150,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
-    
+                self.conn.commit()
             up_nodes = {}
             for row in rows:
                 dict_row = self.convert_db_to_object(dict(row))
@@ -217,6 +218,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
                 rows = cursor.fetchall()
+                self.conn.commit()
             end = time.perf_counter()
             print("query_node_name_list time:", end - start)
             return [row['node_name'] for row in rows]
@@ -243,6 +245,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
+                self.conn.commit()
             end = time.perf_counter()
             print("query_node_info time:", end - start)
             if len(rows) > 0:
@@ -251,8 +254,75 @@ class GraphRepo:
                 return {}
         except Exception as e:
             logger.error(f"Failed to query node info: {e}")
-            return None
+            return {}
     
+    # DB: 查询已匹配节点
+    def query_matched_nodes(self, graph_type, rank, step, micro_step):
+        try:
+            start = time.perf_counter()
+            type = graph_type if graph_type != SINGLE else NPU
+            query = """
+                SELECT 
+                    node_name,
+                    matched_node_link 
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    data_source = ? 
+                    AND rank = ? 
+                    AND step = ?
+                    AND (? = -1 OR micro_step_id = ?)
+                    AND matched_node_link !='[]' AND matched_node_link IS NOT NULL
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
+                rows = cursor.fetchall()
+                self.conn.commit()
+            matched_nodes = {}
+      
+            for row in rows:
+                node_name = row['node_name']
+                matched_node_link = GraphUtils.safe_json_loads(row['matched_node_link'])
+                if isinstance(matched_node_link, list) and len(matched_node_link) > 0:
+                    matched_nodes[node_name] = matched_node_link[-1]
+            
+            end = time.perf_counter()
+            print("query_matched_nodes time:", end - start)
+            return matched_nodes
+        except Exception as e:
+            logger.error(f"Failed to query matched nodes: {e}")
+            return {}
+
+    # DB: 查询未匹配节点
+    def query_unmatched_nodes(self, graph_type, rank, step, micro_step):
+        try:
+            start = time.perf_counter()
+            type = graph_type if graph_type != SINGLE else NPU
+            query = """
+                SELECT 
+                    node_name 
+                FROM 
+                    tb_nodes 
+                WHERE
+                    data_source = ? 
+                    AND rank = ? 
+                    AND step = ?
+                    AND (? = -1 OR micro_step_id = ?)
+                    AND matched_node_link ='[]' OR matched_node_link IS NULL
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
+                rows = cursor.fetchall()
+                self.conn.commit()
+            end = time.perf_counter()
+            print("query_unmatched_nodes time:", end - start)
+            return [row['node_name'] for row in rows]
+        except Exception as e:
+            logger.error(f"Failed to query unmatched nodes: {e}")
+            return []
+
+    # DB: 查询子节点
+
     def convert_db_to_object(self, data):
         object = {
             "id": data.get('node_name'),
