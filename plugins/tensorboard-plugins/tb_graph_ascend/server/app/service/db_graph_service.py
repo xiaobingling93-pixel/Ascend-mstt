@@ -111,11 +111,9 @@ class DbGraphService(GraphServiceStrategy):
             else:
                 matched_node_type = BENCH if graph_type == NPU else NPU
                 node = self.repo.query_node_info(node_name, graph_type, rank, step)
-                matched_node_link = node.get('matched_node_link', []) if isinstance(node.get('matched_node_link', []),
-                                                                                    list) else []
-                matched_node_name = matched_node_link[-1]
-                if matched_node_name:
-                    matched_node = self.repo.query_node_info(matched_node_name, matched_node_type, rank, step)
+                matched_node_link = node.get('matched_node_link', []) 
+                if isinstance(node.get('matched_node_link', []), list) and len(matched_node_link) > 0:
+                    matched_node = self.repo.query_node_info(matched_node_link[-1], matched_node_type, rank, step)
                 else:
                     matched_node = None
                 result['npu'] = node if graph_type == NPU else matched_node
