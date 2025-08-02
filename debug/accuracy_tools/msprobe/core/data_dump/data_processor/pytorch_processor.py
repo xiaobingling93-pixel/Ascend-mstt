@@ -72,9 +72,6 @@ class PytorchDataProcessor(BaseDataProcessor):
 
     @staticmethod
     def compute_crc32_bytes(tensor_bytes):
-        # 纯函数，方便多进程调用
-        # import zlib
-
         return f"{zlib.crc32(tensor_bytes):08x}"
 
     @staticmethod
@@ -263,8 +260,6 @@ class PytorchDataProcessor(BaseDataProcessor):
             if tensor.dtype == torch.bfloat16:
                 tensor = tensor.float()
             tensor_bytes = tensor.cpu().detach().numpy().tobytes()
-
-            # tensor_bytes = tensor.asnumpy().tobytes()
 
             future = self._crc_executor.submit(
                 PytorchDataProcessor.compute_crc32_bytes,

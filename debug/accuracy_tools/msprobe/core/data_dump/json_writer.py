@@ -49,7 +49,6 @@ class DataWriter:
         self._error_log_initialized = False
         self._cache_logged_error_types = set()
         self.crc32_stack_list = []
-        self._crc_flush_threshold = 50
 
     def append_crc32_to_buffer(self, future: concurrent.futures.Future) -> int:
         """
