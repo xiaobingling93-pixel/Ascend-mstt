@@ -17,6 +17,7 @@ import os
 import zlib
 from dataclasses import asdict
 from typing import List
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -24,7 +25,6 @@ from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
 from msprobe.core.common.const import Const
-from concurrent.futures import ThreadPoolExecutor
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger

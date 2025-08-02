@@ -15,6 +15,7 @@
 
 import os
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 
 import mindspore as ms
 from mindspore import mint, ops, hal
@@ -23,7 +24,6 @@ from mindspore._c_expression.typing import Number
 import numpy as np
 
 from msprobe.core.common.const import Const
-from concurrent.futures import ThreadPoolExecutor
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
 from msprobe.core.common.file_utils import path_len_exceeds_limit
