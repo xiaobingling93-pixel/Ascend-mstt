@@ -319,7 +319,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
             'requires_grad': tensor.requires_grad
         }
         result.pop('tensor_stat_index', None)
-        result.pop('md5', None)
+        result.pop('md5_index', None)
         self.assertDictEqual(expected, result)
 
     def test_analyze_tensor_with_empty_tensor(self):

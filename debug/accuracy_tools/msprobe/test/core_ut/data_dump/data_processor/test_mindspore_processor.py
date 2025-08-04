@@ -143,7 +143,7 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         result = self.processor._analyze_tensor(tensor, suffix)
         # 删除不必要的字段
         result.pop('tensor_stat_index', None)
-        result.pop('md5', None)
+        result.pop('md5_index', None)
 
         self.assertEqual(result, expected_result)
 
