@@ -20,6 +20,7 @@ from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from ..model_db.layout_hierarchy_model import LayoutHierarchyModel
+from ..model_db.match_nodes_model import MatchNodesController
 from tensorboard.util import tb_logging
 logger = tb_logging.get_logger()
 
@@ -58,13 +59,25 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': True, 'data': result} 
             # 双图
             else:
-                # DB：根据 rank step micro_step 查询节点列表
+                config_data = GraphState.get_global_value("config_data")
+                
+                npuMatchNodes = self.repo.query_matched_nodes(NPU, rank, step, micro_step)
+                benchMatchNodes = self.repo.query_matched_nodes(BENCH, rank, step, micro_step)
+                npu_unmatehed_name_list = self.repo.query_unmatched_nodes(NPU, rank, step, micro_step)
+                bench_unmatehed_name_list = self.repo.query_unmatched_nodes(BENCH, rank, step, micro_step)
+                
+                config_data['npuMatchNodes'] = npuMatchNodes
+                config_data['benchMatchNodes'] = benchMatchNodes
+                config_data['npuUnMatchNodes'] = npu_unmatehed_name_list
+                config_data['benchUnMatchNodes'] = bench_unmatehed_name_list
+        
+                result['npuMatchNodes'] = npuMatchNodes
+                result['benchMatchNodes'] = benchMatchNodes
+                result['npuUnMatchNodes'] = npu_unmatehed_name_list
+                result['benchUnMatchNodes'] = bench_unmatehed_name_list
                 result['npuNodeList'] = self.repo.query_node_name_list(NPU, rank, step, micro_step)
                 result['benchNodeList'] = self.repo.query_node_name_list(BENCH, rank, step, micro_step)
-                result['npuUnMatchNodes'] = self.repo.query_unmatched_nodes(NPU, rank, step, micro_step)
-                result['benchUnMatchNodes'] = self.repo.query_unmatched_nodes(BENCH, rank, step, micro_step)
-                result['npuMatchNodes'] = self.repo.query_matched_nodes(NPU, rank, step, micro_step)
-                result['benchMatchNodes'] = self.repo.query_matched_nodes(BENCH, rank, step, micro_step)
+                
                 return {'success': True, 'data': result}
         except Exception as e:
             logger.error(f"load graph all node list failed, {e}")
@@ -98,14 +111,22 @@ class DbGraphService(GraphServiceStrategy):
     
     def search_node_by_overflow(self, meta_data, values):
         pass
-    
+
+    def update_hierarchy_data(self, graph_type):
+        if (graph_type == NPU or graph_type == BENCH):
+            hierarchy = LayoutHierarchyModel.update_hierarchy_data(graph_type)
+            return {'success': True, 'data': hierarchy}
+        else:
+            return {'success': False, 'error': '节点类型错误'}
+
     def get_node_info(self, node_info, meta_data):
         try:
+            result = {}
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
             rank = meta_data.get('rank')
             step = meta_data.get('step')
-            result = {}
+       
             if self.config_info.get('isSingleGraph') or graph_type == SINGLE:
                 result['npu'] = self.repo.query_node_info(node_name, graph_type, rank, step)
             else:
@@ -124,13 +145,99 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': False, 'error': '获取节点信息失败:' + str(e), 'data': None}
 
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
-        pass
+        try:
+            result = {}
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            task = self.config_info.get('task')
+            # 根据任务类型计算误差
+            if task == 'md5' or task == 'summary':
+                if is_match_children:
+                    result = MatchNodesController.process_task_add_child_layer(npu_node_name, bench_node_name, task, step, rank)
+                    # DB：更新操作， 更新NPU 节点的 matched_node_link，precision_index，input_data，output_data
+                    # DB：返回格式 []
+                    return result
+                else:
+                    npu_node = self.query_node_info(npu_node_name, NPU, rank, step)
+                    bench_node = self.query_node_info(bench_node_name, BENCH, rank, step)
+                    graph_data = {
+                        "NPU":{
+                            "node": {
+                                npu_node_name: npu_node,
+                            },
+                        },
+                        "Bench":{
+                            "node": {
+                                bench_node_name: bench_node
+                            },
+                        }
+                    }
+                    result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+                    # DB：更新操作， 更新NPU 节点的 matched_node_link，precision_index，input_data，output_data
+                    # DB：返回格式 []
+                    if result.get('success'):
+                        # DB： 如果成功则将匹配关系写入数据库,并且查数据
+                        config_data = GraphState.get_global_value("config_data")
+                        result['data'] = {
+                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                        }
+                    return result
+            else:
+                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+        except Exception as e:
+            return {'success': False, '操作失败': str(e), 'data': None}
 
     def add_match_nodes_by_config(self, config_file, meta_data):
         pass
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
-        pass
+        try:
+            result = {}
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            task = self.config_info.get('task')
+            
+            # 根据任务类型计算误差
+            if task == 'md5' or task == 'summary':
+                if is_unmatch_children:
+                    result = MatchNodesController.process_task_delete_child_layer(npu_node_name, bench_node_name, task, step, rank)
+                    # DB：更新操作， 更新NPU 节点的 matched_node_link，precision_index，input_data，output_data
+                    # DB：返回格式 []
+                    return result
+                else:
+                    npu_node = self.repo.query_node_info(npu_node_name, NPU, rank, step)
+                    bench_node = self.repo.query_node_info(bench_node_name, BENCH, rank, step)
+                    
+                    graph_data = {
+                        "NPU":{
+                            "node": {
+                                npu_node_name: npu_node,
+                            },
+                        },
+                        "Bench":{
+                            "node": {
+                                bench_node_name: bench_node
+                            },
+                        }
+                    }
+                    result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
+                    if result.get('success'):
+                        # DB： 如果成功则将匹配关系写入数据库,并且查数据
+                        config_data = GraphState.get_global_value("config_data")
+                        result['data'] = {
+                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                        }
+                    return result
+            else:
+                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+        except Exception as e:
+            return {'success': False, '操作失败': str(e), 'data': None}
 
     def save_data(self, meta_data):
         pass

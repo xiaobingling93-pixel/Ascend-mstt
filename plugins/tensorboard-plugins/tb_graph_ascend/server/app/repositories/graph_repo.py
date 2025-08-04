@@ -44,7 +44,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query)
                 rows = cursor.fetchall()
-                self.conn.commit()
+                
             record = dict(rows[0])
             # 构建最终的 data 对象
             config_info = {
@@ -91,7 +91,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step))
                 rows = cursor.fetchall()
-                self.conn.commit()
+                
             end = time.perf_counter()
             print("query_root_nodes time:", end - start)
             if len(rows) > 0:
@@ -150,7 +150,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
-                self.conn.commit()
+                
             up_nodes = {}
             for row in rows:
                 dict_row = self.convert_db_to_object(dict(row))
@@ -218,7 +218,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
                 rows = cursor.fetchall()
-                self.conn.commit()
+        
             end = time.perf_counter()
             print("query_node_name_list time:", end - start)
             return [row['node_name'] for row in rows]
@@ -245,7 +245,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (node_name, type, rank, step))
                 rows = cursor.fetchall()
-                self.conn.commit()
+                
             end = time.perf_counter()
             print("query_node_info time:", end - start)
             if len(rows) > 0:
@@ -255,7 +255,40 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query node info: {e}")
             return {}
-    
+        
+    # DB：批量查询节点信息
+    # def query_nodes_info(self, node_names, graph_type, rank, step):
+    #     try:
+    #         start = time.perf_counter()
+    #         type = graph_type if graph_type != SINGLE else NPU
+    #         query = """
+    #             SELECT 
+    #                 * 
+    #             FROM 
+    #                 tb_nodes 
+    #             WHERE 
+    #                 node_name IN ({}) 
+    #                 AND data_source = ?
+    #                 AND rank = ?
+    #                 AND step = ?
+    #             """.format(','.join(['?'] * len(node_names)))
+                
+    #         params = node_names + [type, rank, step]
+    #         with self.conn as c:
+    #             cursor = c.execute(query, params)
+    #             rows = cursor.fetchall()
+                
+    #         end = time.perf_counter()
+    #         print("query_nodes_info time:", end - start)
+    #         result = {}
+    #         for row in rows:
+    #             dict_row = self.convert_db_to_object(dict(row))
+    #             result[row['node_name']] = dict_row
+    #         return result
+    #     except Exception as e:
+    #         logger.error(f"Failed to query nodes info: {e}")
+    #         return {}
+
     # DB: 查询已匹配节点
     def query_matched_nodes(self, graph_type, rank, step, micro_step):
         try:
@@ -277,7 +310,7 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
                 rows = cursor.fetchall()
-                self.conn.commit()
+                
             matched_nodes = {}
       
             for row in rows:
@@ -313,15 +346,13 @@ class GraphRepo:
             with self.conn as c:
                 cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
                 rows = cursor.fetchall()
-                self.conn.commit()
+                
             end = time.perf_counter()
             print("query_unmatched_nodes time:", end - start)
             return [row['node_name'] for row in rows]
         except Exception as e:
             logger.error(f"Failed to query unmatched nodes: {e}")
             return []
-
-    # DB: 查询子节点
 
     def convert_db_to_object(self, data):
         object = {

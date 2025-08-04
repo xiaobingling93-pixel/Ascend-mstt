@@ -93,14 +93,6 @@ class GraphServiceStrategy(ABC):
         }
         return result
 
-    @staticmethod
-    def update_hierarchy_data(graph_type):
-        if graph_type == NPU or graph_type == BENCH:
-            hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
-            return {'success': True, 'data': hierarchy}
-        else:
-            return {'success': False, 'error': '节点类型错误'}
-
     @abstractmethod
     def load_graph_data(self):
         pass

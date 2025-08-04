@@ -91,11 +91,11 @@ class Hierarchy:
         if not target_node.get('expand', False):
             # 1.将target_node的expand置为true
             # 2.将node_name的子节点信息初始化，并添加到current_hierarchy中
+            # DB: 查询所有以当前为父节点的子节点
             sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
             for subnode_name, node_info in sub_nodes.items():
                 if self.current_hierarchy.get(subnode_name):
                     continue
-                # DB: 查询所有以当前为父节点的子节点
                 render_info = self.get_basic_rende_info(subnode_name, node_info)
                 self.current_hierarchy[subnode_name] = render_info
             target_node['expand'] = True
@@ -253,8 +253,9 @@ class Hierarchy:
         label = node_name
         children = []
         if node_name == self.root_name:  # 根节点，根据micro_step获取子节点
-            sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
             # DB：查询以根节点为父节点的所有子节点
+            sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
+     
             for subnode_name, child_node in sub_nodes.items():
                 child_micro_step_id = child_node.get('micro_step_id', -1)  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
                 is_append_all_node = int(self.micro_step_id) == -1 or child_micro_step_id == -1
@@ -300,10 +301,10 @@ class Hierarchy:
                 self.get_connected_graph(child_name, result, new_hierarchy)
 
     def update_hierarchy_data(self):
-        for node_name, node_info in self.current_hierarchy.items():
-            graph_node_info = self.graph.get('node', {}).get(node_name, {})
-            node_info['matchedNodeLink'] = graph_node_info.get('matched_node_link', [])
-            node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
+        # for node_name, node_info in self.current_hierarchy.items():
+        #     graph_node_info = self.graph.get('node', {}).get(node_name, {})
+        #     node_info['matchedNodeLink'] = graph_node_info.get('matched_node_link', [])
+        #     node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
         return self.current_hierarchy
 
     def get_hierarchy(self):

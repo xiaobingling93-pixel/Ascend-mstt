@@ -149,9 +149,13 @@ class GraphView:
     # 更新当前图节点信息
     @staticmethod
     @wrappers.Request.application
+    @check_file_type
     def update_hierarchy_data(request):
-        graph_type = request.args.get("graphType")
-        hierarchy = GraphServiceStrategy.update_hierarchy_data(graph_type)
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
+        graph_type = data.get("graphType")
+        meta_data = data.get('metaData')
+        strategy = GraphView._get_strategy(meta_data)
+        hierarchy = strategy.update_hierarchy_data(graph_type)
         return http_util.Respond(request, json.dumps(hierarchy), "application/json")
 
     # 获取当前节点对应节点的信息看板数据

@@ -18,7 +18,7 @@ import { maybeTruncateString, darkenColor, safeJSONParse } from '../../../utils/
 import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
 import { HierarchyNodeType, PreProcessDataConfigType, GraphType } from '../../type';
-
+import { SelectionType } from '../../../graph_ascend/type';
 import { UseGraphType } from '../../type';
 import {
     DURATION_TIME,
@@ -275,7 +275,7 @@ const useGraph = (): UseGraphType => {
         texts.order();
     };
 
-    const changeNodeExpandState: UseGraphType['changeNodeExpandState'] = async (nodeInfo: any, metaData: any): Promise<any> => {
+    const changeNodeExpandState: UseGraphType['changeNodeExpandState'] = async (nodeInfo: any, metaData: SelectionType): Promise<any> => {
         try {
             const metaDataSafe = safeJSONParse(JSON.stringify(metaData));
             const params = {
@@ -297,10 +297,14 @@ const useGraph = (): UseGraphType => {
         }
     };
 
-    const updateHierarchyData = async (graphType: string): Promise<any> => {
-        const params = { graphType };
+    const updateHierarchyData = async (graphType: string, metaData: SelectionType): Promise<any> => {
+
         try {
-            const result = await request({ url: 'updateHierarchyData', method: 'GET', params: params });
+            const params = {
+                metaData,
+                graphType
+            };
+            const result = await request({ url: 'updateHierarchyData', method: 'POST', data: params });
             return result;
         } catch (err) {
             return {
