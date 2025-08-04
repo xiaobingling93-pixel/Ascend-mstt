@@ -113,6 +113,7 @@ class BaseHookManager(ABC):
                     # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
                     self.data_collector.handle_data(grad_name, data_info,
                                                     flush=self.data_collector.data_processor.is_terminated)
+                    self.data_collector.params_grad_record[grad_name] = True
                 # 记录当前模块的参数梯度信息已占位
                 BaseHookManager.params_grad_info[grad_name] = True
 
@@ -246,6 +247,9 @@ class BaseHookManager(ABC):
                     module_input_output,
                     self._is_recompute
                 )
+                if hook_type == Const.MODULE:
+                    params_dict = self._get_params_dict(module)
+                    self.data_collector.params_data_collect_in_bw_hook(params_dict, full_name)
                 BaseHookManager.inner_switch[tid] = False
 
         return backward_hook
