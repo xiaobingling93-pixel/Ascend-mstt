@@ -82,7 +82,7 @@ class GraphView:
     @check_file_type
     def load_graph_config_info(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.load_graph_config_info()
         # 创建响应对象
@@ -95,7 +95,7 @@ class GraphView:
     @check_file_type
     def load_graph_all_node_list(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.load_graph_all_node_list(meta_data)
         response = http_util.Respond(request, result, "application/json")
@@ -107,7 +107,7 @@ class GraphView:
     @check_file_type
     def update_precision_error(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         filter_value = data.get("filterValue")
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.update_precision_error(meta_data, filter_value)
@@ -120,7 +120,11 @@ class GraphView:
     def change_node_expand_state(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = GraphUtils.safe_get_node_info(data)
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        result = {'success': False, 'error': ''}
+        if node_info is None or not isinstance(node_info, dict):
+            result['error'] = 'The query parameter nodeInfo and its sub-items must exist and must be a dictionary.'
+            return http_util.Respond(request, result, "application/json")
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         hierarchy = strategy.change_node_expand_state(node_info, meta_data)
         return http_util.Respond(request, json.dumps(hierarchy), "application/json")
@@ -140,7 +144,11 @@ class GraphView:
     def get_node_info(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = GraphUtils.safe_get_node_info(data)
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        result = {'success': False, 'error': ''}
+        if node_info is None or not isinstance(node_info, dict):
+            result['error'] = 'The query parameter nodeInfo and its sub-items must exist and must be a dictionary.'
+            return http_util.Respond(request, result, "application/json")
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         node_detail = strategy.get_node_info(node_info, meta_data)
         return http_util.Respond(request, json.dumps(node_detail), "application/json")
@@ -152,7 +160,7 @@ class GraphView:
     def add_match_nodes_by_config(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         config_file = data.get('configFile')
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         match_result = strategy.add_match_nodes_by_config(config_file, meta_data)
         return http_util.Respond(request, json.dumps(match_result), "application/json")
@@ -165,7 +173,7 @@ class GraphView:
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         npu_node_name = data.get("npuNodeName")
         bench_node_name = data.get("benchNodeName")
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         is_match_children = data.get("isMatchChildren")
         strategy = GraphView._get_strategy(meta_data)
         match_result = strategy.add_match_nodes(npu_node_name, bench_node_name, meta_data, is_match_children)
@@ -179,7 +187,7 @@ class GraphView:
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         npu_node_name = data.get("npuNodeName")
         bench_node_name = data.get("benchNodeName")
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         is_unmatch_children = data.get("isUnMatchChildren")
         strategy = GraphView._get_strategy(meta_data)
         match_result = strategy.delete_match_nodes(npu_node_name, bench_node_name, meta_data, is_unmatch_children)
@@ -191,7 +199,7 @@ class GraphView:
     @check_file_type
     def save_data(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         save_result = strategy.save_data(meta_data)
         return http_util.Respond(request, json.dumps(save_result), "application/json")
@@ -212,7 +220,7 @@ class GraphView:
     @check_file_type
     def save_matched_relations(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
-        meta_data = GraphUtils.safe_get_meta_data(data)
+        meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         save_result = strategy.save_matched_relations()
         return http_util.Respond(request, json.dumps(save_result), "application/json")
