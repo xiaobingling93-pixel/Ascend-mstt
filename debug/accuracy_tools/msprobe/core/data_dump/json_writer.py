@@ -105,25 +105,6 @@ class DataWriter:
             for item in data:
                 self._replace_stat_placeholders(item, stat_result)
 
-    def _replace_crc32_placeholders(self, data, crc32_results):
-        """
-        遍历 JSON 结构，将所有 md5_index 占位符替换成真实的 CRC32
-        """
-        if isinstance(data, dict):
-            for k, v in list(data.items()):
-                if k == Const.MD5_INDEX and isinstance(v, int):
-                    idx = v
-                    # 防越界
-                    crc = crc32_results[idx] if idx < len(crc32_results) else None
-                    # 删除占位符，改成真实字段
-                    del data[k]
-                    data[Const.MD5] = crc
-                else:
-                    self._replace_crc32_placeholders(v, crc32_results)
-        elif isinstance(data, (list, tuple)):
-            for item in data:
-                self._replace_crc32_placeholders(item, crc32_results)
-
     def reset_cache(self):
         self.cache_data = {}
         self.cache_stack = {}
@@ -335,3 +316,21 @@ class DataWriter:
             if self.cache_debug:
                 self.write_debug_info_json(self.debug_file_path)
 
+    def _replace_crc32_placeholders(self, data, crc32_results):
+        """
+        遍历 JSON 结构，将所有 md5_index 占位符替换成真实的 CRC32
+        """
+        if isinstance(data, dict):
+            for k, v in list(data.items()):
+                if k == Const.MD5_INDEX and isinstance(v, int):
+                    idx = v
+                    # 防越界
+                    crc = crc32_results[idx] if idx < len(crc32_results) else None
+                    # 删除占位符，改成真实字段
+                    del data[k]
+                    data[Const.MD5] = crc
+                else:
+                    self._replace_crc32_placeholders(v, crc32_results)
+        elif isinstance(data, (list, tuple)):
+            for item in data:
+                self._replace_crc32_placeholders(item, crc32_results)
