@@ -173,6 +173,12 @@ class GraphUtils:
     @staticmethod
     def convert_to_float(value):
         try:
+            if isinstance(value, str):
+                # 处理'0.0%, 由于Mean小于1e-06, 建议不参考此相对误差，请参考绝对误差'和'0.0%'的情况
+                value = value.split(',')[0]
+                if value.endswith('%'):
+                    value = value.replace('%', '').strip()
+                    return float(value) / 100.0
             return float(value)
         except ValueError:
             return float('nan')
@@ -468,8 +474,7 @@ class GraphUtils:
         sorted_keys = sorted(data.keys(), key=cmp_to_key(GraphUtils.compare_tag_names))
         for k in sorted_keys:
             # 对每个键对应的值列表进行排序
-            sorted_values = sorted(data[k], key=cmp_to_key(GraphUtils.compare_tag_names))
-            sorted_data[k] = sorted_values
+            sorted_values = sorted(data.get(k, {}).get('tags'), key=cmp_to_key(GraphUtils.compare_tag_names))
+            sorted_data[k] = {'type': data.get(k, {}).get('type'), 'tags': sorted_values}
 
         return sorted_data
-

@@ -109,8 +109,8 @@ def check_index_dump_mode_consistent(dump_mode, rank_num):
         return []
 
     dump_mode_compare_index_map = {
-        Const.ALL: CompareConst.ALL_COMPARE_INDEX,
-        Const.SUMMARY: CompareConst.SUMMARY_COMPARE_INDEX
+        Const.ALL: CompareConst.ALL_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST],
+        Const.SUMMARY: CompareConst.SUMMARY_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
     }
     valid_compare_index = dump_mode_compare_index_map.get(dump_mode)
 

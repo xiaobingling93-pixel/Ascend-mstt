@@ -350,59 +350,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
             if os.path.exists(base_path):
                 os.rmdir(base_path)
 
-    def test_online_api_precision_compare(self):
-        # 准备测试目录和文件
-        base_path = 'test_online_compare_tmp'
-        os.makedirs(base_path, exist_ok=True)
-        
-        # 创建测试用的CSV文件
-        npu_csv = os.path.join(base_path, 'npu.csv')
-        gpu_csv = os.path.join(base_path, 'gpu.csv')
-        result_csv = os.path.join(base_path, 'results_rank1.csv')
-        details_csv = os.path.join(base_path, 'details_rank1.csv')
-        
-        # 准备在线比较的配置
-        online_config = MagicMock()
-        online_config.rank = 1
-        online_config.result_csv_path = os.path.join(base_path, "results_rank*.csv")
-        online_config.details_csv_path = os.path.join(base_path, "details_rank*.csv")
-        
-        # 将测试数据写入CSV文件
-        df = pd.DataFrame(self.test_data)
-        df.to_csv(npu_csv, index=False)
-        df.to_csv(gpu_csv, index=False)
-        
-        # 设置online_config的数据
-        online_config.npu_data = pd.read_csv(npu_csv)
-        online_config.gpu_data = pd.read_csv(gpu_csv)
-        
-        try:
-            # 执行在线比较
-            online_api_precision_compare(online_config)
-            
-            # 验证结果文件是否生成
-            self.assertTrue(os.path.exists(result_csv))
-            self.assertTrue(os.path.exists(details_csv))
-            
-            # 读取并验证结果
-            result_df = pd.read_csv(result_csv)
-            self.assertFalse(result_df.empty)
-            
-            details_df = pd.read_csv(details_csv)
-            self.assertFalse(details_df.empty)
-            
-            # 验证文件权限
-            self.assertEqual(os.stat(result_csv).st_mode & 0o777, FileCheckConst.DATA_FILE_AUTHORITY)
-            self.assertEqual(os.stat(details_csv).st_mode & 0o777, FileCheckConst.DATA_FILE_AUTHORITY)
-            
-        finally:
-            # 清理测试文件
-            for file_path in [npu_csv, gpu_csv, result_csv, details_csv]:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            if os.path.exists(base_path):
-                os.rmdir(base_path)
-                
+               
     def test_skip_due_to_empty_output(self):
         self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = ' '
         api_name = "abs"

@@ -2,7 +2,7 @@ import unittest
 import os
 from unittest.mock import patch
 
-from msprobe.pytorch.api_accuracy_checker.common.config import Config, CheckerConfig, OnlineConfig, msCheckerConfig
+from msprobe.pytorch.api_accuracy_checker.common.config import Config, CheckerConfig, msCheckerConfig
 
 
 class TestUtConfig():
@@ -10,12 +10,6 @@ class TestUtConfig():
         self.white_list = ['api1', 'api2']
         self.black_list =  ['api3']
         self.error_data_path = '/path/to/error_data'
-        self.is_online = True
-        self.nfs_path = '/path/to/nfs'
-        self.host = 'localhost'
-        self.port = 8080
-        self.rank_list = [0, 1, 2]
-        self.tls_path = '/path/to/tls'
 
 
 class TestConfig(unittest.TestCase):
@@ -60,46 +54,19 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(checker_config.white_list, msCheckerConfig.white_list)
         self.assertEqual(checker_config.black_list, msCheckerConfig.black_list)
         self.assertEqual(checker_config.error_data_path, msCheckerConfig.error_data_path)
-        self.assertEqual(checker_config.is_online, msCheckerConfig.is_online)
-        self.assertEqual(checker_config.nfs_path, msCheckerConfig.nfs_path)
-        self.assertEqual(checker_config.host, msCheckerConfig.host)
-        self.assertEqual(checker_config.port, msCheckerConfig.port)
-        self.assertEqual(checker_config.rank_list, msCheckerConfig.rank_list)
-        self.assertEqual(checker_config.tls_path, msCheckerConfig.tls_path)
+
 
     def test_init_with_task_config(self):
         checker_config = CheckerConfig(self.task_config)
         self.assertEqual(checker_config.white_list, self.task_config.white_list)
         self.assertEqual(checker_config.black_list, self.task_config.black_list)
         self.assertEqual(checker_config.error_data_path, self.task_config.error_data_path)
-        self.assertEqual(checker_config.is_online, self.task_config.is_online)
-        self.assertEqual(checker_config.nfs_path, self.task_config.nfs_path)
-        self.assertEqual(checker_config.host, self.task_config.host)
-        self.assertEqual(checker_config.port, self.task_config.port)
-        self.assertEqual(checker_config.rank_list, self.task_config.rank_list)
-        self.assertEqual(checker_config.tls_path, self.task_config.tls_path)
+
 
     def test_load_config(self):
         checker_config = CheckerConfig()
         checker_config.load_config(self.task_config)
-        self.assertEqual(checker_config.is_online, self.task_config.is_online)
-        self.assertEqual(checker_config.nfs_path, self.task_config.nfs_path)
-        self.assertEqual(checker_config.host, self.task_config.host)
-        self.assertEqual(checker_config.port, self.task_config.port)
-        self.assertEqual(checker_config.rank_list, self.task_config.rank_list)
-        self.assertEqual(checker_config.tls_path, self.task_config.tls_path)
 
-    def test_get_online_config(self):
-        checker_config = CheckerConfig()
-        checker_config.load_config(self.task_config)
-        online_config = checker_config.get_online_config()
-        self.assertIsInstance(online_config, OnlineConfig)
-        self.assertEqual(online_config.is_online, self.task_config.is_online)
-        self.assertEqual(online_config.nfs_path, self.task_config.nfs_path)
-        self.assertEqual(online_config.host, self.task_config.host)
-        self.assertEqual(online_config.port, self.task_config.port)
-        self.assertEqual(online_config.rank_list, self.task_config.rank_list)
-        self.assertEqual(online_config.tls_path, self.task_config.tls_path)
 
     def test_get_run_ut_config(self):
         forward_content = {'api1': 'data1', 'api2': 'data2'}
