@@ -195,6 +195,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
         tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
+            tensor = convert_bf16_to_fp32(tensor)
             # 拷贝并搬到 CPU
             tensor_bytes = tensor.asnumpy().tobytes()
 
