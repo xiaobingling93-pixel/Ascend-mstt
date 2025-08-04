@@ -18,10 +18,6 @@
 from enum import Enum
 
 ADD_MATCH_KEYS = [
-    'Max diff',
-    'Min diff',
-    'Mean diff',
-    'L2norm diff',
     'MaxAbsErr',
     'MinAbsErr',
     'MeanAbsErr',

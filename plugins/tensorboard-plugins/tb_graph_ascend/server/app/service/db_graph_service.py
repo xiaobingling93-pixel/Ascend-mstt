@@ -155,36 +155,36 @@ class DbGraphService(GraphServiceStrategy):
                 if is_match_children:
                     result = MatchNodesController.process_task_add_child_layer(npu_node_name,
                                                                                bench_node_name, task, step, rank)
-                    # DB：更新操作， 更新NPU 节点的 matched_node_link，precision_index，input_data，output_data
-                    # DB：返回格式 []
                     return result
                 else:
-                    npu_node = self.query_node_info(npu_node_name, NPU, rank, step)
-                    bench_node = self.query_node_info(bench_node_name, BENCH, rank, step)
-                    graph_data = {
-                        "NPU":{
-                            "node": {
-                                npu_node_name: npu_node,
-                            },
-                        },
-                        "Bench":{
-                            "node": {
-                                bench_node_name: bench_node
-                            },
-                        }
-                    }
-                    result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-                    # DB：更新操作， 更新NPU 节点的 matched_node_link，precision_index，input_data，output_data
-                    # DB：返回格式 []
-                    if result.get('success'):
-                        # DB： 如果成功则将匹配关系写入数据库,并且查数据
+                    npu_node = self.repo.query_node_info(npu_node_name, NPU, rank, step)
+                    bench_node = self.repo.query_node_info(bench_node_name, BENCH, rank, step)
+                    graph_data = GraphUtils.convert_to_graph_json(npu_node, bench_node)
+                    match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+                    print("match_result", match_result)
+                    
+                    update_data = [node for item in match_result if item.get('success') is True 
+                                   for node in item.get('data', [])]
+                    if len(update_data) > 0:
+                        # DB：更新数据库节点信息
+                        update_db_res = self.repo.update_nodes_info(update_data, rank, step)
+                        if not update_db_res:
+                            return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+                        # 视图：调用更新update_hirarchy方法，同步更新图
+                        LayoutHierarchyModel.update_current_hierarchy_data(update_data)
+                        # 返回：返回更新后的节点信息
                         config_data = GraphState.get_global_value("config_data")
-                        result['data'] = {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
+                        result = {
+                            'success': True,
+                            'data': {
+                                'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                                'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                            }
+                        }     
+                    else:
+                        result = {'success': False, 'error': '未找到匹配的节点(Matched node not found) '}
                     return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
@@ -217,6 +217,7 @@ class DbGraphService(GraphServiceStrategy):
                                    for node in item.get('data', [])]
                     if len(update_data) > 0:
                         # DB：更新数据库节点信息
+                        print("update_data", update_data)
                         update_db_res = self.repo.update_nodes_info(update_data, rank, step)
                         if not update_db_res:
                             return {'success': False, 'error': '更新数据库失败(Update database failed) '}
@@ -234,7 +235,7 @@ class DbGraphService(GraphServiceStrategy):
                             }
                         }     
                     else:
-                        result = {'success': False, 'error': '未找到匹配的节点(Matched node not found) '}
+                        result = {'success': False, 'error': '未找到可匹配的节点(Matched node not found) '}
                     return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
