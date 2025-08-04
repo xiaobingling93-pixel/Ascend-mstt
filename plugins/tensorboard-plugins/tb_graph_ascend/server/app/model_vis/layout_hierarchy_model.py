@@ -45,3 +45,4 @@ class LayoutHierarchyController:
             return LayoutHierarchyController.hierarchy[graph_type].update_hierarchy_data()
         else:
             return {}
+

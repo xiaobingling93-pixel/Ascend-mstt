@@ -14,6 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 from .hierarchy import Hierarchy
+from ..utils.global_state import NPU, BENCH, SINGLE
 import time
 
 
@@ -23,9 +24,9 @@ class LayoutHierarchyModel:
     single_hierarchy = None
 
     hierarchy = {
-        'NPU': npu_hierarchy,
-        'Bench': bench_hierarchy,
-        'Single': single_hierarchy
+        NPU: npu_hierarchy,
+        BENCH: bench_hierarchy,
+        SINGLE: single_hierarchy
     }    
 
     @staticmethod
@@ -59,3 +60,15 @@ class LayoutHierarchyModel:
             return LayoutHierarchyModel.hierarchy[graph_type].update_hierarchy_data()
         else:
             return {}
+        
+    @staticmethod
+    def update_current_hierarchy_data(data):
+        npu_update_data = [node for node in data if node['graph_type'] == NPU]
+        bench_update_data = [node for node in data if node['graph_type'] == BENCH]
+        if LayoutHierarchyModel.hierarchy.get(NPU, None):
+             LayoutHierarchyModel.hierarchy[NPU].update_current_hierarchy_data(npu_update_data)
+        if LayoutHierarchyModel.hierarchy.get(BENCH, None):
+             LayoutHierarchyModel.hierarchy[BENCH].update_current_hierarchy_data(bench_update_data)
+             
+            
+     

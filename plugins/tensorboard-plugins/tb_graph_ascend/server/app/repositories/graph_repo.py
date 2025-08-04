@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import json
+import time
 import sqlite3
 from ..utils.graph_utils import GraphUtils
 from tensorboard.util import tb_logging
 from ..utils.global_state import SINGLE, NPU
 logger = tb_logging.get_logger()
-import time
 
 
 class GraphRepo:
@@ -353,6 +354,45 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query unmatched nodes: {e}")
             return []
+        
+    # DB：批量更新节点信息
+    def update_nodes_info(self, nodes_info, rank, step):
+        try:
+            start = time.perf_counter()
+            data = [
+                (
+                    json.dumps(node['matched_node_link']),
+                    json.dumps(node['input_data']),
+                    json.dumps(node['output_data']),
+                    node['precision_index'],
+                    node['graph_type'],
+                    rank,
+                    step,
+                    node['node_name']  # WHERE 条件
+                )
+                for node in nodes_info
+            ]
+            query = """
+                UPDATE tb_nodes 
+                SET 
+                    matched_node_link = ?,
+                    input_data = ?,
+                    output_data = ?,
+                    precision_index = ?
+                WHERE 
+                    data_source = ? 
+                    AND rank = ? 
+                    AND step = ?
+                    AND node_name = ?
+            """
+            with self.conn as c:
+                c.executemany(query, data)
+            end = time.perf_counter()
+            print("update_nodes_info time:", end - start)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update nodes info: {e}")
+            return False
 
     def convert_db_to_object(self, data):
         object = {

@@ -15,7 +15,7 @@
 # ==============================================================================
 
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import ADD_MATCH_KEYS, MODULE
+from ..utils.global_state import ADD_MATCH_KEYS, MODULE, NPU, BENCH
 from ..utils.global_state import GraphState
 
 
@@ -70,25 +70,18 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_delete(graph_data, npu_node_name, bench_node_name, task):
-        result = {}
-        opposite_result = {}
         opposite_npu_node_name = MatchNodesController.get_opposite_node_name(npu_node_name)
         opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
         if task == 'md5':
-            result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
+            match_result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
         elif task == 'summary':
-            result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
+            match_result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
         else:
-            result = {
-                'success': False,
-                'error': 'task类型错误'
-            }
-        result['success'] = result.get('success') or opposite_result.get('success')
-        if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
-        return result
+            return [{'success': False, 'error': 'task类型错误'},
+                    {'success': False, 'error': 'task类型错误'}]
+        return [match_result, opposite_result]
 
     @staticmethod
     def process_task_add_child_layer_by_config(graph_data, match_node_links, task):
@@ -292,17 +285,22 @@ class MatchNodesController:
                 'success': False,
                 'error': '输出统计误差值为空，计算精度误差失败(Calculation of precision error failed)',
             }
-        # 在原始数据上，添加匹配节点，和匹配节点信息
         # DB：更新数据的节点信息，直接返回新的结果，此处暂时不做更新
-        npu_graph_data = graph_data.get('NPU', {})
-        bench_graph_data = graph_data.get('Bench', {})
-        npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
-        bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
-        npu_node_data.setdefault('data', {})['precision_index'] = precision_error
-        MatchNodesController.update_graph_node_data(npu_node_data.get('input_data'), intput_statistical_diff)
-        MatchNodesController.update_graph_node_data(npu_node_data.get('output_data'), output_statistical_diff)
+        data = [
+                {
+                    "node_name":npu_node_name,
+                    "matched_node_link":bench_node_name,
+                    "precision_index":precision_error,
+                    "input_data":intput_statistical_diff,
+                    "output_data":output_statistical_diff
+                },
+                {
+                    "node_name":bench_node_name,
+                    "matched_node_link":npu_node_name,
+                }
+            ]
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
-        return {'success': True}
+        return {'success': True, "data": data}
 
     @staticmethod
     def process_md5_task_delete(graph_data, npu_node_name, bench_node_name):
@@ -351,18 +349,29 @@ class MatchNodesController:
                 'success': False,
                 'error': "操作失败：节点不存在",
             }
-        # 在原始数据上，删除匹配节点，和匹配节点信息
-        npu_node_data['matched_node_link'] = []
-        bench_node_data['matched_node_link'] = []
-        MatchNodesController.delete_matched_node_data(npu_node_data.get('input_data'))
-        MatchNodesController.delete_matched_node_data(npu_node_data.get('output_data'))
-        # 防止 KeyError 或 TypeError
-        npu_node_data.get('data', {}).pop('precision_index', None)
+        # DB：更新数据的节点信息，直接返回新的结果，此处暂时不做更新
+        input_data = MatchNodesController.delete_matched_node_data(npu_node_data.get('input_data'))
+        output_data = MatchNodesController.delete_matched_node_data(npu_node_data.get('output_data'))
+        data = [
+                {
+                    "node_name":npu_node_name,
+                    "matched_node_link":[],
+                    "precision_index":None,
+                    "input_data":input_data,
+                    "output_data":output_data,
+                    "graph_type":NPU
+                },
+                {
+                    "node_name":bench_node_name,
+                    "matched_node_link":[],
+                    "precision_index":None,
+                    "input_data":bench_node_data.get('input_data'),
+                    "output_data":bench_node_data.get('output_data'),
+                    "graph_type":BENCH,
+                }
+            ]
         MatchNodesController.delete_config_match_nodes(npu_node_name, bench_node_name)
-        return {
-            'success': True,
-            'data': {},
-        }
+        return {'success': True, 'data': data}
 
     @staticmethod
     def add_config_match_nodes(npu_node_name, bench_node_name):
@@ -509,3 +518,4 @@ class MatchNodesController:
                 for sub_key, value in fild_obj.items()
                 if sub_key not in keys_to_remove
             }
+        return graph_npu_node_data

@@ -307,6 +307,21 @@ class Hierarchy:
         #     node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
         return self.current_hierarchy
 
+    def update_current_hierarchy_data(self, data):
+        try:
+            for node_info in data:
+                node_name = node_info.get('node_name')
+                if node_name in self.current_hierarchy:
+                    current_node_info = self.current_hierarchy[node_name]
+                    current_node_info['matchedNodeLink'] = node_info.get('matched_node_link')
+                    current_node_info['precision_index'] = node_info.get('precision_index')
+                    current_node_info['input_data'] = node_info.get('input_data')
+                    current_node_info['output_data'] = node_info.get('output_data')
+            return True
+        except Exception as e:
+            logger.error(f"update_current_hierarchy_data error: {e}")
+            return False
+            
     def get_hierarchy(self):
         result = {}
         new_hierarchy = {}
