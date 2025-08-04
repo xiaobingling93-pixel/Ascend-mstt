@@ -301,10 +301,6 @@ class Hierarchy:
                 self.get_connected_graph(child_name, result, new_hierarchy)
 
     def update_hierarchy_data(self):
-        # for node_name, node_info in self.current_hierarchy.items():
-        #     graph_node_info = self.graph.get('node', {}).get(node_name, {})
-        #     node_info['matchedNodeLink'] = graph_node_info.get('matched_node_link', [])
-        #     node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
         return self.current_hierarchy
 
     def update_current_hierarchy_data(self, data):
