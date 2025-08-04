@@ -35,17 +35,6 @@ class TestDebuggerConfig(unittest.TestCase):
         self.assertEqual(debugger.handler_type, "check")
         self.assertTrue(debugger.preheat_config["if_preheat"])
 
-    def test_online_run_ut_initialization(self):
-        self.task_config.online_run_ut = True
-        self.task_config.nfs_path = "./nfs_path"
-        self.task_config.tls_path = "./tls_path"
-        self.task_config.host = "localhost"
-        self.task_config.port = 8080
-
-        debugger = DebuggerConfig(self.common_config, self.task_config, Const.TENSOR, None, None)
-        self.assertTrue(debugger.online_run_ut)
-        self.assertEqual(debugger.nfs_path, "./nfs_path")
-        self.assertEqual(debugger.port, 8080)
 
     def test_check_kwargs_with_invalid_task(self):
         self.common_config.task = "invalid_task"

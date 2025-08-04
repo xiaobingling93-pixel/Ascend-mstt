@@ -80,6 +80,9 @@ class BaseWriterWithAD:
 
         xpu_stack = torch.stack(xpu_tensors).cpu() if xpu_tensors else torch.tensor([])
 
+        if xpu_stack.__class__.__name__ == 'DTensor':
+            xpu_stack = xpu_stack.to_local()
+
         # 按照输入的顺序恢复
         result = []
         cpu_tensors_idx, xpu_tensors_idx = 0, 0

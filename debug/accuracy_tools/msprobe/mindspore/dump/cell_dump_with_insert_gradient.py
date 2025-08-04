@@ -197,8 +197,16 @@ def cell_construct_wrapper(func, self):
 def sort_filenames(path):
     filenames = os.listdir(path)
     id_pattern = re.compile(rf'{CoreConst.REPLACEMENT_CHARACTER}(\d+){CoreConst.NUMPY_SUFFIX}$')
-    filenames.sort(key=lambda x: int(id_pattern.findall(x)[0]))
-    return filenames
+    # 只保留能提取到数字id的文件，避免数组越界
+    valid_files = []
+    for filename in filenames:
+        match = id_pattern.findall(filename)
+        if match and match[0].isdigit():
+            valid_files.append(filename)
+        else:
+            logger.warning(f"File {filename} does not match the expected pattern and will be ignored.")
+    valid_files.sort(key=lambda x: int(id_pattern.findall(x)[0]))
+    return valid_files
 
 
 def rename_filename(path="", data_df=None):

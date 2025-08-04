@@ -380,7 +380,7 @@ class TestTPPPMerger(unittest.TestCase):
 class TestFullMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock(rank=i) for i in range(8)]
-        self.parallel_param = MagicMock(tp=2, pp=4, rank_size=8)
+        self.parallel_param = MagicMock(tp=2, pp=4, rank_size=8, vpp=1)
         self.is_bench = False
         self.merger = FullMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 

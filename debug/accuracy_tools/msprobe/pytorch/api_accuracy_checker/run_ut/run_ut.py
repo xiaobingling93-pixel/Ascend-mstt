@@ -51,8 +51,6 @@ from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.utils import safe_get_value, CompareException, is_int, check_op_str_pattern_valid
 from msprobe.pytorch.common.utils import seed_all
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params, \
     ExecParams
 
@@ -90,27 +88,22 @@ seed_all()
 
 def run_ut(config):
     logger.info("start UT test")
-    if config.online_config.is_online:
-        logger.info(f"UT task result will be saved in {config.result_csv_path}".replace(".csv", "_rank*.csv"))
-        logger.info(f"UT task details will be saved in {config.details_csv_path}".replace(".csv", "_rank*.csv"))
-    else:
-        logger.info(f"UT task result will be saved in {config.result_csv_path}")
-        logger.info(f"UT task details will be saved in {config.details_csv_path}")
+
+    logger.info(f"UT task result will be saved in {config.result_csv_path}")
+    logger.info(f"UT task details will be saved in {config.details_csv_path}")
 
     if config.save_error_data:
         logger.info(f"UT task error_data will be saved in {config.error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut, config=config)
 
-    if config.online_config.is_online:
-        run_api_online(config, compare)
-    else:
-        csv_df = read_csv(config.result_csv_path)
-        try:
-            api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
-        except IndexError:
-            logger.error(f"Read {config.result_csv_path} error, api_name_set is empty.")
-            api_name_set = set()
-        run_api_offline(config, compare, api_name_set)
+
+    csv_df = read_csv(config.result_csv_path)
+    try:
+        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+    except IndexError:
+        logger.error(f"Read {config.result_csv_path} error, api_name_set is empty.")
+        api_name_set = set()
+    run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
         change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -162,60 +155,6 @@ def run_api_offline(config, compare, api_name_set):
             else:
                 torch.npu.empty_cache()
             gc.collect()
-
-
-def run_api_online(config, compare):
-    attl = init_attl(config.online_config)
-    dispatcher = ConsumerDispatcher(compare=compare)
-    dispatcher.start(handle_func=run_torch_api_online, config=config)
-
-    def tcp_communication_flow():
-        while True:
-            api_data = attl.recv()
-            if api_data == 'STOP_':
-                continue
-            if api_data == 'KILL_':
-                time.sleep(1)
-                logger.info("==========接收到STOP信号==========")
-                dispatcher.stop()
-                attl.stop_serve()
-                time.sleep(1)
-                break
-            if not isinstance(api_data, ApiData):
-                continue
-            api_full_name = api_data.name
-            _, api_name = extract_basic_api_segments(api_full_name)
-            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
-                continue
-            if api_data.rank in config.online_config.rank_list:
-                dispatcher.update_consume_queue(api_data)
-
-    def shared_storage_communication_flow():
-        flag_num = -1
-        while True:
-            api_data = attl.download()
-            if api_data == "start":
-                if flag_num == -1:
-                    flag_num += 1
-                flag_num += 1
-            if api_data == "end":
-                flag_num -= 1
-            if flag_num == 0:
-                dispatcher.stop()
-                break
-            if not isinstance(api_data, ApiData):
-                continue
-            api_full_name = api_data.name
-            _, api_name = extract_basic_api_segments(api_full_name)
-            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
-                continue
-            if api_data.rank in config.online_config.rank_list:
-                dispatcher.update_consume_queue(api_data)
-
-    if config.online_config.nfs_path:
-        shared_storage_communication_flow()
-    else:
-        tcp_communication_flow()
 
 
 def blacklist_and_whitelist_filter(api_name, black_list, white_list):
@@ -315,21 +254,6 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
 
-def run_torch_api_online(api_full_name, api_data, backward_content):
-    in_fwd_data_list = []
-    api_type, api_name = extract_basic_api_segments(api_full_name)
-    args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
-    in_fwd_data_list.append(args)
-    in_fwd_data_list.append(kwargs)
-    if kwargs.get("device"):
-        del kwargs["device"]
-
-    device_exec_params = ExecParams(api_type, api_name, current_device, args, kwargs, False, None)
-    device_out = exec_api(device_exec_params)
-    device_out = move2device_exec(device_out, "cpu")
-    return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
-
-
 def check_need_grad(api_info_dict):
     need_grad = True
     if api_info_dict.get(Const.INPUT_KWARGS) and "out" in api_info_dict.get(Const.INPUT_KWARGS):
@@ -387,16 +311,6 @@ def initialize_save_error_data(error_data_path):
     error_data_path = error_data_path_checker.common_check()
     error_data_path = initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
     return error_data_path
-
-
-def init_attl(config):
-    """config: OnlineConfig"""
-    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
-                                  connect_ip=config.host,
-                                  connect_port=config.port,
-                                  nfs_path=config.nfs_path,
-                                  tls_path=config.tls_path))
-    return attl
 
 
 def _run_ut_parser(parser):
@@ -481,38 +395,6 @@ def _run_ut(parser=None):
     _run_ut_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     run_ut_command(args)
-    
-
-def checked_online_config(online_config):
-    if not online_config.is_online:
-        return
-    if not isinstance(online_config.is_online, bool):
-        raise ValueError("is_online must be bool type")
-    # rank_list
-    if not isinstance(online_config.rank_list, list):
-        raise ValueError("rank_list must be a list")
-    if online_config.rank_list and not all(isinstance(rank, int) for rank in online_config.rank_list):
-        raise ValueError("All elements in rank_list must be integers")
-
-    # nfs_path
-    if online_config.nfs_path:
-        check_file_or_directory_path(online_config.nfs_path, isdir=True)
-        return
-    # tls_path
-    if online_config.tls_path:
-        check_file_or_directory_path(online_config.tls_path, isdir=True)
-        check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
-        check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
-        check_file_or_directory_path(os.path.join(online_config.tls_path, "ca.crt"))
-        crl_path = os.path.join(online_config.tls_path, "crl.pem")
-        if os.path.exists(crl_path):
-            check_file_or_directory_path(crl_path)
-
-    # host and port
-    if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
-        raise Exception(f"host: {online_config.host} is invalid.")
-    if not isinstance(online_config.port, int) or not (0 < online_config.port <= 65535):
-        raise Exception(f"port: {online_config.port} is invalid, port range 0-65535.")
 
 
 def run_ut_command(args):
@@ -525,7 +407,7 @@ def run_ut_command(args):
     else:
         checker_config = CheckerConfig()
     
-    if not checker_config.is_online and not args.api_info_file:
+    if not args.api_info_file:
         logger.error("Please provide api_info_file for offline run ut.")
         raise Exception("Please provide api_info_file for offline run ut.")
 
@@ -588,8 +470,6 @@ def run_ut_command(args):
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
-    online_config = checker_config.get_online_config()
-    checked_online_config(online_config)
     config_params = {
         'forward_content': forward_content,
         'backward_content': backward_content,

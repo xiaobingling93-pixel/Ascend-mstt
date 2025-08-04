@@ -67,12 +67,14 @@ class Legend extends PolymerElement {
       .match-checkbox {
         font-size: 14px;
       }
+
       .vaadin-details-title {
         font-size: 14px;
         color: #333333;
         font-weight: 600;
         margin-bottom: 0;
       }
+
       .vaadin-details vaadin-details-summary {
         font-size: 15px;
         color: #333333;

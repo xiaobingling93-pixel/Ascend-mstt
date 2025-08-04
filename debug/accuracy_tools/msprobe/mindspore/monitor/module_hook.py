@@ -483,6 +483,8 @@ class TrainerMon:
             if (self.print_struct and not all(value == {} for value in self.module_struct.values())
                     and not self.struct_printed):
                 self._save_module_struct()
+                if not self.cc_log_only:
+                    raise Exception("exit after first monitor step when print model struct")
             if is_skip_step(context.step, self.start_step, self.step_interval, self.has_collect_times,
                             self.collect_times):
                 return

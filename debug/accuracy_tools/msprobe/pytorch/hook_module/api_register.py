@@ -45,7 +45,6 @@ _inner_used_api = {}
 _supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
 _cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
 dist_data_collect_func = {}
-origin_wait = getattr(dist.Work, 'wait')
 
 _api_types = {
     Const.PT_FRAMEWORK: {
@@ -115,6 +114,12 @@ def dist_module_forward(module, *args, **kwargs):
 
 
 def redirect_wait():
+    if hasattr(dist, "Work"):
+        from torch.distributed import Work
+    else:
+        from torch._C._distributed_c10d import Work
+    origin_wait = Work.wait
+
     def wrapped_wait(work):
         def wrapped_wait(*args, **kwargs):
             origin_wait(*args, **kwargs)
@@ -122,7 +127,7 @@ def redirect_wait():
                 store_func = dist_data_collect_func.pop(args[0])
                 store_func()
         return wrapped_wait
-    dist.Work.wait = wrapped_wait(dist.Work)
+    Work.wait = wrapped_wait(Work)
 
 
 def npu_module_forward(module, *args, **kwargs):
