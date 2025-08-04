@@ -34,12 +34,11 @@ from tqdm import tqdm
 # Constants
 all_data_type_list = [
     "actv", "actv_grad", "exp_avg", "exp_avg_sq",
-    "grad_unreduced", "grad_reduced", "param_origin", "param_updated",
-    "linear_hook", "norm_hook", "proxy_model", "token_hook", "attention_hook"
+    "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
 ]
 DEFAULT_INT_VALUE = 0
 MAX_PROCESS_NUM = 128
-CSV_FILE_PATTERN = r"(\w+)_(\d+)-(\d+)\.csv"
+CSV_FILE_PATTERN = r"_(\d+)-(\d+)\.csv"
 BATCH_SIZE = 10000
 
 
@@ -83,6 +82,17 @@ def validate_data_type_list(data_type_list: Optional[List[str]]) -> None:
         raise ValueError(f"Unsupported data types: {invalid_types}")
 
 
+def get_info_from_filename(file_name, metric_list=None):
+    metric_name = "_".join(file_name.split('_')[:-1])
+    if metric_list and metric_name not in metric_list:
+        return "", 0, 0
+    match = re.match(f"{metric_name}{CSV_FILE_PATTERN}", file_name)
+    if not match:
+        return "", 0, 0
+    step_start, step_end = match.groups()
+    return metric_name, step_start, step_end
+
+
 def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
     """Pre-scan files for a single rank to collect metadata"""
     metrics = set()
@@ -93,11 +103,9 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
 
     for file_path in files:
         file_name = os.path.basename(file_path)
-        match = re.match(CSV_FILE_PATTERN, file_name)
-        if not match:
+        metric_name, step_start, step_end = get_info_from_filename(file_name)
+        if not metric_name:
             continue
-
-        metric_name, step_start, step_end = match.groups()
         step_start, step_end = int(step_start), int(step_end)
 
         metrics.add(metric_name)
@@ -109,10 +117,15 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
         stats = [k for k in data.keys() if k in MonitorConst.OP_MONVIS_SUPPORTED]
         metric_stats[metric_name].update(stats)
 
-        for _, row in data.iterrows():
-            name = row[MonitorConst.HEADER_NAME]
-            vpp_stage = int(row['vpp_stage'])
-            micro_step = int(row.get('micro_step', DEFAULT_INT_VALUE))
+        for row_id, row in data.iterrows():
+            try:
+                name = row[MonitorConst.HEADER_NAME]
+                vpp_stage = int(row['vpp_stage'])
+                micro_step = int(row.get('micro_step', DEFAULT_INT_VALUE))
+            except (ValueError, KeyError) as e:
+                logger.warning(
+                    f"CSV conversion failed | file={file_path}:{row_id+2} | error={str(e)}")
+                continue
             target = (name, vpp_stage, micro_step)
             if target not in targets:
                 targets[target] = None
@@ -136,11 +149,9 @@ def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: 
     for rank, dir_path in data_dirs.items():
         files = os.listdir(dir_path)
         for file in files:
-            match = re.match(CSV_FILE_PATTERN, file)
-            if not match:
-                continue
-            metric_name, _, _ = match.groups()
-            if metric_name not in data_type_list:
+            metric_name, _, _ = get_info_from_filename(
+                file, metric_list=data_type_list)
+            if not metric_name:
                 continue
             rank_files[rank].append(os.path.join(dir_path, file))
 
@@ -207,11 +218,9 @@ def process_single_rank(
 
     for file in files:
         filename = os.path.basename(file)
-        match = re.match(CSV_FILE_PATTERN, filename)
-        if not match:
+        metric_name, _, _ = get_info_from_filename(filename)
+        if not metric_name:
             continue
-
-        metric_name, _, _ = match.groups()
         metric_info = metric_id_dict.get(metric_name)
         if not metric_info:
             continue
@@ -236,20 +245,19 @@ def process_single_rank(
                     float(row[stat]) if stat in row else None
                     for stat in stats
                 )
-                table_batches[table_name].append(tuple(row_data))
-
-                # Batch insert when threshold reached
-                if len(table_batches[table_name]) >= BATCH_SIZE:
-                    inserted = db.insert_rows(
-                        table_name, table_batches[table_name])
-                    if inserted is not None:
-                        total_inserted += inserted
-                    table_batches[table_name] = []
-
             except (ValueError, KeyError) as e:
                 logger.error(
-                    f"CSV float conversion failed | file={file}:{row_id+2} | error={str(e)}")
+                    f"CSV conversion failed | file={file}:{row_id+2} | error={str(e)}")
                 continue
+
+            table_batches[table_name].append(tuple(row_data))
+            # Batch insert when threshold reached
+            if len(table_batches[table_name]) >= BATCH_SIZE:
+                inserted = db.insert_rows(
+                    table_name, table_batches[table_name])
+                if inserted is not None:
+                    total_inserted += inserted
+                table_batches[table_name] = []
 
     # Insert remaining data
     for table_name, batch in table_batches.items():
@@ -293,8 +301,8 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                 metric_id_dict,
                 target_dict,
                 monitor_db.step_partition_size,
-                monitor_db.db_path): rank 
-                for rank, files in rank_tasks.items()
+                monitor_db.db_path): rank
+            for rank, files in rank_tasks.items()
         }
 
         with tqdm(as_completed(futures), total=len(futures), desc="Import progress") as pbar:
@@ -343,7 +351,8 @@ def csv2db(config: CSV2DBConfig) -> None:
     )
     recursive_chmod(config.output_dirpath)
     if result:
-        logger.info(f"Data import completed. Output saved to: {config.output_dirpath}")
+        logger.info(
+            f"Data import completed. Output saved to: {config.output_dirpath}")
     else:
         logger.warning(
             f"Data import may be incomplete. Output directory: {config.output_dirpath} "
