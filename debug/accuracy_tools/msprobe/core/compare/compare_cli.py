@@ -49,6 +49,7 @@ def compare_cli(args):
         "fuzzy_match": args.fuzzy_match,
         "highlight": args.highlight,
         "data_mapping": args.data_mapping,
+        "diff_analyze": args.diff_analyze
     }
 
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
