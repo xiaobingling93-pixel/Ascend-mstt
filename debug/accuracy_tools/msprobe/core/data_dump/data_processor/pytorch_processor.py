@@ -193,7 +193,7 @@ class PytorchDataProcessor(BaseDataProcessor):
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
 
-    def get_stat_info(self, data, async_dump=False, precision=Const.DUMP_PRECISION_HIGH):
+    def get_stat_info(self, data, async_dump=False, precision=Const.DUMP_PRECISION_LOW):
         tensor_stat = TensorStatInfo()
         if self.tensor_handler.is_empty_data(data):
             return tensor_stat
