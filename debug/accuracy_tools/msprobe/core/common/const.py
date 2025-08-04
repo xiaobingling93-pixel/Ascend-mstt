@@ -267,6 +267,10 @@ class Const:
 
     TENSOR_STAT_LEN = 2
 
+    TENSOR_TYPE = "torch.Tensor"
+    DTENSOR_TYPE = "torch.distributed.tensor.DTensor"
+    FAKE_TENSOR_TYPE = "torch._subclasses.fake_tensor.FakeTensor"
+
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
 
     PT_API_TYPE_FUNCTIONAL = "functional"
