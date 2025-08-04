@@ -141,6 +141,89 @@ class GraphUtils:
             logger.error(f"Unexpected error: {e}")
             return default_value
 
+    @staticmethod
+    def safe_get_node_info(data, default_value=None):
+   
+        node_info_str = data.get("nodeInfo")
+        
+        # 如果参数不存在，返回None
+        if node_info_str is None:
+            logger.error("nodeInfo参数不存在")
+            return default_value
+
+        # 检查是否为字符串类型(防止其他类型注入)
+        if not isinstance(node_info_str, str):
+            logger.error("nodeInfo参数必须是JSON字符串")
+            return default_value
+
+        # 长度限制
+        if len(node_info_str) > MAX_FILE_SIZE:
+            logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
+            return default_value
+        
+        try:
+            # 解析JSON
+            node_info = json.loads(node_info_str)
+            
+            # 验证解析结果是否为字典
+            if not isinstance(node_info, dict):
+                logger.error("nodeInfo必须是JSON对象")
+                return default_value
+                
+            # 验证必要字段是否存在
+            if "nodeName" not in node_info or "nodeType" not in node_info:
+                logger.error("nodeInfo必须包含nodeName和nodeType字段")
+                return default_value
+                
+            return node_info
+            
+        except json.JSONDecodeError:
+            logger.error("nodeInfo参数不是有效的JSON格式")
+            return default_value
+        except Exception as e:
+            logger.error(f"解析nodeInfo参数时发生错误: {str(e)}")
+            return default_value
+
+    @staticmethod
+    def safe_get_meta_data(data, default_value=None):
+   
+        meta_data_str = data.get("metaData")
+        
+        # 如果参数不存在，返回None
+        if meta_data_str is None:
+            logger.error("metaData参数不存在")
+            return default_value
+
+        # 检查是否为字符串类型(防止其他类型注入)
+        if not isinstance(meta_data_str, str):
+            logger.error("metaData参数必须是JSON字符串")
+            return default_value
+        
+        try:
+            # 解析JSON
+            meta_data = json.loads(meta_data_str)
+            
+            # 验证解析结果是否为字典
+            if not isinstance(meta_data, dict):
+                logger.error("metaData必须是JSON对象")
+                return default_value
+                
+            # 验证必要字段是否存在
+            required_fields = ["tag", "microStep", "run"]
+            for field in required_fields:
+                if field not in meta_data:
+                    logger.error("metaData必须包含nodeName和nodeType字段")
+                    return default_value
+                
+            return meta_data
+            
+        except json.JSONDecodeError:
+            logger.error("metaData参数不是有效的JSON格式")
+            return default_value
+        except Exception as e:
+            logger.error(f"解析metaData参数时发生错误: {str(e)}")
+            return default_value
+
     @staticmethod   
     def remove_prototype_pollution(obj, current_depth=1, max_depth=200):
         """
