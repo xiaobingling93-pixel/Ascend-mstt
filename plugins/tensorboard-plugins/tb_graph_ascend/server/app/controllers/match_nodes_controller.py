@@ -65,7 +65,7 @@ class MatchNodesController:
             }
         result['success'] = result.get('success') or opposite_result.get('success')
         if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
+            result['error'] = f'当前节点：{result.get("error","")}。对侧节点：{opposite_result.get("error")}'
         return result
 
     @staticmethod
@@ -87,7 +87,7 @@ class MatchNodesController:
             }
         result['success'] = result.get('success') or opposite_result.get('success')
         if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
+            result['error'] = f'当前节点：{result.get("error","")}。对侧节点：{opposite_result.get("error")}'
         return result
 
     @staticmethod
