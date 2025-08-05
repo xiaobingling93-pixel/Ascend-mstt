@@ -18,7 +18,7 @@ import time
 import sqlite3
 from ..utils.graph_utils import GraphUtils
 from tensorboard.util import tb_logging
-from ..utils.global_state import SINGLE, NPU
+from ..utils.global_state import SINGLE, NPU, BENCH
 logger = tb_logging.get_logger()
 
 
@@ -202,33 +202,6 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query sub nodes: {e}")
             return {}
-    
-    # DB：根据graph_type查询节点名称列表
-    def query_node_name_list(self, graph_type, rank, step, micro_step):
-        try:
-            start = time.perf_counter()
-            type = graph_type if graph_type != SINGLE else NPU
-            query = """
-                SELECT 
-                    node_name 
-                FROM 
-                    tb_nodes 
-                WHERE 
-                    data_source = ? 
-                    AND rank = ? 
-                    AND step = ?
-                    AND (? = -1 OR micro_step_id = ?)
-            """
-            with self.conn as c:
-                cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
-                rows = cursor.fetchall()
-        
-            end = time.perf_counter()
-            print("query_node_name_list time:", end - start)
-            return [row['node_name'] for row in rows]
-        except Exception as e:
-            logger.error(f"Failed to query node names: {e}")
-            return []
 
     # DB: 查询当前节点信息
     def query_node_info(self, node_name, graph_type, rank, step):
@@ -292,15 +265,17 @@ class GraphRepo:
     #     except Exception as e:
     #         logger.error(f"Failed to query nodes info: {e}")
     #         return {}
-
-    # DB: 查询已匹配节点
-    def query_matched_nodes(self, graph_type, rank, step, micro_step):
+    
+    # DB: 查询已匹配节点列表，未匹配节点列表，所有的节点列表
+    def query_all_node_info_in_one(self, rank, step, micro_step):
         try:
             start = time.perf_counter()
-            type = graph_type if graph_type != SINGLE else NPU
+
+            # 单次查询：获取 node_name 和 matched_node_link
             query = """
                 SELECT 
                     node_name,
+                    data_source,
                     matched_node_link 
                 FROM 
                     tb_nodes 
@@ -309,55 +284,68 @@ class GraphRepo:
                     AND rank = ? 
                     AND step = ?
                     AND (? = -1 OR micro_step_id = ?)
-                    AND matched_node_link !='[]' AND matched_node_link IS NOT NULL
             """
-            with self.conn as c:
-                cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
+            
+            with self.conn as conn:
+                cursor = conn.execute(query, (rank, step, micro_step, micro_step))
                 rows = cursor.fetchall()
-                
-            matched_nodes = {}
-      
+
+            # 初始化结果
+            npu_node_list = []
+            bench_node_list = []
+            npu_match_node = {}  # {node_name: last_matched_link}
+            bench_match_node = {}
+            npu_unmatch_node = []
+            bench_unmatch_node = []
+
+            # 一次性遍历结果，分类处理
             for row in rows:
                 node_name = row['node_name']
-                matched_node_link = GraphUtils.safe_json_loads(row['matched_node_link'])
-                if isinstance(matched_node_link, list) and len(matched_node_link) > 0:
-                    matched_nodes[node_name] = matched_node_link[-1]
-            
-            end = time.perf_counter()
-            print("query_matched_nodes time:", end - start)
-            return matched_nodes
-        except Exception as e:
-            logger.error(f"Failed to query matched nodes: {e}")
-            return {}
+                matched_link_str = row['matched_node_link']
+                if row['data_source'] == NPU:
+                    npu_node_list.append(node_name)
+                    # 解析 matched_node_link
+                    matched_link = GraphUtils.safe_json_loads(matched_link_str)
+                    # 判断是否为有效匹配（非空列表）
+                    if isinstance(matched_link, list) and len(matched_link) > 0:
+                        npu_match_node[node_name] = matched_link[-1]  # 取最后一个匹配项
+                    else:
+                        npu_unmatch_node.append(node_name)
+                elif row['data_source'] == BENCH:
+                    bench_node_list.append(node_name)
+                    # 解析 matched_node_link
+                    matched_link = GraphUtils.safe_json_loads(matched_link_str)
+                    # 判断是否为有效匹配（非空列表）
+                    if isinstance(matched_link, list) and len(matched_link) > 0:
+                        bench_match_node[node_name] = matched_link[-1]  # 取最后一个匹配项
+                    else:
+                        bench_unmatch_node.append(node_name)
+                else:
+                    logger.error(f"Invalid data source: {row['data_source']}")
 
-    # DB: 查询未匹配节点
-    def query_unmatched_nodes(self, graph_type, rank, step, micro_step):
-        try:
-            start = time.perf_counter()
-            type = graph_type if graph_type != SINGLE else NPU
-            query = """
-                SELECT 
-                    node_name 
-                FROM 
-                    tb_nodes 
-                WHERE
-                    data_source = ? 
-                    AND rank = ? 
-                    AND step = ?
-                    AND (? = -1 OR micro_step_id = ?)
-                    AND matched_node_link ='[]' OR matched_node_link IS NULL
-            """
-            with self.conn as c:
-                cursor = c.execute(query, (type, rank, step, micro_step, micro_step))
-                rows = cursor.fetchall()
-                
             end = time.perf_counter()
-            print("query_unmatched_nodes time:", end - start)
-            return [row['node_name'] for row in rows]
+            print(f"query_all_node_info_in_one time: {end - start:.4f}s")
+
+            return {
+                'npu_node_list': npu_node_list,
+                'bench_node_list': bench_node_list,
+                'npu_match_node': npu_match_node,
+                'bench_match_node': bench_match_node,
+                'npu_unmatch_node': npu_unmatch_node,
+                'bench_unmatch_node': bench_unmatch_node
+            }
+
         except Exception as e:
-            logger.error(f"Failed to query unmatched nodes: {e}")
-            return []
-        
+            logger.error(f"Failed to query all node info: {e}")
+            return {
+                'npu_node_list': [],
+                'bench_node_list': [],
+                'npu_match_node': {},
+                'bench_match_node': {},
+                'npu_unmatch_node': [],
+                'bench_unmatch_node': []
+            }
+            
     # DB：批量更新节点信息
     def update_nodes_info(self, nodes_info, rank, step):
         try:

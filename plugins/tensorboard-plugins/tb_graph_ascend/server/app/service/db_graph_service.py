@@ -68,23 +68,18 @@ class DbGraphService(GraphServiceStrategy):
             # 双图
             else:
                 config_data = GraphState.get_global_value("config_data")
-                
-                npuMatchNodes = self.repo.query_matched_nodes(NPU, rank, step, micro_step)
-                benchMatchNodes = self.repo.query_matched_nodes(BENCH, rank, step, micro_step)
-                npu_unmatehed_name_list = self.repo.query_unmatched_nodes(NPU, rank, step, micro_step)
-                bench_unmatehed_name_list = self.repo.query_unmatched_nodes(BENCH, rank, step, micro_step)
-                
-                config_data['npuMatchNodes'] = npuMatchNodes
-                config_data['benchMatchNodes'] = benchMatchNodes
-                config_data['npuUnMatchNodes'] = npu_unmatehed_name_list
-                config_data['benchUnMatchNodes'] = bench_unmatehed_name_list
+                all_node_info = self.repo.query_all_node_info_in_one(NPU, rank, step, micro_step)
+                config_data['npuMatchNodes'] = all_node_info.get('npu_match_node')
+                config_data['benchMatchNodes'] = all_node_info.get('bench_match_node')
+                config_data['npuUnMatchNodes'] = all_node_info.get('npu_unmatch_node')
+                config_data['benchUnMatchNodes'] = all_node_info.get('bench_unmatch_node')
         
-                result['npuMatchNodes'] = npuMatchNodes
-                result['benchMatchNodes'] = benchMatchNodes
-                result['npuUnMatchNodes'] = npu_unmatehed_name_list
-                result['benchUnMatchNodes'] = bench_unmatehed_name_list
-                result['npuNodeList'] = self.repo.query_node_name_list(NPU, rank, step, micro_step)
-                result['benchNodeList'] = self.repo.query_node_name_list(BENCH, rank, step, micro_step)
+                result['npuMatchNodes'] = all_node_info.get('npu_match_node')
+                result['benchMatchNodes'] = all_node_info.get('bench_match_node')
+                result['npuUnMatchNodes'] = all_node_info.get('npu_unmatch_node')
+                result['benchUnMatchNodes'] = all_node_info.get('bench_unmatch_node')
+                result['npuNodeList'] = all_node_info.get('npu_node_list')
+                result['benchNodeList'] = all_node_info.get('bench_node_list')
                 
                 return {'success': True, 'data': result}
         except Exception as e:
