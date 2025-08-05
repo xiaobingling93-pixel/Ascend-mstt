@@ -132,7 +132,6 @@ class GraphUtils:
 
         try:
             result = json.loads(json_str)
-            GraphUtils.remove_prototype_pollution(result)
             return result
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
@@ -140,29 +139,6 @@ class GraphUtils:
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             return default_value
-
-    @staticmethod   
-    def remove_prototype_pollution(obj, current_depth=1, max_depth=200):
-        """
-        递归删除对象中的原型污染字段，如 '__proto__', 'constructor', 'prototype'。
-        
-        :param obj: 要清理的对象
-        :param current_depth: 当前递归深度，默认从 1 开始
-        :param max_depth: 最大允许递归深度
-        """
-        if current_depth > max_depth:
-            logger.warning(f"Reached maximum recursion depth of {max_depth}. Stopping further recursion.")
-            return
-        
-        if isinstance(obj, dict):
-            for key in list(obj.keys()):
-                if key in ('__proto__', 'constructor', 'prototype'):
-                    del obj[key]
-                else:
-                    GraphUtils.remove_prototype_pollution(obj[key], current_depth + 1, max_depth)
-        elif isinstance(obj, list):
-            for item in obj:
-                GraphUtils.remove_prototype_pollution(item, current_depth + 1, max_depth)
 
     @staticmethod
     def remove_prefix(node_data, prefix):

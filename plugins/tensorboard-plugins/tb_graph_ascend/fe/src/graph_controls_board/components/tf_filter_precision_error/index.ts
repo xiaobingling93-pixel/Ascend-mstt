@@ -19,7 +19,6 @@ class TfFilterPrecisionError extends PolymerElement {
           confirm-text="确认"
           confirm-theme=" primary"
           opened="{{filterDialogOpened}}"
-          confirm="[[onFlterDialogConfirm]]"
         >
             <vaadin-checkbox-group
                 label=""
@@ -46,6 +45,9 @@ class TfFilterPrecisionError extends PolymerElement {
     @property({ type: Object })
     updateFilterData: Function = () => { };
 
+    @property({ type: Array })
+    lastFilterValue: string[] = [];
+
     MAX_RELATIVE_ERR = "0";
     MIN_RELATIVE_ERR = "1";
     MEAN_RELATIVE_ERR = "2";
@@ -55,12 +57,27 @@ class TfFilterPrecisionError extends PolymerElement {
     _selectionChanged() {
         this.set('filterValue', [this.MAX_RELATIVE_ERR, this.MIN_RELATIVE_ERR, this.MEAN_RELATIVE_ERR, this.NORM_RELATIVE_ERR]);
     }
+    @observe('filterDialogOpened')
+    _onFlterDialogOpened = () => {
+        if (this.filterDialogOpened) {
+            this.set('lastFilterValue', this.filterValue);
+        }
+
+    }
+
     override ready(): void {
         super.ready();
         const filterDialog = this.shadowRoot?.querySelector('#filter-dialog') as HTMLElement;
         filterDialog?.addEventListener('confirm', this.onFlterDialogConfirm)
+        filterDialog?.addEventListener('cancel', this.onFlterDialogCancel)
         this.set('filterValue', [this.MAX_RELATIVE_ERR, this.MIN_RELATIVE_ERR, this.MEAN_RELATIVE_ERR, this.NORM_RELATIVE_ERR]);
     }
+
+
+    onFlterDialogCancel = (e: any) => {
+        this.set('filterValue', this.lastFilterValue);
+    }
+
     onFlterDialogConfirm = async (e: any) => {
         if (isEmpty(this.filterValue)) {
             Notification.show(`错误: 精度误差计算指标为空，请选择指标`, {
