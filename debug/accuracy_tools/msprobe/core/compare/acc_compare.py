@@ -709,7 +709,7 @@ class CalcStatsDiff:
         result_df.loc[cond_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
 
         cond_not_nan_diff = cond_valid_stat & ~cond_diff_nan
-        condition_pt_zero = bench_val == 0
+        condition_pt_zero = self.get_number(bench_val) == 0
         result_df.loc[cond_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.N_A
 
         # 相对误差转成百分比字符串
