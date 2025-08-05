@@ -840,3 +840,12 @@ class MonitorConst:
         TRAIN_STAGE[key] = BACKWARD_STAGE
     for key in OPTIMIZER_KEY:
         TRAIN_STAGE[key] = OPTIMIZER_STAGE
+
+    # csv2db
+    DEFAULT_INT_VALUE = 0
+    MAX_PROCESS_NUM = 128
+    CSV_FILE_PATTERN = r"_(\d+)-(\d+)\.csv"
+    BATCH_SIZE = 10000
+    MAX_PARTITION = 10_000_000
+    MIN_PARTITION = 10
+    

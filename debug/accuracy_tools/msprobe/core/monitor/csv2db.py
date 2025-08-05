@@ -36,10 +36,7 @@ all_data_type_list = [
     "actv", "actv_grad", "exp_avg", "exp_avg_sq",
     "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
 ]
-DEFAULT_INT_VALUE = 0
-MAX_PROCESS_NUM = 128
-CSV_FILE_PATTERN = r"_(\d+)-(\d+)\.csv"
-BATCH_SIZE = 10000
+
 
 
 @dataclass
@@ -58,14 +55,18 @@ def validate_process_num(process_num: int) -> None:
     """Validate process number parameter"""
     if not is_int(process_num) or process_num <= 0:
         raise ValueError("process_num must be a positive integer")
-    if process_num > MAX_PROCESS_NUM:
-        raise ValueError(f"Maximum supported process_num is {MAX_PROCESS_NUM}")
+    if process_num > MonitorConst.MAX_PROCESS_NUM:
+        raise ValueError(f"Maximum supported process_num is {MonitorConst.MAX_PROCESS_NUM}")
 
 
 def validate_step_partition(step_partition: int) -> None:
-    """Validate step partition parameter"""
-    if not is_int(step_partition) or step_partition <= 0:
-        raise ValueError("step_partition must be a positive integer")
+    if not isinstance(step_partition, int):
+        raise TypeError("step_partition must be integer")
+    if not MonitorConst.MIN_PARTITION <= step_partition <= MonitorConst.MAX_PARTITION:
+        raise ValueError(
+            f"step_partition must be between {MonitorConst.MIN_PARTITION} ",
+            f"and {MonitorConst.MAX_PARTITION}, got {step_partition}"
+        )
 
 
 def validate_data_type_list(data_type_list: Optional[List[str]]) -> None:
@@ -86,7 +87,7 @@ def get_info_from_filename(file_name, metric_list=None):
     metric_name = "_".join(file_name.split('_')[:-1])
     if metric_list and metric_name not in metric_list:
         return "", 0, 0
-    match = re.match(f"{metric_name}{CSV_FILE_PATTERN}", file_name)
+    match = re.match(f"{metric_name}{MonitorConst.CSV_FILE_PATTERN}", file_name)
     if not match:
         return "", 0, 0
     step_start, step_end = match.groups()
@@ -121,7 +122,7 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
             try:
                 name = row[MonitorConst.HEADER_NAME]
                 vpp_stage = int(row['vpp_stage'])
-                micro_step = int(row.get('micro_step', DEFAULT_INT_VALUE))
+                micro_step = int(row.get('micro_step', MonitorConst.DEFAULT_INT_VALUE))
             except (ValueError, KeyError) as e:
                 logger.warning(
                     f"CSV conversion failed | file={file_path}:{row_id+2} | error={str(e)}")
@@ -232,7 +233,7 @@ def process_single_rank(
                 # Parse row data
                 name = row.get(MonitorConst.HEADER_NAME)
                 vpp_stage = int(row['vpp_stage'])
-                micro_step = int(row.get('micro_step', DEFAULT_INT_VALUE))
+                micro_step = int(row.get('micro_step', MonitorConst.DEFAULT_INT_VALUE))
                 target_id = target_dict.get((name, vpp_stage, micro_step))
                 if not target_id:
                     continue
@@ -252,7 +253,7 @@ def process_single_rank(
 
             table_batches[table_name].append(tuple(row_data))
             # Batch insert when threshold reached
-            if len(table_batches[table_name]) >= BATCH_SIZE:
+            if len(table_batches[table_name]) >= MonitorConst.BATCH_SIZE:
                 inserted = db.insert_rows(
                     table_name, table_batches[table_name])
                 if inserted is not None:
@@ -290,9 +291,9 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
     # 3. Process data for each rank in parallel
     total_files = sum(len(files) for files in rank_tasks.values())
     logger.info(f"Starting data import for {len(rank_tasks)} ranks,"
-                "{total_files} files..."
+                f"{total_files} files..."
                 )
-
+    all_succeeded = True
     with ProcessPoolExecutor(max_workers=workers) as executor:
         futures = {
             executor.submit(
@@ -315,8 +316,8 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                 except Exception as e:
                     logger.error(
                         f"Failed to process Rank {rank}: {str(e)}")
-                    return False
-    return True
+                    all_succeeded = False
+    return all_succeeded
 
 
 def csv2db(config: CSV2DBConfig) -> None:
