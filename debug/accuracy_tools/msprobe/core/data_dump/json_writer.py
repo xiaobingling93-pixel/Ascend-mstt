@@ -164,7 +164,12 @@ class DataWriter:
 
         length = len(dump_data)
 
-        if self.config.summary_mode == Const.MD5:
+        # 1) 先取到 config（如果没有，就拿 None）
+        cfg = getattr(self, "config", None)
+        # 2) 再取 summary_mode（如果 cfg 是 None 或者没 summary_mode，就拿 None）
+        summary_mode = getattr(cfg, "summary_mode", None)
+
+        if summary_mode == Const.MD5:
             threshold = self.flush_size
         else:
             threshold = self.flush_size if length < self.larger_flush_size else self.larger_flush_size
