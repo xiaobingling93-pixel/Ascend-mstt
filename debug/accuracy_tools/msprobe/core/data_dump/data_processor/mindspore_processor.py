@@ -13,7 +13,9 @@
 # limitations under the License.
 # ============================================================================
 
+import os
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 
 import mindspore as ms
 from mindspore import mint, ops, hal
@@ -53,6 +55,11 @@ class MindsporeDataProcessor(BaseDataProcessor):
         }
         self._async_dump_cache = {}
         self.api_register = get_api_register()
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
+
+    @staticmethod
+    def compute_crc32_bytes(tensor_bytes):
+        return f"{zlib.crc32(tensor_bytes):08x}"
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -188,8 +195,18 @@ class MindsporeDataProcessor(BaseDataProcessor):
         tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
-            tensor_md5 = self.get_md5_for_tensor(tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
+            tensor = convert_bf16_to_fp32(tensor)
+            # 拷贝并搬到 CPU
+            tensor_bytes = tensor.asnumpy().tobytes()
+
+            future = self._crc_executor.submit(
+                MindsporeDataProcessor.compute_crc32_bytes,
+                tensor_bytes
+            )
+
+            crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+            tensor_json[Const.MD5_INDEX] = crc_placeholder
+
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):

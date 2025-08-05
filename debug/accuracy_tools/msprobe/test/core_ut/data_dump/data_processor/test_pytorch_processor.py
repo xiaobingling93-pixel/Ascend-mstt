@@ -273,10 +273,10 @@ class TestPytorchDataProcessor(unittest.TestCase):
             'type': 'torch.Tensor',
             'dtype': str(tensor.dtype),
             'shape': tensor.shape,
-            'requires_grad': tensor.requires_grad,
-            'md5': 'mocked_md5'
+            'requires_grad': tensor.requires_grad
         }
         result.pop('tensor_stat_index', None)
+        result.pop('md5_index', None)
         self.assertDictEqual(expected, result)
 
     def test_analyze_tensor_with_empty_tensor(self):

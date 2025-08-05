@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import zlib
 from collections.abc import Iterable
 from dataclasses import asdict
 from typing import List
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -118,6 +120,13 @@ class PytorchDataProcessor(BaseDataProcessor):
         }
         self._async_dump_cache = {}
         self.tensor_handler = TensorHandler()
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
+
+
+    @staticmethod
+    def compute_crc32_bytes(tensor_bytes):
+        return f"{zlib.crc32(tensor_bytes):08x}"
+
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -290,8 +299,20 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
                 logger.debug("Calculating the md5 value of fake tensor or meta tensor is not supported.")
-                tensor_md5 = self.get_md5_for_tensor(common_tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
+                # 拷贝并搬到 CPU
+                if tensor.dtype == torch.bfloat16:
+                    tensor = tensor.float()
+                tensor_bytes = tensor.cpu().detach().numpy().tobytes()
+
+                future = self._crc_executor.submit(
+                    PytorchDataProcessor.compute_crc32_bytes,
+                    tensor_bytes
+                )
+
+                crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+                tensor_json[Const.MD5_INDEX] = crc_placeholder
+            else:
+                tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):

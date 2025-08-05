@@ -24,6 +24,8 @@ class Const:
     Class for const
     """
     TOOL_NAME = "msprobe"
+    MD5_INDEX = "md5_index"
+    MD5 = "md5"
 
     ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
