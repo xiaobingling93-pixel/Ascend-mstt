@@ -629,6 +629,12 @@ def gen_api_batches(result: np.ndarray):
     return api_batches
 
 
+def get_paired_steps(npu_path, bench_path):
+    npu_steps = set(os.listdir(npu_path))
+    bench_steps = set(os.listdir(bench_path))
+    return list(npu_steps & bench_steps)
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)

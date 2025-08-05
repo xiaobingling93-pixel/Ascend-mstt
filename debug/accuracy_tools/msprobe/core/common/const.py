@@ -397,6 +397,8 @@ class Const:
     CONFIG_CHECK_WARNING = "warning"
     CONFIG_CHECK_ERROR = "error"
 
+    MIX_DUMP_NAMES = {'graph', 'pynative'}
+
 
 class CompareConst:
     """
