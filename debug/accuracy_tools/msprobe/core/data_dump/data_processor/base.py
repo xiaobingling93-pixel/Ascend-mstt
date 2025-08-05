@@ -94,6 +94,7 @@ class BaseDataProcessor:
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
         self.config = config
+        self.data_writer.config = config
         self.api_info_struct = {}
         self.stack_info_struct = {}
         self.current_api_or_module_name = None

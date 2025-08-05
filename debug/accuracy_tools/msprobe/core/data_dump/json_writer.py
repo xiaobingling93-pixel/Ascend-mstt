@@ -164,7 +164,10 @@ class DataWriter:
 
         length = len(dump_data)
 
-        threshold = self.flush_size if length < self.larger_flush_size else self.larger_flush_size
+        if self.config.summary_mode == Const.MD5:
+            threshold = self.flush_size
+        else:
+            threshold = self.flush_size if length < self.larger_flush_size else self.larger_flush_size
 
         if length % threshold == 0:
             self.write_json()
