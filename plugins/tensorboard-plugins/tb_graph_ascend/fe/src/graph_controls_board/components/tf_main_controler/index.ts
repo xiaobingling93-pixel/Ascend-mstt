@@ -91,10 +91,10 @@ class MainController extends PolymerElement {
   microsteps = [];
 
   @property({ type: Array })
-  steps: number[] = [];
+  steps: any[] = [{ value: 0, label: '0' }];
 
   @property({ type: Array })
-  ranks: number[] = [];
+  ranks: any[] = [{ value: 0, label: '0' }];
 
   @property({ type: String })
   selectedRun = '';

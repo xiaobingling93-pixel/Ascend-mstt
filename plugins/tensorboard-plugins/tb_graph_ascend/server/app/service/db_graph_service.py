@@ -68,7 +68,7 @@ class DbGraphService(GraphServiceStrategy):
             # 双图
             else:
                 config_data = GraphState.get_global_value("config_data")
-                all_node_info = self.repo.query_all_node_info_in_one(NPU, rank, step, micro_step)
+                all_node_info = self.repo.query_all_node_info_in_one(rank, step, micro_step)
                 config_data['npuMatchNodes'] = all_node_info.get('npu_match_node')
                 config_data['benchMatchNodes'] = all_node_info.get('bench_match_node')
                 config_data['npuUnMatchNodes'] = all_node_info.get('npu_unmatch_node')
@@ -84,7 +84,7 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': True, 'data': result}
         except Exception as e:
             logger.error(f"load graph all node list failed, {e}")
-            return {'success': False, 'error': 'load graph all node list failed, {e}'}
+            return {'success': False, 'error': f'load graph all node list failed, {e}'}
 
     def change_node_expand_state(self, node_info, meta_data):
         try:
@@ -170,8 +170,6 @@ class DbGraphService(GraphServiceStrategy):
                     bench_node = self.repo.query_node_info(bench_node_name, BENCH, rank, step)
                     graph_data = GraphUtils.convert_to_graph_json(npu_node, bench_node)
                     match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-                    print("match_result", match_result)
-                    
                     update_data = [node for item in match_result if item.get('success') is True 
                                    for node in item.get('data', [])]
                     if len(update_data) > 0:

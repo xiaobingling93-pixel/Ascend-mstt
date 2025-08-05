@@ -192,10 +192,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     microsteps: number[] = [];
 
     @property({ type: Array })
-    steps: number[] = [];
+    steps: any[] = [{ value: 0, label: '0' }];
 
     @property({ type: Array })
-    ranks: number[] = [];
+    ranks: any[] = [{ value: 0, label: '0' }];
 
 
     @property({ type: Array })
@@ -360,15 +360,16 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 }));
                 this.set('microsteps', microstepsArray);
             }
-            if (ranksCount >= 0) {
+            if (ranksCount > 0) {
                 const ranksArray = Array.from({ length: ranksCount + 1 }, (_, index) => ({
                     label: index,
                     value: index,
                 }));
+                console.log('ranksArray', ranksArray);
                 this.set('ranks', ranksArray);
             }
-            if (stepsCount >= 0) {
-                const stepsArray = Array.from({ length: stepsCount + 1 }, (_, index) => ({
+            if (stepsCount > 0) {
+                const stepsArray = Array.from({ length: stepsCount }, (_, index) => ({
                     label: index,
                     value: index,
                 }));

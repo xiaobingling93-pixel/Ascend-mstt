@@ -86,14 +86,14 @@ class GraphRepo:
                 matched_distributed 
             FROM 
                 tb_nodes 
-            WHERE 
-                up_node = ''   
-                AND data_source = ? 
+            WHERE   
+                step = ?
                 AND rank = ? 
-                AND step = ?
+                AND data_source = ? 
+                AND up_node = '' 
             """
             with self.conn as c:
-                cursor = c.execute(query, (type, rank, step))
+                cursor = c.execute(query, (step, rank, type))
                 rows = cursor.fetchall()
                 
             end = time.perf_counter()
@@ -117,22 +117,34 @@ class GraphRepo:
             query = """
                 WITH RECURSIVE parent_chain AS (
                         SELECT child.id, child.node_name, child.up_node, child.data_source, child.rank, child.step, 0 AS level
-                        FROM tb_nodes child
-                        WHERE child.node_name = ?
-                        AND child.data_source = ?
-                        AND child.rank = ?
-                        AND child.step = ?
+                        FROM 
+                            tb_nodes child
+                        WHERE  
+                            child.step = ?
+                            AND child.rank = ?
+                            AND child.data_source = ?
+                            AND child.node_name = ?
 
                         UNION ALL
 
-                        SELECT parent.id, parent.node_name, parent.up_node, parent.data_source, parent.rank, parent.step, pc.level + 1
-                        FROM tb_nodes parent
+                        SELECT 
+                            parent.id, 
+                            parent.node_name, 
+                            parent.up_node,
+                            parent.data_source, 
+                            parent.rank, 
+                            parent.step, 
+                            pc.level + 1
+                        FROM 
+                            tb_nodes parent
                         INNER JOIN parent_chain pc 
                             ON parent.data_source = pc.data_source
-                        AND parent.node_name  = pc.up_node
-                        AND parent.rank = pc.rank
-                        AND parent.step = pc.step
-                        WHERE pc.up_node IS NOT NULL AND pc.up_node != ''
+                            AND parent.node_name  = pc.up_node
+                                AND parent.rank = pc.rank
+                            AND parent.step = pc.step
+                        WHERE 
+                            pc.up_node IS NOT NULL 
+                            AND pc.up_node != ''
                     )
                     SELECT 
                         tb_nodes.id,
@@ -145,14 +157,21 @@ class GraphRepo:
                         tb_nodes.precision_index,
                         tb_nodes.overflow_level,
                         tb_nodes.matched_distributed
-                    FROM tb_nodes
-                    WHERE id IN (SELECT id FROM parent_chain)
+                    FROM 
+                        tb_nodes
+                    WHERE 
+                        id IN (SELECT id FROM parent_chain)
                     ORDER BY (
-                        SELECT level FROM parent_chain pc 
-                        WHERE pc.node_name = tb_nodes.node_name) ASC
+                        SELECT 
+                            level 
+                        FROM 
+                            parent_chain pc 
+                        WHERE 
+                            pc.node_name = tb_nodes.node_name) 
+                        ASC
             """ 
             with self.conn as c:
-                cursor = c.execute(query, (node_name, type, rank, step))
+                cursor = c.execute(query, (step, rank, type, node_name))
                 rows = cursor.fetchall()
                 
             up_nodes = {}
@@ -183,14 +202,14 @@ class GraphRepo:
                     matched_distributed 
                 FROM 
                     tb_nodes 
-                WHERE 
-                    data_source = ? 
-                    AND rank = ? 
-                    AND step = ?
+                WHERE  
+                    step = ?
+                    AND rank = ?
+                    AND data_source = ? 
                     AND up_node = ?
             """
             with self.conn as c:
-                cursor = c.execute(query, (type, rank, step, node_name))
+                cursor = c.execute(query, (step, rank, type, node_name))
                 rows = cursor.fetchall()
             sub_nodes = {}
             for row in rows:
@@ -214,13 +233,13 @@ class GraphRepo:
                 FROM 
                     tb_nodes 
                 WHERE 
-                    data_source = ? 
+                    step = ?
                     AND rank = ? 
-                    AND step = ?
-                    AND  node_name = ?
+                    AND data_source = ? 
+                    AND node_name = ?
             """
             with self.conn as c:
-                cursor = c.execute(query, (type, rank, step, node_name))
+                cursor = c.execute(query, (step, rank, type, node_name))
                 rows = cursor.fetchall()
                 
             end = time.perf_counter()
@@ -280,14 +299,13 @@ class GraphRepo:
                 FROM 
                     tb_nodes 
                 WHERE 
-                    data_source = ? 
+                    step = ?
                     AND rank = ? 
-                    AND step = ?
                     AND (? = -1 OR micro_step_id = ?)
             """
             
             with self.conn as conn:
-                cursor = conn.execute(query, (rank, step, micro_step, micro_step))
+                cursor = conn.execute(query, (step, rank, micro_step, micro_step))
                 rows = cursor.fetchall()
 
             # 初始化结果
@@ -356,10 +374,9 @@ class GraphRepo:
                     json.dumps(node['input_data']),
                     json.dumps(node['output_data']),
                     node['precision_index'],
-                    
-                    node['graph_type'],
-                    rank,
                     step,
+                    rank,
+                    node['graph_type'],
                     node['node_name']  # WHERE 条件
                 )
                 for node in nodes_info
@@ -372,9 +389,9 @@ class GraphRepo:
                     output_data = ?,
                     precision_index = ?
                 WHERE 
-                    data_source = ? 
+                    step = ?
                     AND rank = ? 
-                    AND step = ?
+                    AND data_source = ? 
                     AND node_name = ?
             """
             with self.conn as c:

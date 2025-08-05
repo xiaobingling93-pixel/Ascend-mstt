@@ -106,7 +106,6 @@ const useGraph = (): UseGraphType => {
     const calcClolorByPrecision = (precisionValue: number, colors: PreProcessDataConfigType['colors']) => {
 
         if (isNaN(precisionValue)) {
-            console.log('precisionValue', precisionValue);
             return BASE_NODE_COLOR; // 默认返回灰色
         }
         for (const [color, config] of Object.entries(colors)) {
