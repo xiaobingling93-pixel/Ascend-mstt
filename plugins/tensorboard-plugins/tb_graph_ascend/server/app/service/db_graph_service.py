@@ -32,10 +32,15 @@ class DbGraphService(GraphServiceStrategy):
         runs = GraphState.get_global_value('runs')
         db_path = os.path.join(runs.get(self.run), f"{tag}.vis.db")
         self.repo = GraphRepo(db_path)
+        self.conn = self.repo.get_db_connection()
         self.config_info = {}
 
     def load_graph_data(self):
-        pass
+        if not self.repo:
+            return {'success': False, 'error': 'database not init'}
+        if not self.conn:
+            self.conn = self.repo.get_db_connection()
+        return {'success': True}
 
     def load_graph_config_info(self):
         try:
@@ -47,6 +52,9 @@ class DbGraphService(GraphServiceStrategy):
 
     def load_graph_all_node_list(self, meta_data):
         try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
+            
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
@@ -85,6 +93,8 @@ class DbGraphService(GraphServiceStrategy):
 
     def change_node_expand_state(self, node_info, meta_data):
         try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
             rank = meta_data.get('rank')
@@ -121,6 +131,8 @@ class DbGraphService(GraphServiceStrategy):
 
     def get_node_info(self, node_info, meta_data):
         try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
             result = {}
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
@@ -146,6 +158,8 @@ class DbGraphService(GraphServiceStrategy):
 
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
         try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
             result = {}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
@@ -196,6 +210,8 @@ class DbGraphService(GraphServiceStrategy):
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
             result = {}
             rank = meta_data.get('rank')
             step = meta_data.get('step')

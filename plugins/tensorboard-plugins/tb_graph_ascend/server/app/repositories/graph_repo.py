@@ -37,6 +37,9 @@ class GraphRepo:
             logger.error("Failed to connect to database")
             return None
 
+    def get_db_connection(self):
+        return self.conn
+
     # DB: 查询配置表信息
     def query_config_info(self):
         try:

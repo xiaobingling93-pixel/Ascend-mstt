@@ -138,16 +138,16 @@ class MainController extends PolymerElement {
     };
     const isDBType = type == DB_TYPE;
 
-    this.set('selectedTag', tags[0]);
     if (isDBType) {
       selection['step'] = 0;
       selection['rank'] = 0;
       this.set('selectedStep', 0);
       this.set('selectedRank', 0);
     }
-    this.set('isDBType', isDBType);
-    this.set('selectedMicroStep', -1);
     this.set('selection', selection);
+    this.set('isDBType', isDBType);
+    this.set('selectedTag', tags[0]);
+    this.set('selectedMicroStep', -1);
   }
 
   @observe('selectedTag')
@@ -166,8 +166,8 @@ class MainController extends PolymerElement {
       this.set('selectedStep', 0);
       this.set('selectedRank', 0);
     }
-    this.set('selectedMicroStep', -1);
     this.set('selection', selection);
+    this.set('selectedMicroStep', -1);
   }
 
   @observe('selectedStep')
