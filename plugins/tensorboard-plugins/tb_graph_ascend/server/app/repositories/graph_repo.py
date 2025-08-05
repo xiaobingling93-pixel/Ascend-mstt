@@ -184,13 +184,13 @@ class GraphRepo:
                 FROM 
                     tb_nodes 
                 WHERE 
-                    up_node = ?
-                    AND data_source = ? 
+                    data_source = ? 
                     AND rank = ? 
                     AND step = ?
+                    AND up_node = ?
             """
             with self.conn as c:
-                cursor = c.execute(query, (node_name, type, rank, step))
+                cursor = c.execute(query, (type, rank, step, node_name))
                 rows = cursor.fetchall()
             sub_nodes = {}
             for row in rows:
@@ -241,13 +241,13 @@ class GraphRepo:
                 FROM 
                     tb_nodes 
                 WHERE 
-                    node_name = ?
-                    AND data_source = ? 
+                    data_source = ? 
                     AND rank = ? 
                     AND step = ?
+                    AND  node_name = ?
             """
             with self.conn as c:
-                cursor = c.execute(query, (node_name, type, rank, step))
+                cursor = c.execute(query, (type, rank, step, node_name))
                 rows = cursor.fetchall()
                 
             end = time.perf_counter()
@@ -368,6 +368,7 @@ class GraphRepo:
                     json.dumps(node['input_data']),
                     json.dumps(node['output_data']),
                     node['precision_index'],
+                    
                     node['graph_type'],
                     rank,
                     step,
