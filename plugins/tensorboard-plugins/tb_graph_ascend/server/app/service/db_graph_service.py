@@ -18,7 +18,8 @@ from .base_graph_service import GraphServiceStrategy
 from ..repositories.graph_repo import GraphRepo
 from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
+from ..utils.global_state import  NPU, BENCH, SINGLE
+from ..utils.match_type import ResultType
 from ..model_db.layout_hierarchy_model import LayoutHierarchyModel
 from ..model_db.match_nodes_model import MatchNodesController
 from tensorboard.util import tb_logging
@@ -169,7 +170,7 @@ class DbGraphService(GraphServiceStrategy):
                     npu_node = self.repo.query_node_info(npu_node_name, NPU, rank, step)
                     bench_node = self.repo.query_node_info(bench_node_name, BENCH, rank, step)
                     graph_data = GraphUtils.convert_to_graph_json(npu_node, bench_node)
-                    match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+                    match_result:list[ResultType] = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
                     update_data = [node for item in match_result if item.get('success') is True 
                                    for node in item.get('data', [])]
                     if len(update_data) > 0:

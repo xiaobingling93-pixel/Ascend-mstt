@@ -17,6 +17,7 @@
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import ADD_MATCH_KEYS, MODULE, NPU, BENCH
 from ..utils.global_state import GraphState
+from ..utils.match_type import ResultType
 
 
 class MatchNodesController:
@@ -41,7 +42,7 @@ class MatchNodesController:
         return opposite_node_name
 
     @staticmethod
-    def process_task_add(graph_data, npu_node_name, bench_node_name, task):
+    def process_task_add(graph_data, npu_node_name, bench_node_name, task) -> list[ResultType]: 
         if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
             return {
                 'success': False,
