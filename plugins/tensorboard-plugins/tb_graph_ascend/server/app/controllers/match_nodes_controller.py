@@ -54,10 +54,12 @@ class MatchNodesController:
         opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
         if task == 'md5':
             result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name,
+                                                                        opposite_bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name,
+                                                                            opposite_bench_node_name)
         else:
             result = {
                 'success': False,
@@ -76,10 +78,12 @@ class MatchNodesController:
         opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
         if task == 'md5':
             result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name,
+                                                                           opposite_bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name,
+                                                                               opposite_bench_node_name)
         else:
             result = {
                 'success': False,
