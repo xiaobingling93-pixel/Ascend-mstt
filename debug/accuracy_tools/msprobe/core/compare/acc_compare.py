@@ -37,7 +37,6 @@ from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.highlight import HighLight
 from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
-from msprobe.core.compare.find_first.analyzer import DiffAnalyzer
 
 
 @dataclass
@@ -54,7 +53,6 @@ class ComparisonConfig:
     layer_mapping: dict
     compared_file_type: str
     first_diff_analyze: bool
-    diff_analyze: bool
 
 
 class Comparator:
@@ -103,12 +101,6 @@ class Comparator:
         # get kwargs or set default value
         suffix = kwargs.get('suffix', '')
 
-        if self.mode_config.diff_analyze:
-            logger.info("Start finding first diff node......")
-            npu_path = input_param.get("npu_path")
-            bench_path = input_param.get("bench_path")
-            DiffAnalyzer(npu_path, bench_path, output_path).analyze()
-            return
         # process output file
         file_path = self.process_output_file(output_path, suffix, self.mode_config.compared_file_type)
 
@@ -778,7 +770,6 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             api_mapping=kwargs.get('api_mapping', {}),
             layer_mapping=kwargs.get('layer_mapping', {}),
             first_diff_analyze=kwargs.get('first_diff_analyze', False),
-            diff_analyze=kwargs.get('diff_analyze', False),
             compared_file_type='',
         )
 

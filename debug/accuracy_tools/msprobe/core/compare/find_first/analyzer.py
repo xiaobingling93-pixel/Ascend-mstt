@@ -19,12 +19,12 @@ import os
 from itertools import dropwhile, chain
 
 from msprobe.core.common import const
-from msprobe.core.common.file_utils import check_file_or_directory_path, save_json, make_dir, remove_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, save_json, make_dir
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.compare.find_first.data_processor import DataProcessor
-from msprobe.core.compare.find_first.utils import (RankPath, FileCache, is_communication_op, is_ignore_op, DiffAnalyseConst,
-                                       analyze_diff_in_group)
+from msprobe.core.compare.find_first.utils import (RankPath, FileCache, is_communication_op, is_ignore_op,
+                                                   DiffAnalyseConst, analyze_diff_in_group)
 from msprobe.core.compare.find_first.graph import DataNode, CommunicationNode
 
 
@@ -41,18 +41,6 @@ class DiffAnalyzer:
         self._after_comm_diffs = {}  # 记录各rank下发生在通信节点之后的异常计算节点
         self._rank_comm_nodes_dict = {}  # 记录各rank的通信节点
 
-    def _pre_process(self):
-        self.pre_processor.process(self._npu_path, self._bench_path, self._output_path)
-        self._resolve_input_path(self._output_path)
-        logger.info("Pre Process completed.")
-
-    def  _post_process(self):
-        for rank_path in self._paths.values():
-            dump_path = rank_path.dump_path
-            remove_path(dump_path)
-            logger.debug(f"Remove {dump_path} success")
-        logger.info("Post Process completed.")
-
     def analyze(self):
         self._pre_process()
         for analyze_func in [self._pre_analyze, self._analyze, self._post_analyze]:
@@ -62,6 +50,17 @@ class DiffAnalyzer:
                 self._post_process()
                 return
         logger.info('Cannot find any diff node, no need to generate analyze file.')
+
+    def _pre_process(self):
+        self.pre_processor.process(self._npu_path, self._bench_path, self._output_path)
+        self._resolve_input_path(self._output_path)
+        logger.info("Pre Process completed.")
+
+    def _post_process(self):
+        for rank_path in self._paths.values():
+            dump_path = rank_path.dump_path
+            logger.debug(f"Remove {dump_path} success")
+        logger.info("Post Process completed.")
 
     """
     这里需要生成stack，但是直接用dict中自带就行，在op_items.NPU_Stack_Info中
@@ -137,7 +136,7 @@ class DiffAnalyzer:
                 if not conn_info.get('ranks'):
                     conn_info['ranks'] = self._rank_comm_nodes_dict.keys()
                 if not self._find_connection(conn_info, cur_node, searched_ranks, seen_nodes):
-                    logger.info(f'Cannot find connected communication node for "{cur_node.node_id}".')
+                    logger.debug(f'Cannot find connected communication node for "{cur_node.node_id}".')
 
     def _find_connection(self, conn_info, cur_node, searched_ranks, seen_nodes):
         def connect(search_node):
@@ -253,7 +252,13 @@ class DiffAnalyzer:
                 seen_nodes.update(group)
                 self._diff_nodes.extend(analyze_diff_in_group([self._get_node_by_id(n_id) for n_id in group]))
             if self._diff_nodes:
-                self._diff_nodes = [min(self._diff_nodes, key=lambda x: (x.layer, x.sub_layer))]
+                # 找出所有layer和sub_layer最小的节点
+                min_layer_sublayer = min((x.layer, x.sub_layer) for x in self._diff_nodes)
+                self._diff_nodes = [
+                                        node
+                                        for node in self._diff_nodes
+                                        if (node.layer, node.sub_layer) == min_layer_sublayer
+                                   ]
                 return
 
     def _get_node_by_id(self, node_id):
@@ -274,8 +279,3 @@ class DiffAnalyzer:
             result_content[f'rank_{node.rank}'].append(node.gen_node_info(self._paths[node.rank]))
         save_json(result_file, result_content, 2)
         logger.info(f"The analyze result is saved in: {result_file}")
-
-
-def _run_diff_analyze(args):
-    check_file_or_directory_path(args.bench_path, args.npu_path, True)
-    DiffAnalyzer(args.input_path, args.output_path).analyze()

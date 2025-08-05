@@ -22,12 +22,11 @@ import psutil
 from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
 from msprobe.core.common.const import Const
 
+
 @dataclass
 class RankPath:
     rank: int
     dump_path: str
-    construct_path: str
-    stack_path: str
 
     def __init__(self, rank, dump_path):
         self.rank = rank
@@ -152,8 +151,8 @@ class DiffAnalyseConst:
                        'send_object_list': 'recv_object_list', 'recv_object_list': 'send_object_list'}
     SRC = 'src'
     DST = 'dst'
-    SRC_GROUP = 'src_group'
-    DST_GROUP = 'dst_group'
+    SRC_GROUP = 'group_src'
+    DST_GROUP = 'group_dst'
     LINK = 'link'
     DIRECTED_API = {'send': DST, 'recv': SRC, 'isend': DST, 'irecv': SRC, 'broadcast': SRC, 'scatter': SRC,
                     'gather': DST, 'send_object_list': DST, 'recv_object_list': SRC}

@@ -173,7 +173,8 @@ class CommunicationNode:
             for k, v in self.data.inputs.items():
                 if prefix in k or f"{prefix}_GROUP" in k:
                     # 优先使用MD5值，如果没有则使用NPU_MAX值
-                    compare_val = v.get(CompareConst.NPU_MD5) if CompareConst.NPU_MD5 in v else v.get(CompareConst.NPU_MAX)
+                    compare_val = v.get(CompareConst.NPU_MD5) if CompareConst.NPU_MD5 in v \
+                                  else v.get(CompareConst.NPU_MAX)
                     return node_type if compare_val == self.rank \
                            else DiffAnalyseConst.OPPOSITE_DIR[node_type]
         return DiffAnalyseConst.LINK
