@@ -54,7 +54,7 @@ class Const:
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
 
-    MAX_DEPTH = 10
+    MAX_DEPTH = 50
     CPU_QUARTER = 4
     DUMP_MAX_DEPTH = 50
 
