@@ -97,7 +97,7 @@ def compare_cli(args):
         if common_kwargs.get('diff_analyze', False):
             logger.info("Start finding first diff node......")
             from msprobe.core.compare.find_first.analyzer import DiffAnalyzer
-            DiffAnalyzer(npu_path, bench_path, args.output_path).analyze()
+            DiffAnalyzer(npu_path, bench_path, args.output_path, frame_name).analyze()
             return
 
         if frame_name == Const.PT_FRAMEWORK:
