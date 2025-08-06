@@ -307,7 +307,6 @@ class Hierarchy:
         try:
             for node_info in data:
                 node_name = node_info.get('node_name')
-                print(node_name)
                 if node_name in self.current_hierarchy:
                     current_node_info = self.current_hierarchy[node_name]
                     current_node_info['matchedNodeLink'] = node_info.get('matched_node_link')

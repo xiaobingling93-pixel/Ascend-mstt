@@ -57,20 +57,15 @@ class GraphUtils:
             return None, 'Error: fail to get graph data'
 
     @staticmethod
-    def convert_to_graph_json(npu_node, bench_node):
-        graph_data = {
-            "NPU":{
-                "node": {
-                    npu_node.get('node_name'): npu_node,
-                },
-            },
-            "Bench":{
-                "node": {
-                    bench_node.get('node_name'): bench_node
-                },
-            }
-        }
-        return graph_data
+    @staticmethod
+    def get_opposite_node_name(node_name):
+        opposite_node_name = ''
+        # 如果npu_node_name包含forward，则opposite_npu_node_name为npu_node_name替换forward为backward
+        if 'forward' in node_name:
+            opposite_node_name = node_name.replace('forward', 'backward')
+        else:
+            opposite_node_name = node_name.replace('backward', 'forward')
+        return opposite_node_name
 
     @staticmethod
     def get_parent_node_list(graph_data, node_name):
