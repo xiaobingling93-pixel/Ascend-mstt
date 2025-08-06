@@ -651,11 +651,16 @@ def _compare_parser(parser):
                         help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)
+    parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", type=str, nargs='?', const=True,
+                        help="<optional> Whether to perform a diff analyze on the api name.", required=False)
 
 
 def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
     if not isinstance(kwargs.get('first_diff_analyze', False), bool):
         logger.error('kwargs: first_diff_analyze should be bool, please check!')
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    if not isinstance(kwargs.get('diff_analyze', False), bool):
+        logger.error('kwargs: diff_analyze should be bool, please check!')
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
     if kwargs.get('suffix'):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
