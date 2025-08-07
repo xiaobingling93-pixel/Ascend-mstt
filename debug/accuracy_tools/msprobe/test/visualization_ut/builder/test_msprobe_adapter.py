@@ -11,6 +11,7 @@ from msprobe.visualization.builder.msprobe_adapter import (
     _format_data
 )
 from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.graph.base_node import BaseNode
 import torch
 from msprobe.core.common.const import Const
 
@@ -55,11 +56,9 @@ class TestMsprobeAdapter(unittest.TestCase):
 
     @patch('msprobe.visualization.builder.msprobe_adapter.get_accuracy')
     def test_compare_node(self, mock_get_accuracy):
-        node_ids = ["node1", "node2"]
-        data_dicts = [{'node1': {"input_args": [], "input_kwargs": {}, "output": {}}},
-                      {'node2': {"input_args": [], "input_kwargs": {}, "output": {}}}]
-        stack_json_data = {}
-        result = compare_node(node_ids, data_dicts, stack_json_data, GraphConst.REAL_DATA_COMPARE)
+        node_n = BaseNode('', 'node1')
+        node_b = BaseNode('', 'node2')
+        result = compare_node(node_n, node_b, GraphConst.REAL_DATA_COMPARE)
         mock_get_accuracy.assert_called_once()
         self.assertIsInstance(result, list)
 

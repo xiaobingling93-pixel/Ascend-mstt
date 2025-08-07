@@ -113,9 +113,12 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     STRUCTURE = "structure"
+    DUMP_PRECISION_HIGH = "high"
+    DUMP_PRECISION_LOW = "low"
     TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE]
     DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR, STRUCTURE]
     DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
+    DUMP_PRECISION_LIST = [DUMP_PRECISION_LOW, DUMP_PRECISION_HIGH]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
@@ -237,6 +240,8 @@ class Const:
     MEAN = 'Mean'
     NORM = 'Norm'
     DATA_NAME = 'data_name'
+    STATE = 'state'
+    API_ORIGIN_NAME = 'api_origin_name'
     TENSOR_STAT_INDEX = 'tensor_stat_index'
     SUMMARY_METRICS_LIST = [MAX, MIN, MEAN, NORM]
 
@@ -383,6 +388,9 @@ class Const:
     MATCH_MODE_NAME = "pure name"
     MATCH_MODE_MAPPING = "mapping"
     MATCH_MODE_SIMILARITY = "similarity"
+    CONFIG_CHECK_PASS = "pass"
+    CONFIG_CHECK_WARNING = "warning"
+    CONFIG_CHECK_ERROR = "error"
 
 
 class CompareConst:
@@ -438,7 +446,7 @@ class CompareConst:
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
     COMPARE_MESSAGE = "compare_message"
-    MAX_EXCEL_LENGTH = 1048576
+    MAX_EXCEL_LENGTH = 1048500
     YES = "Yes"
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4
@@ -555,6 +563,8 @@ class CompareConst:
     ULP_FLOAT16_THRESHOLD = 1
 
     # compare result data
+    NO_REAL_DATA = 'No real data'
+    API_UNMATCH = 'api unmatched'
     READ_NONE = 'No data'
     NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
@@ -586,6 +596,7 @@ class CompareConst:
 
     # error message
     NO_BENCH = "No bench data matched."
+
 
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]
@@ -642,9 +653,9 @@ class CompareConst:
 
     OP_NAME_X = 'op_name_x'
     MATCH_RESULT_COLUMNS = [
-        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'data_name_x',
+        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'state_x', 'api_origin_name_x', 'data_name_x',
         CMP_KEY, CMP_SHAPE,
-        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'data_name_y',
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'state_y', 'api_origin_name_y', 'data_name_y'
     ]
 
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
@@ -675,6 +686,7 @@ class FileCheckConst:
     IR_SUFFIX = ".ir"
     ZIP_SUFFIX = ".zip"
     SHELL_SUFFIX = ".sh"
+    LOG_SUFFIX = ".log"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -687,6 +699,7 @@ class FileCheckConst:
     MAX_FILE_IN_ZIP_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_FILE_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
+    MAX_LOG_SIZE = 10737418240  # 1 * 1024 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750
@@ -700,7 +713,8 @@ class FileCheckConst:
         XLSX_SUFFIX: MAX_XLSX_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE,
         IR_SUFFIX: MAX_IR_SIZE,
-        ZIP_SUFFIX: MAX_ZIP_SIZE
+        ZIP_SUFFIX: MAX_ZIP_SIZE,
+        LOG_SUFFIX: MAX_LOG_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 

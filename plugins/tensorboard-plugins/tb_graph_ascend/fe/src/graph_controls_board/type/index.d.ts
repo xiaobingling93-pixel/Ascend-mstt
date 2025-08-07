@@ -19,7 +19,12 @@ export interface MinimapVis {
 }
 export type Dataset = Array<RunItem>;
 
-export type MetaDirType = Record<string, Array<string>>;
+export type MetaDirType = {
+  [string]: {
+    type: string;
+    tags: string[];
+  }
+};
 
 export interface UseMatchedType {
   saveMatchedNodesLink: (selection: any) => Promise<any>;

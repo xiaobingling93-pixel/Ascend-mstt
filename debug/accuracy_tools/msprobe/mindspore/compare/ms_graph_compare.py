@@ -168,8 +168,13 @@ class GraphMSComparator:
         self.output_path = output_path
         self.base_npu_path = input_param.get('npu_path', None)
         self.base_bench_path = input_param.get('bench_path', None)
-        self.rank_list = [convert_to_int(rank_id) for rank_id in input_param.get('rank_id', [])]
-        self.step_list = [convert_to_int(step_id) for step_id in input_param.get('step_id', [])]
+        rank_id_list = input_param.get('rank_id', [])
+        step_id_list = input_param.get('step_id', [])
+        if not isinstance(rank_id_list, list) or not isinstance(step_id_list, list):
+            logger.error("'rank_id' and 'step_id' should both be lists, please check!")
+            raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+        self.rank_list = [convert_to_int(rank_id) for rank_id in rank_id_list]
+        self.step_list = [convert_to_int(step_id) for step_id in step_id_list]
         # split by rank and step, generate rank step path
         self.npu_rank_step_dict = self.generate_rank_step_path(self.base_npu_path)
         self.bench_rank_step_dict = self.generate_rank_step_path(self.base_bench_path)
@@ -291,20 +296,8 @@ class GraphMSComparator:
             compare_result_df = self.do_multi_process(compare_result_df, mode)
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
-            self.to_excel(compare_result_df, compare_result_path)
-            logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
-
-    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0, need_slice=False) -> int:
-        size = len(compare_result_df)
-        # sheet size cannot be larger than 1048576
-        if size < CompareConst.MAX_EXCEL_LENGTH:
-            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if \
-                need_slice else compare_result_path
             save_excel(compare_result_path, compare_result_df)
-            return slice_num + 1
-        else:
-            slice_num = self.to_excel(compare_result_df.iloc[0: size // 2], compare_result_path, slice_num, True)
-            return self.to_excel(compare_result_df.iloc[size // 2:], compare_result_path, slice_num, True)
+            logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
@@ -326,7 +319,7 @@ class GraphMSComparator:
             bench_data_list.extend(data_list)
 
         if npu_mode == GraphMode.ERROR_MODE or bench_mode == GraphMode.ERROR_MODE:
-            logger.warning(f"Data_path {npu_data_path} or {bench_data_path} is not exist.")
+            logger.warning(f"Data path: npu_data_path or bench_data_path does not exist.")
             return [], ''
         if npu_mode != bench_mode:
             logger.error(f"NPU mode {npu_mode} not equal to MATCH mode {bench_mode}.")

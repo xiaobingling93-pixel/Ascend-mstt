@@ -22,6 +22,7 @@ from mindspore import nn
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import ThreadSafe
 from msprobe.mindspore.common.utils import is_mindtorch, register_backward_hook_functions
+from mindspore.common.api import _pynative_executor
 
 ms_version = ms.__version__
 
@@ -55,8 +56,9 @@ def __init__(self, hook_build_func) -> None:
             else:
                 self.register_forward_pre_hook(hook_set.forward_pre_hook)
                 self.register_forward_hook(hook_set.forward_hook)
-            register_backward_hook_functions["full"](self, hook_set.backward_hook)
-            register_backward_hook_functions["pre"](self, hook_set.backward_pre_hook)
+            if _pynative_executor.requires_grad():
+                register_backward_hook_functions["full"](self, hook_set.backward_hook)
+                register_backward_hook_functions["pre"](self, hook_set.backward_pre_hook)
 
 
 # 重载call，加全局标志。

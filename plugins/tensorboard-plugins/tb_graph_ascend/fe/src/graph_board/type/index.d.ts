@@ -53,6 +53,7 @@ export interface UseGraphType {
     bindOuterRect: (container: any, data: any) => void;
     bindText: (container: any, data: any) => void;
     preProcessData: (
+        hierarchyObject: { [key: string]: HierarchyNodeType },
         data: any[],
         selectedNode: string,
         config: PreProcessDataConfigType,

@@ -80,20 +80,6 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.mean, 2.0)
         self.assertEqual(result.norm, torch.norm(tensor).item())
 
-    def test_get_stat_info_float_async(self):
-        tensor = torch.tensor([1.0, 2.0, 3.0])
-        result = self.processor.get_stat_info_async(tensor)
-
-        result_max = result.max
-        result_min = result.min
-        result_mean = result.mean
-        result_norm = result.norm
-
-        self.assertEqual(result_max.item(), 3.0)
-        self.assertEqual(result_min.item(), 1.0)
-        self.assertEqual(result_mean.item(), 2.0)
-        self.assertEqual(result_norm.item(), torch.norm(tensor).item())
-
     def test_get_stat_info_int(self):
         tensor = torch.tensor([1, 2, 3], dtype=torch.int32)
         result = self.processor.get_stat_info(tensor)
@@ -102,20 +88,6 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.min, 1)
         self.assertEqual(result.mean, 2)
         self.assertEqual(result.norm, torch.norm(tensor.float()).item())
-
-    def test_get_stat_info_int_async(self):
-        tensor = torch.tensor([1, 2, 3])
-        result = self.processor.get_stat_info_async(tensor)
-
-        result_max = result.max
-        result_min = result.min
-        result_mean = result.mean
-        result_norm = result.norm
-
-        self.assertEqual(result_max.item(), 3.0)
-        self.assertEqual(result_min.item(), 1.0)
-        self.assertEqual(result_mean.item(), 2.0)
-        self.assertEqual(result_norm.item(), torch.norm(tensor.float()).item())
 
     def test_get_stat_info_empty(self):
         tensor = torch.tensor([])
@@ -132,16 +104,6 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.min, False)
         self.assertIsNone(result.mean)
         self.assertIsNone(result.norm)
-
-    def test_get_stat_info_bool_async(self):
-        tensor = torch.tensor([True, False, True])
-        result = self.processor.get_stat_info_async(tensor)
-
-        result_max = result.max
-        result_min = result.min
-
-        self.assertEqual(result_max.item(), True)
-        self.assertEqual(result_min.item(), False)
 
     def test_get_stat_info_with_scalar_tensor(self):
         scalar_tensor = torch.tensor(42.0)
@@ -368,16 +330,6 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result['dtype'], 'torch.float32')
         self.assertEqual(result['shape'], torch.Size([0]))
         self.assertEqual(result['requires_grad'], False)
-
-    def test_cast_to_float_if_fp8(self):
-        tensor = MagicMock()
-        tensor.dtype = "torch.float8_e5m2"
-        _, dtype = self.processor._cast_to_float_if_fp8(tensor)
-        self.assertEqual(dtype, "torch.float8_e5m2")
-
-        tensor.dtype = "torch.float8_e4m3fn"
-        _, dtype = self.processor._cast_to_float_if_fp8(tensor)
-        self.assertEqual(dtype, "torch.float8_e4m3fn")
 
 
 class TestTensorDataProcessor(unittest.TestCase):

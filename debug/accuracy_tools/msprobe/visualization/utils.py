@@ -20,6 +20,8 @@ import pickle
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.compare.utils import check_and_return_dir_contents
 
 
 def load_json_file(file_path):
@@ -102,6 +104,76 @@ def check_directory_content(input_path):
                      "all rank{number} named folders (such as rank0), or all files.")
 
 
+def extract_rank_number(rank_str):
+    try:
+        return int(rank_str[4:])
+    except ValueError:
+        return 0
+
+
+def sort_rank_number_strings(rank_number_strings):
+    sorted_list = sorted(rank_number_strings, key=extract_rank_number)
+    return sorted_list
+
+
+def check_whether_parallel_merge(input_param):
+    parallel_merge = input_param.get("parallel_merge")
+    if not isinstance(parallel_merge, dict) or not parallel_merge:
+        return False
+    if not parallel_merge.get('npu'):
+        return False
+    return True
+
+
+def load_parallel_param(input_param):
+    parallel_merge = input_param.get("parallel_merge", {})
+    config_n = parallel_merge.get('npu', {})
+    config_b = parallel_merge.get('bench', {})
+    return (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp')),) if not config_b else \
+        (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp'), config_n.get('vpp', 1)),
+         ParallelParam(config_b.get('rank_size'), config_b.get('tp'), config_b.get('pp'), config_b.get('vpp', 1)))
+
+
+def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
+    params = [parallel_param.tp, parallel_param.pp, parallel_param.rank_size]
+    ranks = check_and_return_dir_contents(dump_path, Const.RANK)
+    if len(ranks) != parallel_param.rank_size:
+        logger.error(f'{log_prefix} The parallel param "rank_size" error, '
+                     f'you set {parallel_param.rank_size} but expected {len(ranks)}.')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if any(x is None for x in params):
+        logger.error(f'{log_prefix} The parallel params "tp/pp/rank_size" must not be null!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if any(x <= 0 for x in params):
+        logger.error(f'{log_prefix} The parallel params "tp/pp/vpp/rank_size" must be greater than 0!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.tp > parallel_param.rank_size:
+        logger.error(f'{log_prefix} The parallel param "tp" must be less than or equal to "rank_size"!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.pp > parallel_param.rank_size:
+        logger.error(f'{log_prefix} The parallel param "pp" must be less than or equal to "rank_size"!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.rank_size % parallel_param.tp != 0:
+        logger.error(f'{log_prefix} The parallel param "rank_size" must be divisible by "tp"!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.rank_size % parallel_param.pp != 0:
+        logger.error(f'{log_prefix} The parallel param "rank_size" must be divisible by "pp"!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.tp * parallel_param.pp > parallel_param.rank_size:
+        logger.error(f'{log_prefix} The parallel params "tp * pp" must be less than or equal to "rank_size"!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if parallel_param.vpp > 1 and parallel_param.pp < 2:
+        logger.error(f'{log_prefix} When configuring the parallel param "vpp", the "pp" param must be greater than 1!')
+
+
+class ParallelParam:
+    def __init__(self, rank_size, tp, pp, vpp=1):
+        self.rank_size = rank_size
+        self.tp = tp
+        self.pp = pp
+        self.vpp = vpp
+
+
 class ToolTip:
     MAX_DIFF = 'NPU与标杆API统计信息比对，最大值的差值'
     MIN_DIFF = 'NPU与标杆API统计信息比对，最小值的差值'
@@ -151,6 +223,7 @@ class GraphConst:
     REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX
     SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
+    APIS_BETWEEN_MODULES_ALL_RANKS = 'Apis_Between_Modules_All_Ranks'
     NULL = 'null'
     NONE = 'None'
     VALUE = 'value'
@@ -185,8 +258,12 @@ class GraphConst:
     PEER = 'peer'
     GROUP_ID = 'group_id'
     
+    UNCERTAINTY_THRESHOLD = 1e-6
+    REDUCE_OPERATIONS = ['reduce_scatter', 'all_reduce']
+    
     IGNORE_PRECISION_INDEX = {'empty', 'empty_like', 'empty_with_format', 'new_empty_strided', 'new_empty',
                               'empty_strided'}
+    VPP_CHUNK_0 = '0'
 
 
 def is_serializable(obj):

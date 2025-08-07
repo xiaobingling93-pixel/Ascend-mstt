@@ -34,15 +34,15 @@ std::string MemCpyMetric::seriesToJson()
 void MetricMemCpyProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityMemcpy* kernel = ReinterpretConvert<msptiActivityMemcpy*>(record);
-    msptiActivityMemcpy* ptr = ReinterpretConvert<msptiActivityMemcpy*>(MsptiMalloc(sizeof(msptiActivityMemcpy), ALIGN_SIZE));
-    if (ptr == nullptr || memcpy_s(ptr, sizeof(msptiActivityMemcpy), kernel, sizeof(msptiActivityMemcpy)) != EOK) {
-        MsptiFree(ReinterpretConvert<uint8_t*>(ptr));
-        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+    std::shared_ptr<msptiActivityMemcpy> tmp;
+    MakeSharedPtr(tmp);
+    if (tmp == nullptr || memcpy_s(tmp.get(), sizeof(msptiActivityMemcpy), kernel, sizeof(msptiActivityMemcpy)) != EOK) {
+        LOG(ERROR) << "memcpy_s failed " << IPC_ERROR(ErrCode::MEMORY);
         return;
     }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
-        records.emplace_back(ptr);
+        records.emplace_back(std::move(tmp));
     }
 }
 

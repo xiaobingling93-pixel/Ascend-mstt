@@ -21,6 +21,8 @@ class Args:
     overflow_check: bool = False
     fuzzy_match: bool = False
     complete_stack: bool = False
+    parallel_merge: bool = False
+    parallel_params: tuple = None
 
 
 class TestGraphService(unittest.TestCase):

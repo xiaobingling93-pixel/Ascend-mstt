@@ -143,12 +143,12 @@ class TestConfigChecker(unittest.TestCase):
         total_check_result = read_xlsx(os.path.join(compare_output_dir, ConfigChecker.result_filename))
         self.assertEqual(total_check_result.columns.tolist(), ConfigChecker.result_header)
         target_total_check_result = [
-            ['env', False],
-            ['pip', False],
-            ['dataset', False],
-            ['weights', False],
-            ['hyperparameters', False],
-            ['random', False]
+            ['env', "error"],
+            ['pip', "error"],
+            ['dataset', "error"],
+            ['weights', "error"],
+            ['hyperparameters', "error"],
+            ['random', "error"]
         ]
         self.assertEqual(total_check_result.values.tolist(), target_total_check_result)
 

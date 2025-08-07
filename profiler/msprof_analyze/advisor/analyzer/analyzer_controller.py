@@ -267,7 +267,7 @@ class AnalyzerController:
 
         try:
             if output_path:
-
+                output_path = PathManager.get_realpath(output_path)
                 PathManager.check_input_directory_path(output_path)
                 if os.path.exists(output_path):
                     PathManager.check_path_owner_consistent([output_path])
@@ -713,12 +713,11 @@ class AnalyzerController:
             logger.info(
                 "Skip profiling comparison due to longer processing time due to env 'DISABLE_PROFILING_COMPARISON'")
             return job_list
-
+        kwargs = {}
         for index, _kwargs in enumerate(compare_profiling_list):
             kwargs = copy.deepcopy(self.kwargs)
             kwargs.update(_kwargs)
             compare_profiling_list[index] = kwargs
-
         compare_kwargs = {
             "profiling_path": kwargs.get("profiling_path"),
             "compare_profiling_list": compare_profiling_list,

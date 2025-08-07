@@ -69,7 +69,7 @@ else:
     }
     _supported_api_list_path = (os.path.join(cur_path, '../../../pytorch/hook_module',
                                              MsConst.SUPPORTED_API_LIST_FILE),)
-    _backlist = [f'{Const.PT_API_TYPE_TENSOR}.__setitem__']
+    _backlist = []
 
 _inner_used_api = {
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_OPS: (

@@ -20,14 +20,13 @@ from data.test_case_factory import TestCaseFactory
 
 
 @pytest.fixture(scope="function", autouse=True)
-def reset_global_state():
+def reset_global_state(request):
     """每个测试后重置全局状态"""
-    
     # 执行测试
     yield
-    
     # 恢复原始状态
-    GraphState.init_defaults()
+    if request.module.__name__ != "test_graph_views":
+        GraphState.init_defaults()
 
 
 def pytest_addoption(parser):

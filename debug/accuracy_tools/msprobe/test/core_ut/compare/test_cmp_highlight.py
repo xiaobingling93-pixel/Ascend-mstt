@@ -13,9 +13,10 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 
 from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.compare.highlight import ApiBatch, CheckMaxRelativeDiff, CheckOrderMagnitude, \
+from msprobe.core.compare.highlight import CheckMaxRelativeDiff, CheckOrderMagnitude, \
     CheckOneThousandErrorRatio, CheckCosineSimilarity, add_highlight_row_info, HighLight
 from msprobe.core.compare.config import ModeConfig
+from msprobe.core.compare.utils import ApiBatch
 
 
 summary_line_input = ['Functional_batch_norm_0_forward.input.0', 'Functional_batch_norm_0_forward.input.0',
@@ -37,19 +38,19 @@ summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
               'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0.5, 1, 1, 0.95, 1,
               1, 1, 1, 1, 1.01, 1, 1, 1,
-              'Yes', '']
+              'Yes', '', 'input', 'Functional.batch.norm.0.forward']
 line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1, 1, 0.59, 1,
           'nan', 0, 1, 1, 19, 1, 1, 1,
-          'Yes', '']
+          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.9, 0.5, 1, 1, 0.8, 1,
           0, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '']
+          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 0.5, 1.1e+10, 1, 0.85, 1,
           9, 0.12, 0, 1, 1, 0.1, 1, 1,
-          'Yes', '']
+          'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
 
@@ -209,87 +210,6 @@ class TestUtilsMethods(unittest.TestCase):
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
-
-    def test_ApiBatch_increment_input(self):
-        api_name = "functional.conv2d"
-        start = 2
-        api_batch = ApiBatch(api_name, start)
-
-        api_batch.increment(Const.INPUT)
-
-        self.assertEqual(api_batch._state, Const.INPUT)
-        self.assertEqual(api_batch.input_len, 2)
-        self.assertEqual(api_batch.params_end_index, 4)
-        self.assertEqual(api_batch.output_end_index, 4)
-        self.assertEqual(api_batch.params_grad_end_index, 4)
-
-    def test_ApiBatch_increment_output(self):
-        api_name = "functional.conv2d"
-        start = 2
-        api_batch = ApiBatch(api_name, start)
-
-        api_batch.increment(Const.OUTPUT)
-
-        self.assertEqual(api_batch._state, Const.OUTPUT)
-        self.assertEqual(api_batch.input_len, 1)
-        self.assertEqual(api_batch.params_end_index, 3)
-        self.assertEqual(api_batch.output_end_index, 4)
-        self.assertEqual(api_batch.params_grad_end_index, 4)
-
-    def test_ApiBatch_increment_kwargs(self):
-        api_name = "functional.conv2d"
-        start = 2
-        api_batch = ApiBatch(api_name, start)
-
-        api_batch.increment(Const.KWARGS)
-
-        self.assertEqual(api_batch._state, Const.KWARGS)
-        self.assertEqual(api_batch.input_len, 2)
-        self.assertEqual(api_batch.params_end_index, 4)
-        self.assertEqual(api_batch.output_end_index, 4)
-        self.assertEqual(api_batch.params_grad_end_index, 4)
-
-    def test_ApiBatch_increment_params(self):
-        api_name = "functional.conv2d"
-        start = 2
-        api_batch = ApiBatch(api_name, start)
-
-        api_batch.increment(Const.PARAMS)
-
-        self.assertEqual(api_batch._state, Const.PARAMS)
-        self.assertEqual(api_batch.input_len, 1)
-        self.assertEqual(api_batch.params_end_index, 4)
-        self.assertEqual(api_batch.output_end_index, 4)
-        self.assertEqual(api_batch.params_grad_end_index, 4)
-
-    def test_ApiBatch_increment_multiple_input(self):
-        api_name = "functional.conv2d"
-        start = 2
-        api_batch = ApiBatch(api_name, start)
-
-        api_batch.increment(Const.INPUT)
-        api_batch.increment(Const.INPUT)
-
-        self.assertEqual(api_batch._state, Const.INPUT)
-        self.assertEqual(api_batch.input_len, 3)
-        self.assertEqual(api_batch.params_end_index, 5)
-        self.assertEqual(api_batch.output_end_index, 5)
-        self.assertEqual(api_batch.params_grad_end_index, 5)
-
-    def test_ApiBatch_increment_multiple_output(self):
-        api_name = "functional.conv2d"
-        start = 2
-        api_batch = ApiBatch(api_name, start)
-
-        api_batch.increment(Const.OUTPUT)
-        api_batch.increment(Const.OUTPUT)
-
-        self.assertEqual(api_batch._state, Const.OUTPUT)
-        self.assertEqual(api_batch.input_len, 1)
-        self.assertEqual(api_batch.params_end_index, 3)
-        self.assertEqual(api_batch.output_end_index, 5)
-        self.assertEqual(api_batch.params_grad_end_index, 5)
-
 
     def test_find_error_rows_normal(self):
         compare_result = np.array([
@@ -458,13 +378,6 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_err_msg = "highlight"
         add_highlight_row_info(color_list, num, highlight_err_msg)
         self.assertEqual(color_list, [(1, ["a", "b"]), (5, ["c", "highlight"])])
-
-    def test_add_highlight_row_info_new(self):
-        color_list = [(1, ["a", "b"]), (5, ["c"])]
-        num = 6
-        highlight_err_msg = "highlight"
-        add_highlight_row_info(color_list, num, highlight_err_msg)
-        self.assertEqual(color_list, [(1, ["a", "b"]), (5, ["c"]), (6, ["highlight"])])
 
     def test_update_highlight_err_msg(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',

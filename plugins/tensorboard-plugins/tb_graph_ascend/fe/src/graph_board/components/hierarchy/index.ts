@@ -157,6 +157,9 @@ class Hierarchy extends PolymerElement {
     @property({ type: Boolean })
     minimapVis: boolean = true;
 
+    @property({ type: Boolean })
+    isSyncExpand: boolean = true;
+
     @property({ type: Object })
     contextMenuItems: Array<ContextMenuItem> = [];
 
@@ -228,16 +231,16 @@ class Hierarchy extends PolymerElement {
         const newTransform = d3.zoomIdentity
             .translate(initialTransform.x, initialTransform.y)
             .scale(initialTransform.scale);
-        const mainZoom = d3.zoom().on('zoom', () => {
-            this._zoomTransform = (d3 as any).event.transform;
+        const mainZoom = d3.zoom().on('zoom', (event: d3.D3ZoomEvent<SVGElement, unknown>) => {
+            this._zoomTransform = event.transform;
             if (!this._zoomStartCoords) {
                 this._zoomStartCoords = this._zoomTransform;
             }
             if (this.container) {
-                d3.select(this.container as HTMLElement).attr('transform', (d3 as any).event.transform.toString());
+                d3.select(this.container as HTMLElement).attr('transform', event.transform.toString());
             }
             this.renderGraph(this.hierarchyData, this.hightLightNodeName);
-            this.minimap?.zoom((d3 as any).event.transform); // Notify the minimap.
+            this.minimap?.zoom(event.transform); // Notify the minimap.
         });
 
         this.minimap = (minimapEle as any)?.init(this.graph, this.container, mainZoom, 160, 10);
@@ -253,7 +256,7 @@ class Hierarchy extends PolymerElement {
         const prefix = PREFIX_MAP[this.graphType];
         const selectedNodeName = selectedNode.startsWith(prefix) ? selectedNode : `${prefix}${selectedNode}`; // 加上前缀
         const config = { colors: this.colors, isOverflowFilter: this.isOverflowFilter, graphType: this.graphType };
-        const renderData = this.useGraph.preProcessData(data, selectedNodeName, config, transform);
+        const renderData = this.useGraph.preProcessData(this.hierarchyObject, data, selectedNodeName, config, transform);
         this.useGraph.bindInnerRect(container, renderData);
         this.useGraph.bindOuterRect(container, renderData);
         this.useGraph.bindText(container, renderData);
@@ -405,29 +408,12 @@ class Hierarchy extends PolymerElement {
             if (item.type === EXPAND_MATCHED_NODE) {
                 // 如果当前节点未匹配，则找到其相邻的匹配父节点
                 const tempSelectedNode = this.selectedNode;
-                let nodeName = tempSelectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
-                let selectedNode = this.hierarchyObject[nodeName];
-                while (isEmpty(selectedNode?.matchedNodeLink) && selectedNode?.parentNode) {
-                    nodeName = selectedNode.parentNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
-                    selectedNode = this.hierarchyObject[nodeName];
-                }
-                if (!isEmpty(selectedNode?.matchedNodeLink)) {
-                    let matchedNodeName = selectedNode.matchedNodeLink[selectedNode.matchedNodeLink.length - 1];
-                    const matchedPrefix = this.graphType === 'NPU' ? BENCH_PREFIX : NPU_PREFIX;
-                    matchedNodeName = matchedNodeName.startsWith(matchedPrefix)
-                        ? matchedNodeName
-                        : matchedPrefix + matchedNodeName; // 加上前缀
-                    this.set('selectedNode', matchedNodeName); // 选中对应测节点就能触发展开和选中
-                    this.set('hightLightNodeName', selectedNode.name)
-                    const transform = this.changeNodeCenter(selectedNode.name);
-                    this.renderGraph(this.hierarchyData, selectedNode.name, transform); // 更新selectedNode 会导致当前节点失去高亮显示
-                } else {
-                    Notification.show(`展开失败：当前节点及其父节点无匹配节点`, {
-                        position: 'middle',
-                        duration: 3000,
-                        theme: 'error',
-                    });
-                }
+                this.findMatchedNodeName(tempSelectedNode);
+                const { matchedNodeName, selectedNode } = this.findMatchedNodeName(tempSelectedNode);
+                this.set('selectedNode', matchedNodeName); // 选中对应测节点就能触发展开和选中
+                this.set('hightLightNodeName', selectedNode?.name)
+                const transform = this.changeNodeCenter(selectedNode.name);
+                this.renderGraph(this.hierarchyData, selectedNode.name, transform); // 更新selectedNode 会导致当前节点失去高亮显示
             }
             // 数据通信节点右键菜单
             if (item.type === DATA_COMMUNICATION) {
@@ -499,8 +485,27 @@ class Hierarchy extends PolymerElement {
     bindChangeNodeExpandStateEvent(container) {
         const onDoubleClickNodeEvent = async (event) => {
             event.preventDefault();
-            const target: HTMLElement = event.target as HTMLElement;
-            const selectedNode = target.getAttribute('name');
+            let target;
+            let selectedNode;
+            //判断是点击展开，还是同步展开
+            const isClickGraph = isEmpty(event.detail?.nodeName);
+            if (isClickGraph) {
+                target = event.target as HTMLElement;
+                selectedNode = target.getAttribute('name');
+            }
+            else {
+                selectedNode = event.detail.nodeName;
+                selectedNode = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')
+                const graphType = event.detail.graphType;
+
+                const orginNodeExpandState = event.detail.nodeExpandState;
+                const targetNodeExpandState = this.hierarchyObject[selectedNode]?.expand;
+                //也会触发当前侧图展开才操作，所以需要判断一下
+                //保持展开状态同步,如果一侧展开，一侧为展开，则不触发对应测的展开或者收起的操作
+                if (graphType === this.graphType || (orginNodeExpandState === targetNodeExpandState)) {
+                    return;
+                }
+            }
             const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), ''); // 去掉前缀
             if (nodeName === this.rootName) {
                 return;
@@ -513,6 +518,21 @@ class Hierarchy extends PolymerElement {
                 return;
             }
             await this.changeNodeExpandState(nodeInfo);
+            // 如果是点击展开，触发同步展开事件，通知展开对应节点
+            if (isClickGraph && this.isSyncExpand && this.graphType !== "Single") {
+
+                const findRes = this.findMatchedNodeName(nodeName);
+                const changeMatchNodeExpandState = new CustomEvent('changeMatchNodeExpandState', {
+                    detail: {
+                        nodeName: findRes.matchedNodeName, // 通知通信图展开对应节点
+                        nodeExpandState: findRes?.selectedNode?.expand,
+                        graphType: this.graphType,
+                    },
+                    bubbles: true, // 允许事件冒泡
+                    composed: true, // 允许跨 Shadow DOM 边界
+                });
+                this.dispatchEvent(changeMatchNodeExpandState);
+            }
             const transform = this.changeNodeCenter(nodeName);
             this.renderGraph(this.hierarchyData, this.hightLightNodeName, transform);
         };
@@ -520,11 +540,13 @@ class Hierarchy extends PolymerElement {
             event.preventDefault();
         };
         const throttleDoubleClickNodeEvent = throttle(onDoubleClickNodeEvent, 16);
+        document.addEventListener('changeMatchNodeExpandState', throttleDoubleClickNodeEvent);
         container.addEventListener('dblclick', throttleDoubleClickNodeEvent);
         this.graph?.addEventListener('dblclick', onDoubleClickGraphEvent); // 防止双击选中文本
         return () => {
             container.removeEventListener('dblclick', throttleDoubleClickNodeEvent);
             this.graph?.removeEventListener('dblclick', onDoubleClickGraphEvent);
+            document.removeEventListener('changeMatchNodeExpandState', throttleDoubleClickNodeEvent);
         };
     }
 
@@ -714,5 +736,36 @@ class Hierarchy extends PolymerElement {
             });
         }
         return { success, data, error };
+    }
+    /**
+     * 寻找目标节点的匹配节点
+     * @param tempSelectedNode 目标节点
+     * @returns 
+     * matchedNodeName: 匹配节点名称
+     * selectedNode: 目标节点信息
+     */
+
+    findMatchedNodeName(tempSelectedNode) {
+        let nodeName = tempSelectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
+        let selectedNode = this.hierarchyObject[nodeName];
+        while (isEmpty(selectedNode?.matchedNodeLink) && selectedNode?.parentNode) {
+            nodeName = selectedNode.parentNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '');
+            selectedNode = this.hierarchyObject[nodeName];
+        }
+        if (!isEmpty(selectedNode?.matchedNodeLink)) {
+            let matchedNodeName = selectedNode.matchedNodeLink[selectedNode.matchedNodeLink.length - 1];
+            const matchedPrefix = this.graphType === 'NPU' ? BENCH_PREFIX : NPU_PREFIX;
+            matchedNodeName = matchedNodeName.startsWith(matchedPrefix)
+                ? matchedNodeName
+                : matchedPrefix + matchedNodeName; // 加上前缀
+            return { matchedNodeName, selectedNode };
+        } else {
+            Notification.show(`展开失败：当前节点及其父节点无匹配节点`, {
+                position: 'middle',
+                duration: 3000,
+                theme: 'error',
+            });
+            return { matchedNodeName: '', selectedNode: {} as HierarchyNodeType };
+        }
     }
 }

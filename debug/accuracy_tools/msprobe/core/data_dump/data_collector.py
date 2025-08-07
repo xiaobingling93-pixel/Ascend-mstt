@@ -121,10 +121,13 @@ class DataCollector:
             self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
+        except Exception as e:
+            # 取异常类名作为“类型”做去重
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_input_data_collect failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] forward_input_data_collect failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -142,10 +145,13 @@ class DataCollector:
                 return
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
+        except Exception as e:
+            # 取异常类名作为“类型”做去重
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_output_data_collect failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] forward_output_data_collect failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def forward_data_collect_only_tensor(self, name, module, pid, module_input_output):
@@ -154,10 +160,13 @@ class DataCollector:
                 return
             self.data_processor.analyze_forward(name, module, module_input_output)
 
-        except Exception:
+        except Exception as e:
+            # 取异常类名作为“类型”做去重
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] forward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -173,10 +182,12 @@ class DataCollector:
             self.call_stack_collect(name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] forward_data_collect failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] forward_data_collect failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def backward_data_collect_only_tensor(self, name, module, pid, module_input_output, is_recompute=None):
@@ -185,10 +196,12 @@ class DataCollector:
                 return
             self.data_processor.analyze_backward(name, module, module_input_output)
 
-        except Exception:
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -206,10 +219,12 @@ class DataCollector:
                 self.backward_module_names[module_name] = True
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception:
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_data_collect failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] backward_data_collect failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def backward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -223,10 +238,12 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
 
-        except Exception:
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_input_data_collect failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] backward_input_data_collect failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def backward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
@@ -240,10 +257,12 @@ class DataCollector:
             self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
 
-        except Exception:
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
-                f"[ERROR] backward_output_data_collect failed: name={name}, pid={pid}\n{tb}"
+                f"[ERROR] backward_output_data_collect failed: name={name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def update_construct(self, name):
@@ -291,11 +310,13 @@ class DataCollector:
                 return
             data_info = self.data_processor.analyze_params(grad_name, param_name, data)
             self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
-        except Exception:
+        except Exception as e:
+            error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] params_data_collect failed: "
-                f"name={name}, param_name={param_name}, pid={pid}\n{tb}"
+                f"name={name}, param_name={param_name}, pid={pid}\n{tb}",
+                error_type=error_type
             )
 
     def debug_data_collect_forward(self, variable, name_with_count):

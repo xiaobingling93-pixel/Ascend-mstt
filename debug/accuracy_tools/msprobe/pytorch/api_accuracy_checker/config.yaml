@@ -2,9 +2,4 @@ white_list: []
 black_list: []
 error_data_path: './'
 precision: 14
-is_online: False
-nfs_path: ""
-host: ""
-port: -1
-rank_list: [0]
-tls_path: "./"
+

@@ -66,13 +66,6 @@ class Comparator:
         self.save_path_list = [result_csv_path]
         self.detail_save_path_list = [details_csv_path]
 
-        if config and config.online_config.is_online:
-            self.save_path_str = result_csv_path.replace(".csv", "_rank{}.csv")
-            self.detail_save_path_str = details_csv_path.replace(".csv", "_rank{}.csv")
-            self.save_path_list = [self.save_path_str.format(rank) for rank in config.online_config.rank_list]
-            self.detail_save_path_list = \
-                [self.detail_save_path_str.format(rank) for rank in config.online_config.rank_list]
-
         self.registry = self._register_compare_func()
 
         if not is_continue_run_ut:
@@ -245,9 +238,8 @@ class Comparator:
         self.write_detail_csv(args)
 
 
-    def compare_output(self, full_api_name, data_info, is_online=False):
+    def compare_output(self, full_api_name, data_info):
         """Get compare result and write to result and detail csv.
-        is_online: bool, default False. True: called by online api precision compare, only compare without write to csv.
         """
         _, api_name = extract_basic_api_segments(full_api_name)
         if not api_name:
@@ -280,9 +272,7 @@ class Comparator:
                                  fwd_compare_alg_results,
                                  bwd_compare_alg_results,
                                  data_info.rank)
-        if is_online:
-            # get run_ut compare detail
-            return self._get_run_ut_detail(result_info)
+
         self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE

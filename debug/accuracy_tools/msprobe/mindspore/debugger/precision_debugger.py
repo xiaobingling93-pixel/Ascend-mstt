@@ -17,6 +17,7 @@ import os
 from collections import defaultdict, namedtuple
 
 import mindspore as ms
+from mindspore.ops.operations import _inner_ops as inner
 from mindspore._c_expression import MSContext
 
 from msprobe.core.common.const import Const, MsgConst
@@ -28,7 +29,8 @@ from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.utils import (
     set_register_backward_hook_functions,
     check_save_param,
-    is_graph_mode_cell_dump_allowed
+    is_graph_mode_cell_dump_allowed,
+    wrap_backward_hook_call_func
 )
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.graph_mode_cell_dump import GraphModeCellDump
@@ -76,6 +78,12 @@ class PrecisionDebugger(BasePrecisionDebugger):
         self.common_config.level = level if level else self.common_config.level
         self.common_config.dump_path = dump_path if dump_path else self.common_config.dump_path
         self.config = DebuggerConfig(self.common_config, self.task_config)
+
+        if self._is_kernel_dump() and not self.task_config.is_regex_valid:
+            raise ValueError('Illegal regular expressions exist in the list.')
+
+        setattr(inner.CellBackwardHook, '__call__',
+                wrap_backward_hook_call_func(getattr(inner.CellBackwardHook, '__call__')))
 
         if self._is_kernel_dump() and _msprobe_c:
             os.environ["MS_HOOK_ENABLE"] = "on"
@@ -157,7 +165,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
                 instance.service.stop()
         else:
             Runtime.is_running = False
-        if enable_dynamic_kbyk_dump:
+        if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
             _dump_stop()
         if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
@@ -173,7 +181,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
                 instance.service.step()
         if is_graph_mode_cell_dump_allowed(instance.config):
             GraphModeCellDump.step()
-        if enable_dynamic_kbyk_dump:
+        if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
             _dump_step(1)
         if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().step()
@@ -204,12 +212,9 @@ class PrecisionDebugger(BasePrecisionDebugger):
             check_save_param(variable, name, save_backward)
         except ValueError:
             return
-
-        instance.config.execution_mode = cls._get_execution_mode()
-        if cls._need_service():
-            if not instance.service:
-                instance.service = MindsporeService(instance.config)
-            instance.service.save(variable, name, save_backward)
+        if not instance.service:
+            instance.service = MindsporeService(instance.config)
+        instance.service.save(variable, name, save_backward)
 
     @classmethod
     def _need_service(cls):
@@ -217,7 +222,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.config.level_ori == Const.LEVEL_L2:
-            return False
+            return not instance._is_graph_dump(instance.config)
         if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
             return False
         else:

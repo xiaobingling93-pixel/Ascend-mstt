@@ -94,18 +94,25 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 
 def read_op(op_data, op_name):
+    if not isinstance(op_name, str):
+        logger.error(f"api name error: {op_name} is not a string, please check.")
+        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
     split_name = op_name.split(Const.SEP)
-    if Const.DEBUG in split_name or Const.PARAMS_GRAD in split_name:
-        op_parsed_list = op_item_parse(op_data, op_name)
+    if split_name[-1] == Const.DEBUG:
+        op_parsed_list = op_item_parse(op_data, op_name, Const.DEBUG)
+    elif split_name[-1] == Const.PARAMS_GRAD:
+        op_parsed_list = op_item_parse(op_data, op_name, Const.PARAMS_GRAD)
     else:
         op_parsed_list = []
         for name in CompareConst.IO_NAME_MAPPING:
             if name in op_data:
-                op_parsed_list.extend(op_item_parse(op_data[name], op_name + CompareConst.IO_NAME_MAPPING[name]))
+                op_parsed_list.extend(op_item_parse(op_data[name], op_name + CompareConst.IO_NAME_MAPPING[name], name))
     return op_parsed_list
 
 
-def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
+def op_item_parse(op_data, op_name: str, state: str, depth: int = 0) -> list:
+    if state == Const.INPUT_ARGS or state == Const.INPUT_KWARGS:
+        state = Const.INPUT
     default_item = {
         'full_op_name': op_name,
         'type': None,
@@ -117,7 +124,8 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
         'shape': None,
         'md5': None,
         'value': None,
-        'data_name': '-1'
+        'data_name': '-1',
+        'state': state
     }
 
     if depth > Const.MAX_DEPTH:
@@ -133,14 +141,14 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
     if isinstance(op_data, list):
         for i, data in enumerate(op_data):
             if Const.PARAMS_GRAD not in op_name.split(Const.SEP):
-                item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+                item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), state, depth + 1))
             else:
-                item_list.extend(op_item_parse(data, op_name, depth + 1))
+                item_list.extend(op_item_parse(data, op_name, state, depth + 1))
     elif isinstance(op_data, dict):
         if is_leaf_data(op_data):
-            return [gen_op_item(op_data, op_name)]
+            return [gen_op_item(op_data, op_name, state)]
         for sub_name, sub_data in op_data.items():
-            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), depth + 1))
+            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), state, depth + 1))
     return item_list
 
 
@@ -148,18 +156,21 @@ def is_leaf_data(op_data):
     return 'type' in op_data and isinstance(op_data['type'], str)
 
 
-def gen_op_item(op_data, op_name):
+def gen_op_item(op_data, op_name, state):
     op_item = {}
-    op_item.update(op_data)
-    data_name = op_data.get('data_name') if op_data.get('data_name') else '-1'  # 如果是""也返回-1
-    op_item['data_name'] = data_name
+    op_item.update({key: str(value) if isinstance(value, bool) else value for key, value in op_data.items()})
+    data_name = op_data.get(Const.DATA_NAME) if op_data.get(Const.DATA_NAME) else '-1'  # 如果是""也返回-1
+    op_item[Const.DATA_NAME] = data_name
     op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
+    op_item[Const.STATE] = state
 
-    params = ['Max', 'Min', 'Mean', 'Norm']
+    # 补齐统计量字段
+    params = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     for i in params:
         if i not in op_item:
             op_item[i] = None
 
+    # special cases
     if not op_item.get('dtype'):
         if op_item.get('type') == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
@@ -172,11 +183,18 @@ def gen_op_item(op_data, op_name):
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = op_data.get('value')
+        elif op_name.split(Const.SEP)[-1] in ['src', 'dst', 'group_src', 'group_dst']:
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = '[]'
+            for i in params:
+                op_item[i] = str(op_data.get('value'))
+            op_item['md5'] = str(op_data.get('value'))
         elif op_item.get('type') == 'torch.ProcessGroup':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = '[]'
             for i in params:
                 op_item[i] = str(op_data.get('group_ranks'))
+            op_item['md5'] = str(op_data.get('group_ranks'))
         else:
             op_item['dtype'] = str(type(op_data.get('value')))
             op_item['shape'] = '[]'
@@ -205,7 +223,8 @@ def merge_tensor(tensor_list, dump_mode):
         CompareConst.PARAMS_GRAD_STRUCT,
         CompareConst.DEBUG_STRUCT,
         Const.SUMMARY,
-        Const.STACK_INFO
+        Const.STACK_INFO,
+        Const.STATE
     ]
     op_dict = {key: [] for key in keys}
 
@@ -215,12 +234,13 @@ def merge_tensor(tensor_list, dump_mode):
     for tensor in tensor_list:
         # A dict(len=2) with 'full_op_name' and 'full_info' is added to the tensor only if self.stack_mode is True
         if len(tensor) == 2:
-            op_dict[Const.STACK_INFO].append(tensor['full_info'])
+            op_dict[Const.STACK_INFO].append(tensor.get('full_info'))
             break
 
-        op_dict[CompareConst.OP_NAME].append(tensor['full_op_name'])
+        op_dict[CompareConst.OP_NAME].append(tensor.get('full_op_name'))
+        state = tensor.get(Const.STATE)
+        op_dict[Const.STATE].append(state)
 
-        _, state = get_name_and_state(tensor['full_op_name'])
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
         if not struct_key:
             continue
@@ -266,83 +286,109 @@ def table_value_is_valid(value: str) -> bool:
     return True
 
 
-def get_name_and_state(name):
+class ApiBatch:
+    def __init__(self, api_name: str, start: int):
+        self.api_name = api_name
+        self.start = start
+        self.input_len = 1  # input的数量
+        self.params_end_index = start + 1  # params的结束index
+        self.output_end_index = start + 1  # output的结束index
+        self.params_grad_end_index = start + 1  # params_grad的结束index
+        # 内部state的标志("input", "output", "parameters", "parameters_grad"),
+        # 用于控制计算input_len, output_end_index, params_end_index, self.params_grad_end_index
+        self._state = Const.INPUT  # api_batch初始化为input
+
+    def set_state(self, state: str):
+        """设置当前状态"""
+        if state in {Const.INPUT, Const.OUTPUT, Const.KWARGS, Const.PARAMS, Const.PARAMS_GRAD}:
+            self._state = state
+        else:
+            raise ValueError(f"Invalid state: {state}")
+
+    def increment(self, state: str):
+        self.set_state(state)
+        if self._state == Const.INPUT or self._state == Const.KWARGS:
+            self.input_len += 1
+            self.params_end_index += 1
+            self.output_end_index += 1
+        if self._state == Const.PARAMS:
+            self.params_end_index += 1
+            self.output_end_index += 1
+        if self._state == Const.OUTPUT:
+            self.output_end_index += 1
+        self.params_grad_end_index += 1
+
+
+def api_batches_update(api_batches, api_name, state, index):
     """
-    Get api/module name and state
-    example:
-    name = 'conv2d.forward.1.input.0'
-    return: ('conv2d.forward.1.', 'input')
-
-    name = 'Functional.pad.0.backward.output.0'
-    return: ('Functional.pad.0.backward.', 'output')
-
-    name = 'x_tensor.0.debug.{index}'
-    return: ('x_tensor.0.', 'debug')
-
-    state type: input, output, kwargs, parameters, parameters_grad, debug
+    当一个api的所有item更新完后，input, output的索引范围：
+    input: [start: start+input_len]
+    output: [start+input_len: output_end_index]
+    params: [output_end_index: params_end_index]
     """
-    if not isinstance(name, str):
-        logger.error(f'Invalid name: {name}, type should be string, please check.')
-        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
-
-    if Const.DEBUG in name.split(Const.SEP):
-        return name.split(Const.DEBUG)[0], Const.DEBUG
-    if Const.PARAMS_GRAD in name.split(Const.SEP):
-        return name.split(Const.PARAMS_GRAD)[0], Const.PARAMS_GRAD
-
-    split = re.split(Const.REGEX_FORWARD_BACKWARD, name)
-    if len(split) < 3:
-        logger.error(f'Invalid name string: {name}, can not be split by forward/backward, please check.')
-        raise CompareException(CompareException.INVALID_API_NAME_ERROR)
-    api = f'{split[0]}.{split[1]}.'
-    state_str = split[2]
-    match = re.match(r'^(\d+\.)?(input|output|kwargs|parameters)\..+$', state_str)
-    if not match:
-        raise CompareException(f'Invalid name string: {name}')
-    if match.group(1):
-        api = f'{api}{match.group(1)}'
-    state = match.group(2)
-    return api, state
+    if not api_batches:
+        api_batches.append(ApiBatch(api_name, index))
+    else:
+        api_batch = api_batches[-1]
+        if api_batch.api_name == api_name or (
+                not re.search(Const.REGEX_FORWARD_BACKWARD, api_name) and api_name in api_batch.api_name):
+            try:
+                api_batch.increment(state)
+            except ValueError as e:
+                logger.error(f"api_batch: {api_batch} with invalid state, please check! {e}")
+                raise CompareException(CompareException.INVALID_STATE_ERROR) from e
+        else:
+            api_batches.append(ApiBatch(api_name, index))
 
 
-def reorder_op_name_list(op_name_list):
+def reorder_op_name_list(op_name_list, state_list):
     if not op_name_list:
-        return op_name_list
+        return op_name_list, state_list
 
     parameters = []
     output = []
     parameters_grad = []
     others = []
-    for x in op_name_list:
-        state = get_name_and_state(x)[1]
+    parameters_s = []
+    output_s = []
+    parameters_grad_s = []
+    others_s = []
+    for op_name, state in zip(op_name_list, state_list):
         if state == Const.PARAMS:
-            parameters.append(x)
+            parameters.append(op_name)
+            parameters_s.append(state)
         elif state == Const.OUTPUT:
-            output.append(x)
+            output.append(op_name)
+            output_s.append(state)
         elif state == Const.PARAMS_GRAD:
-            parameters_grad.append(x)
+            parameters_grad.append(op_name)
+            parameters_grad_s.append(state)
         else:
-            others.append(x)
+            others.append(op_name)
+            others_s.append(state)
     # 合并others, parameters, 和output，确保parameters排在output前面
     op_name_reorder = others + parameters + output + parameters_grad
-    return op_name_reorder
+    state_reorder = others_s + parameters_s + output_s + parameters_grad_s
+    return op_name_reorder, state_reorder
 
 
-def reorder_op_x_list(op_name_list, summary_list, data_name_list):
-    """对op_name, summary, data_name重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理"""
+def reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list):
+    """
+    对op_name, summary, data_name, state重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理
+    """
     if not op_name_list or not summary_list:
-        return op_name_list, summary_list, data_name_list
+        return op_name_list, summary_list, data_name_list, state_list
 
     index_map = {name: index for index, name in enumerate(op_name_list)}
 
-    op_name_reorder = reorder_op_name_list(op_name_list)
+    op_name_reorder, state_order = reorder_op_name_list(op_name_list, state_list)
     summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
     if data_name_list:
         data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
     else:
         data_name_reorder = data_name_list
 
-    return op_name_reorder, summary_reorder, data_name_reorder
+    return op_name_reorder, summary_reorder, data_name_reorder, state_order
 
 
 def process_summary_data(summary_data):
@@ -549,6 +595,15 @@ def make_result_table(result, dump_mode, stack_mode):
     return result_df
 
 
+def gen_api_batches(result: np.ndarray):
+    api_batches = []
+    for i, res_i in enumerate(result):
+        api_name = safe_get_value(res_i, -1, "res_i")  # 内部定义倒数第一个元素必是api_origin_name
+        state = safe_get_value(res_i, -2, "res_i")  # 内部定义倒数第二个元素必是state
+        api_batches_update(api_batches, api_name, state, i)
+    return api_batches
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
@@ -561,6 +616,8 @@ def _compare_parser(parser):
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-hl", "--highlight", dest="highlight", action="store_true",
+                        help="<optional> Whether to set result highlighting.", required=False)
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
@@ -572,6 +629,9 @@ def _compare_parser(parser):
 
 
 def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
+    if not isinstance(kwargs.get('first_diff_analyze', False), bool):
+        logger.error('kwargs: first_diff_analyze should be bool, please check!')
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
     if kwargs.get('suffix'):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -591,7 +651,7 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
             npu_path = extract_json(npu_data_dir, file_type)
             bench_path = extract_json(bench_data_dir, file_type)
             if npu_path == "" or bench_path == "":
-                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
+                logger.debug(f'Did not find paired {file_type} in {nr} and {br},'
                              ' skip comparing.')
                 continue
             dump_result_param = {

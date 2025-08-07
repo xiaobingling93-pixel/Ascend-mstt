@@ -24,8 +24,10 @@ export interface ProgressType {
 export interface SelectionType {
     run: string;
     tag: string;
-    microStep: number;
-
+    type: string;
+    microStep?: number;
+    step?: string;
+    rank?: string;
 }
 
 export interface GraphConfigType {

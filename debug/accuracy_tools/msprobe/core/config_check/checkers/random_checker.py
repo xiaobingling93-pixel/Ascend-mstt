@@ -331,7 +331,7 @@ class RandomChecker(BaseChecker):
         cmp_stats_path = os.path.join(cmp_dir, RandomChecker.target_name_in_zip)
         
         df = compare_random_calls(bench_stats_path, cmp_stats_path)
-        pass_check = False not in df['check_result'].values
+        pass_check = Const.CONFIG_CHECK_PASS if False not in df['check_result'].values else Const.CONFIG_CHECK_ERROR
         
         return RandomChecker.target_name_in_zip, pass_check, df
 

@@ -15,6 +15,9 @@
 # ==============================================================================
 
 # 全局常量
+from enum import Enum
+
+
 ADD_MATCH_KEYS = [
     'MaxAbsErr',
     'MinAbsErr',
@@ -46,6 +49,12 @@ API = 1
 MULTI_COLLECTION = 8
 API_LIST = 9
 
+# 计算指标
+MAX_RELATIVE_ERR = "0"
+MIN_RELATIVE_ERR = "1"
+MEAN_RELATIVE_ERR = "2"
+NORM_RELATIVE_ERR = "3"
+
 
 class GraphState:
     # 模块级全局变量
@@ -53,7 +62,6 @@ class GraphState:
         'logdir': '',
         'current_tag': '',
         'current_run': '',
-        'current_file_path': '',
         'current_file_data': {},
         'current_hierarchy': {},
         'config_data': {
@@ -79,7 +87,6 @@ class GraphState:
             'logdir': '',
             'current_tag': '',
             'current_run': '',
-            'current_file_path': '',
             'current_file_data': {},
             'current_hierarchy': {},
             'config_data': {
@@ -115,3 +122,13 @@ class GraphState:
         重置所有全局变量为默认值
         """
         GraphState.init_defaults()
+
+
+class Extension(Enum):
+    DB = '.vis.db'
+    JSON = '.vis'
+
+
+class DataType(Enum):
+    DB = 'db'
+    JSON = 'json'

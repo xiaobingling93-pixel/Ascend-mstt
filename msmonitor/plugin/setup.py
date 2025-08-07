@@ -61,7 +61,7 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 setup(
     name="msmonitor_plugin",
-    version="0.1",
+    version="8.1.0",
     description="msMonitor plugins",
     ext_modules=[CMakeExtension('IPCMonitor')],
     cmdclass=dict(build_ext=CMakeBuild),

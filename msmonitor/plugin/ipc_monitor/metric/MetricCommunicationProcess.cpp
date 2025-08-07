@@ -35,15 +35,15 @@ std::string CommunicationMetric::seriesToJson()
 void MetricCommunicationProcess::ConsumeMsptiData(msptiActivity *record)
 {
     msptiActivityCommunication* communicationData = ReinterpretConvert<msptiActivityCommunication*>(record);
-    msptiActivityCommunication* tmp = ReinterpretConvert<msptiActivityCommunication*>(MsptiMalloc(sizeof(msptiActivityCommunication), ALIGN_SIZE));
-    if (tmp == nullptr || memcpy_s(tmp, sizeof(msptiActivityCommunication), communicationData, sizeof(msptiActivityCommunication)) != EOK) {
-        MsptiFree(ReinterpretConvert<uint8_t*>(tmp));
-        LOG(ERROR) << "memcpy_s failed" << IPC_ERROR(ErrCode::MEMORY);
+    std::shared_ptr<msptiActivityCommunication> tmp;
+    MakeSharedPtr(tmp);
+    if (tmp == nullptr || memcpy_s(tmp.get(), sizeof(msptiActivityCommunication), communicationData, sizeof(msptiActivityCommunication)) != EOK) {
+        LOG(ERROR) << "memcpy_s failed " << IPC_ERROR(ErrCode::MEMORY);
         return;
     }
     {
         std::unique_lock<std::mutex> lock(dataMutex);
-        records.emplace_back(tmp);
+        records.emplace_back(std::move(tmp));
     }
 }
 

@@ -100,6 +100,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         height: 26px;
         margin-right: 5px;
         color: var(--paper-orange-500);
+        font-weight: 500;
       }
 
       .allcontrols .control-holder {
@@ -142,6 +143,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         display: flex;
         align-items: center;
       }
+      .fit-screen vaadin-icon {
+        margin-right: 10px;
+        cursor: pointer;
+        color: var(--paper-orange-500);
+      }
       .fit-screen vaadin-button {
         margin-top: 6px;
         font-size: var(--tb-graph-controls-title-font-size);
@@ -163,6 +169,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       .hidden {
         display: none;
       }
+
+      .sync-expand-checkbox {
+        font-size: var(--tb-graph-controls-title-font-size);
+        margin-left: -4px;
+      }
       paper-checkbox {
         --paper-checkbox-unchecked-color: gray; /* 选中时的颜色 */
         user-select: none;
@@ -176,7 +187,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     <div id="nodes-content" class="tab-content">
       <div class='setting-title'>
         <div class="fit-screen">
-          <iron-icon icon="aspect-ratio" class="button-icon"></iron-icon>
+          <vaadin-icon icon="vaadin:viewport" on-click="_clickSetting"></vaadin-icon>
           <vaadin-button theme="tertiary contrast" on-click="_fit">[[t('fit')]]</vaadin-button>
         </div>
         <vaadin-button class='language-button' theme="tertiary-inline" on-click="changeLanguage">中|en</vaadin-button>
@@ -187,6 +198,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           <paper-checkbox  checked on-click="_toggleBenchMinimap">[[t('show_bench_minimap')]]</paper-checkbox>
         </template>
       </div>
+      <vaadin-checkbox class="sync-expand-checkbox" label="是否同步展开对应侧节点" checked={{isSyncExpand}}></vaadin-checkbox>
       <div class="container-wrapper">
         <tf-main-controler
           t="[[t]]"
@@ -267,6 +279,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   @property({ type: Object, notify: true })
   minimapVis: MinimapVis = { npu: true, bench: true };
+
+  @property({ type: Boolean, notify: true })
+  isSyncExpand: boolean = true;
 
   // 颜色数据
   @property({ type: Object, notify: true })

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp

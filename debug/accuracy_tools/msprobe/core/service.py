@@ -36,7 +36,6 @@ class BaseService(ABC):
         self.config.level = getattr(config, 'level_ori', config.level)  # 兼容MindSpore配置
         self.model = None
         self.data_collector = build_data_collector(self.config)
-        self.attl_manager = None
         self.current_iter = 0
         self.loop = 0
         self.init_step = 0
@@ -92,9 +91,6 @@ class BaseService(ABC):
             (self.config.task == Const.STATISTICS and self.config.tensor_list)
         )
     
-    @property
-    def _is_online_run_ut(self):
-        return getattr(self.config, "online_run_ut", False)
 
     @property
     @abstractmethod
@@ -143,11 +139,9 @@ class BaseService(ABC):
             self.primitive_switch = True
             self._change_jit_switch(True)
             self.logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
-        if self._is_online_run_ut:
-            self._run_ut_dispatch(True)
-        else:
-            self.create_dirs()
-            self.logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
+
+        self.create_dirs()
+        self.logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
         """通用stop模板"""
@@ -162,8 +156,7 @@ class BaseService(ABC):
         self._change_jit_switch(False)
         if self._is_l2_level:
             return
-        if self._is_online_run_ut:
-            self._run_ut_dispatch(False)
+
         self._process_async_dump()
         self.data_collector.write_json()
 
@@ -263,8 +256,6 @@ class BaseService(ABC):
         end_service = self.config.step and self.current_iter > max(self.config.step) or \
                       self.data_collector and self.data_collector.data_processor.is_terminated
         if end_service:
-            if self._is_online_run_ut and self.attl_manager:
-                self.attl_manager.attl_stop()
             self.primitive_switch = False
             self._change_jit_switch(False)
             Runtime.is_running = False
@@ -307,8 +298,7 @@ class BaseService(ABC):
         if root_model and isinstance(root_model, list):
             root_model = root_model[0]
             self.logger.warning("Infer model can only input one to support token_range, choose the first one.")
-        if self._is_online_run_ut:
-            return
+
         root_model.register_forward_pre_hook(infer_hook)
  
     def _create_l2_dirs(self, cur_rank):

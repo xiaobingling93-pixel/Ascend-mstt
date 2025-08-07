@@ -25,16 +25,18 @@ from tqdm import tqdm
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import load_json, remove_path, create_directory
+from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type
+    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type, \
+    add_time_with_json
 from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path, check_api_info_len
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.highlight import HighLight
+from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 
 
 @dataclass
@@ -43,12 +45,14 @@ class ComparisonConfig:
     stack_mode: bool
     auto_analyze: bool
     fuzzy_match: bool
+    highlight: bool
     data_mapping: dict
     suffix: str
     cell_mapping: dict
     api_mapping: dict
     layer_mapping: dict
     compared_file_type: str
+    first_diff_analyze: bool
 
 
 class Comparator:
@@ -57,17 +61,18 @@ class Comparator:
         self.mode_config = mode_config
         self.mapping_config = mapping_config
         self.cross_frame = is_cross_framework
-
         self.mapping_dict = MappingDict(mapping_config)
 
-    @staticmethod
-    def process_output_file(output_path, suffix, compared_file_type):
+    def process_output_file(self, output_path, suffix, compared_file_type):
         file_name_prefix_mapping = {
             Const.DUMP_JSON_FILE: "compare_result",
             Const.DEBUG_JSON_FILE: "debug_compare_result"
         }
         file_name_prefix = file_name_prefix_mapping.get(compared_file_type, "compare_result")
-        file_name = add_time_with_xlsx(file_name_prefix + suffix)
+        if self.mode_config.first_diff_analyze:
+            file_name = add_time_with_json("compare_result" + suffix)
+        else:
+            file_name = add_time_with_xlsx(file_name_prefix + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         if os.path.exists(file_path):
             logger.warning(f"{file_path} will be deleted.")
@@ -108,17 +113,32 @@ class Comparator:
             logger.warning("Can`t match any op. No compare result file generated.")
             return
 
+        if self.mode_config.first_diff_analyze:
+            first_diff_analyze = FirstDiffAnalyze(self.mode_config)
+            check_result = first_diff_analyze.check(result_df)
+            save_json(file_path, check_result, indent=4)
+            logger.info(f"Saving json file to disk: {file_path}")
+            return
+
         # compare real data
         if self.mode_config.dump_mode == Const.ALL:
             compare_real_data = CompareRealData(self.file_reader, self.mode_config, self.cross_frame)
             result_df = compare_real_data.do_multi_process(input_param, result_df)
 
-        # highlight suspicious API
-        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        highlight = HighLight(self.mode_config)
-        if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
-            highlight.find_compare_result_error_rows(result_df, highlight_dict)
-        highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        # save result excel file
+        logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
+        if self.mode_config.highlight and len(result_df) <= CompareConst.MAX_EXCEL_LENGTH:
+            # highlight if not too long
+            highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+            highlight = HighLight(self.mode_config)
+            if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
+                highlight.find_compare_result_error_rows(result_df, highlight_dict)
+            result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
+            highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        else:
+            # fallback to simple save without highlight
+            result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
+            save_excel(file_path, result_df)
 
         # output compare analysis suggestions
         if self.mode_config.auto_analyze:
@@ -149,6 +169,8 @@ class Comparator:
         match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
 
         # organize compare result table by renaming columns
+        if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
+            self.mode_config.dump_mode = Const.SUMMARY
         create_table = CreateTable(self.mode_config)
         result_df, header = create_table.make_result_df(match_result)
 
@@ -179,10 +201,12 @@ class ParseData:
             Const.DTYPE: [],
             Const.SHAPE: [],
             Const.SUMMARY: [],
-            Const.STACK_INFO: []
+            Const.STACK_INFO: [],
+            Const.STATE: [],
+            Const.API_ORIGIN_NAME: []
         }
         if self.mode_config.dump_mode == Const.ALL:
-            result['data_name'] = []
+            result[Const.DATA_NAME] = []
         elif self.mode_config.dump_mode == Const.MD5:
             result[Const.MD5] = []
 
@@ -203,20 +227,22 @@ class ParseData:
 
             op_name_list = merge_list.get(CompareConst.OP_NAME)
             summary_list = merge_list.get(Const.SUMMARY)
-            data_name_list = merge_list.get('data_name')
-            op_name_reorder, summary_reorder, data_name_reorder = reorder_op_x_list(op_name_list,
-                                                                                    summary_list,
-                                                                                    data_name_list)
+            data_name_list = merge_list.get(Const.DATA_NAME)
+            state_list = merge_list.get(Const.STATE)
+            op_name_reorder, summary_reorder, data_name_reorder, state_reorder = reorder_op_x_list(op_name_list,
+                                                                                                   summary_list,
+                                                                                                   data_name_list,
+                                                                                                   state_list)
             # 遍历单个API的所有item
-            for index, op_name in enumerate(op_name_reorder):
+            for index, (op_name, state) in enumerate(zip(op_name_reorder, state_reorder)):
                 result[CompareConst.OP_NAME].append(op_name)
-                if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
+                if state == Const.INPUT or state == Const.KWARGS:
                     info_list = merge_list[CompareConst.INPUT_STRUCT]
-                elif CompareConst.OUTPUT_PATTERN in op_name:
+                elif state == Const.OUTPUT:
                     info_list = merge_list[CompareConst.OUTPUT_STRUCT]
-                elif CompareConst.PARAMS_PATTERN in op_name:
+                elif state == Const.PARAMS:
                     info_list = merge_list[CompareConst.PARAMS_STRUCT]
-                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
+                elif state == Const.PARAMS_GRAD:
                     info_list = merge_list[CompareConst.PARAMS_GRAD_STRUCT]
                 else:
                     info_list = merge_list[CompareConst.DEBUG_STRUCT]
@@ -241,7 +267,10 @@ class ParseData:
 
                 if self.mode_config.dump_mode == Const.ALL:
                     check_api_info_len(op_name, data_name_reorder, 1)
-                    result['data_name'].append(data_name_reorder.pop(0))
+                    result[Const.DATA_NAME].append(data_name_reorder.pop(0))
+
+                result[Const.STATE].append(state)
+                result[Const.API_ORIGIN_NAME].append(data_name)
             progress_bar.update(1)
         progress_bar.close()
         return pd.DataFrame(result)
@@ -413,8 +442,8 @@ class Match:
     @staticmethod
     def put_unmatched_in_table(match_result, npu_op_item):
         npu_columns = npu_op_item.index.tolist()[:-2]
-        new_columns = [name[:-1] + 'y' for name in npu_columns]
-        na_series = pd.Series([CompareConst.N_A] * len(new_columns), index=new_columns)
+        bench_columns = [name + '_y' for name in npu_columns]
+        na_series = pd.Series([CompareConst.N_A] * len(bench_columns), index=bench_columns)
         new_result_item = pd.concat([npu_op_item, na_series]).to_frame().T
         new_result_item.columns = CompareConst.MATCH_RESULT_COLUMNS
         match_result = pd.concat([match_result, new_result_item])
@@ -610,7 +639,9 @@ class CreateTable:
                                'md5_x': CompareConst.NPU_MD5,
                                'md5_y': CompareConst.BENCH_MD5,
                                'data_name_x': CompareConst.DATA_NAME,
-                               'stack_info_x': CompareConst.STACK}, inplace=True)
+                               'stack_info_x': CompareConst.STACK,
+                               'state_x': Const.STATE,
+                               'api_origin_name_x': Const.API_ORIGIN_NAME}, inplace=True)
 
         # process summary data
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
@@ -623,6 +654,7 @@ class CreateTable:
             result[npu_summary] = result['summary_x'].apply(self.set_summary).tolist()
             result[bench_summary] = result['summary_y'].apply(self.set_summary).tolist()
 
+        header.extend([Const.STATE, Const.API_ORIGIN_NAME])
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:
@@ -673,7 +705,7 @@ class CalcStatsDiff:
         # 相对误差转成百分比字符串
         cond_ref_err = cond_not_nan_diff & ~condition_pt_zero
         result_df.loc[cond_ref_err, rel_err_name] = (
-                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err] * 100)
+                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err].astype(float) * 100)
         result_df.loc[cond_ref_err, rel_err_name] = (result_df.loc[cond_ref_err, rel_err_name].abs().astype(str) + '%')
 
         magnitude = self.get_number(result_df[diff_name]).abs() / (pd.Series(
@@ -690,7 +722,7 @@ class CalcStatsDiff:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
             result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
             result_df.loc[~condition_md5_equal & ~condition_no_bench, CompareConst.RESULT] = CompareConst.DIFF
-        elif self.mode_config.dump_mode == Const.SUMMARY:
+        elif self.mode_config.first_diff_analyze or self.mode_config.dump_mode == Const.SUMMARY:
             warning_list = [
                 self.calc_summary_diff(result_df, condition_no_bench, stats_index)
                 for stats_index in ['max', 'min', 'mean', 'l2norm']
@@ -718,11 +750,13 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             stack_mode=False,
             auto_analyze=kwargs.get('auto_analyze', True),
             fuzzy_match=kwargs.get('fuzzy_match', False),
+            highlight=kwargs.get('highlight', False),
             data_mapping=kwargs.get('data_mapping', {}),
             suffix=kwargs.get('suffix', ''),
             cell_mapping=kwargs.get('cell_mapping', {}),
             api_mapping=kwargs.get('api_mapping', {}),
             layer_mapping=kwargs.get('layer_mapping', {}),
+            first_diff_analyze=kwargs.get('first_diff_analyze', False),
             compared_file_type='',
         )
 
@@ -736,7 +770,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         else:
             config.stack_mode = set_stack_json_path(input_param)
 
-        check_configuration_param(config.stack_mode, config.auto_analyze, config.fuzzy_match,
+        check_configuration_param(config.stack_mode, config.auto_analyze, config.fuzzy_match, config.highlight,
                                   input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, config.dump_mode, config.stack_mode)
