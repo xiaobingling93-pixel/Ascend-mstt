@@ -60,13 +60,13 @@ class TestPytorchDataProcessor(unittest.TestCase):
 
     def test_get_stat_info_with_meta_tensor(self):
         mock_data = self.mock_tensor(is_meta=True)
-        result = PytorchDataProcessor.get_stat_info(mock_data)
+        result = self.processor.get_stat_info(mock_data)
         self.assertIsInstance(result, TensorStatInfo)
 
     def test_get_stat_info_with_fake_tensor(self):
         with FakeTensorMode() as fake_tensor_mode:
             fake_tensor = fake_tensor_mode.from_tensor(torch.randn(1, 2, 3))
-        result = PytorchDataProcessor.get_stat_info(fake_tensor)
+        result = self.processor.get_stat_info(fake_tensor)
         self.assertIsNone(result.max)
         self.assertIsNone(result.min)
         self.assertIsNone(result.mean)
@@ -107,7 +107,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
 
     def test_get_stat_info_with_scalar_tensor(self):
         scalar_tensor = torch.tensor(42.0)
-        result = PytorchDataProcessor.get_stat_info(scalar_tensor)
+        result = self.processor.get_stat_info(scalar_tensor)
         self.assertIsInstance(result, TensorStatInfo)
         self.assertEqual(result.max, 42.0)
         self.assertEqual(result.min, 42.0)
@@ -116,7 +116,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
 
     def test_get_stat_info_with_complex_tensor(self):
         complex_tensor = torch.tensor([1 + 2j, 3 + 4j], dtype=torch.complex64)
-        result = PytorchDataProcessor.get_stat_info(complex_tensor)
+        result = self.processor.get_stat_info(complex_tensor)
         expected_max = np.abs(np.array([1 + 2j, 3 + 4j])).max().item()
         expected_min = np.abs(np.array([1 + 2j, 3 + 4j])).min().item()
         expected_mean = np.abs(np.array([1 + 2j, 3 + 4j])).mean().item()
@@ -124,49 +124,6 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertAlmostEqual(result.max, expected_max, places=6)
         self.assertAlmostEqual(result.min, expected_min, places=6)
         self.assertAlmostEqual(result.mean, expected_mean, places=6)
-
-    def test_handle_tensor_extremum_nan_inf_all_nan(self):
-        tensor = torch.tensor([float('nan'), float('nan')])
-        result = self.processor.handle_tensor_extremum_nan_inf(tensor, 'max')
-        self.assertTrue(np.isnan(result))
-
-    def test_handle_tensor_extremum_nan_inf_all_inf(self):
-        tensor = torch.tensor([float('inf'), float('inf')])
-        result = self.processor.handle_tensor_extremum_nan_inf(tensor, 'max')
-        self.assertTrue(np.isinf(result))
-
-    def test_handle_tensor_extremum_nan_inf_all_negative_inf(self):
-        tensor = torch.tensor([float('-inf'), float('-inf')])
-        result = self.processor.handle_tensor_extremum_nan_inf(tensor, 'min')
-        self.assertTrue(np.isinf(result) and result < 0)
-
-    def test_handle_tensor_extremum_nan_inf_mixed(self):
-        tensor = torch.tensor([1.0, float('nan'), 3.0, float('-inf'), 2.0])
-        result_max = self.processor.handle_tensor_extremum_nan_inf(tensor, 'max')
-        result_min = self.processor.handle_tensor_extremum_nan_inf(tensor, 'min')
-        self.assertEqual(result_max, 3.0)
-        self.assertEqual(result_min, 1.0)
-
-    def test_handle_tensor_extremum_nan_inf_mixed_with_inf(self):
-        tensor = torch.tensor([1.0, float('nan'), 3.0, float('inf'), 2.0])
-        result_max = self.processor.handle_tensor_extremum_nan_inf(tensor, 'max')
-        result_min = self.processor.handle_tensor_extremum_nan_inf(tensor, 'min')
-        self.assertEqual(result_max, 3.0)
-        self.assertEqual(result_min, 1.0)
-
-    def test_handle_tensor_extremum_nan_inf_no_inf_nan(self):
-        tensor = torch.tensor([1.0, 2.0, 3.0])
-        result_max = self.processor.handle_tensor_extremum_nan_inf(tensor, 'max')
-        result_min = self.processor.handle_tensor_extremum_nan_inf(tensor, 'min')
-        self.assertEqual(result_max, 3.0)
-        self.assertEqual(result_min, 1.0)
-
-    def test_handle_tensor_extremum_nan_inf_all_inf_nan(self):
-        tensor = torch.tensor([float('nan'), float('inf'), float('-inf')])
-        result_max = self.processor.handle_tensor_extremum_nan_inf(tensor, 'max')
-        result_min = self.processor.handle_tensor_extremum_nan_inf(tensor, 'min')
-        self.assertTrue(np.isinf(result_max))
-        self.assertTrue(np.isinf(result_min))
 
     def test_analyze_builtin(self):
         result = self.processor._analyze_builtin(slice(1, torch.tensor(10, dtype=torch.int32), np.int64(2)))
@@ -316,10 +273,10 @@ class TestPytorchDataProcessor(unittest.TestCase):
             'type': 'torch.Tensor',
             'dtype': str(tensor.dtype),
             'shape': tensor.shape,
-            'requires_grad': tensor.requires_grad,
-            'md5': 'mocked_md5'
+            'requires_grad': tensor.requires_grad
         }
         result.pop('tensor_stat_index', None)
+        result.pop('md5_index', None)
         self.assertDictEqual(expected, result)
 
     def test_analyze_tensor_with_empty_tensor(self):

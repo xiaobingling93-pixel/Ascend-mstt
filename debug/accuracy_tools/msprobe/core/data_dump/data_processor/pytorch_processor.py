@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import zlib
+from collections.abc import Iterable
 from dataclasses import asdict
 from typing import List
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -23,11 +26,11 @@ from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import convert_tuple
-from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.utils import convert_tuple, is_int
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.common.utils import save_pt
@@ -38,6 +41,57 @@ try:
     import torch_npu
 except ImportError:
     is_gpu = True
+
+
+class TensorHandler:
+    def __init__(self):
+        self.has_dtensor = hasattr(dist, "tensor") and hasattr(dist.tensor, "DTensor")
+        self.has_fake_tensor = hasattr(torch, "_subclasses") and hasattr(torch._subclasses, "fake_tensor")
+
+    def is_dtensor(self, tensor):
+        return self.has_dtensor and isinstance(tensor, torch.distributed.tensor.DTensor)
+
+    def is_fake_tensor(self, tensor):
+        return self.has_fake_tensor and isinstance(tensor, torch._subclasses.fake_tensor.FakeTensor)
+
+    def is_empty_data(self, tensor):
+        return tensor.is_meta or self.is_fake_tensor(tensor)
+
+    def convert_common_tensor(self, tensor):
+        if self.is_dtensor(tensor):
+            return tensor.to_local()
+        if self.is_fake_tensor(tensor):
+            logger.debug("FakeTensor cannot be converted to torch.Tensor type.")
+            return tensor
+        return tensor
+
+    def get_tensor_type(self, tensor):
+        if self.is_dtensor(tensor):
+            return Const.DTENSOR_TYPE
+        if self.is_fake_tensor(tensor):
+            return Const.FAKE_TENSOR_TYPE
+        return Const.TENSOR_TYPE
+
+    def get_dtensor_info(self, tensor):
+        dtensor_info = {}
+        if not self.is_dtensor(tensor):
+            return dtensor_info
+        if hasattr(tensor, "device_mesh") and tensor.device_mesh:
+            dtensor_info.update({"device_mesh": tensor.device_mesh.mesh.tolist()})
+
+        placements = []
+        if hasattr(tensor, "placements") and isinstance(tensor.placements, Iterable):
+            for placement in tensor.placements:
+                if placement.is_shard() and is_int(placement.dim):
+                    placements.append({"Shard": {"dim": placement.dim}})
+                    continue
+                if placement.is_replicate():
+                    placements.append({"Replicate": {}})
+                    continue
+                if placement.is_partial() and isinstance(placement.reduce_op, str):
+                    placements.append({"Partial": {"reduce_op": placement.reduce_op}})
+        dtensor_info.update({"placements": placements})
+        return dtensor_info
 
 
 class PytorchDataProcessor(BaseDataProcessor):
@@ -65,6 +119,14 @@ class PytorchDataProcessor(BaseDataProcessor):
             "dtype": self.analyze_dtype_in_kwargs
         }
         self._async_dump_cache = {}
+        self.tensor_handler = TensorHandler()
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
+
+
+    @staticmethod
+    def compute_crc32_bytes(tensor_bytes):
+        return f"{zlib.crc32(tensor_bytes):08x}"
+
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -93,54 +155,6 @@ class PytorchDataProcessor(BaseDataProcessor):
     @staticmethod
     def analyze_dtype_in_kwargs(element):
         return {"type": "torch.dtype", "value": str(element)}
-
-    @staticmethod
-    def get_stat_info(data, async_dump=False, precision=Const.DUMP_PRECISION_HIGH):
-        tensor_stat = TensorStatInfo()
-        if data.is_meta:
-            return tensor_stat
-        data_clone = data.detach()
-        if not data_clone.numel() or not data_clone.data_ptr():
-            return tensor_stat
-        if torch.is_complex(data):
-            if async_dump:
-                logger.warning("Async dump do not support complex data!")
-                return tensor_stat
-            data_np = data.cpu().numpy()
-            data_abs = np.abs(data_np)
-            tensor_stat.max = np.max(data_abs).item()
-            tensor_stat.min = np.min(data_abs).item()
-            tensor_stat.mean = np.mean(data_abs).item()
-        elif data.dtype == torch.bool:
-            tensor_stat.max = torch.any(data)
-            tensor_stat.min = torch.all(data)
-        elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
-        else:
-            if precision == Const.DUMP_PRECISION_HIGH or data.dtype == torch.float64 or not data.is_floating_point():
-                data = data.float()
-            tensor_stat.max = torch.max(data)
-            tensor_stat.min = torch.min(data)
-            tensor_stat.mean = torch.mean(data)
-            tensor_stat.norm = torch.norm(data)
-        return tensor_stat
-
-    @staticmethod
-    def handle_tensor_extremum_nan_inf(tensor, operator):
-        data_clone = tensor.detach()
-        data_nan = torch.isnan(data_clone)
-        if int(torch.sum(data_nan)) == data_clone.numel():
-            return float('nan')
-
-        finite_mask = torch.isfinite(data_clone)
-        if int(torch.sum(finite_mask)) > 0:
-            finite_values = data_clone[finite_mask]
-            return torch.max(finite_values).item() if operator == 'max' else \
-                torch.min(finite_values).item()
-        else:
-            data_no_nan = data_clone[~data_nan]
-            return torch.max(data_no_nan).item() if operator == 'max' else \
-                torch.min(data_no_nan).item()
 
     @staticmethod
     def process_group_hash(arg):
@@ -188,6 +202,36 @@ class PytorchDataProcessor(BaseDataProcessor):
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
 
+    def get_stat_info(self, data, async_dump=False, precision=Const.DUMP_PRECISION_LOW):
+        tensor_stat = TensorStatInfo()
+        if self.tensor_handler.is_empty_data(data):
+            return tensor_stat
+        data_clone = data.detach()
+        if not data_clone.numel() or not data_clone.data_ptr():
+            return tensor_stat
+        if torch.is_complex(data):
+            if async_dump:
+                logger.warning("Async dump do not support complex data!")
+                return tensor_stat
+            data_np = data.cpu().numpy()
+            data_abs = np.abs(data_np)
+            tensor_stat.max = np.max(data_abs).item()
+            tensor_stat.min = np.min(data_abs).item()
+            tensor_stat.mean = np.mean(data_abs).item()
+        elif data.dtype == torch.bool:
+            tensor_stat.max = torch.any(data)
+            tensor_stat.min = torch.all(data)
+        elif not data.shape:
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
+        else:
+            if precision == Const.DUMP_PRECISION_HIGH or data.dtype == torch.float64 or not data.is_floating_point():
+                data = data.float()
+            tensor_stat.max = torch.max(data)
+            tensor_stat.min = torch.min(data)
+            tensor_stat.mean = torch.mean(data)
+            tensor_stat.norm = torch.norm(data)
+        return tensor_stat
+
     def dump_async_data(self):
         for file_path, tensor in self._async_dump_cache.items():
             save_pt(tensor.contiguous(), file_path)
@@ -230,9 +274,10 @@ class PytorchDataProcessor(BaseDataProcessor):
         return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
-        tensor_stat = self.get_stat_info(tensor, self.config.async_dump, self.config.precision)
+        common_tensor = self.tensor_handler.convert_common_tensor(tensor)
+        tensor_stat = self.get_stat_info(common_tensor, self.config.async_dump, self.config.precision)
         tensor_json = {}
-        tensor_json.update({'type': 'torch.Tensor'})
+        tensor_json.update({'type': self.tensor_handler.get_tensor_type(tensor)})
         tensor_json.update({'dtype': str(tensor.dtype)})
         tensor_json.update({"shape": tensor.shape})
 
@@ -246,15 +291,37 @@ class PytorchDataProcessor(BaseDataProcessor):
 
         tensor_json.update({Const.TENSOR_STAT_INDEX: placeholder_index})
         tensor_json.update({"requires_grad": tensor.requires_grad})
+        if self.tensor_handler.is_dtensor(tensor):
+            dtensor_info = self.tensor_handler.get_dtensor_info(tensor)
+            tensor_json.update(dtensor_info)
 
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
-            tensor_md5 = self.get_md5_for_tensor(tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
+            tensor_md5 = None
+            if not self.tensor_handler.is_empty_data(tensor):
+                logger.debug("Calculating the md5 value of fake tensor or meta tensor is not supported.")
+                # 拷贝并搬到 CPU
+                if tensor.dtype == torch.bfloat16:
+                    tensor = tensor.float()
+                tensor_bytes = tensor.cpu().detach().numpy().tobytes()
+
+                future = self._crc_executor.submit(
+                    PytorchDataProcessor.compute_crc32_bytes,
+                    tensor_bytes
+                )
+
+                crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+                tensor_json[Const.MD5_INDEX] = crc_placeholder
+            else:
+                tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
+        if self.tensor_handler.is_empty_data(tensor):
+            logger.debug("Collecting real data of fake tensor or meta tensor is not supported.")
+            return single_arg
+
         single_arg.update({"data_name": dump_data_name})
         if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.clone().detach()

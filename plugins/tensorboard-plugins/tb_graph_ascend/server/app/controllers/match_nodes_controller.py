@@ -54,10 +54,12 @@ class MatchNodesController:
         opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
         if task == 'md5':
             result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name,
+                                                                        opposite_bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name,
+                                                                            opposite_bench_node_name)
         else:
             result = {
                 'success': False,
@@ -65,7 +67,7 @@ class MatchNodesController:
             }
         result['success'] = result.get('success') or opposite_result.get('success')
         if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
+            result['error'] = f'当前节点：{result.get("error","")}。对侧节点：{opposite_result.get("error")}'
         return result
 
     @staticmethod
@@ -76,10 +78,12 @@ class MatchNodesController:
         opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
         if task == 'md5':
             result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name,
+                                                                           opposite_bench_node_name)
         elif task == 'summary':
             result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name,
+                                                                               opposite_bench_node_name)
         else:
             result = {
                 'success': False,
@@ -87,7 +91,7 @@ class MatchNodesController:
             }
         result['success'] = result.get('success') or opposite_result.get('success')
         if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error",'')}。对侧节点：{opposite_result.get("error")}'
+            result['error'] = f'当前节点：{result.get("error","")}。对侧节点：{opposite_result.get("error")}'
         return result
 
     @staticmethod

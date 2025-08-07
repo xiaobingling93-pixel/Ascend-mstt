@@ -31,7 +31,7 @@ export function fetchPbTxt(filepath: string): Promise<ArrayBuffer> {
 const removePrototypePollution = (obj: any): void => {
   if (obj && typeof obj === 'object') {
     for (let key in obj) {
-      if (key === '__proto__' || key === 'constructor') {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
         delete obj[key];
       } else if (typeof obj[key] === 'object') {
         removePrototypePollution(obj[key]);

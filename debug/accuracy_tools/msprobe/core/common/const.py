@@ -24,6 +24,8 @@ class Const:
     Class for const
     """
     TOOL_NAME = "msprobe"
+    MD5_INDEX = "md5_index"
+    MD5 = "md5"
 
     ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
@@ -266,6 +268,10 @@ class Const:
     END_PREFIX = "end_"
 
     TENSOR_STAT_LEN = 2
+
+    TENSOR_TYPE = "torch.Tensor"
+    DTENSOR_TYPE = "torch.distributed.tensor.DTensor"
+    FAKE_TENSOR_TYPE = "torch._subclasses.fake_tensor.FakeTensor"
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
 
