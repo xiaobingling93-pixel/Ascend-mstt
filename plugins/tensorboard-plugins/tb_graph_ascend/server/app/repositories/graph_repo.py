@@ -205,18 +205,31 @@ class GraphRepo:
                 """
             npu_nodes = {}
             bench_nodes = {}
+            opposite_npu_node_name = GraphUtils.get_opposite_node_name(npu_node_name)
+            opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
+            # 定义查询参数列表：(graph_type, node_name, target_dict_key)
+            queries = [
+                (NPU, npu_node_name, 'npu'),
+                (NPU, opposite_npu_node_name, 'npu_opposite'),
+                (BENCH, bench_node_name, 'bench'),
+                (BENCH, opposite_bench_node_name, 'bench_opposite'),
+            ]
+            # 存储结果的字典
+            nodes_dict = {}
             with self.conn as c:
-                npu_cursor = c.execute(query, (step, rank, NPU, npu_node_name))
-                bench_cursor = c.execute(query, (step, rank, BENCH, bench_node_name))
-                npu_rows = npu_cursor.fetchall()
-                bench_rows = bench_cursor.fetchall()
-                if len(npu_rows) >= 0:
-                  npu_nodes = self.convert_db_to_object(dict(npu_rows[0]))
-                  npu_nodes = {npu_nodes.get('node_name'):npu_nodes}
-                if len(bench_rows) >= 0:
-                  bench_nodes = self.convert_db_to_object(dict(bench_rows[0]))
-                  bench_nodes = {bench_nodes.get('node_name'):bench_nodes}
-                
+                for graph_type, node_name, key in queries:
+                    if not node_name:  # 可选：跳过空 node_name
+                        continue
+                    cursor = c.execute(query, (step, rank, graph_type, node_name))
+                    rows = cursor.fetchall()
+                    if rows:
+                        node_obj = self.convert_db_to_object(dict(rows[0]))
+                        nodes_dict[key] = {node_obj.get('node_name'): node_obj}
+                    else:
+                        nodes_dict[key] = {}
+
+            npu_nodes = nodes_dict.get('npu', {}) | nodes_dict.get('npu_opposite', {})
+            bench_nodes = nodes_dict.get('bench', {}) | nodes_dict.get('bench_opposite', {})    
             result = self.convert_to_graph_json(npu_nodes, bench_nodes)
             end = time.perf_counter()
             print("query_matched_nodes_info time:", end - start)
@@ -292,16 +305,31 @@ class GraphRepo:
                     nodes[row['node_name']] = dict_row
                 return nodes
 
-            res = {'NPU': {}, 'Bench': {}}
+            npu_nodes = {}
+            bench_nodes = {}
+            opposite_npu_node_name = GraphUtils.get_opposite_node_name(npu_node_name)
+            opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
+            # 定义查询参数列表：(graph_type, node_name, target_dict_key)
+            queries = [
+                (NPU, npu_node_name, 'npu'),
+                (NPU, opposite_npu_node_name, 'npu_opposite'),
+                (BENCH, bench_node_name, 'bench'),
+                (BENCH, opposite_bench_node_name, 'bench_opposite'),
+            ]
+            # 存储结果的字典
+            nodes_dict = {}
             with self.conn as c:
-                npu_cursor = c.execute(query, (step, rank, NPU, npu_node_name))
-                bench_cursor = c.execute(query, (step, rank, BENCH, bench_node_name))
-                npu_nodes = fetch_and_convert_rows(npu_cursor)
-                bench_nodes = fetch_and_convert_rows(bench_cursor)
-                res = self.convert_to_graph_json(npu_nodes, bench_nodes)
+                for graph_type, node_name, key in queries:
+                    if not node_name:  # 可选：跳过空 node_name
+                        continue
+                    cursor = c.execute(query, (step, rank, graph_type, node_name))
+                    nodes_dict[key] = fetch_and_convert_rows(cursor)
+            npu_nodes = nodes_dict.get('npu', {}) | nodes_dict.get('npu_opposite', {})
+            bench_nodes = nodes_dict.get('bench', {}) | nodes_dict.get('bench_opposite', {})    
+            result = self.convert_to_graph_json(npu_nodes, bench_nodes)
             end = time.perf_counter()
             print("query_node_and_sub_nodes time:", end - start)
-            return res
+            return result
         except Exception as e:
             logger.error(f"Failed to query node and sub nodes: {e}")
             return {'NPU': {}, 'Bench': {}}
