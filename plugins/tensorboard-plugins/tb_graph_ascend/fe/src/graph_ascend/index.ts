@@ -246,7 +246,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 default:
                     break;
             }
-        } else if (isDBChange || this.currentSelection?.microStep !== this.selection?.microStep) {
+        } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
             this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
             this.loadGraphAllNodeList(this.selection);
         }
@@ -285,7 +285,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     loadDBGraphData = async (metaData: SelectionType) => {
         this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
         await request({ url: 'load_graph_data', method: 'GET', params: JSON.stringify(metaData) });
-        this.progreesLoading('正在加载配置', '请稍后', { progress: 50, progressValue: 50, done: false });
+        this.progreesLoading('正在加载配置', '请稍后', { progress: 40, progressValue: 50, done: false });
         await Promise.all([
             this.loadGraphConfig(metaData),
             this.loadGraphAllNodeList(metaData),

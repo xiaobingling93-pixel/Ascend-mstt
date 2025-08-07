@@ -82,7 +82,7 @@ class GraphView:
                     "X-Content-Type-Options": "nosniff",
                 }
             )
-        else:  
+        else: 
             return http_util.Respond(request, {'success': False, 'message': 'type error'}, "application/json")
 
     # 获取当前图数据配置信息
@@ -243,7 +243,7 @@ class GraphView:
     def save_matched_relations(request):
         meta_data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {}).get('metaData')
         strategy = GraphView._get_strategy(meta_data)
-        save_result = strategy.save_matched_relations()
+        save_result = strategy.save_matched_relations(meta_data)
         return http_util.Respond(request, json.dumps(save_result), "application/json")
 
     @staticmethod

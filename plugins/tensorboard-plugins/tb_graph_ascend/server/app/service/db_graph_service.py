@@ -290,12 +290,31 @@ class DbGraphService(GraphServiceStrategy):
         except Exception as e:
             logger.error('delete_match_nodes error: {}'.format(e))
             return {'success': False, '操作失败': str(e), 'data': None}
-
-    def save_data(self, meta_data):
-        pass
+    
+    def update_precision_error(self, meta_data, filter_value):
+        pass    
 
     def update_colors(self, colors):
         pass
 
-    def save_matched_relations(self):
-        pass
+    def save_matched_relations(self, meta_data):
+        try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
+            run = meta_data.get('run')
+            tag = meta_data.get('tag')
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            # DB：根据step rank modify match_node_link查询已经修改的匹配成功的节点关系
+            modify_matched_nodes_list = self.repo.query_modify_matched_nodes_list(rank, step)
+            confilg_file_name = f"{tag}_{step}_{rank}.vis.config"
+            _, error = GraphUtils.safe_save_data(modify_matched_nodes_list, run, confilg_file_name)
+            if error:
+                return {'success': False, 'error': error}
+            else:
+                return {'success': True, 'data': confilg_file_name}
+       
+        except Exception as e:
+            logger.error('save_matched_relations error: {}'.format(e))
+            return {'success': False, 'error': str(e), 'data': None}
+

@@ -381,9 +381,9 @@ class JsonGraphService(GraphServiceStrategy):
         except Exception as e:
             return {'success': False, 'error': str(e), 'data': None}
 
-    def save_matched_relations(self):
-        run = self.run
-        tag = self.tag
+    def save_matched_relations(self, meta_data):
+        run = meta_data.get(run)
+        tag = meta_data.get(tag)
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
         npu_match_nodes_list = config_data.get('manualMatchNodes', {})
@@ -391,6 +391,8 @@ class JsonGraphService(GraphServiceStrategy):
             _, error = GraphUtils.safe_save_data(npu_match_nodes_list, run, f"{tag}.vis.config")
             if error:
                 return {'success': False, 'error': error}
+            else:
+                return {'success': True, 'data': f"{tag}.vis.config"}
         except (ValueError, IOError, PermissionError) as e:
             return {'success': False, 'error': f"Error: {e}"}
-        return {'success': True, 'data': f"{tag}.vis.config"}
+       

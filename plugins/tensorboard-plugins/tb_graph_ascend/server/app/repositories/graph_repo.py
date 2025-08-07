@@ -513,7 +513,41 @@ class GraphRepo:
                 'npu_unmatch_node': [],
                 'bench_unmatch_node': []
             }
-            
+
+    # # DB：根据step rank modify match_node_link查询已经修改的匹配成功的节点关系
+    def query_modify_matched_nodes_list(self, rank, step):
+        try:
+            start = time.perf_counter()
+            query = """
+                SELECT 
+                    node_name,
+                    matched_node_link 
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    step = ?
+                    AND rank = ? 
+                    AND modified = 1
+                    AND matched_node_link IS NOT NULL
+                    AND matched_node_link != '[]'
+                    AND matched_node_link != ''
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (step, rank))
+                rows = cursor.fetchall()
+            result = {}
+            for row in rows:
+                matched_node_link = GraphUtils.safe_json_loads(row['matched_node_link'])
+                node_name = row['node_name']
+                if isinstance(matched_node_link, list) and len(matched_node_link) > 0:
+                    result[node_name] = matched_node_link[-1]  # 取最后一个匹配项
+            end = time.perf_counter()
+            print("query_modify_matched_nodes_list time:", end - start)
+            return result
+        except Exception as e:
+            logger.error(f"Failed to query modify matched nodes list: {e}")
+            return {}
+
     # DB：批量更新节点信息
     def update_nodes_info(self, nodes_info, rank, step):
         # 取消匹配和匹配都要走这个逻辑        

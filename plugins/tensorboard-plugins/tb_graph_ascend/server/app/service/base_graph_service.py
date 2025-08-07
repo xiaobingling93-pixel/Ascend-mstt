@@ -124,6 +124,10 @@ class GraphServiceStrategy(ABC):
     @abstractmethod
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         pass
+    
+    @abstractmethod
+    def update_precision_error(self, meta_data, filter_value):
+        pass    
 
     @abstractmethod
     def update_colors(self, colors):
@@ -132,3 +136,4 @@ class GraphServiceStrategy(ABC):
     @abstractmethod
     def save_matched_relations(self):
         pass
+    
