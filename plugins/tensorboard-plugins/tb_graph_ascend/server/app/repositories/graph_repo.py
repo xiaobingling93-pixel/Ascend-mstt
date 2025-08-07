@@ -99,7 +99,7 @@ class GraphRepo:
             end = time.perf_counter()
             print("query_root_nodes time:", end - start)
             if len(rows) > 0:
-                return self.convert_db_to_object(dict(rows[0]))
+                return self._convert_db_to_object(dict(rows[0]))
             else:
                 return None
         except Exception as e:
@@ -176,7 +176,7 @@ class GraphRepo:
                 
             up_nodes = {}
             for row in rows:
-                dict_row = self.convert_db_to_object(dict(row))
+                dict_row = self._convert_db_to_object(dict(row))
                 up_nodes[row['node_name']] = dict_row
             end = time.perf_counter()
             print("query_up_nodes time:", end - start)
@@ -223,20 +223,20 @@ class GraphRepo:
                     cursor = c.execute(query, (step, rank, graph_type, node_name))
                     rows = cursor.fetchall()
                     if rows:
-                        node_obj = self.convert_db_to_object(dict(rows[0]))
+                        node_obj = self._convert_db_to_object(dict(rows[0]))
                         nodes_dict[key] = {node_obj.get('node_name'): node_obj}
                     else:
                         nodes_dict[key] = {}
 
             npu_nodes = nodes_dict.get('npu', {}) | nodes_dict.get('npu_opposite', {})
             bench_nodes = nodes_dict.get('bench', {}) | nodes_dict.get('bench_opposite', {})    
-            result = self.convert_to_graph_json(npu_nodes, bench_nodes)
+            result = self._convert_to_graph_json(npu_nodes, bench_nodes)
             end = time.perf_counter()
             print("query_matched_nodes_info time:", end - start)
             return result
         except Exception as e:
             logger.error(f"Failed to query matched nodes info: {e}")
-            return self.convert_to_graph_json({}, {})
+            return self._convert_to_graph_json({}, {})
             
     # DB: 查询待匹配节点及其子节点的信息，递归查询当前节点信息和其所有的子节点信息，一直叶子节点
     def query_node_and_sub_nodes(self, npu_node_name, bench_node_name, rank, step):
@@ -293,18 +293,6 @@ class GraphRepo:
             SELECT * FROM descendants
             """ 
 
-            def fetch_and_convert_rows(cursor):
-                """
-                Helper function to fetch rows from cursor and convert them.
-                :param cursor: SQLite cursor object
-                :return: Dictionary of nodes keyed by node_name
-                """
-                nodes = {}
-                for row in cursor.fetchall():
-                    dict_row = self.convert_db_to_object(dict(row))
-                    nodes[row['node_name']] = dict_row
-                return nodes
-
             npu_nodes = {}
             bench_nodes = {}
             opposite_npu_node_name = GraphUtils.get_opposite_node_name(npu_node_name)
@@ -323,17 +311,56 @@ class GraphRepo:
                     if not node_name:  # 可选：跳过空 node_name
                         continue
                     cursor = c.execute(query, (step, rank, graph_type, node_name))
-                    nodes_dict[key] = fetch_and_convert_rows(cursor)
+                    nodes_dict[key] = self._fetch_and_convert_rows(cursor)
             npu_nodes = nodes_dict.get('npu', {}) | nodes_dict.get('npu_opposite', {})
             bench_nodes = nodes_dict.get('bench', {}) | nodes_dict.get('bench_opposite', {})    
-            result = self.convert_to_graph_json(npu_nodes, bench_nodes)
+            result = self._convert_to_graph_json(npu_nodes, bench_nodes)
             end = time.perf_counter()
             print("query_node_and_sub_nodes time:", end - start)
             return result
         except Exception as e:
             logger.error(f"Failed to query node and sub nodes: {e}")
             return {'NPU': {}, 'Bench': {}}
-
+    
+    # DB：查询配置文件中的待匹配节点信息
+    def query_matched_nodes_info_by_config(self, match_node_links, rank, step):
+        try:
+            start = time.perf_counter()
+            query = """
+                SELECT 
+                    id,
+                    node_name,
+                    node_type,
+                    up_node,
+                    sub_nodes,
+                    data_source,
+                    input_data,
+                    output_data,
+                    matched_node_link 
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    step = ?
+                    AND rank = ?
+                    AND data_source = ?
+                    AND node_name IN ({}) 
+                """.format(','.join(['?'] * len(match_node_links)))
+            
+            with self.conn as c:
+                npu_node_names = list(match_node_links.keys())
+                bench_node_names = list(match_node_links.values())
+                npu_cursor = c.execute(query, (step, rank, NPU , *npu_node_names))
+                bench_cursor = c.execute(query, (step, rank, BENCH, *bench_node_names))
+                npu_nodes = self._fetch_and_convert_rows(npu_cursor)
+                bench_nodes = self._fetch_and_convert_rows(bench_cursor)
+            result = self._convert_to_graph_json(npu_nodes, bench_nodes)
+            end = time.perf_counter()
+            print("query_matched_nodes_info_by_config time:", end - start)
+            return result
+        except Exception as e:
+            logger.error(f"Failed to query nodes info: {e}")
+            return {}
+    
     # DB: 查询所有以当前为父节点的子节点
     def query_sub_nodes(self, node_name, graph_type, rank, step):
         try:
@@ -362,7 +389,7 @@ class GraphRepo:
                 rows = cursor.fetchall()
             sub_nodes = {}
             for row in rows:
-                dict_row = self.convert_db_to_object(dict(row))
+                dict_row = self._convert_db_to_object(dict(row))
                 sub_nodes[row['node_name']] = dict_row
             end = time.perf_counter()
             print("query_sub_nodes time:", end - start)
@@ -394,47 +421,34 @@ class GraphRepo:
             end = time.perf_counter()
             print("query_node_info time:", end - start)
             if len(rows) > 0:
-                return self.convert_db_to_object(dict(rows[0]))
+                return self._convert_db_to_object(dict(rows[0]))
             else:
                 return {}
         except Exception as e:
             logger.error(f"Failed to query node info: {e}")
             return {}
-        
-    # DB：批量查询节点信息
-
-    def query_nodes_info(self, node_names, graph_type, rank, step):
+    
+    # DB: 查询节点名称列表
+    def query_node_name_list(self, rank, step, micro_step):
         try:
-            start = time.perf_counter()
-            type = graph_type if graph_type != SINGLE else NPU
             query = """
                 SELECT 
-                    * 
+                    node_name 
                 FROM 
                     tb_nodes 
                 WHERE 
-                    node_name IN ({}) 
-                    AND data_source = ?
+                    step = ?
                     AND rank = ?
-                    AND step = ?
-                """.format(','.join(['?'] * len(node_names)))
-                
-            params = node_names + [type, rank, step]
+                    AND (? = -1 OR micro_step_id = ?)
+            """
             with self.conn as c:
-                cursor = c.execute(query, params)
+                cursor = c.execute(query, (step, rank, micro_step, micro_step))
                 rows = cursor.fetchall()
-                
-            end = time.perf_counter()
-            print("query_nodes_info time:", end - start)
-            result = {}
-            for row in rows:
-                dict_row = self.convert_db_to_object(dict(row))
-                result[row['node_name']] = dict_row
-            return result
+            return [row['node_name'] for row in rows]
         except Exception as e:
-            logger.error(f"Failed to query nodes info: {e}")
-            return {}
-    
+            logger.error(f"Failed to query node name list: {e}")
+            return []
+
     # DB: 查询已匹配节点列表，未匹配节点列表，所有的节点列表
     def query_all_node_info_in_one(self, rank, step, micro_step):
         try:
@@ -588,8 +602,20 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to update nodes info: {e}")
             return False
+    
+    def _fetch_and_convert_rows(self, cursor):
+        """
+        Helper function to fetch rows from cursor and convert them.
+        :param cursor: SQLite cursor object
+        :return: Dictionary of nodes keyed by node_name
+        """
+        nodes = {}
+        for row in cursor.fetchall():
+            dict_row = self._convert_db_to_object(dict(row))
+            nodes[row['node_name']] = dict_row
+        return nodes
 
-    def convert_to_graph_json(self, npu_nodes, bench_nodes):
+    def _convert_to_graph_json(self, npu_nodes, bench_nodes):
         graph_data = {
             "NPU":{
                 "node": npu_nodes,
@@ -600,7 +626,7 @@ class GraphRepo:
         }
         return graph_data
 
-    def convert_db_to_object(self, data):
+    def _convert_db_to_object(self, data):
         object = {
             "id": data.get('node_name'),
             "node_name": data.get('node_name'),

@@ -94,16 +94,18 @@ class MatchNodesController:
     def process_task_add_child_layer_by_config(graph_data, match_node_links, task):
         # 根据配置文件中的匹配关系，批量调用 process_task_add
         result = {}
-        match_reslut = []
+        match_resluts = []
         for npu_node_name, bench_node_name in match_node_links.items():
-            res = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-            match_reslut.append(res.get('success'))
-
+            if task == 'md5':
+                match_result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
+            elif task == 'summary':
+                match_result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
+            match_resluts.append(match_result)
         config_data = GraphState.get_global_value("config_data")
         
         result['success'] = True
         result['data'] = {
-            'matchReslut': match_reslut,
+            'matchReslut': match_resluts,
             'npuMatchNodes': config_data.get('npuMatchNodes', {}),
             'benchMatchNodes': config_data.get('benchMatchNodes', {}),
             'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),

@@ -45,6 +45,9 @@ class DbGraphService(GraphServiceStrategy):
     def load_graph_config_info(self):
         try:
             self.config_info = self.repo.query_config_info()
+            # 读取目录下配置文件列表
+            modify_matched_files = GraphUtils.find_config_files(self.run)
+            self.config_info['matchedConfigFiles'] = modify_matched_files or []
             return {'success': True, 'data':self.config_info}
         except Exception as e:
             logger.error(f"load graph config info failed, {e}")
@@ -54,7 +57,6 @@ class DbGraphService(GraphServiceStrategy):
         try:
             if not self.conn:
                 return {'success': False, 'error': 'database connection not init'}
-            
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
@@ -64,6 +66,8 @@ class DbGraphService(GraphServiceStrategy):
             # 单图
             if self.config_info.get('isSingleGraph'):
                 # DB：根据graphType rank step micro_step 查询节点列表
+                node_name_list = self.repo.query_node_name_list(rank, step, micro_step)
+                result['npuNodeList'] = node_name_list
                 return {'success': True, 'data': result} 
             # 双图
             else:
@@ -213,13 +217,50 @@ class DbGraphService(GraphServiceStrategy):
                         result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
                     return result
             else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+                return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
         except Exception as e:
             logger.error(str(e))
             return {'success': False, 'error': str(e), 'data': None}
 
-    def add_match_nodes_by_config(self, config_file, meta_data):
-        pass
+    def add_match_nodes_by_config(self, config_file_name, meta_data):
+        try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
+            result = {}
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            task = self.config_info.get('task')
+            match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
+            graph_data = self.repo.query_matched_nodes_info_by_config(match_node_links, rank, step)
+            if error:
+                return {'success': False, 'error': '配置文件失败'}
+            # 根据任务类型计算误差
+            if task == 'md5' or task == 'summary':
+                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
+                update_data = [node for item in match_result if item.get('success') is True 
+                                   for node in item.get('data', [])]
+                if len(update_data) > 0:
+                    update_db_res = self.repo.update_nodes_info(update_data, rank, step)
+                    if not update_db_res:
+                            return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+                    # 视图：调用更新update_hirarchy方法，同步更新图
+                    LayoutHierarchyModel.update_current_hierarchy_data(update_data)
+                    # 返回：返回更新后的节点信息
+                    config_data = GraphState.get_global_value("config_data")
+                    result['success'] = True
+                    result['data'] = {
+                        'matchReslut': match_result,
+                        'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                        'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                        'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                        'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                    }
+                    return result
+            else:
+                return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
+        except Exception as e:
+            logger.error(str(e))
+            return {'success': False, 'error': str(e), 'data': None}
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         try:
