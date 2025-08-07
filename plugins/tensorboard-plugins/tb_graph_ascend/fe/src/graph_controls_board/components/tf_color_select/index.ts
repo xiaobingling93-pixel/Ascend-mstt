@@ -25,9 +25,7 @@ import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects }
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
-import { PRECISION_DESC } from '../../../common/constant';
 import '../tf_filter_precision_error/index'
-const UNMATCHED_NODE_NAME = '无匹配节点';
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
