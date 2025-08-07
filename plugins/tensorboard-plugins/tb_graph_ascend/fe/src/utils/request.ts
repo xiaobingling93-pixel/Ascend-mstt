@@ -28,7 +28,7 @@ interface ApiResponse<T = any> {
   error?: string; // 错误信息
 }
 export default async function request<T = any>(options: RequestOptions): Promise<ApiResponse<T>> {
-  const { url, method = 'GET', data = null, params = null, headers = {}, timeout = 60000 * 30 } = options;
+  const { url, method = 'GET', data = null, params = null, headers = {}, timeout = 60000 * 3 } = options;
 
   try {
     const controller = new AbortController();

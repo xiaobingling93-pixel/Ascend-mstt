@@ -365,7 +365,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     label: index,
                     value: index,
                 }));
-                console.log('ranksArray', ranksArray);
                 this.set('ranks', ranksArray);
             }
             if (stepsCount > 0) {
@@ -399,7 +398,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 unmatched.npuNodeList = allNodeList?.npuUnMatchNodes;
                 unmatched.benchNodeList = allNodeList?.benchUnMatchNodes;
             }
-            console.log('npuMatchNodes', allNodeList?.npuMatchNodes);
             this.set('npuMatchNodes', allNodeList?.npuMatchNodes);
             this.set('benchMatchNodes', allNodeList?.benchMatchNodes);
             this.set('nodelist', nodelist);

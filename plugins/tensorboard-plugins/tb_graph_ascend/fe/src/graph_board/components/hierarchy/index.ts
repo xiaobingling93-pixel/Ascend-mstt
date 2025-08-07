@@ -535,6 +535,7 @@ class Hierarchy extends PolymerElement {
                 this.dispatchEvent(changeMatchNodeExpandState);
             }
             const transform = this.changeNodeCenter(nodeName);
+            this.set('needChangeNodeCenter', true);
             this.renderGraph(this.hierarchyData, this.hightLightNodeName, transform);
         };
         const onDoubleClickGraphEvent = (event) => {
