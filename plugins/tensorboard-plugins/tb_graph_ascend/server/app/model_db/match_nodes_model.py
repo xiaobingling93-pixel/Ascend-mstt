@@ -163,6 +163,7 @@ class MatchNodesController:
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
+        # 如果当前节点，也就是第一个节点匹配成功，就尝试匹配子节点
         if len(match_result) > 0 and match_result[0].get('success'):
             result.extend(match_result)
             if npu_subnodes and bench_subnodes:
@@ -199,6 +200,7 @@ class MatchNodesController:
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
+        # 如果当前节点，也就是第一个节点匹配成功，就尝试匹配子节点
         if len(match_result) > 0 and match_result[0].get('success'):
             result.extend(match_result)
             if npu_subnodes and bench_subnodes:

@@ -516,6 +516,7 @@ class GraphRepo:
             
     # DB：批量更新节点信息
     def update_nodes_info(self, nodes_info, rank, step):
+        # 取消匹配和匹配都要走这个逻辑        
         try:
             start = time.perf_counter()
             data = [
@@ -537,7 +538,8 @@ class GraphRepo:
                     matched_node_link = ?,
                     input_data = ?,
                     output_data = ?,
-                    precision_index = ?
+                    precision_index = ?,
+                    modified= 1
                 WHERE 
                     step = ?
                     AND rank = ? 

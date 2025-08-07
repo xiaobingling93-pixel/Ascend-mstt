@@ -24,11 +24,13 @@ import { isEmpty } from 'lodash';
 import { Notification } from '@vaadin/notification';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
-import { NPU_PREFIX, BENCH_PREFIX } from '../../../common/constant';
+import { NPU_PREFIX, BENCH_PREFIX, DB_TYPE } from '../../../common/constant';
 import useMatched from './useMatched';
-import type { UseMatchedType } from '../../type';
-
 import '../tf_search_combox/index';
+import type { UseMatchedType } from '../../type';
+import type { SelectionType } from '../../../graph_ascend/type';
+
+
 @customElement('tf-manual-match')
 class Legend extends PolymerElement {
   // 定义模板
@@ -208,21 +210,23 @@ class Legend extends PolymerElement {
           text="手动匹配结束后，点击保存匹配节点信息，会将已匹配的节点对应关系保存到配置文件中，不会持久原始文件，如果是初次保存，会新建一个文件，文件名称为：[当前文件名].vis.config。"
           position="end"
         ></vaadin-tooltip>
-        <vaadin-button
-          class="save-button"
-          theme="primary contrast small"
-          on-click="_saveMatchedNodesLink"
-          disabled="[[saveLoading]]"
-          >保存</vaadin-button
-        >
-        <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
-        <vaadin-tooltip
-          for="match-save"
-          text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效"
-          position="end"
-        ></vaadin-tooltip>
-        <template is="dom-if" if="[[saveLoading]]">
-          <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+        <template is="dom-if" if="[[!isDBType]]">
+          <vaadin-button
+            class="save-button"
+            theme="primary contrast small"
+            on-click="_saveMatchedNodesLink"
+            disabled="[[saveLoading]]"
+            >保存</vaadin-button
+          >
+          <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
+          <vaadin-tooltip
+            for="match-save"
+            text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效"
+            position="end"
+          ></vaadin-tooltip>
+          <template is="dom-if" if="[[saveLoading]]">
+            <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+          </template>
         </template>
       </div>
     </vaadin-details>
@@ -231,8 +235,11 @@ class Legend extends PolymerElement {
   @property({ type: Object })
   unmatched: any = [];
 
+  @property({ type: Boolean })
+  isDBType = false;
+
   @property({ type: Object })
-  selection: any;
+  selection: SelectionType = {} as SelectionType;
 
   @property({ type: Boolean })
   isCompareGraph: boolean = true;
@@ -301,6 +308,13 @@ class Legend extends PolymerElement {
   npuMatchedNodeList = {};
   benchMatchedNodeList = {};
 
+  @observe('selection')
+  _observeSelection(): void {
+    this.set('isDBType', this.selection?.type == DB_TYPE);
+  }
+
+
+
   @observe('unmatched')
   _observeUnmatchedNode(): void {
     this.set('npuUnMatchedNodes', this.unmatched.npuNodeList || []);
@@ -310,7 +324,7 @@ class Legend extends PolymerElement {
   }
 
   @observe('npuMatchNodes', 'benchMatchNodes')
-  _observeSelection(): void {
+  _observeMatchNodes(): void {
     if (!this.isCompareGraph) {
       return;
     }

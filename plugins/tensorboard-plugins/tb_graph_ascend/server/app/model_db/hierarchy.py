@@ -56,6 +56,8 @@ class Hierarchy:
         return len(text) * 6  # 假设每个字符宽度为6
 
     def extract_label_name(self, node_name, node_type):
+        if not node_name:
+            return ''
         splited_subnode_name = node_name.split('.')
         splited_label = []
         # 在展开层级时，将父级层级名称相关去除，仅保留子节点本身名称信息

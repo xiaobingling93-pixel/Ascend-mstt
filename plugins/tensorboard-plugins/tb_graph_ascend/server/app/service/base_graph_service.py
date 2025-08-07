@@ -126,10 +126,6 @@ class GraphServiceStrategy(ABC):
         pass
 
     @abstractmethod
-    def save_data(self, meta_data):
-        pass
-
-    @abstractmethod
     def update_colors(self, colors):
         pass
 
