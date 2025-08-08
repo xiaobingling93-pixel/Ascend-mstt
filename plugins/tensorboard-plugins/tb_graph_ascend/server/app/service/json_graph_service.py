@@ -21,7 +21,7 @@ from tensorboard.util import tb_logging
 from .db_graph_service import DbGraphService
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState
-from ..model_vis.match_nodes_model import MatchNodesController
+from ..model_db.match_nodes_model import MatchNodesController
 from ..model_vis.layout_hierarchy_model import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
@@ -281,66 +281,99 @@ class JsonGraphService(GraphServiceStrategy):
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
                 if is_match_children:
-                    result = MatchNodesController.process_task_add_child_layer(graph_data,
-                                                                    npu_node_name, bench_node_name, task)
-                    return result
+                    match_result = MatchNodesController.process_task_add_child_layer(graph_data,
+                                                                    npu_node_name, bench_node_name, task)              
                 else:
-                    result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-                    if result.get('success'):
-                        # DB： 如果成功则将匹配关系写入数据库,并且查数据
-                        config_data = GraphState.get_global_value("config_data")
-                        result['data'] = {
+                    match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+                
+                update_data = [node for item in match_result if item.get('success') is True 
+                                for node in item.get('data', [])]                    
+                if len(update_data) > 0:
+                    config_data = GraphState.get_global_value("config_data")
+                    result = {
+                        'success': True,
+                        'data': {
                             'npuMatchNodes': config_data.get('npuMatchNodes', {}),
                             'benchMatchNodes': config_data.get('benchMatchNodes', {}),
                             'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
                             'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
                         }
-                    return result
+                    }     
+                else:
+                    result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
+                return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
             return {'success': False, '操作失败': str(e), 'data': None}
 
-    def add_match_nodes_by_config(self, config_file, meta_data):
+    def add_match_nodes_by_config(self, config_file_name, meta_data):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': '读取文件失败'}
-        match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file)
+        match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
         if error:
-            return {'success': False, 'error': '配置文件失败'}
+            return {'success': False, 'error': '读取配置文件失败'}
         task = graph_data.get('task')
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
+                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
+                update_data = [node for item in match_result if item.get('success') is True 
+                                   for node in item.get('data', [])]
+                result = {}
+                if len(update_data) > 0:
+                    # 返回：返回更新后的节点信息
+                    config_data = GraphState.get_global_value("config_data")
+                    result['success'] = True
+                    result['data'] = {
+                        'matchReslut': match_result,
+                        'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                        'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                        'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                        'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                    }
+                else:
+                    result = {'success': False, 'error': '未找到可匹配的节点(Matched node not found) '}
+                    
                 return result
             else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+                return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
         except Exception as e:
-            return {'success': False, 'error': '操作失败', 'data': None}
+            logger.error(str(e))
+            return {'success': False, 'error': str(e), 'data': None}
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
         task = graph_data.get('task')
-        result = {}
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
                 if is_unmatch_children:
-                    result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
-                                                                              bench_node_name, task)
+                    match_result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
+                                                                                  bench_node_name, task)
                 else:
-                    result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
-                    if result.get('success'):
-                        config_data = GraphState.get_global_value("config_data")
-                        result['data'] = {
+                    match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
+                
+                # 处理结果         
+                update_data = [node for item in match_result if item.get('success') is True 
+                                for node in item.get('data', [])]
+                if len(update_data) > 0:
+                    # 返回：返回更新后的节点信息
+                    config_data = GraphState.get_global_value("config_data")
+                    result = {
+                        'success': True,
+                        'data': {
                             'npuMatchNodes': config_data.get('npuMatchNodes', {}),
                             'benchMatchNodes': config_data.get('benchMatchNodes', {}),
                             'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
                             'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
                         }
+                    }     
+                else:
+                    result = {'success': False, 'error': '未找到可匹配的节点(Matched node not found) '}
                 return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
@@ -382,8 +415,8 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': False, 'error': str(e), 'data': None}
 
     def save_matched_relations(self, meta_data):
-        run = meta_data.get(run)
-        tag = meta_data.get(tag)
+        run = meta_data.get('run')
+        tag = meta_data.get('tag')
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
         npu_match_nodes_list = config_data.get('manualMatchNodes', {})

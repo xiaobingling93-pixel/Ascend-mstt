@@ -214,15 +214,33 @@ class MatchNodesController:
         precision_output_error = MatchNodesController.calculate_md5_diff(npu_output_data, bench_output_data)
         precision_error = precision_input_error and precision_output_error
         # 在原始数据上，添加匹配节点，和匹配节点信息
-
+        # JSON：处理JSON更新
         npu_graph_data = graph_data.get('NPU', {})
         bench_graph_data = graph_data.get('Bench', {})
         npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
         bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
-        
+        # DB: data只有DB会用到
+        data = [
+             {
+                    "node_name":npu_node_name,
+                    "matched_node_link":[bench_node_name],
+                    "precision_index":precision_error,
+                    "input_data":npu_node_data.get('input_data'),
+                    "output_data":npu_node_data.get('output_data'),
+                    "graph_type":NPU
+                },
+                {
+                    "node_name":bench_node_name,
+                    "matched_node_link":[npu_node_name],
+                    "precision_index":None,
+                    "input_data":bench_node_data.get('input_data'),
+                    "output_data":bench_node_data.get('output_data'),
+                    "graph_type":BENCH,
+                }
+            ]
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
-        return {'success': True}
+        return {'success': True, "data": data}
 
     @staticmethod
     def process_summary_task_add(graph_data, npu_node_name, bench_node_name):
@@ -250,8 +268,15 @@ class MatchNodesController:
                 'error': f'{npu_node_name, bench_node_name}输出统计误差值为空，计算精度误差失败(Calculation of precision error failed)',
             }
         # 在原始数据上，添加匹配节点，和匹配节点信息
+        # JSON：处理JSON更新
+        npu_graph_data = graph_data.get('NPU', {})
+        bench_graph_data = graph_data.get('Bench', {})
+        npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
+        bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
+        npu_node_data.setdefault('data', {})['precision_index'] = precision_error
         MatchNodesController.update_graph_node_data(npu_node_data.get('input_data'), intput_statistical_diff)
         MatchNodesController.update_graph_node_data(npu_node_data.get('output_data'), output_statistical_diff)
+        # DB: data只有DB会用到
         data = [
              {
                     "node_name":npu_node_name,
@@ -292,14 +317,33 @@ class MatchNodesController:
                 'error': "f操作失败：{npu_node_name}或{bench_node_name}节点不存在",
             }
         # 在原始数据上，删除匹配节点，和匹配节点信息
+        # JSON：处理JSON更新
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []
-        # 后端维护一个匹配节点列表，前端展示
         del npu_node_data['data']['precision_index']
+        # DB: data只有DB会用到
+        data = [
+             {
+                    "node_name":npu_node_name,
+                    "matched_node_link":[],
+                    "precision_index":None,
+                    "input_data":npu_node_data.get('input_data'),
+                    "output_data":npu_node_data.get('output_data'),
+                    "graph_type":NPU
+                },
+                {
+                    "node_name":bench_node_name,
+                    "matched_node_link":[],
+                    "precision_index":None,
+                    "input_data":bench_node_data.get('input_data'),
+                    "output_data":bench_node_data.get('output_data'),
+                    "graph_type":BENCH,
+                }
+            ]
         MatchNodesController.delete_config_match_nodes(npu_node_name, bench_node_name)
         return {
             'success': True,
-            'data': {},
+            'data': data,
         }
 
     @staticmethod
@@ -322,8 +366,14 @@ class MatchNodesController:
                 'error': f"操作失败：{npu_node_name}或{bench_node_name}节点不存在",
             }
         # DB：更新数据的节点信息，直接返回新的结果，此处暂时不做更新
+        # JSON：处理JSON更新
+        npu_node_data['matched_node_link'] = []
+        bench_node_data['matched_node_link'] = []
         input_data = MatchNodesController.delete_matched_node_data(npu_node_data.get('input_data'))
         output_data = MatchNodesController.delete_matched_node_data(npu_node_data.get('output_data'))
+        # 防止 KeyError 或 TypeError
+        npu_node_data.get('data', {}).pop('precision_index', None)
+        # DB: data只有DB会用到
         data = [
                 {
                     "node_name":npu_node_name,
