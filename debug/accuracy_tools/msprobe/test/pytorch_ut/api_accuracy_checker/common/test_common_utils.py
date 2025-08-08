@@ -34,7 +34,12 @@ class TestUtils(unittest.TestCase):
         tensor = torch.randn(10, 10)
         with self.assertRaises(DumpException) as context:
             self.processor._save_recursive("test_api", [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, 
-                                                        [tensor, [tensor, [tensor, [tensor]]]]]]]]]]], 0)
+                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
+                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
+                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
+                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
+                                                        [tensor, [tensor, [tensor, [tensor
+                                                                                    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]], 0)
         self.assertTrue(isinstance(context.exception, DumpException))
         self.assertEqual(context.exception.code, DumpException.RECURSION_LIMIT_ERROR)
 
