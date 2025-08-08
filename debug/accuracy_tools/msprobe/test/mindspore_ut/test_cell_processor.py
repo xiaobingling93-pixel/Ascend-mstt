@@ -24,6 +24,7 @@ from mindspore.ops.operations import _inner_ops
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.data_dump.scope import ModuleRangeScope
 from msprobe.core.hook_manager import HookSet
 from msprobe.mindspore.cell_processor import CellProcessor, get_cell_construct
@@ -172,6 +173,7 @@ class TestCellProcessor(unittest.TestCase):
 
     def test_build_cell_hook(self):
         CellProcessor.reset_cell_stats()
+        Runtime.is_running = True
 
         cell_name = 'Cell.cell.Cell.'
         mock_build_data_hook = MagicMock()
@@ -322,6 +324,7 @@ class TestCellProcessor(unittest.TestCase):
             self.assertIsNone(ret)
 
             CellProcessor.reset_cell_stats()
+            Runtime.is_running = False
 
     def test_set_construct_info_in_pre_hook(self):
         CellProcessor.reset_cell_stats()

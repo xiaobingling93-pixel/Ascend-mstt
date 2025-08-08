@@ -130,6 +130,9 @@ class CellProcessor:
     def build_cell_hook(self, cell_name, build_data_hook):
         @ThreadSafe.synchronized
         def forward_pre_hook(cell, args):
+            if not Runtime.is_running:
+                return args
+
             index = CellProcessor.set_and_get_calls_number(cell_name)
             full_forward_name = f'{cell_name}{Const.FORWARD}{Const.SEP}{index}'
             full_backward_name = f'{cell_name}{Const.BACKWARD}{Const.SEP}{index}'

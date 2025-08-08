@@ -21,6 +21,7 @@ import torch
 from torch.utils.hooks import BackwardHook, RemovableHandle
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import ModuleQueue, ThreadSafe
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
@@ -162,6 +163,9 @@ class ModuleProcesser:
         def forward_pre_hook(module, args, kwargs=None):
             if kwargs is None:
                 kwargs = {}
+
+            if not Runtime.is_running:
+                return (args, kwargs) if torch_version_above_or_equal_2 else args
 
             if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
                 return (args, kwargs) if torch_version_above_or_equal_2 else args
