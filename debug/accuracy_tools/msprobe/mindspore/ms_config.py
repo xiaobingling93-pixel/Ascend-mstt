@@ -79,6 +79,12 @@ class OverflowCheckConfig(BaseConfig):
             raise Exception("check_mode is invalid")
 
 
+class ExceptionDumpConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.data_mode = ["all"]
+
+
 class FreeBenchmarkConfig(BaseConfig):
     def __init__(self, task_config):
         super().__init__(task_config)
@@ -128,7 +134,8 @@ TaskDict = {
     Const.OVERFLOW_CHECK: OverflowCheckConfig,
     Const.FREE_BENCHMARK: FreeBenchmarkConfig,
     Const.GRAD_PROBE: GradProbeConfig,
-    Const.STRUCTURE: StructureConfig
+    Const.STRUCTURE: StructureConfig,
+    Const.EXCEPTION_DUMP: ExceptionDumpConfig
 }
 
 

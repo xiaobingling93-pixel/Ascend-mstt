@@ -359,13 +359,17 @@ class ProcessDf:
             return npu_op_name
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
+        def remove_prefix(string, prefix):
+            if string.startswith(prefix):
+                return string[len(prefix):]
+            return string
+
         def gen_input_compare_key(pattern, term):
             is_unmatched = True
             for i, prefix in enumerate(mapping_dict.get(f'ms_{term}')):
-                if op_name.split(pattern)[1].startswith(str(prefix)):
+                if remove_prefix(op_name, api_origin_name + pattern) == str(prefix):
                     npu_df.loc[index, CompareConst.CMP_KEY] = (
-                        op_name.replace(pattern + str(prefix),
-                                        pattern + str(mapping_dict.get(f'pt_{term}')[i])))
+                        op_name.replace(pattern + str(prefix), pattern + str(mapping_dict.get(f'pt_{term}')[i])))
                     is_unmatched = False
             return is_unmatched
 
@@ -387,15 +391,17 @@ class ProcessDf:
                 continue
             for index in ms_api_indices_dict.get(ms_api):
                 op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
-                if CompareConst.INPUT_PATTERN in op_name:
+                state = npu_df.loc[index, Const.STATE]
+                api_origin_name = npu_df.loc[index, Const.API_ORIGIN_NAME].replace(ms_api, pt_api, 1)
+                if state == Const.INPUT:
                     is_abandoned = gen_input_compare_key(CompareConst.INPUT_PATTERN, 'args')
-                elif CompareConst.KWARGS_PATTERN in op_name:
+                elif state == Const.KWARGS:
                     is_abandoned = gen_input_compare_key(CompareConst.KWARGS_PATTERN, 'args')
-                elif CompareConst.OUTPUT_PATTERN in op_name:
+                elif state == Const.OUTPUT:
                     is_abandoned = gen_input_compare_key(CompareConst.OUTPUT_PATTERN, 'output')
-                elif CompareConst.PARAMS_PATTERN in op_name:
+                elif state == Const.PARAMS:
                     is_abandoned = gen_input_compare_key(CompareConst.PARAMS_PATTERN, 'parameters')
-                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
+                elif state == Const.PARAMS_GRAD:
                     is_abandoned = gen_input_compare_key(CompareConst.PARAMS_GRAD_PATTERN, 'parameters_grad')
                 else:
                     logger.error(f'Excepted op_name: {op_name}')
@@ -709,7 +715,7 @@ class CalcStatsDiff:
         result_df.loc[cond_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
 
         cond_not_nan_diff = cond_valid_stat & ~cond_diff_nan
-        condition_pt_zero = bench_val == 0
+        condition_pt_zero = self.get_number(bench_val) == 0
         result_df.loc[cond_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.N_A
 
         # 相对误差转成百分比字符串

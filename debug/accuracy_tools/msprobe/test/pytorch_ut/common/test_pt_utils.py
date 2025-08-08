@@ -31,8 +31,6 @@ from msprobe.pytorch.common.utils import (
     print_rank_0,
     load_pt,
     save_pt,
-    save_api_data,
-    load_api_data,
     save_pkl,
     load_pkl
 )
@@ -232,41 +230,6 @@ class TestSavePT(unittest.TestCase):
         with self.assertRaises(RuntimeError) as context:
             save_pt(self.tensor, self.filepath)
         self.assertIn("save pt file temp_tensor.pt failed", str(context.exception))
-
-
-class TestSaveApiData(unittest.TestCase):
-
-    def test_save_api_data_success(self):
-        api_data = {"key": "value"}
-        io_buff = save_api_data(api_data)
-        self.assertIsInstance(io_buff, io.BytesIO)
-        io_buff.seek(0)
-        loaded_data = torch.load(io_buff)
-        self.assertEqual(loaded_data, api_data)
-
-    def test_save_api_data_failure(self):
-        api_data = MagicMock()
-        with patch('torch.save', side_effect=Exception("save error")):
-            with self.assertRaises(RuntimeError) as context:
-                save_api_data(api_data)
-            self.assertIn("save api_data to io_buff failed", str(context.exception))
-
-
-class TestLoadApiData(unittest.TestCase):
-
-    def test_load_api_data_success(self):
-        mock_tensor = torch.tensor([1, 2, 3])
-        buffer = io.BytesIO()
-        torch.save(mock_tensor, buffer)
-        buffer.seek(0)
-        result = load_api_data(buffer.read())
-        self.assertTrue(torch.equal(result, mock_tensor))
-
-    def test_load_api_data_failure(self):
-        invalid_bytes = b'not a valid tensor'
-        with self.assertRaises(RuntimeError) as context:
-            load_api_data(invalid_bytes)
-        self.assertIn("load api_data from bytes failed", str(context.exception))
 
 
 class TestSavePkl(unittest.TestCase):

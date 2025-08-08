@@ -27,6 +27,7 @@ class ModeConfig:
         self.highlight = kwargs.get('highlight', False)
         self.dump_mode = kwargs.get('dump_mode', Const.SUMMARY)
         self.first_diff_analyze = kwargs.get('first_diff_analyze', False)
+        self.diff_analyze = kwargs.get('diff_analyze', False)
         self.compared_file_type = kwargs.get('compared_file_type', Const.DUMP_JSON_FILE)
 
 

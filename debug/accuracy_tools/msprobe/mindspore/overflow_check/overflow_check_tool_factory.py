@@ -32,7 +32,7 @@ class OverflowCheckToolFactory:
             Const.PYNATIVE_MODE: None
         },
         Const.KERNEL: {
-            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_KBYK_MODE: KernelGraphOverflowCheck,
             Const.GRAPH_GE_MODE: KernelGraphOverflowCheck,
             Const.PYNATIVE_MODE: None
         }

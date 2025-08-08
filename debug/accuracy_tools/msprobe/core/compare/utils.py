@@ -651,6 +651,8 @@ def _compare_parser(parser):
                         help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)
+    parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
+                        help="<optional> Whether to perform a diff analyze on the api name.", required=False)
 
 
 def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
