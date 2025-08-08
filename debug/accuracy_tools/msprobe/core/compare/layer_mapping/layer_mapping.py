@@ -18,12 +18,12 @@ from collections import defaultdict
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
-from msprobe.core.common.utils import (add_time_with_yaml,
-                                       detect_framework_by_dump_json,
-                                       get_stack_construct_by_dump_json_path)
+from msprobe.core.common.utils import add_time_with_yaml, detect_framework_by_dump_json, \
+    get_stack_construct_by_dump_json_path, CompareException
 from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
 from msprobe.core.compare.utils import read_op, reorder_op_name_list
 from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.log import logger
 
 
 class LayerTrie:
@@ -63,7 +63,11 @@ class LayerTrie:
             node = node.children[name]
         if index >= len(node.data_items[state]):
             return default_value
-        return node.data_items[state][index]
+        if node.data_items[state]:
+            return node.data_items[state][index]
+        else:
+            logger.error(f"node.data_items of state:{state} is empty, please check.")
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
     def save_to_yaml(self, output_path):
         result = {f"{self.type_name} @ {self}": self.convert_to_dict(self)}
