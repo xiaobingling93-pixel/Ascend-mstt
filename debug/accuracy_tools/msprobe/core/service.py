@@ -114,7 +114,8 @@ class BaseService(ABC):
         self._process_iteration()
         if self._is_debug_level:
             return
-        self.model = model
+        if model:
+            self.model = model
         if self._is_need_module_hook and self.model not in self.hooked_modules:
             self._register_module_hook()
             self.hooked_modules.append(self.model)
