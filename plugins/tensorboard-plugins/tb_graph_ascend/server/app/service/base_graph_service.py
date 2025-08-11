@@ -108,6 +108,12 @@ class GraphServiceStrategy(ABC):
     @abstractmethod
     def change_node_expand_state(self, node_info, meta_data):
         pass
+        
+    def search_node_by_precision(self, meta_data, values):
+        pass
+    
+    def search_node_by_overflow(self, meta_data, values):
+        pass
     
     @abstractmethod
     def get_node_info(self, node_info, meta_data):

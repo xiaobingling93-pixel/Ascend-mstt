@@ -435,7 +435,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
         if (item[1].value.length === 0) {
-          item[1].value.push(UNMATCHED_NODE_NAME);
+          item[1].value = UNMATCHED_NODE_NAME;
         }
       }
       this.colorSetChanged = colorsets;
@@ -869,8 +869,26 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           type: 'overflow',
           values: this.overflowLevel,
         };
-        const overflowmenu = await request({ url: 'screen', method: 'POST', data: params });
-        this.set('overflowmenu', overflowmenu);
+        const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
+        this.set('overflowmenu', data);
+        if (success) {
+          this.set('precisionmenu', data);
+          // 更新数据绑定
+          this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
+          // 清除精度筛选输入框
+          this.set('selectedPrecisionNode', data?.[0] || '');
+          // 选中第一个选项
+          setTimeout(() => {
+            this._observePrecsionNode();
+          }, 200)
+        }
+        else {
+          Notification.show(`Error:${error}`, {
+            position: 'middle',
+            duration: 4000,
+            theme: 'error',
+          });
+        }
       } catch (e) {
         Notification.show(`获取溢出菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
           position: 'middle',

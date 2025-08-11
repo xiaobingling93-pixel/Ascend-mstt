@@ -603,6 +603,52 @@ class GraphRepo:
             logger.error(f"Failed to update nodes info: {e}")
             return False
     
+    # DB: 根据精度误差查询节点信息
+    def query_node_list_by_precision(self, step, rank, micro_step, values, is_filter_unmatch_nodes):
+        try:
+            # 准备占位符
+            conditions = []
+            print(values, is_filter_unmatch_nodes)
+            placeholders = []
+            params = []
+            conditions.append("step = ?")
+            conditions.append("rank = ?")
+            conditions.append("data_source = 'NPU'")
+            conditions.append("(? = -1 OR micro_step_id = ?)")
+            for value in values:
+                placeholder = "(precision_index BETWEEN ? AND ?)"
+                placeholders.append(placeholder)
+                params.extend(value)
+        
+            if is_filter_unmatch_nodes:
+                placeholders.append("matched_node_link = ''")
+                placeholders.append("matched_node_link IS NULL")
+                placeholders.append("matched_node_link = '[]'")
+
+            if len(placeholders) > 0:
+                conditions.append(" OR ".join(placeholders))
+            start = time.perf_counter()
+            query = f"""
+                SELECT 
+                    *
+                FROM
+                    tb_nodes 
+                WHERE 
+                    {" AND ".join(conditions)}
+            """
+            print(query)
+            
+            with self.conn as c:
+                cursor = c.execute(query, (step, rank, micro_step, micro_step, *params))
+                rows = cursor.fetchall()
+            node_list = [row['node_name'] for row in rows]
+            end = time.perf_counter()
+            print("query_node_list_by_precision time:", end - start)
+            return node_list
+        except Exception as e:
+            logger.error(f"Failed to query node list by precision: {e}")
+            return []
+    
     def _fetch_and_convert_rows(self, cursor):
         """
         Helper function to fetch rows from cursor and convert them.
@@ -614,7 +660,7 @@ class GraphRepo:
             dict_row = self._convert_db_to_object(dict(row))
             nodes[row['node_name']] = dict_row
         return nodes
-
+    
     def _convert_to_graph_json(self, npu_nodes, bench_nodes):
         graph_data = {
             "NPU":{

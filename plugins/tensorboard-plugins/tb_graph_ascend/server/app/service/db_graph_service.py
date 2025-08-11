@@ -116,9 +116,27 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': False, 'error': f'节点展开或收起发生错误', 'data': None}
 
     def search_node_by_precision(self, meta_data, values):
-        pass
+        try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            micro_step = meta_data.get('microStep')
+            
+            is_filter_unmatch_nodes = True if '无匹配节点' in values else False
+            if is_filter_unmatch_nodes:
+                values.remove('无匹配节点')
+            
+            node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values, is_filter_unmatch_nodes)
+            print(node_name_list)
+            return {'success': True, 'data':node_name_list}
+        except Exception as e:
+            logger.error('节点搜索发生错误:' + str(e))
+            return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
     
     def search_node_by_overflow(self, meta_data, values):
+        precision = []
+        is_filter_unmatch_nodes = True if '无匹配节点' in values else False
         pass
 
     def update_hierarchy_data(self, graph_type):
