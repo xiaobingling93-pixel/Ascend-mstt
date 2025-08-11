@@ -61,11 +61,14 @@ class MainController extends PolymerElement {
     </style>
 
     <div class="control-holder">
-      <vaadin-combo-box label="目录" items="[[runs]]" value="{{selectedRun}}"></vaadin-combo-box>
-      <vaadin-combo-box label="文件" items="[[tags]]" value="{{selectedTag}}"></vaadin-combo-box>
+      <vaadin-combo-box label="[[t('run')]]" items="[[runs]]" value="{{selectedRun}}"></vaadin-combo-box>
+      <vaadin-combo-box label="[[t('tag')]]" items="[[tags]]" value="{{selectedTag}}"></vaadin-combo-box>
       <vaadin-combo-box label="MicroStep" items="[[microsteps]]" value="{{selectedMicroStep}}"></vaadin-combo-box>
     </div>
   `;
+
+  @property({ type: Object })
+  t: Function = () => '';
 
   @property({ type: Object })
   metaDir: MetaDirType = {};
@@ -155,7 +158,7 @@ class MainController extends PolymerElement {
   _getTagChanged(event): void {
     const detail = event.detail;
     if (!detail?.rankId || detail?.rankId >= this.tags.length) {
-      Notification.show('提示：目标文件不存在', {
+      Notification.show(this.t('invalid_rank_id'), {
         position: 'middle',
         duration: 2000,
         theme: 'warning',

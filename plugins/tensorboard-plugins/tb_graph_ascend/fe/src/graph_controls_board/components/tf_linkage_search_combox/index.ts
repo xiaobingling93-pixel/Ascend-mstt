@@ -88,13 +88,13 @@ class Legend extends PolymerElement {
     <div class="control-holder">
       <div class="condition">
         <vaadin-select
-          label="数据侧"
+          label="[[t('data_side')]]"
           readonly="[[!isCompareGraph]]"
           items="[[menuSideItem]]"
           value="{{selectedSide}}"
         ></vaadin-select>
         <vaadin-text-field
-          label="节点搜索"
+          label="[[t('search_node')]]"
           value="{{searchText}}"
           on-change="_onChangeSearchText"
           clear-button-visible
@@ -102,7 +102,7 @@ class Legend extends PolymerElement {
       </div>
       <div class="result">
         <tf-search-combox
-          label="节点列表([[menuItem.length]])"
+          label="[[t('node_list')]]([[menuItem.length]])"
           items="[[menuItem]]"
           selected-value="{{selectedMenuNode}}"
           on-select-change="[[_onSelectedMenuNode]]"
@@ -110,7 +110,8 @@ class Legend extends PolymerElement {
       </div>
     </div>
   `;
-
+  @property({ type: Object })
+  t: Function = () => '';
   @property({ type: String, notify: true })
   selectedNode = '';
 
@@ -134,8 +135,8 @@ class Legend extends PolymerElement {
 
   @property({ type: Array })
   menuSideItem = [
-    { label: '调试侧', value: 'npu' },
-    { label: '标杆侧', value: 'bench' },
+    { label: this.t('debug'), value: 'npu' },
+    { label: this.t('bench'), value: 'bench' },
   ];
 
   @observe('selectedSide')
@@ -146,6 +147,16 @@ class Legend extends PolymerElement {
       this.set('selectedMenuNode', '');
     }
   }
+  @observe('t')
+  _observeT(): void {
+    if (this.t) {
+      this.set('menuSideItem', [
+        { label: this.t('debug'), value: 'npu' },
+        { label: this.t('bench'), value: 'bench' },
+      ]);
+    }
+  }
+
 
   @observe('nodelist')
   _observeMenu(): void {
