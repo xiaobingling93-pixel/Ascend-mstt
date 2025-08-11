@@ -27,21 +27,12 @@ def check_file_type(func):
         request = args[0]
         if not isinstance(request, Request):
             raise RuntimeError('The request "parameter" is not in a format supported by werkzeug')
-        meta_data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {}).get('metaData')
-
-        result = {'success': False, 'error': ''}
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
+        meta_data = GraphUtils.safe_get_meta_data(data)
         if meta_data is None or not isinstance(meta_data, dict):
-            result['error'] = 'The query parameter "metaData" is required and must be a dictionary'
+            result['error'] = 'The query parameter “metaData” and its sub-items must exist and must be a dictionary.'
             return http_util.Respond(request, result, "application/json")
-        data_type = meta_data.get('type')
-        run = meta_data.get('run')
-        tag = meta_data.get('tag')
-        if data_type is None or run is None or tag is None:
-            result['error'] = 'The query parameters "type", "run" and "tag" in "metaData" are required'
-            return http_util.Respond(request, result, "application/json")
-        if data_type not in [e.value for e in DataType]:
-            result['error'] = 'Unsupported file type'
-            return http_util.Respond(request, result, "application/json")
+        result = {'success': False, 'error': ''}
 
         return func(*args, **kwargs)
 

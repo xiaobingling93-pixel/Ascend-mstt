@@ -141,6 +141,62 @@ class GraphUtils:
             return default_value
 
     @staticmethod
+    def safe_get_node_info(data, default_value=None):
+   
+        node_info = data.get('nodeInfo')
+        
+        try:
+            # 长度限制 - 检查字典转为字符串后的长度
+            node_info_str = str(node_info)
+            if len(node_info_str) > MAX_FILE_SIZE:
+                logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
+                return default_value
+
+            # 验证必要字段是否存在
+            required_fields = ["nodeName", "nodeType"]
+            for field in required_fields:
+                if field not in node_info:
+                    logger.error(f"Field {field} is missing in metadata.")
+                    return default_value
+                
+            return node_info
+            
+        except json.JSONDecodeError:
+            logger.error("NodeInfo parameter is not in valid JSON format.")
+            return default_value
+        except Exception as e:
+            logger.error(f"An error occurred while parsing the nodeInfo parameter: {str(e)}")
+            return default_value
+
+    @staticmethod
+    def safe_get_meta_data(data, default_value=None):
+   
+        meta_data = data.get('metaData')
+        
+        try:
+            # 长度限制
+            meta_data_str = str(meta_data)
+            if len(meta_data_str) > MAX_FILE_SIZE:
+                logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
+                return default_value
+                
+            # 验证必要字段是否存在
+            required_fields = ["tag", "microStep", "run", "type"]
+            for field in required_fields:
+                if field not in meta_data:
+                    logger.error(f"Field {field} is missing in metadata.")
+                    return default_value
+                
+            return meta_data
+            
+        except json.JSONDecodeError:
+            logger.error("MetaData parameter is not in valid JSON format.")
+            return default_value
+        except Exception as e:
+            logger.error(f"An error occurred while parsing the metatdata parameter: {str(e)}")
+            return default_value
+
+    @staticmethod
     def remove_prefix(node_data, prefix):
         if node_data is None:
             return {}
