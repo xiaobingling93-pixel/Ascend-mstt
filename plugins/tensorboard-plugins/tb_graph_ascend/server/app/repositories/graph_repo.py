@@ -52,9 +52,9 @@ class GraphRepo:
             record = dict(rows[0])
             # 构建最终的 data 对象
             config_info = {
-                "microSteps": record.get('micro_steps', 1),
+                "microSteps": record.get('micro_steps', 1) or 1,
                 "tooltips": GraphUtils.safe_json_loads(record.get('tool_tip')),
-                "overflowCheck": bool(record.get('overflow_check', 1)),
+                "overflowCheck": bool(record.get('overflow_check', 1) or 1),
                 "isSingleGraph": not record.get('graph_type') == 'compare',
                 "colors": GraphUtils.safe_json_loads(record.get('node_colors')),
                 "matchedConfigFiles": [],
@@ -602,7 +602,7 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to update nodes info: {e}")
             return False
-    
+            
     # DB: 根据精度误差查询节点信息
     def query_node_list_by_precision(self, step, rank, micro_step, values, is_filter_unmatch_nodes):
         try:
@@ -630,13 +630,12 @@ class GraphRepo:
             start = time.perf_counter()
             query = f"""
                 SELECT 
-                    *
+                    node_name
                 FROM
                     tb_nodes 
                 WHERE 
                     {" AND ".join(conditions)}
             """
-            print(query)
             
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *params))
@@ -647,6 +646,41 @@ class GraphRepo:
             return node_list
         except Exception as e:
             logger.error(f"Failed to query node list by precision: {e}")
+            return []
+
+    # DB: 根据溢出查询节点信息
+    def query_node_list_by_overflow(self, step, rank, micro_step, values):
+        try:
+            # 准备占位符
+            conditions = []
+            
+            conditions.append("step = ?")
+            conditions.append("rank = ?")
+            conditions.append("data_source = 'NPU'")
+            conditions.append("(? = -1 OR micro_step_id = ?)")
+            placeholders = ", ".join(["?"] * len(values)) 
+            start = time.perf_counter()
+            query = f"""
+                SELECT 
+                    node_name
+                FROM
+                    tb_nodes 
+                WHERE 
+                    step = ?
+                    AND rank = ? 
+                    AND data_source = 'NPU'
+                    AND (? = -1 OR micro_step_id = ?)
+                    AND overflow_level IN ({placeholders})
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (step, rank, micro_step, micro_step, *values))
+                rows = cursor.fetchall()
+            node_list = [row['node_name'] for row in rows]
+            end = time.perf_counter()
+            print("query_node_list_by_overflow time:", end - start)
+            return node_list
+        except Exception as e:
+            logger.error(f"Failed to query node list by overflow: {e}")
             return []
     
     def _fetch_and_convert_rows(self, cursor):

@@ -128,16 +128,24 @@ class DbGraphService(GraphServiceStrategy):
                 values.remove('无匹配节点')
             
             node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values, is_filter_unmatch_nodes)
-            print(node_name_list)
             return {'success': True, 'data':node_name_list}
         except Exception as e:
             logger.error('节点搜索发生错误:' + str(e))
             return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
     
     def search_node_by_overflow(self, meta_data, values):
-        precision = []
-        is_filter_unmatch_nodes = True if '无匹配节点' in values else False
-        pass
+        try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
+            rank = meta_data.get('rank')
+            step = meta_data.get('step')
+            micro_step = meta_data.get('microStep')
+            
+            node_name_list = self.repo.query_node_list_by_overflow(step, rank, micro_step, values)
+            return {'success': True, 'data':node_name_list}
+        except Exception as e:
+            logger.error('节点搜索发生错误:' + str(e))
+            return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
 
     def update_hierarchy_data(self, graph_type):
         if (graph_type == NPU or graph_type == BENCH):

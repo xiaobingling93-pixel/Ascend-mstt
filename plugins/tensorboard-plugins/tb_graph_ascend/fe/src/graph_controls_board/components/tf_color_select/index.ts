@@ -831,6 +831,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         values: this.selectColor,
       };
       const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
+
       if (success) {
         this.set('precisionmenu', data);
         // 更新数据绑定
@@ -863,43 +864,30 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         return;
       }
 
-      try {
-        const params = {
-          metaData: this.selection,
-          type: 'overflow',
-          values: this.overflowLevel,
-        };
-        const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
+      const params = {
+        metaData: this.selection,
+        type: 'overflow',
+        values: this.overflowLevel,
+      };
+      const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
+      if (success) {
         this.set('overflowmenu', data);
-        if (success) {
-          this.set('precisionmenu', data);
-          // 更新数据绑定
-          this.notifyPath(`menu.${event.model.index}.checked`, checkbox.checked);
-          // 清除精度筛选输入框
-          this.set('selectedPrecisionNode', data?.[0] || '');
-          // 选中第一个选项
-          setTimeout(() => {
-            this._observePrecsionNode();
-          }, 200)
-        }
-        else {
-          Notification.show(`Error:${error}`, {
-            position: 'middle',
-            duration: 4000,
-            theme: 'error',
-          });
-        }
-      } catch (e) {
-        Notification.show(`获取溢出菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+        // 更新数据绑定
+        this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);
+        // 清除精度筛选输入框
+        this.set('selectedOverflowNode', data?.[0] || '');
+        // 选中第一个选项
+        setTimeout(() => {
+          this._observeOverFlowNode();
+        }, 200)
+      }
+      else {
+        Notification.show(`Error:${error}`, {
           position: 'middle',
           duration: 4000,
           theme: 'error',
         });
       }
-      // 更新数据绑定
-      this.notifyPath(`menu.${event.model.index}.checked`, overflowCheckbox.checked);
-      // 清除精度溢出输入框
-      this.set('selectedOverflowNode', '');
     }
   }
 
@@ -917,6 +905,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   };
 
   _observeOverFlowNode = () => {
+    if (!this.selectedOverflowNode) {
+      return;
+    }
     const prefix = this.isSingleGraph ? '' : NPU_PREFIX;
     const node = prefix + this.selectedOverflowNode;
     this.set('selectedNode', node);
