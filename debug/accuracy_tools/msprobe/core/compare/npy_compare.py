@@ -171,8 +171,10 @@ class TensorComparisonBasic(abc.ABC):
 def get_relative_err(n_value, b_value):
     """计算相对误差"""
     with np.errstate(divide='ignore', invalid='ignore'):
+        if n_value.dtype not in CompareConst.FLOAT_TYPE:
+            n_value = n_value.astype(float)
         if b_value.dtype not in CompareConst.FLOAT_TYPE:
-            n_value, b_value = n_value.astype(float), b_value.astype(float)
+            b_value = b_value.astype(float)
 
         n_value_copy = n_value.copy()
         b_value_copy = b_value.copy()
