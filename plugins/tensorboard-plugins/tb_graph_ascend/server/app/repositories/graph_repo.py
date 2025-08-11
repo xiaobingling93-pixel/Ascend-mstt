@@ -621,9 +621,7 @@ class GraphRepo:
                 params.extend(value)
         
             if is_filter_unmatch_nodes:
-                placeholders.append("matched_node_link = ''")
-                placeholders.append("matched_node_link IS NULL")
-                placeholders.append("matched_node_link = '[]'")
+                placeholders.append("(matched_node_link = '' OR matched_node_link IS NULL OR matched_node_link = '[]')")
 
             if len(placeholders) > 0:
                 conditions.append(" OR ".join(placeholders))
