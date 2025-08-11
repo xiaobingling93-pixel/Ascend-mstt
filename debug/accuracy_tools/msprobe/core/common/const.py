@@ -414,6 +414,8 @@ class CompareConst:
     BENCH_DTYPE = "Bench Dtype"
     NPU_SHAPE = "NPU Tensor Shape"
     BENCH_SHAPE = "Bench Tensor Shape"
+    NPU_CSV_FILE = "NPU CSV File"
+    BENCH_CSV_FILE = "Bench CSV File"
     NPU_MAX = "NPU max"
     NPU_MIN = "NPU min"
     NPU_MEAN = "NPU mean"
@@ -638,6 +640,9 @@ class CompareConst:
     MS_GRAPH_STATISTIC = {
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
+    }
+    MS_GRAPH_CSV = {
+        NPU_CSV_FILE: None, BENCH_CSV_FILE: None
     }
 
     API_MAPPING_KEYS_TO_COMPARE = [
