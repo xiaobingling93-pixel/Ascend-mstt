@@ -321,7 +321,16 @@ class DbGraphService(GraphServiceStrategy):
         pass    
 
     def update_colors(self, colors):
-        pass
+        try:
+            if not self.conn:
+                return {'success': False, 'error': 'database connection not init'}
+            # DB：更新颜色
+            update_db_res = self.repo.update_config_colors(colors)
+            if not update_db_res:
+                return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'data': None}
 
     def save_matched_relations(self, meta_data):
         try:

@@ -562,6 +562,24 @@ class GraphRepo:
             logger.error(f"Failed to query modify matched nodes list: {e}")
             return {}
 
+    # DB：更新config的colors
+    def update_config_colors(self, colors):
+        try:
+            query = """
+                UPDATE 
+                    tb_config 
+                SET 
+                    node_colors = ?
+                WHERE
+	                id=1
+            """
+            with self.conn as c:
+                c.execute(query, (json.dumps(colors),))
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update config colors: {e}")
+            return False
+
     # DB：批量更新节点信息
     def update_nodes_info(self, nodes_info, rank, step):
         # 取消匹配和匹配都要走这个逻辑        
@@ -608,7 +626,6 @@ class GraphRepo:
         try:
             # 准备占位符
             conditions = []
-            print(values, is_filter_unmatch_nodes)
             placeholders = []
             params = []
             conditions.append("step = ?")
@@ -624,7 +641,7 @@ class GraphRepo:
                 placeholders.append("(matched_node_link = '' OR matched_node_link IS NULL OR matched_node_link = '[]')")
 
             if len(placeholders) > 0:
-                conditions.append(" OR ".join(placeholders))
+                conditions.append(f"({'OR'.join(placeholders)})")
             start = time.perf_counter()
             query = f"""
                 SELECT 
@@ -634,7 +651,6 @@ class GraphRepo:
                 WHERE 
                     {" AND ".join(conditions)}
             """
-            
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *params))
                 rows = cursor.fetchall()

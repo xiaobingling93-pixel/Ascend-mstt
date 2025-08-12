@@ -229,10 +229,12 @@ class GraphView:
     # 更新颜色信息
     @staticmethod
     @wrappers.Request.application
+    @check_file_type
     def update_colors(request):
-        colors = GraphUtils.safe_json_loads(request.args.get('colors'))
-        run = request.args.get('run')
-        strategy = GraphView._get_strategy({'run': run}, no_tag=True)
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
+        meta_data = data.get('metaData')
+        colors = GraphUtils.safe_json_loads(data.get('colors'))
+        strategy = GraphView._get_strategy(meta_data, no_tag=True)
         update_result = strategy.update_colors(colors)
         return http_util.Respond(request, json.dumps(update_result), "application/json")
 

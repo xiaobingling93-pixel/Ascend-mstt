@@ -457,6 +457,7 @@ class JsonGraphService(GraphServiceStrategy):
             first_run_tag = first_run_tags.get(self.run)
             first_file_data, error = GraphUtils.safe_load_data(self.run, f"{first_run_tag}.vis")
             if error:
+                logger.error(f"Error loading data: {error}")
                 return {'success': False, 'error': '获取配置信息失败,请检查目录中第一个文件'}
             first_file_data['Colors'] = colors
             config_data_run['colors'] = colors

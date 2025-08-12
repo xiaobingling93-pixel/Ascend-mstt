@@ -574,9 +574,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
     const params = {
       colors: JSON.stringify(newColorsList),
-      run: this.selection.run,
+      metaData: this.selection,
     };
-    const { success, data, error } = await request({ url: 'updateColors', method: 'GET', params: params });
+    const { success, data, error } = await request({ url: 'updateColors', method: "POST", data: params });
     if (success) {
       // 更新颜色列表
       this.set('colors', newColorsList);
