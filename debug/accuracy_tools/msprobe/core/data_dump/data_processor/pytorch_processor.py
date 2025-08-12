@@ -285,8 +285,9 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.clone().detach()
         else:
-            saved_tensor = tensor.clone().contiguous().detach()
-            save_pt(saved_tensor, file_path)
+            if tensor.storage().data_ptr() != 0:
+                saved_tensor = tensor.clone().contiguous().detach()
+                save_pt(saved_tensor, file_path)
         return single_arg
 
     def _analyze_and_save_ndarray(self, ndarray, suffix):
