@@ -138,6 +138,8 @@ def _consolidate_tp_weights(weights: Dict) -> Dict:
 def _parse_num_layers_per_stage(tp_partition):
     match = [re.findall(LAYER_IDX_PATTERN, key) for key in tp_partition.keys()]
     layer_idx = [int(i[0]) for i in match if i]
+    if not layer_idx:
+        return 1
     num_layers_per_pipeline_stage = max(layer_idx) + 1
 
     return num_layers_per_pipeline_stage
