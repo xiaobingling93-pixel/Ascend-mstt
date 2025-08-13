@@ -15,7 +15,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
     stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item, ApiBatch, \
-    get_paired_steps
+    get_paired_dirs
 
 # test_read_op_1
 op_data = {
@@ -932,5 +932,5 @@ class TestGetPairedSteps(unittest.TestCase):
         self.bench_dir.cleanup()
 
     def test_get_paired_steps(self):
-        paired = get_paired_steps(self.npu_dir.name, self.bench_dir.name)
+        paired = get_paired_dirs(self.npu_dir.name, self.bench_dir.name)
         self.assertEqual(set(paired), {'step2'})

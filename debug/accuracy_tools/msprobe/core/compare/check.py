@@ -108,10 +108,3 @@ def check_stack_json_str(stack_info, op_name):
     else:
         logger.error(f"Expected stack_info to be a list, but got {type(stack_info).__name__} for '{op_name}'")
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
-
-
-def check_mix_compare(npu_path, bench_path):
-    def single_check(path):
-        return set(os.listdir(path)) == Const.MIX_DUMP_NAMES
-
-    return single_check(npu_path) and single_check(bench_path)

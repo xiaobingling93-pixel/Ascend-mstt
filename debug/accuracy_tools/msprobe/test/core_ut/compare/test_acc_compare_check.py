@@ -1,10 +1,8 @@
 # coding=utf-8
 import unittest
-import os
-import tempfile
 
 from msprobe.core.compare.check import check_dump_json_str, check_json_key_value, valid_key_value, \
-    check_stack_json_str, check_mix_compare
+    check_stack_json_str
 from msprobe.core.common.utils import CompareException
 
 
@@ -125,53 +123,3 @@ class TestUtilsMethods(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             check_stack_json_str(stack_info, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
-
-
-class TestCheckMixCompare(unittest.TestCase):
-    @staticmethod
-    def create_temp_dir_with_files(file_names):
-        temp_dir = tempfile.TemporaryDirectory()
-        for name in file_names:
-            open(os.path.join(temp_dir.name, name), 'w').close()
-        return temp_dir
-
-    def test_both_dirs_match(self):
-        # 两个路径都包含完整的 MIX_DUMP_NAMES
-        files = ['graph', 'pynative']
-        npu_dir = self.create_temp_dir_with_files(files)
-        bench_dir = self.create_temp_dir_with_files(files)
-
-        self.assertTrue(check_mix_compare(npu_dir.name, bench_dir.name))
-
-        npu_dir.cleanup()
-        bench_dir.cleanup()
-
-    def test_one_dir_missing_file(self):
-        # 一个路径缺少文件
-        npu_dir = self.create_temp_dir_with_files(['graph', 'pynative'])
-        bench_dir = self.create_temp_dir_with_files(['graph'])
-
-        self.assertFalse(check_mix_compare(npu_dir.name, bench_dir.name))
-
-        npu_dir.cleanup()
-        bench_dir.cleanup()
-
-    def test_extra_file(self):
-        # 有额外的文件，也应该返回 False
-        npu_dir = self.create_temp_dir_with_files(['graph', 'pynative', 'extra'])
-        bench_dir = self.create_temp_dir_with_files(['graph', 'pynative'])
-
-        self.assertFalse(check_mix_compare(npu_dir.name, bench_dir.name))
-
-        npu_dir.cleanup()
-        bench_dir.cleanup()
-
-    def test_both_dirs_mismatch(self):
-        # 两个路径都不匹配
-        npu_dir = self.create_temp_dir_with_files(['a'])
-        bench_dir = self.create_temp_dir_with_files(['b', 'c'])
-
-        self.assertFalse(check_mix_compare(npu_dir.name, bench_dir.name))
-
-        npu_dir.cleanup()
-        bench_dir.cleanup()

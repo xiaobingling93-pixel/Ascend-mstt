@@ -629,10 +629,10 @@ def gen_api_batches(result: np.ndarray):
     return api_batches
 
 
-def get_paired_steps(npu_path, bench_path):
-    npu_steps = set(os.listdir(npu_path))
-    bench_steps = set(os.listdir(bench_path))
-    return list(npu_steps & bench_steps)
+def get_paired_dirs(npu_path, bench_path):
+    npu_dirs = set(os.listdir(npu_path))
+    bench_dirs = set(os.listdir(bench_path))
+    return list(npu_dirs & bench_dirs)
 
 
 def _compare_parser(parser):
