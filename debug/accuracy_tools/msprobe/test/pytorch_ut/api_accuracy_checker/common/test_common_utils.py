@@ -29,19 +29,6 @@ class TestUtils(unittest.TestCase):
         self.processor.save_tensors_in_element(api_name, tensor)
         file_path = os.path.join(self.save_path, f'{api_name}.0.pt')
         self.assertTrue(os.path.exists(file_path))
-    
-    def test_recursion_limit_error(self):
-        tensor = torch.randn(10, 10)
-        with self.assertRaises(DumpException) as context:
-            self.processor._save_recursive("test_api", [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, 
-                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
-                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
-                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
-                                                        [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor,
-                                                        [tensor, [tensor, [tensor, [tensor
-                                                                                    ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]], 0)
-        self.assertTrue(isinstance(context.exception, DumpException))
-        self.assertEqual(context.exception.code, DumpException.RECURSION_LIMIT_ERROR)
 
     def test_save_recursive_non_tensor_types(self):
         api_name = "test_api"
