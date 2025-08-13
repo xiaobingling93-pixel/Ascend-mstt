@@ -117,6 +117,7 @@ class Constant(object):
     # result files type
     TEXT = "text"
     DB = "db"
+    NOTEBOOK = "notebook"
     INVALID = "invalid"
 
     # db name
@@ -138,6 +139,7 @@ class Constant(object):
     TABLE_CLUSTER_COMMUNICATION_MATRIX = "ClusterCommAnalyzerMatrix"
     TABLE_CLUSTER_COMMUNICATION_BANDWIDTH = "ClusterCommAnalyzerBandwidth"
     TABLE_CLUSTER_COMMUNICATION_TIME = "ClusterCommunicationTime"
+    TABLE_CLUSTER_TIME_SUMMARY = "ClusterTimeSummary"
 
     # data config key
     CONFIG = "config"
@@ -395,6 +397,7 @@ class Constant(object):
     # Unit Conversion
     COMMUNICATION_B_TO_GB = 0.001 ** 3
     US_TO_S = 0.001 ** 2
+    TIME_UNIT_SCALE = 1000
 
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
@@ -449,6 +452,8 @@ class Constant(object):
     UINT32_BITS = 32
     UINT32_MASK = 0xffffffff
 
+    INVALID_RANK_NUM = 4294967295
+
     # slow rank
     MAX_DIXON_NUM = 100
     DIXON_THRESHOLD_1 = 7
@@ -479,4 +484,29 @@ class Constant(object):
     TABLE_TASK_PMU_INFO = "TASK_PMU_INFO"
     TABLE_OP_MEMORY = "OP_MEMORY"
     TABLE_MEMORY_RECORD = "MEMORY_RECORD"
+    TABLE_STEP_TIME = "STEP_TIME"
 
+    # communication task type
+    NOTIFY_RECORD = "Notify_Record"
+    NOTIFY_WAIT = "Notify_Wait"
+
+    # group name value
+    PP = "pp"
+
+
+class ProfilerTableConstant:
+
+    # COMMUNICATION OP
+    OP_ID = "opId"
+    OP_NAME = "opName"
+    START_NS = "startNS"
+    END_NS = "endNS"
+    CONNECTION_ID = "connectionId"
+    GROUP_NAME = "groupName"
+    RELAY = "relay"
+    RETRY = "retry"
+    DATA_TYPE = "dataType"
+    ALG_TYPE = "algType"
+    COUNT = "count"
+    OP_TYPE = "opType"
+    WAIT_NS = "waitNS"

@@ -36,7 +36,6 @@ class BaseService(ABC):
         self.config.level = getattr(config, 'level_ori', config.level)  # 兼容MindSpore配置
         self.model = None
         self.data_collector = build_data_collector(self.config)
-        self.attl_manager = None
         self.current_iter = 0
         self.loop = 0
         self.init_step = 0
@@ -46,6 +45,7 @@ class BaseService(ABC):
         self.current_rank = None
         self.dump_iter_dir = None
         self.should_stop_service = False
+        self.hooked_modules = []
         self.ori_customer_func = {}
         self.debug_variable_counter = None
         self.currrent_step_first_debug_save = True
@@ -63,7 +63,7 @@ class BaseService(ABC):
     @property
     def _is_l2_level(self):
         return self.config.level == Const.LEVEL_L2
-    
+
     @property
     def _is_mix_level(self):
         return self.config.level == Const.LEVEL_MIX
@@ -71,7 +71,7 @@ class BaseService(ABC):
     @property
     def _is_need_module_hook(self):
         return self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]
-    
+
     @property
     def _is_need_api_hook(self):
         return self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]
@@ -91,10 +91,6 @@ class BaseService(ABC):
             self.config.task in self.data_collector.tasks_need_tensor_data or
             (self.config.task == Const.STATISTICS and self.config.tensor_list)
         )
-    
-    @property
-    def _is_online_run_ut(self):
-        return getattr(self.config, "online_run_ut", False)
 
     @property
     @abstractmethod
@@ -111,16 +107,21 @@ class BaseService(ABC):
     @staticmethod
     def _change_jit_switch(status):
         """修改JitDump开关，mindspore子类重写"""
-        pass 
+        pass
 
     def start(self, model=None, token_range=None):
         """通用start模板"""
         self._process_iteration()
         if self._is_debug_level:
             return
+        if model:
+            self.model = model
+        if self._is_need_module_hook and self.model not in self.hooked_modules:
+            self._register_module_hook()
+            self.hooked_modules.append(self.model)
         if self._need_stop_service():
-            return 
-        self.model = model
+            return
+        Runtime.is_running = True
         self.cur_token_id = 0
         if self.first_start:
             try:
@@ -129,25 +130,21 @@ class BaseService(ABC):
                 self.current_rank = None
             Runtime.current_rank = self.current_rank
             if self._is_no_dump_rank:
+                Runtime.is_running = False
                 return
             self._register_hook()
-            if self._is_need_module_hook:
-                self._register_module_hook()
             self.first_start = False
 
             if token_range:
                 self._register_infer_count_hook(self.model, token_range)
         self.logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
         if token_range is None:
-            Runtime.is_running = True
             self.primitive_switch = True
             self._change_jit_switch(True)
             self.logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
-        if self._is_online_run_ut:
-            self._run_ut_dispatch(True)
-        else:
-            self.create_dirs()
-            self.logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
+
+        self.create_dirs()
+        self.logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
         """通用stop模板"""
@@ -156,14 +153,13 @@ class BaseService(ABC):
         if self._is_no_dump_step or self._is_no_dump_rank:
             return
         self.logger.info(f"{Const.TOOL_NAME}: debugger.stop() is set successfully. "
-                    "Please set debugger.start() to turn on the dump switch again. ")
+                         "Please set debugger.start() to turn on the dump switch again. ")
         Runtime.is_running = False
         self.primitive_switch = False
         self._change_jit_switch(False)
         if self._is_l2_level:
             return
-        if self._is_online_run_ut:
-            self._run_ut_dispatch(False)
+
         self._process_async_dump()
         self.data_collector.write_json()
 
@@ -218,13 +214,12 @@ class BaseService(ABC):
     def register_custom_api(self, module, api_name, api_prefix):
         self.ori_customer_func[str(module) + Const.SEP + api_name] = getattr(module, api_name)
         ApiRegistry.register_custom_api(module, api_name, api_prefix,
-                                          functools.partial(self.build_hook, Const.API), self.api_template)
+                                        functools.partial(self.build_hook, Const.API), self.api_template)
 
     def restore_custom_api(self, module, api):
         ori_func = self.ori_customer_func.get(str(module) + Const.SEP + api)
         if ori_func:
             setattr(module, api, ori_func)
-
 
     def build_hook(self, hook_type, name):
         return self.hook_manager.build_hook(hook_type, name)
@@ -247,24 +242,22 @@ class BaseService(ABC):
     def _init_specific_components(self):
         """初始化框架特定组件"""
         pass
-    
+
     @abstractmethod
     def _register_hook(self):
         """注册hook函数"""
         pass
-    
+
     @abstractmethod
     def _register_module_hook(self):
         """注册模块级别的hook函数"""
-    
+
     def _need_stop_service(self):
         if self.should_stop_service:
             return True
         end_service = self.config.step and self.current_iter > max(self.config.step) or \
-                      self.data_collector and self.data_collector.data_processor.is_terminated
+            self.data_collector and self.data_collector.data_processor.is_terminated
         if end_service:
-            if self._is_online_run_ut and self.attl_manager:
-                self.attl_manager.attl_stop()
             self.primitive_switch = False
             self._change_jit_switch(False)
             Runtime.is_running = False
@@ -307,10 +300,9 @@ class BaseService(ABC):
         if root_model and isinstance(root_model, list):
             root_model = root_model[0]
             self.logger.warning("Infer model can only input one to support token_range, choose the first one.")
-        if self._is_online_run_ut:
-            return
+
         root_model.register_forward_pre_hook(infer_hook)
- 
+
     def _create_l2_dirs(self, cur_rank):
         create_directory(self.dump_iter_dir)
         kernel_config_path = create_kernel_config_json(self.dump_iter_dir, cur_rank)
@@ -319,12 +311,12 @@ class BaseService(ABC):
     def _create_default_dirs(self, cur_rank):
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
-        
+
         dump_data_dir = None
         if self._need_tensor_data:
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
-            
+
         self._configure_dump_paths(dump_dir, dump_data_dir)
 
     def _configure_dump_paths(self, dump_dir, dump_data_dir):

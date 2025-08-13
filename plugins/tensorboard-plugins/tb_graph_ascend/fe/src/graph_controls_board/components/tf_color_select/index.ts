@@ -15,6 +15,7 @@
  */
 
 import '@vaadin/combo-box';
+import '@vaadin/text-field';
 import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
 import { Notification } from '@vaadin/notification';
@@ -24,9 +25,7 @@ import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects }
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
-import { PRECISION_DESC } from '../../../common/constant';
-
-const UNMATCHED_NODE_NAME = '无匹配节点';
+import '../tf_filter_precision_error/index'
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
@@ -146,7 +145,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           cursor: pointer;
           position: relative;
           font-size: 10px;
-          top: -4px;
+          top: -2px;
           left: 2px;
         }
 
@@ -184,7 +183,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               <template is="dom-if" if="[[!isOverflowFilter]]">
                 <div class="toolbar">
                   <div style="font-size: 15px">
-                    精度误差
+                    [[t("accuracy_error")]]
                   <vaadin-icon id="question" icon="vaadin:question-circle"></vaadin-icon>
                   <vaadin-tooltip
                     for="question"
@@ -193,6 +192,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   ></vaadin-tooltip>
                   </div>
                   <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <vaadin-icon icon="vaadin:funnel" on-click="_clickFilter"></vaadin-icon>
                     <vaadin-icon icon="vaadin:cog-o" on-click="_clickSetting"></vaadin-icon>
                     <template is="dom-if" if="[[showSwitchIcon]]">
                       <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
@@ -202,7 +202,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               </template>
               <template is="dom-if" if="[[isOverflowFilter]]">
                 <div class="toolbar">
-                  <div style="font-size: 15px">精度溢出</div>
+                  <div style="font-size: 15px">[[t("overflow")]]</div>
                   <template is="dom-if" if="[[showSwitchIcon]]">
                     <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
                   </template>
@@ -223,7 +223,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                 <span class="search-number">([[precisionmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
-                    label="符合精度误差节点([[precisionmenu.length]])"
+                    label="[[t('match_accuracy_error')]]([[precisionmenu.length]])"
                     items="[[precisionmenu]]"
                     selected-value="{{selectedPrecisionNode}}"
                     on-select-change="[[_observePrecsionNode]]"
@@ -249,7 +249,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                 <span class="search-number">([[precisionmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
-                    label="符合溢出筛选节点([[overflowmenu.length]])"
+                    label="[[t('overflow_filter_node')]]([[overflowmenu.length]])"
                     items="[[overflowmenu]]"
                     selected-value="{{selectedOverflowNode}}"
                     on-select-change="[[_observeOverFlowNode]]"
@@ -336,10 +336,17 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           </template>
         </div>
       </template>
+      <tf-filter-precision-error filter-dialog-opened="{{filterDialogOpened}}" update-filter-data="{{updateFilterData}}" selection="[[selection]]"/>
     `;
+
+  @property({ type: Object })
+  t: Function = () => '';
 
   @property({ type: Boolean })
   _colorSetting: boolean = true; // 颜色设置按钮
+
+  @property({ type: Boolean })
+  filterDialogOpened: boolean = false;
 
   @property({ type: Boolean })
   isSingleGraph = false;
@@ -419,7 +426,19 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   task: string = '';
 
   @property({ type: String })
-  precisionDesc: string = PRECISION_DESC[this.task];
+  precisionDesc: string = '';
+
+  @property({ type: String })
+  unMatchedNodeName = this.t('no_matching_nodes')
+
+
+  @observe('t')
+  _observeT(): void {
+    if (this.t) {
+      this.set('unMatchedNodeName', this.t('no_matching_nodes'));
+      this.set('precisionDesc', this.t(`precision_desc.${this.task}`));
+    }
+  }
 
   @observe('colorset')
   _observeColorSet(): void {
@@ -430,7 +449,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
         if (item[1].value.length === 0) {
-          item[1].value.push(UNMATCHED_NODE_NAME);
+          item[1].value.push(this.unMatchedNodeName);
         }
       }
       this.colorSetChanged = colorsets;
@@ -440,7 +459,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
   @observe('task')
   _observeTask(): void {
-    this.set('precisionDesc', PRECISION_DESC[this.task]);
+    this.set('precisionDesc', this.t(`precision_desc.${this.task}`));
   }
 
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor
@@ -483,9 +502,39 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       }
     }
   }
+  // 请求后端接口，更新筛选数据
+  updateFilterData = async () => {
+    if (_.isEmpty(this.selectColor)) {
+      return;
+    }
+    try {
+      const params = {
+        run: this.selection.run,
+        tag: this.selection.tag,
+        microStep: this.selection.microStep,
+        precision_index: this.selectColor.join(','),
+      };
+
+      const precisionmenu = await request({ url: 'screen', method: 'GET', params: params });
+      this.set('precisionmenu', precisionmenu);
+      this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
+    }
+    catch (error) {
+      Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+        position: 'middle',
+        duration: 4000,
+        theme: 'error',
+      });
+    }
+  }
 
   toggleVisibility(): void {
     this.set('_colorSetting', !this._colorSetting);
+  }
+
+  _clickFilter(event): void {
+    event.stopPropagation();
+    this.set('filterDialogOpened', true);
   }
 
   _clickSetting(event): void {
@@ -533,7 +582,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     }
     // 无匹配节点图例一定存在
     newColorsList[UNMATCHED_COLOR] = {
-      value: UNMATCHED_NODE_NAME,
+      value: this.unMatchedNodeName,
       description: '对比过程中节点未匹配上',
     };
 

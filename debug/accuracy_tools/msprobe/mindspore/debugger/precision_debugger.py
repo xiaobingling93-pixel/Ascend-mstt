@@ -43,6 +43,7 @@ from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 try:
     from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
+    import mindspore as ms
 except ImportError:
     enable_dynamic_kbyk_dump = False
 else:
@@ -165,7 +166,8 @@ class PrecisionDebugger(BasePrecisionDebugger):
                 instance.service.stop()
         else:
             Runtime.is_running = False
-        if enable_dynamic_kbyk_dump:
+        if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
+            ms.runtime.synchronize()
             _dump_stop()
         if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().stop()
@@ -181,7 +183,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
                 instance.service.step()
         if is_graph_mode_cell_dump_allowed(instance.config):
             GraphModeCellDump.step()
-        if enable_dynamic_kbyk_dump:
+        if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
             _dump_step(1)
         if cls._is_kernel_dump() and _msprobe_c:
             _msprobe_c._PrecisionDebugger().step()
@@ -222,7 +224,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.config.level_ori == Const.LEVEL_L2:
-            return False
+            return not instance._is_graph_dump(instance.config)
         if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
             return False
         else:

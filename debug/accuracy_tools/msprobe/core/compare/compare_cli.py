@@ -28,10 +28,10 @@ def compare_cli(args):
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     if not npu_path:
-        logger.error(f"Missing npu_path in configuration file {args.input_path}, please check!")
+        logger.error(f"Missing npu_path in input configuration file, please check!")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     if not bench_path:
-        logger.error(f"Missing bench_path in configuration file {args.input_path}, please check!")
+        logger.error(f"Missing bench_path in input configuration file, please check!")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     frame_name = args.framework
     auto_analyze = not args.compare_only
@@ -49,6 +49,7 @@ def compare_cli(args):
         "fuzzy_match": args.fuzzy_match,
         "highlight": args.highlight,
         "data_mapping": args.data_mapping,
+        "diff_analyze": args.diff_analyze
     }
 
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
@@ -92,6 +93,13 @@ def compare_cli(args):
         if isinstance(common, bool) and common:
             common_dir_compare(input_param, args.output_path)
             return
+
+        if common_kwargs.get('diff_analyze', False):
+            logger.info("Start finding first diff node......")
+            from msprobe.core.compare.find_first.analyzer import DiffAnalyzer
+            DiffAnalyzer(npu_path, bench_path, args.output_path, frame_name).analyze()
+            return
+
         if frame_name == Const.PT_FRAMEWORK:
             compare_distributed(npu_path, bench_path, args.output_path, **kwargs)
         else:

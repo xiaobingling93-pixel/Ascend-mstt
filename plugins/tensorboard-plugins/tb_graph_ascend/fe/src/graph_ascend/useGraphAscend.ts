@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import request from '../utils/request';
-import { LoadGraphFileInfoListType } from './type';
+import { LoadGraphFileInfoListType, SelectionType } from './type';
 const useGraphAscend = () => {
 
     const loadGraphFileInfoList = async (isSafeCheck: boolean): Promise<LoadGraphFileInfoListType> => {
@@ -37,24 +37,13 @@ const useGraphAscend = () => {
             };
         }
     };
-    const loadGraphConfig = async (runName: string, tagName: string): Promise<any> => {
-        const params = {
-            run: runName,
-            tag: tagName,
-        };
-
-        const result = await request({ url: 'loadGraphConfigInfo', method: 'GET', params: params }); // 获取异步的 ArrayBuffer
+    const loadGraphConfig = async (metaData: SelectionType): Promise<any> => {
+        const result = await request({ url: 'loadGraphConfigInfo', method: 'POST', data: { metaData }}); // 获取异步的 ArrayBuffer
         return result;
     };
 
-    const loadGraphAllNodeList = async (runName: string, tagName: string, microStep: number): Promise<any> => {
-        const params = {
-            run: runName,
-            tag: tagName,
-            microStep: microStep,
-        };
-
-        const result = await request({ url: 'loadGraphAllNodeList', method: 'GET', params: params }); // 获取异步的 ArrayBuffer
+    const loadGraphAllNodeList = async (metaData: SelectionType): Promise<any> => {
+        const result = await request({ url: 'loadGraphAllNodeList', method: 'POST', data: { metaData }}); // 获取异步的 ArrayBuffer
         return result;
     };
 

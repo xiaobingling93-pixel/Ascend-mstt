@@ -23,8 +23,9 @@ except ImportError:
 from msprobe.core.common.file_utils import load_yaml, create_file_in_zip
 from msprobe.core.config_check.checkers.base_checker import BaseChecker
 from msprobe.core.config_check.config_checker import register_checker_item
-from msprobe.core.config_check.utils.utils import config_checking_print
+from msprobe.core.config_check.utils.utils import config_checking_print, process_pass_check
 from msprobe.core.common.file_utils import FileOpen, save_excel
+from msprobe.core.common.const import Const
 
 dirpath = os.path.dirname(__file__)
 depend_path = os.path.join(dirpath, "../resource/dependency.yaml")
@@ -62,7 +63,7 @@ def compare_pip_data(bench_pip_path, cmp_pip_path, fmk):
         if bench_version != cmp_version:
             data.append([package, bench_version if bench_version else 'None',
                          cmp_version if cmp_version else 'None',
-                         "error"])
+                         Const.CONFIG_CHECK_ERROR])
 
     df = pd.DataFrame(data, columns=PipPackageChecker.result_header)
     return df
@@ -86,5 +87,5 @@ class PipPackageChecker(BaseChecker):
         bench_pip_path = os.path.join(bench_dir, PipPackageChecker.target_name_in_zip)
         cmp_pip_path = os.path.join(cmp_dir, PipPackageChecker.target_name_in_zip)
         df = compare_pip_data(bench_pip_path, cmp_pip_path, fmk)
-        pass_check = "error" not in df['level'].values
+        pass_check = process_pass_check(df['level'].values)
         return PipPackageChecker.target_name_in_zip, pass_check, df

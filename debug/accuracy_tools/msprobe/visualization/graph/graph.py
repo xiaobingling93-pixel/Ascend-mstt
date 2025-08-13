@@ -65,8 +65,10 @@ class Graph:
         return node_b, ancestors_n, ancestors_b
 
     @staticmethod
-    def fuzzy_match(node_n, node_b):
-        if not node_n or not node_b or not node_n.fuzzy_eq(node_b):
+    def fuzzy_match(node_n, node_b, check_shape=True):
+        if not node_n or not node_b:
+            return None, [], []
+        if check_shape and not node_n.fuzzy_eq(node_b):
             return None, [], []
         ancestors_n = node_n.get_ancestors()
         ancestors_b = node_b.get_ancestors()

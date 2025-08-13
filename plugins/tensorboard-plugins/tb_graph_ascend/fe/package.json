@@ -28,6 +28,7 @@
     "webpack-dev-server": "4.15.1"
   },
   "dependencies": {
+    "@jridgewell/gen-mapping": "^0.3.12",
     "@polymer/decorators": "^3.0.0",
     "@polymer/iron-collapse": "^3.0.1",
     "@polymer/iron-icon": "^3.0.1",
@@ -38,6 +39,7 @@
     "@polymer/polymer": "^3.5.1",
     "@vaadin/button": "24.6.5",
     "@vaadin/checkbox": "24.6.5",
+    "@vaadin/checkbox-group": "^24.6.5",
     "@vaadin/combo-box": "24.6.5",
     "@vaadin/confirm-dialog": "24.6.5",
     "@vaadin/context-menu": "24.6.5",
@@ -53,11 +55,15 @@
     "@vaadin/text-field": "24.6.5",
     "@vaadin/tooltip": "24.6.5",
     "axios": "^1.8.4",
+    "brace-expansion": "^1.1.12",
     "clean-webpack-plugin": "^4.0.0",
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "d3": "^7.9.0",
     "dagre": "^0.8.5",
+    "form-data": "^4.0.4",
+    "i18next": "^23.16.8",
+    "i18next-browser-languagedetector": "^7.2.2",
     "lodash": "^4.17.21",
     "prettier": "^3.4.2",
     "style-loader": "^4.0.0"

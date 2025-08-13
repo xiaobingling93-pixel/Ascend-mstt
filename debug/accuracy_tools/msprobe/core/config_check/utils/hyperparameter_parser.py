@@ -96,9 +96,13 @@ class YamlParser(Parser):
                 new_prefix = prefix + Const.SEP + key if prefix else key
                 self.recursive_parse_parameters(value, new_prefix)
         elif isinstance(parameters, list):
-            for value in parameters:
-                self.recursive_parse_parameters(value, prefix)
-        elif isinstance(parameters, (int, str, bool)):
+            if all(isinstance(x, (int, float, str, bool))for x in parameters):
+                self.hyperparameters.update({prefix: parameters})
+            else:
+                for idx, value in enumerate(parameters):
+                    new_prefix = prefix + Const.SEP + str(idx) if prefix else str(idx)
+                    self.recursive_parse_parameters(value, new_prefix)
+        elif isinstance(parameters, (int, float, str, bool)):
             self.hyperparameters.update({prefix: parameters})
 
 

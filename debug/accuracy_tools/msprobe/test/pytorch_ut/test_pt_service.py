@@ -18,7 +18,6 @@ from unittest.mock import MagicMock, patch
 from msprobe.pytorch.pytorch_service import PytorchService
 from msprobe.core.common.utils import Const
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
-from msprobe.pytorch.attl_manager import ATTLManager
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
 
@@ -29,7 +28,6 @@ class TestPytorchService(unittest.TestCase):
         self.config.rank = []
         self.config.level = Const.LEVEL_MIX
         self.config.task = Const.STATISTICS
-        self.config.online_run_ut_recompute = False
         
         with patch('msprobe.core.service.build_data_collector'):
             self.service = PytorchService(self.config)  
@@ -37,8 +35,6 @@ class TestPytorchService(unittest.TestCase):
         self.service.logger = MagicMock()
         self.service.data_collector = MagicMock()
         self.service.module_processor = MagicMock()
-        self.service.attl_manager = MagicMock(spec=ATTLManager)
-        self.service.attl_manager.attl = MagicMock()
         self.service.api_register = MagicMock()
     
     def test_framework_type(self):
@@ -56,12 +52,10 @@ class TestPytorchService(unittest.TestCase):
         self.assertIsNotNone(service.logger)
         self.assertIsNotNone(service.api_register)
         self.assertIsNotNone(service.module_processor)
-        self.assertIsNotNone(service.attl_manager)
         self.assertIsNotNone(service.hook_manager)
     
     def test_register_hook(self):
         self.service._register_hook()
-        self.service.attl_manager.attl_init.assert_called_once()
     
     @patch('msprobe.pytorch.pytorch_service.register_optimizer_hook')
     def test_register_hook_mix_level(self, mock_register_opt):
@@ -93,24 +87,7 @@ class TestPytorchService(unittest.TestCase):
 
         self.assertTrue(self.service.module_processor.enable_module_dump)
     
-    @patch('msprobe.pytorch.pytorch_service.torch_version_above_or_equal_2', new=True)
-    @patch('msprobe.pytorch.pytorch_service.run_ut_dispatch')
-    def test_run_ut_dispatch(self, mock_run_ut):
-        status = True
-        self.service._run_ut_dispatch(status)
-        mock_run_ut.assert_called_once_with(
-            self.service.attl_manager.attl, 
-            status,
-            self.config.online_run_ut_recompute
-        )
-    
-    @patch('msprobe.pytorch.pytorch_service.torch_version_above_or_equal_2', new=False)
-    @patch('msprobe.pytorch.pytorch_service.run_ut_dispatch')
-    def test_run_ut_dispatch_torch_version_below_2(self, mock_run_ut):
-        status = True
-        self.service._run_ut_dispatch(status)
-        mock_run_ut.assert_not_called()
-    
+   
     @patch.object(HOOKModule, 'reset_module_stats')
     @patch.object(ModuleProcesser, 'reset_module_stats')
     def test_reset_status(self, mock_reset_module_processor, mock_reset_hook_module):
@@ -119,60 +96,8 @@ class TestPytorchService(unittest.TestCase):
         mock_reset_module_processor.assert_called_once()
         self.service.data_collector.reset_status.assert_called_once()
     
-    @patch('msprobe.pytorch.pytorch_service.torch_version_above_or_equal_2', new=True)
-    @patch('msprobe.pytorch.pytorch_service.run_ut_dispatch')
-    def test_start_with_online_run_ut(self, mock_run_ut):
-        self.service.config.online_run_ut = True
-        self.service.data_collector.data_processor.is_terminated = False
-        model_mock = MagicMock()
- 
-        self.service.start(model=model_mock)
-   
-        mock_run_ut.assert_called_once_with(
-            self.service.attl_manager.attl, 
-            True,
-            self.config.online_run_ut_recompute
-        )
-    
-    @patch('msprobe.pytorch.pytorch_service.torch_version_above_or_equal_2', return_value=True)
-    @patch('msprobe.pytorch.pytorch_service.run_ut_dispatch')
-    def test_stop_with_online_run_ut(self, mock_run_ut, mock_version):
-        self.service.config.online_run_ut = True
-        self.service.current_iter = 1
-        self.service.current_rank = 0
-        self.service.attl_manager.attl = MagicMock()
-        self.service.stop()
-        
-        mock_run_ut.assert_called_once_with(
-            self.service.attl_manager.attl, 
-            False,
-            self.config.online_run_ut_recompute
-        )
-    
+
     def test_register_module_hook(self):
         self.service.model = MagicMock()
         self.service._register_module_hook()
         self.service.module_processor.register_module_hook.assert_called_once()
-    
-    @patch('msprobe.pytorch.pytorch_service.torch_version_above_or_equal_2', new=True)
-    @patch('msprobe.pytorch.pytorch_service.run_ut_dispatch')
-    def test_run_ut_dispatch_with_recompute(self, mock_run_ut):
-        self.service.attl_manager.attl = None
-        self.service.config.online_run_ut_recompute = True
-        status = True
-        self.service._run_ut_dispatch(status)
-        mock_run_ut.assert_called_once_with(
-            self.service.attl_manager.attl, 
-            status,
-            True
-        )
-    
-    def test_attl_manager_interaction(self):
-        self.service.config.online_run_ut = True
-        self.service.data_collector.data_processor.is_terminated = False
-        self.service.start(model=MagicMock())
-        self.service.attl_manager.attl_init.assert_called_once()
-        
-        self.service.data_collector.data_processor.is_terminated = True
-        self.service.start()
-        self.service.attl_manager.attl_stop.assert_called_once()

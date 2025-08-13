@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 import unittest
 from unittest.mock import patch
@@ -19,6 +18,7 @@ y = ((X[:, 0] + X[:, 1]) > 0).float().reshape(-1, 1)
 # 创建数据加载器
 dataset = TensorDataset(X, y)
 dataloader = DataLoader(dataset, batch_size=10)
+
 
 # 定义单层神经网络
 class SingleLayerNet(nn.Module):

@@ -34,6 +34,7 @@ class DebuggerConfig:
         self.overflow_nums = task_config.overflow_nums if task_config.overflow_nums else 1
         self.framework = Const.PT_FRAMEWORK
         self.async_dump = common_config.async_dump if common_config.async_dump else False
+        self.precision = common_config.precision if common_config.precision else Const.DUMP_PRECISION_LOW
 
         if self.task == Const.FREE_BENCHMARK:
             self.fuzz_device = task_config.fuzz_device
@@ -47,16 +48,6 @@ class DebuggerConfig:
                 "max_sample": task_config.max_sample
             }
 
-        self.online_run_ut = False
-        if self.task == Const.TENSOR:
-            # dump api tensor and collaborate with online run_ut
-            self.online_run_ut = task_config.online_run_ut if task_config.online_run_ut else False
-            self.nfs_path = task_config.nfs_path if task_config.nfs_path else ""
-            self.tls_path = task_config.tls_path if task_config.tls_path else ""
-            self.host = task_config.host if task_config.host else ""
-            self.port = task_config.port if task_config.port else -1
-            self.online_run_ut_recompute = task_config.online_run_ut_recompute \
-                if isinstance(task_config.online_run_ut_recompute, bool) else False
 
         self.check()
         self._check_statistics_config(task_config)

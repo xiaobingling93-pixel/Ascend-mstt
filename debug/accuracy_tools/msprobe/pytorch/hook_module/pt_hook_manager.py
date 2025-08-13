@@ -38,8 +38,12 @@ class PytorchHookManager(BaseHookManager):
 
     @staticmethod
     def _process_kwargs_and_output(module, hook_type, kwargs_or_output, output_or_kwargs):
-        kwargs = kwargs_or_output if torch_version_above_or_equal_2 else {}
-        output = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
+        if hook_type == Const.API:
+            kwargs = kwargs_or_output
+            output = output_or_kwargs
+        else:
+            kwargs = kwargs_or_output if torch_version_above_or_equal_2 else {}
+            output = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
         return kwargs, output
 
     def build_hook(self, hook_type, name):

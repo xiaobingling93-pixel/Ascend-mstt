@@ -84,8 +84,8 @@ def split_json_file(input_file, num_splits, filter_api):
             for file in split_files:
                 try:
                     remove_path(file)
-                except FileNotFoundError:
-                    logger.error(f"File not found and could not be deleted: {file}")
+                except Exception:
+                    logger.error(f"File not found or could not be deleted: {file}")
             msg = 'ERROR: Split json file failed, please check the input file and try again.'
             raise CompareException(CompareException.PARSE_FILE_ERROR, msg) from e
     return split_files, total_items

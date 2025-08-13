@@ -26,6 +26,7 @@ import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
 import { NPU_PREFIX, BENCH_PREFIX } from '../../../common/constant';
 import useMatched from './useMatched';
+import i18next from '../../../common/i18n'
 import type { UseMatchedType } from '../../type';
 
 import '../tf_search_combox/index';
@@ -67,12 +68,14 @@ class Legend extends PolymerElement {
       .match-checkbox {
         font-size: 14px;
       }
+
       .vaadin-details-title {
         font-size: 14px;
         color: #333333;
         font-weight: 600;
         margin-bottom: 0;
       }
+
       .vaadin-details vaadin-details-summary {
         font-size: 15px;
         color: #333333;
@@ -97,7 +100,7 @@ class Legend extends PolymerElement {
         position: absolute;
         font-size: 10px;
         top: 14px;
-        left: 122px;
+        left: var(--question-config-left, 120px);
       }
       .button-wrapper {
         position: relative;
@@ -125,10 +128,10 @@ class Legend extends PolymerElement {
         cursor: pointer;
       }
     </style>
-    <vaadin-details class="vaadin-details" summary="节点匹配" opened>
+    <vaadin-details class="vaadin-details" summary="[[t('node_match')]]" opened>
       <div class="warning">
         <vaadin-combo-box
-          label="选择匹配配置文件"
+          label="[[t('select_match_config_file')]]"
           items="[[matchedConfigFiles]]"
           value="{{selectedConfigFile}}"
           on-change="_addMatchedNodesLinkByConfigFile"
@@ -136,7 +139,7 @@ class Legend extends PolymerElement {
         <vaadin-icon id="question" icon="vaadin:question-circle"></vaadin-icon>
         <vaadin-tooltip
           for="question"
-          text="选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。"
+          text="[[t('select_match_config_file_desc')]]"
           position="end"
         ></vaadin-tooltip>
       </div>
@@ -146,14 +149,14 @@ class Legend extends PolymerElement {
       <div class="unmatched-node">
         <p class="vaadin-details-title">未匹配节点</p>
         <tf-search-combox
-          label="调试侧([[npuUnMatchedNodes.length]])"
+          label="[[t('debug')]]([[npuUnMatchedNodes.length]])"
           items="[[npuUnMatchedNodes]]"
           selected-value="{{selectedNpuUnMatchedNode}}"
           on-select-change="[[_changeNpuUnMatchedNode]]"
           is-compare-graph="[[isCompareGraph]]"
         ></tf-search-combox>
         <tf-search-combox
-          label="标杆侧([[benchUnMatchedNodes.length]])"
+          label="[[t('bench')]]([[benchUnMatchedNodes.length]])"
           items="[[benchUnMatchedNodes]]"
           selected-value="{{selectedBenchUnMatchedNode}}"
           on-select-change="[[_changeBenchUnMatchedNode]]"
@@ -227,6 +230,9 @@ class Legend extends PolymerElement {
   `;
 
   @property({ type: Object })
+  t: Function = () => '';
+
+  @property({ type: Object })
   unmatched: any = [];
 
   @property({ type: Object })
@@ -298,6 +304,15 @@ class Legend extends PolymerElement {
   useMatched: UseMatchedType = useMatched();
   npuMatchedNodeList = {};
   benchMatchedNodeList = {};
+
+  @observe('t')
+  _observeT(): void {
+    if (this.t) {
+      this.updateStyles({
+        '--question-config-left': i18next.language === 'zh-CN' ? '120px' : '162px',
+      });
+    }
+  }
 
   @observe('unmatched')
   _observeUnmatchedNode(): void {

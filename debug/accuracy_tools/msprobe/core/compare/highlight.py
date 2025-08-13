@@ -138,11 +138,24 @@ class CheckOverflow(HighlightCheck):
             add_highlight_row_info(color_columns.red, num, "maximum absolute error exceeds 1e+10")
 
 
+class CheckReqGradConsist(HighlightCheck):
+    """检查requires_grad是否一致"""
+
+    def apply(self, info, color_columns, dump_mode):
+        line, num = info
+        req_grad_consist_index = get_header_index(CompareConst.REQ_GRAD_CONSIST, dump_mode)
+        if not line[req_grad_consist_index]:
+            add_highlight_row_info(color_columns.yellow, num, "requires_grad is inconsistent")
+
+
 class HighlightRules:
     """高亮规则集合，用于检查API的误差"""
     # 适用于每行的规则
     basic_rules = {
         "check_overflow": CheckOverflow()
+    }
+    consist_rules = {
+        "check_req_grad_consist": CheckReqGradConsist()
     }
 
     # 用于比较输入和输出的规则
@@ -176,7 +189,7 @@ class HighLight:
         if CompareConst.NPU_MD5 in result_df.columns:
             return
 
-        err_msg = result_df.get(CompareConst.ERROR_MESSAGE)
+        err_msg = result_df.get(CompareConst.ERROR_MESSAGE).copy()
         red_lines_num_set = highlight_dict.get('red_rows')
 
         for color in ['red', 'yellow']:
@@ -267,6 +280,13 @@ class HighLight:
                     continue
                 api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=index)
                 self.apply_comparison_rules(api_info, color_columns)
+
+        # 对单行API的输入或输出进行requires_grad是否一致判断
+        for i, line in enumerate(result):
+            index = api_batch_start + i
+            line_info = LineInfo(line_data=line, num_pointer=index)
+            for rule in HighlightRules.consist_rules.values():
+                rule.apply(line_info, color_columns, self.mode_config.dump_mode)
 
         red_lines_num_set = {x[0] for x in red_lines}
         yellow_lines_num_set = {x[0] for x in yellow_lines}

@@ -138,12 +138,12 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         expected_result = {
             'type': 'mindspore.Tensor',
             'dtype': 'Int32',
-            'shape': (3,),
-            'md5': 'test_md5',
+            'shape': (3,)
         }
         result = self.processor._analyze_tensor(tensor, suffix)
         # 删除不必要的字段
         result.pop('tensor_stat_index', None)
+        result.pop('md5_index', None)
 
         self.assertEqual(result, expected_result)
 

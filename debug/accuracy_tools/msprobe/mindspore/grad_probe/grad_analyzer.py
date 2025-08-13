@@ -245,6 +245,8 @@ class CSVGenerator(Process):
         return ["Max", "Min", "Norm", "Shape"]
 
     def get_dist_header(self) -> List[str]:
+        if not self.bounds:
+            return []
         intervals = []
         for i, _ in enumerate(self.bounds):
             if i == 0:

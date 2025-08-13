@@ -115,17 +115,18 @@ def op_item_parse(op_data, op_name: str, state: str, depth: int = 0) -> list:
         state = Const.INPUT
     default_item = {
         'full_op_name': op_name,
-        'type': None,
-        'Max': None,
-        'Min': None,
-        'Mean': None,
-        'Norm': None,
-        'dtype': None,
-        'shape': None,
-        'md5': None,
-        'value': None,
-        'data_name': '-1',
-        'state': state
+        Const.TYPE: None,
+        Const.MAX: None,
+        Const.MIN: None,
+        Const.MEAN: None,
+        Const.NORM: None,
+        Const.DTYPE: None,
+        Const.SHAPE: None,
+        Const.MD5: None,
+        Const.VALUE: None,
+        Const.DATA_NAME: '-1',
+        Const.STATE: state,
+        Const.REQ_GRAD: None
     }
 
     if depth > Const.MAX_DEPTH:
@@ -163,6 +164,8 @@ def gen_op_item(op_data, op_name, state):
     op_item[Const.DATA_NAME] = data_name
     op_item['full_op_name'] = data_name.rsplit(Const.SEP, 1)[0] if data_name != '-1' else op_name
     op_item[Const.STATE] = state
+    if Const.REQ_GRAD not in op_item:
+        op_item[Const.REQ_GRAD] = None
 
     # 补齐统计量字段
     params = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
@@ -224,12 +227,13 @@ def merge_tensor(tensor_list, dump_mode):
         CompareConst.DEBUG_STRUCT,
         Const.SUMMARY,
         Const.STACK_INFO,
-        Const.STATE
+        Const.STATE,
+        Const.REQ_GRAD
     ]
     op_dict = {key: [] for key in keys}
 
     if dump_mode == Const.ALL:
-        op_dict["data_name"] = []
+        op_dict[Const.DATA_NAME] = []
 
     for tensor in tensor_list:
         # A dict(len=2) with 'full_op_name' and 'full_info' is added to the tensor only if self.stack_mode is True
@@ -240,6 +244,7 @@ def merge_tensor(tensor_list, dump_mode):
         op_dict[CompareConst.OP_NAME].append(tensor.get('full_op_name'))
         state = tensor.get(Const.STATE)
         op_dict[Const.STATE].append(state)
+        op_dict[Const.REQ_GRAD].append(tensor.get(Const.REQ_GRAD))
 
         struct_key = CompareConst.STATE_TO_STRUCT_MAPPING.get(state)
         if not struct_key:
@@ -254,7 +259,7 @@ def merge_tensor(tensor_list, dump_mode):
             [str(tensor[key]) if tensor[key] is None else tensor[key] for key in Const.SUMMARY_METRICS_LIST])
 
         if dump_mode == Const.ALL:
-            op_dict["data_name"].append(tensor['data_name'])
+            op_dict[Const.DATA_NAME].append(tensor.get(Const.DATA_NAME))
 
     if not op_dict[CompareConst.KWARGS_STRUCT]:
         del op_dict[CompareConst.KWARGS_STRUCT]
@@ -372,23 +377,25 @@ def reorder_op_name_list(op_name_list, state_list):
     return op_name_reorder, state_reorder
 
 
-def reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list):
+def reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list, requires_grad_list):
     """
-    对op_name, summary, data_name, state重新排序，把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理
+    对op_name, summary, data_name, state, requires_grad重新排序，
+    把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理
     """
     if not op_name_list or not summary_list:
-        return op_name_list, summary_list, data_name_list, state_list
+        return op_name_list, summary_list, data_name_list, state_list, requires_grad_list
 
     index_map = {name: index for index, name in enumerate(op_name_list)}
 
-    op_name_reorder, state_order = reorder_op_name_list(op_name_list, state_list)
+    op_name_reorder, state_reorder = reorder_op_name_list(op_name_list, state_list)
     summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
+    requires_grad_reorder = [requires_grad_list[index_map.get(name)] for name in op_name_reorder]
     if data_name_list:
         data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
     else:
         data_name_reorder = data_name_list
 
-    return op_name_reorder, summary_reorder, data_name_reorder, state_order
+    return op_name_reorder, summary_reorder, data_name_reorder, state_reorder, requires_grad_reorder
 
 
 def process_summary_data(summary_data):
@@ -442,17 +449,22 @@ def stack_column_process(result_item, has_stack, index, key, npu_stack_info):
     return result_item
 
 
-def result_item_init(n_info, b_info, dump_mode):
+def result_item_init(n_info, b_info, requires_grad_pair, dump_mode):
     n_len = len(n_info.struct)
     b_len = len(b_info.struct)
+    # requires_grad_pair内部创建，固定两个元素
+    n_requires_grad = requires_grad_pair[0]
+    b_requires_grad = requires_grad_pair[1]
+    req_grad_consist = n_requires_grad == b_requires_grad
     struct_long_enough = (n_len > 2 and b_len > 2) if dump_mode == Const.MD5 else (n_len > 1 and b_len > 1)
     if struct_long_enough:
         result_item = [
-            n_info.name, b_info.name, n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1]
+            n_info.name, b_info.name, n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1],
+            n_requires_grad, b_requires_grad
         ]
         if dump_mode == Const.MD5:
             md5_compare_result = CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
-            result_item.extend([n_info.struct[2], b_info.struct[2], md5_compare_result])
+            result_item.extend([n_info.struct[2], b_info.struct[2], req_grad_consist, md5_compare_result])
         elif dump_mode == Const.SUMMARY:
             result_item.extend([" "] * 8)  # 8个统计量数据情况的比对指标
         else:
@@ -498,11 +510,15 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             b_name = safe_get_value(b_dict, b_start + index, "b_dict", key="op_name")
             n_struct = safe_get_value(n_dict, index, "n_dict", key=key)
             b_struct = safe_get_value(b_dict, index, "b_dict", key=key)
+            n_requires_grad = safe_get_value(n_dict, n_start + index, "n_dict", key='requires_grad')
+            b_requires_grad = safe_get_value(b_dict, b_start + index, "b_dict", key='requires_grad')
+            requires_grad_pair = [n_requires_grad, b_requires_grad]
+            req_grad_consist = n_requires_grad == b_requires_grad
             err_msg = ""
 
             npu_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
             bench_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
-            result_item = result_item_init(npu_info, bench_info, dump_mode)
+            result_item = result_item_init(npu_info, bench_info, requires_grad_pair, dump_mode)
 
             if dump_mode == Const.MD5:
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
@@ -518,6 +534,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                                   bench_summary_data, err_msg)
 
+            result_item.append(req_grad_consist)
+            err_msg += "Requires_grad inconsistent." if not req_grad_consist else ""
             result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
             result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
@@ -531,23 +549,30 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
         if n_len > b_len:
             for index in range(b_len, n_len):
                 try:
-                    n_name = n_dict['op_name'][n_start + index]
-                    n_struct = n_dict[key][index]
+                    n_name = safe_get_value(n_dict, n_start + index, "n_dict", key="op_name")
+                    n_struct = safe_get_value(n_dict, index, "n_dict", key=key)
+                    n_requires_grad = safe_get_value(n_dict, n_start + index, "n_dict", key='requires_grad')
+
                     if dump_mode == Const.MD5:
                         result_item = [
                             n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                            n_struct[2], CompareConst.NAN, CompareConst.NAN
+                            n_requires_grad, CompareConst.NAN,
+                            n_struct[2], CompareConst.NAN,
+                            False,
+                            CompareConst.NAN
                         ]
                         result.append(result_item)
                         continue
                     result_item = [
                         n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                        n_requires_grad, CompareConst.NAN,
                         " ", " ", " ", " ", " ", " "
                     ]
                     summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                     result_item.extend(summary_data)
                     summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
                     result_item.extend(summary_data)
+                    result_item.append(False)
                 except IndexError as e:
                     err_msg = "index out of bounds error occurs, please check!\n" \
                               f"n_dict is {n_dict}"
@@ -626,6 +651,8 @@ def _compare_parser(parser):
                         help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)
+    parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
+                        help="<optional> Whether to perform a diff analyze on the api name.", required=False)
 
 
 def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
@@ -651,7 +678,7 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
             npu_path = extract_json(npu_data_dir, file_type)
             bench_path = extract_json(bench_data_dir, file_type)
             if npu_path == "" or bench_path == "":
-                logger.debug(f'Did not find paired {file_type} in {npu_data_dir} and {bench_data_dir},'
+                logger.debug(f'Did not find paired {file_type} in {nr} and {br},'
                              ' skip comparing.')
                 continue
             dump_result_param = {

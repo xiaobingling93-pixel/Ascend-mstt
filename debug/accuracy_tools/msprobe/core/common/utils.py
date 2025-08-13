@@ -559,7 +559,7 @@ def check_token_range(token_range):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
     start, end = token_range
-    if not isinstance(start, int) or not isinstance(end, int):
+    if not is_int(start) or not is_int(end):
         logger.error("Start and end in token_range must be integer.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if start > end:
