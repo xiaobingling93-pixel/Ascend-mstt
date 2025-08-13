@@ -561,65 +561,6 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query modify matched nodes list: {e}")
             return {}
-
-    # DB：更新config的colors
-    def update_config_colors(self, colors):
-        try:
-            query = """
-                UPDATE 
-                    tb_config 
-                SET 
-                    node_colors = ?
-                WHERE
-	                id=1
-            """
-            with self.conn as c:
-                c.execute(query, (json.dumps(colors),))
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update config colors: {e}")
-            return False
-
-    # DB：批量更新节点信息
-    def update_nodes_info(self, nodes_info, rank, step):
-        # 取消匹配和匹配都要走这个逻辑        
-        try:
-            start = time.perf_counter()
-            data = [
-                (
-                    json.dumps(node['matched_node_link']),
-                    json.dumps(node['input_data']),
-                    json.dumps(node['output_data']),
-                    node['precision_index'],
-                    step,
-                    rank,
-                    node['graph_type'],
-                    node['node_name']  # WHERE 条件
-                )
-                for node in nodes_info
-            ]
-            query = """
-                UPDATE tb_nodes 
-                SET 
-                    matched_node_link = ?,
-                    input_data = ?,
-                    output_data = ?,
-                    precision_index = ?,
-                    modified= 1
-                WHERE 
-                    step = ?
-                    AND rank = ? 
-                    AND data_source = ? 
-                    AND node_name = ?
-            """
-            with self.conn as c:
-                c.executemany(query, data)
-            end = time.perf_counter()
-            print("update_nodes_info time:", end - start)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update nodes info: {e}")
-            return False
             
     # DB: 根据精度误差查询节点信息
     def query_node_list_by_precision(self, step, rank, micro_step, values, is_filter_unmatch_nodes):
@@ -696,6 +637,65 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query node list by overflow: {e}")
             return []
+    
+        # DB：更新config的colors
+    def update_config_colors(self, colors):
+        try:
+            query = """
+                UPDATE 
+                    tb_config 
+                SET 
+                    node_colors = ?
+                WHERE
+	                id=1
+            """
+            with self.conn as c:
+                c.execute(query, (json.dumps(colors),))
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update config colors: {e}")
+            return False
+
+    # DB：批量更新节点信息
+    def update_nodes_info(self, nodes_info, rank, step):
+        # 取消匹配和匹配都要走这个逻辑        
+        try:
+            start = time.perf_counter()
+            data = [
+                (
+                    json.dumps(node['matched_node_link']),
+                    json.dumps(node['input_data']),
+                    json.dumps(node['output_data']),
+                    node['precision_index'],
+                    step,
+                    rank,
+                    node['graph_type'],
+                    node['node_name']  # WHERE 条件
+                )
+                for node in nodes_info
+            ]
+            query = """
+                UPDATE tb_nodes 
+                SET 
+                    matched_node_link = ?,
+                    input_data = ?,
+                    output_data = ?,
+                    precision_index = ?,
+                    modified= 1
+                WHERE 
+                    step = ?
+                    AND rank = ? 
+                    AND data_source = ? 
+                    AND node_name = ?
+            """
+            with self.conn as c:
+                c.executemany(query, data)
+            end = time.perf_counter()
+            print("update_nodes_info time:", end - start)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update nodes info: {e}")
+            return False
     
     def _fetch_and_convert_rows(self, cursor):
         """
