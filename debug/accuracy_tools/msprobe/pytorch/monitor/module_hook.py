@@ -1002,14 +1002,14 @@ class TrainerMon:
             return ''
         for weight_name in ["weight", "wg"]:
             if hasattr(module, weight_name) and isinstance(getattr(module, weight_name), torch.Tensor):
-                if getattr(module, weight_name) == 2:
+                if getattr(module, weight_name).dim() == 2:
                     return weight_name
         return ''
     
     def _get_norm_hook_target(self, module):
         for weight_name in ["weight"]:
             if hasattr(module, weight_name) and isinstance(getattr(module, weight_name), torch.Tensor):
-                if getattr(module, weight_name) == 1:
+                if getattr(module, weight_name).dim() == 1:
                     return weight_name
         return ''
 
