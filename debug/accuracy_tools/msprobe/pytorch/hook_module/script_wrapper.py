@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
+import importlib
 import types
 import torch
 from msprobe.pytorch.hook_module.api_register import get_api_register
 from msprobe.pytorch.common.utils import torch_version_above_or_equal_2
+
 
 if torch_version_above_or_equal_2:
     from torch._dynamo.convert_frame import convert_frame as _orig_convert_frame, Hooks
@@ -70,7 +73,55 @@ def wrap_compile_script_func():
     _cf_mod.convert_frame = _patched_convert_frame
 
 
+def patch_dynamo__compile() -> bool:
+    cf = importlib.import_module("torch._dynamo.convert_frame")
+    if not hasattr(cf, "_compile"):
+        raise RuntimeError("未找到 torch._dynamo.convert_frame._compile")
+
+    original = cf._compile
+    if getattr(original, "__msprobe_patched__", False):
+        return False
+
+    @functools.wraps(original)
+    def wrapped(*args, **kwargs):
+        try:
+            from msprobe.pytorch.dump.module_dump.module_dump import get_api_register
+            reg = get_api_register()
+            reg.restore_all_api()
+            print("415")
+        except Exception as e:
+            print(f"[msprobe] 前置 restore_all_api 异常: {e}")
+
+        try:
+            return original(*args, **kwargs)
+        finally:
+            try:
+                print("213321415")
+                from msprobe.pytorch.dump.module_dump.module_dump import get_api_register
+                reg = get_api_register()
+                reg.register_all_api()  # ✅ 改成注册
+            except Exception as e:
+                print(f"[msprobe] 后置 register_all_api 异常: {e}")
+
+    wrapped.__msprobe_patched__ = True
+    wrapped.__msprobe_original__ = original
+    cf._compile = wrapped
+    return True
+
+def unpatch_dynamo__compile() -> bool:
+    # 预留取消patch接口
+    cf = importlib.import_module("torch._dynamo.convert_frame")
+    current = getattr(cf, "_compile", None)
+    if current is None:
+        return False
+    original = getattr(current, "__msprobe_original__", None)
+    if original is None:
+        return False
+    cf._compile = original
+    return True
+
+
 def wrap_script_func():
     wrap_jit_script_func()
     if torch_version_above_or_equal_2:
-        wrap_compile_script_func()
+        patch_dynamo__compile()
