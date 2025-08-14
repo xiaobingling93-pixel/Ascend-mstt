@@ -75,7 +75,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
 
     def test_check_json_key_value_max_depth(self):
-        result = check_json_key_value(input_output, op_name, depth=51)
+        result = check_json_key_value(input_output, op_name, depth=1000)
         self.assertEqual(result, None)
 
     def test_valid_key_value_type_shape(self):
