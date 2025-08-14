@@ -17,6 +17,7 @@ import functools
 import importlib
 import types
 import torch
+from msprobe.core.common.log import logger
 from msprobe.pytorch.hook_module.api_register import get_api_register
 from msprobe.pytorch.common.utils import torch_version_above_or_equal_2
 
@@ -85,23 +86,19 @@ def patch_dynamo__compile() -> bool:
     @functools.wraps(original)
     def wrapped(*args, **kwargs):
         try:
-            from msprobe.pytorch.dump.module_dump.module_dump import get_api_register
             reg = get_api_register()
             reg.restore_all_api()
-            print("415")
         except Exception as e:
-            print(f"[msprobe] 前置 restore_all_api 异常: {e}")
+            logger.warning(f"[msprobe] 前置 restore_all_api 异常: {e}")
 
         try:
             return original(*args, **kwargs)
         finally:
             try:
-                print("213321415")
-                from msprobe.pytorch.dump.module_dump.module_dump import get_api_register
                 reg = get_api_register()
-                reg.register_all_api()  # ✅ 改成注册
+                reg.register_all_api()  #  改成注册hook
             except Exception as e:
-                print(f"[msprobe] 后置 register_all_api 异常: {e}")
+                logger.warning(f"[msprobe] 后置 register_all_api 异常: {e}")
 
     wrapped.__msprobe_patched__ = True
     wrapped.__msprobe_original__ = original
