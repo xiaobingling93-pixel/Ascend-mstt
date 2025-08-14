@@ -319,8 +319,8 @@ class PytorchDataProcessor(BaseDataProcessor):
     def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
-        if self.tensor_handler.is_empty_data(tensor):
-            logger.debug("Collecting real data of fake tensor or meta tensor is not supported.")
+        if self.tensor_handler.is_empty_data(tensor) or tensor.storage().data_ptr() == 0:
+            logger.debug("Collecting real data of fake tensor or meta tensor is not supported or data_ptr is 0.")
             return single_arg
 
         single_arg.update({"data_name": dump_data_name})
