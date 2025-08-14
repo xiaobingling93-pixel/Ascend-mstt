@@ -74,7 +74,7 @@ def wrap_compile_script_func():
     _cf_mod.convert_frame = _patched_convert_frame
 
 
-def patch_dynamo__compile() -> bool:
+def patch_dynamo__compile():
     cf = importlib.import_module("torch._dynamo.convert_frame")
     if not hasattr(cf, "_compile"):
         raise RuntimeError("未找到 torch._dynamo.convert_frame._compile")
@@ -96,14 +96,14 @@ def patch_dynamo__compile() -> bool:
         finally:
             try:
                 reg = get_api_register()
-                reg.register_all_api()  #  改成注册hook
+                reg.register_all_api()  # 改成注册hook
             except Exception as e:
                 logger.warning(f"[msprobe] 后置 register_all_api 异常: {e}")
 
     wrapped.__msprobe_patched__ = True
     wrapped.__msprobe_original__ = original
     cf._compile = wrapped
-    return True
+
 
 def unpatch_dynamo__compile() -> bool:
     # 预留取消patch接口
