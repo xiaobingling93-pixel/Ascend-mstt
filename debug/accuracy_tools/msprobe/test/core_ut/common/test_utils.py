@@ -359,28 +359,24 @@ class TestUtils(TestCase):
             self.assertEqual(stack, {'stack_key': 'stack_value'})
             self.assertEqual(construct, {'construct_key': 'construct_value'})
 
-    @patch.object(Const, "MAX_DEPTH", 10)
     @patch.object(logger, "error")
     def test_recursion_depth_decorator(self, mock_error):
-        # 构造深度 = MAX_DEPTH + 1，且最深层仍有 test_list[0] 可取
+        # 测试递归深度限制函数
         recursion_list = [[]]
-        temp = recursion_list[0]
-        for _ in range(Const.MAX_DEPTH + 1):
-            temp.append([])  # 让当前层的 [0] 指向更深一层
-            temp = temp[0]
-        temp.append([])  # ☆ 关键：给“最深层”也再塞一个子列表，避免取 [0] 报 IndexError
-
+        temp_list = recursion_list[0]
+        for _ in range(Const.MAX_DEPTH):
+            temp_list.append([])
+            temp_list = temp_list[0]
+        temp_list.append(0)
         call_record = []
-
         @recursion_depth_decorator("test func_info")
-        def recursion_func(lst, record):
-            record.append(1)
-            if isinstance(lst, list):
-                recursion_func(lst[0], record)
-
+        def recursion_func(test_list, call_record):
+            call_record.append(1)
+            if isinstance(test_list, list):
+                recursion_func(test_list[0], call_record)
         with self.assertRaises(MsprobeException) as context:
             recursion_func(recursion_list, call_record)
-
+        # 执行超过限制的递归函数会触发异常、且函数成功调用次数等于限制次数
         self.assertEqual(context.exception.code, MsprobeException.RECURSION_LIMIT_ERROR)
         mock_error.assert_called_with("call test func_info exceeds the recursion limit.")
         self.assertEqual(len(call_record), Const.MAX_DEPTH)
