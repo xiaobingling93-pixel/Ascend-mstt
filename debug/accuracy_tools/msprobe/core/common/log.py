@@ -89,6 +89,13 @@ class BaseLogger:
         self.error(msg)
         raise exception
 
+    def warning_log_with_exp(self, msg, exception):
+        """
+        打印警告日志并抛出指定异常
+        """
+        self.warning(msg)
+        raise exception
+
     def _print_log(self, level, msg, end='\n'):
         current_rank = self.get_rank()
         current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
