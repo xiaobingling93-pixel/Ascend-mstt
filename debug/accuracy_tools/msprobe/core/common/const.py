@@ -74,6 +74,7 @@ class Const:
     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
     SUMMARY = "summary"
     MD5 = "md5"
+    HASH = "hash"
     VALUE = "value"
     SUMMARY_MODE = ["statistics", "md5"]
 
