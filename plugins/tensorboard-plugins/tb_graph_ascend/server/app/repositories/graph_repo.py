@@ -428,7 +428,7 @@ class GraphRepo:
             logger.error(f"Failed to query node info: {e}")
             return {}
     
-    # DB: 查询节点名称列表
+    # DB: 查询单图节点名称列表
     def query_node_name_list(self, rank, step, micro_step):
         try:
             query = """
@@ -440,6 +440,7 @@ class GraphRepo:
                     step = ?
                     AND rank = ?
                     AND (? = -1 OR micro_step_id = ?)
+                    AND data_source = 'NPU'
             """
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step))
@@ -637,8 +638,35 @@ class GraphRepo:
         except Exception as e:
             logger.error(f"Failed to query node list by overflow: {e}")
             return []
-    
-        # DB：更新config的colors
+
+    # DB：查询节点信息
+    def query_node_info_by_data_source(self, step, rank, data_source):
+        try:
+            start = time.perf_counter()
+            query = """
+                SELECT 
+                    node_name, 
+                    matched_node_link,
+                    output_data,
+                    precision_index
+                FROM 
+                    tb_nodes 
+                WHERE 
+                    step = ?
+                    AND rank = ? 
+                    AND data_source = ?
+            """
+            with self.conn as c:
+                cursor = c.execute(query, (step, rank, data_source))
+                nodes = self._fetch_and_convert_rows(cursor)
+            end = time.perf_counter()
+            print("query_node_info time:", end - start)
+            return nodes
+        except Exception as e:
+            logger.error(f"Failed to query node info: {e}")
+            return {}
+
+    # DB：更新config的colors
     def update_config_colors(self, colors):
         try:
             query = """
@@ -695,6 +723,29 @@ class GraphRepo:
             return True
         except Exception as e:
             logger.error(f"Failed to update nodes info: {e}")
+            return False
+    
+    def update_nodes_precision_error(self, update_data):
+        
+        try:
+            start = time.perf_counter()
+            query = """
+                UPDATE 
+                    tb_nodes
+                SET
+                    precision_index = ?
+                WHERE
+                    step = ?
+                    AND rank = ?
+                    AND node_name = ?
+            """
+            with self.conn as c:
+                c.executemany(query, update_data)
+            end = time.perf_counter()
+            print("update_precision_error time:", end - start)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update precision error: {e}")
             return False
     
     def _fetch_and_convert_rows(self, cursor):
