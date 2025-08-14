@@ -359,6 +359,7 @@ class TestUtils(TestCase):
             self.assertEqual(stack, {'stack_key': 'stack_value'})
             self.assertEqual(construct, {'construct_key': 'construct_value'})
 
+    @patch.object(Const, "MAX_DEPTH", 10)
     @patch.object(logger, "error")
     def test_recursion_depth_decorator(self, mock_error):
         # 测试递归深度限制函数
