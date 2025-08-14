@@ -132,7 +132,6 @@ class GraphUtils:
 
         try:
             result = json.loads(json_str)
-            GraphUtils.remove_prototype_pollution(result)
             return result
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
@@ -141,28 +140,61 @@ class GraphUtils:
             logger.error(f"Unexpected error: {e}")
             return default_value
 
-    @staticmethod   
-    def remove_prototype_pollution(obj, current_depth=1, max_depth=200):
-        """
-        递归删除对象中的原型污染字段，如 '__proto__', 'constructor', 'prototype'。
+    @staticmethod
+    def safe_get_node_info(data, default_value=None):
+   
+        node_info = data.get('nodeInfo')
         
-        :param obj: 要清理的对象
-        :param current_depth: 当前递归深度，默认从 1 开始
-        :param max_depth: 最大允许递归深度
-        """
-        if current_depth > max_depth:
-            logger.warning(f"Reached maximum recursion depth of {max_depth}. Stopping further recursion.")
-            return
+        try:
+            # 长度限制 - 检查字典转为字符串后的长度
+            node_info_str = str(node_info)
+            if len(node_info_str) > MAX_FILE_SIZE:
+                logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
+                return default_value
+
+            # 验证必要字段是否存在
+            required_fields = ["nodeName", "nodeType"]
+            for field in required_fields:
+                if field not in node_info:
+                    logger.error(f"Field {field} is missing in metadata.")
+                    return default_value
+                
+            return node_info
+            
+        except json.JSONDecodeError:
+            logger.error("NodeInfo parameter is not in valid JSON format.")
+            return default_value
+        except Exception as e:
+            logger.error(f"An error occurred while parsing the nodeInfo parameter: {str(e)}")
+            return default_value
+
+    @staticmethod
+    def safe_get_meta_data(data, default_value=None):
+   
+        meta_data = data.get('metaData')
         
-        if isinstance(obj, dict):
-            for key in list(obj.keys()):
-                if key in ('__proto__', 'constructor', 'prototype'):
-                    del obj[key]
-                else:
-                    GraphUtils.remove_prototype_pollution(obj[key], current_depth + 1, max_depth)
-        elif isinstance(obj, list):
-            for item in obj:
-                GraphUtils.remove_prototype_pollution(item, current_depth + 1, max_depth)
+        try:
+            # 长度限制
+            meta_data_str = str(meta_data)
+            if len(meta_data_str) > MAX_FILE_SIZE:
+                logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
+                return default_value
+                
+            # 验证必要字段是否存在
+            required_fields = ["tag", "microStep", "run", "type"]
+            for field in required_fields:
+                if field not in meta_data:
+                    logger.error(f"Field {field} is missing in metadata.")
+                    return default_value
+                
+            return meta_data
+            
+        except json.JSONDecodeError:
+            logger.error("MetaData parameter is not in valid JSON format.")
+            return default_value
+        except Exception as e:
+            logger.error(f"An error occurred while parsing the metatdata parameter: {str(e)}")
+            return default_value
 
     @staticmethod
     def remove_prefix(node_data, prefix):

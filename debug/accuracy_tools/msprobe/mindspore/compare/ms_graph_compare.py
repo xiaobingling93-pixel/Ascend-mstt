@@ -34,10 +34,11 @@ class RowData:
         self.basic_data = copy.deepcopy(CompareConst.MS_GRAPH_BASE)
         self.npy_data = copy.deepcopy(CompareConst.MS_GRAPH_NPY)
         self.statistic_data = copy.deepcopy(CompareConst.MS_GRAPH_STATISTIC)
+        self.csv = copy.deepcopy(CompareConst.MS_GRAPH_CSV)
         if mode == GraphMode.NPY_MODE:
             self.data = {**self.basic_data, **self.npy_data}
         else:
-            self.data = {**self.basic_data, **self.statistic_data}
+            self.data = {**self.basic_data, **self.statistic_data, **self.csv}
 
     def __call__(self):
         return self.data
@@ -80,8 +81,8 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     data_list = []
     statistic_data_list = []
     header_index = {
-        'Data Type': None, 'Shape': None, 'Max Value': None,
-        'Min Value': None, 'Avg Value': None, 'L2Norm Value': None
+        'Data Type': None, 'Shape': None,
+        'Max Value': None, 'Min Value': None, 'Avg Value': None, 'L2Norm Value': None
     }
     for statistic_file in statistic_file_list:
         content = read_csv(statistic_file, as_pd=False)
@@ -107,7 +108,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
             logger.error(f'Dump file {statistic_file_path} has been modified into incorrect format!')
             raise CompareException(f'Dump file {statistic_file_path} has been modified into incorrect format!')
         compare_key = f"{data[1]}.{data[2]}.{data[5]}.{data[6]}"  # OpName, TaskId, IO, Slot
-        op_name = f"{compare_key} {statistic_file_path}"
+        op_name = f"{compare_key}"
         timestamp = int(data[4])
         result_data = [op_name, compare_key, timestamp]
         for key in header_index.keys():
@@ -115,6 +116,8 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
                 result_data.append(np.nan)
             else:
                 result_data.append(data[header_index[key]])
+        csv_file = f"{statistic_file_path}"
+        result_data.append(csv_file)
         data_list.append(result_data)
     return data_list
 
@@ -230,6 +233,17 @@ class GraphMSComparator:
                 result[f'{prefix} min'] = np.float32(rows[f'{prefix} min'])
                 result[f'{prefix} mean'] = np.float32(rows[f'{prefix} mean'])
                 result[f'{prefix} l2norm'] = np.float32(rows[f'{prefix} l2norm'])
+                result[f'{prefix} CSV File'] = rows[f'{prefix} CSV File']
+
+            def calculate_relative_error(numerator, denominator):
+                """Calculates relative error, handling division by zero and NaN."""
+                if denominator != 0:
+                    result = numerator / denominator
+                    if not np.isnan(result):
+                        return str(abs(result * 100)) + "%"
+                    else:
+                        return CompareConst.NAN
+                return CompareConst.N_A
 
             # 使用示例
             update_result_dict(result_dict, row, 'NPU')
@@ -237,34 +251,26 @@ class GraphMSComparator:
             error_flag, error_message = statistics_data_check(result_dict)
             result_dict[CompareConst.ERROR_MESSAGE] += error_message
             if not error_flag:
-                result_dict[CompareConst.MAX_DIFF] = np.abs(
-                    result_dict[CompareConst.NPU_MAX] - result_dict[CompareConst.BENCH_MAX])
-                result_dict[CompareConst.MIN_DIFF] = np.abs(
-                    result_dict[CompareConst.NPU_MIN] - result_dict[CompareConst.BENCH_MIN])
-                result_dict[CompareConst.MEAN_DIFF] = np.abs(
-                    result_dict[CompareConst.NPU_MEAN] - result_dict[CompareConst.BENCH_MEAN])
-                result_dict[CompareConst.NORM_DIFF] = np.abs(
-                    result_dict[CompareConst.NPU_NORM] - result_dict[CompareConst.BENCH_NORM])
-                result_dict[CompareConst.MAX_RELATIVE_ERR] = result_dict[CompareConst.MAX_DIFF] / result_dict[
-                    CompareConst.BENCH_MAX] if result_dict[CompareConst.BENCH_MAX] > 0 else 0
-                if not np.isnan(result_dict[CompareConst.MAX_RELATIVE_ERR]):
-                    result_dict[CompareConst.MAX_RELATIVE_ERR] = str(
-                        result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
-                result_dict[CompareConst.MIN_RELATIVE_ERR] = result_dict[CompareConst.MIN_DIFF] / result_dict[
-                    CompareConst.BENCH_MIN] if result_dict[CompareConst.BENCH_MIN] > 0 else 0
-                if not np.isnan(result_dict[CompareConst.MIN_RELATIVE_ERR]):
-                    result_dict[CompareConst.MIN_RELATIVE_ERR] = \
-                        str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
-                result_dict[CompareConst.MEAN_RELATIVE_ERR] = result_dict[CompareConst.MEAN_DIFF] / result_dict[
-                    CompareConst.BENCH_MEAN] if result_dict[CompareConst.BENCH_MEAN] > 0 else 0
-                if not np.isnan(result_dict[CompareConst.MEAN_RELATIVE_ERR]):
-                    result_dict[CompareConst.MEAN_RELATIVE_ERR] = str(
-                        result_dict[CompareConst.MEAN_RELATIVE_ERR] * 100) + "%"
-                result_dict[CompareConst.NORM_RELATIVE_ERR] = result_dict[CompareConst.NORM_DIFF] / result_dict[
-                    CompareConst.BENCH_NORM] if result_dict[CompareConst.BENCH_NORM] > 0 else 0
-                if not np.isnan(result_dict[CompareConst.NORM_RELATIVE_ERR]):
-                    result_dict[CompareConst.NORM_RELATIVE_ERR] = str(
-                        result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
+                metrics = [
+                    (CompareConst.MAX_DIFF, CompareConst.NPU_MAX, CompareConst.BENCH_MAX),
+                    (CompareConst.MIN_DIFF, CompareConst.NPU_MIN, CompareConst.BENCH_MIN),
+                    (CompareConst.MEAN_DIFF, CompareConst.NPU_MEAN, CompareConst.BENCH_MEAN),
+                    (CompareConst.NORM_DIFF, CompareConst.NPU_NORM, CompareConst.BENCH_NORM),
+                ]
+                relative_error_metrics = [
+                    (CompareConst.MAX_RELATIVE_ERR, CompareConst.MAX_DIFF, CompareConst.BENCH_MAX),
+                    (CompareConst.MIN_RELATIVE_ERR, CompareConst.MIN_DIFF, CompareConst.BENCH_MIN),
+                    (CompareConst.MEAN_RELATIVE_ERR, CompareConst.MEAN_DIFF, CompareConst.BENCH_MEAN),
+                    (CompareConst.NORM_RELATIVE_ERR, CompareConst.NORM_DIFF, CompareConst.BENCH_NORM),
+                ]
+
+                for diff_metric, npu_metric, bench_metric in metrics:
+                    result_dict[diff_metric] = result_dict[npu_metric] - result_dict[bench_metric]
+
+                for rel_metric, diff_metric, bench_metric in relative_error_metrics:
+                    result_dict[rel_metric] = calculate_relative_error(result_dict[diff_metric],
+                                                                       result_dict[bench_metric])
+
                 magnitude_diff = result_dict[CompareConst.MAX_DIFF] / (
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
                 if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
@@ -332,14 +338,15 @@ class GraphMSComparator:
             npu_data_df = pd.DataFrame(npu_data_list,
                                        columns=[CompareConst.NPU_NAME, 'Compare Key', 'TimeStamp',
                                                 CompareConst.NPU_DTYPE, CompareConst.NPU_SHAPE,
-                                                CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN,
-                                                CompareConst.NPU_NORM])
+                                                CompareConst.NPU_MAX, CompareConst.NPU_MIN,
+                                                CompareConst.NPU_MEAN, CompareConst.NPU_NORM,
+                                                CompareConst.NPU_CSV_FILE])
             bench_data_df = pd.DataFrame(bench_data_list,
                                          columns=[CompareConst.BENCH_NAME, 'Compare Key', 'TimeStamp',
-                                                  CompareConst.BENCH_DTYPE,
-                                                  CompareConst.BENCH_SHAPE, CompareConst.BENCH_MAX,
-                                                  CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
-                                                  CompareConst.BENCH_NORM])
+                                                  CompareConst.BENCH_DTYPE, CompareConst.BENCH_SHAPE,
+                                                  CompareConst.BENCH_MAX, CompareConst.BENCH_MIN,
+                                                  CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM,
+                                                  CompareConst.BENCH_CSV_FILE])
 
             npu_float_type = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
             npu_float_data_df = npu_data_df[npu_float_type].astype(str)

@@ -96,12 +96,17 @@ class TestMsGraphCompare(unittest.TestCase):
         op_name = 'Default_Switch-op1_kernel_graph1_Data_86.185.output.0'
         npu_file_path = os.path.join(self.npu_data_path, 'rank_0/mnist/0/0/statistic.csv')
         bench_file_path = os.path.join(self.bench_data_path, 'rank_0/mnist/0/0/statistic.csv')
-        npu_name = f'{op_name} {npu_file_path}'
-        bench_name = f'{op_name} {bench_file_path}'
+        npu_name = f'{op_name}'
+        bench_name = f'{op_name}'
+        npu_csv_file = f'{npu_file_path}'
+        bench_csv_file = f'{bench_file_path}'
 
         result_correct = [
             [npu_name, bench_name, 'float32', 'float32', '-4096', '-4096', 1.0000799894332886, 0.9999160170555115, 1.0,
              63.9995002746582, 1.0000799894332886, 0.9999160170555115, 1.0, 63.9995002746582, 'Yes', '', 0.0, 0.0, 0.0,
-             0.0, '0.0%', '0.0%', '0.0%', '0.0%']]
+             0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+             npu_csv_file, bench_csv_file
+             ]
+        ]
 
         self.assertListEqual(result, result_correct)

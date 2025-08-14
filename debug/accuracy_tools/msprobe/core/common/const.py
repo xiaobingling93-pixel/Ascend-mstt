@@ -24,6 +24,8 @@ class Const:
     Class for const
     """
     TOOL_NAME = "msprobe"
+    MD5_INDEX = "md5_index"
+    MD5 = "md5"
 
     ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
@@ -113,9 +115,10 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     STRUCTURE = "structure"
+    EXCEPTION_DUMP = "exception_dump"
     DUMP_PRECISION_HIGH = "high"
     DUMP_PRECISION_LOW = "low"
-    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE]
+    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE, EXCEPTION_DUMP]
     DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR, STRUCTURE]
     DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     DUMP_PRECISION_LIST = [DUMP_PRECISION_LOW, DUMP_PRECISION_HIGH]
@@ -413,6 +416,8 @@ class CompareConst:
     BENCH_DTYPE = "Bench Dtype"
     NPU_SHAPE = "NPU Tensor Shape"
     BENCH_SHAPE = "Bench Tensor Shape"
+    NPU_CSV_FILE = "NPU CSV File"
+    BENCH_CSV_FILE = "Bench CSV File"
     NPU_MAX = "NPU max"
     NPU_MIN = "NPU min"
     NPU_MEAN = "NPU mean"
@@ -637,6 +642,9 @@ class CompareConst:
     MS_GRAPH_STATISTIC = {
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
+    }
+    MS_GRAPH_CSV = {
+        NPU_CSV_FILE: None, BENCH_CSV_FILE: None
     }
 
     API_MAPPING_KEYS_TO_COMPARE = [

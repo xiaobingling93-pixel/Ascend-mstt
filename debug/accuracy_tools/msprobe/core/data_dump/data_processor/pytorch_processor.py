@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import zlib
 from collections.abc import Iterable
 from dataclasses import asdict
 from typing import List
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -118,6 +120,13 @@ class PytorchDataProcessor(BaseDataProcessor):
         }
         self._async_dump_cache = {}
         self.tensor_handler = TensorHandler()
+        self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
+
+
+    @staticmethod
+    def compute_crc32_bytes(tensor_bytes):
+        return f"{zlib.crc32(tensor_bytes):08x}"
+
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -200,27 +209,28 @@ class PytorchDataProcessor(BaseDataProcessor):
         data_clone = data.detach()
         if not data_clone.numel() or not data_clone.data_ptr():
             return tensor_stat
-        if torch.is_complex(data):
+        if torch.is_complex(data_clone):
             if async_dump:
                 logger.warning("Async dump do not support complex data!")
                 return tensor_stat
-            data_np = data.cpu().numpy()
+            data_np = data_clone.cpu().numpy()
             data_abs = np.abs(data_np)
             tensor_stat.max = np.max(data_abs).item()
             tensor_stat.min = np.min(data_abs).item()
             tensor_stat.mean = np.mean(data_abs).item()
-        elif data.dtype == torch.bool:
-            tensor_stat.max = torch.any(data)
-            tensor_stat.min = torch.all(data)
-        elif not data.shape:
-            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.clone()
+        elif data_clone.dtype == torch.bool:
+            tensor_stat.max = torch.any(data_clone)
+            tensor_stat.min = torch.all(data_clone)
+        elif not data_clone.shape:
+            tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.clone()
         else:
-            if precision == Const.DUMP_PRECISION_HIGH or data.dtype == torch.float64 or not data.is_floating_point():
-                data = data.float()
-            tensor_stat.max = torch.max(data)
-            tensor_stat.min = torch.min(data)
-            tensor_stat.mean = torch.mean(data)
-            tensor_stat.norm = torch.norm(data)
+            if (precision == Const.DUMP_PRECISION_HIGH or data_clone.dtype == torch.float64
+                    or not data_clone.is_floating_point()):
+                data_clone = data_clone.float()
+            tensor_stat.max = torch.max(data_clone)
+            tensor_stat.min = torch.min(data_clone)
+            tensor_stat.mean = torch.mean(data_clone)
+            tensor_stat.norm = torch.norm(data_clone)
         return tensor_stat
 
     def dump_async_data(self):
@@ -290,8 +300,20 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
                 logger.debug("Calculating the md5 value of fake tensor or meta tensor is not supported.")
-                tensor_md5 = self.get_md5_for_tensor(common_tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
+                # 拷贝并搬到 CPU
+                if tensor.dtype == torch.bfloat16:
+                    tensor = tensor.float()
+                tensor_bytes = tensor.cpu().detach().numpy().tobytes()
+
+                future = self._crc_executor.submit(
+                    PytorchDataProcessor.compute_crc32_bytes,
+                    tensor_bytes
+                )
+
+                crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+                tensor_json[Const.MD5_INDEX] = crc_placeholder
+            else:
+                tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):
