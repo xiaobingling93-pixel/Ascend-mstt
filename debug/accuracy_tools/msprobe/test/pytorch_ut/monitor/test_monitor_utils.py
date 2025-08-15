@@ -119,7 +119,7 @@ class TestValidationFunctions(unittest.TestCase):
             "attention_hook": ["0:0.self_attention.core_attention.flash_attention"],
             "linear_hook": []
         }
-        validate_l2_targets(valid_targets)  # 不应抛出异常
+        validate_l2_targets(valid_targets)
 
     def test_validate_l2_targets_invalid_root_type(self):
         """测试非 dict 输入"""
@@ -152,8 +152,8 @@ class TestValidationFunctions(unittest.TestCase):
     # ===== validate_recording_l2_features 测试 =====
     def test_validate_recording_l2_features_valid(self):
         """测试合法布尔值输入"""
-        validate_recording_l2_features(True)   # 不应抛出异常
-        validate_recording_l2_features(False)  # 不应抛出异常
+        validate_recording_l2_features(True)  
+        validate_recording_l2_features(False)  
 
     def test_validate_recording_l2_features_invalid_type(self):
         """测试非法类型输入"""
@@ -163,8 +163,8 @@ class TestValidationFunctions(unittest.TestCase):
                             "recording_l2_features should be a bool")
             
     def test_valid_orders(self):
-        validate_sa_order("b,s,h,d")  # 不应报错
-        validate_sa_order("s,b,h,d")  # 不应报错
+        validate_sa_order("b,s,h,d")
+        validate_sa_order("s, b,h,  d")
 
     def test_invalid_orders(self):
         with self.assertRaises(TypeError) as cm:
