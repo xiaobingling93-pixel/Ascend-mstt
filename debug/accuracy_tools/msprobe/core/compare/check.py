@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
 from msprobe.core.common.const import Const

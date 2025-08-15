@@ -6,6 +6,7 @@ import shutil
 import unittest
 from unittest.mock import patch
 import zlib
+import tempfile
 
 import numpy as np
 
@@ -13,7 +14,8 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
-    stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item, ApiBatch
+    stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item, ApiBatch, \
+    get_paired_dirs
 
 # test_read_op_1
 op_data = {
@@ -910,3 +912,25 @@ class TestApiBatch(unittest.TestCase):
         self.assertEqual(api_batch.params_end_index, 3)
         self.assertEqual(api_batch.output_end_index, 5)
         self.assertEqual(api_batch.params_grad_end_index, 5)
+
+
+class TestGetPairedSteps(unittest.TestCase):
+    def setUp(self):
+        self.npu_dir = tempfile.TemporaryDirectory()
+        self.bench_dir = tempfile.TemporaryDirectory()
+
+        self.npu_files = ['step1', 'step2']
+        for name in self.npu_files:
+            open(os.path.join(self.npu_dir.name, name), 'w').close()
+
+        self.bench_files = ['step2', 'step3']
+        for name in self.bench_files:
+            open(os.path.join(self.bench_dir.name, name), 'w').close()
+
+    def tearDown(self):
+        self.npu_dir.cleanup()
+        self.bench_dir.cleanup()
+
+    def test_get_paired_steps(self):
+        paired = get_paired_dirs(self.npu_dir.name, self.bench_dir.name)
+        self.assertEqual(set(paired), {'step2'})
