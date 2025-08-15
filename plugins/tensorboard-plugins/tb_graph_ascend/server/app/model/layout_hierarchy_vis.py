@@ -14,18 +14,19 @@
 # limitations under the License.
 # ==============================================================================
 from .hierarchy_vis import Hierarchy
+from ..utils.global_state import NPU, BENCH, SINGLE
 
 
 class LayoutHierarchyController:
     npu_hierarchy = None
     bench_hierarchy = None
     single_hierarchy = None
-
+    
     hierarchy = {
-        'NPU': npu_hierarchy,
-        'Bench': bench_hierarchy,
-        'Single': single_hierarchy
-    }
+        NPU: npu_hierarchy,
+        BENCH: bench_hierarchy,
+        SINGLE: single_hierarchy
+    }   
 
     @staticmethod
     def change_expand_state(node_name, graph_type, graph, micro_step):

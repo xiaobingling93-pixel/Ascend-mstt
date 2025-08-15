@@ -101,7 +101,7 @@ class Hierarchy:
         # 递归展开父节点
         while not parent_node or not parent_node.get('expand', False):
             if not parent_node:  # 如果父节点不存在，则初始化父节点
-                node_info = graph.get('node', {}).get(parent_node_name)
+                node_info = self.graph.get('node', {}).get(parent_node_name)
                 render_info = self.get_basic_rende_info(parent_node_name, node_info)
                 self.current_hierarchy[parent_node_name] = render_info
             try:
