@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from .db_graph_service import DbGraphService
-from .json_graph_service import JsonGraphService
+from .graph_service_db import DbGraphService
+from .graph_service_vis import JsonGraphService
 from ..utils.global_state import GraphState, DataType
 
 

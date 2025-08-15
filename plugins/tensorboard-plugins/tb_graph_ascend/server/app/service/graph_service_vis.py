@@ -18,14 +18,13 @@ import time
 import json
 
 from tensorboard.util import tb_logging
-from .db_graph_service import DbGraphService
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState
 from ..model.match_nodes_model import MatchNodesController
 from ..model.layout_hierarchy_vis import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
-from .base_graph_service import GraphServiceStrategy
+from .graph_service_base import GraphServiceStrategy
 
 logger = tb_logging.get_logger()
 

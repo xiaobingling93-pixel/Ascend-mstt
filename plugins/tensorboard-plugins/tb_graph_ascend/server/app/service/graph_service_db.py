@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from .base_graph_service import GraphServiceStrategy
+from .graph_service_base import GraphServiceStrategy
 from ..repositories.graph_repo import GraphRepo
 from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
