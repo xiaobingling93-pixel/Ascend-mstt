@@ -79,7 +79,7 @@ def write_step(output_dirpath, parse_step_result, rank, data_type):
             for op, value in ops.items():
                 tag = f"{vpp_name}/{op}"
                 writer.add_scalar(tag, value, step)
-    writer.flush()
+    writer.close()
 
 
 @recursion_depth_decorator("update_dict", max_depth=50)
