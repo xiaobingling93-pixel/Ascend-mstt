@@ -115,11 +115,13 @@ def validate_recording_l2_features(recording_l2_features):
     if not isinstance(recording_l2_features, bool):
         raise TypeError("recording_l2_features should be a bool")
     
+
 def validate_sa_order(sa_order):
     if isinstance(sa_order, str):
         sa_order = sa_order.replace(' ', '')
     if sa_order not in MonitorConst.SA_ORDERS:
         raise TypeError(f'sa_order must be in {MonitorConst.SA_ORDERS}, got {sa_order}')
+    
     
 def validate_print_struct(print_struct):
     if not isinstance(print_struct, bool):
