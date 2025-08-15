@@ -102,8 +102,8 @@ def validate_l2_targets(targets):
     if not isinstance(targets, dict):
         raise TypeError('l2_targets in config.json should be a dict')
     for hook_name, target_list in targets.items():
-        if hook_name not in MsgConst.L2_HOOKS:
-            raise TypeError(f'key of l2_targtes must be in {MsgConst.L2_HOOKS}, got {hook_name}')
+        if hook_name not in MonitorConst.L2_HOOKS:
+            raise TypeError(f'key of l2_targtes must be in {MonitorConst.L2_HOOKS}, got {hook_name}')
         if not isinstance(target_list, list):
             raise TypeError('values of l2_targets should be a list in config.json')
         for item in target_list:

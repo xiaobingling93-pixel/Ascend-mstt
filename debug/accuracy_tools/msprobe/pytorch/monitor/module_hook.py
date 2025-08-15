@@ -59,6 +59,7 @@ FORMAT_MAPPING = {
 }
 start_step = 0
 
+
 def param_is_not_tensor_parallel_duplicate(param, tp_group):
     return (hasattr(param, 'tensor_model_parallel') and param.tensor_model_parallel) or (
             torch.distributed.get_rank(group=tp_group) == 0
@@ -284,6 +285,18 @@ class TrainerMon:
                 metrics[op].update({key: tensor})
         cc_tensor.reset()
         return metrics
+
+    @staticmethod
+    def get_linear_hook_target(module):
+        if isinstance(module, torch.nn.Embedding):
+            return ''
+        if hasattr(module, "num_embeddings") or hasattr(module, "vocab_start_index"):
+            return ''
+        for weight_name in ["weight", "wg"]:
+            if hasattr(module, weight_name) and isinstance(getattr(module, weight_name), torch.Tensor):
+                if getattr(module, weight_name).dim() == 2:
+                    return weight_name
+        return ''
 
     def set_config(self):
         logger.info(f"current config: {self.config}")
@@ -553,13 +566,13 @@ class TrainerMon:
             self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, MonitorConst.ACTVGRAD)
 
     def write_metrics_if_not_empty(self, features, metrics, step, hook_name):
-            if len(features) == 0:
-                return
-            if hook_name in ["linear_hook"]:
-                self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=False)
-            else:
-                self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=True)
-            features.clear()
+        if len(features) == 0:
+            return
+        if hook_name in ["linear_hook"]:
+            self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=False)
+        else:
+            self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=True)
+        features.clear()
 
     def write_features_tb(self, step):
         if not self.recording_l2_features:
@@ -991,27 +1004,9 @@ class TrainerMon:
                 if pattern in l2_targets:
                     return pattern 
         elif hook_name in ["linear_hook"]:
-                return vpp_stage + squash_param_name(module_name, self.squash_name)
+            return vpp_stage + squash_param_name(module_name, self.squash_name)
         return ""
-
-    def _get_linear_hook_target(self, module):
-        if isinstance(module, torch.nn.Embedding):
-            return ''
-        if hasattr(module, "num_embeddings") or hasattr(module, "vocab_start_index"):
-            return ''
-        for weight_name in ["weight", "wg"]:
-            if hasattr(module, weight_name) and isinstance(getattr(module, weight_name), torch.Tensor):
-                if getattr(module, weight_name).dim() == 2:
-                    return weight_name
-        return ''
     
-    def _get_norm_hook_target(self, module):
-        for weight_name in ["weight"]:
-            if hasattr(module, weight_name) and isinstance(getattr(module, weight_name), torch.Tensor):
-                if getattr(module, weight_name).dim() == 1:
-                    return weight_name
-        return ''
-
     def _hook_module(self, target_names, l2_target_names, module: torch.nn.Module, vpp_stage=''):
         if '_modules' not in module.__dict__:
             # nothing to hook
@@ -1120,7 +1115,7 @@ class TrainerMon:
         def extract_linear_sr_hook(module, module_input, module_output, name):
             if is_recomputation() or not module.training:
                 return
-            weight_name = self._get_linear_hook_target(module)
+            weight_name = self.get_linear_hook_target(module)
             if weight_name == '':
                 return
 
@@ -1178,8 +1173,7 @@ class TrainerMon:
                     "attention_hook": extract_attention_feature_hook,
                     "linear_hook": extract_linear_sr_hook,
                 }
-                hooks = ["attention_hook", "linear_hook"]
-                for hook_name in hooks:
+                for hook_name in func_map.keys():
                     if hook_name not in l2_target_names:
                         continue
                     temp_names = l2_target_names[hook_name]

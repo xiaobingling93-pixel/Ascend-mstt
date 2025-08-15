@@ -132,7 +132,7 @@ class TestValidationFunctions(unittest.TestCase):
         """测试非法 hook_name"""
         with self.assertRaises(TypeError) as cm:
             validate_l2_targets({"invalid_hook": ["module1"]})
-        self.assertIn(f'key of l2_targtes must be in {MsgConst.L2_HOOKS}', 
+        self.assertIn(f'key of l2_targtes must be in {MonitorConst.L2_HOOKS}', 
                      str(cm.exception))
 
     def test_validate_l2_targets_invalid_value_type(self):
