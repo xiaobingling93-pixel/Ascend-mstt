@@ -351,8 +351,8 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('task', config.task);
             this.set('matchedConfigFiles', ['未选择', ...config.matchedConfigFiles]);
             const microstepsCount = Number(config.microSteps);
-            const ranksCount = Number(config.rankNum);
-            const stepsCount = Number(config.stepNum);
+            const ranks = config.ranks || [0];
+            const steps = config.steps || [0];
             if (microstepsCount) {
                 const microstepsArray = Array.from({ length: microstepsCount + 1 }, (_, index) => ({
                     label: index === 0 ? 'ALL' : String(index - 1),
@@ -360,21 +360,20 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 }));
                 this.set('microsteps', microstepsArray);
             }
-            if (ranksCount > 0) {
-                const ranksArray = Array.from({ length: ranksCount + 1 }, (_, index) => ({
-                    label: index,
-                    value: index,
-                }));
+            if (ranks.length > 0) {
+                const ranksArray = ranks.map((rank) => ({
+                    label: rank,
+                    value: rank,
+                }))
                 this.set('ranks', ranksArray);
             }
-            if (stepsCount > 0) {
-                const stepsArray = Array.from({ length: stepsCount }, (_, index) => ({
-                    label: index,
-                    value: index,
-                }));
+            if (steps.length > 0) {
+                const stepsArray = steps.map((step) => ({
+                    label: step,
+                    value: step,
+                }))
                 this.set('steps', stepsArray);
             }
-
         } else {
             Notification.show(`图配置加载失败:${error}`, {
                 position: 'middle',

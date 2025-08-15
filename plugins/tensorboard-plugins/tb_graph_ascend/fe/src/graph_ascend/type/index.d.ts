@@ -41,8 +41,8 @@ export interface GraphConfigType {
     isSingleGraph: boolean;
     matchedConfigFiles: string[];
     task: string;
-    rankNum: number;
-    stepNum: number;
+    ranks: number[];
+    steps: number[]
 }
 
 export interface GraphAllNodeType {
