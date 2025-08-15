@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from .hierarchy import Hierarchy
+from .hierarchy_db import Hierarchy
 from ..utils.global_state import NPU, BENCH, SINGLE
 import time
 
@@ -69,6 +69,4 @@ class LayoutHierarchyModel:
              LayoutHierarchyModel.hierarchy[NPU].update_current_hierarchy_data(npu_update_data)
         if LayoutHierarchyModel.hierarchy.get(BENCH, None):
              LayoutHierarchyModel.hierarchy[BENCH].update_current_hierarchy_data(bench_update_data)
-             
-            
      

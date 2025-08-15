@@ -19,7 +19,6 @@ from abc import ABC, abstractmethod
 from tensorboard.util import tb_logging
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState, NPU, BENCH, Extension, DataType
-from ..model_vis.layout_hierarchy_model import LayoutHierarchyController
 
 logger = tb_logging.get_logger()
 DB_EXT = Extension.DB.value

@@ -19,8 +19,8 @@ from ..repositories.graph_repo import GraphRepo
 from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import  NPU, BENCH, SINGLE
-from ..model_db.layout_hierarchy_model import LayoutHierarchyModel
-from ..model_db.match_nodes_model import MatchNodesController
+from ..model.layout_hierarchy_db import LayoutHierarchyModel
+from ..model.match_nodes_model import MatchNodesController
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 from tensorboard.util import tb_logging
 logger = tb_logging.get_logger()
