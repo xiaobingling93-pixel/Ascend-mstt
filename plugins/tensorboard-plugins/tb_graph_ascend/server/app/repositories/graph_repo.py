@@ -574,6 +574,7 @@ class GraphRepo:
             conditions.append("rank = ?")
             conditions.append("data_source = 'NPU'")
             conditions.append("(? = -1 OR micro_step_id = ?)")
+            conditions.append("(sub_nodes = '' OR sub_nodes IS NULL OR sub_nodes = '[]')") 
             for value in values:
                 placeholder = "(precision_index BETWEEN ? AND ?)"
                 placeholders.append(placeholder)
@@ -592,6 +593,8 @@ class GraphRepo:
                     tb_nodes 
                 WHERE 
                     {" AND ".join(conditions)}
+                ORDER BY
+                    node_order ASC
             """
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *params))
@@ -626,6 +629,7 @@ class GraphRepo:
                     AND rank = ? 
                     AND data_source = 'NPU'
                     AND (? = -1 OR micro_step_id = ?)
+                    AND (sub_nodes = '' OR sub_nodes IS NULL OR sub_nodes = '[]')
                     AND overflow_level IN ({placeholders})
             """
             with self.conn as c:
@@ -737,6 +741,7 @@ class GraphRepo:
                 WHERE
                     step = ?
                     AND rank = ?
+                    AND data_source = 'NPU'
                     AND node_name = ?
             """
             with self.conn as c:
