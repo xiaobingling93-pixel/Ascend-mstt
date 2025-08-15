@@ -565,8 +565,7 @@ class TrainerMon:
         if not self.recording_l2_features:
             return
         for context in self.feature_hook_context_by_module.values():
-            num_features = len(context.attention_feature) + len(context.linear_feature) + len(
-                context.token_feature) + len(context.norm_feature)
+            num_features = len(context.attention_feature) + len(context.linear_feature)
             if num_features == 0:
                 continue
             self.write_metrics_if_not_empty(context.attention_feature, ["entropy", "softmax_max"],
@@ -991,7 +990,7 @@ class TrainerMon:
             ]:
                 if pattern in l2_targets:
                     return pattern 
-        elif hook_name in ["linear_hook", "norm_hook"]:
+        elif hook_name in ["linear_hook"]:
                 return vpp_stage + squash_param_name(module_name, self.squash_name)
         return ""
 
