@@ -59,8 +59,8 @@ class GraphRepo:
                 "colors": GraphUtils.safe_json_loads(record.get('node_colors')),
                 "matchedConfigFiles": [],
                 "task": record.get('task', ''),
-                "ranks": GraphUtils.safe_json_loads(record.get('rank_num')),
-                "steps": GraphUtils.safe_json_loads(record.get('step_num')),
+                "ranks": GraphUtils.safe_json_loads(record.get('rank_list')),
+                "steps": GraphUtils.safe_json_loads(record.get('step_list')),
             }
             end = time.perf_counter()
             print("query_config_info time:", end - start)
@@ -441,6 +441,8 @@ class GraphRepo:
                     AND rank = ?
                     AND (? = -1 OR micro_step_id = ?)
                     AND data_source = 'NPU'
+                ORDER BY
+                    node_order ASC
             """
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step))
@@ -467,11 +469,15 @@ class GraphRepo:
                     step = ?
                     AND rank = ? 
                     AND (? = -1 OR micro_step_id = ?)
+                ORDER BY
+                    node_order ASC
             """
             
             with self.conn as conn:
                 cursor = conn.execute(query, (step, rank, micro_step, micro_step))
                 rows = cursor.fetchall()
+            end = time.perf_counter()
+            print(f"query_all_node_info_in_one time: {end - start:.4f}s")
 
             # 初始化结果
             npu_node_list = []
@@ -505,9 +511,6 @@ class GraphRepo:
                         bench_unmatch_node.append(node_name)
                 else:
                     logger.error(f"Invalid data source: {row['data_source']}")
-
-            end = time.perf_counter()
-            print(f"query_all_node_info_in_one time: {end - start:.4f}s")
 
             return {
                 'npu_node_list': npu_node_list,
