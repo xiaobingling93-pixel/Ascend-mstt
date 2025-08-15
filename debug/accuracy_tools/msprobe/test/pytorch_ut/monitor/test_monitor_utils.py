@@ -8,7 +8,7 @@ from msprobe.core.common.const import MonitorConst
 from msprobe.core.monitor.utils import filter_special_chars, MsgConst, validate_ops, validate_ranks, \
     validate_targets, validate_print_struct, validate_ur_distribution, validate_xy_distribution, \
     validate_mg_distribution, validate_wg_distribution, validate_cc_distribution, validate_alert, validate_config, \
-    get_output_base_dir, validate_l2_targets, validate_recording_l2_features
+    get_output_base_dir, validate_l2_targets, validate_recording_l2_features, validate_sa_order
 from msprobe.pytorch.monitor.utils import get_param_struct
 from msprobe.pytorch.common.utils import is_recomputation
 
@@ -138,7 +138,7 @@ class TestValidationFunctions(unittest.TestCase):
     def test_validate_l2_targets_invalid_value_type(self):
         """测试非法 value 类型"""
         with self.assertRaises(TypeError) as cm:
-            validate_l2_targets({"hook1": "not_a_list"})
+            validate_l2_targets({"linear_hook": "not_a_list"})
         self.assertEqual(str(cm.exception), 
                         'values of l2_targets should be a list in config.json')
 
@@ -161,7 +161,16 @@ class TestValidationFunctions(unittest.TestCase):
             validate_recording_l2_features("xx")
             self.assertEqual(str(cm.exception), 
                             "recording_l2_features should be a bool")
+            
+    def test_valid_orders(self):
+        validate_sa_order("b,s,h,d")  # 不应报错
+        validate_sa_order("s,b,h,d")  # 不应报错
 
+    def test_invalid_orders(self):
+        with self.assertRaises(TypeError) as cm:
+            validate_recording_l2_features("xx")
+            self.assertEqual(str(cm.exception), 
+                            f'sa_order must be in {MonitorConst.SA_ORDERS}, got xx')
 
 class TestIsRecomputation(unittest.TestCase):
     @patch('inspect.stack')

@@ -119,7 +119,7 @@ class TestMathFunctions(unittest.TestCase):
         mask = torch.tensor([[1, 0, 0],
                              [1, 1, 0],
                              [1, 1, 1]], dtype=torch.float)
-        entropy, _ = cal_entropy(qk, mask)
+        entropy, softmax_max = cal_entropy(qk, mask)
         self.assertAlmostEqual(entropy, 0.4715, delta=0.1)
         self.assertAlmostEqual(softmax_max, 0.7988, delta=0.1)
 

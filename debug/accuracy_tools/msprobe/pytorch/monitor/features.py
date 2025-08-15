@@ -170,7 +170,7 @@ def cal_entropy(qk_tensor, mask=None):
     qk_tensor = qk_tensor.masked_fill(mask == 0, float('-inf'))
     softmax_qkt = torch.nn.functional.softmax(qk_tensor.float(), dim=1)
     # softmax取QK矩阵最大值
-    softmax_max = torch.max(torch.amax(softmax_qkt, dim=1))
+    softmax_max = torch.mean(torch.amax(softmax_qkt, dim=1))
     entropy = torch.mean(-torch.nansum(softmax_qkt *
                          torch.log(softmax_qkt), dim=1))
     return entropy, softmax_max
