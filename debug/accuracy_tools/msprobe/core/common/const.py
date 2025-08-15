@@ -797,6 +797,7 @@ class MonitorConst:
     )
     DEEPSPEED_ZERO_OPT_FILTER = "DeepSpeedZeroOptimizer"
     RULE_NAME = ['AnomalyTurbulence', 'AnomalyNan']
+    L2_HOOKS = ["linear_hook", "attention_hook"]
 
     SLICE_SIZE = 20480
     # used for name

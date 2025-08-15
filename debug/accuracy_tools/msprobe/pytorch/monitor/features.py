@@ -205,19 +205,3 @@ def cal_stable_rank(weight: torch.Tensor):
         return torch.tensor(0), torch.tensor(0)
     f_norm = torch.norm(weight, p="fro")
     return f_norm / eig, eig
-
-
-@torch.no_grad()
-def cal_svd_entropy(weight: torch.Tensor, k=50):
-    epsilon = 1e-10
-    if isinstance(weight, torch.Tensor):
-        _, s, _ = torch.svd_lowrank(weight.float(), q=k)
-        s_sum = torch.sum(s)
-        if s_sum.item() == 0:
-            return torch.tensor(0)
-        p = s / torch.sum(s)
-        entropy = -torch.sum(p * torch.log2(p + epsilon))
-    else:
-        logger.warning("Calculate SVD entropy failed: Weight is not a tensor")
-        entropy = torch.tensor(0)
-    return entropy
