@@ -81,7 +81,7 @@ def patch_dynamo__compile():
 
     original = cf._compile
     if getattr(original, "__msprobe_patched__", False):
-        return False
+        return
 
     @functools.wraps(original)
     def wrapped(*args, **kwargs):
