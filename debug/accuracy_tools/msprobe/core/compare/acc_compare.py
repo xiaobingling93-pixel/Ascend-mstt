@@ -203,7 +203,8 @@ class ParseData:
             Const.SUMMARY: [],
             Const.STACK_INFO: [],
             Const.STATE: [],
-            Const.API_ORIGIN_NAME: []
+            Const.API_ORIGIN_NAME: [],
+            Const.REQ_GRAD: []
         }
         if self.mode_config.dump_mode == Const.ALL:
             result[Const.DATA_NAME] = []
@@ -229,10 +230,9 @@ class ParseData:
             summary_list = merge_list.get(Const.SUMMARY)
             data_name_list = merge_list.get(Const.DATA_NAME)
             state_list = merge_list.get(Const.STATE)
-            op_name_reorder, summary_reorder, data_name_reorder, state_reorder = reorder_op_x_list(op_name_list,
-                                                                                                   summary_list,
-                                                                                                   data_name_list,
-                                                                                                   state_list)
+            requires_grad_list = merge_list.get(Const.REQ_GRAD)
+            op_name_reorder, summary_reorder, data_name_reorder, state_reorder, requires_grad_reorder = (
+                reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list, requires_grad_list))
             # 遍历单个API的所有item
             for index, (op_name, state) in enumerate(zip(op_name_reorder, state_reorder)):
                 result[CompareConst.OP_NAME].append(op_name)
@@ -252,9 +252,6 @@ class ParseData:
                 check_api_info_len(op_name, struct, 2)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])
-                if self.mode_config.dump_mode == Const.MD5:
-                    check_api_info_len(op_name, struct, 3)
-                    result[Const.MD5].append(struct[2])
 
                 check_api_info_len(op_name, summary_reorder, 1)
                 result[Const.SUMMARY].append(summary_reorder.pop(0))
@@ -265,12 +262,18 @@ class ParseData:
                 else:
                     result[Const.STACK_INFO].append(None)
 
+                if self.mode_config.dump_mode == Const.MD5:
+                    check_api_info_len(op_name, struct, 3)
+                    result[Const.MD5].append(struct[2])
                 if self.mode_config.dump_mode == Const.ALL:
                     check_api_info_len(op_name, data_name_reorder, 1)
                     result[Const.DATA_NAME].append(data_name_reorder.pop(0))
 
                 result[Const.STATE].append(state)
                 result[Const.API_ORIGIN_NAME].append(data_name)
+                check_api_info_len(op_name, requires_grad_reorder, 1)
+                result[Const.REQ_GRAD].append(requires_grad_reorder.pop(0))
+
             progress_bar.update(1)
         progress_bar.close()
         return pd.DataFrame(result)
@@ -356,13 +359,17 @@ class ProcessDf:
             return npu_op_name
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
+        def remove_prefix(string, prefix):
+            if string.startswith(prefix):
+                return string[len(prefix):]
+            return string
+
         def gen_input_compare_key(pattern, term):
             is_unmatched = True
             for i, prefix in enumerate(mapping_dict.get(f'ms_{term}')):
-                if op_name.split(pattern)[1].startswith(str(prefix)):
+                if remove_prefix(op_name, api_origin_name + pattern) == str(prefix):
                     npu_df.loc[index, CompareConst.CMP_KEY] = (
-                        op_name.replace(pattern + str(prefix),
-                                        pattern + str(mapping_dict.get(f'pt_{term}')[i])))
+                        op_name.replace(pattern + str(prefix), pattern + str(mapping_dict.get(f'pt_{term}')[i])))
                     is_unmatched = False
             return is_unmatched
 
@@ -384,15 +391,17 @@ class ProcessDf:
                 continue
             for index in ms_api_indices_dict.get(ms_api):
                 op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
-                if CompareConst.INPUT_PATTERN in op_name:
+                state = npu_df.loc[index, Const.STATE]
+                api_origin_name = npu_df.loc[index, Const.API_ORIGIN_NAME].replace(ms_api, pt_api, 1)
+                if state == Const.INPUT:
                     is_abandoned = gen_input_compare_key(CompareConst.INPUT_PATTERN, 'args')
-                elif CompareConst.KWARGS_PATTERN in op_name:
+                elif state == Const.KWARGS:
                     is_abandoned = gen_input_compare_key(CompareConst.KWARGS_PATTERN, 'args')
-                elif CompareConst.OUTPUT_PATTERN in op_name:
+                elif state == Const.OUTPUT:
                     is_abandoned = gen_input_compare_key(CompareConst.OUTPUT_PATTERN, 'output')
-                elif CompareConst.PARAMS_PATTERN in op_name:
+                elif state == Const.PARAMS:
                     is_abandoned = gen_input_compare_key(CompareConst.PARAMS_PATTERN, 'parameters')
-                elif CompareConst.PARAMS_GRAD_PATTERN in op_name:
+                elif state == Const.PARAMS_GRAD:
                     is_abandoned = gen_input_compare_key(CompareConst.PARAMS_GRAD_PATTERN, 'parameters_grad')
                 else:
                     logger.error(f'Excepted op_name: {op_name}')
@@ -641,12 +650,19 @@ class CreateTable:
                                'data_name_x': CompareConst.DATA_NAME,
                                'stack_info_x': CompareConst.STACK,
                                'state_x': Const.STATE,
-                               'api_origin_name_x': Const.API_ORIGIN_NAME}, inplace=True)
+                               'api_origin_name_x': Const.API_ORIGIN_NAME,
+                               'requires_grad_x': CompareConst.NPU_REQ_GRAD,
+                               'requires_grad_y': CompareConst.BENCH_REQ_GRAD
+                               },
+                      inplace=True)
 
         # process summary data
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
         bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
                          CompareConst.BENCH_NORM]
+        # process requires_grad
+        result[CompareConst.REQ_GRAD_CONSIST] = result[CompareConst.NPU_REQ_GRAD] == result[CompareConst.BENCH_REQ_GRAD]
+
         if result.empty:
             result[npu_summary] = pd.DataFrame(columns=npu_summary)
             result[bench_summary] = pd.DataFrame(columns=bench_summary)
@@ -699,7 +715,7 @@ class CalcStatsDiff:
         result_df.loc[cond_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
 
         cond_not_nan_diff = cond_valid_stat & ~cond_diff_nan
-        condition_pt_zero = bench_val == 0
+        condition_pt_zero = self.get_number(bench_val) == 0
         result_df.loc[cond_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.N_A
 
         # 相对误差转成百分比字符串
@@ -717,6 +733,7 @@ class CalcStatsDiff:
         condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
         result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
         result_df.loc[condition_no_bench, CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
+        condition_req_grad_consist = result_df[CompareConst.NPU_REQ_GRAD] == result_df[CompareConst.BENCH_REQ_GRAD]
 
         if self.mode_config.dump_mode == Const.MD5:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
@@ -730,14 +747,16 @@ class CalcStatsDiff:
             warning_flag = pd.DataFrame(warning_list).any()
             result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
-            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
+            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy. '
+            result_df.loc[~condition_req_grad_consist, CompareConst.ERROR_MESSAGE] += 'Requires_grad inconsistent. '
         else:
             fill_cols = [CompareConst.COSINE, CompareConst.EUC_DIST,
                          CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
                          CompareConst.ERROR_MESSAGE]
-            result_df.loc[~condition_no_bench, fill_cols] = ''
+            result_df.loc[~condition_no_bench, fill_cols] = ''  # 默认填充'', df默认省缺值为nan，不便后续处理，容易出现意外情况
             result_df.loc[~condition_no_bench, CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
+            result_df.loc[~condition_req_grad_consist, CompareConst.ERROR_MESSAGE] = 'Requires_grad inconsistent. '
 
         return result_df[header]
 

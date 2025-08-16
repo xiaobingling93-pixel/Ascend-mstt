@@ -24,6 +24,8 @@ class Const:
     Class for const
     """
     TOOL_NAME = "msprobe"
+    MD5_INDEX = "md5_index"
+    MD5 = "md5"
 
     ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
@@ -113,9 +115,10 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     STRUCTURE = "structure"
+    EXCEPTION_DUMP = "exception_dump"
     DUMP_PRECISION_HIGH = "high"
     DUMP_PRECISION_LOW = "low"
-    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE]
+    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE, EXCEPTION_DUMP]
     DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR, STRUCTURE]
     DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     DUMP_PRECISION_LIST = [DUMP_PRECISION_LOW, DUMP_PRECISION_HIGH]
@@ -241,6 +244,7 @@ class Const:
     NORM = 'Norm'
     DATA_NAME = 'data_name'
     STATE = 'state'
+    REQ_GRAD = 'requires_grad'
     API_ORIGIN_NAME = 'api_origin_name'
     TENSOR_STAT_INDEX = 'tensor_stat_index'
     SUMMARY_METRICS_LIST = [MAX, MIN, MEAN, NORM]
@@ -265,6 +269,10 @@ class Const:
     END_PREFIX = "end_"
 
     TENSOR_STAT_LEN = 2
+
+    TENSOR_TYPE = "torch.Tensor"
+    DTENSOR_TYPE = "torch.distributed.tensor.DTensor"
+    FAKE_TENSOR_TYPE = "torch._subclasses.fake_tensor.FakeTensor"
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
 
@@ -361,22 +369,22 @@ class Const:
     }
 
     def _fused_adamw_(
-        self,
-        grads,
-        exp_avgs,
-        exp_avg_sqs,
-        max_exp_avg_sqs,
-        state_steps,
-        *,
-        lr,
-        beta1,
-        beta2,
-        weight_decay,
-        eps,
-        amsgrad,
-        maximize,
-        grad_scale=None,
-        found_inf=None
+            self,
+            grads,
+            exp_avgs,
+            exp_avg_sqs,
+            max_exp_avg_sqs,
+            state_steps,
+            *,
+            lr,
+            beta1,
+            beta2,
+            weight_decay,
+            eps,
+            amsgrad,
+            maximize,
+            grad_scale=None,
+            found_inf=None
     ):
         pass
 
@@ -392,6 +400,8 @@ class Const:
     CONFIG_CHECK_WARNING = "warning"
     CONFIG_CHECK_ERROR = "error"
 
+    MIX_DUMP_NAMES = {'graph', 'pynative'}
+
 
 class CompareConst:
     """
@@ -406,6 +416,8 @@ class CompareConst:
     BENCH_DTYPE = "Bench Dtype"
     NPU_SHAPE = "NPU Tensor Shape"
     BENCH_SHAPE = "Bench Tensor Shape"
+    NPU_CSV_FILE = "NPU CSV File"
+    BENCH_CSV_FILE = "Bench CSV File"
     NPU_MAX = "NPU max"
     NPU_MIN = "NPU min"
     NPU_MEAN = "NPU mean"
@@ -425,6 +437,9 @@ class CompareConst:
     MIN_RELATIVE_ERR = "MinRelativeErr"
     MEAN_RELATIVE_ERR = "MeanRelativeErr"
     NORM_RELATIVE_ERR = "NormRelativeErr"
+    REQ_GRAD_CONSIST = "Requires_grad Consistent"
+    NPU_REQ_GRAD = "NPU Requires_grad"
+    BENCH_REQ_GRAD = "Bench Requires_grad"
     ACCURACY = "Accuracy Reached or Not"
     STACK = "NPU_Stack_Info"
     DATA_NAME = "Data_name"
@@ -494,21 +509,21 @@ class CompareConst:
 
     ULP_ERR_STATUS = "ulp_err_status"
 
-    COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, EUC_DIST,
-        MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
-        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
-    ]
+    ALL_COMPARE_INDEX = [COSINE, EUC_DIST, MAX_ABS_ERR, MAX_RELATIVE_ERR,
+                         ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO]
+    SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
+                             MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
+    MD5_COMPARE_INDEX = [RESULT]
 
-    SUMMARY_COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
-        MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR,
-        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, RESULT, ERROR_MESSAGE
-    ]
+    BASIC_INFO = [NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_REQ_GRAD, BENCH_REQ_GRAD]
+    SUMMARY_INFO = [NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM]
 
-    MD5_COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
-    ]
+    COMPARE_RESULT_HEADER = BASIC_INFO + ALL_COMPARE_INDEX + SUMMARY_INFO + [REQ_GRAD_CONSIST, ACCURACY, ERROR_MESSAGE]
+
+    SUMMARY_COMPARE_RESULT_HEADER = BASIC_INFO + SUMMARY_COMPARE_INDEX + SUMMARY_INFO + [REQ_GRAD_CONSIST, RESULT,
+                                                                                         ERROR_MESSAGE]
+
+    MD5_COMPARE_RESULT_HEADER = BASIC_INFO + [NPU_MD5, BENCH_MD5, REQ_GRAD_CONSIST] + MD5_COMPARE_INDEX
 
     COMPARE_RESULT_HEADER_STACK = COMPARE_RESULT_HEADER + [STACK]
 
@@ -521,11 +536,6 @@ class CompareConst:
         Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
         Const.MD5: MD5_COMPARE_RESULT_HEADER
     }
-
-    ALL_COMPARE_INDEX = [COSINE, EUC_DIST, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO,
-                         FIVE_THOUSANDTHS_ERR_RATIO]
-    SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
-                             MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
 
     # dtype match
 
@@ -597,7 +607,6 @@ class CompareConst:
     # error message
     NO_BENCH = "No bench data matched."
 
-
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]
 
@@ -634,6 +643,9 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+    MS_GRAPH_CSV = {
+        NPU_CSV_FILE: None, BENCH_CSV_FILE: None
+    }
 
     API_MAPPING_KEYS_TO_COMPARE = [
         ('ms_args', 'pt_args'),
@@ -653,9 +665,11 @@ class CompareConst:
 
     OP_NAME_X = 'op_name_x'
     MATCH_RESULT_COLUMNS = [
-        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'state_x', 'api_origin_name_x', 'data_name_x',
+        OP_NAME_X, 'dtype_x', 'shape_x', 'summary_x', 'stack_info_x', 'state_x', 'api_origin_name_x',
+        'requires_grad_x', 'data_name_x',
         CMP_KEY, CMP_SHAPE,
-        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'state_y', 'api_origin_name_y', 'data_name_y'
+        'op_name_y', 'dtype_y', 'shape_y', 'summary_y', 'stack_info_y', 'state_y', 'api_origin_name_y',
+        'requires_grad_y', 'data_name_y'
     ]
 
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'

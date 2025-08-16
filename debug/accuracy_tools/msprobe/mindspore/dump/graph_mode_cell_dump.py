@@ -33,6 +33,12 @@ try:
 except ImportError:
     tensordump_flag = False
 
+graph_step_flag = True
+try:
+    from mindspore._c_expression import _dump_step
+except ImportError:
+    graph_step_flag = False
+
 
 class GraphModeCellDump:
     task = CoreConst.STATISTICS
@@ -63,6 +69,15 @@ class GraphModeCellDump:
             step_flag = "<tensordump-update-step>"
             _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
             ops.tensordump(step_flag, temp_tensor)
+
+        # 更新静态图KBK dump的step数
+        if GraphModeCellDump.task == CoreConst.STATISTICS:
+            if not graph_step_flag:
+                raise Exception(
+                    "Importing _dump_step failed, "
+                    "please use the latest version package of MindSpore."
+                )
+            _dump_step(1)
 
     def check_config(self, strict):
         if not self.net:

@@ -5,7 +5,7 @@ from msprobe.visualization.builder.graph_merger import (
     NoParallelMerger, TPPPMerger, FullMerger
 )
 from msprobe.core.common.const import Const
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, ParallelParam
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.graph.graph import Graph
 from msprobe.core.common.exceptions import MsprobeException
@@ -14,7 +14,7 @@ from msprobe.core.common.exceptions import MsprobeException
 class TestGraphMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = MagicMock()
-        self.parallel_param = MagicMock(tp=1, pp=1, rank_size=1)
+        self.parallel_param = ParallelParam(tp=1, pp=1, rank_size=1)
         self.is_bench = False
 
     def test_select_strategy_no_parallel(self):
@@ -57,7 +57,7 @@ class TestGraphMerger(unittest.TestCase):
 class TestBaseGraphMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock(rank=i) for i in range(2)]
-        self.parallel_param = MagicMock(tp=1, pp=1, rank_size=2)
+        self.parallel_param = ParallelParam(tp=1, pp=1, rank_size=2)
         self.is_bench = False
         self.merger = BaseGraphMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 
@@ -166,7 +166,7 @@ class TestBaseGraphMerger(unittest.TestCase):
         merger = BaseGraphMerger(self.build_graph_results, self.parallel_param, self.is_bench)
         tp_groups, pp_groups = merger.get_default_groups()
         self.assertEqual(tp_groups, [[0, 1], [2, 3], [4, 5], [6, 7]])
-        self.assertEqual(pp_groups, [[0, 2], [1, 3], [4, 6], [5, 7]])
+        self.assertEqual(pp_groups, [[0, 4], [1, 5], [2, 6], [3, 7]])
 
         self.parallel_param.tp = 2
         self.parallel_param.pp = 3
@@ -179,7 +179,7 @@ class TestBaseGraphMerger(unittest.TestCase):
 class TestPPMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock(rank=i) for i in range(4)]
-        self.parallel_param = MagicMock(tp=1, pp=4, rank_size=4)
+        self.parallel_param = ParallelParam(tp=1, pp=4, rank_size=4)
         self.is_bench = False
         self.merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 
@@ -281,7 +281,7 @@ class TestPPMerger(unittest.TestCase):
 class TestTPMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock(rank=i) for i in range(4)]
-        self.parallel_param = MagicMock(tp=4, pp=1, rank_size=4)
+        self.parallel_param = ParallelParam(tp=4, pp=1, rank_size=4)
         self.is_bench = False
         self.merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 
@@ -343,7 +343,7 @@ class TestTPMerger(unittest.TestCase):
 class TestNoParallelMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock()]
-        self.parallel_param = MagicMock(tp=1, pp=1, rank_size=1)
+        self.parallel_param = ParallelParam(tp=1, pp=1, rank_size=1)
         self.is_bench = False
         self.merger = NoParallelMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 
@@ -357,7 +357,7 @@ class TestNoParallelMerger(unittest.TestCase):
 class TestTPPPMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock(rank=i) for i in range(4)]
-        self.parallel_param = MagicMock(tp=2, pp=2, rank_size=4)
+        self.parallel_param = ParallelParam(tp=2, pp=2, rank_size=4)
         self.is_bench = False
         self.merger = TPPPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 
@@ -380,7 +380,7 @@ class TestTPPPMerger(unittest.TestCase):
 class TestFullMerger(unittest.TestCase):
     def setUp(self):
         self.build_graph_results = [MagicMock(rank=i) for i in range(8)]
-        self.parallel_param = MagicMock(tp=2, pp=4, rank_size=8, vpp=1)
+        self.parallel_param = ParallelParam(tp=2, pp=4, rank_size=8, vpp=1)
         self.is_bench = False
         self.merger = FullMerger(self.build_graph_results, self.parallel_param, self.is_bench)
 

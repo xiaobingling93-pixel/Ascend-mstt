@@ -27,6 +27,7 @@ import { customElement, property, observe } from '@polymer/decorators';
 import { NPU_PREFIX, BENCH_PREFIX, DB_TYPE } from '../../../common/constant';
 import useMatched from './useMatched';
 import '../tf_search_combox/index';
+import i18next from '../../../common/i18n'
 import type { UseMatchedType } from '../../type';
 import type { SelectionType } from '../../../graph_ascend/type';
 
@@ -101,7 +102,7 @@ class Legend extends PolymerElement {
         position: absolute;
         font-size: 10px;
         top: 14px;
-        left: 122px;
+        left: var(--question-config-left, 120px);
       }
       .button-wrapper {
         position: relative;
@@ -129,10 +130,10 @@ class Legend extends PolymerElement {
         cursor: pointer;
       }
     </style>
-    <vaadin-details class="vaadin-details" summary="节点匹配" opened>
+    <vaadin-details class="vaadin-details" summary="[[t('node_match')]]" opened>
       <div class="warning">
         <vaadin-combo-box
-          label="选择匹配配置文件"
+          label="[[t('select_match_config_file')]]"
           items="[[matchedConfigFiles]]"
           value="{{selectedConfigFile}}"
           on-change="_addMatchedNodesLinkByConfigFile"
@@ -140,7 +141,7 @@ class Legend extends PolymerElement {
         <vaadin-icon id="question" icon="vaadin:question-circle"></vaadin-icon>
         <vaadin-tooltip
           for="question"
-          text="选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。"
+          text="[[t('select_match_config_file_desc')]]"
           position="end"
         ></vaadin-tooltip>
       </div>
@@ -150,14 +151,14 @@ class Legend extends PolymerElement {
       <div class="unmatched-node">
         <p class="vaadin-details-title">未匹配节点</p>
         <tf-search-combox
-          label="调试侧([[npuUnMatchedNodes.length]])"
+          label="[[t('debug')]]([[npuUnMatchedNodes.length]])"
           items="[[npuUnMatchedNodes]]"
           selected-value="{{selectedNpuUnMatchedNode}}"
           on-select-change="[[_changeNpuUnMatchedNode]]"
           is-compare-graph="[[isCompareGraph]]"
         ></tf-search-combox>
         <tf-search-combox
-          label="标杆侧([[benchUnMatchedNodes.length]])"
+          label="[[t('bench')]]([[benchUnMatchedNodes.length]])"
           items="[[benchUnMatchedNodes]]"
           selected-value="{{selectedBenchUnMatchedNode}}"
           on-select-change="[[_changeBenchUnMatchedNode]]"
@@ -231,6 +232,9 @@ class Legend extends PolymerElement {
       </div>
     </vaadin-details>
   `;
+
+  @property({ type: Object })
+  t: Function = () => '';
 
   @property({ type: Object })
   unmatched: any = [];
@@ -314,6 +318,15 @@ class Legend extends PolymerElement {
   }
 
 
+
+  @observe('t')
+  _observeT(): void {
+    if (this.t) {
+      this.updateStyles({
+        '--question-config-left': i18next.language === 'zh-CN' ? '120px' : '162px',
+      });
+    }
+  }
 
   @observe('unmatched')
   _observeUnmatchedNode(): void {

@@ -83,4 +83,3 @@ class Visualization:
                         self.util.log.info("\nStatistic Info:")
                         title_printed = True
                     self.util.log.info(summery_info)
-            pkl_handle.close()

@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,18 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
+import os
+
 from msprobe.core.common.file_utils import check_file_type, load_json, check_file_or_directory_path
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
+from msprobe.core.compare.utils import get_paired_dirs
 
 
-def compare_cli(args):
-    input_param = load_json(args.input_path)
+def compare_cli(args, depth=1):
+    if depth > 2:
+        logger.error("Recursive compare error, depth exceeds 2.")
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+
+    if isinstance(args.input_path, dict):  # special for dyn-graph mix compare
+        input_param = args.input_path
+    else:
+        input_param = load_json(args.input_path)
     if not isinstance(input_param, dict):
         logger.error("input_param should be dict, please check!")
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     if not npu_path:
@@ -33,6 +43,7 @@ def compare_cli(args):
     if not bench_path:
         logger.error(f"Missing bench_path in input configuration file, please check!")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
+
     frame_name = args.framework
     auto_analyze = not args.compare_only
 
@@ -49,6 +60,7 @@ def compare_cli(args):
         "fuzzy_match": args.fuzzy_match,
         "highlight": args.highlight,
         "data_mapping": args.data_mapping,
+        "diff_analyze": args.diff_analyze
     }
 
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
@@ -77,6 +89,12 @@ def compare_cli(args):
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         check_file_or_directory_path(npu_path, isdir=True)
         check_file_or_directory_path(bench_path, isdir=True)
+
+        if depth == 1:
+            mix_compare_success = mix_compare(args, input_param, depth)
+            if mix_compare_success:
+                return
+
         kwargs = {
             **common_kwargs,
             "stack_mode": args.stack_mode,
@@ -92,6 +110,13 @@ def compare_cli(args):
         if isinstance(common, bool) and common:
             common_dir_compare(input_param, args.output_path)
             return
+
+        if common_kwargs.get('diff_analyze', False):
+            logger.info("Start finding first diff node......")
+            from msprobe.core.compare.find_first.analyzer import DiffAnalyzer
+            DiffAnalyzer(npu_path, bench_path, args.output_path, frame_name).analyze()
+            return
+
         if frame_name == Const.PT_FRAMEWORK:
             compare_distributed(npu_path, bench_path, args.output_path, **kwargs)
         else:
@@ -99,3 +124,34 @@ def compare_cli(args):
     else:
         logger.error("The npu_path and bench_path need to be of the same type.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
+
+
+def mix_compare(args, input_param, depth):
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
+
+    npu_bench_same_dirs_set = set(get_paired_dirs(npu_path, bench_path))
+    compare_cross_set = npu_bench_same_dirs_set & Const.MIX_DUMP_NAMES
+
+    if compare_cross_set:
+        logger.info("Start mix compare.")
+        origin_output = args.output_path
+
+        for folder_name in list(compare_cross_set):
+            new_npu_path = os.path.join(npu_path, folder_name)
+            new_bench_path = os.path.join(bench_path, folder_name)
+            paired_steps = get_paired_dirs(new_npu_path, new_bench_path)
+
+            for step_name in paired_steps:
+                logger.info(f"[mix compare] Start comparing {folder_name}/{step_name}")
+                npu_dir = os.path.join(new_npu_path, step_name)
+                bench_dir = os.path.join(new_bench_path, step_name)
+                args.input_path = {
+                    "npu_path": npu_dir,
+                    "bench_path": bench_dir,
+                    "is_print_compare_log": input_param.get("is_print_compare_log", True)
+                }
+                args.output_path = os.path.join(origin_output, folder_name, step_name)
+                compare_cli(args, depth + 1)
+        return True
+    return False

@@ -1,6 +1,8 @@
 # coding=utf-8
 import unittest
-from msprobe.core.compare.check import check_dump_json_str, check_json_key_value, valid_key_value, check_stack_json_str
+
+from msprobe.core.compare.check import check_dump_json_str, check_json_key_value, valid_key_value, \
+    check_stack_json_str
 from msprobe.core.common.utils import CompareException
 
 

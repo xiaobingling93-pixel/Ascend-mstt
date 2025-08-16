@@ -30,7 +30,7 @@ class CommonConfig:
         self.level = json_config.get('level')
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self.async_dump = json_config.get("async_dump", False)
-        self.precision = json_config.get("precision", Const.DUMP_PRECISION_HIGH)
+        self.precision = json_config.get("precision", Const.DUMP_PRECISION_LOW)
         self._check_config()
 
     def _check_config(self):

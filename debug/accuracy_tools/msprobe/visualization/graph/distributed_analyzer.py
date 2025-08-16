@@ -82,7 +82,7 @@ class DistributedAnalyzer:
         """
         target_rank = node.input_data.get(f'{node.id}{GraphConst.INPUT}{parameter}', {}).get('value')
         if target_rank is None:
-            logger.warning(f'The parameter {parameter} of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
+            logger.debug(f'The parameter {parameter} of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
         return target_rank
 
     @staticmethod
@@ -95,15 +95,15 @@ class DistributedAnalyzer:
         """
         group = node.input_data.get(f'{node.id}{GraphConst.INPUT}group', {})
         if not group:
-            logger.warning(f'The kwarg group of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
+            logger.debug(f'The kwarg group of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
             return None, None
         group_ranks = group.get('group_ranks')
         if not group_ranks:
-            logger.warning(f'The group_ranks of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
+            logger.debug(f'The group_ranks of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
             return None, None
         group_id = group.get('group_id')
         if not group_id:
-            logger.warning(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
+            logger.debug(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
             return None, None
         return group_ranks, group_id
 
@@ -183,7 +183,7 @@ class DistributedAnalyzer:
             op = info_dict.get(GraphConst.OP)
             target_rank = info_dict.get(GraphConst.PEER)
             if op is None or target_rank is None:
-                logger.warning('Cannot get param op or peer.')
+                logger.debug('Cannot get param op or peer.')
                 continue
             group_id = op + Const.REPLACEMENT_CHARACTER + Const.RANK + str(target_rank) + \
                        Const.REPLACEMENT_CHARACTER + info_dict.get(GraphConst.GROUP_ID, '')
@@ -215,7 +215,7 @@ class DistributedAnalyzer:
         """
         target_graph = self.graphs.get(target_rank)
         if not target_graph:
-            logger.warning(f'Graph data does not exist, {CANNOT_MATCH}{target_rank}')
+            logger.debug(f'Graph data does not exist, {CANNOT_MATCH}{target_rank}')
             return None
         target_group_mapping = self.group_node_mapping.get(target_rank)
         # p2p通信，想要获取目标节点，需要替换unique_group_id中的rank和api name,
@@ -226,7 +226,7 @@ class DistributedAnalyzer:
         target_node_id = target_group_mapping.get(target_unique_group_id, '')
         target_node = target_graph.node_map.get(target_node_id)
         if not target_node:
-            logger.warning(f'Node {target_node_id} does not exist, {CANNOT_MATCH}{target_rank}')
+            logger.debug(f'Node {target_node_id} does not exist, {CANNOT_MATCH}{target_rank}')
             return None
         return target_node
 
@@ -276,13 +276,13 @@ class DistributedAnalyzer:
         source_rank = (target_node.input_data.get(f'{target_node.id}{GraphConst.INPUT}{target_config_info[1]}', {})
                        .get('value'))
         if source_rank is None:
-            logger.warning(
+            logger.debug(
                 f'The kwarg {target_config_info[1]} of node {target_node.id} does not exist, '
                 f'{CANNOT_MATCH}{source_rank}')
             return
         if source_rank != rank:
             # 点对点通信，待匹配目标节点包含的rank信息要与当前rank一致
-            logger.warning(
+            logger.debug(
                 f'{node.id} of rank{rank} is expected to communicate with {target_node.id} of rank{target_rank}, '
                 f'but the data shows that {target_node.id} communicates with rank{source_rank}.'
                 f'The rank is inconsistent, cannot match distributed node')
@@ -291,7 +291,7 @@ class DistributedAnalyzer:
         # 点对点通信，两个匹配节点的输出数据要一致
         if not DistributedAnalyzer._node_output_all_equal(node.output_data.get(node.id + '.output.0'),
                                                           target_node.output_data.get(target_node.id + '.output.0')):
-            logger.warning(f'{node.id} output of rank{rank} is different from the {target_node.id} '
+            logger.debug(f'{node.id} output of rank{rank} is different from the {target_node.id} '
                            f'output of rank{target_rank}, cannot match distributed node')
             return
 
@@ -332,7 +332,7 @@ class DistributedAnalyzer:
             if not target_group_id:
                 continue
             if group_id != target_group_id:
-                logger.warning(
+                logger.debug(
                     f'{node.id} of rank{rank} is expected to communicate with {target_node.id} of rank{target_rank}'
                     f', but the data shows that the group id of the two nodes are different, '
                     f'cannot match distributed node')
@@ -368,7 +368,7 @@ class DistributedAnalyzer:
                 target_api_name = self.config.get(api_name)[0]
                 target_rank = int(id_info[1].replace(Const.RANK, ''))
             except Exception as e:
-                logger.warning(f'Failed to parse batch p2p parameter with error info: {e}.')
+                logger.debug(f'Failed to parse batch p2p parameter with error info: {e}.')
                 continue
             target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
             if not target_node:

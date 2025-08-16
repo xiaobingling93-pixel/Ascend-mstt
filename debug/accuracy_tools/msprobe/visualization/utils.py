@@ -129,9 +129,11 @@ def load_parallel_param(input_param):
     parallel_merge = input_param.get("parallel_merge", {})
     config_n = parallel_merge.get('npu', {})
     config_b = parallel_merge.get('bench', {})
-    return (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp')),) if not config_b else \
-        (ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp'), config_n.get('vpp', 1)),
-         ParallelParam(config_b.get('rank_size'), config_b.get('tp'), config_b.get('pp'), config_b.get('vpp', 1)))
+    param_n = ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp'), config_n.get('vpp', 1),
+                            config_n.get('order', 'tp-cp-ep-dp-pp'))
+    param_b = ParallelParam(config_b.get('rank_size'), config_b.get('tp'), config_b.get('pp'), config_b.get('vpp', 1),
+                            config_b.get('order', 'tp-cp-ep-dp-pp'))
+    return (param_n,) if not config_b else (param_n, param_b)
 
 
 def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
@@ -164,14 +166,19 @@ def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if parallel_param.vpp > 1 and parallel_param.pp < 2:
         logger.error(f'{log_prefix} When configuring the parallel param "vpp", the "pp" param must be greater than 1!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if not isinstance(parallel_param.order, str):
+        logger.error(f'{log_prefix} The parallel params "order" must be of string type!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
 
 class ParallelParam:
-    def __init__(self, rank_size, tp, pp, vpp=1):
+    def __init__(self, rank_size, tp, pp, vpp=1, order='tp-cp-ep-dp-pp'):
         self.rank_size = rank_size
         self.tp = tp
         self.pp = pp
         self.vpp = vpp
+        self.order = order
 
 
 class ToolTip:
@@ -219,9 +226,9 @@ class GraphConst:
     INPUT = '.input.'
     OUTPUT = '.output.'
     STR_MAX_LEN = 50
-    MD5_INDEX_LIST = [CompareConst.RESULT]
-    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX
-    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX
+    MD5_INDEX_LIST = CompareConst.MD5_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
+    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
+    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     APIS_BETWEEN_MODULES_ALL_RANKS = 'Apis_Between_Modules_All_Ranks'
     NULL = 'null'
@@ -257,10 +264,10 @@ class GraphConst:
     OP = 'op'
     PEER = 'peer'
     GROUP_ID = 'group_id'
-    
+
     UNCERTAINTY_THRESHOLD = 1e-6
     REDUCE_OPERATIONS = ['reduce_scatter', 'all_reduce']
-    
+
     IGNORE_PRECISION_INDEX = {'empty', 'empty_like', 'empty_with_format', 'new_empty_strided', 'new_empty',
                               'empty_strided'}
     VPP_CHUNK_0 = '0'

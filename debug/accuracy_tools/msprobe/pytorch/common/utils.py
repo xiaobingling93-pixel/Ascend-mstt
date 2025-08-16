@@ -388,26 +388,6 @@ def load_pkl(pt_path):
     return pt
 
 
-def save_api_data(api_data):
-    """Save data to io stream"""
-    try:
-        io_buff = io.BytesIO()
-        torch.save(api_data, io_buff)
-    except Exception as e:
-        raise RuntimeError("save api_data to io_buff failed") from e
-    return io_buff
-
-
-def load_api_data(api_data_bytes):
-    """Load data from bytes stream"""
-    try:
-        buffer = io.BytesIO(api_data_bytes)
-        buffer = torch.load(buffer, map_location="cpu", weights_only=False)
-    except Exception as e:
-        raise RuntimeError("load api_data from bytes failed") from e
-    return buffer
-
-
 def is_recomputation():
     """Check if the current operation is in the re-computation phase.
 

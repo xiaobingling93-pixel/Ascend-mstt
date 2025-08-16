@@ -21,8 +21,8 @@ from msprobe.visualization.graph.graph import Graph, BaseNode
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.core.common.log import logger
 from msprobe.visualization.utils import GraphConst
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.parallel_state import get_tp_pp_default_groups
 
 MAX_INFO = 'The Max value merging method for '
 MIN_INFO = 'The Min value merging method for '
@@ -235,34 +235,8 @@ class BaseGraphMerger:
         tp_groups: 张量并行组列表，每个元素是一个包含组内rank的列表
         pp_groups: 流水线并行组列表，每个元素是一个包含组内rank的列表
         """
-        rank_size = self.parallel_param.rank_size
-        tp_size = self.parallel_param.tp
-        pp_size = self.parallel_param.pp
-
-        if rank_size % (tp_size * pp_size) != 0:
-            logger.error(f'{self.log_prefix} The parallel param "rank_size" must be divisible by "tp * pp"!')
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
-        dp_size = int(rank_size / tp_size / pp_size)
-
-        # 存储并行组信息
-        tp_groups = []
-        pp_groups = []
-
-        # 创建张量并行组
-        for dp_rank in range(dp_size):
-            for pp_rank in range(pp_size):
-                # 计算当前DP组和PP组组合下的TP组的第一个rank
-                base_rank = dp_rank * tp_size * pp_size + pp_rank * tp_size
-                group_ranks = [base_rank + tp_rank for tp_rank in range(tp_size)]
-                tp_groups.append(group_ranks)
-
-        # 创建流水线并行组
-        for dp_rank in range(dp_size):
-            for tp_rank in range(tp_size):
-                # 计算当前DP组和TP组组合下的PP组的第一个rank
-                base_rank = dp_rank * tp_size * pp_size + tp_rank
-                group_ranks = [base_rank + pp_rank * tp_size for pp_rank in range(pp_size)]
-                pp_groups.append(group_ranks)
+        tp_groups, pp_groups = get_tp_pp_default_groups(self.parallel_param.rank_size, self.parallel_param.tp,
+                                                        self.parallel_param.pp, order=self.parallel_param.order)
 
         return tp_groups, pp_groups
 
@@ -397,14 +371,11 @@ class PPMerger(BaseGraphMerger):
                         break
                 if pp_rank is not None:
                     break
-            if pp_rank is None:
-                logger.warning(f'{self.log_prefix} Unable to get pp groups because '
-                               f'the batch_isend_irecv, send, or isend were not found.')
-            else:
+            if pp_rank is not None:
                 p2p_mapping[rank] = pp_rank
         pp_groups = self._trace_p2p_mapping(p2p_mapping)
         if not pp_groups:
-            logger.info('Unable to get pp groups based on Distributed Api, '
+            logger.info('Unable to get pp groups based on Distributed Api (batch_isend_irecv, send, or isend), '
                         'generate pp groups using parallel param "rank_size", "tp" and "pp".')
             _, pp_groups = self.get_default_groups()
         logger.info(f'{self.log_prefix} All pp groups is {pp_groups}.')
@@ -684,7 +655,7 @@ class TPMerger(BaseGraphMerger):
                         tp_groups.append(group_ranks)
                     break
         if not tp_groups:
-            logger.info('Unable to get tp groups based on Distributed Api, '
+            logger.info('Unable to get tp groups based on Distributed Api (reduce_scatter or all_reduce), '
                         'generate tp groups using parallel param "rank_size", "tp" and "pp".')
             tp_groups, _ = self.get_default_groups()
         logger.info(f'{self.log_prefix} All tp groups is {tp_groups}.')
