@@ -326,7 +326,8 @@ class DbGraphService(GraphServiceStrategy):
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             npu_node_list = self.repo.query_node_info_by_data_source(step, rank, 'NPU')
-            update_data = []
+            update_data_hierarchy = []
+            update_data_db = []
             for _, node_info in npu_node_list.items():
                 output_statistical_diff = node_info.get('output_data', None)
                 if not node_info.get('matched_node_link') or not output_statistical_diff:
@@ -353,18 +354,25 @@ class DbGraphService(GraphServiceStrategy):
                     max_rel_error_for_key = max(filter_diff_rel) if filter_diff_rel else 0
                     max_rel_error = max(max_rel_error, max_rel_error_for_key)
                 if max_rel_error != -1:
-                    update_data.append((
+                    update_data_hierarchy.append({
+                       "precisionIndex": min(max_rel_error, 1),
+                       "node_name":node_info.get('node_name'),
+                       "matched_node_link":node_info.get('matched_node_link')
+                    })  
+                    update_data_db.append((
                         min(max_rel_error, 1),
                         step,
                         rank,
                         node_info.get('node_name')
-                        
                     ))  
-            if len(update_data) > 0:
+            if len(update_data_hierarchy) > 0:
+                # 视图：调用更新update_hirarchy方法，同步更新图
+                LayoutHierarchyModel.update_current_hierarchy_data(update_data_hierarchy)
                 # DB：更新数据库节点信息
-                update_db_res = self.repo.update_nodes_precision_error(update_data)
+                update_db_res = self.repo.update_nodes_precision_error(update_data_db)
                 if not update_db_res:
                     return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+                # TODO：更新全局缓存，使用update_data_hierarchy覆盖原来的缓存即可，注意，切换视图需要重置缓存信息
                 return {'success': True, 'data': {}}
             else:
                 return {'success': False, 'error': '未找到可更新的节点(Matched node not found) '}

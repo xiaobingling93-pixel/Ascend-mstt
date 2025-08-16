@@ -755,8 +755,8 @@ class GraphRepo:
                     AND data_source = 'NPU'
                     AND node_name = ?
             """
-            with self.conn as c:
-                c.executemany(query, update_data)
+            self.conn.executemany(query, update_data)
+            self.conn.commit()
             end = time.perf_counter()
             print("update_precision_error time:", end - start)
             return True

@@ -508,15 +508,24 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     }
     try {
       const params = {
-        run: this.selection.run,
-        tag: this.selection.tag,
-        microStep: this.selection.microStep,
-        precision_index: this.selectColor.join(','),
+        metaData: this.selection,
+        type: 'precision',
+        values: this.selectColor,
       };
+      const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params })
 
-      const precisionmenu = await request({ url: 'screen', method: 'GET', params: params });
-      this.set('precisionmenu', precisionmenu);
-      this.set('selectedPrecisionNode', precisionmenu?.[0] || '');
+      if (success) {
+        this.set('precisionmenu', data);
+        this.set('selectedPrecisionNode', data?.[0] || '');
+      }
+      else {
+        Notification.show(`Error:${error}`, {
+          position: 'middle',
+          duration: 4000,
+          theme: 'error',
+        });
+      }
+
     }
     catch (error) {
       Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
