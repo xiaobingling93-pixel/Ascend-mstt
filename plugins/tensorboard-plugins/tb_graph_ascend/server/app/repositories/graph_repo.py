@@ -634,6 +634,8 @@ class GraphRepo:
                     AND (? = -1 OR micro_step_id = ?)
                     AND (sub_nodes = '' OR sub_nodes IS NULL OR sub_nodes = '[]')
                     AND overflow_level IN ({placeholders})
+                ORDER BY
+                    node_order ASC
             """
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *values))
@@ -733,28 +735,56 @@ class GraphRepo:
             return False
     
     def update_nodes_precision_error(self, update_data):
+        start = time.perf_counter()
         
         try:
-            start = time.perf_counter()
-            query = """
-                UPDATE 
-                    tb_nodes
-                SET
-                    precision_index = ?
-                WHERE
-                    step = ?
-                    AND rank = ?
-                    AND data_source = 'NPU'
-                    AND node_name = ?
-            """
-            with self.conn as c:
-                c.executemany(query, update_data)
+            # 1. 创建临时表
+            self.conn.execute("""
+                CREATE TEMPORARY TABLE temp_node_updates (
+                    precision_index REAL,
+                    step INTEGER,
+                    rank INTEGER,
+                    node_name TEXT
+                )
+            """)
+            
+            # 2. 批量插入更新数据（非常快）
+            self.conn.executemany("""
+                INSERT INTO temp_node_updates (precision_index, step, rank, node_name)
+                VALUES (?, ?, ?, ?)
+            """, update_data)
+            
+            # 3. 单条 SQL 完成 JOIN 更新
+            self.conn.execute("""
+                UPDATE tb_nodes
+                SET precision_index = (
+                    SELECT t.precision_index
+                    FROM temp_node_updates t
+                    WHERE t.step = tb_nodes.step
+                    AND t.rank = tb_nodes.rank
+                    AND t.node_name = tb_nodes.node_name
+                    AND tb_nodes.data_source = 'NPU'
+                )
+                WHERE EXISTS (
+                    SELECT 1 FROM temp_node_updates t
+                    WHERE t.step = tb_nodes.step
+                    AND t.rank = tb_nodes.rank
+                    AND t.node_name = tb_nodes.node_name
+                )
+            """)
+            
+            self.conn.commit()
             end = time.perf_counter()
             print("update_precision_error time:", end - start)
             return True
+            
         except Exception as e:
+            self.conn.rollback()
             logger.error(f"Failed to update precision error: {e}")
             return False
+        finally:
+            # 清理临时表（可选，连接断开后自动消失）
+            self.conn.execute("DROP TABLE IF EXISTS temp_node_updates;")
     
     def _fetch_and_convert_rows(self, cursor):
         """
