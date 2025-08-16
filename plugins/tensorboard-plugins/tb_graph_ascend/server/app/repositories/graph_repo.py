@@ -33,6 +33,12 @@ class GraphRepo:
             self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
             self.is_db_connected = self.conn is not None
+            # 提升性能的 PRAGMA 设置
+            self.conn.execute("PRAGMA journal_mode = WAL;")
+            self.conn.execute("PRAGMA synchronous = NORMAL;")  # 或 OFF（不安全）
+            self.conn.execute("PRAGMA cache_size = 20000;")
+            self.conn.execute("PRAGMA temp_store = MEMORY;")  # 临时表放内存
+            self.conn.execute("PRAGMA wal_autocheckpoint = 0;")
         except:
             logger.error("Failed to connect to database")
             return None
@@ -401,7 +407,7 @@ class GraphRepo:
     # DB: 查询当前节点信息
     def query_node_info(self, node_name, graph_type, rank, step):
         try:
-            start = time.perf_counter()
+            start = time.perf_counter()     
             type = graph_type if graph_type != SINGLE else NPU
             query = """
                 SELECT 
@@ -634,6 +640,8 @@ class GraphRepo:
                     AND (? = -1 OR micro_step_id = ?)
                     AND (sub_nodes = '' OR sub_nodes IS NULL OR sub_nodes = '[]')
                     AND overflow_level IN ({placeholders})
+                ORDER BY
+                    node_order ASC
             """
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *values))
