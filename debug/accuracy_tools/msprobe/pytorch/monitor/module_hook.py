@@ -566,12 +566,10 @@ class TrainerMon:
             self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, MonitorConst.ACTVGRAD)
 
     def write_metrics_if_not_empty(self, features, metrics, step, hook_name):
-        if len(features) == 0:
+        if not features or len(features) == 0:
             return
-        if hook_name in ["linear_hook"]:
-            self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=False)
-        else:
-            self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=True)
+        use_micro_step = hook_name not in ["linear_hook"]
+        self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=use_micro_step)
         features.clear()
 
     def write_features_tb(self, step):
@@ -1095,8 +1093,11 @@ class TrainerMon:
             context: FeatureHookContext = self.feature_hook_context_by_module[module]
             tbtag_tensor_map = {}
             if len(module_input) < 2:
-                raise ValueError("the length of module_input in attention hook's module "
-                                "should be greater than or equal to 2.")
+                logger.warning(
+                    f"Length of module_input in attention hook ({name}) is {len(module_input)}, "
+                    "expected >= 2. Skipping feature extraction for this module."
+                )
+                return
             q_h = module_input[0]
             k_h = module_input[1]
             qkt = cal_qkt(q_h, k_h, order=self.sa_order)
