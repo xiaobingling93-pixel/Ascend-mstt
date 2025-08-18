@@ -508,12 +508,13 @@ class TestIsSaveVariableValid(unittest.TestCase):
     def setUp(self):
         self.valid_special_types = (int, float, str, bool)
 
+    @patch.object(Const, "DUMP_MAX_DEPTH", 5)
     def test_is_save_variable_valid_DepthExceeded_ReturnsFalse(self):
-        # 创建一个深度超过 Const.DUMP_MAX_DEPTH 的嵌套结构
-        nested_structure = [0] * Const.DUMP_MAX_DEPTH
-        for _ in range(Const.DUMP_MAX_DEPTH):
-            nested_structure = [nested_structure]
-        self.assertFalse(is_save_variable_valid(nested_structure, self.valid_special_types))
+        # 构造深度 = 阈值 + 1
+        nested = [0] * 3
+        for _ in range(Const.DUMP_MAX_DEPTH + 1):  # 注意 +1，确保“超过”阈值
+            nested = [nested]
+        self.assertFalse(is_save_variable_valid(nested, self.valid_special_types))
 
     def test_is_save_variable_valid_ValidSpecialTypes_ReturnsTrue(self):
         for valid_type in self.valid_special_types:

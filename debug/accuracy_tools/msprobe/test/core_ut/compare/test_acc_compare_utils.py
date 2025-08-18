@@ -398,7 +398,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_op_item_parse_max_depth(self):
         with self.assertRaises(CompareException) as context:
-            op_item_parse(parse_item, parse_op_name, 'input', depth=11)
+            op_item_parse(parse_item, parse_op_name, 'input', depth=401)
         self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
 
     def test_get_rela_diff_summary_mode_float_or_int(self):
