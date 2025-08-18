@@ -52,8 +52,8 @@ class LayoutHierarchyModel:
     def update_current_hierarchy_data(data):
         npu_update_data = [node for node in data if node['graph_type'] == NPU]
         bench_update_data = [node for node in data if node['graph_type'] == BENCH]
-        if LayoutHierarchyModel.hierarchy.get(NPU, None):
+        if LayoutHierarchyModel.hierarchy.get(NPU, None) and npu_update_data != []:
              LayoutHierarchyModel.hierarchy[NPU].update_current_hierarchy_data(npu_update_data)
-        if LayoutHierarchyModel.hierarchy.get(BENCH, None):
+        if LayoutHierarchyModel.hierarchy.get(BENCH, None) and bench_update_data != []:
              LayoutHierarchyModel.hierarchy[BENCH].update_current_hierarchy_data(bench_update_data)
      

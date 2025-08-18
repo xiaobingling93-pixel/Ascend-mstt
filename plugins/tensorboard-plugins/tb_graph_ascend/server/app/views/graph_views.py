@@ -68,7 +68,6 @@ class GraphView:
             'type': request.args.get('type'),
         }
         strategy = GraphView._get_strategy(meta_data)
-        
         if meta_data.get('type') == DataType.DB.value:
             result = strategy.load_graph_data()
             return http_util.Respond(request, result, "application/json")

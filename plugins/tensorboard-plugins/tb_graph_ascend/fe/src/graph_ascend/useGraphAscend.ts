@@ -38,12 +38,12 @@ const useGraphAscend = () => {
         }
     };
     const loadGraphConfig = async (metaData: SelectionType): Promise<any> => {
-        const result = await request({ url: 'loadGraphConfigInfo', method: 'POST', data: { metaData }}); // 获取异步的 ArrayBuffer
+        const result = await request({ url: 'loadGraphConfigInfo', method: 'POST', data: { metaData } }); // 获取异步的 ArrayBuffer
         return result;
     };
 
     const loadGraphAllNodeList = async (metaData: SelectionType): Promise<any> => {
-        const result = await request({ url: 'loadGraphAllNodeList', method: 'POST', data: { metaData }}); // 获取异步的 ArrayBuffer
+        const result = await request({ url: 'loadGraphAllNodeList', method: 'POST', data: { metaData } }); // 获取异步的 ArrayBuffer
         return result;
     };
 

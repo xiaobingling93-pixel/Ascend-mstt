@@ -74,6 +74,7 @@ class GraphState:
         },
         'first_run_tags': {},
         'runs': {},
+        'update_precision_cache':{}  # {node_name{precision，...}}，方便查询精度，提高性能
     }
 
     @staticmethod
@@ -99,6 +100,7 @@ class GraphState:
             },
             'first_run_tags': {},
             'runs': {},
+            'update_precision_cache':{}
         }
 
     @staticmethod

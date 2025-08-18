@@ -283,8 +283,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         this.set('metaDir', data);
     }
     loadDBGraphData = async (metaData: SelectionType) => {
+
         this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
-        await request({ url: 'load_graph_data', method: 'GET', params: JSON.stringify(metaData) });
+        await request({ url: 'loadGraphData', method: 'GET', params: metaData });
         this.progreesLoading('正在加载配置', '请稍后', { progress: 40, progressValue: 50, done: false });
         await Promise.all([
             this.loadGraphConfig(metaData),

@@ -41,6 +41,8 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': False, 'error': 'database not init'}
         if not self.conn:
             self.conn = self.repo.get_db_connection()
+        # 清空缓存
+        GraphState.set_global_value("update_precision_cache", {})
         return {'success': True}
 
     def load_graph_config_info(self):
@@ -127,8 +129,26 @@ class DbGraphService(GraphServiceStrategy):
             is_filter_unmatch_nodes = True if '无匹配节点' in values else False
             if is_filter_unmatch_nodes:
                 values.remove('无匹配节点')
-            
-            node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values, is_filter_unmatch_nodes)
+          
+            update_precision_cache:dict = GraphState.get_global_value("update_precision_cache", {})
+            node_name_list = []
+            # 先查全局缓存
+            if update_precision_cache != {} and update_precision_cache != None:
+                print("query node list by precision cache", values)
+                for node_name, node_info in update_precision_cache.items():
+                    if not node_info.get("is_leaf_nodes"):
+                        continue 
+                    matched_node_link = node_info.get('matched_node_link', None)
+                    if is_filter_unmatch_nodes and (matched_node_link == None or matched_node_link == []):
+                        node_name_list.append(node_name)
+                        
+                    if isinstance(node_info.get("precision_index"), (int, float, complex)) and any(low <= node_info.
+                                                                    get("precision_index", -1) <= high for low, high in values):
+                        node_name_list.append(node_name)
+            # 在查数据库
+            else:
+                print("query node list by precision")
+                node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values, is_filter_unmatch_nodes)
             return {'success': True, 'data':node_name_list}
         except Exception as e:
             logger.error('节点搜索发生错误:' + str(e))
@@ -325,12 +345,20 @@ class DbGraphService(GraphServiceStrategy):
 
             rank = meta_data.get('rank')
             step = meta_data.get('step')
-            npu_node_list = self.repo.query_node_info_by_data_source(step, rank, 'NPU')
-            update_data_hierarchy = []
+            npu_node_list = self.repo.query_node_info_by_data_source(step, rank, NPU)
+            update_data_hierarchy = {}
             update_data_db = []
+          
             for _, node_info in npu_node_list.items():
-                output_statistical_diff = node_info.get('output_data', None)
+                output_statistical_diff = node_info.get('output_data', None)                
                 if not node_info.get('matched_node_link') or not output_statistical_diff:
+                    update_data_hierarchy[node_info.get('node_name')] = {
+                       "precision_index":node_info.get('data').get('precision_index'),
+                       "node_name":node_info.get('node_name'),
+                       "matched_node_link":node_info.get('matched_node_link'),
+                       'is_leaf_nodes': node_info.get('subnodes', []) == [],
+                       'graph_type':NPU
+                    }  
                     continue
                 max_rel_error = -1
                 #  根据filter_value 的选择指标计算新的误差值
@@ -354,25 +382,24 @@ class DbGraphService(GraphServiceStrategy):
                     max_rel_error_for_key = max(filter_diff_rel) if filter_diff_rel else 0
                     max_rel_error = max(max_rel_error, max_rel_error_for_key)
                 if max_rel_error != -1:
-                    update_data_hierarchy.append({
-                       "precisionIndex": min(max_rel_error, 1),
-                       "node_name":node_info.get('node_name'),
-                       "matched_node_link":node_info.get('matched_node_link')
-                    })  
                     update_data_db.append((
                         min(max_rel_error, 1),
                         step,
                         rank,
                         node_info.get('node_name')
-                    ))  
+                    ))
+                update_data_hierarchy[node_info.get('node_name')] = {
+                       "precision_index": min(max_rel_error, 1),
+                       "node_name":node_info.get('node_name'),
+                       "matched_node_link":node_info.get('matched_node_link'),
+                       'is_leaf_nodes': node_info.get('subnodes', []) == [],
+                       'graph_type':NPU
+                    }  
             if len(update_data_hierarchy) > 0:
                 # 视图：调用更新update_hirarchy方法，同步更新图
-                LayoutHierarchyModel.update_current_hierarchy_data(update_data_hierarchy)
-                # DB：更新数据库节点信息
-                update_db_res = self.repo.update_nodes_precision_error(update_data_db)
-                if not update_db_res:
-                    return {'success': False, 'error': '更新数据库失败(Update database failed) '}
-                # TODO：更新全局缓存，使用update_data_hierarchy覆盖原来的缓存即可，注意，切换视图需要重置缓存信息
+                LayoutHierarchyModel.update_current_hierarchy_data(list(update_data_hierarchy.values()))
+                # 更新全局缓存，使用update_data_hierarchy覆盖原来的缓存即可，注意，切换视图需要重置缓存信息
+                GraphState.set_global_value("update_precision_cache", update_data_hierarchy)
                 return {'success': True, 'data': {}}
             else:
                 return {'success': False, 'error': '未找到可更新的节点(Matched node not found) '}

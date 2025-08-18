@@ -39,6 +39,7 @@ export default async function request<T = any>(options: RequestOptions): Promise
         params.metaData.type = 'rank' in params.metaData ? 'db' : 'json';
       }
     }
+
     const response: AxiosResponse<T> = await axios({
       url,
       method,

@@ -46,8 +46,9 @@ class GraphsPlugin(base_plugin.TBPlugin):
         """
         super().__init__(context)
         GraphState.reset_global_state()
+        self.logdir = os.path.abspath(os.path.expanduser(context.logdir.rstrip('/')))
         # 将logdir赋值给global_state中的logdir属性,方便其他模块使用
-        GraphState.set_global_value('logdir', os.path.abspath(os.path.expanduser(context.logdir.rstrip('/'))))
+        GraphState.set_global_value('logdir', self.logdir)
 
     def get_plugin_apps(self):
         return {
@@ -72,6 +73,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
     def is_active(self):
         """The graphs plugin is active if any run has a graph."""
+
         def _is_vis(path, file_name):
             return os.path.isfile(path) and (file_name.endswith(DB_EXT) or file_name.endswith(JSON_EXT))
 

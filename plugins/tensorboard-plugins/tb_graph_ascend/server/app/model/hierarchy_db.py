@@ -15,6 +15,7 @@
 # limitations under the License.
 # ==============================================================================
 from tensorboard.util import tb_logging
+from ..utils.global_state import GraphState
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE
 
 logger = tb_logging.get_logger()
@@ -254,6 +255,7 @@ class Hierarchy:
             return {}
         label = node_name
         children = []
+        precision_index = None,
         if node_name == self.root_name:  # 根节点，根据micro_step获取子节点
             # DB：查询以根节点为父节点的所有子节点
             sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
@@ -267,6 +269,12 @@ class Hierarchy:
                     children.append(subnode_name)
         else:
             children = node_info.get('subnodes', [])
+        # precisionIndex 先从缓存中获取(更新误差可能会更新缓存)，如果不存在，则从ode_info中获取
+        update_precision_cache = GraphState.get_global_value('update_precision_cache', {})
+        if update_precision_cache.get(node_name) != None:
+            precision_index = update_precision_cache.get(node_name, {}).get('precision_index')
+        else:
+            precision_index = node_info.get('data', {}).get('precision_index', "NaN")
         if node_info.get('upnode', '') != self.root_name:  # 首层节点不处理显示内容
             label = self.extract_label_name(node_name, node_info.get('node_type'))
         render_info = {
@@ -282,11 +290,10 @@ class Hierarchy:
             'children': children,
             'nodeType': node_info.get('node_type') if node_info.get("subnodes") else UNEXPAND_NODE,
             'matchedNodeLink': node_info.get('matched_node_link', []),
-            'precisionIndex': node_info.get('data', {}).get('precision_index', "NaN"),  # 精度
+            'precisionIndex': precision_index,  # 精度
             'overflowLevel': node_info.get('data', {}).get('overflow_level', "NaN"),  # 溢出
             'matchedDistributed': node_info.get('matched_distributed', {}),
         }
-
         return render_info
 
     # 获取连通图

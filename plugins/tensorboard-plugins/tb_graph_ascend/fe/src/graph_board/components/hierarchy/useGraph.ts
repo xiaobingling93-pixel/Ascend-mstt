@@ -99,6 +99,10 @@ const useGraph = (): UseGraphType => {
         if (isEmpty(node.matchedNodeLink)) {
             return Object.keys(colors).find((color) => colors[color].value === '无匹配节点') ?? NO_MATCHED_NODE_COLOR;
         }
+        if (graphType === 'Bench') {
+            return BENCH_NODE_COLOR;
+        }
+
         const precisionValue = parseFloat(node.precisionIndex);
         return calcClolorByPrecision(precisionValue, colors);
     };

@@ -663,7 +663,8 @@ class GraphRepo:
                     node_name, 
                     matched_node_link,
                     output_data,
-                    precision_index
+                    precision_index,
+                    sub_nodes
                 FROM 
                     tb_nodes 
                 WHERE 
