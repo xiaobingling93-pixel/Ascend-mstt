@@ -1102,7 +1102,7 @@ class TrainerMon:
             qkt = cal_qkt(q_h, k_h, order=self.sa_order)
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(f'{context.module_name}.attention',
-                                            '', 'qkt', qkt)
+                                            f'{MonitorConst.NAME_SEP}{context.micro_step}', 'qkt', qkt)
             )
             get_entropy_metric(tbtag_tensor_map, context.attention_feature)
 
@@ -1123,7 +1123,7 @@ class TrainerMon:
                 self.feature_hook_context_by_module[module] = FeatureHookContext(name)
             context: FeatureHookContext = self.feature_hook_context_by_module[module]
 
-            if context.micro_step == self.micro_batch_number:
+            if context.micro_step == (self.micro_batch_number - 1):
                 tbtag_tensor_map = {}
                 value = getattr(module, weight_name).data
                 tbtag_tensor_map.update(
@@ -1131,9 +1131,11 @@ class TrainerMon:
                                                 '', 'sr', value)
                 )
                 get_sr_metric(tbtag_tensor_map, context.linear_feature)
+
+            context.micro_step += 1
+            if context.micro_step == self.micro_batch_number:
                 context.micro_step = 0
                 context.step += 1
-            context.micro_step += 1
             return
         
         def stack_hook(module, args, kwargs, module_output, name):
