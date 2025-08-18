@@ -5,7 +5,7 @@ dist/
 build/
 tb_graph_ascend.egg-info/
 __pycache__/
-/server/static/index.html
+**/server/static/index.html
 report.html
 assets/
 /htmlcov/
