@@ -1,3 +1,8 @@
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+// Copyright (c) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
+//
+// This source code is licensed under the MIT license found in the
+// LICENSE file in the root directory of this source tree.
 use anyhow::Result;
 use serde_json::Value;
 use crate::DynoClient;
@@ -10,7 +15,7 @@ pub enum NpuTraceTriggerConfig {
         duration_ms: u64,
     },
     IterationBased {
-        start_step: u64,
+        start_step: i64,
         iterations: i64,
     },
 }
@@ -196,7 +201,7 @@ mod test {
 ACTIVITIES_DURATION_MSECS=1000"#
         );
 
-        let trigger_config = NpuTraceTriggerConfig::IterationBased {    
+        let trigger_config = NpuTraceTriggerConfig::IterationBased {
             profile_start_step: 1000,
             iterations: 1000,
         };

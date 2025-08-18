@@ -23,7 +23,7 @@ nputrace的SUBCOMMANDS（子命令）选项如下：
 | --duration-ms         | u64 | 采集的周期，单位毫秒，默认值500，dynolog原生参数                                                                                                                                                                                                     |     N     |      N      | N |
 | --iterations          | i64 | 采集总迭代数，默认值-1，dynolog原生参数，需与start-step参数同时指定                                                                                                                                                                                       |     Y     |      Y      |  Y |
 | --log-file            | String | 采集落盘的路径                                                                                                                                                                                                                           |     Y     |      Y      |  Y |
-| --start-step          | u64 | 开始采集的迭代数，默认值0                                                                                                                                                                                                                     |     Y     |      Y      | Y  |
+| --start-step          | i64 | 开始采集的迭代数，默认值0，设置为-1时表示从下一个step开始采集                                                                                                                                                                                                                     |     Y     |      Y      | Y  |
 | --record-shapes       | action | 是否采集算子的InputShapes和InputTypes，设置参数采集，默认不采集                                                                                                                                                                                        |     Y     |      Y      |  N |
 | --profile-memory      | action | 是否采集算子内存信息，设置参数采集，默认不采集                                                                                                                                                                                                           |     Y     |      Y      | N |
 | --with-stack          | action | 是否采集Python调用栈，设置参数采集，默认不采集                                                                                                                                                                                                        |     Y     |      Y      | N |
@@ -77,13 +77,17 @@ Step 4：使用dyno CLI动态触发trace dump
 # 示例1：从第10个step开始采集，采集2个step，采集框架、CANN和device数据，同时采集完后自动解析以及解析完成不做数据精简，落盘路径为/tmp/profile_data
 dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --activities CPU,NPU --analyse --data-simplification false --log-file /tmp/profile_data
 
-# 示例2：从第10个step开始采集，采集2个step，只采集CANN和device数据，同时采集完后自动解析以及解析完成后开启数据精简，落盘路径为/tmp/profile_data
+# 示例2：从下一个step开始采集，采集2个step，采集框架、CANN和device数据，同时采集完后自动解析以及解析完成不做数据精简，落盘路径为/tmp/profile_data
+dyno --certs-dir /home/client_certs nputrace --start-step -1 --iterations 2 --activities CPU,NPU --analyse --data-simplification false --log-file /tmp/profile_data
+
+# 示例3：从第10个step开始采集，采集2个step，只采集CANN和device数据，同时采集完后自动解析以及解析完成后开启数据精简，落盘路径为/tmp/profile_data
 dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --activities NPU --analyse --data-simplification true --log-file /tmp/profile_data
 
-# 示例3：从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
+# 示例4：从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
+
 dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
 
-# 示例4：多机场景下向特定机器x.x.x.x发送参数信息，参数表示从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
+# 示例5：多机场景下向特定机器x.x.x.x发送参数信息，参数表示从第10个step开始采集，采集2个step，只采集CANN和device数据，只采集不解析，落盘路径为/tmp/profile_data
 dyno --certs-dir /home/client_certs --hostname x.x.x.x nputrace --start-step 10 --iterations 2 --activities NPU --log-file /tmp/profile_data
 ```
 nputrace落盘的数据格式和交付件介绍请参考[Profiler数据目录说明](https://www.hiascend.com/document/detail/zh/mindstudio/81RC1/T&ITools/Profiling/atlasprofiling_16_0177.html#ZH-CN_TOPIC_0000002387356237)
