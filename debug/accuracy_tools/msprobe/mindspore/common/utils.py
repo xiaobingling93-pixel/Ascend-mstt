@@ -131,7 +131,7 @@ def list_lowest_level_directories(root_dir):
     return lowest_level_dirs
 
 
-def seed_all(seed=1234, mode=False, rm_dropout=True):
+def seed_all(seed=1234, mode=False, rm_dropout=False):
     check_seed_all(seed, mode, rm_dropout)
     os.environ['PYTHONHASHSEED'] = str(seed)
     ms.set_seed(seed)
