@@ -17,8 +17,8 @@ from abc import ABC
 
 import torch
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import replace_last_occurrence
 from msprobe.pytorch.free_benchmark import logger
-from msprobe.pytorch.free_benchmark.common.constant import CommonField
 from msprobe.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
@@ -37,6 +37,7 @@ from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
 
 
 class FreeBenchmarkCheck(ABC):
+    grad_saver_dict = {}
 
     def __init__(self, config) -> None:
         super().__init__()
@@ -68,7 +69,9 @@ class FreeBenchmarkCheck(ABC):
         grad_saver.kwargs = kwargs
         grad_saver.register_compare_func_for_inputs(args, data_processor)
         grad_saver.cache_backward_input(args)
-        setattr(module, CommonField.GRADSAVER, grad_saver)
+
+        backward_name = replace_last_occurrence(name, Const.FORWARD, Const.BACKWARD)
+        FreeBenchmarkCheck.grad_saver_dict[backward_name] = grad_saver
 
     def forward(self, name, module, args, kwargs, output):
         if not self.config.fuzz_stage == Const.FORWARD:
@@ -92,16 +95,16 @@ class FreeBenchmarkCheck(ABC):
         return perturbed_output, handler.get_unequal_rows()
 
     def backward(self, name, module, grad_output):
-
         if not self.config.fuzz_stage == Const.BACKWARD:
             return
         try:
-            grad_saver = getattr(module, CommonField.GRADSAVER)
+            grad_saver = FreeBenchmarkCheck.grad_saver_dict[name]
         except AttributeError:
             logger.warning_on_rank_0(
                 f"[msprobe] Free benchmark:  get grad saver failed. api_name:{name}"
             )
             return
+        del FreeBenchmarkCheck.grad_saver_dict[name]
 
         _new_grad_output = grad_output
         try:

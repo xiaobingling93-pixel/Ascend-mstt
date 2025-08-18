@@ -16,6 +16,7 @@
 import functools
 import importlib
 import os
+import threading
 import traceback
 
 import mindspore as ms
@@ -37,7 +38,6 @@ from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
 from msprobe.mindspore.free_benchmark.handler.handler_factory import HandlerFactory
 from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import PerturbationFactory
-
 
 _api_register = get_api_register()
 
@@ -74,9 +74,10 @@ class ApiPyNativeSelfCheck:
 
         def forward_hook(api_name_with_id, cell, input_data, output_data):
             ret = None
+            tid = threading.get_ident()
 
             if not need_wrapper_func():
-                del cell.msprobe_input_kwargs
+                del cell.msprobe_input_kwargs[tid]
                 return ret
 
             api_name_with_id = api_name_with_id[:-1]
@@ -85,9 +86,9 @@ class ApiPyNativeSelfCheck:
                         api_name_with_id[api_name_with_id.find(Const.SEP) + 1:api_name_with_id.rfind(Const.SEP)])
             if api_name in self.api_list:
                 ret = check_self(api_name_with_id, output_data, self.ori_func.get(api_name),
-                                 *input_data, **cell.msprobe_input_kwargs)
+                                 *input_data, **cell.msprobe_input_kwargs[tid])
 
-            del cell.msprobe_input_kwargs
+            del cell.msprobe_input_kwargs[tid]
             return ret
 
         def backward_hook(cell, grad_input, grad_output):

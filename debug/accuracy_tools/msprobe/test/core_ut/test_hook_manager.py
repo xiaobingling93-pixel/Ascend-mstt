@@ -19,7 +19,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import ThreadSafe
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.hook_manager import BaseHookManager
 
@@ -39,10 +38,23 @@ class TestBaseHookManager(unittest.TestCase):
             pass
 
         @staticmethod
-        def _process_kwargs_and_output(module, hook_type, kwargs_or_output, output_or_kwargs):
+        def _get_count(name):
+            pass
+
+        @staticmethod
+        def _process_kwargs_and_output(module, tid, hook_type, kwargs_or_output, output_or_kwargs):
             return {"kwargs": kwargs_or_output}, output_or_kwargs
 
         def build_hook(self):
+            pass
+
+        def _register_forward_hook(self, module, api_name):
+            pass
+
+        def _register_backward_hook(self, module, full_backward_name, args):
+            pass
+
+        def _register_backward_pre_hook(self, module, full_backward_name, output):
             pass
 
         def _get_params_dict(self, module):
@@ -68,34 +80,37 @@ class TestBaseHookManager(unittest.TestCase):
         self.assertEqual(self.manager.config, self.mock_config)
 
     def test_should_execute_hook_conditions(self):
-        module = MagicMock()
-        module.forward_data_collected = True
-        module.async_op_dump_flag = False
+        tid = threading.get_ident()
         Runtime.is_running = True
+        BaseHookManager.inner_switch[tid] = False
         self.mock_data_collector.data_processor.is_terminated = False
-        self.assertTrue(self.manager._should_execute_hook(Const.MODULE, module, True, threading.get_ident()))
-        self.assertTrue(self.manager._should_execute_hook(Const.API, module, False, threading.get_ident()))
+        self.assertTrue(self.manager._should_execute_hook(Const.MODULE, tid))
+        self.assertTrue(self.manager._should_execute_hook(Const.API, tid))
+        self.assertTrue(self.manager._should_execute_hook(Const.API, tid, is_forward=False))
 
         Runtime.is_running = False
-        self.assertFalse(self.manager._should_execute_hook(Const.MODULE, module, True, threading.get_ident()))
+        self.assertFalse(self.manager._should_execute_hook(Const.MODULE, tid))
+        self.assertFalse(self.manager._should_execute_hook(Const.API, tid))
+        self.assertTrue(self.manager._should_execute_hook(Const.API, tid, is_forward=False))
 
         Runtime.is_running = True
-        module.forward_data_collected = False
-        self.assertFalse(self.manager._should_execute_hook(Const.API, module, False, threading.get_ident()))
-
-        BaseHookManager.inner_switch[threading.get_ident()] = True
-        self.assertFalse(self.manager._should_execute_hook(Const.MODULE, module, True, threading.get_ident()))
+        BaseHookManager.inner_switch[tid] = True
+        self.assertFalse(self.manager._should_execute_hook(Const.MODULE, tid))
+        self.assertFalse(self.manager._should_execute_hook(Const.API, tid))
+        self.assertFalse(self.manager._should_execute_hook(Const.API, tid, is_forward=False))
 
         self.mock_data_collector.data_processor.is_terminated = True
-        BaseHookManager.inner_switch[threading.get_ident()] = False
-        self.assertFalse(self.manager._should_execute_hook(Const.MODULE, module, True, threading.get_ident()))
-        self.assertFalse(self.manager._should_execute_hook(Const.API, module, True, threading.get_ident()))
+        BaseHookManager.inner_switch[tid] = False
+        self.assertFalse(self.manager._should_execute_hook(Const.MODULE, tid))
+        self.assertFalse(self.manager._should_execute_hook(Const.API, tid))
+        self.assertFalse(self.manager._should_execute_hook(Const.API, tid, is_forward=False))
 
     def test_clear_input_kwargs(self):
         module = MagicMock()
-        module.msprobe_input_kwargs = {"key": "value"}
-        self.manager._clear_input_kwargs(module)
-        self.assertFalse(hasattr(module, 'msprobe_input_kwargs'))
+        tid = threading.get_ident()
+        module.msprobe_input_kwargs[tid] = {"key": "value"}
+        self.manager._clear_input_kwargs(module, tid)
+        self.assertFalse(tid in module.msprobe_input_kwargs)
 
     def test_register_param_hook(self):
         module = MagicMock()
@@ -122,24 +137,19 @@ class TestBaseHookManager(unittest.TestCase):
         self.manager._init_params_grad_info(module, params)
         self.mock_data_collector.handle_data.assert_called_once()
 
-    @patch.object(ThreadSafe, "release")
     @patch.object(BaseHookManager, "_should_execute_hook")
-    def test_forward_pre_hook_behavior(self, mock_should_execute_hook, mock_release):
+    def test_forward_pre_hook_behavior(self, mock_should_execute_hook):
         mock_should_execute_hook.return_value = True
-        mock_release.return_value = None
-        hook = self.manager._build_forward_pre_hook(Const.API, "api_name", "func_name")
+        hook = self.manager._build_forward_pre_hook(Const.API, "api_name")
         module = MagicMock()
         module.msprobe_input_kwargs = {"kwarg": "value"}
         args = (1, 2)
 
         Runtime.is_running = True
-        module.forward_data_collected = True
         self.mock_data_collector.data_processor.is_terminated = False
-
         with patch.object(self.manager, '_no_grad_context') as mock_ctx:
             hook(module, args)
             self.mock_data_collector.forward_input_data_collect.assert_called_once()
-            self.assertEqual(module.forward_data_collected, True)
 
     @patch.object(BaseHookManager, "_should_execute_hook")
     def test_forward_hook_behavior(self, mock_should_execute_hook):

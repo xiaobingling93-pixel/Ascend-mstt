@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from abc import ABC, abstractmethod
 import copy
-from collections import defaultdict
 import functools
 import os
+from abc import ABC, abstractmethod
+from collections import defaultdict
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import create_directory
@@ -26,7 +25,6 @@ from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
 from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.hook_manager import BaseHookManager
 from msprobe.core.kernel_dump.kernel_config import create_kernel_config_json
 
 
@@ -345,6 +343,6 @@ class BaseService(ABC):
     def _reset_status(self):
         """通用状态重置"""
         self.data_collector.reset_status()
-        BaseHookManager.params_grad_info.clear()
+        self.hook_manager.reset_status()
         if self._is_l2_level:
             self.data_collector.data_processor.reset_status()
