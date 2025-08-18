@@ -448,18 +448,9 @@ PythonListObject& PythonListObject::Insert(int64_t pos, PythonObject& item, bool
         return *this;
     }
 
-    PyObject* item_ptr = item.GetPtr();  // 需确保PythonObject有此方法，返回内部PyObject*
-    if (item_ptr == nullptr) {
-        if (!ignore) {
-            PyErr_SetString(PyExc_ValueError, "Cannot insert a null object into the list.");
-        }
-        return *this;
-    }
-
-    int insert_result = PyList_Insert(ptr, pos, item_ptr);
-    if (insert_result != 0) {
+    if (PyList_Insert(ptr, pos, item) != 0) {
         if (ignore) {
-            PyErr_Clear();  // 清除错误状态，避免影响后续操作
+            PyErr_Clear();
         }
     }
 
