@@ -122,7 +122,12 @@ class DBManager:
         :return: 查询结果列表(字典形式)
         """
 
-        cols = ", ".join(columns) if columns else "*"
+        if not columns:
+            raise ValueError("columns parameter cannot be empty, specify columns to select (e.g. ['id', 'name'])")
+        if not isinstance(columns, list) or not all(isinstance(col, str) for col in columns):
+            raise TypeError("columns must be a list of strings (e.g. ['id', 'name'])")
+        
+        cols = ", ".join(columns)
         sql = f"SELECT {cols} FROM {table_name}"
 
         where_sql, where_parems = self._get_where_sql(where)
