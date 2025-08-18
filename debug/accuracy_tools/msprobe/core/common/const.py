@@ -787,6 +787,11 @@ class MonitorConst:
     DEFAULT_STEP_INTERVAL = 1
 
     OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean", "shape", "dtype"]
+    OP_MONVIS_SUPPORTED = [
+        "norm", "min", "max", "zeros", "nans", "mean",
+        "entropy", "softmax_max", "sr", "kernel_norm", "std_x", "jacobian",
+        "proxy", "token_similarity"
+    ]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
@@ -849,3 +854,12 @@ class MonitorConst:
         TRAIN_STAGE[key] = BACKWARD_STAGE
     for key in OPTIMIZER_KEY:
         TRAIN_STAGE[key] = OPTIMIZER_STAGE
+
+    # csv2db
+    DEFAULT_INT_VALUE = 0
+    MAX_PROCESS_NUM = 128
+    CSV_FILE_PATTERN = r"_(\d+)-(\d+)\.csv"
+    BATCH_SIZE = 10000
+    MAX_PARTITION = 10_000_000
+    MIN_PARTITION = 10
+    
