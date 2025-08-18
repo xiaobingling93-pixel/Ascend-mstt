@@ -101,13 +101,18 @@ class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
 
     def apply(self, info, color_columns, dump_mode):
+        def get_number(data):
+            """统计量相对值如果为正常百分数据，str格式并以%结尾"""
+            if isinstance(data, str) and data.endswith("%"):
+                return float(data[:-1]) / 100
+            return data
+
         api_in, api_out, num = info
-        max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
-        bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
-        input_max_relative_diff = np.abs(
-            np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
-        output_max_relative_diff = np.abs(
-            np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
+        max_rel_diff = get_header_index(CompareConst.MAX_RELATIVE_ERR, dump_mode)
+        input_max_relative_diff = api_in[max_rel_diff]
+        output_max_relative_diff = api_out[max_rel_diff]
+        input_max_relative_diff = get_number(input_max_relative_diff)
+        output_max_relative_diff = get_number(output_max_relative_diff)
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
                                                                                    (float, int)):
             return
