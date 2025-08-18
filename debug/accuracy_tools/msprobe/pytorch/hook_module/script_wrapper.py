@@ -93,6 +93,8 @@ def patch_dynamo__compile():
 
         try:
             return original(*args, **kwargs)
+        except Exception:
+            pass
         finally:
             try:
                 reg = get_api_register()
