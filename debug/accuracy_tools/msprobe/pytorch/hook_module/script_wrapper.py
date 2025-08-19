@@ -91,17 +91,19 @@ def patch_dynamo__compile():
         except Exception as e:
             logger.warning(f"[msprobe] 前置 restore_all_api 异常: {e}")
 
+        result = None
         try:
-            return original(*args, **kwargs)
+            result = original(*args, **kwargs)
         except Exception:
-            pass
+            logger.warning("[msprobe] _compile execution failed (returning None)")
+            result = None
         finally:
             try:
                 reg = get_api_register()
                 reg.register_all_api()  # 改成注册hook
             except Exception as e:
                 logger.warning(f"[msprobe] 后置 register_all_api 异常: {e}")
-
+        return result
     wrapped.__msprobe_patched__ = True
     wrapped.__msprobe_original__ = original
     cf._compile = wrapped
