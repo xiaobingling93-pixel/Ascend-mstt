@@ -448,7 +448,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
         if (item[1].value.length === 0) {
-          item[1].value.push(this.unMatchedNodeName);
+          item[1].value=this.unMatchedNodeName;
         }
       }
       this.colorSetChanged = colorsets;
