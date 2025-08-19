@@ -220,14 +220,18 @@ class MainController extends PolymerElement {
 
   _getTagChanged(event): void {
     const detail = event.detail;
-    if (!detail?.rankId || detail?.rankId >= this.tags.length) {
+    if (detail?.rankId && this.isDBType) {
+      this.set('selectedRank', detail?.rankId);
+    }
+    else if (detail?.rankId && !this.isDBType && detail?.rankId <= this.tags.length) {
+      this.set('selectedTag', this.tags[detail?.rankId]);
+    }
+    else {
       Notification.show(this.t('invalid_rank_id'), {
         position: 'middle',
         duration: 2000,
         theme: 'warning',
       });
-      return;
     }
-    this.set('selectedTag', this.tags[detail?.rankId]);
   }
 }
