@@ -74,10 +74,10 @@ def wrap_compile_script_func():
     _cf_mod.convert_frame = _patched_convert_frame
 
 
-def patch_dynamo__compile():
+def patch_dynamo_compile():
     cf = importlib.import_module("torch._dynamo.convert_frame")
     if not hasattr(cf, "_compile"):
-        raise RuntimeError("未找到 torch._dynamo.convert_frame._compile")
+        logger.warning("No found torch._dynamo.convert_frame._compile")
 
     original = cf._compile
     if getattr(original, "__msprobe_patched__", False):
@@ -89,7 +89,8 @@ def patch_dynamo__compile():
             reg = get_api_register()
             reg.restore_all_api()
         except Exception as e:
-            logger.warning(f"[msprobe] 前置 restore_all_api 异常: {e}")
+            logger.warning(f"[msprobe] Pre restore_all_api failed: {e}")
+            return
 
         result = None
         try:
@@ -102,14 +103,14 @@ def patch_dynamo__compile():
                 reg = get_api_register()
                 reg.register_all_api()  # 改成注册hook
             except Exception as e:
-                logger.warning(f"[msprobe] 后置 register_all_api 异常: {e}")
+                logger.warning(f"[msprobe] Post register_all_api failed: {e}")
         return result
     wrapped.__msprobe_patched__ = True
     wrapped.__msprobe_original__ = original
     cf._compile = wrapped
 
 
-def unpatch_dynamo__compile() -> bool:
+def unpatch_dynamo_compile() -> bool:
     # 预留取消patch接口
     cf = importlib.import_module("torch._dynamo.convert_frame")
     current = getattr(cf, "_compile", None)
@@ -125,4 +126,4 @@ def unpatch_dynamo__compile() -> bool:
 def wrap_script_func():
     wrap_jit_script_func()
     if torch_version_above_or_equal_2:
-        patch_dynamo__compile()
+        patch_dynamo_compile()
