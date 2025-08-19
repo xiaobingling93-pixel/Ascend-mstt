@@ -102,7 +102,7 @@ class MonitorSql:
             "global_stats": cls.create_global_stat_table,
         }
         if not table_name:
-            return [table_creators.get(table, lambda x:"")() for table in table_creators]
+            return [table_creators.get(table, lambda x: "")() for table in table_creators]
         if table_name not in table_creators:
             raise ValueError(f"Unsupported table name: {table_name}")
         return table_creators[table_name]()
