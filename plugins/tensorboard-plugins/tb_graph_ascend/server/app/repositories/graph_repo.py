@@ -389,6 +389,8 @@ class GraphRepo:
                     AND rank = ?
                     AND data_source = ? 
                     AND up_node = ?
+                ORDER BY
+                    node_order ASC
             """
             with self.conn as c:
                 cursor = c.execute(query, (step, rank, type, node_name))
