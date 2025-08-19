@@ -1,21 +1,24 @@
 
 
-# Plugins for msMonitor
+# msmonitor-plugin编包指导
 ## 模块说明
 ### IPCMonitor
 提供IPC(Inter-Process Communication)通信接口，用于实现
 1. IPC控制通道: profiler backend向dynolog daemon获取profiler配置
 2. IPC数据通道: mspti monitor向dynolog daemon发送性能数据
 
-__PyDynamicMonitorProxy__:
+__PyDynamicMonitorProxy接口说明__:
 * `init_dyno` 向dynolog daemon发送注册请求
   * input: npuId(int)
   * return：None
 * `poll_dyno` 向dynolog daemon获取Profiler控制参数
   * input: None
-  * return: str, 返回控制参数
+  * return: str，返回控制参数
 * `enable_dyno_npu_monitor` 开启mspti监控
-  * input: cfg_map(Dict[str,str]) 配置
+  * input: cfg_map(Dict[str,str]) 参数配置
+  * return: None
+* `finalize_dyno` 释放msmonitor中相关资源、线程
+  * input: None
   * return: None
 
 ## 安装方式
@@ -46,4 +49,7 @@ pip uninstall msmonitor-plugin
 ```
 
 ## 日志
-* 用户可以通过配置MSMONITOR_LOG_PATH环境变量，指定日志文件路径，默认路径为当前目录下的msmonitor_log
+用户可以通过配置MSMONITOR_LOG_PATH环境变量，指定到自定义的日志文件路径，默认路径为当前目录下的msmonitor_log
+```
+export MSMONITOR_LOG_PATH=/tmp/msmonitor_log # /tmp/msmonitor_log为自定义日志文件路径
+```
