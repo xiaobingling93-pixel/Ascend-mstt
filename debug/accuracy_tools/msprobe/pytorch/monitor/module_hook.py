@@ -40,9 +40,9 @@ from msprobe.pytorch.monitor.utils import get_param_struct
 from msprobe.pytorch.monitor.data_writers import SummaryWriterWithAD, CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
     get_process_group
-from msprobe.pytorch.monitor.features import get_sign_matches
+from msprobe.pytorch.monitor.features import get_sign_matches, cal_qkt
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name, \
-    TensorMetrics, squash_param_name
+    TensorMetrics, squash_param_name, get_entropy_metric, get_sr_metric
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
@@ -57,6 +57,7 @@ FORMAT_MAPPING = {
     MonitorConst.CSV: CSVWriterWithAD,
     MonitorConst.API: BaseWriterWithAD
 }
+start_step = 0
 
 
 def param_is_not_tensor_parallel_duplicate(param, tp_group):
@@ -83,7 +84,17 @@ class ModuleHookContext:
         self.actvgrad.clear()
 
 
-start_step = 0
+class FeatureHookContext:
+    def __init__(self, module_name):
+        self.step = 0
+        self.micro_step = 0
+        self.attention_feature = {}
+        self.linear_feature = {}
+        self.module_name = module_name
+
+    def reset(self):
+        self.attention_feature.clear()
+        self.linear_feature.clear()
 
 
 class OptimizerContext:
@@ -206,6 +217,7 @@ class TrainerMon:
         # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
+        self.feature_hook_context_by_module = defaultdict(FeatureHookContext)
         self.optimizer_context = defaultdict(OptimizerContext)
         self.cc_context = defaultdict(CommunicationContext)
         self.grad_context = GradContext()
@@ -274,6 +286,18 @@ class TrainerMon:
         cc_tensor.reset()
         return metrics
 
+    @staticmethod
+    def get_linear_hook_target(module):
+        if isinstance(module, torch.nn.Embedding):
+            return ''
+        if hasattr(module, "num_embeddings") or hasattr(module, "vocab_start_index"):
+            return ''
+        for weight_name in ["weight", "wg"]:
+            if hasattr(module, weight_name) and isinstance(getattr(module, weight_name), torch.Tensor):
+                if getattr(module, weight_name).dim() == 2:
+                    return weight_name
+        return ''
+
     def set_config(self):
         logger.info(f"current config: {self.config}")
         self.start_step = self.config.get("start_step", 0)
@@ -298,6 +322,8 @@ class TrainerMon:
         self.cc_distribution = self.config.get("cc_distribution", {})
         self.stack_info = self.config.get('stack_info', False)
         self.monitor_mbs_grad = self.config.get('monitor_mbs_grad', False)
+        self.recording_l2_features = self.config.get("recording_l2_features", False)
+        self.sa_order = self.config.get("sa_order", "s,b,h,d")
 
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
@@ -356,6 +382,8 @@ class TrainerMon:
             logger.info_on_rank_0("> momentum and variance of adam is not monitored. ")
         if not self.wg_distribution:
             logger.info_on_rank_0("> weight grad of specified module is not monitored. ")
+        if not self.recording_l2_features:
+            logger.info_on_rank_0("> l2 features of specified module is not monitored. ")
         if not self.mg_direction:
             logger.info_on_rank_0('> grad and momentum direction will not be compared.')
         if not self.cc_distribution.get('enable', False):
@@ -537,6 +565,24 @@ class TrainerMon:
         if self.grad_context.actv:
             self.summary_writer.write_metrics(self.ops, self.grad_context.actv, step, MonitorConst.ACTVGRAD)
 
+    def write_metrics_if_not_empty(self, features, metrics, step, hook_name):
+        if not features or len(features) == 0:
+            return
+        use_micro_step = hook_name not in ["linear_hook"]
+        self.summary_writer.write_metrics(metrics, features, step, hook_name, use_micro_step=use_micro_step)
+        features.clear()
+
+    def write_features_tb(self, step):
+        if not self.recording_l2_features:
+            return
+        for context in self.feature_hook_context_by_module.values():
+            num_features = len(context.attention_feature) + len(context.linear_feature)
+            if num_features == 0:
+                continue
+            self.write_metrics_if_not_empty(context.attention_feature, ["entropy", "softmax_max"],
+                                            step, "attention_hook")
+            self.write_metrics_if_not_empty(context.linear_feature, ["sr", "kernel_norm"], step, "linear_hook")
+
     def write_param_tb(self, opt_context):
         if not self.param_distribution:
             return
@@ -691,6 +737,7 @@ class TrainerMon:
                     if self.anomaly_data_factory:
                         self.anomaly_data_factory.set_call_id(self.param_name_call_id)
                     self.write_xy_tb(context.step)
+                    self.write_features_tb(context.step)
                     self.write_grad_tb(context.step)
                     self.write_mv_tb(context)
                     self.write_param_tb(context)
@@ -760,7 +807,8 @@ class TrainerMon:
             vpp_stage = f'{vpp_stage}{MonitorConst.NAME_SEP}'
             targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
                 'targets'].keys()
-            hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
+            l2_target_names = self.config.get('l2_targets', '')
+            hooked_count += self._hook_module(targets, l2_target_names, model_chunk, vpp_stage)
 
         logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
 
@@ -801,6 +849,9 @@ class TrainerMon:
         for handle in self.handles['xy']:
             handle.remove()
         self.handles['xy'].clear()
+        for handle in self.handles['L2_features']:
+            handle.remove()
+        self.handles['L2_features'].clear()
         # 清空对应context缓存
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             fwd_context.reset()
@@ -941,7 +992,20 @@ class TrainerMon:
                 return pattern
         return ""
 
-    def _hook_module(self, target_names, module: torch.nn.Module, vpp_stage=''):
+    def _is_recording_module(self, module_name, l2_targets, vpp_stage, hook_name):
+
+        if len(l2_targets) > 0:
+            for pattern in [
+                vpp_stage + squash_param_name(module_name, self.squash_name),
+                vpp_stage + module_name,
+            ]:
+                if pattern in l2_targets:
+                    return pattern 
+        elif hook_name in ["linear_hook"]:
+            return vpp_stage + squash_param_name(module_name, self.squash_name)
+        return ""
+    
+    def _hook_module(self, target_names, l2_target_names, module: torch.nn.Module, vpp_stage=''):
         if '_modules' not in module.__dict__:
             # nothing to hook
             return 0
@@ -1020,6 +1084,61 @@ class TrainerMon:
                 context.micro_step = 0
             return
 
+        def extract_attention_feature_hook(module, module_input, module_output, name):
+            if is_recomputation() or not module.training:
+                return
+
+            if module not in self.feature_hook_context_by_module:
+                self.feature_hook_context_by_module[module] = FeatureHookContext(name)
+            context: FeatureHookContext = self.feature_hook_context_by_module[module]
+            tbtag_tensor_map = {}
+            if len(module_input) < 2:
+                logger.warning(
+                    f"Length of module_input in attention hook ({name}) is {len(module_input)}, "
+                    "expected >= 2. Skipping feature extraction for this module."
+                )
+                return
+            q_h = module_input[0]
+            k_h = module_input[1]
+            qkt = cal_qkt(q_h, k_h, order=self.sa_order)
+            tbtag_tensor_map.update(
+                self.build_tbtag_tensor_map(f'{context.module_name}.attention',
+                                            f'{MonitorConst.NAME_SEP}{context.micro_step}', 'qkt', qkt)
+            )
+            get_entropy_metric(tbtag_tensor_map, context.attention_feature)
+
+            context.micro_step += 1
+            if context.micro_step == self.micro_batch_number:
+                context.micro_step = 0
+                context.step += 1
+            return
+
+        def extract_linear_sr_hook(module, module_input, module_output, name):
+            if is_recomputation() or not module.training:
+                return
+            weight_name = self.get_linear_hook_target(module)
+            if weight_name == '':
+                return
+
+            if module not in self.feature_hook_context_by_module:
+                self.feature_hook_context_by_module[module] = FeatureHookContext(name)
+            context: FeatureHookContext = self.feature_hook_context_by_module[module]
+
+            if context.micro_step == (self.micro_batch_number - 1):
+                tbtag_tensor_map = {}
+                value = getattr(module, weight_name).data
+                tbtag_tensor_map.update(
+                    self.build_tbtag_tensor_map(f'{context.module_name}.linear',
+                                                '', 'sr', value)
+                )
+                get_sr_metric(tbtag_tensor_map, context.linear_feature)
+
+            context.micro_step += 1
+            if context.micro_step == self.micro_batch_number:
+                context.micro_step = 0
+                context.step += 1
+            return
+        
         def stack_hook(module, args, kwargs, module_output, name):
             if module not in self.module_fwd_hook_context_by_module:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
@@ -1051,6 +1170,26 @@ class TrainerMon:
                     self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
                 logger.info_on_rank_0(f"> {name} is monitored successfully")
                 hooked_count += 1
+        if not self.print_struct and self.recording_l2_features:
+            for module_name, submodule in module.named_modules():
+                func_map = {
+                    "attention_hook": extract_attention_feature_hook,
+                    "linear_hook": extract_linear_sr_hook,
+                }
+                for hook_name in func_map.keys():
+                    if hook_name not in l2_target_names:
+                        continue
+                    temp_names = l2_target_names[hook_name]
+                    name = self._is_recording_module(module_name, temp_names, vpp_stage, hook_name)
+                    if name:
+                        handle = submodule.register_forward_hook(partial(func_map[hook_name], name=name))
+                        print_feature_name = hook_name.split('_')[0]
+                        logger.info_on_rank_0(
+                            f'> {print_feature_name} features of {name} is monitored successfully')
+                        self.handles["L2_features"].append(handle)
+                        hooked_count += 1
+                continue
+
         return hooked_count
 
     def _patch_grad_sync(self):
