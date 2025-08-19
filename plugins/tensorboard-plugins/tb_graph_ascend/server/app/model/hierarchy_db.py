@@ -64,7 +64,7 @@ class Hierarchy:
         # 在展开层级时，将父级层级名称相关去除，仅保留子节点本身名称信息
         # 如Module.layer1.1.relu.ReLU.forward.0中的父级名称Module.layer1.1去除，仅保留子级的relu.ReLU.forward.1
         # 如Module.layer4.0.BasicBlock.forward.0中的父级名称Module.1去除，仅保留子级的layer4.0.BasicBlock.forward.0
-        if node_type == MODULE:
+        if int(node_type) == MODULE:
             if len(splited_subnode_name) < 4:
                 return node_name
             splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
