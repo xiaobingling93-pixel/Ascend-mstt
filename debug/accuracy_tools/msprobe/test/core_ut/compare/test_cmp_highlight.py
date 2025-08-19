@@ -237,7 +237,7 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.find_error_rows(compare_result, api_batch, highlight_dict)
 
         self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
@@ -251,7 +251,7 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {}
 
         mode_config = ModeConfig(dump_mode=Const.MD5)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.find_error_rows(compare_result, api_batch, highlight_dict)
 
         self.assertEqual(result, None)
@@ -264,7 +264,7 @@ class TestUtilsMethods(unittest.TestCase):
         result_df_columns = CompareConst.COMPARE_RESULT_HEADER
 
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.value_check(value, api_name, i, result_df_columns)
 
         mock_logger.error.assert_called_once_with(
@@ -281,13 +281,13 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
-        highlight.df_malicious_value_check(result_df, columns)
+        highlight = HighLight(mode_config, '')
+        highlight.df_malicious_value_check(result_df)
 
     def test_compare_result_df_convert(self):
         value = float("nan")
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.compare_result_df_convert(value)
         self.assertEqual(result, "nan\t")
 
@@ -302,7 +302,7 @@ class TestUtilsMethods(unittest.TestCase):
         file_path = os.path.join(base_dir, 'result.xlsx')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         generate_result_xlsx(base_dir)
@@ -319,7 +319,7 @@ class TestUtilsMethods(unittest.TestCase):
         file_path = os.path.join(base_dir, 'result.xlsx')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         generate_result_xlsx(base_dir)
@@ -340,7 +340,7 @@ class TestUtilsMethods(unittest.TestCase):
         sys.stdout = open(temp_output_file, 'w')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         with open(temp_output_file, 'r') as f:
@@ -367,7 +367,7 @@ class TestUtilsMethods(unittest.TestCase):
         sys.stdout = open(temp_output_file, 'w')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         with open(temp_output_file, 'r') as f:
@@ -401,7 +401,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
@@ -423,7 +423,7 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {}
 
         mode_config = ModeConfig(dump_mode=Const.MD5)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         self.assertEqual(result, None)
@@ -442,7 +442,7 @@ class TestUtilsMethods(unittest.TestCase):
             'yellow_lines': [(0, ['c']), (1, ['d'])]
         }
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
 
@@ -454,7 +454,7 @@ class TestUtilsMethods(unittest.TestCase):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
         highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.find_error_rows(summary_result, api_batch, highlight_dict_test)
         self.assertEqual(highlight_dict_test,
                          {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
@@ -464,7 +464,7 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(result)
         highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.find_compare_result_error_rows(result_df, highlight_dict_test)
         self.assertEqual(highlight_dict_test, {
             "red_rows": {1, 3},
