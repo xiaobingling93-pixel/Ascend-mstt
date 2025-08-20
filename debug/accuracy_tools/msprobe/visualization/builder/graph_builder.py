@@ -25,6 +25,7 @@ from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.db_utils import node_to_db, config_to_db
 
 
 class GraphBuilder:
@@ -83,6 +84,19 @@ class GraphBuilder:
             result[GraphConst.JSON_TASK_KEY] = config.task
         result[GraphConst.OVERFLOW_CHECK] = config.overflow_check
         save_json(filename, result, indent=4)
+
+    @staticmethod
+    def to_db(filename, config):
+        config.graph_n.step = config.step
+        config.graph_n.rank = config.rank
+        config.graph_n.compare_mode = config.compare_mode
+        node_to_db(config.graph_n, filename)
+        if config.graph_b:
+            config.graph_b.data_source = GraphConst.JSON_BENCH_KEY
+            config.graph_b.step = config.step
+            config.graph_b.rank = config.rank
+            node_to_db(config.graph_b, filename)
+        config_to_db(config, filename)
 
     @staticmethod
     def _simplify_stack(stack_dict):
@@ -285,7 +299,7 @@ class GraphBuilder:
 
 class GraphExportConfig:
     def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task='',
-                 overflow_check=False, compare_mode=None):
+                 overflow_check=False, compare_mode=None, step=0, rank=0, step_list=None, rank_list=None):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.tool_tip = tool_tip
@@ -294,6 +308,10 @@ class GraphExportConfig:
         self.task = task
         self.overflow_check = overflow_check
         self.compare_mode = compare_mode
+        self.step = step
+        self.rank = rank
+        self.step_list = step_list
+        self.rank_list = rank_list
 
 
 @dataclass

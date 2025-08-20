@@ -18,6 +18,7 @@ from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class Graph:
@@ -28,6 +29,10 @@ class Graph:
         self.root = self.get_node(model_name)
         self.data_path = data_path
         self.dump_data = dump_data
+        self.data_source = GraphConst.JSON_NPU_KEY
+        self.step = 0
+        self.rank = 0
+        self.compare_mode = GraphConst.SUMMARY_COMPARE
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -117,6 +122,25 @@ class Graph:
                     backward_flag = True
             result[micro_step].append(node)
         return result
+
+    def get_sorted_nodes(self):
+        """
+        通过深度优先遍历graph，获得排过序的node列表
+        """
+        visited = set()
+        order = []
+
+        @recursion_depth_decorator('msprobe.visualization.graph.graph.Graph.get_nodes_order.visit', max_depth=500)
+        def visit(node):
+            if node.id in visited:
+                return
+            visited.add(node.id)
+            for sub_node in node.subnodes:
+                visit(sub_node)
+            order.append(node)
+
+        visit(self.root)
+        return order
 
     def add_node(self, node_op, node_id, up_node=None, id_accumulation=False):
         """
