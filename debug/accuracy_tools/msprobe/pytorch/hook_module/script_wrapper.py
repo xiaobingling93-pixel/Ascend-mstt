@@ -85,14 +85,14 @@ def patch_dynamo_compile():
 
     @functools.wraps(original)
     def wrapped(*args, **kwargs):
+        result = None
         try:
             reg = get_api_register()
             reg.restore_all_api()
         except Exception as e:
             logger.warning(f"[msprobe] Pre restore_all_api failed: {e}")
-            return
+            return result
 
-        result = None
         try:
             result = original(*args, **kwargs)
         except Exception:
@@ -104,6 +104,7 @@ def patch_dynamo_compile():
                 reg.register_all_api()  # 改成注册hook
             except Exception as e:
                 logger.warning(f"[msprobe] Post register_all_api failed: {e}")
+                return result
         return result
     wrapped.__msprobe_patched__ = True
     wrapped.__msprobe_original__ = original
