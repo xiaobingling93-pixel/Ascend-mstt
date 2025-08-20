@@ -20,17 +20,17 @@ from unittest.mock import MagicMock, patch
 
 from msprobe.core.common.const import Const
 from msprobe.core.hook_manager import HookSet, BaseHookManager
-from msprobe.mindspore.dump.hook_cell.ms_hook_manager import MindsproeHookManager
+from msprobe.mindspore.dump.hook_cell.ms_hook_manager import MindsporeHookManager
 
 
-class TestMindsproeHookManager(unittest.TestCase):
+class TestMindsporeHookManager(unittest.TestCase):
     def setUp(self):
         self.mock_data_collector = MagicMock()
         self.mock_config = MagicMock()
         self.mock_config.data_mode = ["all"]
         self.mock_config.task = "statistics"
         self.mock_config.level = Const.LEVEL_L1
-        self.manager = MindsproeHookManager(
+        self.manager = MindsporeHookManager(
             self.mock_data_collector,
             self.mock_config
         )
@@ -49,31 +49,40 @@ class TestMindsproeHookManager(unittest.TestCase):
             mock_add.assert_called_once_with("test_module")
 
     def test_process_kwargs_and_output(self):
+        tid = threading.get_ident()
         mock_module = MagicMock()
-        mock_module.msprobe_input_kwargs = {"kw1": "v1"}
+        mock_module.msprobe_input_kwargs = {tid: {"kw1": "v1"}}
 
         kwargs, output = self.manager._process_kwargs_and_output(
-            mock_module, Const.API, "output_value", "ignored"
+            mock_module,
+            tid,
+            Const.API,
+            "output_value",
+            "ignored"
         )
         self.assertEqual(kwargs, {"kw1": "v1"})
         self.assertEqual(output, "output_value")
 
         with patch('msprobe.mindspore.dump.hook_cell.ms_hook_manager.has_kwargs_in_forward_hook', return_value=True):
             kwargs, output = self.manager._process_kwargs_and_output(
-                mock_module, Const.MODULE, "kwargs_value", "output_value"
+                mock_module,
+                tid,
+                Const.MODULE,
+                "kwargs_value",
+                "output_value"
             )
             self.assertEqual(kwargs, "kwargs_value")
             self.assertEqual(output, "output_value")
 
     def test_build_hook(self):
-        hookset = self.manager.build_hook(Const.API, "test_api")
-        self.assertIsInstance(hookset, HookSet)
-        self.assertEqual(hookset.forward_hook.__name__, "forward_hook")
-        self.assertEqual(hookset.forward_pre_hook.__name__, "forward_pre_hook")
-        self.assertEqual(hookset.backward_hook.__name__, "backward_hook")
-        self.assertEqual(hookset.backward_pre_hook.__name__, "backward_pre_hook")
-        hookset = self.manager.build_hook(Const.MODULE, "test_module")
-        self.assertEqual(hookset.forward_pre_hook.__name__, "forward_pre_hook")
+        hook_set = self.manager.build_hook(Const.API, "test_api")
+        self.assertIsInstance(hook_set, HookSet)
+        self.assertEqual(hook_set.forward_pre_hook.__name__, "forward_pre_hook")
+
+        hook_set = self.manager.build_hook(Const.MODULE, "test_module")
+        self.assertEqual(hook_set.forward_hook.__name__, "forward_hook")
+        self.assertEqual(hook_set.backward_pre_hook.__name__, "backward_pre_hook")
+        self.assertEqual(hook_set.backward_hook.__name__, "backward_hook")
 
     def test_need_exchange(self):
         mock_module = MagicMock()

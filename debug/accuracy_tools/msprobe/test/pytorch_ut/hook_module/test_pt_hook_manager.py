@@ -30,7 +30,7 @@ class TestPytorchHookManager(unittest.TestCase):
         self.mock_config.data_mode = ["all"]
         self.mock_config.task = "statistics"
         self.manager = PytorchHookManager(
-            self.mock_data_collector, 
+            self.mock_data_collector,
             self.mock_config
         )
         BaseHookManager.inner_switch[threading.get_ident()] = False
@@ -38,7 +38,7 @@ class TestPytorchHookManager(unittest.TestCase):
     def test_properties(self):
         with patch('msprobe.pytorch.hook_module.pt_hook_manager.is_recomputation', return_value=True):
             self.assertTrue(self.manager._is_recompute)
-        
+
         with patch('msprobe.pytorch.hook_module.pt_hook_manager.is_recomputation', return_value=False):
             self.assertFalse(self.manager._is_recompute)
 
@@ -51,30 +51,50 @@ class TestPytorchHookManager(unittest.TestCase):
             mock_add.assert_called_once_with("test_layer")
 
     def test_process_kwargs_and_output(self):
+        kwargs, output = self.manager._process_kwargs_and_output(
+            None,
+            None,
+            "API",
+            "kwargs_value",
+            "output_value"
+        )
+        self.assertEqual(kwargs, "kwargs_value")
+        self.assertEqual(output, "output_value")
+
         with patch('msprobe.pytorch.hook_module.pt_hook_manager.torch_version_above_or_equal_2', new=True):
             kwargs, output = self.manager._process_kwargs_and_output(
-                None, None, "kwargs_value", "output_value"
+                None,
+                None,
+                None,
+                "kwargs_value",
+                "output_value"
             )
             self.assertEqual(kwargs, "kwargs_value")
             self.assertEqual(output, "output_value")
-        
+
         with patch('msprobe.pytorch.hook_module.pt_hook_manager.torch_version_above_or_equal_2', new=False):
             kwargs, output = self.manager._process_kwargs_and_output(
-                None, None, "kwargs_value", "output_value"
+                None,
+                None,
+                None,
+                "kwargs_value",
+                "output_value"
             )
             self.assertEqual(kwargs, {})
             self.assertEqual(output, "kwargs_value")
 
-    def test_build_hook(self):   
-        hookset = self.manager.build_hook(Const.API, "test_api")
-        self.assertIsInstance(hookset, HookSet)
-        self.assertTrue(callable(hookset.forward_hook))
-        self.assertTrue(callable(hookset.forward_pre_hook))
-        self.assertTrue(callable(hookset.backward_hook))
-        self.assertIsNone(hookset.backward_pre_hook)
-        
-        hookset = self.manager.build_hook(Const.MODULE, "test_module")
-        self.assertEqual(hookset.forward_pre_hook.__name__, "forward_pre_hook")
+    def test_build_hook(self):
+        hook_set = self.manager.build_hook(Const.API, "test_api")
+        self.assertIsInstance(hook_set, HookSet)
+        self.assertTrue(callable(hook_set.forward_pre_hook))
+        self.assertTrue(callable(hook_set.distributed_forward_hook))
+        self.assertIsNone(hook_set.forward_hook)
+        self.assertIsNone(hook_set.backward_pre_hook)
+        self.assertIsNone(hook_set.backward_hook)
+
+        hook_set = self.manager.build_hook(Const.MODULE, "test_module")
+        self.assertEqual(hook_set.forward_hook.__name__, "forward_hook")
+        self.assertEqual(hook_set.backward_hook.__name__, "backward_hook")
 
     def test_need_exchange(self):
         self.assertTrue(self.manager._need_exchange(None))
@@ -86,9 +106,9 @@ class TestPytorchHookManager(unittest.TestCase):
         self.mock_config.task = Const.STRUCTURE
         params_dict = self.manager._get_params_dict(mock_module)
         self.assertEqual(params_dict, {})
-   
+
         self.mock_config.task = "statistics"
-    
+
         mock_named_params = [
             ("conv.weight", MagicMock()),
             ("bn.bias", MagicMock())
@@ -96,7 +116,7 @@ class TestPytorchHookManager(unittest.TestCase):
         mock_module.named_parameters.return_value = mock_named_params
         params_dict = self.manager._get_params_dict(mock_module)
         mock_module.named_parameters.assert_called_once_with(recurse=False)
-        
+
         self.assertEqual(set(params_dict.keys()), {"weight", "bias"})
         self.assertEqual(params_dict["weight"], mock_named_params[0][1])
         self.assertEqual(params_dict["bias"], mock_named_params[1][1])

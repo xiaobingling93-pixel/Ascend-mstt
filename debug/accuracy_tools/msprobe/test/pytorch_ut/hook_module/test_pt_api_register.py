@@ -145,9 +145,8 @@ class TestApiTemplate(unittest.TestCase):
             self.assertEqual(template.prefix, self.prefix)
             self.assertEqual(template.prefix_api_name, "test_prefix.test_api.")
             self.assertEqual(template.device, "cpu")
+            self.assertFalse(template.op_is_distributed)
             self.assertFalse(template.need_hook)
-
-            self.assertFalse(hasattr(template, 'op_is_distributed'))
 
     def test_init_with_distributed_prefix(self):
         with patch('msprobe.pytorch.hook_module.api_register.HOOKModule'):

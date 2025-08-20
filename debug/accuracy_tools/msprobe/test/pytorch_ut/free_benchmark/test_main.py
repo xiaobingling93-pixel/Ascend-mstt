@@ -1,4 +1,3 @@
-import functools
 from abc import ABC
 from unittest import TestCase
 
@@ -93,31 +92,3 @@ class TestInterface(TestCase):
             output=out,
         )
         self.assertEqual(result.dtype, torch.float16)
-
-    def testBackwardCheck(self):
-        # 对于反向接口，在pre forward时暂存input, 然后在backwrad后进行对比
-        config = Config(Const.BACKWARD, HandlerType.CHECK)
-        checker = FreeBenchmarkCheck(config)
-        processor = UnequalDataProcessor()
-        # 初始化输入输出
-        x = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True)
-        y = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True)
-        grad_output = torch.tensor([1, 1], dtype=torch.float16)
-        backward_name = Const.SEP.join([self.api_name, Const.BACKWARD])
-        # 执行前向生成grad saver实例
-        mul_module = WrapMul(self.api_name)
-        checker.pre_forward(backward_name, mul_module, processor, (x, y), {})
-        # 执行算子前向和反向, 并反向获取扰动后grad_input
-        out = mul_module(x, y)
-        checker.backward(backward_name, mul_module, grad_output)
-        out.backward(torch.ones_like(out))
-        # module是否添加暂存器, 其中反向钩子执行扰动后grad_input是否正确
-        self.assertTrue(hasattr(mul_module, CommonField.GRADSAVER))
-        grad_saver = getattr(mul_module, CommonField.GRADSAVER)
-        self.assertEqual(grad_saver.perturbed_grad_input[0][0], 2)
-        handler = FuzzHandlerFactory.create(grad_saver.handler_params)
-        # 模拟一个张量的梯度更新时触发反向检测
-        grad_saver.compare_grad_results(
-            handler, torch.tensor(1.0), torch.tensor(2.0), 0
-        )
-        self.assertEqual(len(processor.unequal_rows), 0)

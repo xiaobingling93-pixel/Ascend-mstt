@@ -87,12 +87,11 @@ _inner_used_api = {
 class ApiTemplate(HOOKCell):
     def __init__(self, api_name, api_func, prefix, hook_build_func):
         self.api_name = api_name
-        self.api_func = api_func
         self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
-        super().__init__(hook_build_func)
         distributed_prefix = Const.DIST_API_TYPE_PREFIX if is_mindtorch() else Const.MINT_DIST_API_TYPE_PREFIX
-        if prefix == distributed_prefix:
-            self.op_is_distributed = True
+        self.op_is_distributed = prefix == distributed_prefix
+        super().__init__(hook_build_func)
+        self.api_func = api_func
 
     @staticmethod
     def async_to_sync(output):
