@@ -42,7 +42,7 @@ class Hierarchy:
             root_node_name: self.get_basic_rende_info(root_node_name, node_info)
         }
         # 默认展开根节点
-        self.update_graph_data(self.root_name, graph)
+        self.update_graph_data(self.root_name, graph)    
         self.update_graph_shape()
         self.update_graph_position()
 
