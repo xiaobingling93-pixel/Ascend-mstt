@@ -14,7 +14,7 @@
 # limitations under the License.
 from mindspore import dtype as mstype, Tensor
 
-from msprobe.mindspore.monitor.features import FUNC_MAP
+from msprobe.mindspore.monitor.features import FUNC_MAP, cal_entropy, cal_stable_rank
 
 
 def get_single_metrics(op_list, tag, tensor, eps=1e-8, output=None):
@@ -75,3 +75,29 @@ def is_skip_step(step, start_step, step_interval, has_collect_times=0, collect_t
     :return: whether skip or not, bool
     """
     return step < start_step or (step - start_step) % step_interval != 0 or has_collect_times >= collect_times
+
+
+def get_entropy_metric(tag2tensor, out_dict=None):
+    if out_dict is None:
+        out_dict = {}
+    for tag, tensor in tag2tensor.items():
+        if tag not in out_dict:
+            out_dict[tag] = {}
+        entropy, softmax = cal_entropy(tensor)
+        out_dict[tag]["entropy"] = entropy
+        out_dict[tag]["softmax"] = softmax
+    return out_dict
+
+
+def get_sr_metric(tag2tensor, out_dict=None):
+    if out_dict is None:
+        out_dict = {}
+    for tag, tensor in tag2tensor.items():
+        if "sr" not in tag:
+            continue
+        if tag not in out_dict:
+            out_dict[tag] = {}
+        sr, eig = cal_stable_rank(tensor)
+        out_dict[tag]["sr"] = sr
+        out_dict[tag]["eig"] = eig
+    return out_dict
