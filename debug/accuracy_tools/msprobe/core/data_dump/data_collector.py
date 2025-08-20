@@ -41,6 +41,7 @@ class DataCollector:
         self.module_count = {}
         self.scope = ScopeFactory(self.config).build_scope()
         self.backward_module_names = {}
+        self.params_grad_record = {}
         self.optimizer_status = ""
         self.optimizer_status_first_start = {Const.OPTIMIZER: True, Const.CLIP_GRAD: True}
         atexit.register(self.write_json_at_exit)
@@ -307,15 +308,38 @@ class DataCollector:
             if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
                 if self.data_writer.cache_data.get("data"):
                     self.data_writer.cache_data.get("data").pop(grad_name, None)
+                    self.params_grad_record[grad_name] = False
                 return
             data_info = self.data_processor.analyze_params(grad_name, param_name, data)
             self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
+            self.params_grad_record[grad_name] = False
         except Exception as e:
             error_type = type(e).__name__
             tb = traceback.format_exc()
             self.data_writer.write_error_log(
                 f"[ERROR] params_data_collect failed: "
                 f"name={name}, param_name={param_name}, pid={pid}\n{tb}",
+                error_type=error_type
+            )
+
+    def params_data_collect_in_bw_hook(self, params_dict, name):
+        try:
+            if not params_dict:
+                return
+            ori_name = name.rsplit(Const.SEP, 2)[0]
+            for param_name, param in params_dict.items():
+                grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+                self.update_api_or_module_name(grad_name)
+                if self.params_grad_record.get(grad_name, False):
+                    grad = param.grad if hasattr(param, "grad") else None
+                    data_info = self.data_processor.analyze_params(grad_name, param_name, grad)
+                    self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
+        except Exception as e:
+            error_type = type(e).__name__
+            tb = traceback.format_exc()
+            self.data_writer.write_error_log(
+                f"[ERROR] params_data_collect_in_bw_hook failed: "
+                f"name={name}",
                 error_type=error_type
             )
 
