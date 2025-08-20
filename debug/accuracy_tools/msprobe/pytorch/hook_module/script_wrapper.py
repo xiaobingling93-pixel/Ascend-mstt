@@ -104,7 +104,6 @@ def patch_dynamo_compile():
                 reg.register_all_api()  # 改成注册hook
             except Exception as e:
                 logger.warning(f"[msprobe] Post register_all_api failed: {e}")
-                return result
         return result
     wrapped.__msprobe_patched__ = True
     wrapped.__msprobe_original__ = original
