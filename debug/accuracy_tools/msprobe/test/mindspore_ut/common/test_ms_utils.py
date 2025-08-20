@@ -113,7 +113,7 @@ class TestMsprobeFunctions(unittest.TestCase):
         seed_all(42, True)
 
         # 验证 check_seed_all 的调用
-        mock_check_seed_all.assert_called_once_with(42, True, True)
+        mock_check_seed_all.assert_called_once_with(42, True, False)
         # 验证环境变量是否设置正确
         self.assertEqual(mock_environ.get('PYTHONHASHSEED'), '42')
         # 验证其他函数是否正确调用
