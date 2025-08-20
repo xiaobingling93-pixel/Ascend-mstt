@@ -280,9 +280,9 @@ def mindspore_patchs():
     import mindspore
 
     mindspore_ops_patches = {
-        'rand': mindspore.ops.uniform,
+        'rand': mindspore.ops.rand,
         'randint': mindspore.ops.randint,
-        'randn': mindspore.ops.normal
+        'randn': mindspore.ops.randn
     }
     for name, func in mindspore_ops_patches.items():
         setattr(mindspore.ops, name, track_random_call(func, f"mindspore.ops.{name}"))

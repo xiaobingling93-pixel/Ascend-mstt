@@ -52,6 +52,8 @@ class OptimizerMon(object):
             if self.fp16_to_fp32_param and param not in self.fp16_to_fp32_param:
                 continue
             grad = param.main_grad if monitor.params_have_main_grad else param.grad
+            if grad.__class__.__name__ == 'DTensor':
+                grad = grad.to_local()
             element_in_cur_partition = self.fp16_to_fp32_param.get(param, param).numel()
             if param.numel() != element_in_cur_partition:
                 if first_param:

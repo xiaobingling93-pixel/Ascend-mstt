@@ -37,19 +37,27 @@ summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_
                   True, 'Warning', '']
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
               'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-              1, 0.5, 1, 1, 0.95, 1, 1, 1, 1, 1, 1.01, 1, 1, 1,
+              1, 0.5, 1, 1, 0.95, 1,
+              1, 1, 1, 1,
+              1.01, 1, 1, 1,
               True, 'Yes', '', 'input', 'Functional.batch.norm.0.forward']
 line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-          0.8, 0.5, 1, 1, 0.59, 1, 'nan', 0, 1, 1, 19, 1, 1, 1,
+          0.8, 0.5, 1, 1, 0.59, 1,
+          'nan', 0, 1, 1,
+          19, 1, 1, 1,
           True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-          0.9, 0.5, 1, 1, 0.8, 1, 0, 0.12, 0, 1, 1, 0.1, 1, 1,
+          0.9, 0.5, 1, 1, 0.8, 1,
+          0, 0.12, 0, 1,
+          1, 0.1, 1, 1,
           True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-          0.8, 0.5, 1.1e+10, 1, 0.85, 1, 9, 0.12, 0, 1, 1, 0.1, 1, 1,
+          0.8, 0.5, 1.1e+10, 1, 0.85, 1,
+          9, 0.12, 0, 1,
+          1, 0.1, 1, 1,
           True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -174,8 +182,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {8: 0, 20: 1}
-        api_out = {8: 0.6, 20: 1}
+        api_in = {12: '1%'}
+        api_out = {12: '60%'}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -189,8 +197,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {8: 0.001, 20: 1}
-        api_out = {8: 0.2, 20: 1}
+        api_in = {12: '0.1%'}
+        api_out = {12: '20%'}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -204,8 +212,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {8: 0.001, 20: np.nan}
-        api_out = {8: 0.2, 20: 1}
+        api_in = {12: '15000%'}
+        api_out = {12: '20%'}
         num = 1
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -475,9 +483,6 @@ class TestUtilsMethods(unittest.TestCase):
             ],
             "yellow_lines": [
                 (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input/parameter's"]),
-                (3, [
-                    "maximum absolute error of both input/parameters and output exceed 1, "
-                    "with the output larger by an order of magnitude",
-                    "The output's cosine decreases by more than 0.1 compared to the input/parameter's"])
+                (3, ["The output's cosine decreases by more than 0.1 compared to the input/parameter's"])
             ]
         })

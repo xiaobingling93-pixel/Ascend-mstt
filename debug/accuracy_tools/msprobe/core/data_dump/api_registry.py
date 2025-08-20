@@ -80,6 +80,22 @@ class ApiWrapper:
 
         return True, args, kwargs
 
+    def wrap_api_func(self, api_name, api_func, prefix, hook_build_func, api_template):
+        api_instance = api_template(api_name, api_func, prefix, hook_build_func)
+
+        def api_function(*args, **kwargs):
+            api_name_with_prefix = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1])
+            enable_wrap, args, kwargs = self.deal_with_self_kwargs(api_name_with_prefix, api_func, args, kwargs)
+            if not enable_wrap:
+                logger.warning(f'Cannot collect precision data of {api_name_with_prefix}. '
+                               'It may be fixed by passing the value of "self" '
+                               'as a positional argument instead of a keyword argument. ')
+                return api_func(*args, **kwargs)
+            return api_instance(*args, **kwargs)
+
+        api_function.__name__ = api_name
+        return api_function
+
     def wrap_api(
         self, api_templates, hook_build_func: Optional[Callable]
     ):
@@ -102,23 +118,15 @@ class ApiWrapper:
                 for api_name in self.api_names.get(framework, {}).get(api_type, []):
                     ori_api = None
                     for module in api_modules[0]:
-                        ori_api = ori_api or _get_attr(module, api_name) 
+                        ori_api = ori_api or _get_attr(module, api_name)
                     if callable(ori_api):
-                        def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):
-                            def api_function(*args, **kwargs):
-                                api_name_with_prefix = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1])
-                                enable_wrap, args, kwargs = self.deal_with_self_kwargs(api_name_with_prefix,
-                                                                                       api_func, args, kwargs)
-                                if not enable_wrap:
-                                    logger.warning(f'Cannot collect precision data of {api_name_with_prefix}. '
-                                                   'It may be fixed by passing the value of "self" '
-                                                   'as a positional argument instead of a keyword argument. ')
-                                    return api_func(*args, **kwargs)
-                                return api_template(api_name, api_func, prefix, hook_build_func)(*args, **kwargs)
-                            api_function.__name__ = api_name
-                            return api_function
-                        wrapped_functions[api_name] = wrap_api_func(api_name, ori_api, name_prefix,
-                                                                    hook_build_func, api_template)
+                        wrapped_functions[api_name] = self.wrap_api_func(
+                            api_name,
+                            ori_api,
+                            name_prefix,
+                            hook_build_func,
+                            api_template
+                        )
                 wrapped_functions_in_framework[api_type] = wrapped_functions
             self.wrapped_api_functions[framework] = wrapped_functions_in_framework
         return self.wrapped_api_functions

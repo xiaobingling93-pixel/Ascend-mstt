@@ -59,6 +59,21 @@ def str2float(percentage_str):
         return 0
 
 
+def get_step_or_rank_int(x: str, is_rank=False):
+    """
+    获取字符串rank{int}或者step{int}中的int值，如果x=rank或step，返回0
+    """
+    if x in [Const.RANK, Const.STEP]:
+        return 0
+    description = Const.RANK if is_rank else Const.STEP
+    try:
+        x_int = int(x.replace(Const.RANK, "")) if is_rank else int(x.replace(Const.STEP, ""))
+    except Exception as e:
+        logger.error(f'The folder name format is incorrect, expected {description}+number, such as rank0, step1, etc.')
+        raise RuntimeError from e
+    return x_int
+
+
 def check_directory_content(input_path):
     """
     检查input_path内容, 是否全是step{数字}命名的文件夹(例如step0), 或者全是rank{数字}命名的文件夹(例如rank0), 或者全是文件
