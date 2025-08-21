@@ -52,7 +52,7 @@ sudo yum install -y cmake ninja
 ```
 
 - 安装protobuf (tensorboard_logger三方依赖，用于对接tensorboard展示)
-
+- **说明**：要求protobuf版本为3.12或更高版本
 ```bash
 # debian
 sudo apt install -y protobuf-compiler libprotobuf-dev
@@ -64,8 +64,9 @@ sudo yum install -y protobuf protobuf-devel protobuf-compiler
 pip install protobuf
 ```
 
-- 安装openssl（RPC TLS认证）& 生成证书密钥
-安装
+- （可选）安装openssl（RPC TLS认证）& 生成证书密钥
+- **说明**：如果不需要使用TLS证书密钥加密，该步骤可跳过。
+
 ```bash
 # debian
 sudo apt-get install -y openssl
@@ -73,7 +74,7 @@ sudo apt-get install -y openssl
 # centos
 sudo yum install -y openssl
 ```
-dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynolog二进制时需要指定证书密钥存放的路径，路径下需要满足如下结构和名称。
+dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynolog二进制时可以指定证书密钥存放的路径，路径下需要满足如下结构和名称。
 **用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。**
 
 服务端证书目录结构： 
@@ -89,7 +90,7 @@ server_certs
 client_certs
 ├── ca.crt (根证书，用于验证其他证书的合法性，必选)
 ├── client.crt (客户端证书，用于向服务器证明客户端身份，必选)
-├── client.key (客户端的私钥文件,与client.crt配对使用，支持加密，必选)
+├── client.key (客户端的私钥文件，与client.crt配对使用，支持加密，必选)
 └── ca.crl (证书吊销列表，包含已被吊销的证书信息，可选)
 ```
 
@@ -97,7 +98,7 @@ client_certs
 
 - dynolog编译
 
-默认编译生成dyno和dynolog二进制文件, -t参数可以支持将二进制文件打包成deb包或rpm包。
+默认编译生成dyno和dynolog二进制文件，-t参数可以支持将二进制文件打包成deb包或rpm包。
 
 ```bash
 # 编译dyno和dynolog二进制文件

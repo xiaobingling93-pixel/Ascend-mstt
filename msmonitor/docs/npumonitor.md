@@ -5,6 +5,10 @@ npumonitor通过dyno CLI中的npumonitor子命令开启：
 ```bash
 dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 ```
+**说明**：
+- 1. dyno和dynolog中--certs-dir传入参数值须保持一致；
+- 2. <CERT_DIR>可传入证书路径，如果不使用TLS证书密钥，设置为NO_CERTS。
+
 
 查看npumonitor支持的命令和帮助
 
@@ -23,44 +27,43 @@ npu-monitor的SUBCOMMANDS（子命令）选项如下：
 
 ## npu-monitor使用方法
 
-Step 1： 拉起dynolog daemon进程
-```bash
-# 方法1和方法2 二选一
-# 方法1：使用systemd拉起service
-# 修改配置文件/etc/dynolog.gflags, 使能ipc_monitor
-echo "--enable_ipc_monitor" | sudo tee -a /etc/dynolog.gflags
-sudo systemctl start dynolog
+Step 1： 拉起dynolog daemon进程，详细介绍请参考[dynolog介绍](./dynolog.md)
 
-# 方法2：命令行执行
+- 示例
+```bash
+# 命令行方式开启dynolog daemon
 dynolog --enable-ipc-monitor --certs-dir /home/server_certs
 
-# 使用Tensorboard上报数据需要指定参数：--metric_log_dir, 指定Tensorboard文件落盘文件
-# dynolog daemon的日志路径为：/var/log/dynolog.log
+# 如需使用Tensorboard展示数据，传入参数--metric_log_dir用于指定Tensorboard文件落盘路径
+# 例如：
+dynolog --enable-ipc-monitor --certs-dir /home/server_certs --metric_log_dir /tmp/metric_log_dir # dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
 
-Step 2：在训练任务拉起窗口使能dynolog环境变量
+Step 2：在训练/推理任务拉起窗口使能dynolog环境变量
 ```bash
 export MSMONITOR_USE_DAEMON=1
 ```
 
-Step 3: 配置Msmonitor日志路径(可选，默认路径为当前目录下的msmonitor_log)
+Step 3：配置Msmonitor日志路径(可选，默认路径为当前目录下的msmonitor_log)
 ```bash
 export MSMONITOR_LOG_PATH=<LOG PATH>
 # 示例：
 export MSMONITOR_LOG_PATH=/tmp/msmonitor_log
 ```
 
-Step 4: 拉起训练任务
+Step 4：设置LD_PRELOAD使能MSPTI
 ```bash
-# 训练任务拉起前需要设置LD_PRELOAD
 # 示例：export LD_PRELOAD=/usr/local/Ascend/ascend-toolkit/latest/lib64/libmspti.so
 export LD_PRELOAD=<CANN toolkit安装路径>/ascend-toolkit/latest/lib64/libmspti.so
+ ```
 
+Step 5：拉起训练/推理任务
+```bash
 # 训练任务中需要使用pytorch的优化器/继承原生优化器
 bash train.sh
 ```
 
-Step 5：使用dyno CLI使能npu-monitor
+Step 6：使用dyno CLI使能npu-monitor
 ```bash
 # 示例1：开启性能监控，使用默认配置
 dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start
@@ -81,16 +84,13 @@ dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start --report-int
 dyno --certs-dir /home/client_certs --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 ```
 
-Step6: 观测Tensorboard上报数据
+Step 7：（可选）观测Tensorboard上报数据
 ```
-# Tensorboard存储数据路径在指定参数metric_log_dir下
 # 请确保安装了Tensorboard：
-
 pip install tensorboard
 
 # 然后运行：
-# metric_log_dir为启动守护进程时所指定参数
-tensorboard --logdir={metric_log_dir} 
+tensorboard --logdir={metric_log_dir} # metric_log_dir为Step1中dynolog命令行中--metric_log_dir参数指定的路径
 
 # 打开浏览器访问http://localhost:6006即可看到对应可视化图表, 其中6006为tensorboard默认端口
 ```
