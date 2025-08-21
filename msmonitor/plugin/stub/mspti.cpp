@@ -50,3 +50,13 @@ msptiResult msptiActivityFlushAll(uint32_t flag)
 {
     return MSPTI_SUCCESS;
 }
+
+msptiResult msptiActivityEnableMarkerDomain(const char* name)
+{
+    return MSPTI_SUCCESS;
+}
+
+msptiResult msptiActivityDisableMarkerDomain(const char* name)
+{
+    return MSPTI_SUCCESS;
+}
