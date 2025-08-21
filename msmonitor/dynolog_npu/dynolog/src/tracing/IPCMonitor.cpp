@@ -102,6 +102,10 @@ void IPCMonitor::LogData(const nlohmann::json& result)
         auto domain = result["domain"].get<std::string>();
         logger_->logStr("domain", domain);
     }
+    if (result.contains("name") && result["name"].is_string()) {
+        auto name = result["name"].get<std::string>();
+        logger_->logStr("name", name);
+    }
     logger_->finalize();
 }
 

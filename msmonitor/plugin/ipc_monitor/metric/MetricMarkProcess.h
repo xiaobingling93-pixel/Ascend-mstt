@@ -36,6 +36,7 @@ public:
 };
 
 struct RangeMarkData {
+    std::string name;
     std::string domain;
     uint64_t duration;
     uint64_t start{0};

@@ -36,6 +36,7 @@ DynoLogNpuMonitor::DynoLogNpuMonitor()
             fprintf(stderr, "Failed to create log path, log will not record\n");
         }
     }
+    msptiActivityDisableMarkerDomain("communication");  // filter inner communication marker data for now
 }
 
 bool DynoLogNpuMonitor::Init()

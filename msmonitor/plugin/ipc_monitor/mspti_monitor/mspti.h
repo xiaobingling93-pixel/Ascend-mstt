@@ -286,6 +286,8 @@ msptiResult msptiActivityEnable(msptiActivityKind kind);
 msptiResult msptiActivityDisable(msptiActivityKind kind);
 msptiResult msptiActivityGetNextRecord(uint8_t *buffer, size_t validBufferSizeBytes, msptiActivity **record);
 msptiResult msptiActivityFlushAll(uint32_t flag);
+msptiResult msptiActivityEnableMarkerDomain(const char* name);
+msptiResult msptiActivityDisableMarkerDomain(const char* name);
 
 #ifdef __cplusplus
 }
