@@ -696,7 +696,10 @@ def multi_statistics_compare(func, func_args):
         chunks = [[input_param_nr] for input_param_nr in input_param_nr_list]
     else:
         chunk_size = param_num // process_num
-        chunks = [input_param_nr_list[i:i + chunk_size] for i in range(0, param_num, chunk_size)]
+        remainder = param_num % process_num
+        chunks = [input_param_nr_list[i:i + chunk_size] for i in range(0, param_num - remainder, chunk_size)]
+        for i in range(remainder):
+            chunks[i].append(input_param_nr_list[param_num - remainder + i])
 
     pool = multiprocessing.Pool(process_num)
     for chunk in chunks:
@@ -713,7 +716,6 @@ def mp_logger_init(ranks_str):
     def wrap_logger(fn):
         def inner(msg, *args, **kwargs):
             return fn(ranks_str + msg, *args, **kwargs)
-
         return inner
 
     logger.info = wrap_logger(logger.info)
