@@ -15,11 +15,11 @@
 # ==============================================================================
 import os
 from .graph_service_base import GraphServiceStrategy
-from ..repositories.graph_repo import GraphRepo
+from ..repositories.graph_repo_db import GraphRepoDB
 from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import  NPU, BENCH, SINGLE
-from ..model.layout_hierarchy_db import LayoutHierarchyModel
+from ..model.layout_hierarchy_model import LayoutHierarchyModel
 from ..model.match_nodes_model import MatchNodesController
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 from tensorboard.util import tb_logging
@@ -32,7 +32,7 @@ class DbGraphService(GraphServiceStrategy):
         super().__init__(run_path, tag)
         runs = GraphState.get_global_value('runs')
         db_path = os.path.join(runs.get(self.run), f"{tag}.vis.db")
-        self.repo = GraphRepo(db_path)
+        self.repo = GraphRepoDB(db_path)
         self.conn = self.repo.get_db_connection()
         self.config_info = {}
 
@@ -134,7 +134,6 @@ class DbGraphService(GraphServiceStrategy):
             node_name_list = []
             # 先查全局缓存
             if update_precision_cache != {} and update_precision_cache != None:
-                print("query node list by precision cache", values)
                 for node_name, node_info in update_precision_cache.items():
                     if not node_info.get("is_leaf_nodes"):
                         continue 
@@ -147,7 +146,6 @@ class DbGraphService(GraphServiceStrategy):
                         node_name_list.append(node_name)
             # 在查数据库
             else:
-                print("query node list by precision")
                 node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values, is_filter_unmatch_nodes)
             return {'success': True, 'data':node_name_list}
         except Exception as e:

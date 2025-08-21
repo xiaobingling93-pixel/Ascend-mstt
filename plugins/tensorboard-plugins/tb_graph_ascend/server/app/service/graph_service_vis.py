@@ -16,16 +16,16 @@
 import os
 import time
 import json
-
-from tensorboard.util import tb_logging
-from ..utils.graph_utils import GraphUtils
+from .graph_service_base import GraphServiceStrategy
+from ..repositories.graph_repo_vis import GraphRepoVis
 from ..utils.global_state import GraphState
+from ..utils.graph_utils import GraphUtils
+from ..model.layout_hierarchy_model import LayoutHierarchyModel
 from ..model.match_nodes_model import MatchNodesController
-from ..model.layout_hierarchy_vis import LayoutHierarchyController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
-from .graph_service_base import GraphServiceStrategy
 
+from tensorboard.util import tb_logging
 logger = tb_logging.get_logger()
 
 
@@ -33,6 +33,7 @@ class JsonGraphService(GraphServiceStrategy):
 
     def __init__(self, run_path, tag):
         super().__init__(run_path, tag)
+        self.repo = None
 
     def load_graph_data(self):
         runs = GraphState.get_global_value('runs')
@@ -73,6 +74,8 @@ class JsonGraphService(GraphServiceStrategy):
             GraphState.set_global_value('current_file_data', json_data)
             GraphState.set_global_value('current_tag', self.tag)
             GraphState.set_global_value('current_run', run_path)
+            # 初始化GraphJson
+            self.repo = GraphRepoVis(json_data)
             yield f"data: {json.dumps({'done': True, 'progress': 100, 'status': 'loading'})}\n\n"
         else:
             yield f"data: {json.dumps({'progress': current_progress, 'error': 'Failed to parse JSON'})}\n\n"
@@ -170,24 +173,25 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': False, 'error': '获取节点列表失败:' + str(e)}
 
     def change_node_expand_state(self, node_info, meta_data):
-        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
-        if error_message or not graph_data:
-            return {'success': False, 'error': error_message}
-        graph_type = node_info.get('nodeType')
-        node_name = node_info.get('nodeName')
-        micro_step = meta_data.get('microStep')
+
         try:
+            graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+            if error_message:
+                return {'success': False, 'error': error_message}
+            if self.repo is None:
+                return {'success': False, 'error': 'initlize graph json failed'}
+            graph_type = node_info.get('nodeType')
+            node_name = node_info.get('nodeName')
+            micro_step = meta_data.get('microStep')
             # 单图
             if not graph_data.get(NPU):
-                hierarchy = LayoutHierarchyController.change_expand_state(node_name, SINGLE, graph_data, micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step)
             # NPU
             elif graph_type == NPU:
-                hierarchy = LayoutHierarchyController.change_expand_state(node_name, graph_type,
-                                                                          graph_data.get(NPU, {}), micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step)
             # 标杆
             elif graph_type == BENCH:
-                hierarchy = LayoutHierarchyController.change_expand_state(node_name, graph_type,
-                                                                          graph_data.get(BENCH, {}), micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step)
             else:
                 return {'success': True, 'data': {}}
             return {'success': True, 'data': hierarchy}
@@ -291,7 +295,7 @@ class JsonGraphService(GraphServiceStrategy):
 
     def update_hierarchy_data(self, graph_type):
         if (graph_type == NPU or graph_type == BENCH):
-            hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
+            hierarchy = LayoutHierarchyModel.update_hierarchy_data(graph_type)
             return {'success': True, 'data': hierarchy}
         else:
             return {'success': False, 'error': '节点类型错误'}

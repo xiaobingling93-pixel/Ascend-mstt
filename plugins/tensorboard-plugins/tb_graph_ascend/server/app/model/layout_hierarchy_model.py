@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from .hierarchy_db import Hierarchy
+from .hierarchy import Hierarchy
 from ..utils.global_state import NPU, BENCH, SINGLE
 
 
@@ -21,7 +21,7 @@ class LayoutHierarchyModel:
     npu_hierarchy = None
     bench_hierarchy = None
     single_hierarchy = None
-
+      
     hierarchy = {
         NPU: npu_hierarchy,
         BENCH: bench_hierarchy,
@@ -29,7 +29,7 @@ class LayoutHierarchyModel:
     }    
 
     @staticmethod
-    def change_expand_state(node_name, graph_type, repo, micro_step, rank, step):
+    def change_expand_state(node_name, graph_type, repo, micro_step, rank=0, step=0):
         if node_name == 'root':
             LayoutHierarchyModel.hierarchy[graph_type] = Hierarchy(graph_type, repo, micro_step, rank, step)
             

@@ -9,27 +9,41 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# WITHOUT WARRANTIE  S OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import os
 import json
 import time
 import sqlite3
+from .graph_repo_base import GraphRepo
 from ..utils.graph_utils import GraphUtils
+from ..utils.global_state import SINGLE, NPU, BENCH, DataType
 from tensorboard.util import tb_logging
-from ..utils.global_state import SINGLE, NPU, BENCH
+
 logger = tb_logging.get_logger()
+DB_TYPE = DataType.DB.value
 
 
-class GraphRepo:
+class GraphRepoDB(GraphRepo):
 
     def __init__(self, db_path):
         self.db_path = db_path
+        self.repo_type = DB_TYPE
         self._initialize_db_connection()           
 
     def _initialize_db_connection(self):
         try:
+            # 目录安全校验
+            dir = str(os.path.dirname(self.db_path))
+            success, error = GraphUtils.safe_check_load_file_path(dir, True)
+            if not success:
+                raise PermissionError(error)
+            # 文件安全校验
+            success, error = GraphUtils.safe_check_load_file_path(self.db_path)
+            if not success:
+                raise PermissionError(error)
             self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row
             self.is_db_connected = self.conn is not None
@@ -37,7 +51,6 @@ class GraphRepo:
             self.conn.execute("PRAGMA journal_mode = WAL;")
             self.conn.execute("PRAGMA synchronous = NORMAL;")  # 或 OFF（不安全）
             self.conn.execute("PRAGMA cache_size = 20000;")
-            self.conn.execute("PRAGMA temp_store = MEMORY;")  # 临时表放内存
             self.conn.execute("PRAGMA wal_autocheckpoint = 0;")
         except:
             logger.error("Failed to connect to database")

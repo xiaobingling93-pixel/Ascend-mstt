@@ -16,7 +16,7 @@
 # ==============================================================================
 from tensorboard.util import tb_logging
 from ..utils.global_state import GraphState
-from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE
+from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE, DataType
 
 logger = tb_logging.get_logger()
 
@@ -25,6 +25,8 @@ INNER_HIGHT = 15  # 内部节点高度
 HORIZONTAL_SPACING = 5  # 横向排列间距
 VERTICAL_SPACING = 10  # 纵向排列间距
 MAX_PER_ROW = 5  # 横向每行最大数
+DB_TYPE = DataType.DB.value
+JSON_TYPE = DataType.JSON.value
 
 
 class Hierarchy:
@@ -107,7 +109,7 @@ class Hierarchy:
 
     def process_select_expand(self, node_name):
         # DB：逻辑
-        # 1.查询当前节点及其的所有父节点，知道没有父节点位置{}
+        # 1.查询当前节点及其的所有父节点，一直到没有父节点位置{}
         
         # DB：查询当前节点的父节点信息
         up_nodes = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
@@ -259,7 +261,6 @@ class Hierarchy:
         if node_name == self.root_name:  # 根节点，根据micro_step获取子节点
             # DB：查询以根节点为父节点的所有子节点
             sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
-     
             for subnode_name, child_node in sub_nodes.items():
                 child_micro_step_id = child_node.get('micro_step_id', -1)  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
                 is_append_all_node = int(self.micro_step_id) == -1 or child_micro_step_id == -1
@@ -310,6 +311,13 @@ class Hierarchy:
                 self.get_connected_graph(child_name, result, new_hierarchy)
 
     def update_hierarchy_data(self):
+        if(self.repo.repo_type == DB_TYPE):
+            return self.current_hierarchy
+        # 处理JSON
+        for node_name, node_info in self.current_hierarchy.items():
+            graph_node_info = self.repo.query_node_info(node_name, self.graph_type)
+            node_info['matchedNodeLink'] = graph_node_info.get('matched_node_link', [])
+            node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
         return self.current_hierarchy
 
     def update_current_hierarchy_data(self, data):
