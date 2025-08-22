@@ -807,20 +807,20 @@ class GraphRepoDB(GraphRepo):
         object = {
             "id": data.get('node_name'),
             "node_name": data.get('node_name'),
-            "node_type": int(data.get('node_type')),
+            "node_type": int(data.get('node_type')) if data.get('node_type') is not None else 0,
             "output_data": GraphUtils.safe_json_loads(data.get('output_data') or "{}"),
             "input_data": GraphUtils.safe_json_loads(data.get('input_data') or "{}"),
             "upnode":data.get('up_node'),
             "subnodes":GraphUtils.safe_json_loads(data.get('sub_nodes') or "[]"),
             "matched_node_link":GraphUtils.safe_json_loads(data.get('matched_node_link') or "[]"),
             "stack_info":GraphUtils.safe_json_loads(data.get('stack_info') or "[]"),
-            "micro_step_id": int(data.get('micro_step_id')) or -1,
+            "micro_step_id": int(data.get('micro_step_id')) if data.get('micro_step_id') is not None else 0,
             "data":{
                 "precision_index": data.get('precision_index'),
             },
             "parallel_merge_info": GraphUtils.safe_json_loads(data.get('parallel_merge_info') or "[]"),
             "matched_distributed": GraphUtils.safe_json_loads(data.get('matched_distributed') or "[]"),
-            "modified":int(data.get('modified')),
+            "modified":int(data.get('modified')) if data.get('modified') is not None else 0,
         }
         return object
     
