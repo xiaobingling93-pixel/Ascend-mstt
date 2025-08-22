@@ -391,6 +391,7 @@ class GraphRepoDB(GraphRepo):
                     up_node,
                     sub_nodes,
                     node_type,
+                    micro_step_id
                     matched_node_link,
                     precision_index,
                     overflow_level,
@@ -454,13 +455,14 @@ class GraphRepoDB(GraphRepo):
         try:
             query = """
                 SELECT 
-                    node_name 
+                    node_name,
+                    sub_nodes,
+                    micro_step_id
                 FROM 
                     tb_nodes 
                 WHERE 
                     step = ?
                     AND rank = ?
-                    AND (? = -1 OR micro_step_id = ?)
                     AND data_source = 'NPU'
                 ORDER BY
                     node_order ASC
@@ -814,7 +816,7 @@ class GraphRepoDB(GraphRepo):
             "subnodes":GraphUtils.safe_json_loads(data.get('sub_nodes') or "[]"),
             "matched_node_link":GraphUtils.safe_json_loads(data.get('matched_node_link') or "[]"),
             "stack_info":GraphUtils.safe_json_loads(data.get('stack_info') or "[]"),
-            "micro_step_id": int(data.get('micro_step_id')) if data.get('micro_step_id') is not None else 0,
+            "micro_step_id": int(data.get('micro_step_id')) if data.get('micro_step_id') is not None else -1,
             "data":{
                 "precision_index": data.get('precision_index'),
             },
