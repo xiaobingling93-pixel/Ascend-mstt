@@ -158,13 +158,13 @@ class ApiRunner:
         if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API,
                                 MsCompareConst.FUNCTIONAL_API] \
                 and api_platform == Const.MS_FRAMEWORK:
-            err_msg = (f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api, "
-                       f"api_name={api_name_str}")
+            err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api," \
+                      f" api_name={api_name_str}"
             logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
         if api_type_str not in MsCompareConst.MT_VALID_API_TYPES and api_platform == Const.MT_FRAMEWORK:
-            err_msg = (f"ApiRunner.get_info_from_name failed: not torch, functional or Tensor api, "
-                       f"api_name={api_name_str}")
+            err_msg = f"ApiRunner.get_info_from_name failed: not torch, functional or Tensor api," \
+                      f" api_name={api_name_str}"
             logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         return api_type_str, api_sub_name
 
