@@ -13,7 +13,7 @@ dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 查看npumonitor支持的命令和帮助
 
 ```bash
-dyno npumonitor --help
+dyno npu-monitor --help
 ```
 
 npu-monitor的SUBCOMMANDS（子命令）选项如下：
