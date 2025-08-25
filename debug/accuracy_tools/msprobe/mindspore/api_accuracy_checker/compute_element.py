@@ -67,8 +67,9 @@ class ComputeElement:
         elif compute_element_info is None:
             self._init_from_null_compute_element_info()
         else:
-            logger.error_log_with_exp(
-                "ComputeElement.__init__ failed: not init with parameter or compute_element info is not (list, dict)",
+            logger.warning_log_with_exp(
+                "ComputeElement.__init__ failed: not init with parameter or compute_element info is not (list, dict)."
+                " Exception has been raised and will be captured/logged externally.",
                 ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
 
     @staticmethod
@@ -82,8 +83,9 @@ class ComputeElement:
         ms_dtype = ms_tensor.dtype
         dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
         if dtype_str not in dtype_str_to_torch_dtype:
-            err_msg = f"ComputeElement.transfer_to_torch_tensor failed: no matching torch dtype for {dtype_str}"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+            err_msg = f"ComputeElement.transfer_to_torch_tensor failed: no matching torch dtype" \
+                      f" for {dtype_str}. Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
 
@@ -109,8 +111,9 @@ class ComputeElement:
         dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
 
         if dtype_str not in dtype_str_to_mindtorch_dtype:
-            err_msg = f"ComputeElement.transfer_to_mindtorch_tensor failed: no matching mindtorch dtype for {dtype_str}"
-            logger.error_log_with_exp(err_msg,
+            err_msg = f"ComputeElement.transfer_to_mindtorch_tensor failed: no matching mindtorch dtype for" \
+                      f" {dtype_str}. Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg,
                                       ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             mindtorch_dtype = dtype_str_to_mindtorch_dtype.get(dtype_str)
@@ -139,8 +142,9 @@ class ComputeElement:
         dtype_str = torch_dtype_to_dtype_str.get(torch_dtype)
         if dtype_str not in dtype_str_to_ms_dtype:
             err_msg = \
-                f"ComputeElement._transfer_to_mindspore_tensor failed: no matching mindspore dtype for {dtype_str}"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+                f"ComputeElement._transfer_to_mindspore_tensor failed: no matching mindspore dtype for {dtype_str}. " \
+                f"Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             ms_dtype = dtype_str_to_ms_dtype.get(dtype_str)
 
@@ -198,8 +202,9 @@ class ComputeElement:
             parameter_tmp = mindspore.Tensor(ndarray, dtype=ms_dtype)
         else:
             err_msg = "ComputeElement.get_parameter failed: self.parameter type is not in " \
-                      "(int, float, str, slice, bool, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+                      "(int, float, str, slice, bool, torch.Tensor, mindspore.Tensor, MstensorMetaData)." \
+                      "Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
 
         # if necessary, do transfer
         if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.PT_FRAMEWORK:
@@ -296,8 +301,9 @@ class ComputeElement:
         self.shape = tuple()
         if not isinstance(parameter, self.supported_parameter_type):
             err_msg = "ComputeElement._init_with_parameter failed: " \
-                      "parameter type is not in (int, float, str, slice, bool, torch.Tensor, mindspore.Tensor)"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+                      "parameter type is not in (int, float, str, slice, bool, torch.Tensor, mindspore.Tensor)." \
+                      "Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         if isinstance(parameter, mindspore.Tensor):
             self.shape = tuple(parameter.shape)
             self.dtype_str = ms_dtype_to_dtype_str.get(parameter.dtype)
