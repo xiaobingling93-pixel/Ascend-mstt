@@ -234,20 +234,28 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             return;
         }
         const isFileChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
+        const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
         if (isFileChange) {
             switch (this.selection?.type) {
                 case 'json':
                     this.loadJSONGraphData(this.selection);
                     break;
                 case 'db':
-                    this.loadDBGraphData(this.selection);
+                    this.loadDBGraphData(this.selection, true);
                     break;
                 default:
                     break;
             }
-        } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
-            this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
+        }
+        else if (isDBChange) {
+            this.loadDBGraphData(this.selection, false);
+        }
+        else if (this.currentSelection?.microStep !== this.selection?.microStep) {
             this.loadGraphAllNodeList(this.selection);
+            this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
+        }
+        else {
+            return
         }
         this.currentSelection = this.selection;
     };
@@ -281,10 +289,11 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         }
         this.set('metaDir', data);
     }
-    loadDBGraphData = async (metaData: SelectionType) => {
-
-        this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
-        await request({ url: 'loadGraphData', method: 'GET', params: metaData });
+    loadDBGraphData = async (metaData: SelectionType, isInitDB: boolean = false) => {
+        if (isInitDB) {
+            this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
+            await request({ url: 'loadGraphData', method: 'GET', params: metaData });
+        }
         this.progreesLoading('正在加载配置', '请稍后', { progress: 40, progressValue: 50, done: false });
         await Promise.all([
             this.loadGraphConfig(metaData),

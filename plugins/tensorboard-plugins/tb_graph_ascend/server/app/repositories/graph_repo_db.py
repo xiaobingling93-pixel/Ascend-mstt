@@ -548,7 +548,8 @@ class GraphRepoDB(GraphRepo):
                 'npu_unmatch_node': npu_unmatch_node,
                 'bench_unmatch_node': bench_unmatch_node
             }
-            GraphState.set_global_value(f'{rank}_{step}_{micro_step}', all_node_info)
+            all_node_info_cache = GraphState.get_global_value('all_node_info_cache', {})
+            all_node_info_cache[cache] = all_node_info
             return all_node_info
 
         except Exception as e:
