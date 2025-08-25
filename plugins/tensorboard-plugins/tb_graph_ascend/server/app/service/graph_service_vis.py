@@ -71,7 +71,6 @@ class JsonGraphService(GraphServiceStrategy):
                 yield f"data: {json.dumps({'progress': current_progress, 'error': str(e)})}\n\n"
 
         if json_data is not None:  # 验证存储
-            GraphState.init_defaults()  # 清缓存
             GraphState.set_global_value('current_file_data', json_data)
             GraphState.set_global_value('current_tag', self.tag)
             GraphState.set_global_value('current_run', run_path)
