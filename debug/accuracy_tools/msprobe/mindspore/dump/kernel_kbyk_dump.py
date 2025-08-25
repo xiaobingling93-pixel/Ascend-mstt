@@ -20,6 +20,9 @@ from msprobe.core.common.file_utils import create_directory, save_json
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 
+import mindspore as ms
+ms_version = ms.__version__
+
 
 class KernelKbykDump:
     COMMON_SETTINGS = "common_dump_settings"
@@ -39,6 +42,7 @@ class KernelKbykDump:
         common_set["input_output"] = 0
         common_set["kernels"] = []
         common_set["support_device"] = [0, 1, 2, 3, 4, 5, 6, 7]
+        common_set["statistic_category"] = []
 
         if config.stat_cal_mode and config.device_stat_precision_mode:
             e2e_set = {
@@ -71,9 +75,29 @@ class KernelKbykDump:
                 common_set["input_output"] = 1
             if config.data_mode[0] == Const.OUTPUT:
                 common_set["input_output"] = 2
+        if config.summary_mode:
+            if isinstance(config.summary_mode, str):
+                if config.summary_mode == Const.STATISTICS:
+                    common_set["statistic_category"] = ["max", "min", "avg", "l2norm"]
+                else:
+                    mode = self._process_hash(config.summary_mode)
+                    common_set["statistic_category"] = [mode]
+            elif isinstance(config.summary_mode, list):
+                common_set["statistic_category"] = list({
+                    self._process_hash("avg" if mode == Const.MEAN else mode)
+                    for mode in config.summary_mode
+                })
 
         self.dump_json[KernelKbykDump.COMMON_SETTINGS] = common_set
         self.dump_json[KernelKbykDump.E2E_SETTINGS] = e2e_set
+
+    @staticmethod
+    def _process_hash(value):
+        if ms_version <= "2.7.0" and (value == Const.HASH or value == Const.MD5):
+            value = "md5"
+        elif value == Const.MD5:
+            value = "hash:md5"
+        return value
 
     def handle(self):
         json_path = self.dump_json[KernelKbykDump.COMMON_SETTINGS]["path"]
