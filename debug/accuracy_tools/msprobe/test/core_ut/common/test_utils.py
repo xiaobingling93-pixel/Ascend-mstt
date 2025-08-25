@@ -38,7 +38,6 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import (CompareException,
                                        check_compare_param,
-                                       check_configuration_param,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
@@ -133,14 +132,6 @@ class TestUtils(TestCase):
             self.assertEqual(mock_check_file_or_directory_path.call_args_list[i][0], call_args[i])
         self.assertEqual(len(mock__check_json.call_args[0]), 2)
         self.assertEqual(mock__check_json.call_args[0][1], "stack_path.json")
-
-    @patch.object(logger, "error")
-    def test_check_configuration_param(self, mock_error):
-        with self.assertRaises(CompareException) as context:
-            check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False,
-                                      is_print_compare_log=True)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Invalid input parameter, stack_mode which should be only bool type.")
 
     @patch.object(logger, "error")
     def test__check_json(self, mock_error):

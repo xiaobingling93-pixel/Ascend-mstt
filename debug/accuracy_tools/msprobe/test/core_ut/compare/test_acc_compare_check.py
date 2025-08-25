@@ -1,9 +1,12 @@
 # coding=utf-8
 import unittest
+from unittest.mock import patch
 
 from msprobe.core.compare.check import check_dump_json_str, check_json_key_value, valid_key_value, \
-    check_stack_json_str
+    check_stack_json_str, check_configuration_param
 from msprobe.core.common.utils import CompareException
+from msprobe.core.common.log import logger
+from msprobe.core.compare.acc_compare import ComparisonConfig
 
 
 # test_check_struct_match
@@ -123,3 +126,25 @@ class TestUtilsMethods(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             check_stack_json_str(stack_info, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
+
+    @patch.object(logger, "error")
+    def test_check_configuration_param(self, mock_error):
+        config = ComparisonConfig(
+            dump_mode='',
+            stack_mode='False',
+            auto_analyze=True,
+            fuzzy_match=False,
+            highlight=False,
+            data_mapping={},
+            suffix='',
+            cell_mapping={},
+            api_mapping={},
+            layer_mapping={},
+            first_diff_analyze=False,
+            compared_file_type='',
+            is_print_compare_log=True
+        )
+        with self.assertRaises(CompareException) as context:
+            check_configuration_param(config)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
+        mock_error.assert_called_with("Invalid input parameter, stack_mode which should be only bool type.")

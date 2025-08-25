@@ -18,13 +18,14 @@ import re
 import math
 import zlib
 from dataclasses import dataclass
+import multiprocessing
 
 import numpy as np
 import pandas as pd
 
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
-from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
 
 json_file_mapping = {
     Const.DUMP_JSON_FILE: "dump.json",
@@ -661,41 +662,130 @@ def _compare_parser(parser):
                         help="<optional> Whether to perform a diff analyze on the api name.", required=False)
 
 
-def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
-    if not isinstance(kwargs.get('first_diff_analyze', False), bool):
-        logger.error('kwargs: first_diff_analyze should be bool, please check!')
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    if kwargs.get('suffix'):
-        logger.error("Argument 'suffix' is not supported for compare_distributed.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    is_print_compare_log = kwargs.get('is_print_compare_log', True)
-    # get the ranks and match by order
-    npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
-    bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
+def get_sorted_ranks(npu_dump_dir, bench_dump_dir):
+    """
+    get the ranks and match by order
+    """
+    unsorted_npu_ranks = check_and_return_dir_contents(npu_dump_dir, 'rank')
+    unsorted_bench_ranks = check_and_return_dir_contents(bench_dump_dir, 'rank')
+    # 正则匹配已经校验rank后面必是数字，或者无数字的rank
+    npu_ranks = sorted(unsorted_npu_ranks, key=lambda x: int(x[4:]) if len(x) > 4 else -1)  # 前四个字符都是rank，后面是卡号
+    bench_ranks = sorted(unsorted_bench_ranks, key=lambda x: int(x[4:]) if len(x) > 4 else -1)
     if len(npu_ranks) != len(bench_ranks):
         logger.error('The number of ranks in the two runs are different. '
                      'Unable to match the ranks. Please use another folder to compare '
                      'or use compare() api and manually match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    for nr, br in zip(npu_ranks, bench_ranks):
+    return npu_ranks, bench_ranks
+
+
+def multi_statistics_compare(func, func_args):
+    def err_call(args):
+        logger.error(f'Multiprocess statistics compare failed! Reason: {args}')
+        try:
+            pool.close()
+        except OSError:
+            logger.error("Pool terminate failed")
+
+    compare_func, input_param_nr_list, output_path, kwargs = func_args
+
+    param_num = len(input_param_nr_list)
+    process_num = max(int((multiprocessing.cpu_count() + 1) // 4), 1)
+    if param_num <= process_num:
+        process_num = param_num
+        chunks = [[input_param_nr] for input_param_nr in input_param_nr_list]
+    else:
+        chunk_size = param_num // process_num
+        remainder = param_num % process_num
+        chunks = [input_param_nr_list[i:i + chunk_size] for i in range(0, param_num - remainder, chunk_size)]
+        for i in range(remainder):
+            chunks[i].append(input_param_nr_list[param_num - remainder + i])
+
+    pool = multiprocessing.Pool(process_num)
+    for chunk in chunks:
+        pool.apply_async(func, args=(compare_func, chunk, output_path, kwargs), error_callback=err_call)
+    pool.close()
+    pool.join()
+
+
+def mp_logger_init(ranks_str):
+    """
+    多进程比对需要对logger进行wrap和patch，在日志前加上卡号信息，从而实现不同进程日志的隔离
+    """
+
+    def wrap_logger(fn):
+        def inner(msg, *args, **kwargs):
+            return fn(ranks_str + msg, *args, **kwargs)
+        return inner
+
+    logger.info = wrap_logger(logger.info)
+    logger.warning = wrap_logger(logger.warning)
+    logger.error = wrap_logger(logger.error)
+
+
+def multi_ranks_compare(compare_func, input_param_nr_list, output_path, kwargs):
+    """
+    将多卡数据分成多进程后，单进程内可能还有多张卡的数据，因此还需要多次比对
+    """
+    rank_list = [input_param_nr[1] for input_param_nr in input_param_nr_list]  # input_param_nr内部数据结构，2元素tuple
+    ranks_str = f"[{' '.join(rank_list)}]"
+    mp_logger_init(ranks_str)
+    for input_param_nr in input_param_nr_list:
+        input_param, nr = input_param_nr
+        compare_entry(compare_func, input_param, output_path, nr, kwargs)
+
+
+def compare_entry(compare_func, input_param, output_path, nr, kwargs):
+    try:
+        compare_func(input_param=input_param, output_path=output_path, suffix=f'_{nr}', **kwargs)
+    except CompareException as e:
+        if e.code == CompareException.INVALID_DATA_ERROR:
+            logger.error(f"Invalid or missing 'data' in dump.json. Skipping {nr} comparison.")
+        if e.code == CompareException.INVALID_TASK_ERROR:
+            logger.error(f"Invalid or missing 'task' in dump.json. Skipping {nr} comparison.")
+
+
+def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
+    def extract_compare_param(_file_type):
         npu_data_dir = os.path.join(npu_dump_dir, nr)
         bench_data_dir = os.path.join(bench_dump_dir, br)
+        npu_path = extract_json(npu_data_dir, _file_type)
+        bench_path = extract_json(bench_data_dir, _file_type)
+        if npu_path == "" or bench_path == "":
+            logger.debug(f'Did not find paired {_file_type} in {nr} and {br}, skip comparing.')
+            return {}, True
+        _input_param = {
+            'npu_json_path': npu_path,
+            'bench_json_path': bench_path,
+            'is_print_compare_log': kwargs.get('is_print_compare_log', True)
+        }
+        return _input_param, False
+
+    if kwargs.get('suffix'):
+        logger.error("Argument 'suffix' is not supported for compare_distributed.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    npu_ranks, bench_ranks = get_sorted_ranks(npu_dump_dir, bench_dump_dir)
+
+    # 统计量、md5比对
+    pre_check_dump_path = os.path.join(npu_dump_dir, npu_ranks[0], 'dump.json') if npu_ranks else ''
+    if not pre_check_dump_path:
+        return
+    dump_data = load_json(pre_check_dump_path)
+    if dump_data.get('task') == Const.STATISTICS:
+        # dump数据为统计量或md5时，多进程加速比对
+        input_param_nr_list = []
+        for nr, br in zip(npu_ranks, bench_ranks):
+            input_param, skip = extract_compare_param(Const.DUMP_JSON_FILE)
+            if not skip:
+                input_param_nr_list.append((input_param, nr))
+        func_args = (compare_func, input_param_nr_list, output_path, kwargs)
+        multi_statistics_compare(multi_ranks_compare, func_args)
+        return
+
+    # 真实数据比对
+    for nr, br in zip(npu_ranks, bench_ranks):
         for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
-            npu_path = extract_json(npu_data_dir, file_type)
-            bench_path = extract_json(bench_data_dir, file_type)
-            if npu_path == "" or bench_path == "":
-                logger.debug(f'Did not find paired {file_type} in {nr} and {br},'
-                             ' skip comparing.')
-                continue
-            dump_result_param = {
-                'npu_json_path': npu_path,
-                'bench_json_path': bench_path,
-                'is_print_compare_log': is_print_compare_log
-            }
-            try:
-                compare_func(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}', **kwargs)
-            except CompareException as e:
-                if e.code == CompareException.INVALID_DATA_ERROR:
-                    logger.error(f"Invalid or missing 'data' in dump.json. Skipping {nr} comparison.")
-                if e.code == CompareException.INVALID_TASK_ERROR:
-                    logger.error(f"Invalid or missing 'task' in dump.json. Skipping {nr} comparison.")
+            input_param, skip = extract_compare_param(file_type)
+            if not skip:
+                compare_entry(compare_func, input_param, output_path, nr, kwargs)

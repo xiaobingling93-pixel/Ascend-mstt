@@ -183,8 +183,9 @@ class HighlightRules:
 
 
 class HighLight:
-    def __init__(self, mode_config: ModeConfig):
+    def __init__(self, mode_config: ModeConfig, rank):
         self.mode_config = mode_config
+        self.rank = rank
 
     @staticmethod
     def check_indices_numeric(api_items, indices: list):
@@ -241,7 +242,9 @@ class HighLight:
         """将dataframe根据API分组，并找到有误差的算子用于高亮"""
         result = result_df.values
         api_batches = gen_api_batches(result)
-        with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
+        default_bar_desc = 'API/Module Analyse Progress'
+        bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
+        with tqdm(total=len(api_batches), desc=bar_desc_add_rank, unit="item", ncols=100) as progress_bar:
             for api_batch in api_batches:
                 self.find_error_rows(result[api_batch.start: api_batch.params_grad_end_index], api_batch,
                                      highlight_dict)
@@ -319,7 +322,7 @@ class HighLight:
 
         self.update_highlight_err_msg(result_df, highlight_dict)  # add highlight err_msg
 
-        self.handle_multi_process_malicious_value_check(self.df_malicious_value_check, result_df)
+        self.df_malicious_value_check(result_df)
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -370,8 +373,11 @@ class HighLight:
         pool.close()
         pool.join()
 
-    def df_malicious_value_check(self, df_chunk, result_df_columns):
-        for row in df_chunk.itertuples(index=False):
+    def df_malicious_value_check(self, result_df):
+        result_df_columns = result_df.columns.tolist()
+        for column in result_df_columns:
+            self.value_check(column)
+        for row in result_df.itertuples(index=False):
             api_name = row[0]
             for i, value in enumerate(row):
                 self.value_check(value, api_name, i, result_df_columns)

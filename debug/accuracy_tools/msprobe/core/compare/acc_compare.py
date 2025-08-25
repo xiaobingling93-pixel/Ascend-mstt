@@ -28,9 +28,9 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type, \
-    add_time_with_json
-from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
+    set_dump_path, get_dump_mode, check_compare_param, load_stack_json, get_file_type, add_time_with_json
+from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
+    check_configuration_param
 from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
     reorder_op_x_list, set_stack_json_path, check_api_info_len
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
@@ -53,6 +53,7 @@ class ComparisonConfig:
     layer_mapping: dict
     compared_file_type: str
     first_diff_analyze: bool
+    is_print_compare_log: bool
 
 
 class Comparator:
@@ -100,6 +101,7 @@ class Comparator:
 
         # get kwargs or set default value
         suffix = kwargs.get('suffix', '')
+        rank = suffix[1:]
 
         # process output file
         file_path = self.process_output_file(output_path, suffix, self.mode_config.compared_file_type)
@@ -108,7 +110,7 @@ class Comparator:
         npu_json = input_param.get("npu_json_path")
         bench_json = input_param.get("bench_json_path")
         stack_json = input_param.get("stack_json_path")
-        result_df = self.compare_statistics([npu_json, bench_json, stack_json])
+        result_df = self.compare_statistics([npu_json, bench_json, stack_json], rank)
         if not result_df.values.tolist():
             logger.warning("Can`t match any op. No compare result file generated.")
             return
@@ -130,7 +132,7 @@ class Comparator:
         if self.mode_config.highlight and len(result_df) <= CompareConst.MAX_EXCEL_LENGTH:
             # highlight if not too long
             highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-            highlight = HighLight(self.mode_config)
+            highlight = HighLight(self.mode_config, rank)
             if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
                 highlight.find_compare_result_error_rows(result_df, highlight_dict)
             result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
@@ -147,9 +149,9 @@ class Comparator:
 
         print_compare_ends_info()
 
-    def compare_statistics(self, file_list):
+    def compare_statistics(self, file_list, rank):
         # load and parse json data
-        parse_data = ParseData(self.mode_config)
+        parse_data = ParseData(self.mode_config, rank)
         npu_df, bench_df = parse_data.parse(file_list)
 
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
@@ -180,8 +182,9 @@ class Comparator:
 
 
 class ParseData:
-    def __init__(self, mode_config: ModeConfig):
+    def __init__(self, mode_config: ModeConfig, rank):
         self.mode_config = mode_config
+        self.rank = rank
 
     def parse(self, file_list):
         npu_json_path, bench_json_path, stack_json_path = file_list
@@ -190,12 +193,12 @@ class ParseData:
         stack_json_data = load_stack_json(stack_json_path) if self.mode_config.stack_mode else None
 
         # parse json data and generate df
-        npu_df = self.gen_data_df(npu_json_data, stack_json_data)
-        bench_df = self.gen_data_df(bench_json_data, stack_json_data)
+        npu_df = self.gen_data_df(npu_json_data, stack_json_data, 'NPU')
+        bench_df = self.gen_data_df(bench_json_data, stack_json_data, 'Bench')
 
         return npu_df, bench_df
 
-    def gen_data_df(self, data_json, stack_json_data):
+    def gen_data_df(self, data_json, stack_json_data, device: str):
         result = {
             CompareConst.OP_NAME: [],
             Const.DTYPE: [],
@@ -217,7 +220,9 @@ class ParseData:
             return pd.DataFrame(result)
 
         api_nums = len(apis_data)
-        progress_bar = tqdm(total=api_nums, desc="API/Module Read Progress", unit="api/module", ncols=100)
+        default_bar_desc = f'{device} API/Module Read Progress'
+        bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
+        progress_bar = tqdm(total=api_nums, desc=bar_desc_add_rank, unit="api/module", ncols=100)
 
         # 从json中循环解析API数据，遍历所有API
         for data_name in apis_data:
@@ -777,6 +782,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             layer_mapping=kwargs.get('layer_mapping', {}),
             first_diff_analyze=kwargs.get('first_diff_analyze', False),
             compared_file_type='',
+            is_print_compare_log=input_param.get('is_print_compare_log', True)
         )
 
         set_dump_path(input_param)
@@ -789,8 +795,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         else:
             config.stack_mode = set_stack_json_path(input_param)
 
-        check_configuration_param(config.stack_mode, config.auto_analyze, config.fuzzy_match, config.highlight,
-                                  input_param.get('is_print_compare_log', True))
+        check_configuration_param(config)
         create_directory(output_path)
         check_compare_param(input_param, output_path, config.dump_mode, config.stack_mode)
 

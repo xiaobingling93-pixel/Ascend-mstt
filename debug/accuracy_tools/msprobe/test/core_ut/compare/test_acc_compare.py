@@ -363,7 +363,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         mode_config = ModeConfig(**config_dict)
 
-        result = ParseData(mode_config).gen_merge_list(json_data, op_name, stack_json_data)
+        result = ParseData(mode_config, 'rank0').gen_merge_list(json_data, op_name, stack_json_data)
         self.assertEqual(result, merge_list)
 
     def test_check_op_item_fuzzy(self):
@@ -397,7 +397,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         from msprobe.pytorch.compare.pt_compare import read_real_data
         comparator = Comparator(read_real_data, mode_config, mapping_config)
-        result = comparator.compare_statistics(file_list)
+        result = comparator.compare_statistics(file_list, 'rank0')
         o_data = [
             ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
              'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', 'False', 'False',
@@ -430,7 +430,7 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode)
-        parse_data = ParseData(mode_config)
+        parse_data = ParseData(mode_config, 'rank0')
         npu_df, bench_df = parse_data.parse(file_list)
 
         target_df = pd.DataFrame(
@@ -449,8 +449,8 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode)
-        parse_data = ParseData(mode_config)
-        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+        parse_data = ParseData(mode_config, 'rank0')
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32',
@@ -467,8 +467,8 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=Const.ALL)
-        parse_data = ParseData(mode_config)
-        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+        parse_data = ParseData(mode_config, 'rank0')
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
@@ -485,8 +485,8 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=Const.MD5)
-        parse_data = ParseData(mode_config)
-        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+        parse_data = ParseData(mode_config, 'rank0')
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
@@ -503,7 +503,7 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode)
-        parse_data = ParseData(mode_config)
+        parse_data = ParseData(mode_config, 'rank0')
         merge_list = parse_data.gen_merge_list(npu_json_data, 'Functional.linear.0.forward', stack_json_data)
 
         target_dict = {
