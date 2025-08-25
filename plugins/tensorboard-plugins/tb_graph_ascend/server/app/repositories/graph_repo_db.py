@@ -391,7 +391,7 @@ class GraphRepoDB(GraphRepo):
                     up_node,
                     sub_nodes,
                     node_type,
-                    micro_step_id
+                    micro_step_id,
                     matched_node_link,
                     precision_index,
                     overflow_level,
