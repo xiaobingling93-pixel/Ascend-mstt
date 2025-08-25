@@ -234,8 +234,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             return;
         }
         const isFileChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
-        const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
-        if (isFileChange || isDBChange) {
+        if (isFileChange) {
             switch (this.selection?.type) {
                 case 'json':
                     this.loadJSONGraphData(this.selection);

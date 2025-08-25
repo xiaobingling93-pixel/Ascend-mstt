@@ -43,6 +43,7 @@ class DbGraphService(GraphServiceStrategy):
             self.conn = self.repo.get_db_connection()
         # 清空缓存
         GraphState.set_global_value("update_precision_cache", {})
+        GraphState.set_global_value("all_node_info_cache", {})
         return {'success': True}
 
     def load_graph_config_info(self):

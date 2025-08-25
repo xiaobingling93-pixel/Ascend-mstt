@@ -19,7 +19,7 @@ import time
 import sqlite3
 from .graph_repo_base import GraphRepo
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import SINGLE, NPU, BENCH, DataType
+from ..utils.global_state import GraphState, SINGLE, NPU, BENCH, DataType
 from tensorboard.util import tb_logging
 
 logger = tb_logging.get_logger()
@@ -50,7 +50,7 @@ class GraphRepoDB(GraphRepo):
             # 提升性能的 PRAGMA 设置
             self.conn.execute("PRAGMA journal_mode = WAL;")
             self.conn.execute("PRAGMA synchronous = NORMAL;")  # 或 OFF（不安全）
-            self.conn.execute("PRAGMA cache_size = 20000;")
+            self.conn.execute("PRAGMA cache_size = 40000;")
             self.conn.execute("PRAGMA wal_autocheckpoint = 0;")
         except:
             logger.error("Failed to connect to database")
@@ -478,8 +478,14 @@ class GraphRepoDB(GraphRepo):
     # DB: 查询已匹配节点列表，未匹配节点列表，所有的节点列表
     def query_all_node_info_in_one(self, rank, step, micro_step):
         try:
+            # 查找缓存
+            all_node_info_cache = GraphState.get_global_value('all_node_info_cache', {})
+            cache = f'{rank}_{step}_{micro_step}'
+            if all_node_info_cache.get(cache) != None:
+                print("all_node_info_cache hit")
+                return all_node_info_cache.get(cache) 
+            # 查询数据库
             start = time.perf_counter()
-
             # 单次查询：获取 node_name 和 matched_node_link
             query = """
                 SELECT 
@@ -534,8 +540,7 @@ class GraphRepoDB(GraphRepo):
                         bench_unmatch_node.append(node_name)
                 else:
                     logger.error(f"Invalid data source: {row['data_source']}")
-
-            return {
+            all_node_info = {
                 'npu_node_list': npu_node_list,
                 'bench_node_list': bench_node_list,
                 'npu_match_node': npu_match_node,
@@ -543,6 +548,8 @@ class GraphRepoDB(GraphRepo):
                 'npu_unmatch_node': npu_unmatch_node,
                 'bench_unmatch_node': bench_unmatch_node
             }
+            GraphState.set_global_value(f'{rank}_{step}_{micro_step}', all_node_info)
+            return all_node_info
 
         except Exception as e:
             logger.error(f"Failed to query all node info: {e}")
