@@ -25,7 +25,7 @@ i18next
                 translation: {
                     fit: "Fit Screen",
                     settings: "Settings",
-                    match: 'Matching',
+                    function: 'function',
                     show_debug_minimap: "show debug minimap",
                     show_bench_minimap: "show bench minimap",
                     run: "Run",
@@ -56,7 +56,7 @@ i18next
                 translation: {
                     fit: "自适应屏幕",
                     settings: "设置",
-                    match: '匹配',
+                    function: '功能',
                     show_debug_minimap: "调试侧缩略图",
                     show_bench_minimap: "标杆侧缩略图",
                     run: "目录",

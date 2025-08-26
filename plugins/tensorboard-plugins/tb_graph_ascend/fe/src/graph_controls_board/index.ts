@@ -213,7 +213,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
     <div class="tabs">
       <button class="tab-button" on-tap="_showNodeControls">[[t('settings')]]</button>
-      <button class="tab-button" on-tap="_showMatch">[[t('match')]]</button>
+      <button class="tab-button" on-tap="_showMatch">[[t('function')]]</button>
     </div>
     <div id="nodes-content" class="tab-content">
       <div class='setting-title'>
