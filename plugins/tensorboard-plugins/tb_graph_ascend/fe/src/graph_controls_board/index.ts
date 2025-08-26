@@ -333,7 +333,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   @property({ type: Object, notify: true })
   loadAllNodeList: Function = () => { };
 
-  @property({ type: Object })
+  @property({ type: Object, notify: true })
   needLoadAllNodeList: boolean = true;
 
 
