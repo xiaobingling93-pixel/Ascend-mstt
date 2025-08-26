@@ -333,6 +333,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   @property({ type: Object, notify: true })
   loadAllNodeList: Function = () => { };
 
+  @property({ type: Object })
+  needLoadAllNodeList: boolean = true;
+
 
 
   override ready(): void {
@@ -382,11 +385,12 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     this._showTabContent(this.t('settings'), 'nodes-content');
   }
 
-  _showMatch(): void {
+  async _showMatch(): Promise<void> {
     this._showTabContent(this.t('match'), 'match-content');
-    if (this.loadAllNodeList) {
+    if (this.loadAllNodeList && this.needLoadAllNodeList) {
       this.set('loading', true)
-      this.loadAllNodeList(this.selection);
+      await this.loadAllNodeList(this.selection);
+      this.set('needLoadAllNodeList', false) //已经加载过一次,不需要再加载
       this.set('loading', false)
     }
   }

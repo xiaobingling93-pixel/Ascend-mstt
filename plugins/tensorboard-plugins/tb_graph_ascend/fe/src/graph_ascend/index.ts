@@ -67,6 +67,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 is-overflow-filter="{{isOverflowFilter}}"
                 on-fit-tap="onFitTap"
                 load-all-node-list="{{loadGraphAllNodeList}}"
+                need-load-all-node-list="{{needLoadAllNodeList}}"
             ></graph-controls-board>
             <div class="center" slot="center">
                 <div class="graph-board-wrapper">
@@ -225,6 +226,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     @property({ type: Array })
     fileListError: Array<LoadGraphFileInfoListType['error']> = [];
 
+    @property({ type: Object })
+    needLoadAllNodeList: boolean = true;
+
     private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
     private eventSource: EventSource | null = null;
@@ -257,6 +261,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         else {
             return
         }
+        this.set('needLoadAllNodeList', true);
         this.currentSelection = this.selection;
     };
 
