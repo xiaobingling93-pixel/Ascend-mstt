@@ -258,14 +258,14 @@ def is_decorated_by_jit(func):
 
 
 @recursion_depth_decorator('msprobe.mindspore.common.utils.get_cells_and_names')
-def get_cells_and_names(model, cells_set=None, name_prefix=''):
+def get_cells_and_names(model, cells_set=None, name_prefix='', parent_cell=None):
     cells_set = cells_set if cells_set else set()
     if model in cells_set:
         return
 
     cells_set.add(model)
     jit_decorated = is_decorated_by_jit(model.construct)
-    yield name_prefix, model, jit_decorated
+    yield name_prefix, model, jit_decorated, parent_cell
     if jit_decorated:
         return
 
@@ -275,9 +275,9 @@ def get_cells_and_names(model, cells_set=None, name_prefix=''):
             cells_name_prefix = f'{name_prefix}{Const.SEP}{name}' if name_prefix else name
             jit_decorated = is_decorated_by_jit(model.construct)
             if jit_decorated:
-                yield cells_name_prefix, cell, jit_decorated
+                yield cells_name_prefix, cell, jit_decorated, model
             else:
-                for ele in get_cells_and_names(cell, cells_set, cells_name_prefix):
+                for ele in get_cells_and_names(cell, cells_set, cells_name_prefix, model):
                     yield ele
 
 
@@ -288,9 +288,9 @@ def get_cells_and_names_with_index(models):
     def distinguish_cells(cells):
         cells_in_pynative_mode = []
         cells_in_graph_mode = []
-        for name, cell, jit_decorated in cells:
+        for name, cell, jit_decorated, parent_cell in cells:
             if jit_decorated:
-                cells_in_graph_mode.append((name, cell))
+                cells_in_graph_mode.append((name, cell, parent_cell))
             else:
                 cells_in_pynative_mode.append((name, cell))
         return cells_in_pynative_mode, cells_in_graph_mode
