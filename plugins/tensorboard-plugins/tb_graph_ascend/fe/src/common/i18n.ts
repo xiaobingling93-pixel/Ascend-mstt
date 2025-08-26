@@ -48,8 +48,8 @@ i18next
                     },
                     node_match: "Node Match",
                     select_match_config_file: "Select Match Config File",
-                    select_match_config_file_desc: "Select the corresponding configuration file, read the matching node information, and match the corresponding node."
-
+                    select_match_config_file_desc: "Select the corresponding configuration file, read the matching node information, and match the corresponding node.",
+                    node_search: "Node Search"
                 }
             },
             'zh-CN': {
@@ -79,7 +79,8 @@ i18next
                     },
                     node_match: "节点匹配",
                     select_match_config_file: "选择匹配配置文件",
-                    select_match_config_file_desc: "选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。"
+                    select_match_config_file_desc: "选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。",
+                    node_search: "节点搜索"
                 }
             }
         },

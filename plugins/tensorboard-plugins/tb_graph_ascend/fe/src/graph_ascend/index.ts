@@ -66,6 +66,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 task="[[task]]"
                 is-overflow-filter="{{isOverflowFilter}}"
                 on-fit-tap="onFitTap"
+                load-all-node-list="{{loadGraphAllNodeList}}"
             ></graph-controls-board>
             <div class="center" slot="center">
                 <div class="graph-board-wrapper">
@@ -251,7 +252,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.loadDBGraphData(this.selection, false);
         }
         else if (this.currentSelection?.microStep !== this.selection?.microStep) {
-            this.loadGraphAllNodeList(this.selection);
             this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
         }
         else {
@@ -295,10 +295,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             await request({ url: 'loadGraphData', method: 'GET', params: metaData });
         }
         this.progreesLoading('正在加载配置', '请稍后', { progress: 40, progressValue: 50, done: false });
-        await Promise.all([
-            this.loadGraphConfig(metaData),
-            this.loadGraphAllNodeList(metaData),
-        ]);
+        await this.loadGraphConfig(metaData)
         this.progreesLoading('正在初始化图', '请稍后', { progress: 90, progressValue: 90, done: false });
         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
         this.progreesLoading('初始化完成', '请稍后', { progress: 100, progressValue: 100, done: true });
@@ -325,10 +322,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     this.eventSource?.close();
                     this.eventSource = null;
                     try {
-                        await Promise.all([
-                            this.loadGraphConfig(metaData),
-                            this.loadGraphAllNodeList(metaData),
-                        ]);
+                        await this.loadGraphConfig(metaData)
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
                         this.progreesLoading('初始化完成', '请稍后', data);
                     } catch (error) {
