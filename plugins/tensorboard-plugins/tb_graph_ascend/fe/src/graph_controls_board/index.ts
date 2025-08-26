@@ -86,8 +86,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         margin-right: 12px;
       }
 
-
-
       .icon-button {
         font-size: var(--tb-graph-controls-title-font-size);
       }
@@ -134,6 +132,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       }
 
       .tab-content {
+        position: relative;
         background: rgb(255, 255, 255);
         padding: 0 20px;
         flex-grow: 1;
@@ -192,6 +191,20 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         color: #333333;
         font-weight: 600;
       }
+
+      .loading-wrapper{
+          position: absolute;
+          width: 90%;
+          height: 90%;
+          z-index: 999;
+          color: rgba(37, 37, 37, 0.8);
+          background-color: rgba(255, 255, 255, 0.76);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-size: 20px;
+          font-weight: 600;
+      }
       paper-checkbox {
         --paper-checkbox-unchecked-color: gray; /* 选中时的颜色 */
         user-select: none;
@@ -242,6 +255,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     </div>
     <div id="directory-content" class="tab-content hidden"></div>
     <div id="match-content" class="tab-content hidden">
+        <template is='dom-if' if='[[loading]]'>
+          <div class='loading-wrapper'>
+              Loading......
+          </div>
+      </template>
       <vaadin-details class="vaadin-details" summary="[[t('node_match')]]" opened>
         <tf-linkage-search-combox
           t="[[t]]"
@@ -267,6 +285,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
   @property({ type: Object })
   t: Function = (key) => i18next.t(key);
+
+  @property({ type: Boolean })
+  loading: boolean = false;
 
   @property({ type: Object })
   metaDir: MetaDirType = {} as MetaDirType;
@@ -364,7 +385,9 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   _showMatch(): void {
     this._showTabContent(this.t('match'), 'match-content');
     if (this.loadAllNodeList) {
+      this.set('loading', true)
       this.loadAllNodeList(this.selection);
+      this.set('loading', false)
     }
   }
 
