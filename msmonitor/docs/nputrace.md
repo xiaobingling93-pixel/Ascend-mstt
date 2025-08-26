@@ -56,10 +56,6 @@ Step 1：拉起dynolog daemon进程，详细介绍请参考[dynolog介绍](./dyn
 ```bash
 # 命令行方式开启dynolog daemon
 dynolog --enable-ipc-monitor --certs-dir /home/server_certs
-
-# 如需使用Tensorboard展示数据，传入参数--metric_log_dir用于指定Tensorboard文件落盘路径
-# 例如：
-dynolog --enable-ipc-monitor --certs-dir /home/server_certs --metric_log_dir /tmp/metric_log_dir # dynolog daemon的日志路径为：/var/log/dynolog.log
 ```
 
 Step 2：在训练/推理任务拉起窗口使能dynolog环境变量

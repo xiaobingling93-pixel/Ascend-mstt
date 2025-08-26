@@ -1,5 +1,3 @@
-
-
 # msmonitor-plugin编包指导
 ## 模块说明
 ### IPCMonitor
@@ -10,7 +8,7 @@
 __PyDynamicMonitorProxy接口说明__:
 * `init_dyno` 向dynolog daemon发送注册请求
   * input: npuId(int)
-  * return：None
+  * return: None 
 * `poll_dyno` 向dynolog daemon获取Profiler控制参数
   * input: None
   * return: str，返回控制参数

@@ -92,6 +92,6 @@ pip install tensorboard
 # 然后运行：
 tensorboard --logdir={metric_log_dir} # metric_log_dir为Step1中dynolog命令行中--metric_log_dir参数指定的路径
 
-# 打开浏览器访问http://localhost:6006即可看到对应可视化图表, 其中6006为tensorboard默认端口
+# 打开浏览器访问http://localhost:6006即可看到对应可视化图表, 其中localhost为服务器的ip地址，6006为tensorboard默认端口
 ```
 > tensorboard 具体使用参数见https://github.com/tensorflow/tensorboard
