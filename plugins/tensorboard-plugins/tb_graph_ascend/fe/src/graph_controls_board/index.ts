@@ -260,7 +260,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
               Loading......
           </div>
       </template>
-      <vaadin-details class="vaadin-details" summary="[[t('node_match')]]" opened>
+      <vaadin-details class="vaadin-details" summary="[[t('node_search')]]" opened>
         <tf-linkage-search-combox
           t="[[t]]"
           nodelist="[[nodelist]]"           
@@ -386,7 +386,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   }
 
   async _showMatch(): Promise<void> {
-    this._showTabContent(this.t('match'), 'match-content');
+    this._showTabContent(this.t('function'), 'match-content');
     if (this.loadAllNodeList && this.needLoadAllNodeList) {
       this.set('loading', true)
       await this.loadAllNodeList(this.selection);
