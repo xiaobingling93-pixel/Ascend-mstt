@@ -277,6 +277,8 @@ class Const:
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
 
+    API_ATTR_LIST = ["__name__", "default"]
+
     PT_API_TYPE_FUNCTIONAL = "functional"
     PT_API_TYPE_TENSOR = "tensor"
     PT_API_TYPE_TORCH = "torch"

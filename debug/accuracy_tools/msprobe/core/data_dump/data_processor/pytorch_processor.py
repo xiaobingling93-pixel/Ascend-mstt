@@ -279,8 +279,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_stat = self.get_stat_info(common_tensor, self.config.async_dump, self.config.precision)
         tensor_json = {}
         tensor_json.update({'type': self.tensor_handler.get_tensor_type(tensor)})
-        tensor_json.update({'dtype': str(tensor.dtype)})
-        tensor_json.update({"shape": tensor.shape})
+        tensor_json.update({'dtype': str(common_tensor.dtype)})
+        tensor_json.update({"shape": common_tensor.shape})
 
         stat_values = [
             tensor_stat.max,
@@ -299,11 +299,10 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
-                logger.debug("Calculating the md5 value of fake tensor or meta tensor is not supported.")
                 # 拷贝并搬到 CPU
-                if tensor.dtype == torch.bfloat16:
-                    tensor = tensor.float()
-                tensor_bytes = tensor.cpu().detach().numpy()
+                if common_tensor.dtype == torch.bfloat16:
+                    common_tensor = common_tensor.float()
+                tensor_bytes = common_tensor.cpu().detach().numpy()
 
                 future = self._crc_executor.submit(
                     PytorchDataProcessor.compute_crc32_bytes,
@@ -313,14 +312,21 @@ class PytorchDataProcessor(BaseDataProcessor):
                 crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
                 tensor_json[Const.MD5_INDEX] = crc_placeholder
             else:
+                logger.debug(
+                    "Calculating the md5 value of fake tensor or meta tensor is not supported, "
+                    f"the current api/module name is {self.current_api_or_module_name}."
+                )
                 tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
-        if self.tensor_handler.is_empty_data(tensor) or tensor.storage().data_ptr() == 0:
-            logger.debug("Collecting real data of fake tensor or meta tensor is not supported or data_ptr is 0.")
+        if self.tensor_handler.is_empty_data(tensor) or tensor.untyped_storage().data_ptr() == 0:
+            logger.debug(
+                "Collecting real data of fake tensor or meta tensor is not supported or data_ptr is 0, "
+                f"the current api/module name is {self.current_api_or_module_name}."
+            )
             return single_arg
 
         single_arg.update({"data_name": dump_data_name})
