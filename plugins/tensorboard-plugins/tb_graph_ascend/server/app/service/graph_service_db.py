@@ -41,9 +41,7 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': False, 'error': 'database not init'}
         if not self.conn:
             self.conn = self.repo.get_db_connection()
-        # 清空缓存
-        GraphState.set_global_value("update_precision_cache", {})
-        GraphState.set_global_value("all_node_info_cache", {})
+        GraphState.set_global_value("all_node_info_cache", {})  # 切换文件清缓存
         return {'success': True}
 
     def load_graph_config_info(self):

@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 from .hierarchy import Hierarchy
-from ..utils.global_state import NPU, BENCH, SINGLE
+from ..utils.global_state import GraphState,NPU, BENCH, SINGLE
 
 
 class LayoutHierarchyModel:
@@ -31,6 +31,7 @@ class LayoutHierarchyModel:
     @staticmethod
     def change_expand_state(node_name, graph_type, repo, micro_step, rank=0, step=0):
         if node_name == 'root':
+            GraphState.set_global_value("update_precision_cache", {})  # 切换图清缓存
             LayoutHierarchyModel.hierarchy[graph_type] = Hierarchy(graph_type, repo, micro_step, rank, step)
             
         elif LayoutHierarchyModel.hierarchy.get(graph_type, None):
