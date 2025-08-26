@@ -398,7 +398,7 @@ class TestKernelKbykDump(TestCase):
                 "list": [],
                 "data_mode": ["all"],
                 "device": "host",
-                "summary_mode": ["hash", "md5","max"]
+                "summary_mode": ["hash", "md5", "max", "mean"]
             }
         }
 
@@ -409,9 +409,9 @@ class TestKernelKbykDump(TestCase):
         self.assertEqual(dumper.dump_json["e2e_dump_settings"]["stat_calc_mode"], "host")
         self.assertEqual(dumper.dump_json["common_dump_settings"]["saved_data"], "statistic")
         if ms_version > "2.7.0":
-            self.assertEqual(Counter(dumper.dump_json["common_dump_settings"]["statistic_category"]), Counter(["max", "hash", "hash:md5"]))
+            self.assertEqual(Counter(dumper.dump_json["common_dump_settings"]["statistic_category"]), Counter(["max", "hash", "hash:md5", "avg"]))
         else:
-            self.assertEqual(Counter(dumper.dump_json["common_dump_settings"]["statistic_category"]), Counter(["max", "md5"]))
+            self.assertEqual(Counter(dumper.dump_json["common_dump_settings"]["statistic_category"]), Counter(["max", "md5", "avg"]))
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
         with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
