@@ -54,7 +54,7 @@ if not is_mindtorch():
         )
 
     _supported_api_list_path = (os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE),)
-    _backlist = []
+    _blacklist = []
 else:
     import torch
     import torch_npu
@@ -69,7 +69,7 @@ else:
     }
     _supported_api_list_path = (os.path.join(cur_path, '../../../pytorch/hook_module',
                                              MsConst.SUPPORTED_API_LIST_FILE),)
-    _backlist = []
+    _blacklist = []
 
 _inner_used_api = {
     Const.MS_FRAMEWORK + Const.SEP + Const.MS_API_TYPE_OPS: (
@@ -160,7 +160,7 @@ def get_api_register(return_new=False):
             _inner_used_api,
             _supported_api_list_path,
             ApiTemplate,
-            _backlist
+            _blacklist
         )
 
     global api_register
@@ -170,6 +170,6 @@ def get_api_register(return_new=False):
             _inner_used_api,
             _supported_api_list_path,
             ApiTemplate,
-            _backlist
+            _blacklist
         )
     return api_register
