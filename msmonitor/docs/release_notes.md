@@ -40,7 +40,7 @@ Step 3: 包安装(以x86版本为例)
    
    3. 安装whl包
    ```bash
-   pip install msmonitor_plugin-*-cp39-*.whl
+   pip install msmonitor_plugin-{mindstudio_version}-cp{python_version}-cp{python_version}-linux_{system_architecture}.whl
    ```
    
    4. 安装dynolog
