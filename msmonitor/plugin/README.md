@@ -36,10 +36,10 @@ pip install pybind11
 bash ./stub/build_stub.sh
 python3 setup.py bdist_wheel
 ```
-以上命令执行完成后在dist目录下生成msMonitor插件whl安装包msmonitor-plugin-{version}.whl
+以上命令执行完成后在dist目录下生成msMonitor插件whl安装包msmonitor_plugin-{mindstudio_version}-cp{python_version}-cp{python_version}-linux_{system_architecture}.whl
 * 安装
 ```
-pip install dist/{msmonitor-plugin-{version}.whl}
+pip install dist/msmonitor_plugin-{mindstudio_version}-cp{python_version}-cp{python_version}-linux_{system_architecture}.whl
 ```
 * 卸载
 ```
