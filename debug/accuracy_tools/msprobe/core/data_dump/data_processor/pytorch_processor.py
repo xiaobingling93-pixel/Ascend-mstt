@@ -136,6 +136,54 @@ class PytorchDataProcessor(BaseDataProcessor):
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
 
+    def _tensor_bytes_view_cpu(t: torch.Tensor, logger=None, tag: str = "crc"):
+        """
+        返回 t 在当前 dtype 下的原始字节视图（优先零拷贝）。
+        需保证：t 已在 CPU 且是 contiguous。
+        可能返回 memoryview 或 bytes（兜底拷贝），均可被 zlib.crc32 接受。
+        """
+        # 直接拿底层 storage（PyTorch 提供的无类型存储，单字节步长）
+        # nbytes = t.numel() * t.element_size()
+        # storage = t.untyped_storage()
+        # mv = memoryview(storage)  # 这就是 u8 视图
+        # return mv[:nbytes]        # 截到有效字节长度
+
+        nbytes = t.numel() * t.element_size()
+        byte_offset = t.storage_offset() * t.element_size()
+
+        if nbytes == 0:
+            # _log("empty_tensor", action="return_empty_memoryview")
+            return memoryview(b"")
+
+        # A) 直接对 UntypedStorage 建立 memoryview
+        storage = t.untyped_storage()
+
+        # C) ctypes 指针构造 memoryview（零拷贝 FFI）
+        import ctypes
+        try:
+            addr = storage.data_ptr() + byte_offset
+            buf = (ctypes.c_ubyte * nbytes).from_address(addr)
+            mv3 = memoryview(buf)
+
+            return mv3
+        except Exception as e3:
+
+            pass
+
+    def compute_crc32_from_tensor(t: torch.Tensor, *, logger=None) -> str:
+        """
+        直接对 Tensor 原始字节做 CRC32。
+        :
+        - "raw": 保持 bfloat16 原始 16bit 字节（推荐，避免升精/增容）
+        """
+
+        # 取得字节视图（含多级回退），然后做 CRC
+        mv = PytorchDataProcessor._tensor_bytes_view_cpu(t)
+
+        crc = zlib.crc32(mv)
+
+        return f"{crc:08x}"
+
     @staticmethod
     def analyze_device_in_kwargs(element):
         single_arg = {}
@@ -299,14 +347,17 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
-                # 拷贝并搬到 CPU
-                if common_tensor.dtype == torch.bfloat16:
-                    common_tensor = common_tensor.float()
-                tensor_bytes = common_tensor.cpu().detach().numpy()
+
+                if common_tensor.device.type != "cpu":
+                    t_cpu = common_tensor.to("cpu", non_blocking=False)
+                t_cpu = common_tensor.detach()
+                if not t_cpu.is_contiguous():
+                    t_cpu = t_cpu.contiguous()
+
 
                 future = self._crc_executor.submit(
-                    PytorchDataProcessor.compute_crc32_bytes,
-                    tensor_bytes
+                    PytorchDataProcessor.compute_crc32_from_tensor,
+                    t_cpu
                 )
 
                 crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
