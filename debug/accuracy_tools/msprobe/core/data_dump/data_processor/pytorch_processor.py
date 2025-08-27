@@ -303,7 +303,7 @@ class PytorchDataProcessor(BaseDataProcessor):
                 # 拷贝并搬到 CPU
                 if tensor.dtype == torch.bfloat16:
                     tensor = tensor.float()
-                tensor_bytes = tensor.cpu().detach().numpy().tobytes()
+                tensor_bytes = tensor.cpu().detach().numpy()
 
                 future = self._crc_executor.submit(
                     PytorchDataProcessor.compute_crc32_bytes,
