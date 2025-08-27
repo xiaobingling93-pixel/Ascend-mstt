@@ -84,7 +84,7 @@ class KernelKbykDump:
                     common_set["statistic_category"] = [mode]
             elif isinstance(config.summary_mode, list):
                 common_set["statistic_category"] = list({
-                    self._process_hash("avg" if mode == Const.MEAN else mode)
+                    self._process_hash("avg" if mode == "mean" else mode)
                     for mode in config.summary_mode
                 })
 
