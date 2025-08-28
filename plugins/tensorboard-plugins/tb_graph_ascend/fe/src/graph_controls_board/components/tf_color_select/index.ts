@@ -245,7 +245,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                     </div>
                   </div>
                 </template>
-                <span class="search-number">([[precisionmenu.length]])</span>
+                <span class="search-number">([[overflowmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
                     label="[[t('overflow_filter_node')]]([[overflowmenu.length]])"
@@ -448,7 +448,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const colorsets = this.colorset;
       for (const item of colorsets) {
         if (item[1].value.length === 0) {
-          item[1].value=this.unMatchedNodeName;
+          item[1].value = this.unMatchedNodeName;
         }
       }
       this.colorSetChanged = colorsets;

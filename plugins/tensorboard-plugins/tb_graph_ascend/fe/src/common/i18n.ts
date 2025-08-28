@@ -70,7 +70,7 @@ i18next
                     accuracy_error: "精度误差",
                     overflow: "精度溢出",
                     match_accuracy_error: "符合精度误差节点",
-                    overflow_filter_node: "溢出筛选节点",
+                    overflow_filter_node: "符合溢出筛选节点",
                     no_matching_nodes: "无匹配节点",
                     precision_desc: {
                         "summary": "节点中调试侧和标杆侧输出的统计量相对误差，值越大精度差距越大，颜色标记越深,相对误差指标（RelativeErr）：| (调试值 - 标杆值) / 标杆值 |",

@@ -436,12 +436,13 @@ class Hierarchy extends PolymerElement {
             if (target.tagName.toLowerCase() !== 'rect' && target.tagName.toLowerCase() !== 'text') {
                 event.stopPropagation();
             } else {
-                const contextMenuItems: Array<ContextMenuItem> = [
-                    {
+                const contextMenuItems: Array<ContextMenuItem> = [];
+                if (this.graphType != 'Single') {
+                    contextMenuItems.push({
                         text: '展开对应侧节点',
                         type: EXPAND_MATCHED_NODE,
-                    },
-                ];
+                    })
+                }
                 const selectedNode = target.getAttribute('name');
                 const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '') ?? '';
                 const nodeData = this.hierarchyObject[nodeName];

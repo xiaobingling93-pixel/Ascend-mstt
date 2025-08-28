@@ -455,14 +455,13 @@ class GraphRepoDB(GraphRepo):
         try:
             query = """
                 SELECT 
-                    node_name,
-                    sub_nodes,
-                    micro_step_id
+                    node_name
                 FROM 
                     tb_nodes 
                 WHERE 
                     step = ?
                     AND rank = ?
+                    AND (? = -1 OR micro_step_id = ?)
                     AND data_source = 'NPU'
                 ORDER BY
                     node_order ASC
@@ -827,6 +826,7 @@ class GraphRepoDB(GraphRepo):
             "micro_step_id": int(data.get('micro_step_id')) if data.get('micro_step_id') is not None else -1,
             "data":{
                 "precision_index": data.get('precision_index'),
+                'overflow_level': data.get('overflow_level'),
             },
             "parallel_merge_info": GraphUtils.safe_json_loads(data.get('parallel_merge_info') or "[]"),
             "matched_distributed": GraphUtils.safe_json_loads(data.get('matched_distributed') or "[]"),

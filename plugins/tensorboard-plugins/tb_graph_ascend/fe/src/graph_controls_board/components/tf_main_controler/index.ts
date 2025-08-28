@@ -220,11 +220,15 @@ class MainController extends PolymerElement {
 
   _getTagChanged(event): void {
     const detail = event.detail;
-    if (detail?.rankId && this.isDBType) {
-      this.set('selectedRank', detail?.rankId);
+    if (detail?.rankId != undefined && this.isDBType) {
+      setTimeout(() => {
+        this.set('selectedRank', detail?.rankId);
+      })
     }
-    else if (detail?.rankId && !this.isDBType && detail?.rankId <= this.tags.length) {
-      this.set('selectedTag', this.tags[detail?.rankId]);
+    else if (detail?.rankId != undefined && !this.isDBType && detail?.rankId <= this.tags.length) {
+      setTimeout(() => {
+        this.set('selectedTag', this.tags[detail?.rankId]);
+      })
     }
     else {
       Notification.show(this.t('invalid_rank_id'), {
