@@ -358,9 +358,9 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
-
-                if common_tensor.device.type != "cpu":
-                    t_cpu = common_tensor.to("cpu", non_blocking=False)
+                t_cpu = common_tensor
+                if t_cpu.device.type != "cpu":
+                    t_cpu = t_cpu.to("cpu", non_blocking=False)
                 t_cpu = t_cpu.detach()
                 if not t_cpu.is_contiguous():
                     t_cpu = t_cpu.contiguous()
