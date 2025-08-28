@@ -470,6 +470,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
+        result_df.columns = CompareConst.COMPARE_RESULT_HEADER + [Const.STATE, Const.API_ORIGIN_NAME]
         highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         mode_config = ModeConfig(dump_mode=Const.ALL)
         highlight = HighLight(mode_config, '')
