@@ -194,6 +194,15 @@ class Graph:
             graph_other: 可选参数，另一个graph
         Returns: 分批的数量
         """
+
+        @recursion_depth_decorator(
+            'msprobe.visualization.graph.graph.Graph.paging_by_micro_step.propagate_micro_step_id', max_depth=500)
+        def propagate_micro_step_id(node):
+            if node.upnode is not None and node.micro_step_id is None:
+                node.micro_step_id = node.upnode.micro_step_id
+            for sub_node in node.subnodes:
+                propagate_micro_step_id(sub_node)
+
         batches_n = Graph.split_nodes_by_micro_step(self.root.subnodes)
         for batch_number, nodes in batches_n.items():
             for node in nodes:
@@ -203,6 +212,7 @@ class Graph:
                     node_other = graph_other.get_node(node.matched_node_link[-1])
                     if node_other:
                         node_other.micro_step_id = batch_number
+        propagate_micro_step_id(self.root)
         # 遍历graph_other根节点下的所有子节点，确保未匹配节点也有micro_step_id
         if graph_other:
             for node in graph_other.root.subnodes:
@@ -212,6 +222,7 @@ class Graph:
                     except ValueError:
                         micro_step_id = 0
                     node.micro_step_id = micro_step_id
+            propagate_micro_step_id(graph_other.root)
         return len(batches_n)
 
     def overflow_check(self):

@@ -66,7 +66,12 @@ config_columns = {
 }
 
 indexes = {
-    "index1": ["step", "rank", "data_source", "up_node", "node_name"]
+    "index1": ["step", "rank", "data_source", "up_node", "node_order"],
+    "index2": ["step", "rank", "data_source", "node_name"],
+    "index3": ["step", "rank", "data_source", "node_order"],
+    "index4": ["step", "rank", "node_order"],
+    "index5": ["step", "rank", "micro_step_id", "node_order"],
+    "index6": ["step", "rank", "modified", "matched_node_link"]
 }
 
 SAFE_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_]+$')
@@ -201,7 +206,8 @@ def node_to_db(graph, db_name):
                      json.dumps(node.stack_info),
                      json.dumps(node.parallel_merge_info) if node.parallel_merge_info else '',
                      json.dumps(node.matched_distributed), 0,
-                     json.dumps(format_node_data(node.input_data)), json.dumps(format_node_data(node.output_data)),
+                     json.dumps(format_node_data(node.input_data, node.id, graph.compare_mode)),
+                     json.dumps(format_node_data(node.output_data, node.id, graph.compare_mode)),
                      graph.data_source, graph.data_path, graph.step, graph.rank))
     to_db(db_name, create_table_sql, insert_sql, data)
 
