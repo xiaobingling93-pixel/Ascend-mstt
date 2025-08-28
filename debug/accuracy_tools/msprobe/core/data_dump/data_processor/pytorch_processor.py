@@ -15,6 +15,7 @@
 
 import os
 import zlib
+import ctypes
 from collections.abc import Iterable
 from dataclasses import asdict
 from typing import List
@@ -147,7 +148,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         storage = t.untyped_storage()
 
         # ctypes 指针构造 memoryview（零拷贝 FFI）
-        import ctypes
         try:
             addr = storage.data_ptr() + byte_offset
             buf = (ctypes.c_ubyte * nbytes).from_address(addr)
