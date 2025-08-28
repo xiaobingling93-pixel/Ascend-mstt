@@ -122,12 +122,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         self.tensor_handler = TensorHandler()
         self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
 
-
-    @staticmethod
-    def compute_crc32_bytes(tensor_bytes):
-        return f"{zlib.crc32(tensor_bytes):08x}"
-
-
     @staticmethod
     def get_md5_for_tensor(x):
         if x.dtype == torch.bfloat16:
