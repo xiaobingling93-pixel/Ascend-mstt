@@ -136,29 +136,23 @@ class PytorchDataProcessor(BaseDataProcessor):
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
 
-    def _tensor_bytes_view_cpu(t: torch.Tensor, logger=None, tag: str = "crc"):
+    @staticmethod
+    def tensor_bytes_view_cpu(t: torch.Tensor):
         """
         返回 t 在当前 dtype 下的原始字节视图（优先零拷贝）。
         需保证：t 已在 CPU 且是 contiguous。
-        可能返回 memoryview 或 bytes（兜底拷贝），均可被 zlib.crc32 接受。
+        可能返回 memoryview 或 bytes（兜底拷贝）或者 转为numpy，均可被 zlib.crc32 接受。
         """
-        # 直接拿底层 storage（PyTorch 提供的无类型存储，单字节步长）
-        # nbytes = t.numel() * t.element_size()
-        # storage = t.untyped_storage()
-        # mv = memoryview(storage)  # 这就是 u8 视图
-        # return mv[:nbytes]        # 截到有效字节长度
 
         nbytes = t.numel() * t.element_size()
         byte_offset = t.storage_offset() * t.element_size()
 
         if nbytes == 0:
-            # _log("empty_tensor", action="return_empty_memoryview")
             return memoryview(b"")
 
-        # A) 直接对 UntypedStorage 建立 memoryview
         storage = t.untyped_storage()
 
-        # C) ctypes 指针构造 memoryview（零拷贝 FFI）
+        # ctypes 指针构造 memoryview（零拷贝 FFI）
         import ctypes
         try:
             addr = storage.data_ptr() + byte_offset
@@ -166,11 +160,28 @@ class PytorchDataProcessor(BaseDataProcessor):
             mv3 = memoryview(buf)
 
             return mv3
+        except Exception as e1:
+            logger.warning(f"path_A_failed: {e1}.")
+
+        try:
+            data = ctypes.string_at(storage.data_ptr() + byte_offset, nbytes)
+
+            return data  # bytes 也可直接用于 zlib.crc32
+        except Exception as e2:
+            logger.warning(f"path_B_failed: {e2}.")
+
+        try:
+            if t.dtype == torch.bfloat16:
+                t = t.float()
+            data = t.numpy()
+
+            return data
         except Exception as e3:
+            logger.warning(f"path_C_failed: {e3}.")
+            return memoryview(b"")
 
-            pass
-
-    def compute_crc32_from_tensor(t: torch.Tensor, *, logger=None) -> str:
+    @staticmethod
+    def compute_crc32_from_tensor(t: torch.Tensor) -> str:
         """
         直接对 Tensor 原始字节做 CRC32。
         :
@@ -178,7 +189,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         """
 
         # 取得字节视图（含多级回退），然后做 CRC
-        mv = PytorchDataProcessor._tensor_bytes_view_cpu(t)
+        mv = PytorchDataProcessor.tensor_bytes_view_cpu(t)
 
         crc = zlib.crc32(mv)
 
@@ -350,10 +361,9 @@ class PytorchDataProcessor(BaseDataProcessor):
 
                 if common_tensor.device.type != "cpu":
                     t_cpu = common_tensor.to("cpu", non_blocking=False)
-                t_cpu = common_tensor.detach()
+                t_cpu = t_cpu.detach()
                 if not t_cpu.is_contiguous():
                     t_cpu = t_cpu.contiguous()
-
 
                 future = self._crc_executor.submit(
                     PytorchDataProcessor.compute_crc32_from_tensor,
