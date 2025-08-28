@@ -16,11 +16,12 @@
 import functools
 import importlib
 import types
-import torch
-from msprobe.core.common.log import logger
-from msprobe.pytorch.hook_module.api_register import get_api_register
-from msprobe.pytorch.common.utils import torch_version_above_or_equal_2
 
+import torch
+
+from msprobe.core.common.log import logger
+from msprobe.pytorch.common.utils import torch_version_above_or_equal_2
+from msprobe.pytorch.hook_module.api_register import get_api_register
 
 if torch_version_above_or_equal_2:
     from torch._dynamo.convert_frame import convert_frame as _orig_convert_frame, Hooks
@@ -121,6 +122,16 @@ def unpatch_dynamo_compile() -> bool:
         return False
     cf._compile = original
     return True
+
+
+def preprocess_func():
+    try:
+        from torch.utils._device import _device_constructors
+        _device_constructors()
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"Failed to execute _device_constructors. Error Details: {str(e)}")
 
 
 def wrap_script_func():
