@@ -354,7 +354,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             if not self.tensor_handler.is_empty_data(tensor):
                 t_cpu = common_tensor
                 if t_cpu.device.type != "cpu":
-                    t_cpu = t_cpu.to("cpu", non_blocking=True)
+                    t_cpu = t_cpu.to("cpu", non_blocking=False)
                 t_cpu = t_cpu.detach()
                 if not t_cpu.is_contiguous():
                     t_cpu = t_cpu.contiguous()
