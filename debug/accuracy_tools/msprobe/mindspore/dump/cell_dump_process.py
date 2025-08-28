@@ -596,6 +596,11 @@ def is_download_finished(directory, interval=3):
 
 
 def process(dump_path):
+    if not os.path.exists(dump_path):
+        logger.warning('No grap cell data is dumped.')
+        create_directory(dump_path)
+        return
+
     rank_id = os.environ.get('RANK_ID')
     rank_dir = DEFAULT_RANK_DIR
     if rank_id is not None:
@@ -685,6 +690,11 @@ def merge_file(dump_path, rank_dir, file_dict):
 
 
 def process_statistics(dump_path):
+    if not os.path.exists(dump_path):
+        logger.warning('No grap cell data is dumped.')
+        create_directory(dump_path)
+        return
+
     rank_id = os.environ.get('RANK_ID')
     rank_dir_kbk = "rank_0"
     if rank_id is not None:
