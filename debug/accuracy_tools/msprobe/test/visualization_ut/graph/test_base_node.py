@@ -20,7 +20,6 @@ class TestBaseNode(unittest.TestCase):
         other_node = BaseNode(self.node_op, self.node_id, self.up_node)
         self.assertEqual(self.node, other_node)
 
-
     def test_set_input_output(self):
         input_data = {'input1': 'value1'}
         output_data = {'output1': 'value2'}
@@ -41,21 +40,6 @@ class TestBaseNode(unittest.TestCase):
         self.node.add_link(other_node, ancestors)
         self.assertEqual(self.node.matched_node_link, ancestors)
         self.assertEqual(other_node.matched_node_link, ancestors)
-
-    def test_to_dict(self):
-        expected_result = {
-            'id': self.node_id,
-            'node_type': self.node_op.value,
-            'data': {},
-            'output_data': {},
-            'input_data': {},
-            'upnode': self.up_node.id,
-            'subnodes': [],
-            'matched_node_link': [],
-            'suggestions': {},
-            'stack_info': []
-        }
-        self.assertEqual(self.node.to_dict(), expected_result)
 
     def test_get_ancestors(self):
         expected_ancestors = ['up_node_1']

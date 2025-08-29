@@ -88,11 +88,7 @@ def _export_compare_graph_result(args, result):
     graphs = [result.graph_n, result.graph_b]
     graph_comparator = result.graph_comparator
     micro_steps = result.micro_steps
-    output_file_name = result.output_file_name
-    if not output_file_name:
-        output_file_name = f'compare_{current_time}.vis'
-    logger.info(f'Start exporting compare graph result, file name: {output_file_name}...')
-    output_path = os.path.join(args.output_path, output_file_name)
+    logger.info(f'Start exporting compare graph result, file name: {compare_output_db_name}...')
     output_db_path = os.path.join(args.output_path, compare_output_db_name)
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graphs[0], graphs[1], graph_comparator.ma.get_tool_tip(),
@@ -101,13 +97,12 @@ def _export_compare_graph_result(args, result):
                                       args.step_list if hasattr(args, 'step_list') else [0],
                                       args.rank_list if hasattr(args, 'rank_list') else [0])
     try:
-        # output_db_path to_db
-        GraphBuilder.to_json(output_path, export_config)
-        logger.info(f'Exporting compare graph result successfully, the result file is saved in {output_path}')
+        GraphBuilder.to_db(output_db_path, export_config)
+        logger.info(f'Exporting compare graph result successfully, the result file is saved in {output_db_path}')
         return ''
     except RuntimeError as e:
-        logger.error(f'Failed to export compare graph result, file: {output_file_name}, error: {e}')
-        return output_file_name
+        logger.error(f'Failed to export compare graph result, file: {compare_output_db_name}, error: {e}')
+        return compare_output_db_name
 
 
 def _build_graph_info(dump_path, args, graph=None):
@@ -144,16 +139,14 @@ def _run_build_graph_compare(input_param, args, nr, br):
 def _run_build_graph_single(dump_ranks_path, rank, step, args):
     logger.info(f'Start building graph for {rank}...')
     dump_path = os.path.join(dump_ranks_path, rank)
-    output_file_name = f'build_{step}_{rank}_{current_time}.vis' if step else f'build_{rank}_{current_time}.vis'
     result = _build_graph_result(dump_path, args)
-    result.output_file_name = output_file_name
     if rank != Const.RANK:
         result.rank = get_step_or_rank_int(rank, True)
     logger.info(f'Building graph for step: {step}, rank: {rank} finished.')
     return result
 
 
-def _run_graph_compare(graph_task_info, input_param, args, output_file_name):
+def _run_graph_compare(graph_task_info, input_param, args):
     logger.info(f'Start comparing data for {graph_task_info.npu_rank}...')
     graph_n = graph_task_info.graph_info_n
     graph_b = graph_task_info.graph_info_b
@@ -165,7 +158,6 @@ def _run_graph_compare(graph_task_info, input_param, args, output_file_name):
         graph_n.graph.overflow_check()
         graph_b.graph.overflow_check()
     graph_result = CompareGraphResult(graph_n.graph, graph_b.graph, graph_comparator, micro_steps)
-    graph_result.output_file_name = output_file_name
     if nr != Const.RANK:
         graph_result.rank = get_step_or_rank_int(nr, True)
     logger.info(f'Comparing data for {graph_task_info.npu_rank} finished.')
@@ -177,23 +169,18 @@ def _export_build_graph_result(args, result):
     graph = result.graph
     micro_steps = result.micro_steps
     overflow_check = args.overflow_check
-    output_file_name = result.output_file_name
-    if not output_file_name:
-        output_file_name = f'build_{current_time}.vis'
-    logger.info(f'Start exporting graph for {output_file_name}...')
-    output_path = os.path.join(out_path, output_file_name)
+    logger.info(f'Start exporting graph for {build_output_db_name}...')
     output_db_path = os.path.join(out_path, build_output_db_name)
     config = GraphExportConfig(graph, micro_steps=micro_steps, overflow_check=overflow_check, rank=result.rank,
                                step=result.step, rank_list=args.rank_list if hasattr(args, 'rank_list') else [0],
                                step_list=args.step_list if hasattr(args, 'step_list') else [0])
     try:
-        # output_db_path to_db
-        GraphBuilder.to_json(output_path, config)
-        logger.info(f'Model graph exported successfully, the result file is saved in {output_path}')
+        GraphBuilder.to_db(output_db_path, config)
+        logger.info(f'Model graph exported successfully, the result file is saved in {output_db_path}')
         return None
     except RuntimeError as e:
-        logger.error(f'Failed to export model graph, file: {output_file_name}, error: {e}')
-        return output_file_name
+        logger.error(f'Failed to export model graph, file: {build_output_db_name}, error: {e}')
+        return build_output_db_name
 
 
 def is_real_data_compare(input_param, npu_ranks, bench_ranks):
@@ -211,9 +198,9 @@ def is_real_data_compare(input_param, npu_ranks, bench_ranks):
     return has_real_data
 
 
-def _mp_compare(input_param, serializable_args, output_file_name, nr, br):
+def _mp_compare(input_param, serializable_args, nr, br):
     graph_task_info = _run_build_graph_compare(input_param, serializable_args, nr, br)
-    return _run_graph_compare(graph_task_info, input_param, serializable_args, output_file_name)
+    return _run_graph_compare(graph_task_info, input_param, serializable_args)
 
 
 def _compare_graph_ranks(input_param, args, step=None):
@@ -266,25 +253,23 @@ def _get_compare_graph_results(input_param, serializable_args, step, pool, err_c
         for nr, br in zip(npu_ranks, bench_ranks):
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
-            output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
+            build_key = f'{step}_{nr}' if step else f'{nr}'
             input_param_copy = deepcopy(input_param)
-            mp_task_dict[output_file_name] = pool.apply_async(_run_build_graph_compare,
+            mp_task_dict[build_key] = pool.apply_async(_run_build_graph_compare,
                                                               args=(input_param_copy, serializable_args, nr, br),
                                                               error_callback=err_call)
 
         mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
-        for output_file_name, mp_res in mp_res_dict.items():
-            compare_graph_results.append(_run_graph_compare(mp_res, input_param, serializable_args, output_file_name))
+        for mp_res in mp_res_dict.values():
+            compare_graph_results.append(_run_graph_compare(mp_res, input_param, serializable_args))
     else:
         compare_graph_tasks = []
         for nr, br in zip(npu_ranks, bench_ranks):
             input_param['npu_path'] = os.path.join(dump_rank_n, nr)
             input_param['bench_path'] = os.path.join(dump_rank_b, br)
-            output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
             input_param_copy = deepcopy(input_param)
             compare_graph_tasks.append(pool.apply_async(_mp_compare,
-                                                        args=(input_param_copy, serializable_args, output_file_name, nr,
-                                                              br),
+                                                        args=(input_param_copy, serializable_args, nr, br),
                                                         error_callback=err_call))
         compare_graph_results = [task.get() for task in compare_graph_tasks]
     if step is not None:
@@ -348,10 +333,7 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
         create_directory(args.output_path)
         export_build_graph_tasks = []
         serializable_args.rank_list = [result.rank for result in build_graph_results]
-        for i, result in enumerate(build_graph_results):
-            if args.parallel_params:
-                result.output_file_name = f'build_{step}_merged{i}_{current_time}.vis' \
-                    if step else f'build_merged{i}_{current_time}.vis'
+        for result in build_graph_results:
             export_build_graph_tasks.append(pool.apply_async(_export_build_graph_result,
                                                              args=(serializable_args, result),
                                                              error_callback=err_call))
@@ -373,8 +355,8 @@ def _build_graph_steps(dump_steps_path, args):
         _build_graph_ranks(dump_ranks_path, args, step)
 
 
-def _compare_and_export_graph(graph_task_info, input_param, args, output_file_name):
-    result = _run_graph_compare(graph_task_info, input_param, args, output_file_name)
+def _compare_and_export_graph(graph_task_info, input_param, args):
+    result = _run_graph_compare(graph_task_info, input_param, args)
     return _export_compare_graph_result(args, result)
 
 
@@ -430,11 +412,8 @@ def _compare_graph_ranks_parallel(input_param, args, step=None):
                 _build_graph_info(os.path.join(npu_path, f'rank{graph_n.root.rank}'), args, graph_n),
                 _build_graph_info(os.path.join(bench_path, f'rank{graph_b.root.rank}'), args, graph_b),
                 f'rank{graph_n.root.rank}', f'rank{graph_b.root.rank}', current_time)
-            output_file_name = f'compare_{step}_merged{i}_{current_time}.vis' \
-                if step else f'compare_merged{i}_{current_time}.vis'
             export_res_task_list.append(pool.apply_async(_compare_and_export_graph,
-                                                         args=(graph_task_info, input_param, serializable_args,
-                                                               output_file_name),
+                                                         args=(graph_task_info, input_param, serializable_args),
                                                          error_callback=err_call))
         export_res_list = [res.get() for res in export_res_task_list]
         if any(export_res_list):
@@ -503,7 +482,8 @@ def _graph_service_command(args):
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
-    # 所有数据输出db结束后，添加索引，修改权限：post_process_db output_db_path
+    # 所有数据输出db结束后，添加索引，修改权限
+    post_process_db(output_db_path)
 
 
 def _pt_graph_service_parser(parser):
@@ -523,20 +503,18 @@ def _ms_graph_service_command(args):
 
 
 class CompareGraphResult:
-    def __init__(self, graph_n, graph_b, graph_comparator, micro_steps, rank=0, step=0, output_file_name=''):
+    def __init__(self, graph_n, graph_b, graph_comparator, micro_steps, rank=0, step=0):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.graph_comparator = graph_comparator
         self.micro_steps = micro_steps
         self.rank = rank
         self.step = step
-        self.output_file_name = output_file_name
 
 
 class BuildGraphResult:
-    def __init__(self, graph, micro_steps=0, rank=0, step=0, output_file_name=''):
+    def __init__(self, graph, micro_steps=0, rank=0, step=0):
         self.graph = graph
         self.micro_steps = micro_steps
         self.rank = rank
         self.step = step
-        self.output_file_name = output_file_name

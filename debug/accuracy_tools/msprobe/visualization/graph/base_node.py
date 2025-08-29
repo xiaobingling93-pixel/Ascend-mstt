@@ -89,30 +89,6 @@ class BaseNode:
         self.matched_node_link = ancestors
         node.matched_node_link = ancestors
 
-    def to_dict(self, compare_mode=None):
-        """
-        输出数据
-        """
-        result = {
-            'id': self.id,
-            'node_type': self.op.value,
-            'output_data': format_node_data(self.output_data, self.id, compare_mode),
-            'input_data': format_node_data(self.input_data, self.id, compare_mode),
-            'upnode': self.upnode.id if self.upnode else 'None',
-            'subnodes': [node.id for node in self.subnodes],
-            'matched_node_link': self.matched_node_link,
-            'suggestions': self.suggestions,
-            'stack_info': self.stack_info
-        }
-        if self.micro_step_id is not None:
-            result['micro_step_id'] = self.micro_step_id
-        result['data'] = self.data
-        if self.matched_distributed:
-            result[GraphConst.MATCHED_DISTRIBUTED] = self.matched_distributed
-        if self.parallel_merge_info:
-            result['parallel_merge_info'] = self.parallel_merge_info
-        return result
-
     def get_ancestors(self):
         """
         获取节点所有祖先的列表
