@@ -16,13 +16,13 @@
 from msprobe.core.common.utils import Const
 from msprobe.core.service import BaseService
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import get_rank_if_initialized, torch_version_above_or_equal_2
+from msprobe.pytorch.common.utils import get_rank_if_initialized
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate, redirect_wait
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
-from msprobe.pytorch.hook_module.script_wrapper import wrap_script_func, wrap_jit_script_func
 from msprobe.pytorch.hook_module.pt_hook_manager import PytorchHookManager
 from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
+from msprobe.pytorch.hook_module.script_wrapper import wrap_script_func, preprocess_func
 
 
 class PytorchService(BaseService):
@@ -49,6 +49,7 @@ class PytorchService(BaseService):
             register_optimizer_hook(self.data_collector)
 
     def _register_api_hook(self):
+        preprocess_func()
         super()._register_api_hook()
         wrap_script_func()
         redirect_wait()
