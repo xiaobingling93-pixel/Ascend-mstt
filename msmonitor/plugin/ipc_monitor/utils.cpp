@@ -31,9 +31,26 @@
 #include <climits>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <netpacket/packet.h>
+#include <pybind11/pybind11.h>
 
 namespace dynolog_npu {
 namespace ipc_monitor {
+namespace {
+template <typename T>
+std::string IntToHexStr(T number)
+{
+    std::stringstream strStream;
+    strStream << std::hex << number;
+    return strStream.str();
+}
+} // namespace
+
+static std::string gParallelGroupInfo;
+
 std::unordered_map<SubModule, std::string> submoduleMap = {
     {SubModule::IPC, "IPC"},
 };
@@ -66,7 +83,10 @@ std::string getCurrentTimestamp()
     auto micro_time = micros.count() % 1000;
 
     std::ostringstream oss;
-    oss << std::put_time(timeInfo, "%Y-%m-%d-%H:%M:%S");
+    oss << std::put_time(timeInfo, "%Y%m%d%H%M%S");
+    constexpr int kMilliTimeWidth = 3;
+    oss << std::setw(kMilliTimeWidth) << std::setfill('0') << milli_time;
+
     return oss.str();
 }
 
@@ -90,7 +110,11 @@ std::string formatErrorCode(SubModule submodule, ErrCode errorCode)
 
 int32_t GetProcessId()
 {
-    return static_cast<int32_t>(getpid());
+    static thread_local int32_t pid = 0;
+    if (pid == 0) {
+        pid = static_cast<int32_t>(getpid());
+    }
+    return pid;
 }
 
 bool ParseProcStat(const std::string& line, std::string& command, int& parentPid)
@@ -254,6 +278,15 @@ std::vector<std::string> split(const std::string& str, char delimiter)
     return tokens;
 }
 
+std::string join(const std::vector<std::string> &strs, const std::string &delimiter)
+{
+    std::stringstream ss;
+    for (size_t i = 0, len = strs.size(); i < len; ++i) {
+        ss << strs[i] << (i == len - 1 ? "" : delimiter);
+    }
+    return ss.str();
+}
+
 void *MsptiMalloc(size_t size, size_t alignment)
 {
     if (alignment > 0) {
@@ -413,7 +446,92 @@ bool PathUtils::DirPathCheck(const std::string& path)
     return true;
 }
 
-bool CreateMsmonitorLogPath(std::string& path)
+int GetRankId()
+{
+    static int rankId = []() -> int {
+        pybind11::gil_scoped_acquire gil;
+        return pybind11::module::import("IPCMonitor.utils").attr("get_rank_id")().cast<int>();
+    }();
+    return rankId;
+}
+
+void SetParallelGroupInfo(std::string parallelGroupInfo)
+{
+    gParallelGroupInfo = std::move(parallelGroupInfo);
+}
+
+std::string GetParallelGroupInfo()
+{
+    return gParallelGroupInfo;
+}
+
+uint64_t CalcHashId(const std::string &data)
+{
+    static const uint32_t UINT32_BITS = 32;
+    uint32_t prime[2] = {29, 131};
+    uint32_t hash[2] = {0};
+    for (char d : data) {
+        hash[0] = hash[0] * prime[0] + static_cast<uint32_t>(d);
+        hash[1] = hash[1] * prime[1] + static_cast<uint32_t>(d);
+    }
+    return (static_cast<uint64_t>(hash[0]) << UINT32_BITS) | hash[1];
+}
+
+std::string GetHostName()
+{
+    char hostName[PATH_MAX] = {0};
+    if (gethostname(hostName, PATH_MAX) != 0) {
+        return "";
+    }
+    return std::string(hostName);
+}
+
+std::string GetHostUid()
+{
+    static const uint8_t SECOND_LEAST_BIT = 1 << 1;
+    struct ifaddrs *ifaddr = nullptr;
+    if (getifaddrs(&ifaddr) == -1) {
+        if (ifaddr != nullptr) {
+            freeifaddrs(ifaddr);
+        }
+        return 0;
+    }
+    std::vector<std::string> universalMacAddrs;
+    std::vector<std::string> localMacAddrs;
+    for (struct ifaddrs *ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr || ifa->ifa_addr->sa_family != AF_PACKET) {
+            continue;
+        }
+        if ((ifa->ifa_flags & IFF_LOOPBACK) != 0) {
+            continue;
+        }
+        struct sockaddr_ll *lladdr = ReinterpretConvert<struct sockaddr_ll*>(ifa->ifa_addr);
+        uint32_t len = static_cast<uint32_t>(lladdr->sll_halen);
+        if (len > 0) {
+            std::string addr;
+            for (uint32_t i = 0; i < len; ++i) {
+                std::string hexAddr = IntToHexStr(static_cast<uint16_t>(lladdr->sll_addr[i]));
+                addr += (hexAddr.length() > 1) ? hexAddr : ("0" + hexAddr);
+            }
+            if ((lladdr->sll_addr[0] & SECOND_LEAST_BIT) == 0) {
+                universalMacAddrs.emplace_back(addr);
+            } else {
+                localMacAddrs.emplace_back(addr);
+            }
+        }
+    }
+    if (ifaddr != nullptr) {
+        freeifaddrs(ifaddr);
+    }
+    if (universalMacAddrs.empty() && localMacAddrs.empty()) {
+        return 0;
+    }
+    auto &macAddrs = universalMacAddrs.empty() ? localMacAddrs : universalMacAddrs;
+    std::sort(macAddrs.begin(), macAddrs.end());
+    return std::to_string(CalcHashId(join(macAddrs, "-")));
+}
+
+bool CreateMsmonitorLogPath(std::string &path)
 {
     const char* logPathEnvVal = getenv("MSMONITOR_LOG_PATH");
     std::string logPath;

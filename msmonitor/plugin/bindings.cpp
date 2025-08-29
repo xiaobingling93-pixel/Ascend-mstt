@@ -16,14 +16,25 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "ipc_monitor/PyDynamicMonitorProxy.h"
+#include "ipc_monitor/utils.h"
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(IPCMonitor, m) {
-    py::class_<dynolog_npu::ipc_monitor::PyDynamicMonitorProxy>(m, "PyDynamicMonitorProxy")
-        .def(py::init<>())
-        .def("init_dyno", &dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::InitDyno, py::arg("npuId"))
-        .def("poll_dyno", &dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::PollDyno)
-        .def("enable_dyno_npu_monitor", &dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::EnableMsptiMonitor, py::arg("cfg_map"))
-        .def("finalize_dyno", &dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::FinalizeDyno);
+
+PYBIND11_MODULE(IPCMonitor_C, m) {
+    m.def("init_dyno", [](int npu_id) -> bool {
+        return dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->InitDyno(npu_id);
+    }, py::arg("npu_id"));
+    m.def("poll_dyno", []() -> std::string {
+        return dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->PollDyno();
+    });
+    m.def("enable_dyno_npu_monitor", [](std::unordered_map<std::string, std::string>& config_map) -> void {
+        dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->EnableMsptiMonitor(config_map);
+    }, py::arg("config_map"));
+    m.def("finalize_dyno", []() -> void {
+        dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->FinalizeDyno();
+    });
+    m.def("set_parallel_group_info", [](std::string parallel_group_info) -> void {
+        dynolog_npu::ipc_monitor::SetParallelGroupInfo(parallel_group_info);
+    }, py::arg("parallel_group_info"));
 }
