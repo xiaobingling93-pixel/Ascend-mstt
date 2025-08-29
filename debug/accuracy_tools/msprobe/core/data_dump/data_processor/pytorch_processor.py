@@ -353,8 +353,16 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
                 t_cpu = common_tensor
-                if t_cpu.device.type != "cpu":
-                    t_cpu = t_cpu.to("cpu", non_blocking=False)
+
+                # 根据设备类型做同步，确保数据已准备好
+                if t_cpu.device.type == "cuda":
+                    t_cpu = t_cpu.to("cpu", non_blocking=True)
+                    torch.cuda.synchronize()
+                    # 先异步搬运再进行同步可以显著提升性能
+                elif t_cpu.device.type == "npu":
+                    t_cpu = t_cpu.to("cpu", non_blocking=True)
+                    torch.npu.synchronize()
+
                 t_cpu = t_cpu.detach()
                 if not t_cpu.is_contiguous():
                     t_cpu = t_cpu.contiguous()
