@@ -14,15 +14,17 @@
 # limitations under the License.
 # ==============================================================================
 import os
+from tensorboard.util import tb_logging
+
 from .graph_service_base import GraphServiceStrategy
 from ..repositories.graph_repo_db import GraphRepoDB
 from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import  NPU, BENCH, SINGLE
+from ..utils.global_state import NPU, BENCH, SINGLE
 from ..model.layout_hierarchy_model import LayoutHierarchyModel
 from ..model.match_nodes_model import MatchNodesController
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
-from tensorboard.util import tb_logging
+
 logger = tb_logging.get_logger()
 
 
@@ -50,7 +52,7 @@ class DbGraphService(GraphServiceStrategy):
             # 读取目录下配置文件列表
             modify_matched_files = GraphUtils.find_config_files(self.run)
             self.config_info['matchedConfigFiles'] = modify_matched_files or []
-            return {'success': True, 'data':self.config_info}
+            return {'success': True, 'data': self.config_info}
         except Exception as e:
             logger.error(f"load graph config info failed, {e}")
             return {'success': False, 'error': f'load graph config info failed, {e}'}
@@ -103,13 +105,16 @@ class DbGraphService(GraphServiceStrategy):
             micro_step = meta_data.get('microStep')
             # 单图
             if self.config_info.get('isSingleGraph'):
-               hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step, rank, step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step,
+                                                                     rank, step)
             # NPU
             elif graph_type == NPU:
-               hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step, rank, step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step,
+                                                                     rank, step)
             # 标杆
             elif graph_type == BENCH:
-               hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step, rank, step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step,
+                                                                     rank, step)
             else:
                 return {'success': True, 'data': {}}
             return {'success': True, 'data': hierarchy}
@@ -129,24 +134,25 @@ class DbGraphService(GraphServiceStrategy):
             if is_filter_unmatch_nodes:
                 values.remove('无匹配节点')
           
-            update_precision_cache:dict = GraphState.get_global_value("update_precision_cache", {})
+            update_precision_cache = GraphState.get_global_value("update_precision_cache", {})
             node_name_list = []
             # 先查全局缓存
-            if update_precision_cache != {} and update_precision_cache != None:
+            if update_precision_cache:
                 for node_name, node_info in update_precision_cache.items():
                     if not node_info.get("is_leaf_nodes"):
                         continue 
                     matched_node_link = node_info.get('matched_node_link', None)
-                    if is_filter_unmatch_nodes and (matched_node_link == None or matched_node_link == []):
+                    if is_filter_unmatch_nodes and (not matched_node_link):
                         node_name_list.append(node_name)
                         
                     if isinstance(node_info.get("precision_index"), (int, float, complex)) and any(low <= node_info.
-                                                                    get("precision_index", -1) <= high for low, high in values):
+                                            get("precision_index", -1) <= high for low, high in values):
                         node_name_list.append(node_name)
             # 在查数据库
             else:
-                node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values, is_filter_unmatch_nodes)
-            return {'success': True, 'data':node_name_list}
+                node_name_list = self.repo.query_node_list_by_precision(step, rank, micro_step, values,
+                                                                        is_filter_unmatch_nodes)
+            return {'success': True, 'data': node_name_list}
         except Exception as e:
             logger.error('节点搜索发生错误:' + str(e))
             return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
@@ -160,7 +166,7 @@ class DbGraphService(GraphServiceStrategy):
             micro_step = meta_data.get('microStep')
             
             node_name_list = self.repo.query_node_list_by_overflow(step, rank, micro_step, values)
-            return {'success': True, 'data':node_name_list}
+            return {'success': True, 'data': node_name_list}
         except Exception as e:
             logger.error('节点搜索发生错误:' + str(e))
             return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
@@ -214,10 +220,14 @@ class DbGraphService(GraphServiceStrategy):
                                                                                bench_node_name, task)
                 else:
                     graph_data = self.repo.query_matched_nodes_info(npu_node_name, bench_node_name, rank, step)
-                    match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+                    match_result = MatchNodesController.process_task_add(graph_data, npu_node_name,
+                                                                         bench_node_name, task)
                 # 处理匹配结果
-                update_data = [node for item in match_result if item.get('success') is True 
-                                for node in item.get('data', [])]
+                update_data = [node 
+                               for item in match_result 
+                               if item.get('success') is True 
+                               for node in item.get('data', [])
+                              ]
                 if len(update_data) > 0:
                     # DB：更新数据库节点信息
                     update_db_res = self.repo.update_nodes_info(update_data, rank, step)
@@ -259,13 +269,17 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': False, 'error': '配置文件失败'}
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
-                update_data = [node for item in match_result if item.get('success') is True 
-                                   for node in item.get('data', [])]
+                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
+                                                                                           match_node_links, task)
+                update_data = [node 
+                               for item in match_result 
+                               if item.get('success') is True 
+                               for node in item.get('data', [])
+                              ]
                 if len(update_data) > 0:
                     update_db_res = self.repo.update_nodes_info(update_data, rank, step)
                     if not update_db_res:
-                            return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+                        return {'success': False, 'error': '更新数据库失败(Update database failed) '}
                     # 视图：调用更新update_hirarchy方法，同步更新图
                     LayoutHierarchyModel.update_current_hierarchy_data(update_data)
                     # 返回：返回更新后的节点信息
@@ -304,10 +318,14 @@ class DbGraphService(GraphServiceStrategy):
                                                                                   bench_node_name, task)
                 else:
                     graph_data = self.repo.query_matched_nodes_info(npu_node_name, bench_node_name, rank, step)
-                    match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
+                    match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name,
+                                                                            bench_node_name, task)
                 # 遍历match_result，找到的success=true的节点，合并所有的data字段(数组类型)，合并到update_db_data
-                update_data = [node for item in match_result if item.get('success') is True 
-                                for node in item.get('data', [])]
+                update_data = [node 
+                               for item in match_result 
+                               if item.get('success') is True 
+                               for node in item.get('data', [])
+                              ]
                 if len(update_data) > 0:
                     # DB：更新数据库节点信息
                     update_db_res = self.repo.update_nodes_info(update_data, rank, step)
@@ -350,11 +368,11 @@ class DbGraphService(GraphServiceStrategy):
                 output_statistical_diff = node_info.get('output_data', None)                
                 if not node_info.get('matched_node_link') or not output_statistical_diff:
                     update_data_hierarchy[node_info.get('node_name')] = {
-                       "precision_index":node_info.get('data').get('precision_index'),
-                       "node_name":node_info.get('node_name'),
-                       "matched_node_link":node_info.get('matched_node_link'),
+                       "precision_index": node_info.get('data').get('precision_index'),
+                       "node_name": node_info.get('node_name'),
+                       "matched_node_link": node_info.get('matched_node_link'),
                        'is_leaf_nodes': node_info.get('subnodes', []) == [],
-                       'graph_type':NPU
+                       'graph_type': NPU
                     }  
                     continue
                 max_rel_error = -1
@@ -387,10 +405,10 @@ class DbGraphService(GraphServiceStrategy):
                     ))
                 update_data_hierarchy[node_info.get('node_name')] = {
                        "precision_index": min(max_rel_error, 1),
-                       "node_name":node_info.get('node_name'),
-                       "matched_node_link":node_info.get('matched_node_link'),
+                       "node_name": node_info.get('node_name'),
+                       "matched_node_link": node_info.get('matched_node_link'),
                        'is_leaf_nodes': node_info.get('subnodes', []) == [],
-                       'graph_type':NPU
+                       'graph_type': NPU
                     }  
             if len(update_data_hierarchy) > 0:
                 # 视图：调用更新update_hirarchy方法，同步更新图
