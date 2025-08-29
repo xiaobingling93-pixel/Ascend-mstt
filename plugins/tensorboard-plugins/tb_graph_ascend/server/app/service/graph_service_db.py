@@ -223,11 +223,12 @@ class DbGraphService(GraphServiceStrategy):
                     match_result = MatchNodesController.process_task_add(graph_data, npu_node_name,
                                                                          bench_node_name, task)
                 # 处理匹配结果
-                update_data = [node 
-                               for item in match_result 
-                               if item.get('success') is True 
-                               for node in item.get('data', [])
-                              ]
+                update_data = []
+                for item in match_result:
+                    if item.get('success') is True:
+                        nodes = item.get('data', [])
+                        for node in nodes:
+                            update_data.append(node)
                 if len(update_data) > 0:
                     # DB：更新数据库节点信息
                     update_db_res = self.repo.update_nodes_info(update_data, rank, step)
@@ -271,11 +272,13 @@ class DbGraphService(GraphServiceStrategy):
             if task == 'md5' or task == 'summary':
                 match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
                                                                                            match_node_links, task)
-                update_data = [node 
-                               for item in match_result 
-                               if item.get('success') is True 
-                               for node in item.get('data', [])
-                              ]
+                update_data = []
+                for item in match_result:
+                    if item.get('success') is True:
+                        nodes = item.get('data', [])
+                        for node in nodes:
+                            update_data.append(node)
+
                 if len(update_data) > 0:
                     update_db_res = self.repo.update_nodes_info(update_data, rank, step)
                     if not update_db_res:
@@ -321,11 +324,13 @@ class DbGraphService(GraphServiceStrategy):
                     match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name,
                                                                             bench_node_name, task)
                 # 遍历match_result，找到的success=true的节点，合并所有的data字段(数组类型)，合并到update_db_data
-                update_data = [node 
-                               for item in match_result 
-                               if item.get('success') is True 
-                               for node in item.get('data', [])
-                              ]
+                update_data = []
+                for item in match_result:
+                    if item.get('success') is True:
+                        nodes = item.get('data', [])
+                        for node in nodes:
+                            update_data.append(node)
+
                 if len(update_data) > 0:
                     # DB：更新数据库节点信息
                     update_db_res = self.repo.update_nodes_info(update_data, rank, step)
