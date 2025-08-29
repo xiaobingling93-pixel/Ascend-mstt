@@ -123,6 +123,13 @@ class PytorchDataProcessor(BaseDataProcessor):
         self.tensor_handler = TensorHandler()
         self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
 
+    @staticmethod
+    def get_md5_for_tensor(x):
+        if x.dtype == torch.bfloat16:
+            x = x.float()
+        tensor_bytes = x.cpu().detach().numpy().tobytes()
+        crc32_hash = zlib.crc32(tensor_bytes)
+        return f"{crc32_hash:08x}"
 
     @staticmethod
     def tensor_bytes_view_cpu(t: torch.Tensor):
