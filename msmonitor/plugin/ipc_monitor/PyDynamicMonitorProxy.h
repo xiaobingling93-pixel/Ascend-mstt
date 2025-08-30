@@ -23,7 +23,9 @@
 namespace dynolog_npu {
 namespace ipc_monitor {
 
-class PyDynamicMonitorProxy {
+class PyDynamicMonitorProxy : public Singleton<PyDynamicMonitorProxy> {
+    friend class Singleton<PyDynamicMonitorProxy>;
+
 public:
     PyDynamicMonitorProxy() = default;
     bool InitDyno(int npuId)
