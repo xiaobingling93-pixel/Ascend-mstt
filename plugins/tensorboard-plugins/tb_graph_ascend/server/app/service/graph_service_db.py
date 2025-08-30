@@ -109,7 +109,8 @@ class DbGraphService(GraphServiceStrategy):
                 'step', step
             }
             if self.config_info.get('isSingleGraph'):
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step, rank_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step,
+                                                                     rank_step)
             # NPU
             elif graph_type == NPU:
                 hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step, rank_step)
