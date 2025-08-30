@@ -105,8 +105,8 @@ class DbGraphService(GraphServiceStrategy):
             micro_step = meta_data.get('microStep')
             # 单图
             rank_step = {
-                'rank', rank,
-                'step', step
+                'rank':rank,
+                'step': step
             }
             if self.config_info.get('isSingleGraph'):
                 hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step,
