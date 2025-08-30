@@ -66,7 +66,7 @@ class GraphRepoVis(GraphRepo):
         up_nodes = {}
         up_nodes[node_name] = graph_nodes.get(node_name, {})
         parent_node_name = graph_nodes.get(node_name, {}).get("upnode")
-        while graph_nodes.get(parent_node_name, None) != None:
+        while graph_nodes.get(parent_node_name, None) is not None:
             parent_node = graph_nodes.get(parent_node_name, {})
             up_nodes[parent_node_name] = parent_node
             parent_node_name = parent_node.get("upnode")
