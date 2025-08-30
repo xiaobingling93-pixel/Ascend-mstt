@@ -105,7 +105,7 @@ class DbGraphService(GraphServiceStrategy):
             micro_step = meta_data.get('microStep')
             # 单图
             rank_step = {
-                'rank':rank,
+                'rank': rank,
                 'step': step
             }
             if self.config_info.get('isSingleGraph'):
