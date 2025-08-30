@@ -104,17 +104,18 @@ class DbGraphService(GraphServiceStrategy):
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
             # 单图
+            rank_step = {
+                'rank', rank,
+                'step', step
+            }
             if self.config_info.get('isSingleGraph'):
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step,
-                                                                     rank, step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step, rank_step)
             # NPU
             elif graph_type == NPU:
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step,
-                                                                     rank, step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step, rank_step)
             # 标杆
             elif graph_type == BENCH:
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step,
-                                                                     rank, step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step, rank_step)
             else:
                 return {'success': True, 'data': {}}
             return {'success': True, 'data': hierarchy}
