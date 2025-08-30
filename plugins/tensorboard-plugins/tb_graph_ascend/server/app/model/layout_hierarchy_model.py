@@ -29,7 +29,7 @@ class LayoutHierarchyModel:
     }    
 
     @staticmethod
-    def change_expand_state(node_name, graph_type, repo, micro_step, rank_step={}):
+    def change_expand_state(node_name, graph_type, repo, micro_step, rank_step):
         if node_name == 'root':
             rank = rank_step.get('rank', 0)
             step = rank_step.get('step', 0)

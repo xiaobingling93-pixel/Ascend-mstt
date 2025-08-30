@@ -186,13 +186,13 @@ class JsonGraphService(GraphServiceStrategy):
             micro_step = meta_data.get('microStep')
             # 单图
             if not graph_data.get(NPU):
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step, {})
             # NPU
             elif graph_type == NPU:
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step, {})
             # 标杆
             elif graph_type == BENCH:
-                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step, {})
             else:
                 return {'success': True, 'data': {}}
             return {'success': True, 'data': hierarchy}
