@@ -16,6 +16,8 @@
 import os
 import time
 import json
+from tensorboard.util import tb_logging
+
 from .graph_service_base import GraphServiceStrategy
 from ..repositories.graph_repo_vis import GraphRepoVis
 from ..utils.global_state import GraphState
@@ -25,7 +27,6 @@ from ..model.match_nodes_model import MatchNodesController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 
-from tensorboard.util import tb_logging
 logger = tb_logging.get_logger()
 
 
@@ -230,7 +231,7 @@ class JsonGraphService(GraphServiceStrategy):
                     precision.append(node_name)
                 if any(low <= node.get('data', {}).get("precision_index", -1) < high for low, high in values):
                     precision.append(node_name)
-            return { 'success': True, 'data': precision}
+            return {'success': True, 'data': precision}
         except Exception as e:
             logger.error('获取符合精度误差节点失败:' + str(e))
             return {'success': False, 'error': '获取符合精度误差节点失败:' + str(e)}
@@ -252,7 +253,7 @@ class JsonGraphService(GraphServiceStrategy):
                         continue 
                     if node.get('data', {}).get("overflow_level", -1) in values:
                         overflow.append(node_name)
-                return { 'success': True, 'data': overflow}
+                return {'success': True, 'data': overflow}
             else:
                 return {'success': False, 'error': '多图模式下不支持溢出检测'}         
         except Exception as e:

@@ -115,12 +115,12 @@ class GraphView:
     def search_node(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
         meta_data = data.get("metaData")
-        type = data.get("type")
+        search_type = data.get("type")
         values = data.get("values")
         strategy = GraphView._get_strategy(meta_data)
-        if(type == 'precision'):
+        if(search_type == 'precision'):
             result = strategy.search_node_by_precision(meta_data, values)
-        elif(type == 'overflow'):
+        elif(search_type == 'overflow'):
             result = strategy.search_node_by_overflow(meta_data, values)
         else:
             result = {
