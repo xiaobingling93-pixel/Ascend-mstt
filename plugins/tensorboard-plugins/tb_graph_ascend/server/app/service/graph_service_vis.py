@@ -207,23 +207,26 @@ class JsonGraphService(GraphServiceStrategy):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
+     
+        precision = []
+        is_filter_unmatch_nodes = True if '无匹配节点' in values else False
         try:
-            precision = []
-            is_filter_unmatch_nodes = True if '无匹配节点' in values else False
             if is_filter_unmatch_nodes:
                 values.remove('无匹配节点')
             # 单图
             if not graph_data.get(NPU):
-                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}), meta_data.get("microStep", -1))
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}),
+                                                                     meta_data.get("microStep", -1))
             # 多图
             else:
-                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get(NPU), meta_data.get("microStep", -1))
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get(NPU),
+                                                                     meta_data.get("microStep", -1))
             for node_name, node in node_list.items():
                 subnodes = node.get("subnodes", None)
-                if subnodes != [] and subnodes != None:
-                   continue 
+                if subnodes != [] and subnodes is not None:
+                    continue 
                 matched_node_link = node.get('matched_node_link', None)
-                if is_filter_unmatch_nodes and (matched_node_link == None or matched_node_link == []):
+                if is_filter_unmatch_nodes and (matched_node_link is None or matched_node_link == []):
                     precision.append(node_name)
                 if any(low <= node.get('data', {}).get("precision_index", -1) < high for low, high in values):
                     precision.append(node_name)
@@ -237,14 +240,15 @@ class JsonGraphService(GraphServiceStrategy):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
+        overflow = []   
         try:
-            overflow = []
             # 单图
             if not graph_data.get(NPU):
-                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}), meta_data.get("microStep", -1))
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}),
+                                                                     meta_data.get("microStep", -1))
                 for node_name, node in node_list.items():
                     subnodes = node.get("subnodes", None)
-                    if subnodes != [] and subnodes != None:
+                    if subnodes != [] and subnodes is not None:
                         continue 
                     if node.get('data', {}).get("overflow_level", -1) in values:
                         overflow.append(node_name)
@@ -340,10 +344,14 @@ class JsonGraphService(GraphServiceStrategy):
                     match_result = MatchNodesController.process_task_add_child_layer(graph_data,
                                                                     npu_node_name, bench_node_name, task)              
                 else:
-                    match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-                
-                update_data = [node for item in match_result if item.get('success') is True 
-                                for node in item.get('data', [])]                    
+                    match_result = MatchNodesController.process_task_add(graph_data,
+                                                                         npu_node_name, bench_node_name, task)
+                update_data = []
+                for item in match_result:
+                    if item.get('success') is True:
+                        for node in item.get('data', []):
+                            update_data.append(node)
+                 
                 if len(update_data) > 0:
                     config_data = GraphState.get_global_value("config_data")
                     result = {
@@ -374,9 +382,13 @@ class JsonGraphService(GraphServiceStrategy):
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
-                update_data = [node for item in match_result if item.get('success') is True 
-                                   for node in item.get('data', [])]
+                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
+                                                                                           match_node_links, task)
+                update_data = []
+                for item in match_result:
+                    if item.get('success') is True:
+                        for node in item.get('data', []):
+                            update_data.append(node)
                 result = {}
                 if len(update_data) > 0:
                     # 返回：返回更新后的节点信息
@@ -411,11 +423,16 @@ class JsonGraphService(GraphServiceStrategy):
                     match_result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
                                                                                   bench_node_name, task)
                 else:
-                    match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
+                    match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name,
+                                                                            bench_node_name, task)
                 
-                # 处理结果         
-                update_data = [node for item in match_result if item.get('success') is True 
-                                for node in item.get('data', [])]
+                # 处理结果         )]
+                update_data = []
+                for item in match_result:
+                    if item.get('success') is True:
+                        for node in item.get('data', []):
+                            update_data.append(node)
+
                 if len(update_data) > 0:
                     # 返回：返回更新后的节点信息
                     config_data = GraphState.get_global_value("config_data")

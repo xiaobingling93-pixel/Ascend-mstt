@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 from .hierarchy import Hierarchy
-from ..utils.global_state import GraphState,NPU, BENCH, SINGLE
+from ..utils.global_state import GraphState, NPU, BENCH, SINGLE
 
 
 class LayoutHierarchyModel:
@@ -54,7 +54,7 @@ class LayoutHierarchyModel:
         npu_update_data = [node for node in data if node['graph_type'] == NPU]
         bench_update_data = [node for node in data if node['graph_type'] == BENCH]
         if LayoutHierarchyModel.hierarchy.get(NPU, None) and npu_update_data != []:
-             LayoutHierarchyModel.hierarchy[NPU].update_current_hierarchy_data(npu_update_data)
+            LayoutHierarchyModel.hierarchy[NPU].update_current_hierarchy_data(npu_update_data)
         if LayoutHierarchyModel.hierarchy.get(BENCH, None) and bench_update_data != []:
-             LayoutHierarchyModel.hierarchy[BENCH].update_current_hierarchy_data(bench_update_data)
+            LayoutHierarchyModel.hierarchy[BENCH].update_current_hierarchy_data(bench_update_data)
      

@@ -40,10 +40,12 @@ class MatchNodesController:
         opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
         if task == 'md5':
             match_result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name,
+                                                                        opposite_bench_node_name)
         elif task == 'summary':
             match_result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name,
+                                                                            opposite_bench_node_name)
         else:
             return [{'success': False, 'error': 'task类型错误'},
                     {'success': False, 'error': 'task类型错误'}]
@@ -55,10 +57,12 @@ class MatchNodesController:
         opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
         if task == 'md5':
             match_result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name,
+                                                                           opposite_bench_node_name)
         elif task == 'summary':
             match_result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
-            opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name, opposite_bench_node_name)
+            opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name,
+                                                                               opposite_bench_node_name)
         else:
             return [{'success': False, 'error': 'task类型错误'},
                     {'success': False, 'error': 'task类型错误'}]
@@ -127,8 +131,8 @@ class MatchNodesController:
                 bench_subnode_list = bench_match_names.get(key, [])
                 # 多个节点可能有一个module name
                 for npu_subnode_name, bench_subnode_name in zip(npu_subnode_list, bench_subnode_list):
-                    match_result = MatchNodesController.process_task_add(graph_data, npu_subnode_name, bench_subnode_name,
-                                                                   task)
+                    match_result = MatchNodesController.process_task_add(graph_data, npu_subnode_name,
+                                                                         bench_subnode_name, task)
                     npu_subnodes = npu_nodes.get(npu_subnode_name, {}).get('subnodes', [])
                     bench_subnodes = bench_nodes.get(bench_subnode_name, {}).get('subnodes', [])
                     # 2.4 如果有子节点，递归调用2.1-2.4
@@ -179,15 +183,15 @@ class MatchNodesController:
                 if not matched_node_link:
                     continue
                 bench_subnode_name = matched_node_link[-1]
-                match_result = MatchNodesController.process_task_delete(graph_data, npu_subnode_name, bench_subnode_name,
-                                                                  task)
+                match_result = MatchNodesController.process_task_delete(graph_data, npu_subnode_name,
+                                                                        bench_subnode_name, task)
                 npu_subnodes = npu_nodes.get(npu_subnode_name, {}).get('subnodes', [])
                 bench_subnodes = bench_nodes.get(bench_subnode_name, {}).get('subnodes', [])
                 # 2.4 如果有子节点，递归调用2.1-2.4
                 if len(match_result) > 0 and match_result[0].get('success'):
-                        result.extend(match_result)
-                        if npu_subnodes and bench_subnodes:
-                            process_child_layer(npu_subnodes)
+                    result.extend(match_result)
+                    if npu_subnodes and bench_subnodes:
+                        process_child_layer(npu_subnodes)
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
@@ -223,20 +227,20 @@ class MatchNodesController:
         # DB: data只有DB会用到
         data = [
              {
-                    "node_name":npu_node_name,
-                    "matched_node_link":[bench_node_name],
-                    "precision_index":precision_error,
-                    "input_data":npu_node_data.get('input_data'),
-                    "output_data":npu_node_data.get('output_data'),
-                    "graph_type":NPU
+                    "node_name": npu_node_name,
+                    "matched_node_link": [bench_node_name],
+                    "precision_index": precision_error,
+                    "input_data": npu_node_data.get('input_data'),
+                    "output_data": npu_node_data.get('output_data'),
+                    "graph_type": NPU
                 },
                 {
-                    "node_name":bench_node_name,
-                    "matched_node_link":[npu_node_name],
-                    "precision_index":None,
-                    "input_data":bench_node_data.get('input_data'),
-                    "output_data":bench_node_data.get('output_data'),
-                    "graph_type":BENCH,
+                    "node_name": bench_node_name,
+                    "matched_node_link": [npu_node_name],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
                 }
             ]
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
@@ -260,12 +264,12 @@ class MatchNodesController:
         if not intput_statistical_diff or not output_statistical_diff:
             return {
                 'success': False,
-                'error': f'{npu_node_name, bench_node_name}输入或输出统计误差值为空(Input and output statistical error calculation failed)',
+                'error': f'{npu_node_name, bench_node_name}输入或输出统计误差值为空',
             }
         if precision_error == -1:
             return {
                 'success': False,
-                'error': f'{npu_node_name, bench_node_name}输出统计误差值为空，计算精度误差失败(Calculation of precision error failed)',
+                'error': f'{npu_node_name, bench_node_name}输出统计误差值为空，计算精度误差失败',
             }
         # 在原始数据上，添加匹配节点，和匹配节点信息
         # JSON：处理JSON更新
@@ -279,20 +283,20 @@ class MatchNodesController:
         # DB: data只有DB会用到
         data = [
              {
-                    "node_name":npu_node_name,
-                    "matched_node_link":[bench_node_name],
-                    "precision_index":precision_error,
-                    "input_data":npu_node_data.get('input_data'),
-                    "output_data":npu_node_data.get('output_data'),
-                    "graph_type":NPU
+                    "node_name": npu_node_name,
+                    "matched_node_link": [bench_node_name],
+                    "precision_index": precision_error,
+                    "input_data": npu_node_data.get('input_data'),
+                    "output_data": npu_node_data.get('output_data'),
+                    "graph_type": NPU
                 },
                 {
-                    "node_name":bench_node_name,
-                    "matched_node_link":[npu_node_name],
-                    "precision_index":None,
-                    "input_data":bench_node_data.get('input_data'),
-                    "output_data":bench_node_data.get('output_data'),
-                    "graph_type":BENCH,
+                    "node_name": bench_node_name,
+                    "matched_node_link": [npu_node_name],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
                 }
             ]
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
@@ -324,20 +328,20 @@ class MatchNodesController:
         # DB: data只有DB会用到
         data = [
              {
-                    "node_name":npu_node_name,
-                    "matched_node_link":[],
-                    "precision_index":None,
-                    "input_data":npu_node_data.get('input_data'),
-                    "output_data":npu_node_data.get('output_data'),
-                    "graph_type":NPU
+                    "node_name": npu_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": npu_node_data.get('input_data'),
+                    "output_data": npu_node_data.get('output_data'),
+                    "graph_type": NPU
                 },
                 {
-                    "node_name":bench_node_name,
-                    "matched_node_link":[],
-                    "precision_index":None,
-                    "input_data":bench_node_data.get('input_data'),
-                    "output_data":bench_node_data.get('output_data'),
-                    "graph_type":BENCH,
+                    "node_name": bench_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
                 }
             ]
         MatchNodesController.delete_config_match_nodes(npu_node_name, bench_node_name)
@@ -376,20 +380,20 @@ class MatchNodesController:
         # DB: data只有DB会用到
         data = [
                 {
-                    "node_name":npu_node_name,
-                    "matched_node_link":[],
-                    "precision_index":None,
-                    "input_data":input_data,
-                    "output_data":output_data,
-                    "graph_type":NPU
+                    "node_name": npu_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": input_data,
+                    "output_data": output_data,
+                    "graph_type": NPU
                 },
                 {
-                    "node_name":bench_node_name,
-                    "matched_node_link":[],
-                    "precision_index":None,
-                    "input_data":bench_node_data.get('input_data'),
-                    "output_data":bench_node_data.get('output_data'),
-                    "graph_type":BENCH,
+                    "node_name": bench_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
                 }
             ]
         MatchNodesController.delete_config_match_nodes(npu_node_name, bench_node_name)
@@ -518,7 +522,6 @@ class MatchNodesController:
             # 格式化相对误差字段
             for field in ['MaxRelativeErr', 'MinRelativeErr', 'NormRelativeErr', 'MeanRelativeErr']:
                 diff_values[field] = GraphUtils.format_relative_err(diff_values.get(field, float('nan')))
-
             # 转换 absErr 为 NaN 字符串
             for field in ['MaxAbsErr', 'MinAbsErr', 'MeanAbsErr', 'NormAbsErr']:
                 diff_values[field] = GraphUtils.nan_to_str(diff_values.get(field, float('nan')))

@@ -55,10 +55,12 @@ class Hierarchy:
         self.update_graph_shape()
         self.update_graph_position()
 
-    def measure_text_width(self, text):
+    @classmethod
+    def measure_text_width(cls, text):
         return len(text) * 6  # 假设每个字符宽度为6
 
-    def extract_label_name(self, node_name, node_type):
+    @classmethod
+    def extract_label_name(cls, node_name, node_type):
         if not node_name:
             return ''
         splited_subnode_name = node_name.split('.')
@@ -272,7 +274,7 @@ class Hierarchy:
             children = node_info.get('subnodes', [])
         # precisionIndex 先从缓存中获取(更新误差可能会更新缓存)，如果不存在，则从ode_info中获取
         update_precision_cache = GraphState.get_global_value('update_precision_cache', {})
-        if update_precision_cache.get(node_name) != None:
+        if update_precision_cache.get(node_name) is not None:
             precision_index = update_precision_cache.get(node_name, {}).get('precision_index')
         else:
             precision_index = node_info.get('data', {}).get('precision_index', "NaN")
