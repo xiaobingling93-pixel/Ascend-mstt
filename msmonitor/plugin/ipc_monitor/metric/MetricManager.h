@@ -18,33 +18,31 @@
 
 #include <vector>
 #include <atomic>
-
-#include "utils.h"
-#include "singleton.h"
-#include "mspti.h"
-#include "TimerTask.h"
+#include "MsptiDataProcessBase.h"
 #include "MetricProcessBase.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
 namespace metric {
-class MetricManager : public ipc_monitor::Singleton<MetricManager>, public TimerTask {
+class MetricManager : public MsptiDataProcessBase {
 public:
     MetricManager();
     ~MetricManager() = default;
-    ErrCode ConsumeMsptiData(msptiActivity *record);
-    void SetReportInterval(uint32_t intervalTimes);
-    void SendMetricMsg();
+    ErrCode ConsumeMsptiData(msptiActivity *record) override;
+    void SetReportInterval(uint32_t intervalTimes) override;
     void ExecuteTask() override;
-    void EnableKindSwitch_(msptiActivityKind kind, bool flag);
-    void ReleaseResource() override;
+    void EnableKindSwitch(msptiActivityKind kind, bool flag) override;
+    void RunPostTask() override;
+
+private:
+    void SendMetricMsg();
 private:
     std::vector<std::atomic<bool>> kindSwitchs_;
     std::vector<std::atomic<bool>> consumeStatus_;
     std::atomic<uint32_t> reportInterval_;
     std::vector<std::shared_ptr<MetricProcessBase>> metrics;
 };
-}
-}
-}
-#endif
+} // namespace metric
+} // namespace ipc_monitor
+} // namespace dynolog_npu
+#endif // METRIC_MANAGER_H

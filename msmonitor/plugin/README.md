@@ -7,8 +7,8 @@
 
 __PyDynamicMonitorProxy接口说明__:
 * `init_dyno` 向dynolog daemon发送注册请求
-  * input: npuId(int)
-  * return: None 
+  * input: npu_id(int)
+  * return: None
 * `poll_dyno` 向dynolog daemon获取Profiler控制参数
   * input: None
   * return: str，返回控制参数

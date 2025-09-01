@@ -22,6 +22,7 @@
 
 #include "DynoLogNpuMonitor.h"
 #include "MetricManager.h"
+#include "db/DBProcessManager.h"
 #include "utils.h"
 
 namespace {
@@ -32,13 +33,6 @@ constexpr uint32_t MAX_ALLOC_CNT = MAX_BUFFER_SIZE / DEFAULT_BUFFER_SIZE;
 
 namespace dynolog_npu {
 namespace ipc_monitor {
-
-MsptiMonitor::MsptiMonitor()
-    : start_(false),
-      subscriber_(nullptr),
-      checkFlush_(false),
-      flushInterval_(0) {}
-
 MsptiMonitor::~MsptiMonitor()
 {
     Uninit();
@@ -49,13 +43,27 @@ void MsptiMonitor::Start()
     if (start_.load()) {
         return;
     }
+    if (savePath_.empty()) {
+        std::shared_ptr<metric::MetricManager> metricManager{nullptr};
+        MakeSharedPtr(metricManager);
+        dataProcessor_ = metricManager;
+    } else {
+        std::shared_ptr<db::DBProcessManager> dbProcessManager{nullptr};
+        MakeSharedPtr(dbProcessManager, savePath_);
+        dataProcessor_ = dbProcessManager;
+    }
+    if (dataProcessor_ == nullptr) {
+        LOG(ERROR) << "MsptiMonitor Start failed, dataProcessor init failed";
+        return;
+    }
     SetThreadName("MsptiMonitor");
     if (Thread::Start() != 0) {
         LOG(ERROR) << "MsptiMonitor start failed";
         return;
     }
     start_.store(true);
-    metric::MetricManager::GetInstance()->Run();
+    dataProcessor_->SetReportInterval(flushInterval_);
+    dataProcessor_->Run();
     LOG(INFO) << "MsptiMonitor start successfully";
 }
 
@@ -65,10 +73,11 @@ void MsptiMonitor::Stop()
         LOG(WARNING) << "MsptiMonitor is not running";
         return;
     }
-    Uninit();
+
     if (msptiActivityFlushAll(1) != MSPTI_SUCCESS) {
         LOG(WARNING) << "MsptiMonitor stop msptiActivityFlushAll failed";
     }
+    Uninit();
     LOG(INFO) << "MsptiMonitor stop successfully";
 }
 
@@ -77,10 +86,34 @@ void MsptiMonitor::Uninit()
     if (!start_.load()) {
         return;
     }
-    metric::MetricManager::GetInstance()->Stop();
     start_.store(false);
     cv_.notify_one();
     Thread::Stop();
+    if (dataProcessor_ != nullptr) {
+        dataProcessor_->Stop();
+        dataProcessor_ = nullptr;
+    }
+    savePath_.clear();
+}
+
+bool MsptiMonitor::CheckAndSetSavePath(const std::string &path)
+{
+    if (path.empty()) {
+        LOG(ERROR) << "MsptiMonitor CheckAndSetSavePath failed, path is empty";
+        return false;
+    }
+    std::string absPath = PathUtils::RelativeToAbsPath(path);
+    if (PathUtils::DirPathCheck(absPath)) {
+        std::string realPath = PathUtils::RealPath(absPath);
+        if (PathUtils::CreateDir(realPath)) {
+            savePath_ = realPath;
+            return true;
+        }
+        LOG(ERROR) << "MsptiMonitor CheckAndSetSavePath failed, Create save path: " << realPath << " failed.";
+    } else {
+        LOG(ERROR) << "MsptiMonitor CheckAndSetSavePath failed, save path: " << absPath << " is invalid.";
+    }
+    return false;
 }
 
 void MsptiMonitor::EnableActivity(msptiActivityKind kind)
@@ -92,7 +125,9 @@ void MsptiMonitor::EnableActivity(msptiActivityKind kind)
         } else {
             LOG(ERROR) << "MsptiMonitor enableActivity failed, kind: " << static_cast<int32_t>(kind);
         }
-        metric::MetricManager::GetInstance()->EnableKindSwitch_(kind, true);
+        if (dataProcessor_ != nullptr) {
+            dataProcessor_->EnableKindSwitch(kind, true);
+        }
     }
 }
 
@@ -105,7 +140,9 @@ void MsptiMonitor::DisableActivity(msptiActivityKind kind)
         } else {
             LOG(ERROR) << "MsptiMonitor disableActivity failed, kind: " << static_cast<int32_t>(kind);
         }
-        metric::MetricManager::GetInstance()->EnableKindSwitch_(kind, false);
+        if (dataProcessor_ != nullptr) {
+            dataProcessor_->EnableKindSwitch(kind, false);
+        }
     }
 }
 
@@ -116,7 +153,9 @@ void MsptiMonitor::SetFlushInterval(uint32_t interval)
     if (start_.load()) {
         cv_.notify_one();
     }
-    metric::MetricManager::GetInstance()->SetReportInterval(interval);
+    if (dataProcessor_ != nullptr) {
+        dataProcessor_->SetReportInterval(interval);
+    }
 }
 
 bool MsptiMonitor::IsStarted()
@@ -227,7 +266,22 @@ void MsptiMonitor::BufferConsume(msptiActivity *record)
     if (record == nullptr) {
         return;
     }
-    metric::MetricManager::GetInstance()->ConsumeMsptiData(record);
+    auto dataProcessor = GetDataProcessor();
+    if (dataProcessor != nullptr) {
+        dataProcessor->ConsumeMsptiData(record);
+    }
+}
+
+std::shared_ptr<MsptiDataProcessBase> MsptiMonitor::GetDataProcessor()
+{
+    return GetInstance()->dataProcessor_;
+}
+
+void MsptiMonitor::SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData)
+{
+    if (dataProcessor_ != nullptr) {
+        dataProcessor_->SetClusterConfigData(configData);
+    }
 }
 } // namespace ipc_monitor
 } // namespace dynolog_npu

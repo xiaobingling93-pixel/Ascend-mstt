@@ -74,8 +74,8 @@ public:
         interval.store(intervalTimes);
     }
 
-    virtual void InitResource() {};
-    virtual void ReleaseResource() {};
+    virtual void RunPreTask() {};
+    virtual void RunPostTask() {};
     virtual void ExecuteTask() = 0;
     bool IsRunning() { return running.load(); }
 private:
@@ -83,7 +83,7 @@ private:
     void TaskRun()
     {
         LOG(INFO) << name << " Timer task started.";
-        InitResource();
+        RunPreTask();
         while (running) {
             std::unique_lock<std::mutex> lock(cv_mutex);
             if (interval.load()) {
@@ -101,7 +101,7 @@ private:
                 ExecuteTask();
             }
         }
-        ReleaseResource();
+        RunPostTask();
         LOG(INFO) << name << " Timer task stopped.";
     }
 

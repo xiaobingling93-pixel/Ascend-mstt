@@ -16,7 +16,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "ipc_monitor/PyDynamicMonitorProxy.h"
-#include "ipc_monitor/utils.h"
+#include "ipc_monitor/mspti_monitor/MsptiMonitor.h"
 
 namespace py = pybind11;
 
@@ -34,4 +34,7 @@ PYBIND11_MODULE(IPCMonitor_C, m) {
     m.def("finalize_dyno", []() -> void {
         dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->FinalizeDyno();
     });
+    m.def("set_cluster_config_data", [](const std::unordered_map<std::string, std::string>& cluster_config) -> void {
+        dynolog_npu::ipc_monitor::MsptiMonitor::GetInstance()->SetClusterConfigData(cluster_config);
+    }, py::arg("cluster_config"));
 }

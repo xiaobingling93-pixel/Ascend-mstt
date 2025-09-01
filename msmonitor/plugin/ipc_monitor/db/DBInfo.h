@@ -14,35 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef IPC_MONITOR_DB_BASE_H
-#define IPC_MONITOR_DB_BASE_H
+#ifndef IPC_MONITOR_DB_INFO_H
+#define IPC_MONITOR_DB_INFO_H
 
-#include <unordered_map>
-#include "db/Connection.h"
+#include "db/DBRunner.h"
+#include "db/DataBase.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
 namespace db {
-using TableColumns = std::vector<TableColumn>;
+struct DBInfo {
+    DBInfo() = default;
 
-class Database {
-public:
-    Database() = default;
-    virtual ~Database() = default;
-    void SetDBName(std::string dbName) { dbName_ = std::move(dbName); }
-    std::string GetDBName() const { return dbName_; }
-    const TableColumns& GetTableCols(const std::string &tableName);
-protected:
-    std::string dbName_;
-    std::unordered_map<std::string, TableColumns> tableColumns_;
-};
+    bool ConstructDBRunner(const std::string& dbPath)
+    {
+        dbRunner = std::make_shared<DBRunner>(dbPath);
+        return dbRunner != nullptr;
+    }
 
-class MsMonitorDB : public Database {
-public:
-    MsMonitorDB();
+    std::shared_ptr<Database> database{nullptr};
+    std::shared_ptr<DBRunner> dbRunner{nullptr};
 };
 } // namespace db
 } // namespace ipc_monitor
 } // namespace dynolog_npu
 
-#endif // IPC_MONITOR_DB_BASE_H
+#endif // IPC_MONITOR_DB_INFO_H
