@@ -15,6 +15,7 @@ set(ENV{PROJECT_ROOT_PATH} "${CMAKE_SOURCE_DIR}")
 include(utils)
 find_package(glog MODULE REQUIRED)
 find_package(nlohmannjson MODULE REQUIRED)
+find_package(sqlite3 MODULE REQUIRED)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor
@@ -35,6 +36,7 @@ set(SOURCES
     bindings.cpp
     ${IPC_SOURCES}
     ${SECUREC_SOURCES}
+    ${sqlite3_SOURCES}
 )
 
 add_library(IPCMonitor MODULE ${SOURCES})
@@ -64,9 +66,9 @@ target_link_options(IPCMonitor PRIVATE
     -s
 )
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_compile_options(-O0 -g)
-    add_link_options(-O0 -g)
-else()
-    add_compile_options(-D_FORITFY_SOURCE=2 -O2)
-endif()
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0 -g")
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_FORTIFY_SOURCE=2 -O2")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -D_FORTIFY_SOURCE=2 -O2")

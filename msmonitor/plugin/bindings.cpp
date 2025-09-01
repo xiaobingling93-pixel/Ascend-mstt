@@ -34,7 +34,4 @@ PYBIND11_MODULE(IPCMonitor_C, m) {
     m.def("finalize_dyno", []() -> void {
         dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->FinalizeDyno();
     });
-    m.def("set_parallel_group_info", [](std::string parallel_group_info) -> void {
-        dynolog_npu::ipc_monitor::SetParallelGroupInfo(parallel_group_info);
-    }, py::arg("parallel_group_info"));
 }

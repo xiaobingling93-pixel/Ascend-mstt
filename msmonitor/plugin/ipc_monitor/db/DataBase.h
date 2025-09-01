@@ -13,33 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INPUT_PARSER_H
-#define INPUT_PARSER_H
+
+#ifndef IPC_MONITOR_DB_BASE_H
+#define IPC_MONITOR_DB_BASE_H
 
 #include <unordered_map>
-#include <string>
-#include <set>
-#include "mspti.h"
-#include "singleton.h"
+#include "db/Connection.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
+namespace db {
+using TableColumns = std::vector<TableColumn>;
 
-struct MsptiMonitorCfg {
-    std::set<msptiActivityKind> enableActivities;
-    uint32_t reportIntervals;
-    bool monitorStart;
-    bool monitorStop;
-    bool isMonitor;
-    std::string savePath;
-};
-
-
-class InputParser : public Singleton<InputParser> {
+class Database {
 public:
-    MsptiMonitorCfg DynoLogGetOpts(std::unordered_map<std::string, std::string>& cmd);
+    Database() = default;
+    virtual ~Database() = default;
+    void SetDBName(std::string dbName) { dbName_ = std::move(dbName); }
+    std::string GetDBName() const { return dbName_; }
+    TableColumns GetTableCols(const std::string &tableName);
+protected:
+    std::string dbName_;
+    std::unordered_map<std::string, TableColumns> tableColumns_;
 };
 
+class MsMonitorDB : public Database {
+public:
+    MsMonitorDB();
+};
+} // namespace db
 } // namespace ipc_monitor
 } // namespace dynolog_npu
-#endif // INPUT_PARSER_H
+
+#endif // IPC_MONITOR_DB_BASE_H

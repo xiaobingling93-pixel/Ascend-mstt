@@ -9,13 +9,14 @@ import zlib
 import tempfile
 
 import numpy as np
+import pandas as pd
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
-    stack_column_process, table_value_is_valid, reorder_op_name_list, reorder_op_x_list, gen_op_item, ApiBatch, \
-    get_paired_dirs
+    stack_column_process, table_value_is_valid, reorder_op_name_list, gen_op_item, ApiBatch, get_paired_dirs, \
+    reorder_index, gen_api_batches
 
 # test_read_op_1
 op_data = {
@@ -589,6 +590,40 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertFalse(result)
 
 
+class TestReorderIndex(unittest.TestCase):
+    def test_reorder_index_mixed_states(self):
+        op_parsed_list = [
+            {Const.STATE: "OTHER"},
+            {Const.STATE: Const.OUTPUT},
+            {Const.STATE: Const.PARAMS},
+            {Const.STATE: Const.PARAMS_GRAD},
+            {Const.STATE: Const.INPUT},
+            {"not_state": 123},  # 没有 STATE，算作 other
+        ]
+
+        reordered = reorder_index(op_parsed_list)
+        self.assertTrue(reordered == [0, 4, 2, 1, 3])
+
+    def test_reorder_index_all_params(self):
+        op_parsed_list = [
+            {Const.STATE: Const.PARAMS},
+            {Const.STATE: Const.PARAMS},
+            {Const.STATE: Const.PARAMS},
+        ]
+        reordered = reorder_index(op_parsed_list)
+        self.assertTrue(reordered == [0, 1])
+
+    def test_reorder_index_empty(self):
+        op_parsed_list = []
+        reordered = reorder_index(op_parsed_list)
+        self.assertTrue(reordered == [])
+
+    def test_reorder_index_single_element(self):
+        op_parsed_list = [{Const.STATE: Const.PARAMS}]
+        reordered = reorder_index(op_parsed_list)
+        self.assertTrue(reordered == [])
+
+
 class TestReorderOpNameList(unittest.TestCase):
     def test_reorder_op_name_list(self):
         # 标准顺序
@@ -619,62 +654,6 @@ class TestReorderOpNameList(unittest.TestCase):
         expected_state = []
         self.assertEqual(op_name_reorder, expected_result)
         self.assertEqual(state_reorder, expected_state)
-
-
-class TestReorderOpXList(unittest.TestCase):
-    def test_reorder_op_x_list(self):
-        # 标准顺序
-        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
-        summary_list = ["summary1", "summary2", "summary3"]
-        data_name_list = ["data1", "data2", "data3"]
-        state_list = ["input", "output", "parameters"]
-        requires_grad_list = [True, None, False]
-        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
-            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
-        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
-        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
-        self.assertEqual(result_data_name, ["data1", "data3", "data2"])
-        self.assertEqual(result_state, ["input", "parameters", "output"])
-        self.assertEqual(result_requires_grad, [True, False, None])
-
-        # 空 op_name_list 或 summary_list
-        op_name_list = []
-        summary_list = []
-        data_name_list = ["data1", "data2", "data3"]
-        state_list = []
-        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
-            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
-        self.assertEqual(result_op_name, [])
-        self.assertEqual(result_summary, [])
-        self.assertEqual(result_data_name, ["data1", "data2", "data3"])
-        self.assertEqual(result_state, [])
-        self.assertEqual(result_requires_grad, [True, None, False])
-
-        # 空 data_name_list
-        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
-        summary_list = ["summary1", "summary2", "summary3"]
-        data_name_list = []
-        state_list = ["input", "output", "parameters"]
-        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
-            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
-        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
-        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
-        self.assertEqual(result_data_name, [])
-        self.assertEqual(result_state, ["input", "parameters", "output"])
-        self.assertEqual(result_requires_grad, [True, False, None])
-
-        # data_name_list 为 None
-        op_name_list = ["op.forward.input.0", "op.forward.output.0", "op.forward.parameters.weight"]
-        summary_list = ["summary1", "summary2", "summary3"]
-        data_name_list = None
-        state_list = ["input", "output", "parameters"]
-        result_op_name, result_summary, result_data_name, result_state, result_requires_grad = reorder_op_x_list(
-            op_name_list, summary_list, data_name_list, state_list, requires_grad_list)
-        self.assertEqual(result_op_name, ["op.forward.input.0", "op.forward.parameters.weight", "op.forward.output.0"])
-        self.assertEqual(result_summary, ["summary1", "summary3", "summary2"])
-        self.assertEqual(result_data_name, None)
-        self.assertEqual(result_state, ["input", "parameters", "output"])
-        self.assertEqual(result_requires_grad, [True, False, None])
 
 
 class TestGenOpItem(unittest.TestCase):
@@ -912,6 +891,43 @@ class TestApiBatch(unittest.TestCase):
         self.assertEqual(api_batch.params_end_index, 3)
         self.assertEqual(api_batch.output_end_index, 5)
         self.assertEqual(api_batch.params_grad_end_index, 5)
+
+
+class TestGenApiBatches(unittest.TestCase):
+    def test_gen_api_batches_normal(self):
+        result_df_part1 = pd.DataFrame(o_result)
+        result_df_part1.columns = CompareConst.SUMMARY_COMPARE_RESULT_HEADER_STACK
+        new_columns = [
+            ['input', 'Functional.conv2d.0.forward'],
+            ['input', 'Functional.conv2d.0.forward'],
+            ['input', 'Functional.conv2d.0.forward'],
+            ['parameters', 'Functional.conv2d.0.forward'],
+            ['parameters', 'Functional.conv2d.0.forward'],
+            ['output', 'Functional.conv2d.0.forward'],
+            ['parameters_grad', 'Functional.conv2d.0.forward'],
+            ['parameters_grad', 'Functional.conv2d.0.forward']
+        ]
+        result_df_part2 = pd.DataFrame(new_columns)
+        result_df_part2.columns = [Const.STATE, Const.API_ORIGIN_NAME]
+        result_df = pd.concat([result_df_part1, result_df_part2], axis=1)
+        result = result_df.values
+        header = result_df.columns.tolist()
+        result_api_batches = gen_api_batches(result, header)
+
+        api_batch = ApiBatch('Functional.conv2d.0.forward', 0)
+        api_batch.input_len = 3
+        api_batch.output_end_index = 6
+        api_batch.params_end_index = 5
+        api_batch.params_grad_end_index = 8
+        api_batch._state = 'parameters_grad'
+
+        result_api_batch = result_api_batches[0]
+        self.assertEqual(result_api_batch.api_name, api_batch.api_name)
+        self.assertEqual(result_api_batch.start, api_batch.start)
+        self.assertEqual(result_api_batch.input_len, api_batch.input_len)
+        self.assertEqual(result_api_batch.params_end_index, api_batch.params_end_index)
+        self.assertEqual(result_api_batch.params_grad_end_index, api_batch.params_grad_end_index)
+        self.assertEqual(result_api_batch._state, api_batch._state)
 
 
 class TestGetPairedSteps(unittest.TestCase):

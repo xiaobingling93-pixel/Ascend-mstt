@@ -24,7 +24,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
            {'compare_metrics': ['MaxRelativeErr', 'NormRelativeErr'], 'MaxRelativeErr': [0.5]})
     def test_single_metric_diff_check_true(self):
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, '')
         result = first_diff_analyze.single_metric_diff_check('MaxRelativeErr', '60.0%')
         self.assertTrue(result)
 
@@ -32,7 +32,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
            {'compare_metrics': ['MaxRelativeErr', 'NormRelativeErr'], 'MaxRelativeErr': [0.5]})
     def test_single_metric_diff_check_false(self):
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, '')
         result = first_diff_analyze.single_metric_diff_check('MaxRelativeErr', '30.0%')
         self.assertFalse(result)
 
@@ -40,7 +40,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
            {'compare_metrics': ['MaxRelativeErr', 'NormRelativeErr'], 'NormRelativeErr': [0.5]})
     def test_single_metric_diff_check_miss_threshold(self):
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, '')
         with self.assertRaises(CompareException) as context:
             result = first_diff_analyze.single_metric_diff_check('MaxRelativeErr', '30.0%')
         self.assertEqual(context.exception.code, CompareException.MISSING_THRESHOLD_ERROR)
@@ -49,7 +49,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
            {'compare_metrics': ['MaxRelativeErr', 'NormRelativeErr'], 'MaxRelativeErr': [0.5, 1.0]})
     def test_single_metric_diff_check_wrong_threshold(self):
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, '')
         with self.assertRaises(CompareException) as context:
             result = first_diff_analyze.single_metric_diff_check('MaxRelativeErr', '30.0%')
         self.assertEqual(context.exception.code, CompareException.WRONG_THRESHOLD_ERROR)
@@ -73,7 +73,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
             ]
         }
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, 'rank0')
         result = first_diff_analyze.single_api_check(result_slice, self.header)
         self.assertEqual(result, expected_result)
 
@@ -96,7 +96,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
             ]
         }
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, 'rank0')
         result = first_diff_analyze.single_api_check(result_slice, self.header)
         self.assertEqual(result, expected_result)
 
@@ -123,7 +123,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
             ]
         }
         mode_config = ModeConfig(dump_mode=Const.MD5, first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, 'rank0')
         result = first_diff_analyze.single_api_check(result_slice, md5_header)
         self.assertEqual(result, expected_result)
 
@@ -150,7 +150,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
             ]
         }
         mode_config = ModeConfig(dump_mode=Const.MD5, first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, 'rank0')
         result = first_diff_analyze.single_api_check(result_slice, md5_header)
         self.assertEqual(result, expected_result)
 
@@ -171,6 +171,6 @@ class TestFirstDiffAnalyze(unittest.TestCase):
             }
         }
         mode_config = ModeConfig(first_diff_analyze=True)
-        first_diff_analyze = FirstDiffAnalyze(mode_config)
+        first_diff_analyze = FirstDiffAnalyze(mode_config, 'rank1')
         result = first_diff_analyze.check(self.result_df)
         self.assertEqual(result, expected_result)

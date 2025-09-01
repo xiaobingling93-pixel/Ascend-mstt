@@ -104,9 +104,7 @@ auto groupby(const Container& vec, KeyFunc keyFunc)
 }
 
 int GetRankId();
-void SetParallelGroupInfo(std::string parallelGroupInfo);
 uint64_t CalcHashId(const std::string &data);
-std::string GetParallelGroupInfo();
 std::string GetHostName();
 std::string GetHostUid();
 bool CreateMsmonitorLogPath(std::string& path);
