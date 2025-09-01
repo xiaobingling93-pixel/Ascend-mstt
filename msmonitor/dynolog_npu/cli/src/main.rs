@@ -113,6 +113,14 @@ fn parse_start_step(src: &str) -> Result<i64, String> {
     Ok(start_step)
 }
 
+fn parse_iterations(src: &str) -> Result<i64, String> {
+    let iterations = src.trim().parse::<i64>().map_err(|e| format!("{}", e))?;
+    if iterations < 0 {
+        return Err(format!("Must be non-negative integer or {}", 0));
+    }
+    Ok(iterations)
+}
+
 #[derive(Debug, Parser)]
 enum Command {
     /// Check the status of a dynolog process
@@ -174,7 +182,7 @@ enum Command {
         #[clap(long, default_value_t = 500)]
         duration_ms: u64,
         /// Training iterations to collect, this takes precedence over duration.
-        #[clap(long, default_value_t = -1, allow_negative_numbers = true)]
+        #[clap(long, value_parser = parse_iterations, allow_negative_numbers = true)]
         iterations: i64,
         /// Log file for trace.
         #[clap(long)]
@@ -183,7 +191,7 @@ enum Command {
         #[clap(long, default_value_t = 0)]
         profile_start_time: u64,
         /// Number of steps to start profile, -1 means start from next step.
-        #[clap(long, default_value_t = 0, value_parser = parse_start_step, allow_negative_numbers = true)]
+        #[clap(long, value_parser = parse_start_step, allow_negative_numbers = true)]
         start_step: i64,
         /// Max number of processes to profile.
         #[clap(long, default_value_t = 3)]
