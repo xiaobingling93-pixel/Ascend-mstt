@@ -18,7 +18,6 @@ import math
 import multiprocessing
 from collections import namedtuple
 
-import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -241,7 +240,8 @@ class HighLight:
     def find_compare_result_error_rows(self, result_df, highlight_dict):
         """将dataframe根据API分组，并找到有误差的算子用于高亮"""
         result = result_df.values
-        api_batches = gen_api_batches(result)
+        header = result_df.columns.tolist()
+        api_batches = gen_api_batches(result, header)
         default_bar_desc = 'API/Module Analyse Progress'
         bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
         with tqdm(total=len(api_batches), desc=bar_desc_add_rank, unit="item", ncols=100) as progress_bar:

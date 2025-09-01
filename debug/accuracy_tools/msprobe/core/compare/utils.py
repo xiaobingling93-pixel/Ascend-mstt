@@ -147,11 +147,26 @@ def op_item_parse(op_data, op_name: str, state: str, depth: int = 0) -> list:
             else:
                 item_list.extend(op_item_parse(data, op_name, state, depth + 1))
     elif isinstance(op_data, dict):
+        if is_p2pop_leaf_data(op_data):
+            p2pop_item = {}
+            for key in ['class_type', 'op', 'peer', 'tag', 'group_id']:
+                p2pop_item[key] = op_data.get(key)
+            op_data = op_data.get('tensor')
+            if isinstance(op_data, dict):
+                op_item = gen_op_item(op_data, op_name, state)
+            else:
+                op_item = default_item
+            op_item.update(p2pop_item)
+            return [op_item]
         if is_leaf_data(op_data):
             return [gen_op_item(op_data, op_name, state)]
         for sub_name, sub_data in op_data.items():
             item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), state, depth + 1))
     return item_list
+
+
+def is_p2pop_leaf_data(op_data):
+    return op_data.get('class_type') == 'torch.distributed.P2POp'
 
 
 def is_leaf_data(op_data):
@@ -267,12 +282,6 @@ def merge_tensor(tensor_list, dump_mode):
     return op_dict if op_dict[CompareConst.OP_NAME] else {}
 
 
-def check_api_info_len(op_name, info_list, len_require):
-    if len(info_list) < len_require:
-        logger.error(f'Index out of bounds error, please check info of api: {op_name}.')
-        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
-
-
 def print_compare_ends_info():
     total_len = len(CompareConst.COMPARE_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
     logger.info('*' * total_len)
@@ -347,6 +356,29 @@ def api_batches_update(api_batches, api_name, state, index):
             api_batches.append(ApiBatch(api_name, index))
 
 
+def reorder_index(op_parsed_list):
+    """
+    对单个api解析的op_items的index进行重排，将parameter的index放到output前面，返回新的重排后的index列表，op_parsed_list不变
+    """
+    index_param = []
+    index_output = []
+    index_param_grad = []
+    index_other = []
+    for i, op_item in enumerate(op_parsed_list[:-1]):
+        state = op_item.get(Const.STATE)
+        if state == Const.PARAMS:
+            index_param.append(i)
+        elif state == Const.OUTPUT:
+            index_output.append(i)
+        elif state == Const.PARAMS_GRAD:
+            index_param_grad.append(i)
+        else:
+            index_other.append(i)
+    # 合并others, parameters, 和output，确保parameters排在output前面
+    reordered_index_list = index_other + index_param + index_output + index_param_grad
+    return reordered_index_list
+
+
 def reorder_op_name_list(op_name_list, state_list):
     if not op_name_list:
         return op_name_list, state_list
@@ -376,27 +408,6 @@ def reorder_op_name_list(op_name_list, state_list):
     op_name_reorder = others + parameters + output + parameters_grad
     state_reorder = others_s + parameters_s + output_s + parameters_grad_s
     return op_name_reorder, state_reorder
-
-
-def reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list, requires_grad_list):
-    """
-    对op_name, summary, data_name, state, requires_grad重新排序，
-    把parameters放到input后output前，data_name由于统计量比对时，为None，单独处理
-    """
-    if not op_name_list or not summary_list:
-        return op_name_list, summary_list, data_name_list, state_list, requires_grad_list
-
-    index_map = {name: index for index, name in enumerate(op_name_list)}
-
-    op_name_reorder, state_reorder = reorder_op_name_list(op_name_list, state_list)
-    summary_reorder = [summary_list[index_map.get(name)] for name in op_name_reorder]
-    requires_grad_reorder = [requires_grad_list[index_map.get(name)] for name in op_name_reorder]
-    if data_name_list:
-        data_name_reorder = [data_name_list[index_map.get(name)] for name in op_name_reorder]
-    else:
-        data_name_reorder = data_name_list
-
-    return op_name_reorder, summary_reorder, data_name_reorder, state_reorder, requires_grad_reorder
 
 
 def process_summary_data(summary_data):
@@ -621,11 +632,13 @@ def make_result_table(result, dump_mode, stack_mode):
     return result_df
 
 
-def gen_api_batches(result: np.ndarray):
+def gen_api_batches(result: np.ndarray, header: list):
+    api_name_index = header.index(Const.API_ORIGIN_NAME)
+    state_name_index = header.index(Const.STATE)
     api_batches = []
     for i, res_i in enumerate(result):
-        api_name = safe_get_value(res_i, -1, "res_i")  # 内部定义倒数第一个元素必是api_origin_name
-        state = safe_get_value(res_i, -2, "res_i")  # 内部定义倒数第二个元素必是state
+        api_name = safe_get_value(res_i, api_name_index, "res_i")
+        state = safe_get_value(res_i, state_name_index, "res_i")
         api_batches_update(api_batches, api_name, state, i)
     return api_batches
 
