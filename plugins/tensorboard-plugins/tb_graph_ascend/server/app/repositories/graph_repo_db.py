@@ -379,14 +379,16 @@ class GraphRepoDB(GraphRepo):
         graph_type = graph_type if graph_type != SINGLE else NPU
         query = """
             SELECT 
-                * 
+                n.*,
+                d.stack_info 
             FROM 
-                tb_nodes 
+                tb_nodes n
+            JOIN tb_stack d ON n.stack_id = d.id
             WHERE 
-                step = ?
-                AND rank = ? 
-                AND data_source = ? 
-                AND node_name = ?
+                n.step = ?
+                AND n.rank = ? 
+                AND n.data_source = ? 
+                AND n.node_name = ?
         """
         try:
             with self.conn as c:
