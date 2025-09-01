@@ -263,6 +263,9 @@ enum Command {
         /// MSPTI collect activity kind
         #[clap(long, value_parser = parse_mspti_activity_kinds, default_value = "Marker")]
         mspti_activity_kind: String,
+        /// Log file for NPU monitor.
+        #[clap(long, default_value = "")]
+        log_file: String,
     },
     /// Pause dcgm profiling. This enables running tools like Nsight compute and avoids conflicts.
     DcgmPause {
@@ -795,12 +798,14 @@ fn main() -> Result<()> {
             npu_monitor_stop,
             report_interval_s,
             mspti_activity_kind,
+            log_file,
         } => {
             let npu_mon_config = NpuMonitorConfig {
                 npu_monitor_start,
                 npu_monitor_stop,
                 report_interval_s,
-                mspti_activity_kind
+                mspti_activity_kind,
+                log_file
             };
             npumonitor::run_npumonitor(client, npu_mon_config)
         }

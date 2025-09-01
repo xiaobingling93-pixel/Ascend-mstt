@@ -49,8 +49,6 @@ std::string IntToHexStr(T number)
 }
 } // namespace
 
-static std::string gParallelGroupInfo;
-
 std::unordered_map<SubModule, std::string> submoduleMap = {
     {SubModule::IPC, "IPC"},
 };
@@ -110,10 +108,9 @@ std::string formatErrorCode(SubModule submodule, ErrCode errorCode)
 
 int32_t GetProcessId()
 {
-    static thread_local int32_t pid = 0;
-    if (pid == 0) {
-        pid = static_cast<int32_t>(getpid());
-    }
+    static int32_t pid = []() -> int32_t {
+        return static_cast<int32_t>(getpid());
+    }();
     return pid;
 }
 
@@ -453,16 +450,6 @@ int GetRankId()
         return pybind11::module::import("IPCMonitor.utils").attr("get_rank_id")().cast<int>();
     }();
     return rankId;
-}
-
-void SetParallelGroupInfo(std::string parallelGroupInfo)
-{
-    gParallelGroupInfo = std::move(parallelGroupInfo);
-}
-
-std::string GetParallelGroupInfo()
-{
-    return gParallelGroupInfo;
 }
 
 uint64_t CalcHashId(const std::string &data)

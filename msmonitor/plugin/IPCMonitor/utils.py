@@ -29,7 +29,7 @@ def get_pytorch_rank_id() -> Optional[int]:
         if rank_id is not None and not isinstance(rank_id, int):
             rank_id = int(rank_id)
     except Exception as ex:
-        raise RuntimeError(f"Get rank id failed in pytorch failed: {str(ex)}") from ex
+        raise RuntimeError(f"Get rank id failed in pytorch: {str(ex)}") from ex
     return rank_id
 
 
@@ -77,7 +77,7 @@ def get_mindspore_rank_id() -> Optional[int]:
         if rank_id is not None and not isinstance(rank_id, int):
             rank_id = int(rank_id)
     except Exception as ex:
-        raise RuntimeError(f"Get rank id failed in mindspore failed: {str(ex)}") from ex
+        raise RuntimeError(f"Get rank id failed in mindspore: {str(ex)}") from ex
     return rank_id
 
 

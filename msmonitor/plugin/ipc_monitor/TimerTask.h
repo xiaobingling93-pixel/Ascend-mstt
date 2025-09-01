@@ -30,7 +30,7 @@ public:
     TimerTask(const std::string& name, int interval)
         : interval(interval), name(name), manual_trigger(false), running(false) {}
 
-    ~TimerTask()
+    virtual ~TimerTask()
     {
         Stop();
     }
@@ -58,7 +58,7 @@ public:
     void Stop()
     {
         if (!running) {
-            LOG(ERROR) << name << "Timer task is not running.";
+            LOG(WARNING) << name << "Timer task is not running.";
             return;
         }
 
@@ -77,6 +77,7 @@ public:
     virtual void InitResource() {};
     virtual void ReleaseResource() {};
     virtual void ExecuteTask() = 0;
+    bool IsRunning() { return running.load(); }
 private:
     // 定时任务线程函数
     void TaskRun()
@@ -112,7 +113,6 @@ private:
     std::atomic<bool> running;
     std::thread taskThread;
 };
-    
-}
-}
-#endif
+} // namespace ipc_monitor
+} // namespace dynolog_npu
+#endif // TIMER_TASK_H
