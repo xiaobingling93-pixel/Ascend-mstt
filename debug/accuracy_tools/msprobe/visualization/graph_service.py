@@ -113,7 +113,7 @@ def _build_graph_info(dump_path, args, graph=None):
     stack_path = FileChecker(os.path.join(dump_path, GraphConst.STACK_FILE), FileCheckConst.FILE,
                              FileCheckConst.READ_ABLE).common_check()
     if not graph:
-        graph = GraphBuilder.build(construct_path, data_path, stack_path, complete_stack=args.complete_stack)
+        graph = GraphBuilder.build(construct_path, data_path, stack_path)
     return GraphInfo(graph, construct_path, data_path, stack_path)
 
 
@@ -256,8 +256,8 @@ def _get_compare_graph_results(input_param, serializable_args, step, pool, err_c
             build_key = f'{step}_{nr}' if step else f'{nr}'
             input_param_copy = deepcopy(input_param)
             mp_task_dict[build_key] = pool.apply_async(_run_build_graph_compare,
-                                                              args=(input_param_copy, serializable_args, nr, br),
-                                                              error_callback=err_call)
+                                                       args=(input_param_copy, serializable_args, nr, br),
+                                                       error_callback=err_call)
 
         mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
         for mp_res in mp_res_dict.values():
@@ -434,8 +434,6 @@ def _graph_service_parser(parser):
                         help="<Optional> whether open overflow_check for graph.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<Optional> Whether to perform a fuzzy match on the api name.", required=False)
-    parser.add_argument("-cs", "--complete_stack", dest="complete_stack", action="store_true",
-                        help="<Optional> Whether to use complete stack information.", required=False)
 
 
 def _graph_service_command(args):
