@@ -57,7 +57,6 @@ class GraphUtils:
             return None, 'Error: fail to get graph data'
 
     @staticmethod
-    @staticmethod
     def get_opposite_node_name(node_name):
         opposite_node_name = ''
         # 如果npu_node_name包含forward，则opposite_npu_node_name为npu_node_name替换forward为backward
