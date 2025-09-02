@@ -172,19 +172,6 @@ class Graph:
         """
         return self.node_map.get(node_id, None)
 
-    def to_dict(self, compare_mode=None):
-        """
-        用于数据输出
-        """
-        result = {}
-        result[GraphConst.JSON_ROOT_KEY] = self.root.id if self.root else 'None'
-        result[GraphConst.JSON_DATA_KEY] = self.data_path
-        result[GraphConst.JSON_NODE_KEY] = {}
-        for node_id in self.node_map:
-            info = self.node_map.get(node_id).to_dict(compare_mode)
-            result[GraphConst.JSON_NODE_KEY][node_id] = info
-        return result
-
     def paging_by_micro_step(self, graph_other=None):
         """
         给graph首层节点增加micro step标记，供前端分页展示，有助于在处理大规模图数据时进行优化和管理

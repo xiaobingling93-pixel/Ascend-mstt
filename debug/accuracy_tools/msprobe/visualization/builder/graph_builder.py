@@ -64,28 +64,6 @@ class GraphBuilder:
         return graph
 
     @staticmethod
-    def to_json(filename, config):
-        """
-        将graph导出成.vis文件的接口
-        """
-        result = {}
-        if config.graph_b:
-            result[GraphConst.JSON_NPU_KEY] = config.graph_n.to_dict(config.compare_mode)
-            result[GraphConst.JSON_BENCH_KEY] = config.graph_b.to_dict(config.compare_mode)
-        else:
-            result = config.graph_n.to_dict(config.compare_mode)
-        if config.tool_tip:
-            result[GraphConst.JSON_TIP_KEY] = config.tool_tip
-        if config.node_colors:
-            result[GraphConst.COLORS] = config.node_colors
-        if config.micro_steps:
-            result[GraphConst.MICRO_STEPS] = config.micro_steps
-        if config.task:
-            result[GraphConst.JSON_TASK_KEY] = config.task
-        result[GraphConst.OVERFLOW_CHECK] = config.overflow_check
-        save_json(filename, result, indent=4)
-
-    @staticmethod
     def to_db(filename, config):
         config.graph_n.step = config.step
         config.graph_n.rank = config.rank

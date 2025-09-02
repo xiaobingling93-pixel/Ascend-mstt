@@ -27,12 +27,6 @@ class TestGraph(unittest.TestCase):
         self.assertIn("api.8", graph.node_map)
         self.assertNotIn("api", graph.node_map)
 
-    def test_to_dict(self):
-        self.graph.add_node(self.node_op, self.node_id)
-        result = self.graph.to_dict()
-        self.assertEqual(result[GraphConst.JSON_ROOT_KEY], "model_name")
-        self.assertIn(self.node_id, result[GraphConst.JSON_NODE_KEY])
-
     def test_str(self):
         self.graph.add_node(self.node_op, self.node_id)
         expected_str = f'{self.node_id}'
@@ -54,7 +48,7 @@ class TestGraph(unittest.TestCase):
         matched_node, ancestors = Graph.match(graph_a, graph_a.get_node("node_id_a_1"), graph_b)
         self.assertIsNotNone(matched_node)
         self.assertEqual(ancestors, ['node_id_a'])
-        
+
     def test_split_nodes_by_micro_step(self):
         nodes = [BaseNode(NodeOp.module, 'a.forward.0'), BaseNode(NodeOp.module, 'a.backward.0'),
                  BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.forward.1'),
