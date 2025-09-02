@@ -115,8 +115,8 @@ fn parse_start_step(src: &str) -> Result<i64, String> {
 
 fn parse_iterations(src: &str) -> Result<i64, String> {
     let iterations = src.trim().parse::<i64>().map_err(|e| format!("{}", e))?;
-    if iterations < 0 {
-        return Err(format!("Must be non-negative integer or {}", 0));
+    if iterations <= 0 {
+        return Err("Must be a positive integer".to_string());
     }
     Ok(iterations)
 }
