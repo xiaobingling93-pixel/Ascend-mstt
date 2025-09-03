@@ -64,6 +64,8 @@ class DbGraphService(GraphServiceStrategy):
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
+            if rank is None or step is None or micro_step is None:
+                return {'success': False, 'error': 'rank or step or micro_step is null'}
             result = {}
             if not self.config_info:
                 self.config_info = self.repo.query_config_info() 
@@ -103,6 +105,8 @@ class DbGraphService(GraphServiceStrategy):
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
+            if rank is None or step is None or micro_step is None:
+                return {'success': False, 'error': 'rank or step or micro_step is null'}
             # 单图
             rank_step = {
                 'rank': rank,
@@ -131,7 +135,8 @@ class DbGraphService(GraphServiceStrategy):
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
-            
+            if rank is None or step is None or micro_step is None:
+                return {'success': False, 'error': 'rank or step or micro_step is null'}
             is_filter_unmatch_nodes = True if '无匹配节点' in values else False
             if is_filter_unmatch_nodes:
                 values.remove('无匹配节点')
@@ -166,7 +171,8 @@ class DbGraphService(GraphServiceStrategy):
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
-            
+            if rank is None or step is None or micro_step is None:
+                return {'success': False, 'error': 'rank or step or micro_step is null'}
             node_name_list = self.repo.query_node_list_by_overflow(step, rank, micro_step, values)
             return {'success': True, 'data': node_name_list}
         except Exception as e:
@@ -189,7 +195,8 @@ class DbGraphService(GraphServiceStrategy):
             node_name = node_info.get('nodeName')
             rank = meta_data.get('rank')
             step = meta_data.get('step')
-       
+            if rank is None or step is None:
+                return {'success': False, 'error': 'rank or step is null'}
             if self.config_info.get('isSingleGraph') or graph_type == SINGLE:
                 result['npu'] = self.repo.query_node_info(node_name, graph_type, rank, step)
             else:
@@ -213,6 +220,8 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': False, 'error': 'database connection not init'}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
+            if rank is None or step is None:
+                return {'success': False, 'error': 'rank or step is null'}
             task = self.config_info.get('task')
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
@@ -265,6 +274,8 @@ class DbGraphService(GraphServiceStrategy):
             result = {}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
+            if rank is None or step is None:
+                return {'success': False, 'error': 'rank or step is null'}
             task = self.config_info.get('task')
             match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
             graph_data = self.repo.query_matched_nodes_info_by_config(match_node_links, rank, step)
@@ -312,6 +323,8 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': False, 'error': 'database connection not init'}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
+            if rank is None or step is None:
+                return {'success': False, 'error': 'rank or step is null'}
             task = self.config_info.get('task')
             
             # 根据任务类型计算误差
@@ -367,6 +380,8 @@ class DbGraphService(GraphServiceStrategy):
 
             rank = meta_data.get('rank')
             step = meta_data.get('step')
+            if rank is None or step is None:
+                return {'success': False, 'error': 'rank or step is null'}
             npu_node_list = self.repo.query_node_info_by_data_source(step, rank, NPU)
             update_data_hierarchy = {}
             update_data_db = []
@@ -449,6 +464,8 @@ class DbGraphService(GraphServiceStrategy):
             tag = meta_data.get('tag')
             rank = meta_data.get('rank')
             step = meta_data.get('step')
+            if rank is None or step is None:
+                return {'success': False, 'error': 'rank or step is null'}
             # DB：根据step rank modify match_node_link查询已经修改的匹配成功的节点关系
             modify_matched_nodes_list = self.repo.query_modify_matched_nodes_list(rank, step)
             confilg_file_name = f"{tag}_{step}_{rank}.vis.config"
