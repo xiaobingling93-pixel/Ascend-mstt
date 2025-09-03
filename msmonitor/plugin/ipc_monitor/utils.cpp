@@ -91,9 +91,8 @@ std::string getCurrentTimestamp()
 uint64_t getCurrentTimestamp64()
 {
     auto now = std::chrono::system_clock::now();
-    auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
-    auto milli_time = std::chrono::duration_cast<std::chrono::milliseconds>(micros).count();
-    return milli_time;
+    auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch());
+    return ns.count();
 }
 
 std::string formatErrorCode(SubModule submodule, ErrCode errorCode)

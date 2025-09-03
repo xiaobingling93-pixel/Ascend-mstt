@@ -26,6 +26,11 @@ const TableColumns STRING_IDS = {
     {"value", SQL_TEXT_TYPE}
 };
 
+const TableColumns SESSION_TIME_INFO = {
+    {"startTimeNs", SQL_INT_TYPE},
+    {"endTimeNs", SQL_INT_TYPE}
+};
+
 const TableColumns ENUM_TABLE = {
     {"id", SQL_INT_TYPE, true},
     {"name", SQL_TEXT_TYPE}
@@ -108,7 +113,7 @@ const TableColumns MSTX = {
     {"eventType", SQL_INT_TYPE},
     {"rangeId", SQL_INT_TYPE},
     {"category", SQL_INT_TYPE},
-    {"meassge", SQL_INT_TYPE},
+    {"message", SQL_INT_TYPE},
     {"globalTid", SQL_INT_TYPE},
     {"endGlobalTid", SQL_INT_TYPE},
     {"domainId", SQL_INT_TYPE},
@@ -116,7 +121,7 @@ const TableColumns MSTX = {
 };
 } // namespace
 
-TableColumns Database::GetTableCols(const std::string &tableName)
+const TableColumns& Database::GetTableCols(const std::string &tableName)
 {
     auto iter = tableColumns_.find(tableName);
     if (iter == tableColumns_.end()) {
@@ -131,6 +136,7 @@ MsMonitorDB::MsMonitorDB()
     dbName_ = "msmonitor.db";
     tableColumns_ = {
         {TABLE_STRING_IDS, STRING_IDS},
+        {TABLE_SESSION_TIME_INFO, SESSION_TIME_INFO},
         {TABLE_COMMUNICATION_OP, COMMUNICATION_OP},
         {TABLE_HCCL_DATA_TYPE, ENUM_TABLE},
         {TABLE_MSTX, MSTX},

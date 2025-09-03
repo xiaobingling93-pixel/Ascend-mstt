@@ -17,7 +17,7 @@ import sys
 import os
 import importlib
 from .singleton import Singleton
-
+from .utils import get_parallel_group_info
 
 so_path = os.path.join(os.path.dirname(__file__), "lib64")
 sys.path.append(os.path.realpath(so_path))
@@ -37,6 +37,8 @@ class PyDynamicMonitorProxy:
 
     @classmethod
     def enable_dyno_npu_monitor(cls, config_map: dict):
+        if str(config_map.get("NPU_MONITOR_STOP")).lower() in ("true", "1"):
+            ipcMonitor_C_module.set_cluster_config_data({"parallel_group_info": get_parallel_group_info()})
         ipcMonitor_C_module.enable_dyno_npu_monitor(config_map)
 
     @classmethod

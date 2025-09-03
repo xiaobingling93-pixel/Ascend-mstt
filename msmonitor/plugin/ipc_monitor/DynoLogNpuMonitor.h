@@ -18,7 +18,6 @@
 
 #include "MonitorBase.h"
 #include "NpuIpcClient.h"
-#include "MsptiMonitor.h"
 #include "singleton.h"
 #include "InputParser.h"
 
@@ -49,7 +48,6 @@ private:
     bool isInitialized_ = false;
     int32_t npuId_ = 0;
     IpcClient ipcClient_;
-    MsptiMonitor msptiMonitor_;
 };
 
 } // namespace ipc_monitor

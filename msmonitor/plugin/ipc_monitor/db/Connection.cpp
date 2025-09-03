@@ -76,8 +76,12 @@ bool Connection::ExecuteSql(const std::string &sql, const std::string &sqlType)
 
 bool Connection::CheckTableExists(const std::string &tableName)
 {
-    std::string sql = "SELECT COUNT(1) FROM " + tableName;
-    return ExecuteSql(sql, CHECK);
+    std::string sql{"SELECT 1 FROM sqlite_master WHERE type='table' AND name='" + tableName + "' LIMIT 1"};
+    std::vector<std::tuple<int32_t>> result;
+    if(ExecuteQuery(sql, result)) {
+        return !result.empty();
+    }
+    return false;
 }
 
 bool Connection::ExecuteCreateTable(const std::string &sql)

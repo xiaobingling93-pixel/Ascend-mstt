@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <iterator>
 #include "utils.h"
+#include "MsptiMonitor.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -30,6 +31,7 @@ DynoLogNpuMonitor::DynoLogNpuMonitor()
             fprintf(stderr, "[INFO] [%d] Msmonitor log will record to %s\n", GetProcessId(), logPath.c_str());
             logPath = logPath + "/msmonitor_";
             google::InitGoogleLogging("MsMonitor");
+            google::SetStderrLogging(google::GLOG_ERROR);
             google::SetLogDestination(google::GLOG_INFO, logPath.c_str());
             google::SetLogFilenameExtension(".log");
         } else {
@@ -59,29 +61,31 @@ bool DynoLogNpuMonitor::Init()
 
 ErrCode DynoLogNpuMonitor::DealMonitorReq(MsptiMonitorCfg& cmd)
 {
+    auto msptiMonitor = MsptiMonitor::GetInstance();
     if (cmd.monitorStop) {
-        if (msptiMonitor_.IsStarted()) {
+        if (msptiMonitor->IsStarted()) {
             LOG(INFO) << "Stop mspti monitor thread successfully";
-            msptiMonitor_.Stop();
+            msptiMonitor->Stop();
         }
         return ErrCode::SUC;
     }
 
-    if (cmd.reportIntervals <= 0) {
-        cmd.reportIntervals = DEFAULT_FLUSH_INTERVAL;
-        LOG(WARNING) << "Invalid report interval, set to 60";
-    }
     if (cmd.reportIntervals != 0) {
-        msptiMonitor_.SetFlushInterval(cmd.reportIntervals);
+        msptiMonitor->SetFlushInterval(cmd.reportIntervals);
     }
 
-    if (cmd.monitorStart && !msptiMonitor_.IsStarted()) {
+    if (cmd.monitorStart && !msptiMonitor->IsStarted()) {
+        if (!cmd.savePath.empty() && !msptiMonitor->CheckAndSetSavePath(cmd.savePath)) {
+            LOG(ERROR) << "Invalid log path, mspti monitor start failed";
+            return ErrCode::PERMISSION;
+        }
+
         LOG(INFO) << "Start mspti monitor thread successfully";
-        msptiMonitor_.Start();
+        msptiMonitor->Start();
     }
 
-    if (msptiMonitor_.IsStarted() && !cmd.enableActivities.empty()) {
-        auto curActivities = msptiMonitor_.GetEnabledActivities();
+    if (msptiMonitor->IsStarted() && !cmd.enableActivities.empty()) {
+        auto curActivities = msptiMonitor->GetEnabledActivities();
         std::vector<msptiActivityKind> enableKinds;
         std::vector<msptiActivityKind> disableKinds;
         std::set_difference(cmd.enableActivities.begin(), cmd.enableActivities.end(), curActivities.begin(), curActivities.end(),
@@ -89,10 +93,10 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(MsptiMonitorCfg& cmd)
         std::set_difference(curActivities.begin(), curActivities.end(), cmd.enableActivities.begin(), cmd.enableActivities.end(),
                             std::back_inserter(disableKinds));
         for (auto activity : enableKinds) {
-            msptiMonitor_.EnableActivity(activity);
+            msptiMonitor->EnableActivity(activity);
         }
         for (auto activity : disableKinds) {
-            msptiMonitor_.DisableActivity(activity);
+            msptiMonitor->DisableActivity(activity);
         }
     }
     return ErrCode::SUC;
@@ -125,7 +129,7 @@ void DynoLogNpuMonitor::EnableMsptiMonitor(std::unordered_map<std::string, std::
 
 void DynoLogNpuMonitor::Finalize()
 {
-    msptiMonitor_.Uninit();
+    MsptiMonitor::GetInstance()->Uninit();
 }
 } // namespace ipc_monitor
 } // namespace dynolog_npu

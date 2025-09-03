@@ -28,7 +28,7 @@ namespace dynolog_npu {
 namespace ipc_monitor {
 namespace metric {
 
-MetricManager::MetricManager(): TimerTask("MetricManager", DEFAULT_FLUSH_INTERVAL),
+MetricManager::MetricManager(): MsptiDataProcessBase("MetricManager"),
     kindSwitchs_(MSPTI_ACTIVITY_KIND_COUNT), consumeStatus_(MSPTI_ACTIVITY_KIND_COUNT) {
     metrics.resize(MSPTI_ACTIVITY_KIND_COUNT);
     metrics[MSPTI_ACTIVITY_KIND_KERNEL] = std::make_shared<MetricKernelProcess>();
@@ -41,7 +41,7 @@ MetricManager::MetricManager(): TimerTask("MetricManager", DEFAULT_FLUSH_INTERVA
     metrics[MSPTI_ACTIVITY_KIND_COMMUNICATION] = std::make_shared<MetricCommunicationProcess>();
 }
 
-void MetricManager::ReleaseResource()
+void MetricManager::RunPostTask()
 {
     for (int i = 0; i < MSPTI_ACTIVITY_KIND_COUNT; i++) {
         if (kindSwitchs_[i].load()) {
@@ -86,7 +86,7 @@ void MetricManager::SendMetricMsg()
     }
 }
 
-void MetricManager::EnableKindSwitch_(msptiActivityKind kind, bool flag)
+void MetricManager::EnableKindSwitch(msptiActivityKind kind, bool flag)
 {
     kindSwitchs_[kind] = flag;
 }

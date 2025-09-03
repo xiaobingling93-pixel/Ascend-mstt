@@ -1,0 +1,43 @@
+/*
+ * Copyright (C) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#ifndef MSPTI_DATA_PROCESS_BASE_H
+#define MSPTI_DATA_PROCESS_BASE_H
+
+#include "mspti.h"
+#include "utils.h"
+#include "TimerTask.h"
+
+namespace dynolog_npu {
+namespace ipc_monitor {
+class MsptiDataProcessBase : public TimerTask {
+public:
+    explicit MsptiDataProcessBase(const std::string& name) : TimerTask(name, DEFAULT_FLUSH_INTERVAL) {}
+    ~MsptiDataProcessBase() = default;
+    void ExecuteTask() override {}
+    virtual void EnableKindSwitch(msptiActivityKind kind, bool flag) {}
+    virtual ErrCode ConsumeMsptiData(msptiActivity *record) { return ErrCode::SUC; }
+    virtual void SetReportInterval(uint32_t interval) {}
+    void SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData)
+    {
+        clusterConfigData = configData;
+    }
+
+protected:
+    std::unordered_map<std::string, std::string> clusterConfigData;
+};
+} // namespace ipc_monitor
+} // namespace dynolog_npu
+#endif // MSPTI_DATA_PROCESS_BASE_H

@@ -24,6 +24,7 @@ npu-monitor的SUBCOMMANDS（子命令）选项如下：
 | --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                                                | Y | Y | N |
 | --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                                       | Y | Y | N |
 | --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`, `Communication`] , 默认值`Marker` | Y | Y | N |
+| --log-file            | String | 性能数据采集落盘的路径，当前仅支持`mspti-activity-kind`设置为`Marker`，`Kernel`，`API`，`Communication`4类数据的导出， 落盘数据格式为db，db中内容说明请参考[msprof导出db格式数据说明](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/devaids/Profiling/atlasprofiling_16_1144.html)，默认值为空，表示不落盘 | Y | Y | N |
 
 ## npu-monitor使用方法
 
@@ -79,7 +80,11 @@ dyno --certs-dir /home/client_certs npu-monitor --report-interval-s 30 --mspti-a
 # 上报周期30s, 上报数据类型Marker和Kernel
 dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 
-# 示例5：多机场景下性能监控开启时修改配置
+# 示例5：性能监控开启时修改配置，开启数据采集落盘
+# 数据落盘路径为/tmp/msmonitor_db，落盘周期为30s，采集数据类型为Marker，Kernel，Communication
+dyno --certs-dir /home/client_certs npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel,Communication --log-file /tmp/msmonitor_db
+
+# 示例6：多机场景下性能监控开启时修改配置
 # 多机场景下向特定机器x.x.x.x发送参数信息，参数表示上报周期30s, 上报数据类型Marker和Kernel
 dyno --certs-dir /home/client_certs --hostname x.x.x.x npu-monitor --npu-monitor-start --report-interval-s 30 --mspti-activity-kind Marker,Kernel
 ```

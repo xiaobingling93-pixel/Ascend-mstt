@@ -28,6 +28,7 @@ const std::string SQL_REAL_TYPE = "REAL";
 const std::string SQL_NUMERIC_TYPE = "NUMERIC";
 
 const std::string TABLE_STRING_IDS = "STRING_IDS";
+const std::string TABLE_SESSION_TIME_INFO = "SESSION_TIME_INFO";
 const std::string TABLE_CANN_API = "CANN_API";
 const std::string TABLE_TASK = "TASK";
 const std::string TABLE_COMPUTE_TASK_INFO = "COMPUTE_TASK_INFO";
