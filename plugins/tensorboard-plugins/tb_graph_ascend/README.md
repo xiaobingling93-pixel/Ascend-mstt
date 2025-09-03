@@ -8,7 +8,7 @@
 
 ### 1. 相关依赖
 
-`python >= 3.7 ，tensorboard >= 2.11.2，numpy>=1.19.2,<= 1.26.3`
+`python >= 3.7 ，tensorboard >= 2.11.2
 
 ### 2. 安装方式
 
