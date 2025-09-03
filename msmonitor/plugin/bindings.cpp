@@ -37,4 +37,7 @@ PYBIND11_MODULE(IPCMonitor_C, m) {
     m.def("set_cluster_config_data", [](const std::unordered_map<std::string, std::string>& cluster_config) -> void {
         dynolog_npu::ipc_monitor::MsptiMonitor::GetInstance()->SetClusterConfigData(cluster_config);
     }, py::arg("cluster_config"));
+    m.def("update_profiler_status", [](std::unordered_map<std::string, std::string>& status) -> void {
+        dynolog_npu::ipc_monitor::PyDynamicMonitorProxy::GetInstance()->UpdateProfilerStatus(status);
+    }, py::arg("status"));
 }

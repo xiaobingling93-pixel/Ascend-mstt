@@ -44,3 +44,7 @@ class PyDynamicMonitorProxy:
     @classmethod
     def finalize_dyno(cls):
         ipcMonitor_C_module.finalize_dyno()
+
+    @classmethod
+    def update_profiler_status(cls, status: dict):
+        ipcMonitor_C_module.update_profiler_status(status)

@@ -232,6 +232,26 @@ bool Str2Uint32(uint32_t& dest, const std::string& str)
     return true;
 }
 
+bool Str2Int32(int32_t& dest, const std::string& str)
+{
+    if (str.empty()) {
+        LOG(ERROR) << "Str to int32 failed, input string is null";
+        return false;
+    }
+    size_t pos = 0;
+    try {
+        dest = static_cast<int32_t>(std::stol(str, &pos));
+    } catch(...) {
+        LOG(ERROR) << "Str to int32 failed, input string is " << str;
+        return false;
+    }
+    if (pos != str.size()) {
+        LOG(ERROR) << "Str to int32 failed, input string is " << str;
+        return false;
+    }
+    return true;
+}
+
 bool Str2Bool(bool& dest, const std::string& str)
 {
     std::string lower_str = str;

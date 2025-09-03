@@ -124,12 +124,23 @@ void DynoLogNpuMonitor::EnableMsptiMonitor(std::unordered_map<std::string, std::
         if (ans != ErrCode::SUC) {
             LOG(ERROR) << "Deal monitor request failed, because" << IPC_ERROR(ans);
         }
+        UpdateNpuStatus(static_cast<int32_t>(MsptiMonitor::GetInstance()->IsStarted()), MSG_TYPE_MONITOR_STATUS);
     }
 }
 
 void DynoLogNpuMonitor::Finalize()
 {
     MsptiMonitor::GetInstance()->Uninit();
+}
+
+void DynoLogNpuMonitor::UpdateNpuStatus(int32_t status, const std::string& msgType)
+{
+    bool res = ipcClient_.SendNpuStatus(status, msgType);
+    if (res) {
+        LOG(INFO) << "Send npu status successfully";
+    } else {
+        LOG(WARNING) << "Send npu status failed";
+    }
 }
 } // namespace ipc_monitor
 } // namespace dynolog_npu
