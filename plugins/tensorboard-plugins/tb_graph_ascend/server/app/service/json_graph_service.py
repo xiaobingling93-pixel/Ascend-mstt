@@ -167,7 +167,7 @@ class JsonGraphService(GraphServiceStrategy):
                 GraphState.set_global_value('config_data', config_data)
                 return {'success': True, 'data': result}
         except Exception as e:
-            logger.error('获取节点列表失败:' + str(e))
+            logger.error('get node list error:' + str(e))
             return {'success': False, 'error': '获取节点列表失败:' + str(e)}
 
     def change_node_expand_state(self, node_info, meta_data):
@@ -193,7 +193,7 @@ class JsonGraphService(GraphServiceStrategy):
                 return {'success': True, 'data': {}}
             return {'success': True, 'data': hierarchy}
         except Exception as e:
-            logger.error('节点展开或收起发生错误:' + str(e))
+            logger.error('node expand or collapse error:' + str(e))
             node_type_name = ""
             if graph_data.get(NPU):
                 node_type_name = '调试侧' if graph_type == NPU else '标杆侧'
@@ -234,7 +234,7 @@ class JsonGraphService(GraphServiceStrategy):
                     node_info.setdefault('data', {})['precision_index'] = min(max_rel_error, 1)
             return {'success': True, 'data': {}}
         except Exception as e:
-            logger.error('更新精度误差失败:' + str(e))
+            logger.error('update precision error error:' + str(e))
             return {'success': False, 'error': str(e)}
 
     def update_hierarchy_data(self, graph_type):
@@ -268,7 +268,7 @@ class JsonGraphService(GraphServiceStrategy):
                 result['bench'] = node if graph_type == BENCH else matched_node
             return {'success': True, 'data': result}
         except Exception as e:
-            logger.error('获取节点信息失败:' + str(e))
+            logger.error('get node info error:' + str(e))
             return {'success': False, 'error': '获取节点信息失败:' + str(e), 'data': None}
 
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
