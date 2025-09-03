@@ -21,6 +21,11 @@ export interface ProgressType {
     done?: boolean;
 }
 
+export interface SelectedItemType {
+    value: number;
+    label: string;
+}
+
 export interface SelectionType {
     run: string;
     tag: string;

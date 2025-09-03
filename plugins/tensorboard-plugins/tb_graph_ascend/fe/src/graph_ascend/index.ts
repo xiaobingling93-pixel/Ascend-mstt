@@ -28,7 +28,7 @@ import '../common/graph-board-layout';
 import '@vaadin/confirm-dialog'
 import { Notification } from '@vaadin/notification';
 import request from '../utils/request';
-import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
+import type { SelectedItemType, SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
 
 @customElement('graph-ascend')
 class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
@@ -59,7 +59,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 matched-config-files="[[matchedConfigFiles]]"
                 nodelist="[[nodelist]]"
                 unmatched="[[unmatched]]"
-                matchedlist="[[matchedlist]]"
                 minimap-vis="{{minimapVis}}"
                 is-sync-expand="{{isSyncExpand}}"
                 is-single-graph="{{isSingleGraph}}"
@@ -164,10 +163,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     selection: SelectionType | null = null;
 
     @property({ type: Object, notify: true })
-    nodelist: any;
+    nodelist: NodeListType = {} as NodeListType;
 
     @property({ type: Object, notify: true })
-    unmatched: any;
+    unmatched: UnmatchedNodeType = {} as UnmatchedNodeType;
 
     @property({ type: Object, notify: true })
     matchedlist: any;
@@ -194,14 +193,14 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     microsteps: number[] = [];
 
     @property({ type: Array })
-    steps: any[] = [{ value: 0, label: '0' }];
+    steps: Array<SelectedItemType> = [{ value: 0, label: '0' }];
 
     @property({ type: Array })
-    ranks: any[] = [{ value: 0, label: '0' }];
+    ranks: Array<SelectedItemType> = [{ value: 0, label: '0' }];
 
 
     @property({ type: Array })
-    overflowcheck;
+    overflowcheck: boolean = false;
 
     @property({ type: Object })
     tooltips: object = {};
