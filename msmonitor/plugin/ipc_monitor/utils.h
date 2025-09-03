@@ -36,6 +36,7 @@ std::vector<std::pair<int32_t, std::string>> GetPidCommandPairsofAncestors();
 std::string getCurrentTimestamp();
 uint64_t getCurrentTimestamp64();
 bool Str2Uint32(uint32_t& dest, const std::string& str);
+bool Str2Int32(int32_t& dest, const std::string& str);
 bool Str2Bool(bool& dest, const std::string& str);
 std::string& trim(std::string& str);
 std::vector<std::string> split(const std::string& str, char delimiter);

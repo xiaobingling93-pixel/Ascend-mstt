@@ -18,6 +18,9 @@ __PyDynamicMonitorProxy接口说明__:
 * `finalize_dyno` 释放msmonitor中相关资源、线程
   * input: None
   * return: None
+* `update_profiler_status` 上报profiler_status
+  * input: status(Dict[str,str])
+  * return: None
 
 ## 安装方式
 ### 1. 通过shell脚本一键安装

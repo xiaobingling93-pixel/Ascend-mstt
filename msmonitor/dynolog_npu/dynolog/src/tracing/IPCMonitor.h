@@ -30,6 +30,7 @@ public:
     virtual void processDataMsg(std::unique_ptr<ipcfabric::Message> msg);
     void getLibkinetoOnDemandRequest(std::unique_ptr<ipcfabric::Message> msg);
     void registerLibkinetoContext(std::unique_ptr<ipcfabric::Message> msg);
+    void updateLibkinetoStatus(std::unique_ptr<ipcfabric::Message> msg, const std::string& msgType);
     void setLogger(std::unique_ptr<Logger> logger);
     void LogData(const nlohmann::json& result);
 
