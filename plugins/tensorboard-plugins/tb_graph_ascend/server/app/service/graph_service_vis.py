@@ -444,7 +444,7 @@ class JsonGraphService(GraphServiceStrategy):
         except (ValueError, IOError, PermissionError) as e:
             return {'success': False, 'error': f"Error: {e}"}
   
-    def _generate_matched_result(cls, match_result):
+    def _generate_matched_result(self, match_result):
         update_data = []
         for item in match_result:
             if item.get('success') is True:
