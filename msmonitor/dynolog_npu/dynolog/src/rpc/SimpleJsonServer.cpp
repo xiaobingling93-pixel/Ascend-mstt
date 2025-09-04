@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cerrno>
+#include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509.h>
@@ -67,8 +68,9 @@ void SimpleJsonServerBase::initSocket()
     /* Create socket for listening (client requests). */
     sock_fd_ = ::socket(AF_INET6, SOCK_STREAM, 0);
     if (sock_fd_ == -1) {
+        int error_code = errno;
         std::perror("socket()");
-        return;
+        throw std::runtime_error("socket() failed, error is " + std::string(std::strerror(error_code)));
     }
 
     /* Set socket to reuse address in case server is restarted. */
@@ -76,8 +78,9 @@ void SimpleJsonServerBase::initSocket()
     int ret =
         ::setsockopt(sock_fd_, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
     if (ret == -1) {
+        int error_code = errno;
         std::perror("setsockopt()");
-        return;
+        throw std::runtime_error("setsockopt() failed, error is " + std::string(std::strerror(error_code)));
     }
 
     // in6addr_any allows us to bind to both IPv4 and IPv6 clients.
@@ -88,17 +91,19 @@ void SimpleJsonServerBase::initSocket()
     /* Bind address and socket together */
     ret = ::bind(sock_fd_, (struct sockaddr*)&server_addr, sizeof(server_addr));
     if (ret == -1) {
+        int error_code = errno;
         std::perror("bind()");
         close(sock_fd_);
-        return;
+        throw std::runtime_error("bind() failed, error is " + std::string(std::strerror(error_code)));
     }
 
     /* Create listening queue (client requests) */
     ret = ::listen(sock_fd_, CLIENT_QUEUE_LEN);
     if (ret == -1) {
+        int error_code = errno;
         std::perror("listen()");
         close(sock_fd_);
-        return;
+        throw std::runtime_error("listen() failed, error is " + std::string(std::strerror(error_code)));
     }
 
     /* Get port if assigned 0 */
@@ -129,7 +134,11 @@ public:
     ~ClientSocketWrapper()
     {
         if (FLAGS_certs_dir != NO_CERTS_MODE && ssl_) {
-        SSL_shutdown(ssl_);
+        int shutdown_ret = SSL_shutdown(ssl_);
+        if (shutdown_ret <= 0) {
+            LOG(ERROR) << "SSL_shutdown failed, error code: " << shutdown_ret;
+            shutdown_ret = SSL_shutdown(ssl_);
+        }
         SSL_free(ssl_);
         }
         if (client_sock_fd_ != -1) {
@@ -301,8 +310,15 @@ void SimpleJsonServerBase::run()
 
 void SimpleJsonServerBase::init_openssl()
 {
+    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    // OpenSSL 1.1.0+ (包括3.0+)
+    OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS |
+                     OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+    #else
+    // OpenSSL 1.0.x 及更早版本
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
+    #endif
 }
 
 SSL_CTX* SimpleJsonServerBase::create_context()
@@ -341,6 +357,7 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store)
         return false;
     }
     bool is_revoked = false;
+    STACK_OF(X509_CRL)* crls = nullptr;
     try {
         // 初始化证书验证上下文
         if (!X509_STORE_CTX_init(ctx, store, cert, nullptr)) {
@@ -349,7 +366,7 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store)
             return false;
         }
         // 获取CRL列表
-        STACK_OF(X509_CRL)* crls = X509_STORE_CTX_get1_crls(ctx, issuer);
+        crls = X509_STORE_CTX_get1_crls(ctx, issuer);
         if (!crls) {
             LOG(INFO) << "No CRLs found for issuer";
             X509_STORE_CTX_free(ctx);
@@ -400,12 +417,12 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store)
                 break;
             }
         }
-        if (crls) {
-            sk_X509_CRL_pop_free(crls, X509_CRL_free);
-        }
     } catch (const std::exception& e) {
         LOG(ERROR) << "Exception while checking CRL: " << e.what();
         is_revoked = false;
+    }
+    if (crls) {
+        sk_X509_CRL_pop_free(crls, X509_CRL_free);
     }
     X509_STORE_CTX_free(ctx);
     return is_revoked;
@@ -414,17 +431,23 @@ static bool is_cert_revoked(X509* cert, X509_STORE* store)
 // 禁用终端回显的函数，但显示星号
 int get_password_with_stars(char* buf, size_t bufsize)
 {
+    char* secure_buf = static_cast<char*>(CRYPTO_secure_malloc(bufsize, __FILE__, __LINE__));
+    if (!secure_buf) {
+        return -1;          /* 内存申请失败 */
+    }
     struct termios old_flags;
     struct termios new_flags;
     size_t idx = 0;
-
-    tcgetattr(fileno(stdin), &old_flags);
+    if (tcgetattr(fileno(stdin), &old_flags) != 0) {
+        CRYPTO_secure_free(secure_buf, __FILE__, __LINE__);
+        return -1;
+    }
     new_flags = old_flags;
     new_flags.c_lflag &= ~ECHO;
     tcsetattr(fileno(stdin), TCSANOW, &new_flags);
 
-    char ch;
-    while ((ch = getchar()) != '\n' && idx + 1 < bufsize) {
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF && idx + 1 < bufsize) {
         if (ch == DEL_ASCII || ch == BACKSPACE_ASCII) {
             if (idx > 0) {
                 idx--;
@@ -432,13 +455,16 @@ int get_password_with_stars(char* buf, size_t bufsize)
                 fflush(stdout);
             }
         } else {
-            buf[idx++] = ch;
+            secure_buf[idx++] = static_cast<char> (ch);
             printf("*");
             fflush(stdout);
         }
     }
-    buf[idx] = '\0';
+    secure_buf[idx] = '\0';
+    std::copy_n(secure_buf, idx + 1, buf);
     tcsetattr(fileno(stdin), TCSANOW, &old_flags);
+    OPENSSL_cleanse(secure_buf, bufsize);
+    CRYPTO_secure_free(secure_buf, __FILE__, __LINE__);
     return idx;
 }
 
@@ -573,8 +599,14 @@ void SimpleJsonServerBase::verify_certificate_extensions(X509* cert)
                 ASN1_BIT_STRING* usage = (ASN1_BIT_STRING*)X509V3_EXT_d2i(ext);
                 if (usage) {
                     has_key_usage = true;
-                    has_cert_sign = (usage->data[0] & KU_KEY_CERT_SIGN) != 0;
-                    has_crl_sign = (usage->data[0] & KU_CRL_SIGN) != 0;
+                    if (usage->data) {
+                        has_cert_sign = (usage->data[0] & KU_KEY_CERT_SIGN) != 0;
+                        has_crl_sign  = (usage->data[0] & KU_CRL_SIGN)    != 0;
+                    } else {
+                        /* 位串为空，视为两项均未置位 */
+                        has_cert_sign = false;
+                        has_crl_sign  = false;
+                    }
                     ASN1_BIT_STRING_free(usage);
                 }
             }
