@@ -17,7 +17,6 @@
 # 全局常量
 from enum import Enum
 
-
 ADD_MATCH_KEYS = [
     'MaxAbsErr',
     'MinAbsErr',
@@ -28,7 +27,7 @@ ADD_MATCH_KEYS = [
     'MeanRelativeErr',
     'NormRelativeErr',
 ]
-MAX_FILE_SIZE = 3 * 1024 * 1024 * 1024  # 最大文件大小限制
+MAX_FILE_SIZE = 15 * 1024 * 1024 * 1024  # 最大文件大小限制
 NPU_PREFIX = 'N___'
 BENCH_PREFIX = 'B___'
 FILE_NAME_REGEX = r'^[a-zA-Z0-9_\-\.]+$'  # 文件名正则表达式
@@ -75,6 +74,8 @@ class GraphState:
         },
         'first_run_tags': {},
         'runs': {},
+        'update_precision_cache': {},  # {node_name{precision，...}}，方便查询精度，提高性能
+        'all_node_info_cache': {},  # {rank_step_micro_step:{node_name:node_info,...}}，方便查询节点信息，提高性能
     }
 
     @staticmethod
@@ -100,6 +101,8 @@ class GraphState:
             },
             'first_run_tags': {},
             'runs': {},
+            'update_precision_cache': {},
+            'all_node_info_cache': {},
         }
 
     @staticmethod

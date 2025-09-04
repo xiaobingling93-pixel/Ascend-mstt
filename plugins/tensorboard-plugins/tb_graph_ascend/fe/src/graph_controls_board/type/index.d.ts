@@ -41,6 +41,6 @@ export interface MatchResultType {
     benchMatchNodes: Record<string, string>;
     npuUnMatchNodes: string[];
     benchUnMatchNodes: string[];
-    matchReslut?: boolean[];
+    matchResult?: boolean[];
   };
 };

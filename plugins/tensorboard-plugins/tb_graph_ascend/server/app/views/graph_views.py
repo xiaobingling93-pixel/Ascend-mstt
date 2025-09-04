@@ -19,8 +19,10 @@ import json
 from pathlib import Path
 from werkzeug import wrappers, Response, exceptions
 from tensorboard.backend import http_util
-from ..service import ServiceFactory, GraphServiceStrategy, check_file_type
+from ..service import ServiceFactory, GraphServiceStrategy
+from ..utils.file_check_wrapper import check_file_type
 from ..utils.graph_utils import GraphUtils
+from ..utils.global_state import DataType
 
 
 class GraphView:
@@ -63,18 +65,25 @@ class GraphView:
     def load_graph_data(request):
         meta_data = {
             'run': request.args.get('run'),
-            'tag': request.args.get('tag')
+            'tag': request.args.get('tag'),
+            'type': request.args.get('type'),
         }
         strategy = GraphView._get_strategy(meta_data)
-        return Response(
-            strategy.load_graph_data(),
-            mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'close',  # TCP链接不复用，请求结束释放资源
-                "X-Content-Type-Options": "nosniff",
-            }
-        )
+        if meta_data.get('type') == DataType.DB.value:
+            result = strategy.load_graph_data()
+            return http_util.Respond(request, result, "application/json")
+        elif meta_data.get('type') == DataType.JSON.value:
+            return Response(
+                strategy.load_graph_data(),
+                mimetype='text/event-stream',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'close',  # TCP链接不复用，请求结束释放资源
+                    "X-Content-Type-Options": "nosniff",
+                }
+            )
+        else: 
+            return http_util.Respond(request, {'success': False, 'message': 'type error'}, "application/json")
 
     # 获取当前图数据配置信息
     @staticmethod
@@ -100,6 +109,26 @@ class GraphView:
         result = strategy.load_graph_all_node_list(meta_data)
         response = http_util.Respond(request, result, "application/json")
         return response
+    
+    # 根据精度误差搜索节点
+    @staticmethod
+    @wrappers.Request.application
+    def search_node(request):
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
+        meta_data = data.get("metaData")
+        search_type = data.get("type")
+        values = data.get("values")
+        strategy = GraphView._get_strategy(meta_data)
+        if(search_type == 'precision'):
+            result = strategy.search_node_by_precision(meta_data, values)
+        elif(search_type == 'overflow'):
+            result = strategy.search_node_by_overflow(meta_data, values)
+        else:
+            result = {
+                'success': False,
+                'message': "type error"
+            }
+        return http_util.Respond(request, result, "application/json") 
     
     # 更新误差节点
     @staticmethod
@@ -132,9 +161,13 @@ class GraphView:
     # 更新当前图节点信息
     @staticmethod
     @wrappers.Request.application
+    @check_file_type
     def update_hierarchy_data(request):
-        graph_type = request.args.get("graphType")
-        hierarchy = GraphServiceStrategy.update_hierarchy_data(graph_type)
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
+        graph_type = data.get("graphType")
+        meta_data = data.get('metaData')
+        strategy = GraphView._get_strategy(meta_data)
+        hierarchy = strategy.update_hierarchy_data(graph_type)
         return http_util.Respond(request, json.dumps(hierarchy), "application/json")
 
     # 获取当前节点对应节点的信息看板数据
@@ -207,10 +240,12 @@ class GraphView:
     # 更新颜色信息
     @staticmethod
     @wrappers.Request.application
+    @check_file_type
     def update_colors(request):
-        colors = GraphUtils.safe_json_loads(request.args.get('colors'))
-        run = request.args.get('run')
-        strategy = GraphView._get_strategy({'run': run}, no_tag=True)
+        data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
+        meta_data = data.get('metaData')
+        colors = GraphUtils.safe_json_loads(data.get('colors'))
+        strategy = GraphView._get_strategy(meta_data, no_tag=True)
         update_result = strategy.update_colors(colors)
         return http_util.Respond(request, json.dumps(update_result), "application/json")
 
@@ -222,7 +257,7 @@ class GraphView:
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
-        save_result = strategy.save_matched_relations()
+        save_result = strategy.save_matched_relations(meta_data)
         return http_util.Respond(request, json.dumps(save_result), "application/json")
 
     @staticmethod

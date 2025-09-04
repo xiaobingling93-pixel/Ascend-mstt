@@ -25,7 +25,7 @@ i18next
                 translation: {
                     fit: "Fit Screen",
                     settings: "Settings",
-                    match: 'Matching',
+                    function: 'function',
                     show_debug_minimap: "show debug minimap",
                     show_bench_minimap: "show bench minimap",
                     run: "Run",
@@ -48,15 +48,15 @@ i18next
                     },
                     node_match: "Node Match",
                     select_match_config_file: "Select Match Config File",
-                    select_match_config_file_desc: "Select the corresponding configuration file, read the matching node information, and match the corresponding node."
-
+                    select_match_config_file_desc: "Select the corresponding configuration file, read the matching node information, and match the corresponding node.",
+                    node_search: "Node Search"
                 }
             },
             'zh-CN': {
                 translation: {
                     fit: "自适应屏幕",
                     settings: "设置",
-                    match: '匹配',
+                    function: "功能",
                     show_debug_minimap: "调试侧缩略图",
                     show_bench_minimap: "标杆侧缩略图",
                     run: "目录",
@@ -70,8 +70,8 @@ i18next
                     accuracy_error: "精度误差",
                     overflow: "精度溢出",
                     match_accuracy_error: "符合精度误差节点",
-                    overflow_filter_node: "溢出筛选节点",
-                    no_matching_nodes: "无匹配节点11",
+                    overflow_filter_node: "符合溢出筛选节点",
+                    no_matching_nodes: "无匹配节点",
                     precision_desc: {
                         "summary": "节点中调试侧和标杆侧输出的统计量相对误差，值越大精度差距越大，颜色标记越深,相对误差指标（RelativeErr）：| (调试值 - 标杆值) / 标杆值 |",
                         "all": "节点中所有输入的最小双千指标和所有输出的最小双千分之一指标的差值，反映了双千指标的下降情况，值越大精度差距越大，颜色标记越深，双千分之一精度指标（One Thousandth Err Ratio）：Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的比例占总元素个数的比例，比例越接近1越好",
@@ -79,7 +79,8 @@ i18next
                     },
                     node_match: "节点匹配",
                     select_match_config_file: "选择匹配配置文件",
-                    select_match_config_file_desc: "选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。"
+                    select_match_config_file_desc: "选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。",
+                    node_search: "节点搜索"
                 }
             }
         },

@@ -23,6 +23,7 @@ import { customElement, property, observe } from '@polymer/decorators';
 import { isEmpty } from 'lodash';
 import type { SelectionType } from '../../../graph_ascend/type';
 import type { MetaDirType } from '../../type';
+import { DB_TYPE } from '../../../common/constant';
 @customElement('tf-main-controler')
 class MainController extends PolymerElement {
   // 定义模板
@@ -63,6 +64,10 @@ class MainController extends PolymerElement {
     <div class="control-holder">
       <vaadin-combo-box label="[[t('run')]]" items="[[runs]]" value="{{selectedRun}}"></vaadin-combo-box>
       <vaadin-combo-box label="[[t('tag')]]" items="[[tags]]" value="{{selectedTag}}"></vaadin-combo-box>
+      <template is="dom-if" if="[[isDBType]]">
+        <vaadin-combo-box label="Step" items="[[steps]]" value="{{selectedStep}}"></vaadin-combo-box>
+        <vaadin-combo-box label="Rank" items="[[ranks]]" value="{{selectedRank}}"></vaadin-combo-box>
+      </template>
       <vaadin-combo-box label="MicroStep" items="[[microsteps]]" value="{{selectedMicroStep}}"></vaadin-combo-box>
     </div>
   `;
@@ -82,8 +87,17 @@ class MainController extends PolymerElement {
   @property({ type: Array })
   tags = [];
 
+  @property({ type: Boolean })
+  isDBType = false;
+
   @property({ type: Array })
   microsteps = [];
+
+  @property({ type: Array })
+  steps: any[] = [{ value: 0, label: '0' }];
+
+  @property({ type: Array })
+  ranks: any[] = [{ value: 0, label: '0' }];
 
   @property({ type: String })
   selectedRun = '';
@@ -92,10 +106,17 @@ class MainController extends PolymerElement {
   selectedTag = '';
 
   @property({ type: Number })
+  selectedRank = 0;
+
+  @property({ type: Number })
+  selectedStep = 0;
+
+  @property({ type: Number })
   selectedMicroStep = -1;
 
   @observe('metaDir')
   _metaDirChanged(): void {
+
     if (isEmpty(this.metaDir)) {
       return;
     }
@@ -111,7 +132,6 @@ class MainController extends PolymerElement {
     }
     const { type, tags } = this.metaDir[this.selectedRun];
     this.set('tags', tags);
-    this.set('selectedTag', tags[0]);
     const selection = {
       ...this.selection,
       run: this.selectedRun,
@@ -119,9 +139,18 @@ class MainController extends PolymerElement {
       microStep: -1,
       type
     };
+    const isDBType = type == DB_TYPE;
+
+    if (isDBType) {
+      selection['step'] = 0;
+      selection['rank'] = 0;
+      this.set('selectedStep', 0);
+      this.set('selectedRank', 0);
+    }
+    this.set('selection', selection);
+    this.set('isDBType', isDBType);
     this.set('selectedTag', tags[0]);
     this.set('selectedMicroStep', -1);
-    this.set('selection', selection);
   }
 
   @observe('selectedTag')
@@ -134,8 +163,42 @@ class MainController extends PolymerElement {
       tag: this.selectedTag,
       microStep: -1,
     };
-    this.set('selectedMicroStep', -1);
+    if (this.isDBType) {
+      selection['step'] = 0;
+      selection['rank'] = 0;
+      this.set('selectedStep', 0);
+      this.set('selectedRank', 0);
+    }
     this.set('selection', selection);
+    this.set('selectedMicroStep', -1);
+  }
+
+  @observe('selectedStep')
+  _selectedStepChanged(): void {
+    if (isEmpty(this.metaDir)) {
+      return;
+    }
+    const selection = {
+      ...this.selection,
+      step: this.selectedStep,
+      microStep: -1,
+    };
+    this.set('selection', selection);
+    this.set('selectedMicroStep', -1);
+  }
+
+  @observe('selectedRank')
+  _selectedRankChanged(): void {
+    if (isEmpty(this.metaDir)) {
+      return;
+    }
+    const selection = {
+      ...this.selection,
+      rank: this.selectedRank,
+      microStep: -1,
+    };
+    this.set('selection', selection);
+    this.set('selectedMicroStep', -1);
   }
 
   @observe('selectedMicroStep')
@@ -157,14 +220,22 @@ class MainController extends PolymerElement {
 
   _getTagChanged(event): void {
     const detail = event.detail;
-    if (!detail?.rankId || detail?.rankId >= this.tags.length) {
+    if (detail?.rankId != undefined && this.isDBType) {
+      setTimeout(() => {
+        this.set('selectedRank', detail?.rankId);
+      })
+    }
+    else if (detail?.rankId != undefined && !this.isDBType && detail?.rankId <= this.tags.length) {
+      setTimeout(() => {
+        this.set('selectedTag', this.tags[detail?.rankId]);
+      })
+    }
+    else {
       Notification.show(this.t('invalid_rank_id'), {
         position: 'middle',
         duration: 2000,
         theme: 'warning',
       });
-      return;
     }
-    this.set('selectedTag', this.tags[detail?.rankId]);
   }
 }

@@ -86,8 +86,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         margin-right: 12px;
       }
 
-
-
       .icon-button {
         font-size: var(--tb-graph-controls-title-font-size);
       }
@@ -134,6 +132,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       }
 
       .tab-content {
+        position: relative;
         background: rgb(255, 255, 255);
         padding: 0 20px;
         flex-grow: 1;
@@ -174,6 +173,38 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         font-size: var(--tb-graph-controls-title-font-size);
         margin-left: -4px;
       }
+
+      .vaadin-details-selected {
+        display: flex;
+        padding-top: 0;
+      }
+      
+      .vaadin-details-title {
+        font-size: 14px;
+        color: #333333;
+        font-weight: 600;
+        margin-bottom: 0;
+      }
+
+      .vaadin-details vaadin-details-summary {
+        font-size: 15px;
+        color: #333333;
+        font-weight: 600;
+      }
+
+      .loading-wrapper{
+          position: absolute;
+          width: 90%;
+          height: 90%;
+          z-index: 999;
+          color: rgba(37, 37, 37, 0.8);
+          background-color: rgba(255, 255, 255, 0.76);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          font-size: 20px;
+          font-weight: 600;
+      }
       paper-checkbox {
         --paper-checkbox-unchecked-color: gray; /* 选中时的颜色 */
         user-select: none;
@@ -182,7 +213,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
 
     <div class="tabs">
       <button class="tab-button" on-tap="_showNodeControls">[[t('settings')]]</button>
-      <button class="tab-button" on-tap="_showMatch">[[t('match')]]</button>
+      <button class="tab-button" on-tap="_showMatch">[[t('function')]]</button>
     </div>
     <div id="nodes-content" class="tab-content">
       <div class='setting-title'>
@@ -205,17 +236,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           meta-dir="[[metaDir]]"
           selection="{{selection}}"
           microsteps="[[microsteps]]"
+          ranks="[[ranks]]"
+          steps="[[steps]]"
         ></tf-main-controler>
       </div>
-      <div class="container-wrapper">
-        <tf-linkage-search-combox
-          t="[[t]]"
-          nodelist="[[nodelist]]"           
-          selected-node="{{selectedNode}}"
-          is-compare-graph="[[!isSingleGraph]]"
-        >
-        </tf-linkage-search-combox>
-      </div>
+   
       <tf-color-select
         t="[[t]]"
         colors="{{colors}}"
@@ -230,6 +255,20 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     </div>
     <div id="directory-content" class="tab-content hidden"></div>
     <div id="match-content" class="tab-content hidden">
+        <template is='dom-if' if='[[loading]]'>
+          <div class='loading-wrapper'>
+              Loading......
+          </div>
+      </template>
+      <vaadin-details class="vaadin-details" summary="[[t('node_search')]]" opened>
+        <tf-linkage-search-combox
+          t="[[t]]"
+          nodelist="[[nodelist]]"           
+          selected-node="{{selectedNode}}"
+          is-compare-graph="[[!isSingleGraph]]"
+        >
+        </tf-linkage-search-combox>
+      </vaadin-details>
       <tf-manual-match
         t="[[t]]"
         unmatched="[[unmatched]]"
@@ -240,11 +279,15 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         bench-match-nodes="[[benchMatchNodes]]"
         matched-config-files="[[matchedConfigFiles]]"
       ></tf-manual-match>
+
     </div>
   `;
 
   @property({ type: Object })
   t: Function = (key) => i18next.t(key);
+
+  @property({ type: Boolean })
+  loading: boolean = false;
 
   @property({ type: Object })
   metaDir: MetaDirType = {} as MetaDirType;
@@ -286,6 +329,14 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   // 颜色数据
   @property({ type: Object, notify: true })
   colors: any;
+
+  @property({ type: Object, notify: true })
+  loadAllNodeList: Function = () => { };
+
+  @property({ type: Object, notify: true })
+  needLoadAllNodeList: boolean = true;
+
+
 
   override ready(): void {
     super.ready();
@@ -334,8 +385,14 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     this._showTabContent(this.t('settings'), 'nodes-content');
   }
 
-  _showMatch(): void {
-    this._showTabContent(this.t('match'), 'match-content');
+  async _showMatch(): Promise<void> {
+    this._showTabContent(this.t('function'), 'match-content');
+    if (this.loadAllNodeList && this.needLoadAllNodeList) {
+      this.set('loading', true)
+      await this.loadAllNodeList(this.selection);
+      this.set('needLoadAllNodeList', false) //已经加载过一次,不需要再加载
+      this.set('loading', false)
+    }
   }
 
   _fit(): void {

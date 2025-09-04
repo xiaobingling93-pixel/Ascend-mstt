@@ -27,8 +27,8 @@ import '../graph_controls_board/index';
 import '../common/graph-board-layout';
 import '@vaadin/confirm-dialog'
 import { Notification } from '@vaadin/notification';
-
-import type { SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
+import request from '../utils/request';
+import type { SelectedItemType, SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
 
 @customElement('graph-ascend')
 class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
@@ -51,19 +51,22 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 colors="{{colors}}"
                 colorset="[[colorset]]"
                 overflowcheck="[[overflowcheck]]"
+                steps="[[steps]]"
+                ranks="[[ranks]]"
                 microsteps="[[microsteps]]"
                 npu-match-nodes="[[npuMatchNodes]]"
                 bench-match-nodes="[[benchMatchNodes]]"
                 matched-config-files="[[matchedConfigFiles]]"
                 nodelist="[[nodelist]]"
                 unmatched="[[unmatched]]"
-                matchedlist="[[matchedlist]]"
                 minimap-vis="{{minimapVis}}"
                 is-sync-expand="{{isSyncExpand}}"
                 is-single-graph="{{isSingleGraph}}"
                 task="[[task]]"
                 is-overflow-filter="{{isOverflowFilter}}"
                 on-fit-tap="onFitTap"
+                load-all-node-list="{{loadGraphAllNodeList}}"
+                need-load-all-node-list="{{needLoadAllNodeList}}"
             ></graph-controls-board>
             <div class="center" slot="center">
                 <div class="graph-board-wrapper">
@@ -160,10 +163,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     selection: SelectionType | null = null;
 
     @property({ type: Object, notify: true })
-    nodelist: any;
+    nodelist: NodeListType = {} as NodeListType;
 
     @property({ type: Object, notify: true })
-    unmatched: any;
+    unmatched: UnmatchedNodeType = {} as UnmatchedNodeType;
 
     @property({ type: Object, notify: true })
     matchedlist: any;
@@ -186,11 +189,18 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     @property({ type: Boolean })
     isSingleGraph: boolean = false;
 
-    @property({ type: Object })
-    microsteps: any;
+    @property({ type: Array })
+    microsteps: number[] = [];
 
     @property({ type: Array })
-    overflowcheck;
+    steps: Array<SelectedItemType> = [{ value: 0, label: '0' }];
+
+    @property({ type: Array })
+    ranks: Array<SelectedItemType> = [{ value: 0, label: '0' }];
+
+
+    @property({ type: Array })
+    overflowcheck: boolean = false;
 
     @property({ type: Object })
     tooltips: object = {};
@@ -215,6 +225,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     @property({ type: Array })
     fileListError: Array<LoadGraphFileInfoListType['error']> = [];
 
+    @property({ type: Object })
+    needLoadAllNodeList: boolean = true;
+
     private currentSelection: SelectionType | null = null;
     private useGraphAscend = useGraphAscend();
     private eventSource: EventSource | null = null;
@@ -224,12 +237,30 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         if (!this.selection?.run || !this.selection?.tag) {
             return;
         }
-        if (this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag) {
-            this.loadGraphData(this.selection);
-        } else if (this.currentSelection?.microStep !== this.selection?.microStep) {
-            this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
-            this.loadGraphAllNodeList(this.selection);
+        const isFileChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
+        const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
+        if (isFileChange) {
+            switch (this.selection?.type) {
+                case 'json':
+                    this.loadJSONGraphData(this.selection);
+                    break;
+                case 'db':
+                    this.loadDBGraphData(this.selection, true);
+                    break;
+                default:
+                    break;
+            }
         }
+        else if (isDBChange) {
+            this.loadDBGraphData(this.selection, false);
+        }
+        else if (this.currentSelection?.microStep !== this.selection?.microStep) {
+            this.initGraphBoard(); // 只改变microsteps时，不重新加载图数据
+        }
+        else {
+            return
+        }
+        this.set('needLoadAllNodeList', true);
         this.currentSelection = this.selection;
     };
 
@@ -262,13 +293,25 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         }
         this.set('metaDir', data);
     }
+    loadDBGraphData = async (metaData: SelectionType, isInitDB: boolean = false) => {
+        if (isInitDB) {
+            this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
+            await request({ url: 'loadGraphData', method: 'GET', params: metaData });
+            await this.loadGraphConfig(metaData)
+        }
+        this.progreesLoading('正在初始化图', '请稍后', { progress: 90, progressValue: 90, done: false });
+        this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
+        this.progreesLoading('初始化完成', '请稍后', { progress: 100, progressValue: 100, done: true });
+    }
 
-    loadGraphData = (metaData: SelectionType) => {
+
+    loadJSONGraphData = async (metaData: SelectionType) => {
         if (this.eventSource) {
             this.eventSource.close();
             this.eventSource = null;
         }
-        this.eventSource = new EventSource(`loadGraphData?run=${metaData.run}&tag=${metaData.tag}`);
+
+        this.eventSource = new EventSource(`loadGraphData?run=${metaData.run}&tag=${metaData.tag}&type=${metaData.type}`);
         this.eventSource.onmessage = async (e) => {
             const data = safeJSONParse(e.data);
             if (data?.error) {
@@ -282,10 +325,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     this.eventSource?.close();
                     this.eventSource = null;
                     try {
-                        await Promise.all([
-                            this.loadGraphConfig(metaData),
-                            this.loadGraphAllNodeList(metaData),
-                        ]);
+                        await this.loadGraphConfig(metaData)
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
                         this.progreesLoading('初始化完成', '请稍后', data);
                     } catch (error) {
@@ -303,7 +343,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             }
             this.eventSource?.close();
         };
-    };
+    }
 
     loadGraphConfig = async (metaData) => {
         const { success, data, error } = await this.useGraphAscend.loadGraphConfig(metaData);
@@ -317,14 +357,28 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('task', config.task);
             this.set('matchedConfigFiles', ['未选择', ...config.matchedConfigFiles]);
             const microstepsCount = Number(config.microSteps);
+            const ranks = config.ranks || [0];
+            const steps = config.steps || [0];
             if (microstepsCount) {
                 const microstepsArray = Array.from({ length: microstepsCount + 1 }, (_, index) => ({
                     label: index === 0 ? 'ALL' : String(index - 1),
                     value: index - 1,
                 }));
                 this.set('microsteps', microstepsArray);
-            } else {
-                this.set('microsteps', []);
+            }
+            if (ranks.length > 0) {
+                const ranksArray = ranks.map((rank) => ({
+                    label: rank,
+                    value: rank,
+                }))
+                this.set('ranks', ranksArray);
+            }
+            if (steps.length > 0) {
+                const stepsArray = steps.map((step) => ({
+                    label: step,
+                    value: step,
+                }))
+                this.set('steps', stepsArray);
             }
         } else {
             Notification.show(`图配置加载失败:${error}`, {

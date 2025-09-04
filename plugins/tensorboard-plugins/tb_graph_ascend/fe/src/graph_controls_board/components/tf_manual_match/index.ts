@@ -24,12 +24,14 @@ import { isEmpty } from 'lodash';
 import { Notification } from '@vaadin/notification';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
-import { NPU_PREFIX, BENCH_PREFIX } from '../../../common/constant';
+import { NPU_PREFIX, BENCH_PREFIX, DB_TYPE } from '../../../common/constant';
 import useMatched from './useMatched';
+import '../tf_search_combox/index';
 import i18next from '../../../common/i18n'
 import type { UseMatchedType } from '../../type';
+import type { SelectionType } from '../../../graph_ascend/type';
 
-import '../tf_search_combox/index';
+
 @customElement('tf-manual-match')
 class Legend extends PolymerElement {
   // 定义模板
@@ -209,21 +211,23 @@ class Legend extends PolymerElement {
           text="手动匹配结束后，点击保存匹配节点信息，会将已匹配的节点对应关系保存到配置文件中，不会持久原始文件，如果是初次保存，会新建一个文件，文件名称为：[当前文件名].vis.config。"
           position="end"
         ></vaadin-tooltip>
-        <vaadin-button
-          class="save-button"
-          theme="primary contrast small"
-          on-click="_saveMatchedNodesLink"
-          disabled="[[saveLoading]]"
-          >保存</vaadin-button
-        >
-        <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
-        <vaadin-tooltip
-          for="match-save"
-          text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效"
-          position="end"
-        ></vaadin-tooltip>
-        <template is="dom-if" if="[[saveLoading]]">
-          <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+        <template is="dom-if" if="[[!isDBType]]">
+          <vaadin-button
+            class="save-button"
+            theme="primary contrast small"
+            on-click="_saveMatchedNodesLink"
+            disabled="[[saveLoading]]"
+            >保存</vaadin-button
+          >
+          <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
+          <vaadin-tooltip
+            for="match-save"
+            text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效"
+            position="end"
+          ></vaadin-tooltip>
+          <template is="dom-if" if="[[saveLoading]]">
+            <vaadin-progress-bar indeterminate></vaadin-progress-bar>
+          </template>
         </template>
       </div>
     </vaadin-details>
@@ -235,8 +239,11 @@ class Legend extends PolymerElement {
   @property({ type: Object })
   unmatched: any = [];
 
+  @property({ type: Boolean })
+  isDBType = false;
+
   @property({ type: Object })
-  selection: any;
+  selection: SelectionType = {} as SelectionType;
 
   @property({ type: Boolean })
   isCompareGraph: boolean = true;
@@ -305,6 +312,13 @@ class Legend extends PolymerElement {
   npuMatchedNodeList = {};
   benchMatchedNodeList = {};
 
+  @observe('selection')
+  _observeSelection(): void {
+    this.set('isDBType', this.selection?.type == DB_TYPE);
+  }
+
+
+
   @observe('t')
   _observeT(): void {
     if (this.t) {
@@ -323,7 +337,7 @@ class Legend extends PolymerElement {
   }
 
   @observe('npuMatchNodes', 'benchMatchNodes')
-  _observeSelection(): void {
+  _observeMatchNodes(): void {
     if (!this.isCompareGraph) {
       return;
     }
@@ -449,7 +463,7 @@ class Legend extends PolymerElement {
       const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes?.length);
+      const processedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes?.length);
       this.dispatchEvent(updateHierarchyData);
       // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
@@ -466,7 +480,7 @@ class Legend extends PolymerElement {
       // 已匹配列表清空选中的节点
       this.set('selectedNpuMatchedNode', '');
       this.set('selectedBenchMatchedNode', '');
-      Notification.show(`取消成功：取消节点数 ${porcessedNodeNum} 个,对应节点状态已更新`, {
+      Notification.show(`取消成功：取消节点数 ${processedNodeNum} 个,对应节点状态已更新`, {
         position: 'middle',
         duration: 4000,
         theme: 'success',
@@ -499,16 +513,16 @@ class Legend extends PolymerElement {
     );
     this.set('matchConfigLoading', false);
     if (success) {
-      const matchReslut = data?.matchReslut || [];
+      const matchResult = data?.matchResult || [];
       const npuMatchNodes = data?.npuMatchNodes || {};
       const benchMatchNodes = data?.benchMatchNodes || {};
       const npuUnMatchNodes = data?.npuUnMatchNodes;
       const benchUnMatchNodes = data?.benchUnMatchNodes;
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = matchReslut?.length;
-      const matchSuccessNum = matchReslut?.filter(Boolean).length;
-      const matchFailedNum = porcessedNodeNum - matchSuccessNum;
+      const processedNodeNum = matchResult?.length;
+      const matchSuccessNum = matchResult?.filter(Boolean).length;
+      const matchFailedNum = processedNodeNum - matchSuccessNum;
       // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
@@ -520,7 +534,7 @@ class Legend extends PolymerElement {
       this.set('npuUnMatchedNodes', npuUnMatchNodes);
       this.set('benchUnMatchedNodes', benchUnMatchNodes);
       Notification.show(
-        `匹配成功：匹配节点数 ${porcessedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`,
+        `匹配成功：匹配节点数 ${processedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`,
         {
           position: 'middle',
           duration: 4000,
@@ -570,7 +584,7 @@ class Legend extends PolymerElement {
       const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
+      const processedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
       // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
@@ -587,7 +601,7 @@ class Legend extends PolymerElement {
       // 未匹配列表清空选中的节点
       this.set('selectedNpuUnMatchedNode', '');
       this.set('selectedBenchUnMatchedNode', '');
-      Notification.show(`匹配成功：匹配节点数 ${porcessedNodeNum} 个,对应节点状态已更新`, {
+      Notification.show(`匹配成功：匹配节点数 ${processedNodeNum} 个,对应节点状态已更新`, {
         position: 'middle',
         duration: 4000,
         theme: 'success',

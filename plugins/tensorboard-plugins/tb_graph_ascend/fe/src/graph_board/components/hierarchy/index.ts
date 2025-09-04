@@ -38,6 +38,7 @@ import { Notification } from '@vaadin/notification';
 import type { UseGraphType } from '../../type';
 import type { HierarchyNodeType, ContextMenuItem, PreProcessDataConfigType, GraphType } from '../../type';
 import type { ContextMenuItemSelectedEvent } from '@vaadin/context-menu';
+import type { SelectionType } from '../../../graph_ascend/type';
 
 const EXPAND_MATCHED_NODE = 1;
 const DATA_COMMUNICATION = 2;
@@ -131,7 +132,7 @@ class Hierarchy extends PolymerElement {
     isOverflowFilter: boolean = false;
 
     @property({ type: Object })
-    selection = {};
+    selection: SelectionType = {} as SelectionType;
 
     @property({ type: Boolean, notify: true })
     selectedNode = '';
@@ -356,7 +357,7 @@ class Hierarchy extends PolymerElement {
     bindUpdateHierarchyDataEvent() {
         const onUpdateHierarchyDataEvent = async () => {
             this.set('loading', true);
-            const { success, data, error } = await this.useGraph.updateHierarchyData(this.graphType);
+            const { success, data, error } = await this.useGraph.updateHierarchyData(this.graphType, this.selection);
             this.set('loading', false);
             if (success) {
                 const hierarchyObject = data;
@@ -435,12 +436,13 @@ class Hierarchy extends PolymerElement {
             if (target.tagName.toLowerCase() !== 'rect' && target.tagName.toLowerCase() !== 'text') {
                 event.stopPropagation();
             } else {
-                const contextMenuItems: Array<ContextMenuItem> = [
-                    {
+                const contextMenuItems: Array<ContextMenuItem> = [];
+                if (this.graphType != 'Single') {
+                    contextMenuItems.push({
                         text: '展开对应侧节点',
                         type: EXPAND_MATCHED_NODE,
-                    },
-                ];
+                    })
+                }
                 const selectedNode = target.getAttribute('name');
                 const nodeName = selectedNode?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '') ?? '';
                 const nodeData = this.hierarchyObject[nodeName];
@@ -534,6 +536,7 @@ class Hierarchy extends PolymerElement {
                 this.dispatchEvent(changeMatchNodeExpandState);
             }
             const transform = this.changeNodeCenter(nodeName);
+            this.set('needChangeNodeCenter', true);
             this.renderGraph(this.hierarchyData, this.hightLightNodeName, transform);
         };
         const onDoubleClickGraphEvent = (event) => {

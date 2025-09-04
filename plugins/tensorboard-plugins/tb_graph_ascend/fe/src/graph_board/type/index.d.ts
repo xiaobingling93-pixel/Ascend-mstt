@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { SelectionType } from "../../graph_ascend/type";
 export interface HierarchyNodeType {
     x: number;
     y: number;
@@ -59,9 +61,9 @@ export interface UseGraphType {
         config: PreProcessDataConfigType,
         transform: { x: number; y: number; scale: number },
     ) => Array<any>;
-    changeNodeExpandState: (nodeInfo: any, metaData: any) => Promise<any>;
+    changeNodeExpandState: (nodeInfo: any, metaData: SelectionType) => Promise<any>;
     createComponent: (text, precision, colors: PreProcessDataConfigType['colors']) => any;
-    updateHierarchyData: (graphType: string) => Promise<any>;
+    updateHierarchyData: (graphType: string, metaData: SelectionType) => Promise<any>;
 }
 
 export interface TransformType {

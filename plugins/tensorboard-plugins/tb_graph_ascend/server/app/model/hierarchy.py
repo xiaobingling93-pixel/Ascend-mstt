@@ -1,3 +1,4 @@
+
 # Copyright (c) 2025, Huawei Technologies.
 # All Rights Reserved.
 #
@@ -14,7 +15,8 @@
 # limitations under the License.
 # ==============================================================================
 from tensorboard.util import tb_logging
-from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE
+from ..utils.global_state import GraphState
+from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE, DataType
 
 logger = tb_logging.get_logger()
 
@@ -23,40 +25,50 @@ INNER_HIGHT = 15  # 内部节点高度
 HORIZONTAL_SPACING = 5  # 横向排列间距
 VERTICAL_SPACING = 10  # 纵向排列间距
 MAX_PER_ROW = 5  # 横向每行最大数
+DB_TYPE = DataType.DB.value
+JSON_TYPE = DataType.JSON.value
 
 
 class Hierarchy:
     
-    def __init__(self, graph_type, graph, micro_step):
-        root_node_name = graph.get('root')
-        node_info = graph.get('node', {}).get(root_node_name, {})
+    def __init__(self, graph_type, repo, micro_step, rank, step):
+        # DB：查询根节点信息
+        node_info = repo.query_root_nodes(graph_type, rank, step)
+        if(not node_info):
+            logger.error("No root node info found in database.")
+            return
+        root_node_name = node_info.get('node_name')
         name_prefix = NPU_PREFIX if graph_type == NPU else BENCH_PREFIX
         name_prefix = '' if graph_type == SINGLE else name_prefix
+        self.repo = repo
         self.name_prefix = name_prefix
         self.root_name = root_node_name
         self.graph_type = graph_type
-        self.graph = graph
+        self.rank = rank
+        self.step = step
         self.micro_step_id = micro_step
         self.current_hierarchy = {
             root_node_name: self.get_basic_rende_info(root_node_name, node_info)
         }
         # 默认展开根节点
-        self.update_graph_data(self.root_name, graph)
+        self.update_graph_data(self.root_name)
         self.update_graph_shape()
         self.update_graph_position()
 
-    @staticmethod
-    def measure_text_width(text):
+    @classmethod
+    def measure_text_width(cls, text):
         return len(text) * 6  # 假设每个字符宽度为6
 
-    @staticmethod
-    def extract_label_name(node_name, node_type):
+    @classmethod
+    def extract_label_name(cls, node_name, node_type):
+        if not node_name:
+            return ''
         splited_subnode_name = node_name.split('.')
         splited_label = []
         # 在展开层级时，将父级层级名称相关去除，仅保留子节点本身名称信息
         # 如Module.layer1.1.relu.ReLU.forward.0中的父级名称Module.layer1.1去除，仅保留子级的relu.ReLU.forward.1
         # 如Module.layer4.0.BasicBlock.forward.0中的父级名称Module.1去除，仅保留子级的layer4.0.BasicBlock.forward.0
-        if node_type == MODULE:
+        if int(node_type) == MODULE:
             if len(splited_subnode_name) < 4:
                 return node_name
             splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
@@ -71,14 +83,14 @@ class Hierarchy:
                 -2].isdigit() else splited_subnode_name[-3:]
         return ('.').join(splited_label)
 
-    def update_graph_data(self, node_name, graph):
+    def update_graph_data(self, node_name):
         target_node = self.current_hierarchy.get(node_name, {})
         if node_name == self.root_name or target_node:
-            self.process_click_expand(node_name, graph)
+            self.process_click_expand(node_name)
         else:  # 如果图中不存在该节点，说明是选中节点，需要递归展开该节点的所有父节点
-            self.process_select_expand(node_name, graph)
+            self.process_select_expand(node_name)
 
-    def process_click_expand(self, node_name, graph):
+    def process_click_expand(self, node_name):
         target_node = self.current_hierarchy.get(node_name, {})
         target_node_children = target_node.get("children", [])
         if not target_node or not target_node_children:
@@ -86,34 +98,40 @@ class Hierarchy:
         if not target_node.get('expand', False):
             # 1.将target_node的expand置为true
             # 2.将node_name的子节点信息初始化，并添加到current_hierarchy中
-            for subnode_name in target_node_children:
+            # DB: 查询所有以当前为父节点的子节点
+            sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
+            for subnode_name, node_info in sub_nodes.items():
                 if self.current_hierarchy.get(subnode_name):
                     continue
-                node_info = graph.get('node', {}).get(subnode_name, {})
                 render_info = self.get_basic_rende_info(subnode_name, node_info)
                 self.current_hierarchy[subnode_name] = render_info
             target_node['expand'] = True
         else:
             target_node['expand'] = False if node_name != self.root_name else True  # 根节点默认展开
 
-    def process_select_expand(self, node_name, graph):
-        parent_node_name = graph.get('node', {}).get(node_name, {}).get("upnode")
-        parent_node = self.current_hierarchy.get(parent_node_name)
+    def process_select_expand(self, node_name):
+        # DB：逻辑
+        # 1.查询当前节点及其的所有父节点，一直到没有父节点位置{}
+        
+        # DB：查询当前节点的父节点信息
+        up_nodes = self.repo.query_up_nodes(node_name, self.graph_type, self.rank, self.step)
+        parent_node_name = up_nodes.get(node_name, {}).get('upnode')
+        parent_node = self.current_hierarchy.get(parent_node_name, '')
         # 递归展开父节点
         while not parent_node or not parent_node.get('expand', False):
-            if not parent_node:  # 如果父节点不存在，则初始化父节点
-                node_info = graph.get('node', {}).get(parent_node_name)
-                render_info = self.get_basic_rende_info(parent_node_name, node_info)
+            if not parent_node:  # 如果父节点不存在图中，则初始化父节点
+              
+                render_info = self.get_basic_rende_info(parent_node_name, up_nodes.get(parent_node_name))
                 self.current_hierarchy[parent_node_name] = render_info
             try:
-                self.process_click_expand(parent_node_name, graph)  # 展开父节点
+                self.process_click_expand(parent_node_name)  # 展开父节点
             except Exception as e:
                 logger.error(f"Failed to expand parent node {parent_node_name}: {e}")
                 break
             if parent_node_name == self.root_name:
                 break
-            parent_node_name = graph.get('node', {}).get(parent_node_name, {}).get("upnode")
-            parent_node = self.current_hierarchy.get(parent_node_name)
+            parent_node_name = up_nodes.get(parent_node_name, {}).get('upnode')
+            parent_node = self.current_hierarchy.get(parent_node_name, '')
 
     def update_graph_shape(self):
         self.resize_hierarchy(self.root_name)
@@ -132,7 +150,7 @@ class Hierarchy:
             return
         if not node.get('expand', False):
             # 未展开的父节点按文字宽度
-            node['width'] = Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
+            node['width'] = self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 文字宽度 + 边距
             node['height'] = INNER_HIGHT
             return
         for child_name in node.get('children', []):
@@ -166,7 +184,7 @@ class Hierarchy:
         # 最终尺寸计算
         node['width'] = max(
             max_child_width + HORIZONTAL_SPACING * 2,  # 子节点最大宽度 + 边距
-            Hierarchy.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
+            self.measure_text_width(node.get('label', '')) + HORIZONTAL_SPACING * 2  # 保证文字可见
         )
         node['height'] = total_height + VERTICAL_SPACING  # 总高度 + 边距
 
@@ -241,10 +259,11 @@ class Hierarchy:
             return {}
         label = node_name
         children = []
+        precision_index = None,
         if node_name == self.root_name:  # 根节点，根据micro_step获取子节点
-            target_node_children = node_info.get('subnodes', [])
-            for subnode_name in target_node_children:
-                child_node = self.graph.get('node', {}).get(subnode_name, {})
+            # DB：查询以根节点为父节点的所有子节点
+            sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
+            for subnode_name, child_node in sub_nodes.items():
                 child_micro_step_id = child_node.get('micro_step_id', -1)  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
                 is_append_all_node = int(self.micro_step_id) == -1 or child_micro_step_id == -1
                 is_append_split_node = int(self.micro_step_id) != -1 and int(child_micro_step_id) == int(
@@ -253,12 +272,18 @@ class Hierarchy:
                     children.append(subnode_name)
         else:
             children = node_info.get('subnodes', [])
+        # precisionIndex 先从缓存中获取(更新误差可能会更新缓存)，如果不存在，则从ode_info中获取
+        update_precision_cache = GraphState.get_global_value('update_precision_cache', {})
+        if update_precision_cache.get(node_name) is not None:
+            precision_index = update_precision_cache.get(node_name, {}).get('precision_index')
+        else:
+            precision_index = node_info.get('data', {}).get('precision_index', "NaN")
         if node_info.get('upnode', '') != self.root_name:  # 首层节点不处理显示内容
-            label = Hierarchy.extract_label_name(node_name, node_info.get('node_type'))
+            label = self.extract_label_name(node_name, node_info.get('node_type'))
         render_info = {
             'x': 0,
             'y': 0,
-            'width': Hierarchy.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
+            'width': self.measure_text_width(node_name) + HORIZONTAL_SPACING * 2,
             'height': INNER_HIGHT,
             'expand': False,
             'isRoot': node_name == self.root_name,
@@ -268,11 +293,10 @@ class Hierarchy:
             'children': children,
             'nodeType': node_info.get('node_type') if node_info.get("subnodes") else UNEXPAND_NODE,
             'matchedNodeLink': node_info.get('matched_node_link', []),
-            'precisionIndex': node_info.get('data', {}).get('precision_index', "NaN"),  # 精度
+            'precisionIndex': precision_index,  # 精度
             'overflowLevel': node_info.get('data', {}).get('overflow_level', "NaN"),  # 溢出
             'matchedDistributed': node_info.get('matched_distributed', {}),
         }
-
         return render_info
 
     # 获取连通图
@@ -289,12 +313,24 @@ class Hierarchy:
                 self.get_connected_graph(child_name, result, new_hierarchy)
 
     def update_hierarchy_data(self):
+        if(self.repo.repo_type == DB_TYPE):
+            return self.current_hierarchy
+        # 处理JSON
         for node_name, node_info in self.current_hierarchy.items():
-            graph_node_info = self.graph.get('node', {}).get(node_name, {})
+            graph_node_info = self.repo.query_node_info(node_name, self.graph_type)
             node_info['matchedNodeLink'] = graph_node_info.get('matched_node_link', [])
             node_info['precisionIndex'] = graph_node_info.get('data', {}).get('precision_index', "NaN")
         return self.current_hierarchy
 
+    def update_current_hierarchy_data(self, data):
+        for node_info in data:
+            node_name = node_info.get('node_name')
+            if node_name in self.current_hierarchy:
+                current_node_info = self.current_hierarchy[node_name]
+                current_node_info['matchedNodeLink'] = node_info.get('matched_node_link')
+                current_node_info['precisionIndex'] = node_info.get('precision_index')
+        return True
+            
     def get_hierarchy(self):
         result = {}
         new_hierarchy = {}

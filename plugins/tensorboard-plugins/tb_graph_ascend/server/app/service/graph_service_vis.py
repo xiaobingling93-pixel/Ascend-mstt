@@ -16,16 +16,16 @@
 import os
 import time
 import json
-
 from tensorboard.util import tb_logging
-from .db_graph_service import DbGraphService
-from ..utils.graph_utils import GraphUtils
+
+from .graph_service_base import GraphServiceStrategy
+from ..repositories.graph_repo_vis import GraphRepoVis
 from ..utils.global_state import GraphState
-from ..controllers.match_nodes_controller import MatchNodesController
-from ..controllers.layout_hierarchy_controller import LayoutHierarchyController
+from ..utils.graph_utils import GraphUtils
+from ..model.layout_hierarchy_model import LayoutHierarchyModel
+from ..model.match_nodes_model import MatchNodesController
 from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
 from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
-from .base_graph_service import GraphServiceStrategy
 
 logger = tb_logging.get_logger()
 
@@ -34,6 +34,7 @@ class JsonGraphService(GraphServiceStrategy):
 
     def __init__(self, run_path, tag):
         super().__init__(run_path, tag)
+        self.repo = None
 
     def load_graph_data(self):
         runs = GraphState.get_global_value('runs')
@@ -74,6 +75,8 @@ class JsonGraphService(GraphServiceStrategy):
             GraphState.set_global_value('current_file_data', json_data)
             GraphState.set_global_value('current_tag', self.tag)
             GraphState.set_global_value('current_run', run_path)
+            # 初始化GraphJson
+            self.repo = GraphRepoVis(json_data)
             yield f"data: {json.dumps({'done': True, 'progress': 100, 'status': 'loading'})}\n\n"
         else:
             yield f"data: {json.dumps({'progress': current_progress, 'error': 'Failed to parse JSON'})}\n\n"
@@ -171,24 +174,25 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': False, 'error': '获取节点列表失败:' + str(e)}
 
     def change_node_expand_state(self, node_info, meta_data):
-        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
-        if error_message or not graph_data:
-            return {'success': False, 'error': error_message}
-        graph_type = node_info.get('nodeType')
-        node_name = node_info.get('nodeName')
-        micro_step = meta_data.get('microStep')
+
         try:
+            graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+            if error_message:
+                return {'success': False, 'error': error_message}
+            if self.repo is None:
+                return {'success': False, 'error': 'initlize graph json failed'}
+            graph_type = node_info.get('nodeType')
+            node_name = node_info.get('nodeName')
+            micro_step = meta_data.get('microStep')
             # 单图
             if not graph_data.get(NPU):
-                hierarchy = LayoutHierarchyController.change_expand_state(node_name, SINGLE, graph_data, micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, SINGLE, self.repo, micro_step, {})
             # NPU
             elif graph_type == NPU:
-                hierarchy = LayoutHierarchyController.change_expand_state(node_name, graph_type,
-                                                                          graph_data.get(NPU, {}), micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, NPU, self.repo, micro_step, {})
             # 标杆
             elif graph_type == BENCH:
-                hierarchy = LayoutHierarchyController.change_expand_state(node_name, graph_type,
-                                                                          graph_data.get(BENCH, {}), micro_step)
+                hierarchy = LayoutHierarchyModel.change_expand_state(node_name, BENCH, self.repo, micro_step, {})
             else:
                 return {'success': True, 'data': {}}
             return {'success': True, 'data': hierarchy}
@@ -197,7 +201,64 @@ class JsonGraphService(GraphServiceStrategy):
             node_type_name = ""
             if graph_data.get(NPU):
                 node_type_name = '调试侧' if graph_type == NPU else '标杆侧'
-            return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
+        return {'success': False, 'error': f'{node_type_name}节点展开或收起发生错误', 'data': None}
+
+    def search_node_by_precision(self, meta_data, values):
+        # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
+        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+        if error_message:
+            return {'success': False, 'error': error_message}
+     
+        precision = []
+        is_filter_unmatch_nodes = True if '无匹配节点' in values else False
+        try:
+            if is_filter_unmatch_nodes:
+                values.remove('无匹配节点')
+            # 单图
+            if not graph_data.get(NPU):
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}),
+                                                                     meta_data.get("microStep", -1))
+            # 多图
+            else:
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get(NPU),
+                                                                     meta_data.get("microStep", -1))
+            for node_name, node in node_list.items():
+                subnodes = node.get("subnodes", None)
+                if subnodes != [] and subnodes is not None:
+                    continue 
+                matched_node_link = node.get('matched_node_link', None)
+                if is_filter_unmatch_nodes and (matched_node_link is None or matched_node_link == []):
+                    precision.append(node_name)
+                if any(low <= node.get('data', {}).get("precision_index", -1) < high for low, high in values):
+                    precision.append(node_name)
+            return {'success': True, 'data': precision}
+        except Exception as e:
+            logger.error('search precision node failed:' + str(e))
+            return {'success': False, 'error': '获取符合精度误差节点失败:' + str(e)}
+    
+    def search_node_by_overflow(self, meta_data, values):
+        # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
+        graph_data, error_message = GraphUtils.get_graph_data(meta_data)
+        if error_message:
+            return {'success': False, 'error': error_message}
+        overflow = []   
+        try:
+            # 单图
+            if not graph_data.get(NPU):
+                node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}),
+                                                                     meta_data.get("microStep", -1))
+                for node_name, node in node_list.items():
+                    subnodes = node.get("subnodes", None)
+                    if subnodes != [] and subnodes is not None:
+                        continue 
+                    if node.get('data', {}).get("overflow_level", -1) in values:
+                        overflow.append(node_name)
+                return {'success': True, 'data': overflow}
+            else:
+                return {'success': False, 'error': '多图模式下不支持溢出检测'}         
+        except Exception as e:
+            logger.error('search overflow node failed:' + str(e))
+            return {'success': False, 'error': '获取符合溢出检测节点失败:' + str(e)}
 
     def update_precision_error(self, meta_data, filter_value):
         try:
@@ -239,7 +300,7 @@ class JsonGraphService(GraphServiceStrategy):
 
     def update_hierarchy_data(self, graph_type):
         if (graph_type == NPU or graph_type == BENCH):
-            hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
+            hierarchy = LayoutHierarchyModel.update_hierarchy_data(graph_type)
             return {'success': True, 'data': hierarchy}
         else:
             return {'success': False, 'error': '节点类型错误'}
@@ -281,66 +342,53 @@ class JsonGraphService(GraphServiceStrategy):
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
                 if is_match_children:
-                    result = MatchNodesController.process_task_add_child_layer(graph_data,
-                                                                    npu_node_name, bench_node_name, task)
-                    return result
+                    match_result = MatchNodesController.process_task_add_child_layer(graph_data,
+                                                                    npu_node_name, bench_node_name, task)              
                 else:
-                    result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-                    if result.get('success'):
-                        config_data = GraphState.get_global_value("config_data")
-                        result['data'] = {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
-                    return result
+                    match_result = MatchNodesController.process_task_add(graph_data,
+                                                                         npu_node_name, bench_node_name, task)
+                return self._generate_matched_result(match_result)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
             return {'success': False, '操作失败': str(e), 'data': None}
 
-    def add_match_nodes_by_config(self, config_file, meta_data):
+    def add_match_nodes_by_config(self, config_file_name, meta_data):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': '读取文件失败'}
-        match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file)
+        match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
         if error:
-            return {'success': False, 'error': '配置文件失败'}
+            return {'success': False, 'error': '读取配置文件失败'}
         task = graph_data.get('task')
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
-                result = MatchNodesController.process_task_add_child_layer_by_config(graph_data, match_node_links, task)
-                return result
+                match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
+                                                                                           match_node_links, task)
+                return self._generate_matched_result(match_result)
             else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+                return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
         except Exception as e:
-            return {'success': False, 'error': '操作失败', 'data': None}
+            logger.error(str(e))
+            return {'success': False, 'error': str(e), 'data': None}
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
             return {'success': False, 'error': error_message}
         task = graph_data.get('task')
-        result = {}
         try:
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
                 if is_unmatch_children:
-                    result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
-                                                                              bench_node_name, task)
+                    match_result = MatchNodesController.process_task_delete_child_layer(graph_data, npu_node_name,
+                                                                                  bench_node_name, task)
                 else:
-                    result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
-                    if result.get('success'):
-                        config_data = GraphState.get_global_value("config_data")
-                        result['data'] = {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
-                return result
+                    match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name,
+                                                                            bench_node_name, task)
+                
+                return self._generate_matched_result(match_result)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
@@ -370,6 +418,7 @@ class JsonGraphService(GraphServiceStrategy):
             first_run_tag = first_run_tags.get(self.run)
             first_file_data, error = GraphUtils.safe_load_data(self.run, f"{first_run_tag}.vis")
             if error:
+                logger.error(f"Error loading data: {error}")
                 return {'success': False, 'error': '获取配置信息失败,请检查目录中第一个文件'}
             first_file_data['Colors'] = colors
             config_data_run['colors'] = colors
@@ -380,9 +429,9 @@ class JsonGraphService(GraphServiceStrategy):
         except Exception as e:
             return {'success': False, 'error': str(e), 'data': None}
 
-    def save_matched_relations(self):
-        run = self.run
-        tag = self.tag
+    def save_matched_relations(self, meta_data):
+        run = meta_data.get('run')
+        tag = meta_data.get('tag')
         config_data = GraphState.get_global_value("config_data")
         # 匹配列表和未匹配列表
         npu_match_nodes_list = config_data.get('manualMatchNodes', {})
@@ -390,6 +439,29 @@ class JsonGraphService(GraphServiceStrategy):
             _, error = GraphUtils.safe_save_data(npu_match_nodes_list, run, f"{tag}.vis.config")
             if error:
                 return {'success': False, 'error': error}
+            else:
+                return {'success': True, 'data': f"{tag}.vis.config"}
         except (ValueError, IOError, PermissionError) as e:
             return {'success': False, 'error': f"Error: {e}"}
-        return {'success': True, 'data': f"{tag}.vis.config"}
+  
+    def _generate_matched_result(self, match_result):
+        update_data = []
+        for item in match_result:
+            if item.get('success') is True:
+                for node in item.get('data', []):
+                    update_data.append(node)
+            
+        if len(update_data) > 0:
+            config_data = GraphState.get_global_value("config_data")
+            result = {
+                'success': True,
+                'data': {
+                    'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                    'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                    'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                    'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                }
+            }     
+        else:
+            result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
+        return result

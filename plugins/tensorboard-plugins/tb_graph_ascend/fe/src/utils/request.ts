@@ -29,16 +29,17 @@ interface ApiResponse<T = any> {
 }
 export default async function request<T = any>(options: RequestOptions): Promise<ApiResponse<T>> {
   const { url, method = 'GET', data = null, params = null, headers = {}, timeout = 60000 * 3 } = options;
-
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
   try {
-    const controller = new AbortController();
-    const signal = controller.signal;
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     if (typeof params === 'object' && params !== null) {
       if ('metaData' in params) {
         params.metaData.type = 'rank' in params.metaData ? 'db' : 'json';
       }
     }
+
     const response: AxiosResponse<T> = await axios({
       url,
       method,
@@ -62,6 +63,7 @@ export default async function request<T = any>(options: RequestOptions): Promise
       };
     }
   } catch (error) {
+    clearTimeout(timeoutId);
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
       if (axiosError.code === 'ECONNABORTED') {

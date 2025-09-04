@@ -21,13 +21,18 @@ export interface ProgressType {
     done?: boolean;
 }
 
+export interface SelectedItemType {
+    value: number;
+    label: string;
+}
+
 export interface SelectionType {
     run: string;
     tag: string;
-    type: string;
+    type: 'json' | 'db';
     microStep?: number;
-    step?: string;
-    rank?: string;
+    step?: number;
+    rank?: number;
 }
 
 export interface GraphConfigType {
@@ -41,6 +46,8 @@ export interface GraphConfigType {
     isSingleGraph: boolean;
     matchedConfigFiles: string[];
     task: string;
+    ranks: number[];
+    steps: number[]
 }
 
 export interface GraphAllNodeType {

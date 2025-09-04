@@ -15,7 +15,7 @@
 # ==============================================================================
 
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import ADD_MATCH_KEYS, MODULE
+from ..utils.global_state import ADD_MATCH_KEYS, MODULE, NPU, BENCH
 from ..utils.global_state import GraphState
 
 
@@ -25,110 +25,77 @@ class MatchNodesController:
     def is_same_node_type(graph_data, npu_node_name, bench_node_name):
         npu_node_type = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name, {}).get('node_type')
         bench_node_type = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name, {}).get('node_type')
-
         if npu_node_type is None or bench_node_type is None or npu_node_type != bench_node_type:
             return False
         return True
 
     @staticmethod
-    def get_opposite_node_name(node_name):
-        opposite_node_name = ''
-        # 如果npu_node_name包含forward，则opposite_npu_node_name为npu_node_name替换forward为backward
-        if 'forward' in node_name:
-            opposite_node_name = node_name.replace('forward', 'backward')
-        else:
-            opposite_node_name = node_name.replace('backward', 'forward')
-        return opposite_node_name
-
-    @staticmethod
-    def process_task_add(graph_data, npu_node_name, bench_node_name, task):
+    def process_task_add(graph_data, npu_node_name, bench_node_name, task): 
         if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
-            return {
+            return [{
                 'success': False,
                 'error': '节点类型不一致,无法添加匹配关系'
-            }
-            
-        result = {}
-        opposite_result = {}
-        opposite_npu_node_name = MatchNodesController.get_opposite_node_name(npu_node_name)
-        opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
+            }]
+        opposite_npu_node_name = GraphUtils.get_opposite_node_name(npu_node_name)
+        opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
         if task == 'md5':
-            result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
+            match_result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_md5_task_add(graph_data, opposite_npu_node_name,
                                                                         opposite_bench_node_name)
         elif task == 'summary':
-            result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
+            match_result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_summary_task_add(graph_data, opposite_npu_node_name,
                                                                             opposite_bench_node_name)
         else:
-            result = {
-                'success': False,
-                'error': 'task类型错误'
-            }
-        result['success'] = result.get('success') or opposite_result.get('success')
-        if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error","")}。对侧节点：{opposite_result.get("error")}'
-        return result
+            return [{'success': False, 'error': 'task类型错误'},
+                    {'success': False, 'error': 'task类型错误'}]
+        return [match_result, opposite_result]
 
     @staticmethod
     def process_task_delete(graph_data, npu_node_name, bench_node_name, task):
-        result = {}
-        opposite_result = {}
-        opposite_npu_node_name = MatchNodesController.get_opposite_node_name(npu_node_name)
-        opposite_bench_node_name = MatchNodesController.get_opposite_node_name(bench_node_name)
+        opposite_npu_node_name = GraphUtils.get_opposite_node_name(npu_node_name)
+        opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
         if task == 'md5':
-            result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
+            match_result = MatchNodesController.process_md5_task_delete(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_md5_task_delete(graph_data, opposite_npu_node_name,
                                                                            opposite_bench_node_name)
         elif task == 'summary':
-            result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
+            match_result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_summary_task_delete(graph_data, opposite_npu_node_name,
                                                                                opposite_bench_node_name)
         else:
-            result = {
-                'success': False,
-                'error': 'task类型错误'
-            }
-        result['success'] = result.get('success') or opposite_result.get('success')
-        if not result.get('success'):
-            result['error'] = f'当前节点：{result.get("error","")}。对侧节点：{opposite_result.get("error")}'
-        return result
+            return [{'success': False, 'error': 'task类型错误'},
+                    {'success': False, 'error': 'task类型错误'}]
+        return [match_result, opposite_result]
 
     @staticmethod
     def process_task_add_child_layer_by_config(graph_data, match_node_links, task):
         # 根据配置文件中的匹配关系，批量调用 process_task_add
-        result = {}
-        match_reslut = []
+        match_results = []
         for npu_node_name, bench_node_name in match_node_links.items():
-            res = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
-            match_reslut.append(res.get('success'))
-
-        config_data = GraphState.get_global_value("config_data")
-        
-        result['success'] = True
-        result['data'] = {
-            'matchReslut': match_reslut,
-            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-        }
-        return result
+            if task == 'md5':
+                match_result = MatchNodesController.process_md5_task_add(graph_data, npu_node_name, bench_node_name)
+            elif task == 'summary':
+                match_result = MatchNodesController.process_summary_task_add(graph_data, npu_node_name, bench_node_name)
+            match_results.append(match_result)
+        return match_results
 
     @staticmethod
     def process_task_add_child_layer(graph_data, npu_node_name, bench_node_name, task):
         if not all([graph_data, npu_node_name, bench_node_name, task]):
-            return {'success': False, 'error': '参数错误'}
+            return [{'success': False, 'error': '参数错误'}]
      
         if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
-            return {
+            return [{
                 'success': False,
                 'error': '节点类型不一致,无法添加匹配关系'
-            }
+            }]
+        # DB：找到目标节点所有子节点和标杆侧所有子节点
         npu_nodes = graph_data.get('NPU', {}).get('node', {})
         bench_nodes = graph_data.get('Bench', {}).get('node', {})
+        result = []
         # 1. 选中的目标节点和标杆侧节点添加匹配关系
-        result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
+        match_result = MatchNodesController.process_task_add(graph_data, npu_node_name, bench_node_name, task)
 
         # 2. 目标节点的子节点和标杆侧的子节点添加匹配关系
 
@@ -164,13 +131,15 @@ class MatchNodesController:
                 bench_subnode_list = bench_match_names.get(key, [])
                 # 多个节点可能有一个module name
                 for npu_subnode_name, bench_subnode_name in zip(npu_subnode_list, bench_subnode_list):
-                    result = MatchNodesController.process_task_add(graph_data, npu_subnode_name, bench_subnode_name,
-                                                                   task)
+                    match_result = MatchNodesController.process_task_add(graph_data, npu_subnode_name,
+                                                                         bench_subnode_name, task)
                     npu_subnodes = npu_nodes.get(npu_subnode_name, {}).get('subnodes', [])
                     bench_subnodes = bench_nodes.get(bench_subnode_name, {}).get('subnodes', [])
                     # 2.4 如果有子节点，递归调用2.1-2.4
-                    if result.get('success') and npu_subnodes and bench_subnodes:
-                        process_child_layer(npu_subnodes, bench_subnodes)
+                    if len(match_result) > 0 and match_result[0].get('success'):
+                        result.extend(match_result)
+                        if npu_subnodes and bench_subnodes:
+                            process_child_layer(npu_subnodes, bench_subnodes)
 
         def extract_module_name(subnode_name):
             splited_subnode_name = subnode_name.split('.')
@@ -189,27 +158,22 @@ class MatchNodesController:
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
-        if result.get('success') and npu_subnodes and bench_subnodes:
-            process_child_layer(npu_subnodes, bench_subnodes)
-        if result.get('success'):
-            config_data = GraphState.get_global_value("config_data")
-            result['data'] = {
-                'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-            }
+        # 如果当前节点，也就是第一个节点匹配成功，就尝试匹配子节点
+        if len(match_result) > 0 and match_result[0].get('success'):
+            result.extend(match_result)
+            if npu_subnodes and bench_subnodes:
+                process_child_layer(npu_subnodes, bench_subnodes)
         return result
 
     @staticmethod
     def process_task_delete_child_layer(graph_data, npu_node_name, bench_node_name, task):
         if not all([graph_data, npu_node_name, bench_node_name, task]):
-            return {'success': False, 'error': '参数错误'}
-
+            return [{'success': False, 'error': '参数错误'}]
+        result = []
         npu_nodes = graph_data.get('NPU', {}).get('node', {})
         bench_nodes = graph_data.get('Bench', {}).get('node', {})
         # 1. 选中的目标节点和标杆侧节点添加匹配关系
-        result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
+        match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name, bench_node_name, task)
 
         # 2. 目标节点的子节点和标杆侧的子节点添加匹配关系
         def process_child_layer(npu_child_nodes):
@@ -219,28 +183,23 @@ class MatchNodesController:
                 if not matched_node_link:
                     continue
                 bench_subnode_name = matched_node_link[-1]
-                result = MatchNodesController.process_task_delete(graph_data, npu_subnode_name, bench_subnode_name,
-                                                                  task)
+                match_result = MatchNodesController.process_task_delete(graph_data, npu_subnode_name,
+                                                                        bench_subnode_name, task)
                 npu_subnodes = npu_nodes.get(npu_subnode_name, {}).get('subnodes', [])
                 bench_subnodes = bench_nodes.get(bench_subnode_name, {}).get('subnodes', [])
                 # 2.4 如果有子节点，递归调用2.1-2.4
-                if result.get('success') and npu_subnodes and bench_subnodes:
-                    process_child_layer(npu_subnodes)
+                if len(match_result) > 0 and match_result[0].get('success'):
+                    result.extend(match_result)
+                    if npu_subnodes and bench_subnodes:
+                        process_child_layer(npu_subnodes)
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
-
-        if result.get('success') and npu_subnodes and bench_subnodes:
-            process_child_layer(npu_subnodes)
-        if result.get('success'):
-            config_data = GraphState.get_global_value("config_data")
-            
-            result['data'] = {
-                'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-            }
+        # 如果当前节点，也就是第一个节点匹配成功，就尝试匹配子节点
+        if len(match_result) > 0 and match_result[0].get('success'):
+            result.extend(match_result)
+            if npu_subnodes and bench_subnodes:
+                process_child_layer(npu_subnodes)
         return result
 
     @staticmethod
@@ -248,7 +207,7 @@ class MatchNodesController:
         npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
         bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
         if not npu_node_data or not bench_node_data:
-            return {'success': False, 'error': '节点不存在'}
+            return {'success': False, 'error': f'{npu_node_name, bench_node_name}节点不存在'}
         # 去除节点名称前缀
         npu_input_data = GraphUtils.remove_prefix(npu_node_data.get('input_data', {}), npu_node_name + '.')
         bench_input_data = GraphUtils.remove_prefix(bench_node_data.get('input_data', {}), bench_node_name + '.')
@@ -259,15 +218,33 @@ class MatchNodesController:
         precision_output_error = MatchNodesController.calculate_md5_diff(npu_output_data, bench_output_data)
         precision_error = precision_input_error and precision_output_error
         # 在原始数据上，添加匹配节点，和匹配节点信息
-
+        # JSON：处理JSON更新
         npu_graph_data = graph_data.get('NPU', {})
         bench_graph_data = graph_data.get('Bench', {})
         npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
         bench_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
-        
+        # DB: data只有DB会用到
+        data = [
+             {
+                    "node_name": npu_node_name,
+                    "matched_node_link": [bench_node_name],
+                    "precision_index": precision_error,
+                    "input_data": npu_node_data.get('input_data'),
+                    "output_data": npu_node_data.get('output_data'),
+                    "graph_type": NPU
+                },
+                {
+                    "node_name": bench_node_name,
+                    "matched_node_link": [npu_node_name],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
+                }
+            ]
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
-        return {'success': True}
+        return {'success': True, "data": data}
 
     @staticmethod
     def process_summary_task_add(graph_data, npu_node_name, bench_node_name):
@@ -287,15 +264,15 @@ class MatchNodesController:
         if not intput_statistical_diff or not output_statistical_diff:
             return {
                 'success': False,
-                'error': '输入或输出统计误差值为空(Input and output statistical error calculation failed)',
+                'error': f'{npu_node_name, bench_node_name}输入或输出统计误差值为空',
             }
-
         if precision_error == -1:
             return {
                 'success': False,
-                'error': '输出统计误差值为空，计算精度误差失败(Calculation of precision error failed)',
+                'error': f'{npu_node_name, bench_node_name}输出统计误差值为空，计算精度误差失败',
             }
         # 在原始数据上，添加匹配节点，和匹配节点信息
+        # JSON：处理JSON更新
         npu_graph_data = graph_data.get('NPU', {})
         bench_graph_data = graph_data.get('Bench', {})
         npu_node_data['matched_node_link'] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
@@ -303,8 +280,27 @@ class MatchNodesController:
         npu_node_data.setdefault('data', {})['precision_index'] = precision_error
         MatchNodesController.update_graph_node_data(npu_node_data.get('input_data'), intput_statistical_diff)
         MatchNodesController.update_graph_node_data(npu_node_data.get('output_data'), output_statistical_diff)
+        # DB: data只有DB会用到
+        data = [
+             {
+                    "node_name": npu_node_name,
+                    "matched_node_link": [bench_node_name],
+                    "precision_index": precision_error,
+                    "input_data": npu_node_data.get('input_data'),
+                    "output_data": npu_node_data.get('output_data'),
+                    "graph_type": NPU
+                },
+                {
+                    "node_name": bench_node_name,
+                    "matched_node_link": [npu_node_name],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
+                }
+            ]
         MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
-        return {'success': True}
+        return {'success': True, "data": data}
 
     @staticmethod
     def process_md5_task_delete(graph_data, npu_node_name, bench_node_name):
@@ -315,28 +311,48 @@ class MatchNodesController:
                 bench_node_name) != npu_node_name:
             return {
                 'success': False,
-                'error': "操作失败：节点未匹配，请先匹配节点",
+                'error': f"操作失败：{npu_node_name}或{bench_node_name}节点未匹配，请先匹配节点",
             }
         npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
         bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
         if not npu_node_data or not bench_node_data:
             return {
                 'success': False,
-                'error': "操作失败：节点不存在",
+                'error': "f操作失败：{npu_node_name}或{bench_node_name}节点不存在",
             }
         # 在原始数据上，删除匹配节点，和匹配节点信息
+        # JSON：处理JSON更新
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []
-        # 后端维护一个匹配节点列表，前端展示
         del npu_node_data['data']['precision_index']
+        # DB: data只有DB会用到
+        data = [
+             {
+                    "node_name": npu_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": npu_node_data.get('input_data'),
+                    "output_data": npu_node_data.get('output_data'),
+                    "graph_type": NPU
+                },
+                {
+                    "node_name": bench_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
+                }
+            ]
         MatchNodesController.delete_config_match_nodes(npu_node_name, bench_node_name)
         return {
             'success': True,
-            'data': {},
+            'data': data,
         }
 
     @staticmethod
     def process_summary_task_delete(graph_data, npu_node_name, bench_node_name):
+        
         config_data = GraphState.get_global_value("config_data")
         npu_match_nodes_list = config_data.get('npuMatchNodes', {})
         bench_match_nodes_list = config_data.get('benchMatchNodes', {})
@@ -344,27 +360,44 @@ class MatchNodesController:
                 bench_node_name) != npu_node_name:
             return {
                 'success': False,
-                'error': "操作失败：节点未匹配，请先匹配节点",
+                 'error': f"操作失败：{npu_node_name,bench_node_name}节点未匹配，请先匹配节点",
             }
         npu_node_data = graph_data.get('NPU', {}).get('node', {}).get(npu_node_name)
         bench_node_data = graph_data.get('Bench', {}).get('node', {}).get(bench_node_name)
         if not npu_node_data or not bench_node_data:
             return {
                 'success': False,
-                'error': "操作失败：节点不存在",
+                'error': f"操作失败：{npu_node_name}或{bench_node_name}节点不存在",
             }
-        # 在原始数据上，删除匹配节点，和匹配节点信息
+        # DB：更新数据的节点信息，直接返回新的结果，此处暂时不做更新
+        # JSON：处理JSON更新
         npu_node_data['matched_node_link'] = []
         bench_node_data['matched_node_link'] = []
-        MatchNodesController.delete_matched_node_data(npu_node_data.get('input_data'))
-        MatchNodesController.delete_matched_node_data(npu_node_data.get('output_data'))
+        input_data = MatchNodesController.delete_matched_node_data(npu_node_data.get('input_data'))
+        output_data = MatchNodesController.delete_matched_node_data(npu_node_data.get('output_data'))
         # 防止 KeyError 或 TypeError
         npu_node_data.get('data', {}).pop('precision_index', None)
+        # DB: data只有DB会用到
+        data = [
+                {
+                    "node_name": npu_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": input_data,
+                    "output_data": output_data,
+                    "graph_type": NPU
+                },
+                {
+                    "node_name": bench_node_name,
+                    "matched_node_link": [],
+                    "precision_index": None,
+                    "input_data": bench_node_data.get('input_data'),
+                    "output_data": bench_node_data.get('output_data'),
+                    "graph_type": BENCH,
+                }
+            ]
         MatchNodesController.delete_config_match_nodes(npu_node_name, bench_node_name)
-        return {
-            'success': True,
-            'data': {},
-        }
+        return {'success': True, 'data': data}
 
     @staticmethod
     def add_config_match_nodes(npu_node_name, bench_node_name):
@@ -489,7 +522,6 @@ class MatchNodesController:
             # 格式化相对误差字段
             for field in ['MaxRelativeErr', 'MinRelativeErr', 'NormRelativeErr', 'MeanRelativeErr']:
                 diff_values[field] = GraphUtils.format_relative_err(diff_values.get(field, float('nan')))
-
             # 转换 absErr 为 NaN 字符串
             for field in ['MaxAbsErr', 'MinAbsErr', 'MeanAbsErr', 'NormAbsErr']:
                 diff_values[field] = GraphUtils.nan_to_str(diff_values.get(field, float('nan')))
@@ -511,3 +543,4 @@ class MatchNodesController:
                 for sub_key, value in fild_obj.items()
                 if sub_key not in keys_to_remove
             }
+        return graph_npu_node_data

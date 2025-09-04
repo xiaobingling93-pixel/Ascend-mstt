@@ -17,10 +17,8 @@ import os
 from abc import ABC, abstractmethod
 
 from tensorboard.util import tb_logging
-
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState, NPU, BENCH, Extension, DataType
-from ..controllers.layout_hierarchy_controller import LayoutHierarchyController
 
 logger = tb_logging.get_logger()
 DB_EXT = Extension.DB.value
@@ -94,14 +92,6 @@ class GraphServiceStrategy(ABC):
         }
         return result
 
-    @staticmethod
-    def update_hierarchy_data(graph_type):
-        if graph_type == NPU or graph_type == BENCH:
-            hierarchy = LayoutHierarchyController.update_hierarchy_data(graph_type)
-            return {'success': True, 'data': hierarchy}
-        else:
-            return {'success': False, 'error': '节点类型错误'}
-
     @abstractmethod
     def load_graph_data(self):
         pass
@@ -116,6 +106,12 @@ class GraphServiceStrategy(ABC):
 
     @abstractmethod
     def change_node_expand_state(self, node_info, meta_data):
+        pass
+        
+    def search_node_by_precision(self, meta_data, values):
+        pass
+    
+    def search_node_by_overflow(self, meta_data, values):
         pass
     
     @abstractmethod
@@ -133,10 +129,10 @@ class GraphServiceStrategy(ABC):
     @abstractmethod
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         pass
-
+    
     @abstractmethod
-    def save_data(self, meta_data):
-        pass
+    def update_precision_error(self, meta_data, filter_value):
+        pass    
 
     @abstractmethod
     def update_colors(self, colors):
@@ -145,3 +141,4 @@ class GraphServiceStrategy(ABC):
     @abstractmethod
     def save_matched_relations(self):
         pass
+    

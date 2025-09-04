@@ -20,6 +20,9 @@ export const BENCH_PREFIX = 'B___';
 // 未匹配节点颜色
 export const UNMATCHED_COLOR = '#C7C7C7';
 
+export const JSON_TYPE = 'json'
+export const DB_TYPE = 'db'
+
 // 双图下单个图形的最小宽度
 export const MIN_GRAPG_WIDTH = 200;
 
@@ -44,7 +47,7 @@ export enum NODE_TYPE {
 // 渲染信息
 export const DURATION_TIME = 160; // 动画时间
 export const SELECTED_STROKE_COLOR = 'rgb(31, 63, 207)'; // 选中节点颜色
-export const BENCH_NODE_COLOR = 'rgb(236, 235, 235)'; // 基准模型节点颜色
+export const BENCH_NODE_COLOR = 'rgba(255, 255, 255, 1)'; // 基准模型节点颜色
 export const BENCH_STROKE_COLOR = 'rgb(161, 161, 161)'; // 基准模型边框颜色
 export const NO_MATCHED_NODE_COLOR = 'rgb(199, 199, 199)'; // 未匹配节点颜色
 export const BASE_NODE_COLOR = 'rgb(255, 255, 255)'; // 基准节点颜色，没有精度信息、API、FUSION的填充色

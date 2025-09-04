@@ -13,6 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from .base_graph_service import GraphServiceStrategy
-from .file_check_wrapper import check_file_type
+from .graph_service_base import GraphServiceStrategy
 from .graph_service_factory import ServiceFactory
