@@ -60,8 +60,8 @@ class LayoutHierarchyModel:
                 npu_update_data.append(node)
             elif node['graph_type'] == BENCH:
                 bench_update_data.append(node)
-        if LayoutHierarchyModel.hierarchy.get(NPU, None) and npu_update_data != []:
+        if LayoutHierarchyModel.hierarchy.get(NPU, None) and npu_update_data:
             LayoutHierarchyModel.hierarchy[NPU].update_current_hierarchy_data(npu_update_data)
-        if LayoutHierarchyModel.hierarchy.get(BENCH, None) and bench_update_data != []:
+        if LayoutHierarchyModel.hierarchy.get(BENCH, None) and bench_update_data:
             LayoutHierarchyModel.hierarchy[BENCH].update_current_hierarchy_data(bench_update_data)
      

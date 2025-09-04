@@ -347,26 +347,7 @@ class JsonGraphService(GraphServiceStrategy):
                 else:
                     match_result = MatchNodesController.process_task_add(graph_data,
                                                                          npu_node_name, bench_node_name, task)
-                update_data = []
-                for item in match_result:
-                    if item.get('success') is True:
-                        for node in item.get('data', []):
-                            update_data.append(node)
-                 
-                if len(update_data) > 0:
-                    config_data = GraphState.get_global_value("config_data")
-                    result = {
-                        'success': True,
-                        'data': {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
-                    }     
-                else:
-                    result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
-                return result
+                return self._generate_matched_result(match_result)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
@@ -385,27 +366,7 @@ class JsonGraphService(GraphServiceStrategy):
             if task == 'md5' or task == 'summary':
                 match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
                                                                                            match_node_links, task)
-                update_data = []
-                for item in match_result:
-                    if item.get('success') is True:
-                        for node in item.get('data', []):
-                            update_data.append(node)
-                result = {}
-                if len(update_data) > 0:
-                    # 返回：返回更新后的节点信息
-                    config_data = GraphState.get_global_value("config_data")
-                    result['success'] = True
-                    result['data'] = {
-                        'matchResult': match_result,
-                        'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                        'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                        'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                        'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                    }
-                else:
-                    result = {'success': False, 'error': '未找到可匹配的节点(Matched node not found) '}
-                    
-                return result
+                return self._generate_matched_result(match_result)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
         except Exception as e:
@@ -427,28 +388,7 @@ class JsonGraphService(GraphServiceStrategy):
                     match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name,
                                                                             bench_node_name, task)
                 
-                # 处理结果         )]
-                update_data = []
-                for item in match_result:
-                    if item.get('success') is True:
-                        for node in item.get('data', []):
-                            update_data.append(node)
-
-                if len(update_data) > 0:
-                    # 返回：返回更新后的节点信息
-                    config_data = GraphState.get_global_value("config_data")
-                    result = {
-                        'success': True,
-                        'data': {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
-                    }     
-                else:
-                    result = {'success': False, 'error': '未找到可匹配的节点(Matched node not found) '}
-                return result
+                return self._generate_matched_result(match_result)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
@@ -503,4 +443,25 @@ class JsonGraphService(GraphServiceStrategy):
                 return {'success': True, 'data': f"{tag}.vis.config"}
         except (ValueError, IOError, PermissionError) as e:
             return {'success': False, 'error': f"Error: {e}"}
-       
+  
+    def _generate_matched_result(cls, match_result):
+        update_data = []
+        for item in match_result:
+            if item.get('success') is True:
+                for node in item.get('data', []):
+                    update_data.append(node)
+            
+        if len(update_data) > 0:
+            config_data = GraphState.get_global_value("config_data")
+            result = {
+                'success': True,
+                'data': {
+                    'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                    'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                    'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                    'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                }
+            }     
+        else:
+            result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
+        return result
