@@ -463,7 +463,7 @@ class Legend extends PolymerElement {
       const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes?.length);
+      const processedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes?.length);
       this.dispatchEvent(updateHierarchyData);
       // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
@@ -480,7 +480,7 @@ class Legend extends PolymerElement {
       // 已匹配列表清空选中的节点
       this.set('selectedNpuMatchedNode', '');
       this.set('selectedBenchMatchedNode', '');
-      Notification.show(`取消成功：取消节点数 ${porcessedNodeNum} 个,对应节点状态已更新`, {
+      Notification.show(`取消成功：取消节点数 ${processedNodeNum} 个,对应节点状态已更新`, {
         position: 'middle',
         duration: 4000,
         theme: 'success',
@@ -513,16 +513,16 @@ class Legend extends PolymerElement {
     );
     this.set('matchConfigLoading', false);
     if (success) {
-      const matchReslut = data?.matchReslut || [];
+      const matchResult = data?.matchResult || [];
       const npuMatchNodes = data?.npuMatchNodes || {};
       const benchMatchNodes = data?.benchMatchNodes || {};
       const npuUnMatchNodes = data?.npuUnMatchNodes;
       const benchUnMatchNodes = data?.benchUnMatchNodes;
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = matchReslut?.length;
-      const matchSuccessNum = matchReslut?.filter(Boolean).length;
-      const matchFailedNum = porcessedNodeNum - matchSuccessNum;
+      const processedNodeNum = matchResult?.length;
+      const matchSuccessNum = matchResult?.filter(Boolean).length;
+      const matchFailedNum = processedNodeNum - matchSuccessNum;
       // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
@@ -534,7 +534,7 @@ class Legend extends PolymerElement {
       this.set('npuUnMatchedNodes', npuUnMatchNodes);
       this.set('benchUnMatchedNodes', benchUnMatchNodes);
       Notification.show(
-        `匹配成功：匹配节点数 ${porcessedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`,
+        `匹配成功：匹配节点数 ${processedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`,
         {
           position: 'middle',
           duration: 4000,
@@ -584,7 +584,7 @@ class Legend extends PolymerElement {
       const benchUnMatchNodes = data?.benchUnMatchNodes || [];
       // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
       const updateHierarchyData = new CustomEvent('updateHierarchyData', { bubbles: true, composed: true });
-      const porcessedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
+      const processedNodeNum = Math.abs(npuUnMatchNodes?.length - this.npuUnMatchedNodes.length);
       // 更新匹配关系
       this.npuMatchedNodeList = npuMatchNodes;
       this.benchMatchedNodeList = benchMatchNodes;
@@ -601,7 +601,7 @@ class Legend extends PolymerElement {
       // 未匹配列表清空选中的节点
       this.set('selectedNpuUnMatchedNode', '');
       this.set('selectedBenchUnMatchedNode', '');
-      Notification.show(`匹配成功：匹配节点数 ${porcessedNodeNum} 个,对应节点状态已更新`, {
+      Notification.show(`匹配成功：匹配节点数 ${processedNodeNum} 个,对应节点状态已更新`, {
         position: 'middle',
         duration: 4000,
         theme: 'success',
