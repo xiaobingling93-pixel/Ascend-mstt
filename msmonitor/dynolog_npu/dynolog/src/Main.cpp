@@ -182,7 +182,7 @@ int main(int argc, char** argv)
 
     std::shared_ptr<gpumon::DcgmGroupInfo> dcgm;
 
-    std::unique_ptr<tracing::IPCMonitor> ipcmon;
+    std::shared_ptr<tracing::IPCMonitor> ipcmon;
     std::unique_ptr<std::thread> ipcmon_thread;
     std::unique_ptr<std::thread> data_ipcmon_thread;
     std::unique_ptr<std::thread> gpumon_thread;
@@ -190,12 +190,12 @@ int main(int argc, char** argv)
 
     if (FLAGS_enable_ipc_monitor) {
     LOG(INFO) << "Starting IPC Monitor";
-    ipcmon = std::make_unique<tracing::IPCMonitor>();
+    ipcmon = std::make_shared<tracing::IPCMonitor>();
     ipcmon->setLogger(std::move(getLogger()));
     ipcmon_thread =
-        std::make_unique<std::thread>([&ipcmon]() { ipcmon->loop(); });
+        std::make_unique<std::thread>([ipcmon]() { ipcmon->loop(); });
     data_ipcmon_thread =
-        std::make_unique<std::thread>([&ipcmon]() { ipcmon->dataLoop(); });
+        std::make_unique<std::thread>([ipcmon]() { ipcmon->dataLoop(); });
     }
 
     if (FLAGS_enable_gpu_monitor) {
@@ -212,6 +212,7 @@ int main(int argc, char** argv)
     auto handler = std::make_shared<ServiceHandler>(dcgm);
 
     // use simple json RPC server for now
+    // In the current scenario, the process can only be terminated and all threads closed using Ctrl+C.
     auto server = setup_server(handler);
     server->run();
 

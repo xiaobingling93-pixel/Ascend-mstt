@@ -74,16 +74,17 @@ std::string getCurrentTimestamp()
     auto now = std::chrono::system_clock::now();
     auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
 
-    std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
-    std::tm* timeInfo = std::localtime(&currentTime);
-
-    auto milli_time = std::chrono::duration_cast<std::chrono::milliseconds>(micros).count() % 1000;
-    auto micro_time = micros.count() % 1000;
-
     std::ostringstream oss;
-    oss << std::put_time(timeInfo, "%Y%m%d%H%M%S");
-    constexpr int kMilliTimeWidth = 3;
-    oss << std::setw(kMilliTimeWidth) << std::setfill('0') << milli_time;
+    std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+    std::tm timeInfo;
+    if (localtime_r(&currentTime, &timeInfo) != nullptr) {
+        auto milli_time = std::chrono::duration_cast<std::chrono::milliseconds>(micros).count() % 1000;
+        auto micro_time = micros.count() % 1000;
+
+        oss << std::put_time(&timeInfo, "%Y%m%d%H%M%S");
+        constexpr int kMilliTimeWidth = 3;
+        oss << std::setw(kMilliTimeWidth) << std::setfill('0') << milli_time;
+    }
 
     return oss.str();
 }
