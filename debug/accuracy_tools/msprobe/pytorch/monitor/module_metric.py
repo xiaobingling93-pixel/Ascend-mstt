@@ -17,6 +17,7 @@ import re
 import torch
 
 from msprobe.pytorch.monitor.features import get_max, get_min, get_zeros, get_nans, get_norm, get_mean
+from msprobe.pytorch.monitor.features import cal_entropy, cal_stable_rank
 from msprobe.pytorch.monitor.utils import get_nan_tensor
 
 
@@ -185,3 +186,27 @@ def get_metrics(ops, tag2tensor, eps, out_dict=None):
             fun_metric = config_metric_registry.get(metric_name)
             out_dict[tag][metric_name] = fun_metric.get_metric(tensor, eps)
     return out_dict
+
+
+def get_sr_metric(tag2tensor, out_dict=None):
+    if out_dict is None:
+        out_dict = {}
+    for tag, tensor in tag2tensor.items():
+        if "sr" not in tag:
+            continue
+        if tag not in out_dict:
+            out_dict[tag] = {}
+        sr, eig = cal_stable_rank(tensor)
+        out_dict[tag]['sr'] = sr
+        out_dict[tag]['kernel_norm'] = eig
+
+
+def get_entropy_metric(tag2tensor, out_dict=None):
+    if out_dict is None:
+        out_dict = {}
+    for tag, tensor in tag2tensor.items():
+        if tag not in out_dict:
+            out_dict[tag] = {}
+        entropy, softmax_max = cal_entropy(tensor)
+        out_dict[tag]['entropy'] = entropy
+        out_dict[tag]['softmax_max'] = softmax_max

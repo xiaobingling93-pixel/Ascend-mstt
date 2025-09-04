@@ -14,50 +14,30 @@
 # limitations under the License.
 
 import functools
-import threading
 from collections import defaultdict
 
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
-from msprobe.core.common.runtime import Runtime
-from msprobe.core.common.utils import ThreadSafe
-from msprobe.pytorch.common.utils import register_forward_pre_hook, register_forward_hook
+from msprobe.pytorch.common.utils import register_forward_pre_hook
 
 
 class HOOKModule(nn.Module):
     module_count = defaultdict(int)
-    inner_stop_hook = defaultdict(bool)
 
     def __init__(self, hook_build_func) -> None:
         super(HOOKModule, self).__init__()
-        self.has_overflow = False
-        self.tid = threading.get_ident()
-        self.stop_hook = HOOKModule.inner_stop_hook.get(self.tid, False)
-
-        if not self.stop_hook:
-            self.forward_data_collected = False
-
-            if not Runtime.is_running:
-                return
-            prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
-            ThreadSafe.acquire()
-            if callable(hook_build_func):
-                hook_set = hook_build_func(prefix)
-                register_forward_pre_hook(self, hook_set.forward_pre_hook)
-                register_forward_hook(self, hook_set.forward_hook)
-                self.register_backward_hook(hook_set.backward_hook)
+        prefix = self.prefix_api_name if hasattr(self, "prefix_api_name") else ""
+        op_is_distributed = self.op_is_distributed if hasattr(self, "op_is_distributed") else False
+        if callable(hook_build_func):
+            hook_set = hook_build_func(prefix)
+            register_forward_pre_hook(self, hook_set.forward_pre_hook)
+            if op_is_distributed:
+                self.distributed_forward_hook = hook_set.distributed_forward_hook
 
     def __call__(self, *args, **kwargs):
-        changed = False
-        if not self.stop_hook:
-            HOOKModule.inner_stop_hook[self.tid] = True
-            changed = True
-        result = self._call_func(*args, **kwargs)
-        if changed:
-            HOOKModule.inner_stop_hook[self.tid] = False
-        return result
+        return self._call_func(*args, **kwargs)
 
     @staticmethod
     def reset_module_stats():

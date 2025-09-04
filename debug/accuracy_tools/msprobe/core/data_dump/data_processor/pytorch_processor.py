@@ -15,6 +15,7 @@
 
 import os
 import zlib
+import ctypes
 from collections.abc import Iterable
 from dataclasses import asdict
 from typing import List
@@ -122,12 +123,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         self.tensor_handler = TensorHandler()
         self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
 
-
-    @staticmethod
-    def compute_crc32_bytes(tensor_bytes):
-        return f"{zlib.crc32(tensor_bytes):08x}"
-
-
     @staticmethod
     def get_md5_for_tensor(x):
         if x.dtype == torch.bfloat16:
@@ -135,6 +130,64 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_bytes = x.cpu().detach().numpy().tobytes()
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
+
+    @staticmethod
+    def tensor_bytes_view_cpu(t: torch.Tensor):
+        """
+        返回 t 在当前 dtype 下的原始字节视图（优先零拷贝）。
+        需保证：t 已在 CPU 且是 contiguous。
+        可能返回 memoryview 或 bytes（兜底拷贝）或者 转为numpy，均可被 zlib.crc32 接受。
+        """
+
+        nbytes = t.numel() * t.element_size()
+        byte_offset = t.storage_offset() * t.element_size()
+
+        if nbytes == 0:
+            return memoryview(b"")
+
+        storage = t.untyped_storage()
+
+        # ctypes 指针构造 memoryview（零拷贝 FFI）
+        try:
+            addr = storage.data_ptr() + byte_offset
+            buf = (ctypes.c_ubyte * nbytes).from_address(addr)
+            mv3 = memoryview(buf)
+
+            return mv3
+        except Exception as e1:
+            logger.warning(f"path_A_failed: {e1}.")
+
+        try:
+            data = ctypes.string_at(storage.data_ptr() + byte_offset, nbytes)
+
+            return data  # bytes 也可直接用于 zlib.crc32
+        except Exception as e2:
+            logger.warning(f"path_B_failed: {e2}.")
+
+        try:
+            if t.dtype == torch.bfloat16:
+                t = t.float()
+            data = t.numpy()
+
+            return data
+        except Exception as e3:
+            logger.warning(f"path_C_failed: {e3}.")
+            return memoryview(b"")
+
+    @staticmethod
+    def compute_crc32_from_tensor(t: torch.Tensor) -> str:
+        """
+        直接对 Tensor 原始字节做 CRC32。
+        :
+        - "raw": 保持 bfloat16 原始 16bit 字节（推荐，避免升精/增容）
+        """
+
+        # 取得字节视图（含多级回退），然后做 CRC
+        mv = PytorchDataProcessor.tensor_bytes_view_cpu(t)
+
+        crc = zlib.crc32(mv)
+
+        return f"{crc:08x}"
 
     @staticmethod
     def analyze_device_in_kwargs(element):
@@ -279,8 +332,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_stat = self.get_stat_info(common_tensor, self.config.async_dump, self.config.precision)
         tensor_json = {}
         tensor_json.update({'type': self.tensor_handler.get_tensor_type(tensor)})
-        tensor_json.update({'dtype': str(tensor.dtype)})
-        tensor_json.update({"shape": tensor.shape})
+        tensor_json.update({'dtype': str(common_tensor.dtype)})
+        tensor_json.update({"shape": common_tensor.shape})
 
         stat_values = [
             tensor_stat.max,
@@ -299,28 +352,44 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor_md5 = None
             if not self.tensor_handler.is_empty_data(tensor):
-                logger.debug("Calculating the md5 value of fake tensor or meta tensor is not supported.")
-                # 拷贝并搬到 CPU
-                if tensor.dtype == torch.bfloat16:
-                    tensor = tensor.float()
-                tensor_bytes = tensor.cpu().detach().numpy().tobytes()
+                t_cpu = common_tensor
+
+                # 根据设备类型做同步，确保数据已准备好
+                if t_cpu.device.type == "cuda":
+                    t_cpu = t_cpu.to("cpu", non_blocking=True)
+                    torch.cuda.synchronize()
+                    # 先异步搬运再进行同步可以显著提升性能
+                elif t_cpu.device.type == "npu":
+                    t_cpu = t_cpu.to("cpu", non_blocking=True)
+                    torch.npu.synchronize()
+
+                t_cpu = t_cpu.detach()
+                if not t_cpu.is_contiguous():
+                    t_cpu = t_cpu.contiguous()
 
                 future = self._crc_executor.submit(
-                    PytorchDataProcessor.compute_crc32_bytes,
-                    tensor_bytes
+                    PytorchDataProcessor.compute_crc32_from_tensor,
+                    t_cpu
                 )
 
                 crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
                 tensor_json[Const.MD5_INDEX] = crc_placeholder
             else:
+                logger.debug(
+                    "Calculating the md5 value of fake tensor or meta tensor is not supported, "
+                    f"the current api/module name is {self.current_api_or_module_name}."
+                )
                 tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
     def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
-        if self.tensor_handler.is_empty_data(tensor) or tensor.storage().data_ptr() == 0:
-            logger.debug("Collecting real data of fake tensor or meta tensor is not supported or data_ptr is 0.")
+        if self.tensor_handler.is_empty_data(tensor) or tensor.untyped_storage().data_ptr() == 0:
+            logger.debug(
+                "Collecting real data of fake tensor or meta tensor is not supported or data_ptr is 0, "
+                f"the current api/module name is {self.current_api_or_module_name}."
+            )
             return single_arg
 
         single_arg.update({"data_name": dump_data_name})

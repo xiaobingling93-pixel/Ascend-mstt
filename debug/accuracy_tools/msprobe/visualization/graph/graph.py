@@ -18,6 +18,7 @@ from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class Graph:
@@ -28,6 +29,10 @@ class Graph:
         self.root = self.get_node(model_name)
         self.data_path = data_path
         self.dump_data = dump_data
+        self.data_source = GraphConst.JSON_NPU_KEY
+        self.step = 0
+        self.rank = 0
+        self.compare_mode = GraphConst.SUMMARY_COMPARE
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -118,6 +123,25 @@ class Graph:
             result[micro_step].append(node)
         return result
 
+    def get_sorted_nodes(self):
+        """
+        通过深度优先遍历graph，获得排过序的node列表
+        """
+        visited = set()
+        order = []
+
+        @recursion_depth_decorator('msprobe.visualization.graph.graph.Graph.get_nodes_order.visit', max_depth=500)
+        def visit(node):
+            if node.id in visited:
+                return
+            visited.add(node.id)
+            for sub_node in node.subnodes:
+                visit(sub_node)
+            order.append(node)
+
+        visit(self.root)
+        return order
+
     def add_node(self, node_op, node_id, up_node=None, id_accumulation=False):
         """
         在graph中进行节点的添加
@@ -148,19 +172,6 @@ class Graph:
         """
         return self.node_map.get(node_id, None)
 
-    def to_dict(self, compare_mode=None):
-        """
-        用于数据输出
-        """
-        result = {}
-        result[GraphConst.JSON_ROOT_KEY] = self.root.id if self.root else 'None'
-        result[GraphConst.JSON_DATA_KEY] = self.data_path
-        result[GraphConst.JSON_NODE_KEY] = {}
-        for node_id in self.node_map:
-            info = self.node_map.get(node_id).to_dict(compare_mode)
-            result[GraphConst.JSON_NODE_KEY][node_id] = info
-        return result
-
     def paging_by_micro_step(self, graph_other=None):
         """
         给graph首层节点增加micro step标记，供前端分页展示，有助于在处理大规模图数据时进行优化和管理
@@ -170,6 +181,15 @@ class Graph:
             graph_other: 可选参数，另一个graph
         Returns: 分批的数量
         """
+
+        @recursion_depth_decorator(
+            'msprobe.visualization.graph.graph.Graph.paging_by_micro_step.propagate_micro_step_id', max_depth=500)
+        def propagate_micro_step_id(node):
+            if node.upnode is not None and node.micro_step_id is None:
+                node.micro_step_id = node.upnode.micro_step_id
+            for sub_node in node.subnodes:
+                propagate_micro_step_id(sub_node)
+
         batches_n = Graph.split_nodes_by_micro_step(self.root.subnodes)
         for batch_number, nodes in batches_n.items():
             for node in nodes:
@@ -179,6 +199,7 @@ class Graph:
                     node_other = graph_other.get_node(node.matched_node_link[-1])
                     if node_other:
                         node_other.micro_step_id = batch_number
+        propagate_micro_step_id(self.root)
         # 遍历graph_other根节点下的所有子节点，确保未匹配节点也有micro_step_id
         if graph_other:
             for node in graph_other.root.subnodes:
@@ -188,6 +209,7 @@ class Graph:
                     except ValueError:
                         micro_step_id = 0
                     node.micro_step_id = micro_step_id
+            propagate_micro_step_id(graph_other.root)
         return len(batches_n)
 
     def overflow_check(self):

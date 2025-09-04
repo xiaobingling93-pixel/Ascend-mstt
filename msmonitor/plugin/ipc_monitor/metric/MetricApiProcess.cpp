@@ -57,6 +57,9 @@ std::vector<ApiMetric> MetricApiProcess::AggregatedData()
         copyRecords = std::move(records);
         records.clear();
     }
+    if (copyRecords.empty()) {
+        return {};
+    }
     ApiMetric apiMetric{};
     auto ans = std::accumulate(copyRecords.begin(), copyRecords.end(), 0ULL,
         [](uint64_t acc, std::shared_ptr<msptiActivityApi> api) {

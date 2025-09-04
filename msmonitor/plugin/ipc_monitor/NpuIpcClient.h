@@ -34,6 +34,8 @@ constexpr const int MAX_SLEEP_US = 10000;
 const std::string DYNO_IPC_NAME = "dynolog";
 const std::string MSG_TYPE_REQUEST = "req";
 const std::string MSG_TYPE_CONTEXT = "ctxt";
+const std::string MSG_TYPE_TRACE_STATUS = "npuTraceStatus";
+const std::string MSG_TYPE_MONITOR_STATUS = "npuMonitorStatus";
 const std::string MSG_TYPE_DATA = "data";
 
 struct NpuRequest {
@@ -45,6 +47,12 @@ struct NpuRequest {
 
 struct NpuContext {
     int32_t npu;
+    pid_t pid;
+    int64_t jobId;
+};
+
+struct NpuStatus {
+    int32_t status;
     pid_t pid;
     int64_t jobId;
 };
@@ -135,6 +143,7 @@ public:
     IpcClient() = default;
     bool Init();
     bool RegisterInstance(int32_t npu);
+    bool SendNpuStatus(int32_t npuTraceStatus, const std::string& msgType);
     std::string IpcClientNpuConfig();
     bool SyncSendMessage(const Message &message, const std::string &destName, int numRetry = 10,
         int seepTimeUs = 10000);

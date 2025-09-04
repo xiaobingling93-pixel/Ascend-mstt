@@ -36,6 +36,20 @@ parameter_name_mapping = load_yaml(os.path.realpath(hyperparameters_path))
 hyperparameters_dict = {}
 
 
+def refine_json_keys(json_dcit):
+    new_dict = {}
+    for key in json_dcit.keys():
+        new_key = key.split(Const.SEP)[-1].replace("-", "_")
+        new_dict[new_key] = key 
+    return new_dict       
+
+
+def to_str_if_number(value):
+    if isinstance(value, (int, float)):
+        return str(value)
+    return value
+
+
 @register_checker_item("hyperparameter")
 class HyperparameterChecker(BaseChecker):
     target_name_in_zip = "hyperparameters"
@@ -92,13 +106,17 @@ class HyperparameterChecker(BaseChecker):
     @staticmethod
     def compare_param(bench_params, cmp_params, file_name):
         all_diffs = []
-        bench_param_names = bench_params.keys()
-        for bench_param_name in bench_param_names:
+        bench_params_refined = refine_json_keys(bench_params)
+        cmp_params_refined = refine_json_keys(cmp_params)
+
+        for bench_param_name in bench_params_refined.keys():
             matched_cmp_param_name, matched_with = HyperparameterChecker._fuzzy_match_parameter(bench_param_name,
-                                                                                                cmp_params)
-            bench_param_value = bench_params[bench_param_name]
+                                                                                                cmp_params_refined)
+            matched_cmp_param_name = cmp_params_refined.get(matched_cmp_param_name)
+            bench_param_name = bench_params_refined.get(bench_param_name)
+            bench_param_value = to_str_if_number(bench_params[bench_param_name])
             if matched_cmp_param_name:
-                cmp_param_value = cmp_params[matched_cmp_param_name]
+                cmp_param_value = to_str_if_number(cmp_params[matched_cmp_param_name])
                 if bench_param_value != cmp_param_value:
                     all_diffs.append(
                         [file_name, bench_param_name, matched_cmp_param_name, bench_param_value, cmp_param_value,

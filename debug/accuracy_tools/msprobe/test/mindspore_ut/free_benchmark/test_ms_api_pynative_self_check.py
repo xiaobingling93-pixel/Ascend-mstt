@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 import os
 from unittest import TestCase
 from unittest.mock import patch
@@ -99,13 +100,14 @@ class TestApiPyNativeSelfCheck(TestCase):
         hook_set = self.checker.build_hook("Functional.add.")
 
         cell = Cell()
-        cell.msprobe_input_kwargs = {}
+        tid = threading.get_ident()
+        cell.msprobe_input_kwargs = {tid: {}}
 
         with patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.need_wrapper_func", return_value=False):
             self.assertIsNone(hook_set.forward_hook(cell, "input", "output"))
 
         cell = Cell()
-        cell.msprobe_input_kwargs = {}
+        cell.msprobe_input_kwargs = {tid: {}}
         self.checker.api_list = ["mindspore.ops.add"]
         self.checker.ori_func["mindspore.ops.add"] = "add"
         with patch("msprobe.mindspore.free_benchmark.api_pynative_self_check.need_wrapper_func", return_value=True), \

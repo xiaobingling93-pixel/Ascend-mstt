@@ -152,18 +152,21 @@ class ApiRunner:
         """
         api_name_list = api_name_str.split(Const.SEP)
         if len(api_name_list) != 3:
-            err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
+            err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format." \
+                      f" Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
         if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API,
                                 MsCompareConst.FUNCTIONAL_API] \
                 and api_platform == Const.MS_FRAMEWORK:
-            err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
+            err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api," \
+                      f" api_name={api_name_str}. Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
         if api_type_str not in MsCompareConst.MT_VALID_API_TYPES and api_platform == Const.MT_FRAMEWORK:
-            err_msg = f"ApiRunner.get_info_from_name failed: not torch, functional or Tensor api"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
+            err_msg = f"ApiRunner.get_info_from_name failed: not torch, functional or Tensor api," \
+                      f" api_name={api_name_str}. Exception has been raised and will be captured/logged externally."
+            logger.warning_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         return api_type_str, api_sub_name
 
     @staticmethod

@@ -78,7 +78,7 @@ fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
             return Err(format!("Invalid MSPTI activity kind: {}, Possible values: {:?}.]", kind, allowed_values));
         }
     }
-    
+
     Ok(src.to_string())
 }
 
@@ -101,6 +101,24 @@ fn parse_host_sys(src: &str) -> Result<String, String>{
     }
     let result = host_systems.join(",");
     Ok(result)
+}
+
+const INSTANT_START_STEP: i64 = -1;   // nputrace子命令，表示从下个step开启采集任务
+
+fn parse_start_step(src: &str) -> Result<i64, String> {
+    let start_step = src.trim().parse::<i64>().map_err(|e| format!("{}", e))?;
+    if start_step < INSTANT_START_STEP {
+        return Err(format!("Must be non-negative integer or {}", INSTANT_START_STEP));
+    }
+    Ok(start_step)
+}
+
+fn parse_iterations(src: &str) -> Result<i64, String> {
+    let iterations = src.trim().parse::<i64>().map_err(|e| format!("{}", e))?;
+    if iterations <= 0 {
+        return Err("Must be a positive integer".to_string());
+    }
+    Ok(iterations)
 }
 
 #[derive(Debug, Parser)]
@@ -164,7 +182,7 @@ enum Command {
         #[clap(long, default_value_t = 500)]
         duration_ms: u64,
         /// Training iterations to collect, this takes precedence over duration.
-        #[clap(long, default_value_t = -1)]
+        #[clap(long, value_parser = parse_iterations, allow_negative_numbers = true)]
         iterations: i64,
         /// Log file for trace.
         #[clap(long)]
@@ -172,9 +190,9 @@ enum Command {
         /// Unix timestamp used for synchronized collection (milliseconds since epoch).
         #[clap(long, default_value_t = 0)]
         profile_start_time: u64,
-        /// Number of steps to start profile.
-        #[clap(long, default_value_t = 0)]
-        start_step: u64,
+        /// Number of steps to start profile, -1 means start from next step.
+        #[clap(long, value_parser = parse_start_step, allow_negative_numbers = true)]
+        start_step: i64,
         /// Max number of processes to profile.
         #[clap(long, default_value_t = 3)]
         process_limit: u32,
@@ -253,6 +271,9 @@ enum Command {
         /// MSPTI collect activity kind
         #[clap(long, value_parser = parse_mspti_activity_kinds, default_value = "Marker")]
         mspti_activity_kind: String,
+        /// Log file for NPU monitor.
+        #[clap(long, default_value = "")]
+        log_file: String,
     },
     /// Pause dcgm profiling. This enables running tools like Nsight compute and avoids conflicts.
     DcgmPause {
@@ -285,12 +306,12 @@ fn verify_certificate(cert_der: &[u8], is_root_cert: bool) -> Result<()> {
 
     // 检查证书签名算法
     let sig_alg = cert.signature_algorithm.algorithm;
-    
+
     // 定义不安全的算法 OID
     let md2_rsa = oid!(1.2.840.113549.1.1.2);  // MD2 with RSA
     let md5_rsa = oid!(1.2.840.113549.1.1.4);  // MD5 with RSA
     let sha1_rsa = oid!(1.2.840.113549.1.1.5); // SHA1 with RSA
-    
+
     // 检查是否使用不安全的算法
     if sig_alg == md2_rsa || sig_alg == md5_rsa || sig_alg == sha1_rsa {
         return Err(io::Error::new(
@@ -428,7 +449,7 @@ fn is_cert_revoked(cert_der: &[u8], crl_path: &PathBuf) -> Result<bool> {
     let crl_data = read_to_string(crl_path)?;
     let (_, pem) = pem::parse_x509_pem(crl_data.as_bytes())
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse CRL PEM: {:?}", e)))?;
-    
+
     // 解析 CRL
     let (_, crl) = CertificateRevocationList::from_der(&pem.contents)
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to parse CRL: {:?}", e)))?;
@@ -472,7 +493,7 @@ fn is_cert_revoked(cert_der: &[u8], crl_path: &PathBuf) -> Result<bool> {
     for revoked in crl.iter_revoked_certificates() {
         let revoked_serial = revoked.user_certificate.to_bigint()
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Failed to convert revoked certificate serial to BigInt"))?;
-        
+
         if revoked_serial == cert_serial {
             return Ok(true);
         }
@@ -486,7 +507,7 @@ enum DynoClient {
 }
 
 fn create_dyno_client(
-    host: &str, 
+    host: &str,
     port: u16,
     certs_dir: &str,
 ) -> Result<DynoClient> {
@@ -507,7 +528,7 @@ fn create_dyno_client(
 }
 
 fn create_dyno_client_with_no_certs(
-    host: &str, 
+    host: &str,
     port: u16,
 ) -> Result<DynoClient> {
     let addr = (host, port)
@@ -533,7 +554,7 @@ fn secure_clear_password(password: &mut Vec<u8>) {
 }
 
 fn create_dyno_client_with_certs(
-    host: &str, 
+    host: &str,
     port: u16,
     config: &ClientConfigPath,
 ) -> Result<StreamOwned<ClientConnection, TcpStream>> {
@@ -563,7 +584,7 @@ fn create_dyno_client_with_certs(
     let cert_file = File::open(&config.cert_path)?;
     let mut cert_reader = BufReader::new(cert_file);
     let certs = rustls_pemfile::certs(&mut cert_reader)?;
-    
+
     // 检查客户端证书的基本要求
     for cert in &certs {
         verify_certificate(cert, false)?;  // 验证客户端证书
@@ -601,7 +622,7 @@ fn create_dyno_client_with_certs(
     println!("Loading client key from: {}", config.key_path.display());
     let key_file = File::open(&config.key_path)?;
     let mut key_reader = BufReader::new(key_file);
-    
+
     // 检查私钥是否加密
     let mut key_data = Vec::new();
     key_reader.read_to_end(&mut key_data)?;
@@ -614,10 +635,10 @@ fn create_dyno_client_with_certs(
         let mut password = prompt_password("Please enter the certificate password: ")?.into_bytes();
         let pkey = PKey::private_key_from_pem_passphrase(&key_data, &password)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to decrypt private key: {}", e)))?;
-        
+
         // 手动清除密码
         secure_clear_password(&mut password);
-        
+
         // 返回私钥
         vec![pkey.private_key_to_der()
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to convert private key to DER: {}", e)))?]
@@ -626,7 +647,7 @@ fn create_dyno_client_with_certs(
         let mut key_reader = BufReader::new(File::open(&config.key_path)?);
         rustls_pemfile::pkcs8_private_keys(&mut key_reader)?
     };
-    
+
     if keys.is_empty() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
@@ -785,12 +806,14 @@ fn main() -> Result<()> {
             npu_monitor_stop,
             report_interval_s,
             mspti_activity_kind,
+            log_file,
         } => {
             let npu_mon_config = NpuMonitorConfig {
                 npu_monitor_start,
                 npu_monitor_stop,
                 report_interval_s,
-                mspti_activity_kind
+                mspti_activity_kind,
+                log_file
             };
             npumonitor::run_npumonitor(client, npu_mon_config)
         }

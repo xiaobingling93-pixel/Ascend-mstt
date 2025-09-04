@@ -96,8 +96,33 @@ def validate_targets(targets):
             raise TypeError('key of targets should be module_name[str] in config.json')
         if not isinstance(field, dict):
             raise TypeError('values of targets should be cared filed e.g. {"input": "tensor"} in config.json')
+        
+
+def validate_l2_targets(targets):
+    if not isinstance(targets, dict):
+        raise TypeError('l2_targets in config.json should be a dict')
+    for hook_name, target_list in targets.items():
+        if hook_name not in MonitorConst.L2_HOOKS:
+            raise TypeError(f'key of l2_targtes must be in {MonitorConst.L2_HOOKS}, got {hook_name}')
+        if not isinstance(target_list, list):
+            raise TypeError('values of l2_targets should be a list in config.json')
+        for item in target_list:
+            if not isinstance(item, str):
+                raise TypeError(f'item of "{hook_name}" in l2_targets should be module_name[str] in config.json')
 
 
+def validate_recording_l2_features(recording_l2_features):
+    if not isinstance(recording_l2_features, bool):
+        raise TypeError("recording_l2_features should be a bool")
+    
+
+def validate_sa_order(sa_order):
+    if isinstance(sa_order, str):
+        sa_order = sa_order.replace(' ', '')
+    if sa_order not in MonitorConst.SA_ORDERS:
+        raise TypeError(f'sa_order must be in {MonitorConst.SA_ORDERS}, got {sa_order}')
+    
+    
 def validate_print_struct(print_struct):
     if not isinstance(print_struct, bool):
         raise TypeError("print_struct should be a bool")
@@ -215,6 +240,15 @@ def validate_config(config):
 
     targets = config.get("targets", {})
     validate_targets(targets)
+
+    l2_targets = config.get("l2_targets", {})
+    validate_l2_targets(l2_targets)
+
+    recording_l2_features = config.get("recording_l2_features", False)
+    validate_recording_l2_features(recording_l2_features)
+    
+    sa_order = config.get("sa_order", "s,b,h,d")
+    validate_sa_order(sa_order)
 
     print_struct = config.get('print_struct', False)
     validate_print_struct(print_struct)

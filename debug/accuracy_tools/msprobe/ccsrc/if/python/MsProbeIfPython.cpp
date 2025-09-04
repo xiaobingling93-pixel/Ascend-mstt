@@ -58,7 +58,6 @@ PyMODINIT_FUNC PyInit__msprobe_c(void)
         Py_DECREF(m);
         return nullptr;
     }
-    Py_INCREF(precisionDebugger);
 
     PyObject* cpyAgent = MindStudioDebugger::GetCPythonAgentModule();
     if (cpyAgent == nullptr) {
@@ -71,11 +70,17 @@ PyMODINIT_FUNC PyInit__msprobe_c(void)
         Py_DECREF(m);
         return nullptr;
     }
-    Py_INCREF(cpyAgent);
 
     PyMethodDef* dumpmethods = MindStudioDebugger::GetDumpMethods();
     for (PyMethodDef* method = dumpmethods; method->ml_name != nullptr; ++method) {
-        if (PyModule_AddObject(m, method->ml_name, PyCFunction_New(method, nullptr)) < 0) {
+        PyObject* func = PyCFunction_New(method, nullptr);
+        if (func == nullptr) {
+            PyErr_SetString(PyExc_ImportError, "Failed to create dump method.");
+            Py_DECREF(m);
+            return nullptr;
+        }
+        if (PyModule_AddObject(m, method->ml_name, func) < 0) {
+            Py_DECREF(func); // 释放未被模块接管的方法对象
             PyErr_SetString(PyExc_ImportError, "Failed to bind dump method.");
             Py_DECREF(m);
             return nullptr;

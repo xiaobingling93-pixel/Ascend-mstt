@@ -36,16 +36,18 @@ std::vector<std::pair<int32_t, std::string>> GetPidCommandPairsofAncestors();
 std::string getCurrentTimestamp();
 uint64_t getCurrentTimestamp64();
 bool Str2Uint32(uint32_t& dest, const std::string& str);
+bool Str2Int32(int32_t& dest, const std::string& str);
 bool Str2Bool(bool& dest, const std::string& str);
 std::string& trim(std::string& str);
 std::vector<std::string> split(const std::string& str, char delimiter);
+std::string join(const std::vector<std::string>& strs, const std::string& delimiter);
 
 constexpr size_t ALIGN_SIZE = 8;
 void *MsptiMalloc(size_t size, size_t alignment);
 void MsptiFree(uint8_t *ptr);
 const mode_t DATA_FILE_AUTHORITY = 0640;
 const mode_t DATA_DIR_AUTHORITY = 0750;
-const int DEFAULT_FLUSH_INTERVAL = 60;
+const uint32_t DEFAULT_FLUSH_INTERVAL = 60;
 
 enum class SubModule {
     IPC = 0
@@ -102,6 +104,10 @@ auto groupby(const Container& vec, KeyFunc keyFunc)
     return grouped;
 }
 
+int GetRankId();
+uint64_t CalcHashId(const std::string &data);
+std::string GetHostName();
+std::string GetHostUid();
 bool CreateMsmonitorLogPath(std::string& path);
 
 struct PathUtils {

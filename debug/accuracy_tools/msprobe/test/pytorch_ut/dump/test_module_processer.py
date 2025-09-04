@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+from io import StringIO
 import threading
 
 import unittest
@@ -23,37 +25,45 @@ import msprobe.pytorch.dump.module_dump.module_processer as mp
 from msprobe.core.data_dump.scope import ModuleRangeScope
 from msprobe.pytorch.dump.module_dump.module_processer import (
     ModuleProcesser,
-    replace_checkpoint,
-    checkpoint_without_early_stop,
-    wrap_megatron_deallocate
+    wrap_megatron_deallocate,
+    wrap_forward_with_hook_safety
 )
+from torch.utils.checkpoint import _StopRecomputationError
 
 ori_checkpoint = torch.utils.checkpoint.checkpoint
+
+
+class TestModule(torch.nn.Module):
+    """测试用的模块类，可控制是否抛出异常"""
+
+    def __init__(self, raise_exception=False):
+        super().__init__()
+        self.raise_exception = raise_exception
+
+    def forward(self, x, *args, **kwargs):
+        if self.raise_exception:
+            raise _StopRecomputationError()
+        return x * 2
+
+
+def forward_hook_fn(module, args, kwargs_or_output, output_or_kwargs=None):
+    print(f"The forward_hook executed normally.")
 
 
 class TestWrapper(unittest.TestCase):
     def setUp(self):
         torch.utils.checkpoint.checkpoint = ori_checkpoint
+        self.held_output = StringIO()
+        self.original_stdout = sys.stdout
+        sys.stdout = self.held_output
 
-    def test_replace_checkpoint_for_torch_version_above_2(self):
-        mp.torch_version_above_or_equal_2 = True
-        with patch('msprobe.pytorch.dump.module_dump.module_processer.checkpoint_without_early_stop') as mock_obj:
-            replace_checkpoint()
-            self.assertEqual(torch.utils.checkpoint.checkpoint, mock_obj)
+    def tearDown(self):
+        """恢复标准输出"""
+        sys.stdout = self.original_stdout
 
-    def test_replace_checkpoint_for_torch_version_below_2(self):
-        mp.torch_version_above_or_equal_2 = False
-        replace_checkpoint()
-        self.assertEqual(torch.utils.checkpoint.checkpoint, ori_checkpoint)
-
-    def test_checkpoint_without_early_stop(self):
-        mock_checkpoint = MagicMock(return_value="test_result")
-
-        with patch('msprobe.pytorch.dump.module_dump.module_processer.set_checkpoint_early_stop', MagicMock()), \
-                patch('msprobe.pytorch.dump.module_dump.module_processer.origin_checkpoint', mock_checkpoint):
-            result = checkpoint_without_early_stop("input")
-            mock_checkpoint.assert_called_once_with("input")
-            self.assertEqual(result, "test_result")
+    def get_output(self):
+        """获取捕获的输出内容"""
+        return self.held_output.getvalue().strip()
 
     def test_wrap_megatron_deallocate(self):
         mock_func = MagicMock(return_value="output_test")
@@ -75,6 +85,39 @@ class TestWrapper(unittest.TestCase):
         self.assertEqual(result, "output_test")
         mock_func.assert_called_with("normal_input", False)
 
+    def test_normal_forward_execution(self):
+        """测试正常执行forward时的情况"""
+        # 准备测试模块和hook
+        module = TestModule(raise_exception=False)
+        module.register_forward_hook(forward_hook_fn)
+
+        # 应用包装函数
+        wrap_forward_with_hook_safety(module)
+
+        # 执行forward
+        input_tensor = torch.tensor(3.0)
+        output = module(input_tensor)
+
+        # 验证结果和hook调用
+        self.assertEqual(output.item(), 6.0)
+        self.assertIn("The forward_hook executed normally.", self.get_output())
+
+    def test_stop_recomputation_exception_triggers_hook(self):
+        """测试抛出_StopRecomputationError时hook被调用"""
+        # 准备测试模块和hook
+        module = TestModule(raise_exception=True)
+        module.register_forward_hook(forward_hook_fn)
+
+        # 应用包装函数
+        wrap_forward_with_hook_safety(module)
+
+        # 执行forward并验证异常
+        input_tensor = torch.tensor(3.0)
+        with self.assertRaises(_StopRecomputationError):
+            module(input_tensor)
+
+        self.assertIn("The forward_hook executed normally.", self.get_output())
+
 
 class TestModuleProcesser(unittest.TestCase):
     def setUp(self):
@@ -87,12 +130,10 @@ class TestModuleProcesser(unittest.TestCase):
         self.mock_scope = MagicMock()
 
     @patch('msprobe.pytorch.dump.module_dump.module_processer.wrap_setup_input_output_hook')
-    @patch('msprobe.pytorch.dump.module_dump.module_processer.replace_checkpoint')
-    def test_init_with_valid_scope(self, mock_replace, mock_wrap):
+    def test_init_with_valid_scope(self, mock_wrap):
         processor = ModuleProcesser(self.scope)
         self.assertEqual(processor.scope, self.scope)
         mock_wrap.assert_called_once()
-        mock_replace.assert_called_once()
 
     @patch('msprobe.pytorch.dump.module_dump.module_processer.logger.info_on_rank_0')
     def test_init_without_megatron(self, mock_log):

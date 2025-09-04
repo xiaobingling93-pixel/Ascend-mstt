@@ -28,11 +28,11 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
-    set_dump_path, get_dump_mode, check_compare_param, check_configuration_param, load_stack_json, get_file_type, \
-    add_time_with_json
-from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping
-from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, \
-    reorder_op_x_list, set_stack_json_path, check_api_info_len
+    set_dump_path, get_dump_mode, check_compare_param, load_stack_json, get_file_type, add_time_with_json
+from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
+    check_configuration_param
+from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, set_stack_json_path, \
+    reorder_index
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.highlight import HighLight
@@ -53,6 +53,7 @@ class ComparisonConfig:
     layer_mapping: dict
     compared_file_type: str
     first_diff_analyze: bool
+    is_print_compare_log: bool
 
 
 class Comparator:
@@ -100,6 +101,7 @@ class Comparator:
 
         # get kwargs or set default value
         suffix = kwargs.get('suffix', '')
+        rank = suffix[1:]
 
         # process output file
         file_path = self.process_output_file(output_path, suffix, self.mode_config.compared_file_type)
@@ -108,13 +110,21 @@ class Comparator:
         npu_json = input_param.get("npu_json_path")
         bench_json = input_param.get("bench_json_path")
         stack_json = input_param.get("stack_json_path")
-        result_df = self.compare_statistics([npu_json, bench_json, stack_json])
+        parse_data = ParseData(self.mode_config, rank)  # load and parse json data
+        npu_df, bench_df = parse_data.parse([npu_json, bench_json, stack_json])
+        result_df = self.compare_statistics(npu_df, bench_df)
         if not result_df.values.tolist():
             logger.warning("Can`t match any op. No compare result file generated.")
             return
 
         if self.mode_config.first_diff_analyze:
-            first_diff_analyze = FirstDiffAnalyze(self.mode_config)
+            # add P2POp additional info from npu_df and bench_df to result_df
+            result_df['NPU P2POp op'] = npu_df['op']
+            result_df['Bench P2POp op'] = bench_df['op']
+            result_df['NPU P2POp peer'] = npu_df['peer']
+            result_df['Bench P2POp peer'] = bench_df['peer']
+
+            first_diff_analyze = FirstDiffAnalyze(self.mode_config, rank)
             check_result = first_diff_analyze.check(result_df)
             save_json(file_path, check_result, indent=4)
             logger.info(f"Saving json file to disk: {file_path}")
@@ -130,7 +140,7 @@ class Comparator:
         if self.mode_config.highlight and len(result_df) <= CompareConst.MAX_EXCEL_LENGTH:
             # highlight if not too long
             highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-            highlight = HighLight(self.mode_config)
+            highlight = HighLight(self.mode_config, rank)
             if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
                 highlight.find_compare_result_error_rows(result_df, highlight_dict)
             result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
@@ -147,11 +157,7 @@ class Comparator:
 
         print_compare_ends_info()
 
-    def compare_statistics(self, file_list):
-        # load and parse json data
-        parse_data = ParseData(self.mode_config)
-        npu_df, bench_df = parse_data.parse(file_list)
-
+    def compare_statistics(self, npu_df, bench_df):
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
 
@@ -180,8 +186,9 @@ class Comparator:
 
 
 class ParseData:
-    def __init__(self, mode_config: ModeConfig):
+    def __init__(self, mode_config: ModeConfig, rank):
         self.mode_config = mode_config
+        self.rank = rank
 
     def parse(self, file_list):
         npu_json_path, bench_json_path, stack_json_path = file_list
@@ -190,12 +197,12 @@ class ParseData:
         stack_json_data = load_stack_json(stack_json_path) if self.mode_config.stack_mode else None
 
         # parse json data and generate df
-        npu_df = self.gen_data_df(npu_json_data, stack_json_data)
-        bench_df = self.gen_data_df(bench_json_data, stack_json_data)
+        npu_df = self.gen_data_df(npu_json_data, stack_json_data, 'NPU')
+        bench_df = self.gen_data_df(bench_json_data, stack_json_data, 'Bench')
 
         return npu_df, bench_df
 
-    def gen_data_df(self, data_json, stack_json_data):
+    def gen_data_df(self, data_json, stack_json_data, device: str):
         result = {
             CompareConst.OP_NAME: [],
             Const.DTYPE: [],
@@ -217,62 +224,49 @@ class ParseData:
             return pd.DataFrame(result)
 
         api_nums = len(apis_data)
-        progress_bar = tqdm(total=api_nums, desc="API/Module Read Progress", unit="api/module", ncols=100)
+        default_bar_desc = f'{device} API/Module Read Progress'
+        bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
+        progress_bar = tqdm(total=api_nums, desc=bar_desc_add_rank, unit="api/module", ncols=100)
 
         # 从json中循环解析API数据，遍历所有API
         for data_name in apis_data:
             check_op_str_pattern_valid(data_name)
-            merge_list = self.gen_merge_list(data_json, data_name, stack_json_data)
-            if not merge_list:
+            op_parsed_list = self.gen_merge_list(data_json, data_name, stack_json_data)
+            if not op_parsed_list:
                 continue
+            reordered_index_list = reorder_index(op_parsed_list)
+            for i, index in enumerate(reordered_index_list):
+                op_item = op_parsed_list[index]
 
-            op_name_list = merge_list.get(CompareConst.OP_NAME)
-            summary_list = merge_list.get(Const.SUMMARY)
-            data_name_list = merge_list.get(Const.DATA_NAME)
-            state_list = merge_list.get(Const.STATE)
-            requires_grad_list = merge_list.get(Const.REQ_GRAD)
-            op_name_reorder, summary_reorder, data_name_reorder, state_reorder, requires_grad_reorder = (
-                reorder_op_x_list(op_name_list, summary_list, data_name_list, state_list, requires_grad_list))
-            # 遍历单个API的所有item
-            for index, (op_name, state) in enumerate(zip(op_name_reorder, state_reorder)):
-                result[CompareConst.OP_NAME].append(op_name)
-                if state == Const.INPUT or state == Const.KWARGS:
-                    info_list = merge_list[CompareConst.INPUT_STRUCT]
-                elif state == Const.OUTPUT:
-                    info_list = merge_list[CompareConst.OUTPUT_STRUCT]
-                elif state == Const.PARAMS:
-                    info_list = merge_list[CompareConst.PARAMS_STRUCT]
-                elif state == Const.PARAMS_GRAD:
-                    info_list = merge_list[CompareConst.PARAMS_GRAD_STRUCT]
-                else:
-                    info_list = merge_list[CompareConst.DEBUG_STRUCT]
-                check_api_info_len(op_name, info_list, 1)
-                struct = info_list.pop(0)
+                # common key
+                result[CompareConst.OP_NAME].append(op_item.get('full_op_name'))
+                result[Const.DTYPE].append(op_item.get(Const.DTYPE))
+                result[Const.SHAPE].append(op_item.get(Const.SHAPE))
+                result[Const.STATE].append(op_item.get(Const.STATE))
+                result[Const.REQ_GRAD].append(op_item.get(Const.REQ_GRAD))
+                result[Const.API_ORIGIN_NAME].append(data_name)
+                summary_data = [
+                    str(op_item.get(key)) if op_item.get(key) is None else op_item.get(key)
+                    for key in Const.SUMMARY_METRICS_LIST
+                ]
+                result[Const.SUMMARY].append(summary_data)
 
-                check_api_info_len(op_name, struct, 2)
-                result[Const.DTYPE].append(struct[0])
-                result[Const.SHAPE].append(struct[1])
+                # dump_mode differ key
+                if self.mode_config.dump_mode == Const.MD5:
+                    result[Const.MD5].append(op_parsed_list[index].get(Const.MD5))
+                if self.mode_config.dump_mode == Const.ALL:
+                    result[Const.DATA_NAME].append(op_item.get(Const.DATA_NAME))
 
-                check_api_info_len(op_name, summary_reorder, 1)
-                result[Const.SUMMARY].append(summary_reorder.pop(0))
-
-                if index == 0 and self.mode_config.stack_mode:
-                    check_api_info_len(op_name, merge_list[Const.STACK_INFO], 1)
-                    result[Const.STACK_INFO].append(merge_list[Const.STACK_INFO][0])
+                # mode_config stack_mode addition key
+                if i == 0 and self.mode_config.stack_mode:
+                    result[Const.STACK_INFO].append(op_parsed_list[-1].get('full_info'))
                 else:
                     result[Const.STACK_INFO].append(None)
 
-                if self.mode_config.dump_mode == Const.MD5:
-                    check_api_info_len(op_name, struct, 3)
-                    result[Const.MD5].append(struct[2])
-                if self.mode_config.dump_mode == Const.ALL:
-                    check_api_info_len(op_name, data_name_reorder, 1)
-                    result[Const.DATA_NAME].append(data_name_reorder.pop(0))
-
-                result[Const.STATE].append(state)
-                result[Const.API_ORIGIN_NAME].append(data_name)
-                check_api_info_len(op_name, requires_grad_reorder, 1)
-                result[Const.REQ_GRAD].append(requires_grad_reorder.pop(0))
+                # mode_config first_diff_analyze addition key
+                if self.mode_config.first_diff_analyze:
+                    result.setdefault('op', []).append(op_item.get('op', str(None)))
+                    result.setdefault('peer', []).append(op_item.get('peer', str(None)))
 
             progress_bar.update(1)
         progress_bar.close()
@@ -288,14 +282,14 @@ class ParseData:
             stack_info = stack_json_data.get(op_name)
             if stack_info is not None:
                 check_stack_json_str(stack_info, op_name)
-            # append only when stack_mode is True,
-            op_parsed_list.append({
-                'full_op_name': op_name,
-                'full_info': stack_info
-            })
-
-        merge_list = merge_tensor(op_parsed_list, self.mode_config.dump_mode)
-        return merge_list
+        else:
+            stack_info = None
+        # always add stack_info whether stack_mode is True
+        op_parsed_list.append({
+            'full_op_name': op_name,
+            'full_info': stack_info
+        })
+        return op_parsed_list
 
 
 class ProcessDf:
@@ -777,6 +771,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             layer_mapping=kwargs.get('layer_mapping', {}),
             first_diff_analyze=kwargs.get('first_diff_analyze', False),
             compared_file_type='',
+            is_print_compare_log=input_param.get('is_print_compare_log', True)
         )
 
         set_dump_path(input_param)
@@ -789,8 +784,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         else:
             config.stack_mode = set_stack_json_path(input_param)
 
-        check_configuration_param(config.stack_mode, config.auto_analyze, config.fuzzy_match, config.highlight,
-                                  input_param.get('is_print_compare_log', True))
+        check_configuration_param(config)
         create_directory(output_path)
         check_compare_param(input_param, output_path, config.dump_mode, config.stack_mode)
 

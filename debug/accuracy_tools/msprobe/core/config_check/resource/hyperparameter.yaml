@@ -19,3 +19,13 @@ weight_decay:
 dropout_rate:
   - dropout
   - drop_rate
+
+compute_dtype:
+  - bf16
+  - fp32
+
+residual_dtype:
+  - fp32_residual_connection
+
+softmax_compute_dtype:
+  - attention_softmax_in_fp32

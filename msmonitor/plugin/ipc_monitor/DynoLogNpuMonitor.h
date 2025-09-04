@@ -18,7 +18,6 @@
 
 #include "MonitorBase.h"
 #include "NpuIpcClient.h"
-#include "MsptiMonitor.h"
 #include "singleton.h"
 #include "InputParser.h"
 
@@ -35,6 +34,7 @@ public:
     std::string Poll() override;
     void EnableMsptiMonitor(std::unordered_map<std::string, std::string>& cfg_map);
     void Finalize();
+    void UpdateNpuStatus(int32_t status, const std::string& msgType);
     void SetNpuId(int id) override
     {
         npuId_ = id;
@@ -49,7 +49,6 @@ private:
     bool isInitialized_ = false;
     int32_t npuId_ = 0;
     IpcClient ipcClient_;
-    MsptiMonitor msptiMonitor_;
 };
 
 } // namespace ipc_monitor

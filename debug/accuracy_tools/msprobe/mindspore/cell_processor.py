@@ -117,11 +117,11 @@ class CellProcessor:
             cells_and_names_in_graph_mode = []
             for index, cells_and_names in cells_with_index_in_graph_mode.items():
                 model = models if index == "-1" else models[int(index)]
-                for name, cell in cells_and_names:
+                for name, cell, parent_cell in cells_and_names:
                     if cell == model:
                         continue
                     cell_index = (index + Const.SEP) if index != "-1" else ""
-                    cells_and_names_in_graph_mode.append((f'{cell_index}{name}', cell))
+                    cells_and_names_in_graph_mode.append((f'{cell_index}{name}', cell, parent_cell))
 
             if cells_and_names_in_graph_mode:
                 Runtime.run_mode = MsConst.PYNATIVE_GRAPH_MODE

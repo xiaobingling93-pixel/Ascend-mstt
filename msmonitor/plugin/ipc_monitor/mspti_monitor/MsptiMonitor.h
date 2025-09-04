@@ -22,13 +22,14 @@
 #include <set>
 #include "mspti.h"
 #include "thread.h"
+#include "singleton.h"
+#include "MsptiDataProcessBase.h"
 
 
 namespace dynolog_npu {
 namespace ipc_monitor {
-class MsptiMonitor : public Thread {
+class MsptiMonitor : public Singleton<MsptiMonitor>, public Thread {
 public:
-    explicit MsptiMonitor();
     virtual ~MsptiMonitor();
     void Start();
     void Stop();
@@ -38,25 +39,30 @@ public:
     bool IsStarted();
     std::set<msptiActivityKind> GetEnabledActivities();
     void Uninit();
+    bool CheckAndSetSavePath(const std::string& path);
+    void SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData);
 
 private:
     static void BufferRequest(uint8_t **buffer, size_t *size, size_t *maxNumRecords);
     static void BufferComplete(uint8_t *buffer, size_t size, size_t validSize);
     static void BufferConsume(msptiActivity *record);
+    static std::shared_ptr<MsptiDataProcessBase> GetDataProcessor();
     static std::atomic<uint32_t> allocCnt;
 
 private:
     void Run() override;
 
 private:
-    std::atomic<bool> start_;
+    std::atomic<bool> start_{false};
     std::mutex cvMtx_;
     std::condition_variable cv_;
-    msptiSubscriberHandle subscriber_;
+    msptiSubscriberHandle subscriber_{nullptr};
     std::mutex activityMtx_;
     std::set<msptiActivityKind> enabledActivities_;
-    std::atomic<bool> checkFlush_;
-    std::atomic<uint32_t> flushInterval_;
+    std::atomic<bool> checkFlush_{false};
+    std::atomic<uint32_t> flushInterval_{0};
+    std::string savePath_;
+    std::shared_ptr<MsptiDataProcessBase> dataProcessor_{nullptr};
 };
 } // namespace ipc_monitor
 } // namespace dynolog_npu

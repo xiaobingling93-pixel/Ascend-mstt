@@ -57,11 +57,12 @@ class StatisticsConfig(BaseConfig):
             raise Exception("Config param [precision] is invalid, expected from [\"high\", \"low\"]")
 
     def _check_summary_mode(self):
-        muti_opt = ["md5", "max", "min", "mean", "l2norm"]
+        muti_opt = ["max", "min", "mean", "count", "negative zero count", "positive zero count", "nan count",
+                    "negative inf count", "positive inf count", "zero count", "l2norm", "hash", "md5"]
         if isinstance(self.summary_mode, str) and self.summary_mode not in Const.SUMMARY_MODE:
-            raise Exception("summary_mode is invalid")
+            raise Exception("summary_mode is an invalid string")
         if isinstance(self.summary_mode, list) and not all(opt in muti_opt for opt in self.summary_mode):
-            raise Exception("summary_mode is invalid")
+            raise Exception("summary_mode contains invalid option(s)")
 
 
 class OverflowCheckConfig(BaseConfig):

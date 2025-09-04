@@ -108,3 +108,14 @@ def check_stack_json_str(stack_info, op_name):
     else:
         logger.error(f"Expected stack_info to be a list, but got {type(stack_info).__name__} for '{op_name}'")
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+
+
+def check_configuration_param(config):
+    arg_list = [config.stack_mode, config.auto_analyze, config.fuzzy_match,
+                config.highlight, config.first_diff_analyze, config.is_print_compare_log]
+    arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match',
+                 'highlight', 'first_diff_analyze', 'is_print_compare_log']
+    for arg, name in zip(arg_list, arg_names):
+        if not isinstance(arg, bool):
+            logger.error(f"Invalid input parameter, {name} which should be only bool type.")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)

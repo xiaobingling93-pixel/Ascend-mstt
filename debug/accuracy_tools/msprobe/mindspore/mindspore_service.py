@@ -27,7 +27,7 @@ from msprobe.mindspore.common.utils import (
     get_cells_and_names_with_index
 )
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register, ApiTemplate
-from msprobe.mindspore.dump.hook_cell.ms_hook_manager import MindsproeHookManager
+from msprobe.mindspore.dump.hook_cell.ms_hook_manager import MindsporeHookManager
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 
@@ -59,7 +59,7 @@ class MindsporeService(BaseService):
         self.api_register = get_api_register()
         self.primitive_hook_service = PrimitiveHookService(self)
         self.cell_processor = CellProcessor(self.data_collector.scope)
-        self.hook_manager = MindsproeHookManager(self.data_collector, self.config)
+        self.hook_manager = MindsporeHookManager(self.data_collector, self.config)
         self._setup_jit_context()
         self.api_template = ApiTemplate
 

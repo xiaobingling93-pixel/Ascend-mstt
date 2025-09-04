@@ -38,6 +38,8 @@ DEFAULT_RANK_DIR = "rank0"
 KEY_LAYERS = "layers"
 construct = {}
 cell_list = []
+free_cells = {}
+parent_cell_types = {}
 KEY_SIDE_EFFECT = "side_effect_io"
 KEY_TOPLAYER = "TopLayer"
 KEY_FORWARD = CoreConst.FORWARD
@@ -302,7 +304,24 @@ def check_relation(cell_name, parent_cell_name):
     return False
 
 
+def get_parent_cell_name(child_cell_name):
+    parent_cell_name = ''
+
+    last_dot_index = child_cell_name.rfind(CoreConst.SEP)
+    if last_dot_index == -1:
+        return parent_cell_name
+
+    layers_pattern = rf"{CoreConst.SEP}{KEY_LAYERS}{CoreConst.SEP}\d+$"
+    if re.search(layers_pattern, child_cell_name):
+        parent_cell_name = re.sub(layers_pattern, '', child_cell_name)
+    else:
+        parent_cell_name = child_cell_name[:last_dot_index]
+
+    return parent_cell_name
+
+
 def get_construct(cell_list_input):
+    global free_cells, parent_cell_types
     for cell in cell_list_input:
         cell_name = get_cell_name(cell)
         cell_data_mode = get_data_mode(cell)
@@ -316,7 +335,20 @@ def get_construct(cell_list_input):
                 found_flag = True
                 break
         if not found_flag:
-            construct.update({cell: None})
+            cell_name_with_mode = f'{cell_name}{CoreConst.SEP}{cell_data_mode}'
+            if cell_name_with_mode in free_cells:
+                construct.update({cell: free_cells.get(cell_name_with_mode)})
+                continue
+
+            parent_cell = None
+            parent_cell_name = get_parent_cell_name(cell_name)
+            if parent_cell_name and cell_name in parent_cell_types:
+                parent_cell = CoreConst.SEP.join([CoreConst.CELL, parent_cell_name, parent_cell_types.get(cell_name)])
+                second_last_dot_index = cell.rfind(CoreConst.SEP, 0, cell.rfind(CoreConst.SEP))
+                parent_cell = f'{parent_cell}{cell[second_last_dot_index:]}'
+                free_cells[cell_name_with_mode] = parent_cell
+
+            construct.update({cell: parent_cell})
 
 
 def generate_construct(path):
@@ -470,7 +502,7 @@ def process_csv(path):
             if col_name in columns:
                 value = convert_special_values(row[col_name])
                 tensor_json[json_key] = value
-      
+
         if io_key == KEY_INPUT:
             data_info.append([op_name, CoreConst.INPUT_ARGS, tensor_json])
         elif io_key == KEY_OUTPUT:
@@ -564,6 +596,11 @@ def is_download_finished(directory, interval=3):
 
 
 def process(dump_path):
+    if not os.path.exists(dump_path):
+        logger.warning('No grap cell data is dumped.')
+        create_directory(dump_path)
+        return
+
     rank_id = os.environ.get('RANK_ID')
     rank_dir = DEFAULT_RANK_DIR
     if rank_id is not None:
@@ -653,6 +690,11 @@ def merge_file(dump_path, rank_dir, file_dict):
 
 
 def process_statistics(dump_path):
+    if not os.path.exists(dump_path):
+        logger.warning('No grap cell data is dumped.')
+        create_directory(dump_path)
+        return
+
     rank_id = os.environ.get('RANK_ID')
     rank_dir_kbk = "rank_0"
     if rank_id is not None:
@@ -794,7 +836,7 @@ def create_kbyk_json(dump_path, summary_mode, step):
 
 
 def start(config: CellDumpConfig):
-    global dump_task
+    global dump_task, parent_cell_types
     dump_task = config.task
     net = config.net
     dump_path = config.dump_path
@@ -822,7 +864,7 @@ def start(config: CellDumpConfig):
         return
 
     if isinstance(net, nn.Cell):
-        net = (('', net),)
+        net = (('', net, None),)
 
     td_config_path = ""
     try:
@@ -845,6 +887,7 @@ def start(config: CellDumpConfig):
     black_list = ["grad_reducer", ""]
 
     for name_and_model in net:
+        parent_cell_types[name_and_model[0]] = name_and_model[2].__class__.__name__
         for name, cell in name_and_model[1].cells_and_names(name_prefix=name_and_model[0]):
             class_name = cell.__class__.__name__
             # 跳过黑名单cell

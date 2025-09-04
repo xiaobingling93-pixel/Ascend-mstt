@@ -38,7 +38,6 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import (CompareException,
                                        check_compare_param,
-                                       check_configuration_param,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
@@ -133,14 +132,6 @@ class TestUtils(TestCase):
             self.assertEqual(mock_check_file_or_directory_path.call_args_list[i][0], call_args[i])
         self.assertEqual(len(mock__check_json.call_args[0]), 2)
         self.assertEqual(mock__check_json.call_args[0][1], "stack_path.json")
-
-    @patch.object(logger, "error")
-    def test_check_configuration_param(self, mock_error):
-        with self.assertRaises(CompareException) as context:
-            check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False,
-                                      is_print_compare_log=True)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Invalid input parameter, stack_mode which should be only bool type.")
 
     @patch.object(logger, "error")
     def test__check_json(self, mock_error):
@@ -508,12 +499,13 @@ class TestIsSaveVariableValid(unittest.TestCase):
     def setUp(self):
         self.valid_special_types = (int, float, str, bool)
 
+    @patch.object(Const, "DUMP_MAX_DEPTH", 5)
     def test_is_save_variable_valid_DepthExceeded_ReturnsFalse(self):
-        # 创建一个深度超过 Const.DUMP_MAX_DEPTH 的嵌套结构
-        nested_structure = [0] * Const.DUMP_MAX_DEPTH
-        for _ in range(Const.DUMP_MAX_DEPTH):
-            nested_structure = [nested_structure]
-        self.assertFalse(is_save_variable_valid(nested_structure, self.valid_special_types))
+        # 构造深度 = 阈值 + 1
+        nested = [0] * 3
+        for _ in range(Const.DUMP_MAX_DEPTH + 1):  # 注意 +1，确保“超过”阈值
+            nested = [nested]
+        self.assertFalse(is_save_variable_valid(nested, self.valid_special_types))
 
     def test_is_save_variable_valid_ValidSpecialTypes_ReturnsTrue(self):
         for valid_type in self.valid_special_types:

@@ -17,9 +17,10 @@
 #define INPUT_PARSER_H
 
 #include <unordered_map>
-#include <singleton.h>
+#include <string>
 #include <set>
-#include <mspti.h>
+#include "mspti.h"
+#include "singleton.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -30,15 +31,15 @@ struct MsptiMonitorCfg {
     bool monitorStart;
     bool monitorStop;
     bool isMonitor;
+    std::string savePath;
 };
 
 
-class InputParser : public dynolog_npu::ipc_monitor::Singleton<InputParser> {
+class InputParser : public Singleton<InputParser> {
 public:
     MsptiMonitorCfg DynoLogGetOpts(std::unordered_map<std::string, std::string>& cmd);
 };
 
 } // namespace ipc_monitor
 } // namespace dynolog_npu
-
-#endif
+#endif // INPUT_PARSER_H

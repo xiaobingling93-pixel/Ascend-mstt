@@ -197,7 +197,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if self.config.summary_mode == Const.MD5 and not self.config.async_dump:
             tensor = convert_bf16_to_fp32(tensor)
             # 拷贝并搬到 CPU
-            tensor_bytes = tensor.asnumpy().tobytes()
+            tensor_bytes = tensor.asnumpy()
 
             future = self._crc_executor.submit(
                 MindsporeDataProcessor.compute_crc32_bytes,

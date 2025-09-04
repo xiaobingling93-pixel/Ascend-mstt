@@ -19,7 +19,8 @@ import json
 from pathlib import Path
 from werkzeug import wrappers, Response, exceptions
 from tensorboard.backend import http_util
-from ..service import ServiceFactory, GraphServiceStrategy, check_file_type
+from ..service import ServiceFactory, GraphServiceStrategy
+from ..utils.file_check_wrapper import check_file_type
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import DataType
 

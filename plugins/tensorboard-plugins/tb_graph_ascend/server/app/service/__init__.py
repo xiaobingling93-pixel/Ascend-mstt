@@ -14,5 +14,4 @@
 # limitations under the License.
 # ==============================================================================
 from .graph_service_base import GraphServiceStrategy
-from .file_check_wrapper import check_file_type
 from .graph_service_factory import ServiceFactory

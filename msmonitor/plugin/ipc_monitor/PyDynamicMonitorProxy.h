@@ -23,7 +23,9 @@
 namespace dynolog_npu {
 namespace ipc_monitor {
 
-class PyDynamicMonitorProxy {
+class PyDynamicMonitorProxy : public Singleton<PyDynamicMonitorProxy> {
+    friend class Singleton<PyDynamicMonitorProxy>;
+
 public:
     PyDynamicMonitorProxy() = default;
     bool InitDyno(int npuId)
@@ -52,6 +54,19 @@ public:
     void FinalizeDyno()
     {
         DynoLogNpuMonitor::GetInstance()->Finalize();
+    }
+
+    void UpdateProfilerStatus(std::unordered_map<std::string, std::string>& status)
+    {
+        int32_t npuTraceStatus = 0;
+        auto it = status.find("profiler_status");
+        if (it != status.end() && !it->second.empty()) {
+            Str2Int32(npuTraceStatus, it->second);
+        } else {
+            LOG(ERROR) << "Missing key 'profiler_status'.";
+            return;
+        }
+        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuTraceStatus, MSG_TYPE_TRACE_STATUS);
     }
 private:
     MonitorBase *monitor_ = nullptr;

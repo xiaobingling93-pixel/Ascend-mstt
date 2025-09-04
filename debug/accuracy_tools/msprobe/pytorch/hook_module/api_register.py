@@ -14,22 +14,25 @@
 # limitations under the License.
 
 import functools
-import os
 import inspect
+import os
 
 import torch
 import torch.distributed as dist
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import (
-    torch_without_guard_version, is_gpu, torch_device_guard, parameter_adapter
+    torch_without_guard_version,
+    is_gpu,
+    torch_device_guard,
+    parameter_adapter
 )
 from msprobe.pytorch.function_factory import npu_custom_functions
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.hook_module.utils import dynamic_import_op
-from msprobe.core.common.file_utils import load_yaml
 
 try:
     import mindspeed.ops
@@ -38,13 +41,13 @@ except ImportError:
 else:
     mindspeed_enable = True
 
-
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 
 _inner_used_api = {}
 _supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
 _cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
 dist_data_collect_func = {}
+dist_batch_data_collect_func = []
 
 _api_types = {
     Const.PT_FRAMEWORK: {
@@ -57,6 +60,7 @@ _api_types = {
 }
 if not is_gpu:
     import torch_npu
+
     if torch_without_guard_version:
         _api_types.get(Const.PT_FRAMEWORK).update(
             {
@@ -69,8 +73,10 @@ if not is_gpu:
         )
         _api_types.get(Const.PT_FRAMEWORK).update(
             {
-                Const.PT_API_TYPE_NPU_DIST: ((torch_npu.distributed,), (torch_npu.distributed,
-                                                                     torch_npu.distributed.distributed_c10d))
+                Const.PT_API_TYPE_NPU_DIST: (
+                    (torch_npu.distributed,),
+                    (torch_npu.distributed, torch_npu.distributed.distributed_c10d)
+                )
             }
         )
     if mindspeed_enable:
@@ -96,20 +102,17 @@ def dist_module_forward(module, *args, **kwargs):
         logger.warning(f"fail to get dist api's func signature because {e}, no wait")
 
     def create_async_callback_func(catch_func):
+        full_name = module.full_forward_name if hasattr(module, "full_forward_name") else None
+
         def store_data():
-            module.async_op_dump_flag = False
-            catch_func(module, args, kwargs, handle)
+            catch_func(module, full_name, args, kwargs, handle)
+
         return store_data
 
-    if len(module._forward_hooks.values()) == 0:
-        return handle
     if use_async_op_flag or module.api_name in ['isend', 'irecv']:
-        module.async_op_dump_flag = True
-        dist_data_collect_func[handle] = create_async_callback_func(list(module._forward_hooks.values())[0])
+        dist_data_collect_func[handle] = create_async_callback_func(module.distributed_forward_hook)
     if module.api_name == 'batch_isend_irecv':
-        if isinstance(handle, list):
-            for req in handle:
-                dist_data_collect_func[req] = create_async_callback_func(list(module._forward_hooks.values())[0])
+        dist_batch_data_collect_func.append([handle, create_async_callback_func(module.distributed_forward_hook)])
     return handle
 
 
@@ -126,7 +129,17 @@ def redirect_wait():
             if args[0] in dist_data_collect_func:
                 store_func = dist_data_collect_func.pop(args[0])
                 store_func()
+                return
+            for value in dist_batch_data_collect_func:
+                if args[0] in value[0]:
+                    value[0].remove(args[0])
+                    if len(value[0]) == 0:
+                        store_func = value[1]
+                        store_func()
+                    return
+
         return wrapped_wait
+
     Work.wait = wrapped_wait(Work)
 
 
@@ -151,16 +164,14 @@ forward_methods = {
 class ApiTemplate(HOOKModule):
     def __init__(self, api_name, api_func, prefix, hook_build_func, need_hook=True, device=Const.CPU_LOWERCASE):
         self.api_name = api_name
-        self.api_func = api_func
         self.prefix = prefix
         self.prefix_api_name = prefix + Const.SEP + str(api_name.split(Const.SEP)[-1]) + Const.SEP
         self.need_hook = need_hook
         self.device = device
-        self.async_op_dump_flag = False
+        self.op_is_distributed = prefix == Const.DIST_API_TYPE_PREFIX
         if self.need_hook:
             super().__init__(hook_build_func)
-        if prefix == Const.DIST_API_TYPE_PREFIX:
-            self.op_is_distributed = True
+        self.api_func = api_func
 
     @torch_device_guard
     def forward(self, *args, **kwargs):

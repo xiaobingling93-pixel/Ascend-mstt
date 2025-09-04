@@ -18,7 +18,7 @@ import sys
 import subprocess
 import pybind11
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_namespace_packages
 from setuptools.command.build_ext import build_ext
 
 
@@ -43,7 +43,6 @@ class CMakeBuild(build_ext):
             '-DPYTHON_EXECUTABLE=' + sys.executable,
             '-DCMAKE_PREFIX_PATH=' + pybind11.get_cmake_dir(),
             '-DCMAKE_INSTALL_PREFIX=' + ext_dir,
-            '-DDYNOLOG_PATH=' + os.path.join(os.path.dirname(BASE_DIR), "third_party", "dynolog"),
             '-DCMAKE_BUILD_TYPE=' + cfg
         ]
 
@@ -54,15 +53,16 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.', '--target', 'install', '-j', '8'] + build_args,
+        subprocess.check_call(['cmake', '--build', '.', '-j', '8'] + build_args,
                               cwd=self.build_temp)
 
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 setup(
     name="msmonitor_plugin",
     version="8.1.0",
-    description="msMonitor plugins",
+    description="msMonitor plugin",
+    packages=find_namespace_packages(include=["IPCMonitor*"]),
+    include_package_data=True,
     ext_modules=[CMakeExtension('IPCMonitor')],
     cmdclass=dict(build_ext=CMakeBuild),
     install_requires=["pybind11"],

@@ -54,9 +54,9 @@ class Const:
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
 
-    MAX_DEPTH = 10
+    MAX_DEPTH = 400
     CPU_QUARTER = 4
-    DUMP_MAX_DEPTH = 50
+    DUMP_MAX_DEPTH = 400
 
     EXTERN_INPUT_LIST_MAX_LEN = 100
     MAX_PROCESS_NUM = 128
@@ -74,6 +74,7 @@ class Const:
     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
     SUMMARY = "summary"
     MD5 = "md5"
+    HASH = "hash"
     VALUE = "value"
     SUMMARY_MODE = ["statistics", "md5"]
 
@@ -275,6 +276,8 @@ class Const:
     FAKE_TENSOR_TYPE = "torch._subclasses.fake_tensor.FakeTensor"
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
+
+    API_ATTR_LIST = ["__name__", "default"]
 
     PT_API_TYPE_FUNCTIONAL = "functional"
     PT_API_TYPE_TENSOR = "tensor"
@@ -701,6 +704,7 @@ class FileCheckConst:
     ZIP_SUFFIX = ".zip"
     SHELL_SUFFIX = ".sh"
     LOG_SUFFIX = ".log"
+    DB_SUFFIX = '.db'
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -714,6 +718,7 @@ class FileCheckConst:
     MAX_FILE_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     MAX_LOG_SIZE = 10737418240  # 1 * 1024 * 1024 * 1024
+    MAX_DB_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750
@@ -728,7 +733,8 @@ class FileCheckConst:
         YAML_SUFFIX: MAX_YAML_SIZE,
         IR_SUFFIX: MAX_IR_SIZE,
         ZIP_SUFFIX: MAX_ZIP_SIZE,
-        LOG_SUFFIX: MAX_LOG_SIZE
+        LOG_SUFFIX: MAX_LOG_SIZE,
+        DB_SUFFIX: MAX_DB_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
@@ -787,6 +793,11 @@ class MonitorConst:
     DEFAULT_STEP_INTERVAL = 1
 
     OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean", "shape", "dtype"]
+    OP_MONVIS_SUPPORTED = [
+        "norm", "min", "max", "zeros", "nans", "mean",
+        "entropy", "softmax_max", "sr", "kernel_norm", "std_x", "jacobian",
+        "proxy", "token_similarity"
+    ]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
@@ -799,6 +810,8 @@ class MonitorConst:
     )
     DEEPSPEED_ZERO_OPT_FILTER = "DeepSpeedZeroOptimizer"
     RULE_NAME = ['AnomalyTurbulence', 'AnomalyNan']
+    L2_HOOKS = ["linear_hook", "attention_hook"]
+    SA_ORDERS = ["s,b,h,d", "b,s,h,d"]
 
     SLICE_SIZE = 20480
     # used for name
@@ -849,3 +862,12 @@ class MonitorConst:
         TRAIN_STAGE[key] = BACKWARD_STAGE
     for key in OPTIMIZER_KEY:
         TRAIN_STAGE[key] = OPTIMIZER_STAGE
+
+    # csv2db
+    DEFAULT_INT_VALUE = 0
+    MAX_PROCESS_NUM = 128
+    CSV_FILE_PATTERN = r"_(\d+)-(\d+)\.csv"
+    BATCH_SIZE = 10000
+    MAX_PARTITION = 10_000_000
+    MIN_PARTITION = 10
+    

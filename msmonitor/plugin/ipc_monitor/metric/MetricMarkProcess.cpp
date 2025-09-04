@@ -34,6 +34,7 @@ std::string MarkMetric::seriesToJson()
     jsonMsg["kind"] = "Marker";
     jsonMsg["deviceId"] = deviceId;
     jsonMsg["domain"] = domain;
+    jsonMsg["name"] = name;
     jsonMsg["duration"] = duration;
     jsonMsg["timestamp"] = timestamp;
     return jsonMsg.dump();
@@ -53,6 +54,7 @@ bool MetricMarkProcess::TransMarkData2Range(const std::vector<std::shared_ptr<ms
                 rangemarkData.deviceStart = activityMarker->timestamp;
             } else {
                 rangemarkData.start = activityMarker->timestamp;
+                rangemarkData.name = activityMarker->name;
             }
         }
         if (activityMarker->flag == MSPTI_ACTIVITY_FLAG_MARKER_END_WITH_DEVICE) {
@@ -117,23 +119,23 @@ std::vector<MarkMetric> MetricMarkProcess::AggregatedData()
         }
     }
 
-    std::unordered_map<std::string, std::vector<RangeMarkData>> domain2RangeData =
-        groupby(rangeDatas, [](const RangeMarkData& data) -> std::string {
-            return data.domain + std::to_string(data.deviceId);
-        });
     std::vector<MarkMetric> ans;
-    for (auto& pair: domain2RangeData) {
-        MarkMetric markMetric{};
-        auto domainName = pair.first;
-        auto rangeDatas = pair.second;
-        markMetric.deviceId = rangeDatas[0].deviceId;
-        markMetric.domain = domainName;
-        markMetric.timestamp = getCurrentTimestamp64();
-        markMetric.duration = std::accumulate(rangeDatas.begin(), rangeDatas.end(), 0ULL,
-            [](uint64_t acc, const RangeMarkData& rangeData) {
-                return acc + rangeData.deviceEnd - rangeData.deviceStart;
-            });
-        ans.emplace_back(markMetric);
+    MarkMetric hostMarkMetric{};
+    MarkMetric devMarkMetric{};
+    for (const auto& data : rangeDatas) {
+        hostMarkMetric.name = data.name;
+        hostMarkMetric.domain = data.domain;
+        hostMarkMetric.deviceId = -1;
+        hostMarkMetric.duration = data.end - data.start;
+        hostMarkMetric.timestamp = data.start;
+        ans.emplace_back(hostMarkMetric);
+
+        devMarkMetric.name = data.name;
+        devMarkMetric.domain = data.domain;
+        devMarkMetric.deviceId = data.deviceId;
+        devMarkMetric.duration = data.deviceEnd - data.deviceStart;
+        devMarkMetric.timestamp = data.deviceStart;
+        ans.emplace_back(devMarkMetric);
     }
     return ans;
 }

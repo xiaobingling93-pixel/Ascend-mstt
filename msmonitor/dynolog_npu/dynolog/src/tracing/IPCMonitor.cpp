@@ -78,6 +78,18 @@ void IPCMonitor::processMsg(std::unique_ptr<ipcfabric::Message> msg)
             kLibkinetoRequest.data(),
             kLibkinetoRequest.size()) == 0) {
         getLibkinetoOnDemandRequest(std::move(msg));
+    } else if (
+        memcmp( // NOLINT(facebook-security-vulnerable-memcmp)
+            msg->metadata.type,
+            kLibkinetoTraceStatus.data(),
+            kLibkinetoTraceStatus.size()) == 0) {
+        updateLibkinetoStatus(std::move(msg), kLibkinetoTraceStatus);
+    } else if (
+        memcmp( // NOLINT(facebook-security-vulnerable-memcmp)
+            msg->metadata.type,
+            kLibkinetoMonitorStatus.data(),
+            kLibkinetoMonitorStatus.size()) == 0) {
+        updateLibkinetoStatus(std::move(msg), kLibkinetoMonitorStatus);
     } else {
         LOG(ERROR) << "TYPE UNKOWN: " << msg->metadata.type;
     }
@@ -101,6 +113,10 @@ void IPCMonitor::LogData(const nlohmann::json& result)
     if (result.contains("domain") && result["domain"].is_string()) {
         auto domain = result["domain"].get<std::string>();
         logger_->logStr("domain", domain);
+    }
+    if (result.contains("name") && result["name"].is_string()) {
+        auto name = result["name"].get<std::string>();
+        logger_->logStr("name", name);
     }
     logger_->finalize();
 }
@@ -182,6 +198,23 @@ void IPCMonitor::registerLibkinetoContext(
         LOG(ERROR) << "Failed to send ctxt from dyno: IPC sync_send fail";
     }
     return;
+}
+
+void IPCMonitor::updateLibkinetoStatus(
+    std::unique_ptr<ipcfabric::Message> msg, const std::string& msgType)
+{
+    struct NpuStatus {
+        int32_t status;
+        pid_t pid;
+        int64_t jobId;
+    };
+    NpuStatus* status = (NpuStatus*)msg->buf.get();
+    try {
+        LibkinetoConfigManager::getInstance()->updateNpuStatus(
+            std::to_string(status->jobId), status->pid, status->status, msgType);
+    } catch (const std::runtime_error& ex) {
+    LOG(ERROR) << "Kineto config manager exception when updateNpuStatus: " << ex.what();
+    }
 }
 
 } // namespace tracing

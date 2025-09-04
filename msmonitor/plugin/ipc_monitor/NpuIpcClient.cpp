@@ -45,6 +45,27 @@ bool IpcClient::RegisterInstance(int32_t npu)
     return true;
 }
 
+bool IpcClient::SendNpuStatus(int32_t status, const std::string& msgType)
+{
+    NpuStatus npuStatus{
+        .status = status,
+        .pid = GetProcessId(),
+        .jobId = JOB_ID,
+    };
+    std::unique_ptr<Message> message = Message::ConstructMessage<decltype(npuStatus)>(npuStatus, msgType);
+    try {
+        if (!SyncSendMessage(*message, DYNO_IPC_NAME)) {
+            LOG(WARNING) << "Failed to send msmonitor status for pid " << npuStatus.pid << " with dyno";
+            return false;
+        }
+    } catch (const std::exception &e) {
+        LOG(WARNING) << "Error when SyncSendMessage: " << e.what();
+        return false;
+    }
+    LOG(INFO) << "Send msmonitor status for pid " << npuStatus.pid << " for dynolog success!";
+    return true;
+}
+
 std::string IpcClient::IpcClientNpuConfig()
 {
     auto size = pids_.size();

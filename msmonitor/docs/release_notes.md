@@ -40,11 +40,21 @@ Step 3: 包安装(以x86版本为例)
    
    3. 安装whl包
    ```bash
-   pip install msmonitor_plugin-*-cp39-*.whl
+   pip install msmonitor_plugin-{mindstudio_version}-cp{python_version}-cp{python_version}-linux_{system_architecture}.whl
    ```
    
-   4. 安装dynolog deb或rpm包
-   ```
-   rpm -ivh dynolog-*.rpm --nodeps
-   # deb包则为 dpkg -i --force-overwrite dynolog*.deb
-   ```
+   4. 安装dynolog
+
+      有以下三种安装方式可供选择，根据用户服务器系统自行选择： 
+      
+      方式一：使用deb软件包安装（适用于Debian/Ubuntu等系统）；
+      ```
+      dpkg -i --force-overwrite dynolog*.deb
+      ``` 
+
+      方式二：使用rpm软件包安装（适用于RedHat/Fedora/openSUSE等系统）；
+      ```
+      rpm -ivh dynolog-*.rpm --nodeps
+      ```
+
+      方式三：直接复制bin文件夹到系统中。

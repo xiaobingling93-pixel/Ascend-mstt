@@ -37,19 +37,27 @@ summary_line_3 = ['Functional_batch_norm_0_forward.output.2', 'Functional_batch_
                   True, 'Warning', '']
 line_input = ['Functional.batch.norm.0.forward.input.0', 'Functional.batch.norm.0.forward.input.0', 'torch.float16',
               'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-              1, 0.5, 1, 1, 0.95, 1, 1, 1, 1, 1, 1.01, 1, 1, 1,
+              1, 0.5, 1, 1, 0.95, 1,
+              1, 1, 1, 1,
+              1.01, 1, 1, 1,
               True, 'Yes', '', 'input', 'Functional.batch.norm.0.forward']
 line_1 = ['Functional.batch.norm.0.forward.output.0', 'Functional.batch.norm.0.forward.output.0', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-          0.8, 0.5, 1, 1, 0.59, 1, 'nan', 0, 1, 1, 19, 1, 1, 1,
+          0.8, 0.5, 1, 1, 0.59, 1,
+          'nan', 0, 1, 1,
+          19, 1, 1, 1,
           True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_2 = ['Functional.batch.norm.0.forward.output.1', 'Functional.batch.norm.0.forward.output.1', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-          0.9, 0.5, 1, 1, 0.8, 1, 0, 0.12, 0, 1, 1, 0.1, 1, 1,
+          0.9, 0.5, 1, 1, 0.8, 1,
+          0, 0.12, 0, 1,
+          1, 0.1, 1, 1,
           True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 line_3 = ['Functional.batch.norm.0.forward.output.2', 'Functional.batch.norm.0.forward.output.2', 'torch.float16',
           'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], True, True,
-          0.8, 0.5, 1.1e+10, 1, 0.85, 1, 9, 0.12, 0, 1, 1, 0.1, 1, 1,
+          0.8, 0.5, 1.1e+10, 1, 0.85, 1,
+          9, 0.12, 0, 1,
+          1, 0.1, 1, 1,
           True, 'Yes', '', 'output', 'Functional.batch.norm.0.forward']
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -174,8 +182,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {8: 0, 20: 1}
-        api_out = {8: 0.6, 20: 1}
+        api_in = {12: '1%'}
+        api_out = {12: '60%'}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -189,8 +197,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {8: 0.001, 20: 1}
-        api_out = {8: 0.2, 20: 1}
+        api_in = {12: '0.1%'}
+        api_out = {12: '20%'}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -204,8 +212,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {8: 0.001, 20: np.nan}
-        api_out = {8: 0.2, 20: 1}
+        api_in = {12: '15000%'}
+        api_out = {12: '20%'}
         num = 1
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
@@ -237,7 +245,7 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.find_error_rows(compare_result, api_batch, highlight_dict)
 
         self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
@@ -251,7 +259,7 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {}
 
         mode_config = ModeConfig(dump_mode=Const.MD5)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.find_error_rows(compare_result, api_batch, highlight_dict)
 
         self.assertEqual(result, None)
@@ -264,7 +272,7 @@ class TestUtilsMethods(unittest.TestCase):
         result_df_columns = CompareConst.COMPARE_RESULT_HEADER
 
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.value_check(value, api_name, i, result_df_columns)
 
         mock_logger.error.assert_called_once_with(
@@ -281,13 +289,13 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
-        highlight.df_malicious_value_check(result_df, columns)
+        highlight = HighLight(mode_config, '')
+        highlight.df_malicious_value_check(result_df)
 
     def test_compare_result_df_convert(self):
         value = float("nan")
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.compare_result_df_convert(value)
         self.assertEqual(result, "nan\t")
 
@@ -302,7 +310,7 @@ class TestUtilsMethods(unittest.TestCase):
         file_path = os.path.join(base_dir, 'result.xlsx')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         generate_result_xlsx(base_dir)
@@ -319,7 +327,7 @@ class TestUtilsMethods(unittest.TestCase):
         file_path = os.path.join(base_dir, 'result.xlsx')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         generate_result_xlsx(base_dir)
@@ -340,7 +348,7 @@ class TestUtilsMethods(unittest.TestCase):
         sys.stdout = open(temp_output_file, 'w')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         with open(temp_output_file, 'r') as f:
@@ -367,7 +375,7 @@ class TestUtilsMethods(unittest.TestCase):
         sys.stdout = open(temp_output_file, 'w')
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
         with open(temp_output_file, 'r') as f:
@@ -401,7 +409,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
 
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
@@ -423,7 +431,7 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {}
 
         mode_config = ModeConfig(dump_mode=Const.MD5)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.update_highlight_err_msg(result_df, highlight_dict)
 
         self.assertEqual(result, None)
@@ -442,7 +450,7 @@ class TestUtilsMethods(unittest.TestCase):
             'yellow_lines': [(0, ['c']), (1, ['d'])]
         }
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         result = highlight.update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
 
@@ -454,7 +462,7 @@ class TestUtilsMethods(unittest.TestCase):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
         highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         mode_config = ModeConfig()
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.find_error_rows(summary_result, api_batch, highlight_dict_test)
         self.assertEqual(highlight_dict_test,
                          {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
@@ -462,9 +470,10 @@ class TestUtilsMethods(unittest.TestCase):
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
+        result_df.columns = CompareConst.COMPARE_RESULT_HEADER + [Const.STATE, Const.API_ORIGIN_NAME]
         highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         mode_config = ModeConfig(dump_mode=Const.ALL)
-        highlight = HighLight(mode_config)
+        highlight = HighLight(mode_config, '')
         highlight.find_compare_result_error_rows(result_df, highlight_dict_test)
         self.assertEqual(highlight_dict_test, {
             "red_rows": {1, 3},
@@ -475,9 +484,6 @@ class TestUtilsMethods(unittest.TestCase):
             ],
             "yellow_lines": [
                 (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input/parameter's"]),
-                (3, [
-                    "maximum absolute error of both input/parameters and output exceed 1, "
-                    "with the output larger by an order of magnitude",
-                    "The output's cosine decreases by more than 0.1 compared to the input/parameter's"])
+                (3, ["The output's cosine decreases by more than 0.1 compared to the input/parameter's"])
             ]
         })

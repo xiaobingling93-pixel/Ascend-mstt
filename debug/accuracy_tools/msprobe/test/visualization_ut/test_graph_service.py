@@ -36,8 +36,8 @@ class TestGraphService(unittest.TestCase):
             'is_print_compare_log': True
         }
         self.layer_mapping = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'layer_mapping.yaml')
-        self.pattern = r'\b\w+\.vis\b'
-        self.pattern_rank = r'[\w_]+\.vis\b'
+        self.pattern = r'\b\w+\.vis.db\b'
+        self.pattern_rank = r'[\w_]+\.vis.db\b'
         self.output_json = []
         for i in range(7):
             self.output_json.append(os.path.join(self.current_path, f"compare{i}.json"))
@@ -134,6 +134,8 @@ class TestGraphService(unittest.TestCase):
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, 'Exporting compare graph result successfully, the result file is saved in')
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command1(self, mock_log_info):
         input_param1 = {
             'npu_path': os.path.join(self.input, 'step0', 'rank0'),
             'is_print_compare_log': True
@@ -144,6 +146,8 @@ class TestGraphService(unittest.TestCase):
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command2(self, mock_log_info):
         input_param2 = {
             'npu_path': os.path.join(self.input, 'step0'),
             'bench_path': os.path.join(self.input, 'step0'),
@@ -155,6 +159,8 @@ class TestGraphService(unittest.TestCase):
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command3(self, mock_log_info):
         input_param3 = {
             'npu_path': self.input,
             'bench_path': self.input,
@@ -166,6 +172,8 @@ class TestGraphService(unittest.TestCase):
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command4(self, mock_log_info):
         input_param4 = {
             'npu_path': os.path.join(self.input, 'step0'),
             'is_print_compare_log': True
@@ -176,6 +184,8 @@ class TestGraphService(unittest.TestCase):
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command5(self, mock_log_info):
         input_param5 = {
             'npu_path': self.input,
             'is_print_compare_log': True
@@ -186,6 +196,8 @@ class TestGraphService(unittest.TestCase):
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command6(self, mock_log_info):
         input_param6 = {
             'npu_path': self.input,
             'bench_path': os.path.join(self.input, 'step0'),

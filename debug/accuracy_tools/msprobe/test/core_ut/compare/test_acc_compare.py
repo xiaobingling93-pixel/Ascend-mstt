@@ -342,18 +342,26 @@ class TestUtilsMethods(unittest.TestCase):
         json_data = {'data': {'Functional.linear.0.forward': op_data}}
         op_name = 'Functional.linear.0.forward'
         stack_json_data = {'Functional.linear.0.forward': ['File']}
-        merge_list = {
-            'debug_struct': [],
-            'input_struct': [('torch.float32', [2, 2])],
-            'op_name': ['Functional.linear.0.forward.input.0'],
-            'output_struct': [],
-            'params_struct': [],
-            'params_grad_struct': [],
-            'stack_info': [['File']],
-            'summary': [[1, 1, 1, 1]],
-            'state': ['input'],
-            'requires_grad': ['False']
-        }
+        target_merge_list = [
+            {
+                'full_op_name': 'Functional.linear.0.forward.input.0',
+                'type': 'torch.Tensor',
+                'dtype': 'torch.float32',
+                'shape': [2, 2],
+                'requires_grad': 'False',
+                'Max': 1,
+                'Min': 1,
+                'Mean': 1,
+                'Norm': 1,
+                'md5': '00000000',
+                'data_name': 'Functional.linear.0.forward.input.0.pt',
+                'state': 'input'
+            },
+            {
+                'full_op_name': 'Functional.linear.0.forward',
+                'full_info': ['File']
+            }
+        ]
 
         config_dict = {
             'stack_mode':  True,
@@ -363,8 +371,8 @@ class TestUtilsMethods(unittest.TestCase):
         }
         mode_config = ModeConfig(**config_dict)
 
-        result = ParseData(mode_config).gen_merge_list(json_data, op_name, stack_json_data)
-        self.assertEqual(result, merge_list)
+        result = ParseData(mode_config, 'rank0').gen_merge_list(json_data, op_name, stack_json_data)
+        self.assertEqual(result, target_merge_list)
 
     def test_check_op_item_fuzzy(self):
         config_dict = {
@@ -397,7 +405,9 @@ class TestUtilsMethods(unittest.TestCase):
 
         from msprobe.pytorch.compare.pt_compare import read_real_data
         comparator = Comparator(read_real_data, mode_config, mapping_config)
-        result = comparator.compare_statistics(file_list)
+        parse_data = ParseData(mode_config, '')
+        npu_df, bench_df = parse_data.parse(file_list)
+        result = comparator.compare_statistics(npu_df, bench_df)
         o_data = [
             ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
              'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', 'False', 'False',
@@ -430,7 +440,7 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode)
-        parse_data = ParseData(mode_config)
+        parse_data = ParseData(mode_config, 'rank0')
         npu_df, bench_df = parse_data.parse(file_list)
 
         target_df = pd.DataFrame(
@@ -449,8 +459,8 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode)
-        parse_data = ParseData(mode_config)
-        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+        parse_data = ParseData(mode_config, 'rank0')
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32',
@@ -467,8 +477,8 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=Const.ALL)
-        parse_data = ParseData(mode_config)
-        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+        parse_data = ParseData(mode_config, 'rank0')
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
@@ -485,8 +495,8 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=Const.MD5)
-        parse_data = ParseData(mode_config)
-        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data)
+        parse_data = ParseData(mode_config, 'rank0')
+        npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
             [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
@@ -503,22 +513,30 @@ class TestParseData(unittest.TestCase):
 
         stack_mode = True
         mode_config = ModeConfig(stack_mode=stack_mode)
-        parse_data = ParseData(mode_config)
+        parse_data = ParseData(mode_config, 'rank0')
         merge_list = parse_data.gen_merge_list(npu_json_data, 'Functional.linear.0.forward', stack_json_data)
 
-        target_dict = {
-            'debug_struct': [],
-            'input_struct': [('torch.float32', [2, 2])],
-            'op_name': ['Functional.linear.0.forward.input.0'],
-            'output_struct': [],
-            'params_grad_struct': [],
-            'params_struct': [],
-            'stack_info': [['File']],
-            'summary': [[2, 0, 1, 1]],
-            'state': ['input'],
-            'requires_grad': ['False']
-        }
-        self.assertEqual(merge_list, target_dict)
+        target_merge_list = [
+            {
+                'full_op_name': 'Functional.linear.0.forward.input.0',
+                'type': 'torch.Tensor',
+                'dtype': 'torch.float32',
+                'shape': [2, 2],
+                'requires_grad': 'False',
+                'Max': 2,
+                'Min': 0,
+                'Mean': 1,
+                'Norm': 1,
+                'md5': '00000000',
+                'data_name': 'Functional.linear.0.forward.input.0.pt',
+                'state': 'input'
+            },
+            {
+                'full_op_name': 'Functional.linear.0.forward',
+                'full_info': ['File']
+            }
+        ]
+        self.assertEqual(merge_list, target_merge_list)
 
 
 class TestProcessDf(unittest.TestCase):

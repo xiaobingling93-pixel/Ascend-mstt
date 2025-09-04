@@ -15,6 +15,8 @@
 
 import os
 
+from tqdm import tqdm
+
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import logger, CompareException
 from msprobe.core.common.file_utils import load_yaml
@@ -29,8 +31,9 @@ cmp_metrics = thresholds.get('compare_metrics')
 
 
 class FirstDiffAnalyze:
-    def __init__(self, mode_config: ModeConfig):
+    def __init__(self, mode_config: ModeConfig, rank):
         self.mode_config = mode_config
+        self.rank = rank
 
     @staticmethod
     def single_metric_diff_check(cmp_metric, metric_value):
@@ -105,11 +108,16 @@ class FirstDiffAnalyze:
         result = result_df.values
         header = result_df.columns.tolist()
 
-        api_batches = gen_api_batches(result)
+        api_batches = gen_api_batches(result, header)
 
         check_result = {}
-        for api_batch in api_batches:
-            result_slice = result[api_batch.start: api_batch.params_grad_end_index]
-            check_result[api_batch.api_name] = self.single_api_check(result_slice, header)
+
+        default_bar_desc = 'API/Module diff check Progress'
+        bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
+        with tqdm(total=len(api_batches), desc=bar_desc_add_rank, unit="api/module", ncols=100) as progress_bar:
+            for api_batch in api_batches:
+                result_slice = result[api_batch.start: api_batch.params_grad_end_index]
+                check_result[api_batch.api_name] = self.single_api_check(result_slice, header)
+                progress_bar.update(1)
 
         return check_result

@@ -202,4 +202,3 @@ class Mstx2Commop(BaseRecipeAnalysis):
         PathManager.make_dir_safety(new_path)
         shutil.copyfile(profiler_db_path, new_db_path)
         return new_db_path
-

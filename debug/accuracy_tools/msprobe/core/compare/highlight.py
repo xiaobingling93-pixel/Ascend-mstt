@@ -18,7 +18,6 @@ import math
 import multiprocessing
 from collections import namedtuple
 
-import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -53,10 +52,12 @@ class CheckOrderMagnitude(HighlightCheck):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
                                           else CompareConst.MAX_ABS_ERR, dump_mode)
-        if abs(api_in[max_diff_index]) > abs(api_out[max_diff_index]):
+        max_diff_in = abs(api_in[max_diff_index])
+        max_diff_out = abs(api_out[max_diff_index])
+        if max_diff_in > max_diff_out or (max_diff_in <= 1 or max_diff_out <= 1):
             return
-        in_order = 0 if abs(api_in[max_diff_index]) < 1 else math.log10(abs(api_in[max_diff_index]))
-        out_order = 0 if abs(api_out[max_diff_index]) < 1 else math.log10(abs(api_out[max_diff_index]))
+        in_order = 0 if max_diff_in < 1 else math.log10(max_diff_in)
+        out_order = 0 if max_diff_out < 1 else math.log10(max_diff_out)
         if out_order - in_order >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
             add_highlight_row_info(color_columns.yellow, num,
                                    "maximum absolute error of both input/parameters and output exceed 1, "
@@ -101,20 +102,28 @@ class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
 
     def apply(self, info, color_columns, dump_mode):
+        def get_number(data):
+            """统计量相对值如果为正常百分数据，str格式并以%结尾"""
+            if isinstance(data, str) and data.endswith("%"):
+                return float(data[:-1]) / 100
+            return data
+
         api_in, api_out, num = info
-        max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
-        bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
-        input_max_relative_diff = np.abs(
-            np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
-        output_max_relative_diff = np.abs(
-            np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
-        if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
-                                                                                   (float, int)):
+        max_rel_diff = get_header_index(CompareConst.MAX_RELATIVE_ERR, dump_mode)
+        input_max_relative_diff = api_in[max_rel_diff]  # 内部数据，长度总是和表头一致，不会越界
+        output_max_relative_diff = api_out[max_rel_diff]
+        input_max_relative_diff = get_number(input_max_relative_diff)
+        output_max_relative_diff = get_number(output_max_relative_diff)
+
+        if not isinstance(output_max_relative_diff, (float, int)):
             return
         if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
             add_highlight_row_info(color_columns.red, num, "maximum relative error exceeds 0.5")
-        elif (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
-              input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
+
+        if not isinstance(input_max_relative_diff, (float, int)):
+            return
+        if (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
+                input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
             add_highlight_row_info(color_columns.yellow, num,
                                    "The output's maximum relative error exceeds 0.1, "
                                    "while the input/parameter's is below 0.01")
@@ -173,8 +182,9 @@ class HighlightRules:
 
 
 class HighLight:
-    def __init__(self, mode_config: ModeConfig):
+    def __init__(self, mode_config: ModeConfig, rank):
         self.mode_config = mode_config
+        self.rank = rank
 
     @staticmethod
     def check_indices_numeric(api_items, indices: list):
@@ -230,8 +240,11 @@ class HighLight:
     def find_compare_result_error_rows(self, result_df, highlight_dict):
         """将dataframe根据API分组，并找到有误差的算子用于高亮"""
         result = result_df.values
-        api_batches = gen_api_batches(result)
-        with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
+        header = result_df.columns.tolist()
+        api_batches = gen_api_batches(result, header)
+        default_bar_desc = 'API/Module Analyse Progress'
+        bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
+        with tqdm(total=len(api_batches), desc=bar_desc_add_rank, unit="item", ncols=100) as progress_bar:
             for api_batch in api_batches:
                 self.find_error_rows(result[api_batch.start: api_batch.params_grad_end_index], api_batch,
                                      highlight_dict)
@@ -309,7 +322,7 @@ class HighLight:
 
         self.update_highlight_err_msg(result_df, highlight_dict)  # add highlight err_msg
 
-        self.handle_multi_process_malicious_value_check(self.df_malicious_value_check, result_df)
+        self.df_malicious_value_check(result_df)
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -360,8 +373,11 @@ class HighLight:
         pool.close()
         pool.join()
 
-    def df_malicious_value_check(self, df_chunk, result_df_columns):
-        for row in df_chunk.itertuples(index=False):
+    def df_malicious_value_check(self, result_df):
+        result_df_columns = result_df.columns.tolist()
+        for column in result_df_columns:
+            self.value_check(column)
+        for row in result_df.itertuples(index=False):
             api_name = row[0]
             for i, value in enumerate(row):
                 self.value_check(value, api_name, i, result_df_columns)

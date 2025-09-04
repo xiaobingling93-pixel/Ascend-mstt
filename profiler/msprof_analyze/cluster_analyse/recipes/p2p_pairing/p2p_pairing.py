@@ -70,14 +70,11 @@ class P2PPairing(BaseRecipeAnalysis):
         if ret is None:
             logger.error("Failed to connect to the database. Please check the database configurations")
             return
-        if self.COL_NAME_P2P_CONNECTION_ID in ret:
-            logger.error(f"`{self.COL_NAME_P2P_CONNECTION_ID}` already exists in the {self.TARGET_TABLE_NAME}. "
-                         f"Exiting to prevent result overwrite.")
-            return
-        DBManager.execute_sql(
-            conn,
-            f"ALTER TABLE {self.TARGET_TABLE_NAME} ADD COLUMN {self.COL_NAME_P2P_CONNECTION_ID} TEXT"
-        )
+        if self.COL_NAME_P2P_CONNECTION_ID not in ret:
+            DBManager.execute_sql(
+                conn,
+                f"ALTER TABLE {self.TARGET_TABLE_NAME} ADD COLUMN {self.COL_NAME_P2P_CONNECTION_ID} TEXT"
+            )
         DBManager.execute_sql(
             conn,
             f"UPDATE {self.TARGET_TABLE_NAME} SET {self.COL_NAME_P2P_CONNECTION_ID} = NULL"
@@ -125,11 +122,13 @@ class P2PPairing(BaseRecipeAnalysis):
         3、步骤1得到数据中本端卡号是否一致，如果不一致则会报出error返回空值
         """
         df = df[df[P2PPairingExport.TASK_TYPE].isin(self.VALID_DST_RANK_TASK_TYPE)]
+        if df.empty:
+            return df
 
-        def check_dst_rank_unique(group):
-            return group[P2PPairingExport.DST_RANK].nunique() == 1
+        def check_src_dst_rank_unique(group):
+            return group[P2PPairingExport.DST_RANK].nunique() == 1 and group[P2PPairingExport.SRC_RANK].nunique() == 1
 
-        unique_dst_rank: pd.DataFrame = (df.groupby(P2PPairingExport.OP_NAME).apply(check_dst_rank_unique))
+        unique_src_dst_rank: pd.DataFrame = (df.groupby(P2PPairingExport.OP_NAME).apply(check_src_dst_rank_unique))
 
         def get_dst_rank_value(group):
             if group[P2PPairingExport.DST_RANK].nunique() == 1:
@@ -140,23 +139,17 @@ class P2PPairing(BaseRecipeAnalysis):
                                         apply(get_dst_rank_value))
 
         df = df.copy()
-        df[self.COL_NAME_IS_UNIQUE_VALUE] = df[P2PPairingExport.OP_NAME].map(unique_dst_rank)
+        df[self.COL_NAME_IS_UNIQUE_VALUE] = df[P2PPairingExport.OP_NAME].map(unique_src_dst_rank)
         df[self.COL_NAME_OP_DST_RANK] = df[P2PPairingExport.OP_NAME].map(dst_rank_value)
         df[self.COL_NAME_OP_DST_RANK] = df[self.COL_NAME_OP_DST_RANK].fillna(Constant.INVALID_RANK_NUM)
         df[self.COL_NAME_OP_DST_RANK] = df[self.COL_NAME_OP_DST_RANK].astype(df[P2PPairingExport.DST_RANK].dtype)
 
-        check_dst_rank_unique_false: pd.DataFrame = df[~df[self.COL_NAME_IS_UNIQUE_VALUE]]
-        if not check_dst_rank_unique_false.empty:
+        check_src_dst_rank_unique_false: pd.DataFrame = df[~df[self.COL_NAME_IS_UNIQUE_VALUE]]
+        if not check_src_dst_rank_unique_false.empty:
             logger.warning(f"There are communication op entries with multiple destination ranks! "
                            f"Please check the corresponding profiler database file.")
 
         df = df[df[self.COL_NAME_IS_UNIQUE_VALUE]]
-
-        src_rank_unique_values: int = df[P2PPairingExport.SRC_RANK].nunique()
-        if src_rank_unique_values != 1:
-            logger.error(f"There are communication op entries with multiple source ranks! "
-                         f"Please check the corresponding profiler database file.")
-            return None
         return df.reset_index()
 
     def filter_data_by_group_name(self, df: pd.DataFrame):
@@ -173,37 +166,6 @@ class P2PPairing(BaseRecipeAnalysis):
                            f" profiler database in communication task info.")
         return filtered_df.reset_index()
 
-    def extract_pp_group_from_metadata(self, profiler_parent_path) -> any:
-        """
-        从profiler_metadata.json的文件中获取pp通信域的信息
-        """
-        metadata_path = os.path.join(profiler_parent_path, Constant.PROFILER_METADATA)
-        try:
-            if os.path.exists(metadata_path):
-                metadata = FileManager.read_json_file(metadata_path)
-                parallel_group_info: dict = metadata.get(Constant.PARALLEL_GROUP_INFO, None) if metadata else None
-            else:
-                raise FileNotFoundError(f"No `{Constant.PROFILER_METADATA}` found in {profiler_parent_path}.")
-        except (FileNotFoundError, JSONDecodeError) as e:
-            logger.error(f"Failed to load profiler metadata: {e}")
-            return None
-
-        if parallel_group_info is None:
-            logger.error(f"No key name `{Constant.PARALLEL_GROUP_INFO}` found in {metadata_path}")
-            return None
-
-        pp_group_info = []
-        for name in parallel_group_info:
-            each_group_info: dict = parallel_group_info[name]
-            if each_group_info[Constant.GROUP_NAME] == Constant.PP:
-                pp_group_info.append(parallel_group_info[name])
-        if not pp_group_info:
-            logger.error(f"No pipeline parallel info found in {metadata_path}")
-            return None
-
-        return pp_group_info
-
-
     def _mapper_func(self, data_map, analysis_class):
         profiler_db_path: str = data_map.get(Constant.PROFILER_DB_PATH)
         profiler_parent_path: str = os.path.dirname(os.path.dirname(profiler_db_path))
@@ -218,18 +180,14 @@ class P2PPairing(BaseRecipeAnalysis):
             logger.warning(f"There is no stats data in {profiler_db_path}.")
             return None
 
-        pp_group_info = self.extract_pp_group_from_metadata(profiler_parent_path) # 暂时没用到，预留给后续确认用全局rank
-        if pp_group_info is None:
-            logger.error(f"Cannot obtain pipeline parallel info from the metadata. "
-                         f"Please check the corresponding {Constant.PROFILER_METADATA}")
-
         df = self.filter_data_by_group_name(df)
         if df.empty:
             return None
 
         df_filtered = self.fine_filtering_src_dst_ranks(df.copy())
-        if df_filtered is None:
-            logger.error("Got error when trying to match rank numbers!")
+        if df_filtered.empty:
+            logger.warning("The result of fine_filtering_src_dst_ranks is empty!"
+                           "Please check whether the data level is at level1 or above.")
             return None
 
         df_result = df_filtered.groupby([P2PPairingExport.OP_NAME, P2PPairingExport.CO_OP_NAME]).agg(
