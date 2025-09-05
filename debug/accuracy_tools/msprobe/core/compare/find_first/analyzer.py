@@ -47,7 +47,6 @@ class DiffAnalyzer:
             analyze_func()
             if self._diff_nodes:
                 self._gen_analyze_info()
-                self._post_process()
                 return
         logger.info('Cannot find any diff node, no need to generate analyze file.')
 
@@ -55,12 +54,6 @@ class DiffAnalyzer:
         self.pre_processor.process(self._npu_path, self._bench_path, self._output_path)
         self._resolve_input_path(self._output_path)
         logger.info("Pre Process completed.")
-
-    def _post_process(self):
-        for rank_path in self._paths.values():
-            dump_path = rank_path.dump_path
-            logger.debug(f"Remove {dump_path} success")
-        logger.info("Post Process completed.")
 
     """
     这里需要生成stack，但是直接用dict中自带就行，在op_items.NPU_Stack_Info中
