@@ -31,7 +31,7 @@ namespace ipc_monitor {
 
 using fileDesT = int;
 constexpr const char STR_END_CHAR = '\0';
-constexpr int SOCKET_FD_CHMOD = 0666;
+constexpr int SOCKET_FD_CHMOD = 0640;
 
 struct NpuPayLoad {
     size_t size;
