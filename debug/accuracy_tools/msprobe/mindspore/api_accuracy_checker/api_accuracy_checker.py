@@ -17,7 +17,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Optional
 from tqdm import tqdm
-import numpy as np
+
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json, load_yaml
 from msprobe.core.common.utils import add_time_as_suffix
