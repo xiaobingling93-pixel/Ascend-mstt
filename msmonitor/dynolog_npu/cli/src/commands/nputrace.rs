@@ -164,7 +164,16 @@ pub fn run_nputrace(
     println!("response = {}", resp_str);
 
     let resp_v: Value = serde_json::from_str(&resp_str)?;
-    let processes = resp_v["processesMatched"].as_array().unwrap();
+    let processes = if let Some(val) = resp_v.get("processesMatched") {
+        if let Some(arr) = val.as_array() {
+            arr
+        } else {
+            println!("'processesMatched' is not an array");
+            return Ok(());
+        }
+    } else {
+        return Ok(());
+    };
 
     if processes.is_empty() {
         println!("No processes were matched, please check --job-id or --pids flags");
