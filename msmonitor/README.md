@@ -76,7 +76,7 @@ dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --ac
 ## 📖 特性介绍
 ⚠️ 由于底层资源限制，npumonitor功能和nputrace不能同时开启。
 
-1. 执行 dyno 命令后，响应结果里有一个 ‘response’ 的json字符串。该字符串中的 ‘commandStatus’ 字段用于标识命令是否生效：‘effective’ 表示命令会生效，‘ineffective’ 表示命令无效。其他字段均为 dynolog 的原生字段。
+1. 执行 dyno 命令后，响应结果里有一个 ‘response’ 的json字符串。该字符串中的 ‘commandStatus’ 字段用于标识命令是否生效：‘effective’ 表示命令会生效，‘ineffective’ 表示命令无效。其他字段均为 dynolog 的原生字段(仅状态为‘effective’时存在)。
 
 ### 📈 npumonitor特性
 npumonitor特性为用户提供轻量化监控关键指标的能力，npumonitor基于[MSPTI](https://www.hiascend.com/document/detail/zh/mindstudio/81RC1/T&ITools/Profiling/atlasprofiling_16_0021.html)开发，用户可以通过npumonitor查看模型运行时的计算、通信算子执行耗时。

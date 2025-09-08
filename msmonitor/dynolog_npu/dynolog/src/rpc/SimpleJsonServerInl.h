@@ -21,6 +21,7 @@ class SimpleJsonServer : public SimpleJsonServerBase {
   ~SimpleJsonServer() {}
 
   std::string processOneImpl(const std::string& request) override;
+  nlohmann::json handleSetKinetOnDemandRequest(const nlohmann::json& request);
 
  private:
   std::shared_ptr<TServiceHandler> handler_;
@@ -89,6 +90,38 @@ std::string GetCommandStatus(const std::string& configStr)
 }
 
 template <class TServiceHandler>
+nlohmann::json SimpleJsonServer<TServiceHandler>::handleSetKinetOnDemandRequest(const nlohmann::json& request) {
+  using json = nlohmann::json;
+  json response;
+  if (!request.contains("config") || !request.contains("pids")) {
+    response["status"] = "failed";
+    return response;
+  }
+  try {
+    std::string config = request.value("config", "");
+    std::vector<int> pids = request.at("pids").get<std::vector<int>>();
+    std::set<int> pids_set{pids.begin(), pids.end()};
+    int job_id = request.value("job_id", 0);
+    int process_limit = request.value("process_limit", 1000);
+    auto commandStatus = GetCommandStatus(config);
+    if (commandStatus == "effective") {
+      auto result = handler_->setKinetOnDemandRequest(job_id, pids_set, config, process_limit);
+      response["processesMatched"] = result.processesMatched;
+      response["eventProfilersTriggered"] = result.eventProfilersTriggered;
+      response["activityProfilersTriggered"] = result.activityProfilersTriggered;
+      response["eventProfilersBusy"] = result.eventProfilersBusy;
+      response["activityProfilersBusy"] = result.activityProfilersBusy;
+    }
+    response["commandStatus"] = commandStatus;
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "setKinetOnDemandRequest: parsing exception = " << ex.what();
+    response["status"] = fmt::format("failed with exception = {}", ex.what());
+  }
+  return response;
+}
+
+
+template <class TServiceHandler>
 std::string SimpleJsonServer<TServiceHandler>::processOneImpl(
     const std::string& request_str) {
   using json = nlohmann::json;
@@ -105,29 +138,7 @@ std::string SimpleJsonServer<TServiceHandler>::processOneImpl(
   } else if (request["fn"] == "getVersion") {
     response["version"] = handler_->getVersion();
   } else if (request["fn"] == "setKinetOnDemandRequest") {
-    if (!request.contains("config") || !request.contains("pids")) {
-      response["status"] = "failed";
-    } else {
-      try {
-        std::string config = request.value("config", "");
-        std::vector<int> pids = request.at("pids").get<std::vector<int>>();
-        std::set<int> pids_set{pids.begin(), pids.end()}; // TODO directly convert?
-
-        int job_id = request.value("job_id", 0);
-        int process_limit = request.value("process_limit", 1000);
-        auto result = handler_->setKinetOnDemandRequest(job_id, pids_set, config, process_limit);
-        auto commandStatus = GetCommandStatus(config);
-        response["commandStatus"] = commandStatus;
-        response["processesMatched"] = result.processesMatched;
-        response["eventProfilersTriggered"] = result.eventProfilersTriggered;
-        response["activityProfilersTriggered"] = result.activityProfilersTriggered;
-        response["eventProfilersBusy"] = result.eventProfilersBusy;
-        response["activityProfilersBusy"] = result.activityProfilersBusy;
-      } catch (const std::exception& ex) {
-        LOG(ERROR) << "setKinetOnDemandRequest: parsing exception = " << ex.what();
-        response["status"] = fmt::format("failed with exception = {}", ex.what());
-      }
-    }
+    response = handleSetKinetOnDemandRequest(request);
   } else if (request["fn"] == "dcgmProfPause") {
     if (!request.contains("duration_s")) {
       response["status"] = "failed";
