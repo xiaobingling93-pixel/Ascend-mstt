@@ -39,7 +39,7 @@ if [[ "${extension}" == "gz" || "${extension}" == "zip" ]]; then
     if [[ -e ${fullname} ]]; then
         echo "Source ${fullname} is exists, will not download again."
     else
-        curl -L "${url}" -o ${fullname} -k
+        curl -L "${url}" -o ${fullname}
         if [ $? -eq 0 ]; then
             echo "Download successful: ${url}"
         else
