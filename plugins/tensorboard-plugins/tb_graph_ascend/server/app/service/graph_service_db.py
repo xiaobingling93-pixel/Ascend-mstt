@@ -212,7 +212,7 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': True, 'data': result}
         except Exception as e:
             logger.error('get node info failed:' + str(e))
-            return {'success': False, 'error': '获取节点信息失败:' + str(e), 'data': None}
+            return {'success': False, 'error': '获取节点信息失败', 'data': None}
 
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
         try:
@@ -233,50 +233,23 @@ class DbGraphService(GraphServiceStrategy):
                     graph_data = self.repo.query_matched_nodes_info(npu_node_name, bench_node_name, rank, step)
                     match_result = MatchNodesController.process_task_add(graph_data, npu_node_name,
                                                                          bench_node_name, task)
-                # 处理匹配结果
-                update_data = []
-                for item in match_result:
-                    if item.get('success') is True:
-                        nodes = item.get('data', [])
-                        for node in nodes:
-                            update_data.append(node)
-                if len(update_data) > 0:
-                    # DB：更新数据库节点信息
-                    update_db_res = self.repo.update_nodes_info(update_data, rank, step)
-                    if not update_db_res:
-                        return {'success': False, 'error': '更新数据库失败(Update database failed) '}
-                    # 视图：调用更新update_hirarchy方法，同步更新图
-                    LayoutHierarchyModel.update_current_hierarchy_data(update_data)
-                    # 返回：返回更新后的节点信息
-                    config_data = GraphState.get_global_value("config_data")
-                    result = {
-                        'success': True,
-                        'data': {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
-                    }     
-                else:
-                    result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
-                return result
+                return self._generate_matched_result(match_result, rank, step)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
         except Exception as e:
             logger.error(str(e))
-            return {'success': False, 'error': str(e), 'data': None}
+            return {'success': False, 'error': '匹配节点失败', 'data': None}
 
     def add_match_nodes_by_config(self, config_file_name, meta_data):
+        if not self.conn:
+            return {'success': False, 'error': 'database connection not init'}
+        result = {}
+        rank = meta_data.get('rank')
+        step = meta_data.get('step')
+        if rank is None or step is None:
+            return {'success': False, 'error': 'rank or step is null'}
+        task = self.config_info.get('task')
         try:
-            if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
-            result = {}
-            rank = meta_data.get('rank')
-            step = meta_data.get('step')
-            if rank is None or step is None:
-                return {'success': False, 'error': 'rank or step is null'}
-            task = self.config_info.get('task')
             match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
             graph_data = self.repo.query_matched_nodes_info_by_config(match_node_links, rank, step)
             if error:
@@ -285,37 +258,14 @@ class DbGraphService(GraphServiceStrategy):
             if task == 'md5' or task == 'summary':
                 match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
                                                                                            match_node_links, task)
-                update_data = []
-                for item in match_result:
-                    if item.get('success') is True:
-                        nodes = item.get('data', [])
-                        for node in nodes:
-                            update_data.append(node)
-
-                if len(update_data) > 0:
-                    update_db_res = self.repo.update_nodes_info(update_data, rank, step)
-                    if not update_db_res:
-                        return {'success': False, 'error': '更新数据库失败(Update database failed) '}
-                    # 视图：调用更新update_hirarchy方法，同步更新图
-                    LayoutHierarchyModel.update_current_hierarchy_data(update_data)
-                    # 返回：返回更新后的节点信息
-                    config_data = GraphState.get_global_value("config_data")
-                    result['success'] = True
-                    result['data'] = {
-                        'matchReslut': match_result,
-                        'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                        'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                        'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                        'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                    }
-                else:
-                    result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
+                result = self._generate_matched_result(match_result, rank, step)
+                result.setdefault('data', {})['matchResult'] = [item.get('success', False) for item in match_result]
                 return result
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
         except Exception as e:
             logger.error(str(e))
-            return {'success': False, 'error': str(e), 'data': None}
+            return {'success': False, 'error': '匹配节点失败', 'data': None}
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         try:
@@ -338,40 +288,12 @@ class DbGraphService(GraphServiceStrategy):
                     graph_data = self.repo.query_matched_nodes_info(npu_node_name, bench_node_name, rank, step)
                     match_result = MatchNodesController.process_task_delete(graph_data, npu_node_name,
                                                                             bench_node_name, task)
-                # 遍历match_result，找到的success=true的节点，合并所有的data字段(数组类型)，合并到update_db_data
-                update_data = []
-                for item in match_result:
-                    if item.get('success') is True:
-                        nodes = item.get('data', [])
-                        for node in nodes:
-                            update_data.append(node)
-
-                if len(update_data) > 0:
-                    # DB：更新数据库节点信息
-                    update_db_res = self.repo.update_nodes_info(update_data, rank, step)
-                    if not update_db_res:
-                        return {'success': False, 'error': '更新数据库失败(Update database failed) '}
-                    # 视图：调用更新update_hirarchy方法，同步更新图
-                    LayoutHierarchyModel.update_current_hierarchy_data(update_data)
-                    # 返回：返回更新后的节点信息
-                    config_data = GraphState.get_global_value("config_data")
-                    result = {
-                        'success': True,
-                        'data': {
-                            'npuMatchNodes': config_data.get('npuMatchNodes', {}),
-                            'benchMatchNodes': config_data.get('benchMatchNodes', {}),
-                            'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
-                            'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
-                        }
-                    }     
-                else:
-                    result = {'success': False, 'error': '未找到可匹配的节点(Matched node not found) '}
-                return result
+                return self._generate_matched_result(match_result, rank, step)
             else:
                 return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
         except Exception as e:
             logger.error('delete_match_nodes error: {}'.format(e))
-            return {'success': False, '操作失败': str(e), 'data': None}
+            return {'success': False, 'error': '删除匹配节点失败', 'data': None}
     
     def update_precision_error(self, meta_data, filter_value):
         try:
@@ -442,7 +364,7 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': False, 'error': '未找到可更新的节点(Matched node not found) '}
         except Exception as e:
             logger.error('update_precision_error error: {}'.format(e))
-            return {'success': False, 'error': str(e), 'data': None}   
+            return {'success': False, 'error': '更新节点精度失败(Update node precision failed)', 'data': None}   
 
     def update_colors(self, colors):
         try:
@@ -454,7 +376,7 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': False, 'error': '更新数据库失败(Update database failed) '}
             return {'success': True}
         except Exception as e:
-            return {'success': False, 'error': str(e), 'data': None}
+            return {'success': False, 'error': '更新颜色失败(Update color failed)', 'data': None}
 
     def save_matched_relations(self, meta_data):
         try:
@@ -477,5 +399,34 @@ class DbGraphService(GraphServiceStrategy):
        
         except Exception as e:
             logger.error('save_matched_relations error: {}'.format(e))
-            return {'success': False, 'error': str(e), 'data': None}
+            return {'success': False, 'error': '保存匹配关系失败(Save matched relations failed)', 'data': None}
 
+    def _generate_matched_result(self, match_result, rank, step):
+        update_data = []
+        for item in match_result:
+            if item.get('success') is True:
+                nodes = item.get('data', [])
+                for node in nodes:
+                    update_data.append(node)
+        if len(update_data) > 0:
+            # DB：更新数据库节点信息
+            update_db_res = self.repo.update_nodes_info(update_data, rank, step)
+            if not update_db_res:
+                return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+            # 视图：调用更新update_hirarchy方法，同步更新图
+            LayoutHierarchyModel.update_current_hierarchy_data(update_data)
+            # 返回：返回更新后的节点信息
+            config_data = GraphState.get_global_value("config_data")
+            result = {
+                'success': True,
+                'data': {
+                    'npuMatchNodes': config_data.get('npuMatchNodes', {}),
+                    'benchMatchNodes': config_data.get('benchMatchNodes', {}),
+                    'npuUnMatchNodes': config_data.get('npuUnMatchNodes', []),
+                    'benchUnMatchNodes': config_data.get('benchUnMatchNodes', [])
+                }
+            }
+        else:
+            result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
+        return result
+                     

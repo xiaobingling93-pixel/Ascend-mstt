@@ -63,92 +63,174 @@
 
 ### 3. 解析数据说明
 
-将通过[msprobe](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe#10-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis 的模型结构文件（文件本身为 json 格式）放置于某个文件夹中，路径名称下文称之为 `output_path`
+将通过[msprobe](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe#10-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件置于某个文件夹中，路径名称下文称之为 `output_path`
 
-- E.g. \
-  `---output_path` \
-  `-----output.vis` \
-  `-----output2.vis`
+图构建：
 
-### 4. 启动方式
+```
+├── output_path
+|    ├── build_{timestamp}.vis.db
+```
 
-1. 启动 TensorBoard
+图比对：
 
-   ```
-   tensorboard --logdir output_path
-   ```
+```
+├── output_path
+|    ├── compare_{timestamp}.vis.db
+```
 
-   注意：确保默认端口 6006 可连通。
+## 4.启动 tensorboard
 
-   如果需要切换端口号需要在尾部加上指定的端口号，如`--port=6007`
+### 4.1 可直连的服务器
 
-   ```
-   tensorboard --logdir output_path --port=6007
-   ```
+将生成 vis 文件的路径**out_path**传入--logdir
 
-2. 在浏览器上打开 tensorboard
+```
+tensorboard --logdir out_path --bind_all --port [可选，端口号]
+```
 
-   在浏览器中打开 URL： `http://localhost:6006`。
+启动后会打印日志:
 
-   注意：如果`--logdir` 指定目录下的文件太大或太多，请等候，刷新浏览器查看加载结果。
+![tensorboard_1](./doc/images/tensorboard_1.png)
 
-3. 建议在本地启动 tensorboard，如果网络浏览器与启动 TensorBoard 的机器不在同一台机器上，需要远程启动，可参照[远程启动方式](#413-远程查看数据)，但需用户自行评估**安全风险**。
+ubuntu 是机器地址，6008 是端口号。
 
-## 三、浏览器查看
+**注意，ubuntu 需要替换为真实的服务器地址，例如真实的服务器地址为 10.123.456.78，则需要在浏览器窗口输入http://10.123.456.78:6008**
 
-**注意：本工具不支持同时通过多个浏览器窗口同时访问同一个 TensorBoard 服务，否则会出现页面无法正常显示的情况。**
+### 4.2 不可直连的服务器
 
-### 3.1 主界面
+**如果链接打不开，可以尝试以下方法，选择其一即可：**
 
-![输入图片说明](./doc/images/main-page.png)
+1.本地电脑网络手动设置代理，例如 Windows10 系统，在【手动设置代理】中添加服务器地址（例如 10.123.456.78）
 
-### 3.2 操作方式：
+![proxy](./doc/images/proxy.png)
 
-- **节点双击打开，单击选中。**
-- **选中的节点边框呈现蓝色，比对场景下若其存在对应节点，则对应节点边框为浅蓝色。**
-- **键盘 WS 根据鼠标位置放大缩小，AD 左右移动。**
-- **鼠标滚轮上下移动，鼠标可拖动页面。**
-- **比对场景鼠标右键可选中节点，并可展开至对应侧的节点并选中。**
+然后，在服务器中输入：
 
-![输入图片说明](./doc/images/operator-image.png)
+```
+tensorboard --logdir out_path --bind_all --port 6008[可选，端口号]
+```
 
-### 3.3 名称搜索
+最后，在浏览器窗口输入http://10.123.456.78:6008
 
-![输入图片说明](./doc/images/vis_search_info.png)
+**注意，如果当前服务器开启了防火墙，则此方法无效，需要关闭防火墙，或者尝试后续方法**
 
-### 3.4 精度筛选/溢出筛选
+2.或者使用 vscode 连接服务器，在 vscode 终端输入：
 
-注意：单图场景不存在精度筛选和溢出筛选，下图为双图比对场景。<br>
+```
+tensorboard --logdir out_path
+```
 
-![输入图片说明](./doc/images/vis_precision_info.png)
+![tensorboard_2](./doc/images/tensorboard_2.png)
 
-### 3.5 未匹配节点筛选
+按住 CTRL 点击链接即可
 
-参考匹配说明，不符合匹配规则的节点为无匹配节点，颜色标灰。适用于排查两个模型结构差异的场景。<br>
+3.或者将构图结果件 vis 文件从服务器传输至本地电脑，在本地电脑中安装 tb_graph_ascend 插件查看构图结果
 
-![输入图片说明](./doc/images/vis_unmatch_info.png)
+电脑终端输入：
 
-### 3.6 手动选择节点匹配
+```
+tensorboard --logdir out_path
+```
 
-可通过浏览器界面，通过鼠标选择两个待匹配的灰色节点进行匹配。当前暂不支持真实数据模式。<br>
-如果选中"操作选中节点及其子节点"：<br>
-点击匹配后会将两个节点及其子节点按照 Module 名称依次匹配，取消匹配后会将子节点的匹配关系清除。<br>
-否则：<br>
-点击匹配后只会将两个节点进行匹配，取消匹配后会将节点的匹配关系清除
-注意：匹配结束之后，需要点击保存才能持久化到源文件里面
+按住 CTRL 点击链接即可
 
-![输入图片说明](./doc/images/vis_match_info.png)
+## 5.浏览器查看
 
-### 3.7 生成匹配配置文件
+### 5.1 浏览器打开图
 
-可保存已经已匹配节点的匹配关系到配置文件中，并支持读取配置文件中的数据，进行匹配操作。<br>
-默认保存在当前目录下，文件名为`[当前文件名].vis.config`，每次切换文件都会扫描当前录下的后缀名为.vis.config 配置文件，并更新配置文件列表。
-注意：匹配结束之后，需要点击保存才能持久化到源文件里面
-![输入图片说明](./doc/images/vis_save_match_info.png)
+推荐使用谷歌浏览器，在浏览器中输入机器地址+端口号回车，出现 TensorBoard 页面，其中/#graph_ascend 会自动拼接。
 
-### 3.8 支持用户自定义精度指标配置
+![vis_browser_1](./doc/images/vis_browser_1.png)
 
-![输入图片说明](./doc/images/vis_update_precision.png)
+如果您切换了 TensorBoard 的其他功能，此时想回到模型分级可视化页面，可以点击左上方的**GRAPH_ASCEND**
+
+![vis_browser_2](./doc/images/vis_browser_2.png)
+
+### 5.2 查看图
+
+![vis_show_info.png](./doc/images/vis_show_info.png)
+
+MicroStep 是指在一次完整的权重更新前执行的多次前向和反向传播过程，一次完整的训练迭代（step）可以进一步细分为多个更小的步骤（micro step）。其中分级可视化工具通过识别模型首层结构中一次完整的前反向作为一次 micro step。
+
+### 5.3 名称搜索
+
+![vis_search_info.png](./doc/images/vis_search_info.png)
+
+### 5.4 精度筛选
+
+![vis_precision_info.png](./doc/images/vis_precision_info.png)
+
+### 5.5 未匹配节点筛选
+
+不符合匹配规则的节点为无匹配节点，颜色标灰。适用于排查两个模型结构差异的场景。
+
+![vis_unmatch_info.png](./doc/images/vis_unmatch_info.png)
+
+### 5.6 手动选择节点匹配
+
+可通过浏览器界面，通过鼠标选择两个待匹配的灰色节点进行匹配。当前暂不支持真实数据模式。
+
+![vis_match_info.png](./doc/images/vis_match_info.png)
+
+## 6.图比对说明
+
+### 6.1 颜色
+
+颜色越深，精度比对差异越大，越可疑，具体信息可见浏览器页面左下角颜色图例。
+
+#### 6.1.1 真实数据模式
+
+节点中所有输入的最小双千指标和所有输出的最小双千分之一指标的差值，反映了双千指标的下降情况，**该数值越大，表明两组模型的精度差异越大，在图中标注的对应颜色会更深**。
+
+`One Thousandth Err Ratio（双千分之一）精度指标：Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的比例占总元素个数的比例，比例越接近1越好`
+
+如果调试侧（NPU）节点的 output 指标中的最大值（MAX）或最小值（MIN）中存在 nan/inf/-inf，直接标记为最深颜色。
+
+#### 6.1.2 统计信息模式
+
+节点中输出的统计量相对误差，**该数值越大，表明两组模型的精度差异越大，在图中标注的对应颜色会更深**。
+
+`相对误差：abs（(npu统计值 - bench统计值) / bench统计值)`
+
+如果调试侧（NPU）节点的 output 指标中的最大值（MAX）或最小值（MIN）中存在 nan/inf/-inf，直接标记为最深颜色。
+
+#### 6.1.3 md5 模式
+
+节点中任意输入输出的 md5 值不同。
+
+### 6.2 指标说明
+
+精度比对从三个层面评估 API 的精度，依次是：真实数据模式、统计数据模式和 MD5 模式。比对结果分别有不同的指标。
+
+**公共指标**：
+
+- name: 参数名称，例如 input.0
+- type: 类型，例如 torch.Tensor
+- dtype: 数据类型，例如 torch.float32
+- shape: 张量形状，例如[32, 1, 32]
+- Max: 最大值
+- Min: 最小值
+- Mean: 平均值
+- Norm: L2-范数
+
+**真实数据模式指标**：
+
+- Cosine: tensor 余弦相似度
+- EucDist: tensor 欧式距离
+- MaxAbsErr: tensor 最大绝对误差
+- MaxRelativeErr: tensor 最大相对误差
+- One Thousandth Err Ratio: tensor 相对误差小于千分之一的比例（双千分之一）
+- Five Thousandth Err Ratio: tensor 相对误差小于千分之五的比例（双千分之五）
+
+**统计数据模式指标**
+
+- (Max, Min, Mean, Norm) diff: 统计量绝对误差
+- (Max, Min, Mean, Norm) RelativeErr: 统计量相对误差
+
+**MD5 模式指标**
+
+- md5: CRC-32 值
 
 ## 四、附录
 
@@ -172,11 +254,13 @@
 
 - 在启动指令尾部加上`--bind_all`或`--host={服务器IP}`参数启用远程查看方式，如：
 
-  ```
-  tensorboard --logdir output_path --port=6006 --host=xxx.xxx.xxx.xxx
-  或
-  tensorboard --logdir output_path --port=6006 --bind_all
-  ```
+```
+
+tensorboard --logdir output_path --port=6006 --host=xxx.xxx.xxx.xxx
+或
+tensorboard --logdir output_path --port=6006 --bind_all
+
+```
 
 - 在打开浏览器访问界面时，需将 URL 内主机名由`localhost`替换为主机的 ip 地址，如`http://xxx.xxx.xxx.xxx:6006`
 
