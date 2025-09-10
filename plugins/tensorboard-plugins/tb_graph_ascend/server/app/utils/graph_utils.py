@@ -47,7 +47,7 @@ class GraphUtils:
             else:
                 json_data, error_message = GraphUtils.safe_load_data(run, f"{tag}.vis", False)
                 if error_message:
-                    return None, error_message
+                    return None, 'Error: fail to get graph data'
                 GraphState.set_global_value('current_file_data', json_data)
                 GraphState.set_global_value('current_tag', tag)
                 GraphState.set_global_value('current_run', run)
