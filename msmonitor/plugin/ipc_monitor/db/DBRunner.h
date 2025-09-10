@@ -52,7 +52,7 @@ bool DBRunner::InsertData(const std::string &tableName, const std::vector<std::t
     LOG(INFO) << "Start insert data to " << tableName;
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
         LOG(ERROR) << "Create connection for " << tableName << " failed";
         return false;
     }
@@ -70,7 +70,7 @@ bool DBRunner::QueryData(const std::string &sql, std::vector<std::tuple<Args...>
     LOG(INFO) << "Start query data";
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
         LOG(ERROR) << "Create connection failed: " << sql;
         return false;
     }

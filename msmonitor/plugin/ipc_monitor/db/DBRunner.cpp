@@ -49,7 +49,8 @@ bool DBRunner::CreateTable(const std::string &tableName, const std::vector<Table
     }
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return false;
     }
     LOG(INFO) << "Create table " << tableName;
@@ -72,7 +73,8 @@ bool DBRunner::CreateIndex(const std::string &tableName, const std::string &inde
     }
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return false;
     }
     LOG(INFO) << "Create index " << indexName << " on table " << tableName;
@@ -94,7 +96,8 @@ bool DBRunner::DropTable(const std::string &tableName) const
     }
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return false;
     }
     LOG(INFO) << "Drop table " << tableName;
@@ -111,7 +114,8 @@ bool DBRunner::DeleteData(const std::string &sql) const
 {
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return false;
     }
     LOG(INFO) << "Delete data, sql: " << sql;
@@ -127,7 +131,8 @@ bool DBRunner::UpdateData(const std::string &sql) const
 {
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return false;
     }
     LOG(INFO) << "Update data, sql: " << sql;
@@ -143,7 +148,8 @@ std::vector<TableColumn> DBRunner::GetTableColumns(const std::string &tableName)
 {
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return {};
     }
     LOG(INFO) << "Get table columns, table name: " << tableName;
