@@ -95,9 +95,46 @@ class GraphBuilder:
         return upnode_id
 
     @staticmethod
+    def _handle_backward_inplace(construct_dict, sub_node_id, up_node_id):
+        """
+        如果当前backward节点的父层级信息不等于其父级节点的层级信息，则尝试从同名的forward节点寻找父级节点
+        主要针对的场景：inplace层会无法触发backward hook导致反向层级错误
+
+        example:
+            正确的层级关系：
+                父层：Module.layer4.1.BasicBlock.backward.0的层级信息为Module.layer4.1
+                子层：Module.layer4.1.conv2.Conv2d.backward.0的父层级信息为Module.layer4.1
+
+            错误的层级关系：
+                父层：Module.layer4.1.relu.ReLU.backward.1的层级信息为Module.layer4.1.relu
+                子层：Module.layer4.1.conv2.Conv2d.backward.0的父层级信息为Module.layer4.1
+        """
+        if GraphBuilder.backward_pattern.search(sub_node_id) and up_node_id:
+            sub_split = sub_node_id.split(Const.SEP)
+            if len(sub_split) < 5:
+                return up_node_id
+            up_split = up_node_id.split(Const.SEP)
+            if len(up_split) < 4:
+                return up_node_id
+            sub_node_prefix = Const.SEP.join(sub_split[:-4])
+            up_node_prefix = Const.SEP.join(up_split[:-3])
+            if sub_node_prefix != up_node_prefix:
+                forward_sub_node_id = GraphBuilder.backward_pattern.sub(r".forward.\2", sub_node_id)
+                if forward_sub_node_id in construct_dict:
+                    forward_up_node_id = construct_dict.get(forward_sub_node_id)
+                    # forward_up_node_id ---> null
+                    if not forward_up_node_id:
+                        return forward_up_node_id
+                    new_up_node_id = GraphBuilder.forward_pattern.sub(r".backward.\2", forward_up_node_id)
+                    if new_up_node_id in construct_dict:
+                        return new_up_node_id
+        return up_node_id
+
+    @staticmethod
     def _init_nodes(graph, construct_dict, data_dict, stack_dict):
         for subnode_id, upnode_id in construct_dict.items():
-            upnode_id = GraphBuilder._handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id)
+            upnode_id = GraphBuilder._handle_backward_inplace(construct_dict, subnode_id, upnode_id) if upnode_id \
+                else GraphBuilder._handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id)
             if upnode_id:
                 upnode_op = NodeOp.get_node_op(upnode_id)
                 upnode = GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], upnode_op, upnode_id)

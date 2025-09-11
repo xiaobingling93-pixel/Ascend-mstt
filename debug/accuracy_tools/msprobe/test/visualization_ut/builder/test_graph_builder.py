@@ -126,3 +126,22 @@ class TestGraphBuilder(unittest.TestCase):
         self.assertEqual(root_nodes_id[-1], 'Module.a.backward.1')
         self.assertEqual(sub_nodes_id0[-1], 'Module.aaa.backward.0')
         self.assertEqual(sub_nodes_id1[-1], 'Module.a.parameters_grad')
+
+    def test_handle_backward_inplace(self):
+        construct_dict = {'Module.module.Float16Model.forward.0': None,
+                          'Module.module.layer1.BasicBlock.forward.0': 'Module.module.Float16Model.forward.0',
+                          'Module.module.layer2.BasicBlock.forward.0': 'Module.module.Float16Model.forward.0',
+                          'Module.module.conv.Conv2d.forward.0': 'Module.module.Float16Model.forward.0',
+                          'Module.module.Float16Model.backward.0': None,
+                          'Module.module.layer1.BasicBlock.backward.0': 'Module.module.Float16Model.backward.0',
+                          'Module.module.layer2.BasicBlock.backward.0': 'Module.module.conv.Conv2d.backward.0',
+                          'Module.module.conv.Conv2d.backward.0': 'Module.module.Float16Model.backward.0'
+                          }
+        up_node_id = GraphBuilder._handle_backward_inplace(construct_dict,
+                                                           'Module.module.layer2.BasicBlock.backward.0',
+                                                           'Module.module.conv.Conv2d.backward.0')
+        self.assertEqual(up_node_id, 'Module.module.Float16Model.backward.0')
+        up_node_id = GraphBuilder._handle_backward_inplace(construct_dict,
+                                                           'Module.module.layer1.BasicBlock.backward.0',
+                                                           'Module.module.Float16Model.backward.0')
+        self.assertEqual(up_node_id, 'Module.module.Float16Model.backward.0')
