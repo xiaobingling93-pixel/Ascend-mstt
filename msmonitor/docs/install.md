@@ -7,7 +7,7 @@
 ### 1. clone 代码
 
 ```bash
-git clone https://gitee.com/ascend/mstt.git
+git clone https://gitcode.com/Ascend/mstt.git
 ```
 
 ### 2. 安装依赖
