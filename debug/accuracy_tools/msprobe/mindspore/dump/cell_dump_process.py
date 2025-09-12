@@ -46,9 +46,11 @@ KEY_FORWARD = CoreConst.FORWARD
 KEY_BACKWARD = CoreConst.BACKWARD
 KEY_INPUT = CoreConst.INPUT
 KEY_OUTPUT = CoreConst.OUTPUT
-KEY_DUMP_TENSOR_DATA = "dump_tensor_data_"
+KEY_DUMP_TENSOR_DATA = "dump_tensor_data/"
 KEY_STATISTIC_CSV = "statistic.csv"
 KEY_TD_FLAG = "td_flag"
+# 设置落盘文件检测超时时间
+TIMEOUT = 1200
 td = ops.TensorDump()
 if (ms.__version__ >= "2.5.0"):
     td_in = ops.TensorDump("in")
@@ -574,28 +576,30 @@ def generate_stack_info(path):
     logger.info(f"Stack data saved to {json_path}")
 
 
-def is_download_finished(directory, interval=3):
+def is_download_finished(directory, save_flag):
     """
     判断指定目录在一段时间后是否有数据被下载完成
     :param directory: 指定目录的路径
-    :param interval: 检查的时间间隔（秒），默认为 3 秒
+    :param save_flag: 数据落盘完成后的标志文件
     :return: 如有数据被下载完成返回 True，否则返回 False
     """
     # 检查目录是否存在
     if not os.path.exists(directory):
         logger.warning(f"The specified directory {directory} does not exist.")
         return False
-    initial_modification_time = os.path.getmtime(directory)
-    time.sleep(interval)
-    current_modification_time = os.path.getmtime(directory)
-    # 比较初始和当前修改时间
-    if current_modification_time > initial_modification_time:
-        return False
-    else:
-        return True
+    
+    # 遍历当前目录中的所有条目
+    for entry_path in os.listdir(directory):
+        if entry_path.startswith(save_flag):
+            return True
+
+    return False
 
 
-def process(dump_path):
+def process_step(dump_path, step, step_list):
+    if step not in step_list:
+        return
+
     if not os.path.exists(dump_path):
         logger.warning('No grap cell data is dumped.')
         create_directory(dump_path)
@@ -606,32 +610,39 @@ def process(dump_path):
     if rank_id is not None:
         rank_dir = CoreConst.RANK + str(rank_id)
 
-    step_dir_list = os.listdir(dump_path)
-    for step_dir in step_dir_list:
-        step_path = os.path.join(dump_path, step_dir)
-        rank_path = os.path.join(step_path, rank_dir)
-        npy_path = os.path.join(rank_path, CoreConst.DUMP_TENSOR_DATA)
-        while True:
-            is_finished = is_download_finished(npy_path)
-            if not is_finished:
-                logger.info("There is data being downloaded in the specified directory, continue checking...")
-            else:
-                logger.info("There is no data being downloaded in the specified directory, Stop checking.")
-                break
-        logger.info("==========Start processing data that has already been stored on the disk!==========")
-        rename_filename(path=npy_path)
-        generate_construct(npy_path)
-        generate_dump_info(npy_path)
-        generate_stack_info(npy_path)
-        # 单卡场景，rank目录名称为rank
-        if rank_id is None:
-            new_rank_path = os.path.join(step_path, CoreConst.RANK)
-            try:
-                move_directory(rank_path, new_rank_path)
-                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
-            except Exception as e:
-                logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
-        logger.info("==========JSON file generation completed!==========")
+    step_dir = CoreConst.STEP + str(step)
+
+    step_path = os.path.join(dump_path, step_dir)
+    rank_path = os.path.join(step_path, rank_dir)
+    npy_path = os.path.join(rank_path, CoreConst.DUMP_TENSOR_DATA)
+    save_finish_flag = f"step_{step}"
+    start_time = time.time() 
+    while True:
+        flag_path = os.path.join(dump_path, "dump_flag", rank_dir)
+        is_finished = is_download_finished(flag_path, save_finish_flag)
+        if not is_finished:
+            logger.info("There is data being downloaded in the specified directory, continue checking...")
+        else:
+            logger.info("There is no data being downloaded in the specified directory, Stop checking.")
+            break
+        elapsed_time = time.time() - start_time
+        if elapsed_time > TIMEOUT:
+            logger.error(f"Check timed out after {TIMEOUT} seconds. Exiting.")
+            return
+    logger.info(f"==========Start processing step_{step}'s data that has already been stored on the disk!==========")
+    rename_filename(path=npy_path)
+    generate_construct(npy_path)
+    generate_dump_info(npy_path)
+    generate_stack_info(npy_path)
+    # 单卡场景，rank目录名称为rank
+    if rank_id is None:
+        new_rank_path = os.path.join(step_path, CoreConst.RANK)
+        try:
+            move_directory(rank_path, new_rank_path)
+            logger.info(f"Directory was successfully renamed to: {new_rank_path}")
+        except Exception as e:
+            logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
+    logger.info(f"==========Step_{step}'s JSON file generation completed!==========")
 
 
 # 删除csv文件中每行数据最后面的逗号
@@ -689,7 +700,10 @@ def merge_file(dump_path, rank_dir, file_dict):
                          " and the index is out of bounds.")
 
 
-def process_statistics(dump_path):
+def process_statistics_step(dump_path, step, step_list):
+    if step not in step_list:
+        return
+
     if not os.path.exists(dump_path):
         logger.warning('No grap cell data is dumped.')
         create_directory(dump_path)
@@ -723,25 +737,24 @@ def process_statistics(dump_path):
 
     rank_dir = rank_dir_kbk.replace(CoreConst.REPLACEMENT_CHARACTER, '')
     dir_list = os.listdir(dump_path)
-    step_dir_list = [d for d in dir_list if d.startswith(CoreConst.STEP)]
-    for step_dir in step_dir_list:
-        step_path = os.path.join(dump_path, step_dir)
-        rank_path = os.path.join(step_path, rank_dir)
-        csv_path = os.path.join(rank_path, KEY_STATISTIC_CSV)
-        logger.info("==========Start processing data csv!==========")
-        generate_construct(csv_path)
-        generate_dump_info(csv_path)
-        generate_stack_info(csv_path)
-        remove_path(rank_path_kbk)
-        # 单卡场景，rank目录名称为rank
-        if rank_id is None:
-            new_rank_path = os.path.join(step_path, CoreConst.RANK)
-            try:
-                move_directory(rank_path, new_rank_path)
-                logger.info(f"Directory was successfully renamed to: {new_rank_path}")
-            except Exception as e:
-                logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
-        logger.info("==========JSON file generation completed!==========")
+    step_dir = CoreConst.STEP + str(step)
+    step_path = os.path.join(dump_path, step_dir)
+    rank_path = os.path.join(step_path, rank_dir)
+    csv_path = os.path.join(rank_path, KEY_STATISTIC_CSV)
+    logger.info("==========Start processing data csv!==========")
+    generate_construct(csv_path)
+    generate_dump_info(csv_path)
+    generate_stack_info(csv_path)
+    remove_path(rank_path_kbk)
+    # 单卡场景，rank目录名称为rank
+    if rank_id is None:
+        new_rank_path = os.path.join(step_path, CoreConst.RANK)
+        try:
+            move_directory(rank_path, new_rank_path)
+            logger.info(f"Directory was successfully renamed to: {new_rank_path}")
+        except Exception as e:
+            logger.warning(f"Failed to renamed to {new_rank_path}: {e}")
+    logger.info("==========JSON file generation completed!==========")
 
 
 def get_yaml_keys(yaml_data):
@@ -922,7 +935,3 @@ def start(config: CellDumpConfig):
             cell.data_mode = data_mode
 
     logger.info("==========The cell_dump_process_start phase is Finished!==========")
-    if dump_task == CoreConst.TENSOR:
-        atexit.register(process, dump_path=dump_path)
-    if dump_task == CoreConst.STATISTICS:
-        atexit.register(process_statistics, dump_path=dump_path)

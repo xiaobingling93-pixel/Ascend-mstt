@@ -182,7 +182,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
             with ThreadSafe():
                 instance.service.step()
         if is_graph_mode_cell_dump_allowed(instance.config):
-            GraphModeCellDump.step()
+            GraphModeCellDump.step(instance.config.dump_path, instance.config.step, instance.config.task)
         if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
             _dump_step(1)
         if cls._is_kernel_dump() and _msprobe_c:
