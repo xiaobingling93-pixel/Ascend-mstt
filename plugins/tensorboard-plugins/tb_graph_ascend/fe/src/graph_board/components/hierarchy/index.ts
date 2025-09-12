@@ -31,6 +31,7 @@ import {
     MAX_SCALE,
     MIN_SCALE,
     PREFIX_MAP,
+    DB_TYPE
 } from '../../../common/constant';
 import '../minimap/index';
 import '@vaadin/context-menu';
@@ -723,6 +724,9 @@ class Hierarchy extends PolymerElement {
      * @returns
      */
     async changeNodeExpandState(nodeInfo) {
+        if (this.selection.type === DB_TYPE && (typeof (this.selection.rank) != 'number' || typeof (this.selection.step) != 'number')) {
+            return {}
+        }
         this.set('loading', true);
         const { success, data, error } = await this.useGraph.changeNodeExpandState(nodeInfo, this.selection);
         this.set('loading', false);

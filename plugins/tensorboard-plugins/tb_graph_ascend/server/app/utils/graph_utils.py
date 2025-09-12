@@ -132,14 +132,11 @@ class GraphUtils:
         """
         # 类型检查
         if not isinstance(json_str, str):
-            logger.error("Input is not a string.")
             return default_value
 
         # 长度限制
         if len(json_str) > MAX_FILE_SIZE:
-            logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
             return default_value
-
         try:
             result = json.loads(json_str)
             return result

@@ -86,7 +86,7 @@ class JsonGraphService(GraphServiceStrategy):
         tag = self.tag
         graph_data, error_message = GraphUtils.get_graph_data({'run': run_name, 'tag': tag})
         if error_message or not graph_data:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
         config = {}
         try:
             # 读取全局信息,tag层面
@@ -123,7 +123,7 @@ class JsonGraphService(GraphServiceStrategy):
         micro_step = meta_data.get('microStep')
         graph_data, error_message = GraphUtils.get_graph_data({'run': self.run, 'tag': self.tag})
         if error_message or not graph_data:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
         result = {}
         try:
             if not graph_data.get(NPU):
@@ -178,7 +178,7 @@ class JsonGraphService(GraphServiceStrategy):
         try:
             graph_data, error_message = GraphUtils.get_graph_data(meta_data)
             if error_message:
-                return {'success': False, 'error': str(e)}
+                return {'success': False, 'error': str(error_message)}
             if self.repo is None:
                 return {'success': False, 'error': 'initlize graph json failed'}
             graph_type = node_info.get('nodeType')
@@ -207,7 +207,7 @@ class JsonGraphService(GraphServiceStrategy):
         # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
      
         precision = []
         is_filter_unmatch_nodes = True if '无匹配节点' in values else False
@@ -234,13 +234,13 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': True, 'data': precision}
         except Exception as e:
             logger.error('search precision node failed:' + str(e))
-            return {'success': False, 'error': '获取符合精度误差节点失败:' + str(e)}
+            return {'success': False, 'error': '获取符合精度误差节点失败'}
     
     def search_node_by_overflow(self, meta_data, values):
         # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
         overflow = []   
         try:
             # 单图
@@ -264,7 +264,7 @@ class JsonGraphService(GraphServiceStrategy):
         try:
             graph_data, error_message = GraphUtils.get_graph_data(meta_data)
             if error_message:
-                return {'success': False, 'error': str(e)}
+                return {'success': False, 'error': str(error_message)}
             npu_node_list = graph_data.get(NPU, {}).get('node', {})
             for _, node_info in npu_node_list.items():
                 output_statistical_diff = node_info.get('output_data', None)
@@ -308,7 +308,7 @@ class JsonGraphService(GraphServiceStrategy):
     def get_node_info(self, node_info, meta_data):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
         try:
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
@@ -335,7 +335,7 @@ class JsonGraphService(GraphServiceStrategy):
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
         task = graph_data.get('task')
         result = {}
         try:
@@ -379,7 +379,7 @@ class JsonGraphService(GraphServiceStrategy):
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
         task = graph_data.get('task')
         try:
             # 根据任务类型计算误差
@@ -402,14 +402,14 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': False, 'error': '参数为空'}
         graph_data, error_message = GraphUtils.get_graph_data(meta_data)
         if error_message:
-            return {'success': False, 'error': str(e)}
+            return {'success': False, 'error': str(error_message)}
 
         try:
             _, error = GraphUtils.safe_save_data(graph_data, self.run, f"{self.tag}.vis")
             if error:
                 return {'success': False, 'error': error}
         except (ValueError, IOError, PermissionError) as e:
-            return {'success': False, 'error': f"Error: {e}"}
+            return {'success': False, 'error': "Error: 保存文件失败"}
         return {'success': True}
 
     def update_colors(self, colors):
@@ -445,7 +445,7 @@ class JsonGraphService(GraphServiceStrategy):
             else:
                 return {'success': True, 'data': f"{tag}.vis.config"}
         except (ValueError, IOError, PermissionError) as e:
-            return {'success': False, 'error': f"Error: {e}"}
+            return {'success': False, 'error': f"Error: 操作失败"}
   
     def _generate_matched_result(self, match_result):
         update_data = []

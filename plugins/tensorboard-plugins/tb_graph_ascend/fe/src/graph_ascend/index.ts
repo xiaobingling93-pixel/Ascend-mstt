@@ -193,11 +193,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     microsteps: number[] = [];
 
     @property({ type: Array })
-    steps: Array<SelectedItemType> = [{ value: 0, label: '0' }];
+    steps: Array<SelectedItemType> = [];
 
     @property({ type: Array })
-    ranks: Array<SelectedItemType> = [{ value: 0, label: '0' }];
-
+    ranks: Array<SelectedItemType> = [];
 
     @property({ type: Array })
     overflowcheck: boolean = false;
@@ -216,6 +215,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     @property({ type: Object })
     matchedConfigFiles: string[] = [];
+
     @property({ type: Object })
     task: string = '';
 
@@ -348,6 +348,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     loadGraphConfig = async (metaData) => {
         const { success, data, error } = await this.useGraphAscend.loadGraphConfig(metaData);
         const config = data as GraphConfigType;
+        const selection = { ...this.selection };
         if (success) {
             this.set('colors', config.colors);
             this.set('tooltips', safeJSONParse(config.tooltips));
@@ -372,6 +373,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     value: rank,
                 }))
                 this.set('ranks', ranksArray);
+                selection['rank'] = ranks[0]
             }
             if (steps.length > 0) {
                 const stepsArray = steps.map((step) => ({
@@ -379,7 +381,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     value: step,
                 }))
                 this.set('steps', stepsArray);
+                selection['step'] = steps[0]
             }
+            this.set('selection', selection);
         } else {
             Notification.show(`图配置加载失败:${error}`, {
                 position: 'middle',
@@ -417,6 +421,11 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     };
 
     initGraphBoard = () => {
+        const isFileChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
+        const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
+        if (!isFileChange && !isDBChange && this.currentSelection?.microStep === this.selection?.microStep) {
+            return;
+        }
         (this.shadowRoot?.querySelector('#graph-board') as any)?.initGraphHierarchy(this.jumpToNode);
         if (this.jumpToNode) {
             this.set('selectedNode', this.jumpToNode);
