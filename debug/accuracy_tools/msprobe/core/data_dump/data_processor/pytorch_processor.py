@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ctypes
 import os
 import zlib
-import ctypes
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import List
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
@@ -29,7 +29,6 @@ from torch.distributed.distributed_c10d import _get_default_group
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, is_int
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
@@ -93,6 +92,17 @@ class TensorHandler:
                     placements.append({"Partial": {"reduce_op": placement.reduce_op}})
         dtensor_info.update({"placements": placements})
         return dtensor_info
+
+    def save_tensor(self, tensor, file_path):
+        common_tensor = self.convert_common_tensor(tensor)
+        if self.is_empty_data(common_tensor):
+            logger.debug(f"Saving fake tensor or meta tensor is not supported, the current tensor is {file_path}.")
+            return
+        if common_tensor.untyped_storage().data_ptr() == 0:
+            logger.debug(f"Saving null-pointer tensor is not supported, the current tensor is {file_path}.")
+            return
+        saved_tensor = common_tensor.clone().contiguous().detach()
+        save_pt(saved_tensor, file_path)
 
 
 class PytorchDataProcessor(BaseDataProcessor):
@@ -288,7 +298,7 @@ class PytorchDataProcessor(BaseDataProcessor):
 
     def dump_async_data(self):
         for file_path, tensor in self._async_dump_cache.items():
-            save_pt(tensor.contiguous(), file_path)
+            self.tensor_handler.save_tensor(tensor, file_path)
         self._async_dump_cache.clear()
 
     def analyze_single_element(self, element, suffix_stack):
@@ -385,24 +395,24 @@ class PytorchDataProcessor(BaseDataProcessor):
     def _analyze_and_save_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = PytorchDataProcessor._analyze_tensor(self, tensor, suffix)
-        if self.tensor_handler.is_empty_data(tensor) or tensor.untyped_storage().data_ptr() == 0:
-            logger.debug(
-                "Collecting real data of fake tensor or meta tensor is not supported or data_ptr is 0, "
-                f"the current api/module name is {self.current_api_or_module_name}."
-            )
+        common_tensor = self.tensor_handler.convert_common_tensor(tensor)
+        if self.tensor_handler.is_empty_data(common_tensor):
+            logger.debug(f"Saving fake tensor or meta tensor is not supported, the current tensor is {file_path}.")
+            return single_arg
+        if common_tensor.untyped_storage().data_ptr() == 0:
+            logger.debug(f"Saving null-pointer tensor is not supported, the current tensor is {file_path}.")
             return single_arg
 
         single_arg.update({"data_name": dump_data_name})
         if self.config.async_dump:
-            self._async_dump_cache[file_path] = tensor.clone().detach()
+            self._async_dump_cache[file_path] = common_tensor.clone().detach()
         else:
-            saved_tensor = tensor.clone().contiguous().detach()
-            save_pt(saved_tensor, file_path)
+            self.tensor_handler.save_tensor(common_tensor, file_path)
         return single_arg
 
     def _analyze_and_save_ndarray(self, ndarray, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        save_pt(torch.tensor(ndarray), file_path)
+        self.tensor_handler.save_tensor(torch.tensor(ndarray), file_path)
         ndarray_json = PytorchDataProcessor._analyze_ndarray(ndarray, suffix)
         ndarray_json.update({"data_name": dump_data_name})
         return ndarray_json
@@ -493,7 +503,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             self._analyze_maybe_overflow_flag()
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
-                save_pt(tensor.clone().contiguous().detach(), file_path)
+                self.tensor_handler.save_tensor(tensor, file_path)
             self.real_overflow_nums += 1
             if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
                 logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
@@ -538,10 +548,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        if not path_len_exceeds_limit(file_path):
-            self.cached_tensors_and_file_paths.update({file_path: tensor})
-        else:
-            logger.warning(f'The file path {file_path} length exceeds limit.')
+        self.cached_tensors_and_file_paths.update({file_path: tensor})
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         if not self.has_overflow and self.support_inf_nan:
