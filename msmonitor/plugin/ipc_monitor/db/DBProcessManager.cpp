@@ -90,10 +90,11 @@ public:
     ~IdPool() = default;
     uint64_t GetUint64Id(const std::string &key);
     StringIdFormat GetStringIdData();
+    void Clear();
 
 private:
-    uint64_t uint64Index_{0};
     std::mutex uint64IdMapMutex_;
+    uint64_t uint64Index_{0};
     std::unordered_map<std::string, uint64_t> uint64IdMap_;
 };
 
@@ -117,6 +118,13 @@ StringIdFormat IdPool::GetStringIdData()
         stringIdData.emplace_back(it.second, it.first);
     }
     return stringIdData;
+}
+
+void IdPool::Clear()
+{
+    std::lock_guard<std::mutex> lock(uint64IdMapMutex_);
+    uint64IdMap_.clear();
+    uint64Index_ = 0;
 }
 
 void DBProcessManager::SetReportInterval(uint32_t interval)
@@ -261,7 +269,7 @@ void DBProcessManager::RunPostTask()
     }
     sessionStartTime_ = 0;
     hasSavedData_ = false;
-    reportInterval_.store(DEFAULT_FLUSH_INTERVAL);
+    reportInterval_.store(0);
     deviceSet_.clear();
     apiData_.clear();
     computeTaskInfoData_.clear();
@@ -273,16 +281,20 @@ void DBProcessManager::RunPostTask()
     savePath_.clear();
     msMonitorDB_.database = nullptr;
     msMonitorDB_.dbRunner = nullptr;
+    IdPool::GetInstance()->Clear();
 }
 
 void DBProcessManager::ProcessApiData(msptiActivityApi *record)
 {
+    uint64_t endTime = record->end;
+    if (endTime < sessionStartTime_) {
+        return;
+    }
     std::lock_guard<std::mutex> lock(dataMutex_);
     uint64_t name = IdPool::GetInstance()->GetUint64Id(record->name);
     uint64_t globalTid = ConcatGlobalTid(record->pt.processId, record->pt.threadId);
     uint64_t connectionId = record->correlationId;
-    apiData_.emplace_back(static_cast<uint64_t>(record->start), static_cast<uint64_t>(record->end),
-        API_NODE_TYPE, globalTid, connectionId, name);
+    apiData_.emplace_back(static_cast<uint64_t>(record->start), endTime, API_NODE_TYPE, globalTid, connectionId, name);
 }
 
 std::string DBProcessManager::ConstructCommOpName(const std::string &opName, const std::string &groupName)
@@ -306,6 +318,10 @@ std::string DBProcessManager::ConstructCommOpName(const std::string &opName, con
 
 void DBProcessManager::ProcessCommunicationData(msptiActivityCommunication *record)
 {
+    uint64_t endTime = record->end;
+    if (endTime < sessionStartTime_) {
+        return;
+    }
     std::lock_guard<std::mutex> lock(dataMutex_);
     uint64_t groupName = IdPool::GetInstance()->GetUint64Id(record->commName);
     auto commOpName = ConstructCommOpName(record->name, record->commName);
@@ -314,13 +330,18 @@ void DBProcessManager::ProcessCommunicationData(msptiActivityCommunication *reco
     uint64_t algType = IdPool::GetInstance()->GetUint64Id(record->algType);
     uint64_t opType = IdPool::GetInstance()->GetUint64Id(record->name);
     uint64_t connectionId = record->correlationId;
-    communicationOpData_.emplace_back(opName, static_cast<uint64_t>(record->start), static_cast<uint64_t>(record->end),
+    communicationOpData_.emplace_back(opName, static_cast<uint64_t>(record->start), endTime,
         connectionId, groupName, opId, 0, 0, static_cast<uint16_t>(record->dataType),
         algType, static_cast<uint64_t>(record->count), opType);
+    deviceSet_.insert(static_cast<uint32_t>(record->ds.deviceId));
 }
 
 void DBProcessManager::ProcessKernelData(msptiActivityKernel *record)
 {
+    uint64_t endTime = record->end;
+    if (endTime < sessionStartTime_) {
+        return;
+    }
     std::lock_guard<std::mutex> lock(dataMutex_);
     uint64_t opName = IdPool::GetInstance()->GetUint64Id(record->name);
     uint64_t taskType = IdPool::GetInstance()->GetUint64Id(record->type);
@@ -330,7 +351,7 @@ void DBProcessManager::ProcessKernelData(msptiActivityKernel *record)
         NAId, NAId, NAId, NAId, NAId, NAId, NAId, NAId, NAId, NAId);
     uint64_t connectionId = record->correlationId;
     uint32_t deviceId = record->ds.deviceId;
-    taskData_.emplace_back(static_cast<uint64_t>(record->start), static_cast<uint64_t>(record->end),
+    taskData_.emplace_back(static_cast<uint64_t>(record->start), endTime,
         deviceId, connectionId, globalTaskId, GetProcessId(), taskType, UINT32_MAX,
         static_cast<uint32_t>(record->ds.streamId), UINT32_MAX, UINT32_MAX);
     deviceSet_.insert(deviceId);
@@ -338,6 +359,9 @@ void DBProcessManager::ProcessKernelData(msptiActivityKernel *record)
 
 void DBProcessManager::ProcessMstxData(msptiActivityMarker *record)
 {
+    if (record->timestamp < sessionStartTime_) {
+        return;
+    }
     std::lock_guard<std::mutex> lock(dataMutex_);
     if (record->sourceKind == msptiActivitySourceKind::MSPTI_ACTIVITY_SOURCE_KIND_HOST) {
         ProcessMstxHostData(record);
