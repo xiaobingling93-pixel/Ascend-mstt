@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import os
-
+import glob
 import mindspore as ms
 from mindspore import hal, ops, Tensor
 from mindspore.ops.primitive import _run_op
@@ -28,6 +28,7 @@ import msprobe.mindspore.dump.cell_dump_process as cellDumperWithDumpGradient
 import msprobe.mindspore.dump.cell_dump_with_insert_gradient as cellDumperWithInsertGradient
 
 tensordump_flag = True
+DEFAULT_RANK_DIR = "rank0"
 try:
     from mindspore._c_expression import _tensordump_set_step
 except ImportError:
@@ -61,11 +62,25 @@ class GraphModeCellDump:
         self.set_step()
 
     @staticmethod
-    def step():
+    def step(dump_path, step_list, task):
         # 更新TensorDump Step
         if GraphModeCellDump.task == CoreConst.TENSOR:
             hal.synchronize()
             temp_tensor = ms.Tensor([1], dtype=ms.float32)
+            rank_id = os.environ.get('RANK_ID')
+            rank_dir = DEFAULT_RANK_DIR
+            
+            if rank_id is not None:
+                rank_dir = CoreConst.RANK + str(rank_id)
+            # 确保dump前目录下不存在flag文件
+            flag_dir = os.path.join(dump_path, "dump_flag", rank_dir)
+            prefix = f"step_{Runtime.step_count}"
+            matching_files = glob.glob(os.path.join(flag_dir, f"{prefix}*"))
+            # 同时存在多个step_10, step_100，只需要删除第一个
+            if matching_files:
+                os.remove(matching_files[0])
+            save_file_flag = f"{dump_path}/dump_flag/{rank_dir}/step_{Runtime.step_count}"
+            _run_op(ops.TensorDump(), "TensorDump", (save_file_flag, temp_tensor))
             step_flag = "<tensordump-update-step>"
             _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
             ops.tensordump(step_flag, temp_tensor)
@@ -78,6 +93,11 @@ class GraphModeCellDump:
                     "please use the latest version package of MindSpore."
                 )
             _dump_step(1)
+
+        if task == CoreConst.TENSOR:
+            cellDumperWithDumpGradient.process_step(dump_path, Runtime.step_count, step_list)
+        if task == CoreConst.STATISTICS:
+            cellDumperWithDumpGradient.process_statistics_step(dump_path, Runtime.step_count, step_list)
 
     def check_config(self, strict):
         if not self.net:
