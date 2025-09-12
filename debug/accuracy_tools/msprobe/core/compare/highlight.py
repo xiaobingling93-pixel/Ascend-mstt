@@ -26,7 +26,7 @@ from tqdm import tqdm
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import get_header_index
+from msprobe.core.common.utils import get_header_index, CompareException
 from msprobe.core.compare.utils import table_value_is_valid, gen_api_batches
 from msprobe.core.compare.config import ModeConfig
 
@@ -359,18 +359,25 @@ class HighLight:
 
         def err_call(args):
             logger.error("Multiprocessing malicious value check failed! Reason: {}".format(args))
-            try:
-                pool.close()
-            except OSError:
-                logger.error("Pool terminate failed")
 
         result_df_columns = result_df.columns.tolist()
         for column in result_df_columns:
             self.value_check(column)
+        async_results = []
         for df_chunk in chunks:
-            pool.apply_async(func, args=(df_chunk, result_df_columns,), error_callback=err_call)
+            result = pool.apply_async(func, args=(df_chunk, result_df_columns,), error_callback=err_call)
+            async_results.append(result)
 
         pool.close()
+
+        for ar in async_results:
+            try:
+                ar.get(timeout=3600)
+            except Exception as e:
+                logger.error(f"Task failed with exception: {e}")
+                pool.terminate()
+                raise CompareException(CompareException.MULTIPROCESS_ERROR) from e
+
         pool.join()
 
     def df_malicious_value_check(self, result_df):
