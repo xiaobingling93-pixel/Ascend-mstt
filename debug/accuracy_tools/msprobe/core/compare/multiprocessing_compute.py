@@ -52,16 +52,20 @@ def _ms_graph_handle_multi_process(func, result_df, mode):
 
     def err_call(args):
         logger.error('multiprocess compare failed! Reason: {}'.format(args))
-        try:
-            pool.close()
-        except OSError as e:
-            logger.error(f'pool terminate failed: {str(e)}')
 
     for df_chunk in df_chunks:
         result = pool.apply_async(func, args=(df_chunk, mode), error_callback=err_call)
         results.append(result)
-    final_results = [r.get() for r in results]
+
     pool.close()
+
+    try:
+        final_results = [r.get(timeout=3600) for r in results]
+    except Exception as e:
+        logger.error(f"Task failed with exception: {e}")
+        pool.terminate()
+        raise CompareException(CompareException.MULTIPROCESS_ERROR) from e
+
     pool.join()
     return pd.concat(final_results, ignore_index=True)
 
@@ -277,10 +281,6 @@ class CompareRealData:
 
         def err_call(args):
             logger.error('multiprocess compare failed! Reason: {}'.format(args))
-            try:
-                pool.close()
-            except OSError:
-                logger.error("pool terminate failed")
 
         progress_bar = tqdm(total=len(result_df), desc="API/Module Item Compare Process", unit="row", ncols=100)
 
@@ -298,7 +298,14 @@ class CompareRealData:
                                       )
             results.append(result)
 
-        final_results = [r.get() for r in results]
         pool.close()
+
+        try:
+            final_results = [r.get(timeout=3600) for r in results]
+        except Exception as e:
+            logger.error(f"Task failed with exception: {e}")
+            pool.terminate()
+            raise CompareException(CompareException.MULTIPROCESS_ERROR) from e
+
         pool.join()
         return pd.concat(final_results, ignore_index=True)

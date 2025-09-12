@@ -35,7 +35,8 @@ def read_pt_data(dir_path, file_name):
         data_value = load_pt(data_path, to_cpu=True).detach()
     except RuntimeError as e:
         # 这里捕获 load_pt 中抛出的异常
-        logger.error(f"Failed to load the .pt file at {data_path}.")
+        data_path_file_name = os.path.basename(data_path)
+        logger.error(f"Failed to load the .pt file at {data_path_file_name}.")
         raise CompareException(CompareException.INVALID_FILE_ERROR) from e
     except AttributeError as e:
         # 这里捕获 detach 方法抛出的异常

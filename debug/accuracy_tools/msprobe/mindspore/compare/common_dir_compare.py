@@ -212,14 +212,14 @@ def do_multi_process(func, map_dict):
         df_chunks = [result_df]
         process_num = 1
     logger.info(f"Using {process_num} processes with chunk size {df_chunk_size}")
-    
+
     # 分割字典
     map_chunks = split_dict(map_dict, df_chunk_size)
-    
+
     # 创建结果列表和进程池
     results = []
     pool = multiprocessing.Pool(process_num)
-    
+
     progress_bar = tqdm(total=len(result_df), desc="API/Module Item Compare Process", unit="row", ncols=100)
 
     def update_progress(size, progress_lock, extra_param=None):
@@ -228,34 +228,30 @@ def do_multi_process(func, map_dict):
 
     def err_call(args):
         logger.error('multiprocess compare failed! Reason: {}'.format(args))
-        try:
-            pool.close()
-        except OSError as e:
-            logger.error(f'pool terminate failed: {str(e)}')
-    results = []
-    try:
-        # 提交任务到进程池
-        for process_idx, (df_chunk, map_chunk) in enumerate(zip(df_chunks, map_chunks)):
-            start_idx = df_chunk_size * process_idx
-            result = pool.apply_async(
-                func,
-                args=(df_chunk, start_idx, map_chunk, lock),
-                error_callback=err_call,
-                callback=partial(update_progress, len(map_chunk), lock)
-            )
-            results.append(result)
 
-        final_results = [r.get() for r in results]
-        # 等待所有任务完成
-        pool.close()
-        pool.join()
-        return pd.concat(final_results, ignore_index=True)
+    results = []
+
+    # 提交任务到进程池
+    for process_idx, (df_chunk, map_chunk) in enumerate(zip(df_chunks, map_chunks)):
+        start_idx = df_chunk_size * process_idx
+        result = pool.apply_async(
+            func,
+            args=(df_chunk, start_idx, map_chunk, lock),
+            error_callback=err_call,
+            callback=partial(update_progress, len(map_chunk), lock)
+        )
+        results.append(result)
+    pool.close()
+
+    try:
+        final_results = [r.get(timeout=3600) for r in results]
     except Exception as e:
-        logger.error(f"\nMain process error: {str(e)}")
+        logger.error(f"Task failed with exception: {e}")
         pool.terminate()
         return pd.DataFrame({})
-    finally:
-        pool.close()
+    # 等待所有任务完成
+    pool.join()
+    return pd.concat(final_results, ignore_index=True)
 
 
 def initialize_result_df(total_size):

@@ -695,10 +695,6 @@ def get_sorted_ranks(npu_dump_dir, bench_dump_dir):
 def multi_statistics_compare(func, func_args):
     def err_call(args):
         logger.error(f'Multiprocess statistics compare failed! Reason: {args}')
-        try:
-            pool.close()
-        except OSError:
-            logger.error("Pool terminate failed")
 
     compare_func, input_param_nr_list, output_path, kwargs = func_args
 
@@ -715,9 +711,22 @@ def multi_statistics_compare(func, func_args):
             chunks[i].append(input_param_nr_list[param_num - remainder + i])
 
     pool = multiprocessing.Pool(process_num)
+
+    async_results = []
     for chunk in chunks:
-        pool.apply_async(func, args=(compare_func, chunk, output_path, kwargs), error_callback=err_call)
+        result = pool.apply_async(func, args=(compare_func, chunk, output_path, kwargs), error_callback=err_call)
+        async_results.append(result)
+
     pool.close()
+
+    for ar in async_results:
+        try:
+            ar.get(timeout=3600)
+        except Exception as e:
+            logger.error(f"Task failed with exception: {e}")
+            pool.terminate()
+            raise CompareException(CompareException.MULTIPROCESS_ERROR) from e
+
     pool.join()
 
 

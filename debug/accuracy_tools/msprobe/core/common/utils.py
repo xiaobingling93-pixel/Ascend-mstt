@@ -83,7 +83,8 @@ class MsprobeBaseException(Exception):
     INVALID_API_NAME_ERROR = 36
     CROSS_FRAME_ERROR = 37
     MISSING_THRESHOLD_ERROR = 38
-    WRONG_THRESHOLD_ERROR = 38
+    WRONG_THRESHOLD_ERROR = 39
+    MULTIPROCESS_ERROR = 40
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -347,6 +348,16 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
     check_file_or_directory_path(directory, True)
     stack_json = os.path.join(directory, "stack.json")
     construct_json = os.path.join(directory, "construct.json")
+
+    stack_json_exist = os.path.exists(stack_json)
+    construct_json_exist = os.path.exists(construct_json)
+
+    if not stack_json_exist and not construct_json_exist:
+        logger.info("stack.json and construct.json not found")
+        return {}, {}
+    if not stack_json_exist or not construct_json_exist:
+        logger.error("stack.json or construct.json not found, please check.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     stack = load_json(stack_json)
     construct = load_json(construct_json)
