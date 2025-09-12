@@ -21,7 +21,7 @@ import { Notification } from '@vaadin/notification';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property, observe } from '@polymer/decorators';
 import { isEmpty } from 'lodash';
-import type { SelectionType } from '../../../graph_ascend/type';
+import type { SelectedItemType, SelectionType } from '../../../graph_ascend/type';
 import type { MetaDirType } from '../../type';
 import { DB_TYPE } from '../../../common/constant';
 @customElement('tf-main-controler')
@@ -94,10 +94,10 @@ class MainController extends PolymerElement {
   microsteps = [];
 
   @property({ type: Array })
-  steps: any[] = [{ value: 0, label: '0' }];
+  steps: Array<SelectedItemType> = [];
 
   @property({ type: Array })
-  ranks: any[] = [{ value: 0, label: '0' }];
+  ranks: Array<SelectedItemType> = [];
 
   @property({ type: String })
   selectedRun = '';
@@ -106,23 +106,38 @@ class MainController extends PolymerElement {
   selectedTag = '';
 
   @property({ type: Number })
-  selectedRank = 0;
+  selectedRank;
 
   @property({ type: Number })
-  selectedStep = 0;
+  selectedStep;
 
   @property({ type: Number })
   selectedMicroStep = -1;
 
   @observe('metaDir')
   _metaDirChanged(): void {
-
     if (isEmpty(this.metaDir)) {
       return;
     }
     const runs = Object.keys(this.metaDir);
     this.set('runs', runs);
     this.set('selectedRun', runs[0]);
+  }
+
+  @observe('ranks')
+  _ranksChanged(): void {
+    if (isEmpty(this.ranks)) {
+      return;
+    }
+    this.set('selectedRank', this.ranks[0]?.value);
+  }
+
+  @observe('steps')
+  _stepsChanged(): void {
+    if (isEmpty(this.steps)) {
+      return;
+    }
+    this.set('selectedStep', this.steps[0]?.value);
   }
 
   @observe('selectedRun')
@@ -140,13 +155,6 @@ class MainController extends PolymerElement {
       type
     };
     const isDBType = type == DB_TYPE;
-
-    if (isDBType) {
-      selection['step'] = 0;
-      selection['rank'] = 0;
-      this.set('selectedStep', 0);
-      this.set('selectedRank', 0);
-    }
     this.set('selection', selection);
     this.set('isDBType', isDBType);
     this.set('selectedTag', tags[0]);
@@ -163,12 +171,6 @@ class MainController extends PolymerElement {
       tag: this.selectedTag,
       microStep: -1,
     };
-    if (this.isDBType) {
-      selection['step'] = 0;
-      selection['rank'] = 0;
-      this.set('selectedStep', 0);
-      this.set('selectedRank', 0);
-    }
     this.set('selection', selection);
     this.set('selectedMicroStep', -1);
   }
