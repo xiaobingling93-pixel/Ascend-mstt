@@ -520,6 +520,9 @@ def move_directory(src_path, dst_path):
     check_file_or_directory_path(src_path, isdir=True)
     check_path_before_create(dst_path)
     try:
+        if os.path.exists(dst_path):
+            logger.warning(f"The destination directory {dst_path} already exists, it will be removed.")
+            shutil.rmtree(dst_path)
         shutil.move(src_path, dst_path)
     except Exception as e:
         logger.error(f"move directory {src_path} to {dst_path} failed")
