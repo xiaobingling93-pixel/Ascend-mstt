@@ -823,6 +823,7 @@ class MonitorConst:
     ACTV_OUT = "output"
     ACTVGRAD_IN = "input_grad"
     ACTVGRAD_OUT = "output_grad"
+    FSDP_FLAT_SEP = "_fsdp_wrapped_module."
     # used for tasks
     ACTV = "actv"
     ACTVGRAD = "actv_grad"

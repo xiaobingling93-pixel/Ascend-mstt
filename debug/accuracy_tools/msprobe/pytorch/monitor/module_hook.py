@@ -19,12 +19,14 @@ import importlib
 from collections import defaultdict
 from datetime import datetime
 from functools import partial
+from itertools import cycle
 
 import pytz
 import torch
 import torch.distributed as dist
 import pandas as pd
 from torch.utils.hooks import BackwardHook
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json, make_dir
@@ -229,6 +231,8 @@ class TrainerMon:
         self.duplicate_param = {}
         self.name2tag = {}
         self.param_name_call_id = {}
+        self.flat_prefix_names = []
+        self.flat_prefix_reverse_iter = None
         self.call_id = 0
         self.module_struct = defaultdict(dict)
         self.grad_accs = []
@@ -945,13 +949,20 @@ class TrainerMon:
         return False
 
     def _register_chunk(self, model_chunk, prefix):
+        if isinstance(model_chunk, FSDP):
+            if not model_chunk._use_orig_params:
+                raise ValueError("Only Support fsdp1 with use_orig_params=True")
+            self.fsdp_wrapped_module = True
         for (param_name, param) in model_chunk.named_parameters():
             if not param.requires_grad:
                 continue
-            if not self.fsdp_wrapped_module and param_name.startswith("_fsdp_wrapped_module"):
-                self.fsdp_wrapped_module = True
             if not self.fsdp2_wrapped_module and param.__class__.__name__ == "DTensor":
                 self.fsdp2_wrapped_module = True
+            if self.fsdp_wrapped_module:  # FSDP1需要记录完整的不被target限制的flat权重前缀名，以供后续对flat解包
+                flat_prefix_name, _ = param_name.rsplit(MonitorConst.FSDP_FLAT_SEP, 1)
+                if flat_prefix_name not in self.flat_prefix_names:
+                    self.flat_prefix_names.append(flat_prefix_name)
+
             if self._is_target_param(param_name, param, prefix):
                 name = prefix + squash_param_name(param_name, self.squash_name)
                 if name in self.param2name.values():
@@ -975,6 +986,8 @@ class TrainerMon:
                     k: get_summary_writer_tag_name(name, k, self.rank)
                     for k in keywords
                 }
+        if self.fsdp_wrapped_module:
+            self.flat_prefix_reverse_iter = cycle(reversed(self.flat_prefix_names))  # post_backward_hook调用顺序是反向的
 
     def _register_param_name(self):
         for vpp_stage, model_chunk in enumerate(self.model):
@@ -1224,17 +1237,22 @@ class TrainerMon:
         每个forward阶段，fsdp对AccumulateGrad重复注册hook方法，monitor工具内注册hook无法生效，
         因此对_post_backward_hook进行patch，在backward后，reduce_scatter前采集梯度。
         """
+
         def patch_post_backward_hook(_post_backward_hook):
             def wrapper(state, handle, *unused):
                 grad_dict = {}
-                offset = 0
-                for param, name in self.param2name.items():
-                    limit = param.numel()
-                    if not limit:
+                local_names = handle.flat_param._fqns
+                offsets = handle._get_flat_param_offsets()
+                shapes = handle.flat_param._shapes
+                flat_prefix = next(self.flat_prefix_reverse_iter)
+                for local_name, (start, end), local_shape in zip(local_names, offsets, shapes):
+                    grad_clip = handle.flat_param.grad[start:end + 1]
+                    grad = grad_clip.reshape(local_shape)
+                    total_name = f"{flat_prefix}{MonitorConst.FSDP_FLAT_SEP}{local_name}"
+                    if total_name not in self.origin2squash:
+                        logger.warning(f"{total_name} not in model.named_parameters(), skip.")
                         continue
-                    grad = handle.flat_param.grad[offset:offset + limit]
-                    offset += limit
-                    tag = self.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
+                    tag = self.name2tag.get(self.origin2squash[total_name], {}).get(MonitorConst.PRE_GRAD)
                     if tag is None:
                         continue
                     grad_dict[tag] = grad
@@ -1242,6 +1260,7 @@ class TrainerMon:
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = _post_backward_hook(state, handle, *unused)
                 return out
+
             return wrapper
 
         logger.info("Patch fsdp _post_backward_hook, collect pre_grad metrics.")
