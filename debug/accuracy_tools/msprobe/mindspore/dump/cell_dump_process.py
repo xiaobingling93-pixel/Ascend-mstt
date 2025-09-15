@@ -50,7 +50,7 @@ KEY_DUMP_TENSOR_DATA = "dump_tensor_data/"
 KEY_STATISTIC_CSV = "statistic.csv"
 KEY_TD_FLAG = "td_flag"
 # 设置落盘文件检测超时时间
-TIMEOUT = 1200
+TIMEOUT = 600
 td = ops.TensorDump()
 if (ms.__version__ >= "2.5.0"):
     td_in = ops.TensorDump("in")
@@ -583,6 +583,9 @@ def is_download_finished(directory, save_flag):
     :param save_flag: 数据落盘完成后的标志文件
     :return: 如有数据被下载完成返回 True，否则返回 False
     """
+    # 设定一定的延迟间隔，避免频繁进行磁盘的io读取操作
+    time.sleep(0.5)
+    logger.info("Waiting for download...")
     # 检查目录是否存在
     if not os.path.exists(directory):
         logger.warning(f"The specified directory {directory} does not exist.")
@@ -596,7 +599,7 @@ def is_download_finished(directory, save_flag):
     return False
 
 
-def process_step(dump_path, step, step_list):
+def process_step(dump_path, flag_path, step, step_list):
     if step not in step_list:
         return
 
@@ -618,7 +621,6 @@ def process_step(dump_path, step, step_list):
     save_finish_flag = f"step_{step}"
     start_time = time.time() 
     while True:
-        flag_path = os.path.join(dump_path, "dump_flag", rank_dir)
         is_finished = is_download_finished(flag_path, save_finish_flag)
         if not is_finished:
             logger.info("There is data being downloaded in the specified directory, continue checking...")

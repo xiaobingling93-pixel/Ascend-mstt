@@ -15,6 +15,7 @@
 
 import os
 import glob
+import tempfile
 import mindspore as ms
 from mindspore import hal, ops, Tensor
 from mindspore.ops.primitive import _run_op
@@ -42,8 +43,6 @@ except ImportError:
 
 
 class GraphModeCellDump:
-    task = CoreConst.STATISTICS
-
     def __init__(self, config: DebuggerConfig, model, strict=True):
         self.net = model
         self.white_list = []
@@ -56,47 +55,39 @@ class GraphModeCellDump:
         self.list = config.list
         self.data_mode = config.data_mode
         self.file_format = config.file_format
-        GraphModeCellDump.task = config.task
         self.summary_mode = config.summary_mode
+        self.task = config.task
         self.check_config(strict)
         self.set_step()
 
     @staticmethod
     def step(dump_path, step_list, task):
         # 更新TensorDump Step
-        if GraphModeCellDump.task == CoreConst.TENSOR:
+        if task == CoreConst.TENSOR:
             hal.synchronize()
             temp_tensor = ms.Tensor([1], dtype=ms.float32)
             rank_id = os.environ.get('RANK_ID')
             rank_dir = DEFAULT_RANK_DIR
-            
+
             if rank_id is not None:
                 rank_dir = CoreConst.RANK + str(rank_id)
-            # 确保dump前目录下不存在flag文件
-            flag_dir = os.path.join(dump_path, "dump_flag", rank_dir)
-            prefix = f"step_{Runtime.step_count}"
-            matching_files = glob.glob(os.path.join(flag_dir, f"{prefix}*"))
-            # 同时存在多个step_10, step_100，只需要删除第一个
-            if matching_files:
-                os.remove(matching_files[0])
-            save_file_flag = f"{dump_path}/dump_flag/{rank_dir}/step_{Runtime.step_count}"
-            _run_op(ops.TensorDump(), "TensorDump", (save_file_flag, temp_tensor))
-            step_flag = "<tensordump-update-step>"
-            _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
-            ops.tensordump(step_flag, temp_tensor)
+
+            with tempfile.TemporaryDirectory(dir=dump_path, prefix=rank_dir) as temp_dir:
+                save_file_flag = f"{temp_dir}/step_{Runtime.step_count}"
+                _run_op(ops.TensorDump(), "TensorDump", (save_file_flag, temp_tensor))
+                step_flag = "<tensordump-update-step>"
+                _run_op(ops.TensorDump(), "TensorDump", (step_flag, temp_tensor))
+                ops.tensordump(step_flag, temp_tensor)
+                cellDumperWithDumpGradient.process_step(dump_path, temp_dir, Runtime.step_count, step_list)
 
         # 更新静态图KBK dump的step数
-        if GraphModeCellDump.task == CoreConst.STATISTICS:
+        if task == CoreConst.STATISTICS:
             if not graph_step_flag:
                 raise Exception(
                     "Importing _dump_step failed, "
                     "please use the latest version package of MindSpore."
                 )
             _dump_step(1)
-
-        if task == CoreConst.TENSOR:
-            cellDumperWithDumpGradient.process_step(dump_path, Runtime.step_count, step_list)
-        if task == CoreConst.STATISTICS:
             cellDumperWithDumpGradient.process_statistics_step(dump_path, Runtime.step_count, step_list)
 
     def check_config(self, strict):
