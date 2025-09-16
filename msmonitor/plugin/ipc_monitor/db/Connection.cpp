@@ -78,7 +78,7 @@ bool Connection::CheckTableExists(const std::string &tableName)
 {
     std::string sql{"SELECT 1 FROM sqlite_master WHERE type='table' AND name='" + tableName + "' LIMIT 1"};
     std::vector<std::tuple<int32_t>> result;
-    if(ExecuteQuery(sql, result)) {
+    if (ExecuteQuery(sql, result)) {
         return !result.empty();
     }
     return false;
@@ -120,7 +120,8 @@ std::vector<TableColumn> Connection::ExecuteGetTableColumns(const std::string &t
         return columns;
     }
     while (sqlite3_step(stmt_) == SQLITE_ROW) {
-        std::string name, type;
+        std::string name;
+        std::string type;
         GetColumn(name);
         GetColumn(type);
         columns.emplace_back(name, type);

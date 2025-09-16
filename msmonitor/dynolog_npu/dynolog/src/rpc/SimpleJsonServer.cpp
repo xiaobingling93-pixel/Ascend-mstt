@@ -310,15 +310,15 @@ void SimpleJsonServerBase::run()
 
 void SimpleJsonServerBase::init_openssl()
 {
-    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
     // OpenSSL 1.1.0+ (包括3.0+)
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS |
                      OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
-    #else
+#else
     // OpenSSL 1.0.x 及更早版本
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
-    #endif
+#endif
 }
 
 SSL_CTX* SimpleJsonServerBase::create_context()
@@ -455,7 +455,7 @@ int get_password_with_stars(char* buf, size_t bufsize)
                 fflush(stdout);
             }
         } else {
-            secure_buf[idx++] = static_cast<char> (ch);
+            secure_buf[idx++] = static_cast<char>(ch);
             printf("*");
             fflush(stdout);
         }
