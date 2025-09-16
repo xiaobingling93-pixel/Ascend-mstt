@@ -6,7 +6,7 @@
 ## 依赖
 与业内pytorch的算子介入方式相同，算子接入框架需要保障设备上有正确的pytorch版本（我们还依赖torch_npu版本）
 
-pytorch版本可由pip安装，torch_npu版本详见[此处](https://gitee.com/ascend/pytorch/releases)，请选择与pytorch适配的torch_npu版本。
+pytorch版本可由pip安装，torch_npu版本详见[此处](https://gitcode.com/Ascend/pytorch/releases)，请选择与pytorch适配的torch_npu版本。
 
 ## 工程介绍
 整体工程目录如下：

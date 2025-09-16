@@ -90,7 +90,7 @@ setuptools.setup(
     description="Ascend Probe Utils",
     long_description="MindStudio-Probe is a set of tools for diagnosing and improving model accuracy on Ascend NPU, "
                      "including API acc checker, ptdbg, grad tool etc.",
-    url="https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe",
+    url="https://gitcode.com/Ascend/mstt/tree/master/debug/accuracy_tools/msprobe",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
     packages=setuptools.find_namespace_packages(exclude=EXCLUDE_PKGS, include=["msprobe", "msprobe*"]),
