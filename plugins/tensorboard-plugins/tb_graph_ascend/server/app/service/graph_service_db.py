@@ -40,7 +40,7 @@ class DbGraphService(GraphServiceStrategy):
 
     def load_graph_data(self):
         if not self.repo:
-            return {'success': False, 'error': 'database not init'}
+            return {'success': False, 'error': GraphUtils.t('dbInitError')}
         if not self.conn:
             self.conn = self.repo.get_db_connection()
         GraphState.set_global_value("all_node_info_cache", {})  # 切换文件清缓存
@@ -55,17 +55,17 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': True, 'data': self.config_info}
         except Exception as e:
             logger.error(f"load graph config info failed, {e}")
-            return {'success': False, 'error': f'load graph config info failed, {e}'}
+            return {'success': False, 'error': GraphUtils.t('loadConfigError')}
 
     def load_graph_all_node_list(self, meta_data):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
             if rank is None or step is None or micro_step is None:
-                return {'success': False, 'error': 'rank or step or micro_step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             result = {}
             if not self.config_info:
                 self.config_info = self.repo.query_config_info() 
@@ -94,12 +94,12 @@ class DbGraphService(GraphServiceStrategy):
                 return {'success': True, 'data': result}
         except Exception as e:
             logger.error(f"load graph all node list failed, {e}")
-            return {'success': False, 'error': f'load graph all node list failed, {e}'}
+            return {'success': False, 'error': GraphUtils.t('loadNodeError')}
 
     def change_node_expand_state(self, node_info, meta_data):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
             rank = meta_data.get('rank')
@@ -126,17 +126,17 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': True, 'data': hierarchy}
         except Exception as e:
             logger.error('node expand or collapse failed:' + str(e))
-            return {'success': False, 'error': f'节点展开或收起发生错误', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('expandNodeError'), 'data': None}
 
     def search_node_by_precision(self, meta_data, values):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
             if rank is None or step is None or micro_step is None:
-                return {'success': False, 'error': 'rank or step or micro_step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             is_filter_unmatch_nodes = True if '无匹配节点' in values else False
             if is_filter_unmatch_nodes:
                 values.remove('无匹配节点')
@@ -162,12 +162,12 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': True, 'data': node_name_list}
         except Exception as e:
             logger.error('node search by precision failed:' + str(e))
-            return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('searchNodeError'), 'data': None}
     
     def search_node_by_overflow(self, meta_data, values):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
@@ -177,26 +177,26 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': True, 'data': node_name_list}
         except Exception as e:
             logger.error('node search by overflow failed:' + str(e))
-            return {'success': False, 'error': f'节点搜索发生错误', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('searchNodeError'), 'data': None}
 
     def update_hierarchy_data(self, graph_type):
         if (graph_type == NPU or graph_type == BENCH):
             hierarchy = LayoutHierarchyModel.update_hierarchy_data(graph_type)
             return {'success': True, 'data': hierarchy}
         else:
-            return {'success': False, 'error': '节点类型错误'}
+            return {'success': False, 'error': GraphUtils.t('graphTypeError')}
 
     def get_node_info(self, node_info, meta_data):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             result = {}
             graph_type = node_info.get('nodeType')
             node_name = node_info.get('nodeName')
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             if rank is None or step is None:
-                return {'success': False, 'error': 'rank or step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             if self.config_info.get('isSingleGraph') or graph_type == SINGLE:
                 result['npu'] = self.repo.query_node_info(node_name, graph_type, rank, step)
             else:
@@ -212,16 +212,16 @@ class DbGraphService(GraphServiceStrategy):
             return {'success': True, 'data': result}
         except Exception as e:
             logger.error('get node info failed:' + str(e))
-            return {'success': False, 'error': '获取节点信息失败', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('getNodeInfoError'), 'data': None}
 
     def add_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_match_children):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             if rank is None or step is None:
-                return {'success': False, 'error': 'rank or step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             task = self.config_info.get('task')
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
@@ -235,25 +235,25 @@ class DbGraphService(GraphServiceStrategy):
                                                                          bench_node_name, task)
                 return self._generate_matched_result(match_result, rank, step)
             else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
+                return {'success': False, 'error': GraphUtils.t('taskTypeError')}
         except Exception as e:
             logger.error(str(e))
-            return {'success': False, 'error': '匹配节点失败', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('matchNodeError'), 'data': None}
 
     def add_match_nodes_by_config(self, config_file_name, meta_data):
         if not self.conn:
-            return {'success': False, 'error': 'database connection not init'}
+            return {'success': False, 'error': GraphUtils.t('dbInitError')}
         result = {}
         rank = meta_data.get('rank')
         step = meta_data.get('step')
         if rank is None or step is None:
-            return {'success': False, 'error': 'rank or step is null'}
+            return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
         task = self.config_info.get('task')
         try:
             match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
             graph_data = self.repo.query_matched_nodes_info_by_config(match_node_links, rank, step)
             if error:
-                return {'success': False, 'error': '配置文件失败'}
+                return {'success': False, 'error': GraphUtils.t('loadConfigFileError')}
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
                 match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,
@@ -262,19 +262,19 @@ class DbGraphService(GraphServiceStrategy):
                 result.setdefault('data', {})['matchResult'] = [item.get('success', False) for item in match_result]
                 return result
             else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported)'}
+                return {'success': False, 'error': GraphUtils.t('taskTypeError')}
         except Exception as e:
             logger.error(str(e))
-            return {'success': False, 'error': '匹配节点失败', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('matchNodeError'), 'data': None}
 
     def delete_match_nodes(self, npu_node_name, bench_node_name, meta_data, is_unmatch_children):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbInitError')}
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             if rank is None or step is None:
-                return {'success': False, 'error': 'rank or step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             task = self.config_info.get('task')
             
             # 根据任务类型计算误差

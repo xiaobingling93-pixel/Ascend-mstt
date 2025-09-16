@@ -36,6 +36,7 @@ import './components/tf_manual_match/index';
 import './components/tf_color_select/index';
 import './components/tf_linkage_search_combox/index';
 import type { MetaDirType, MinimapVis } from './type';
+import type { SelectionType } from '../graph_ascend/type';
 
 @customElement('graph-controls-board')
 class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
@@ -299,7 +300,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   isSingleGraph = false;
 
   @property({ type: Object, notify: true })
-  selection: Selection = {} as Selection;
+  selection: SelectionType = {} as SelectionType;
 
   // 全量节点数据，支撑各种节点的搜索
   @property({ type: Object })
@@ -350,6 +351,8 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       const t = this.t;
       this.set('t', null);
       this.set('t', t);
+      const selection = { ...this.selection, lang: currentLang }
+      this.set('selection', selection);
 
     });
   }
