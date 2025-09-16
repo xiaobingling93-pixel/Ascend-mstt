@@ -703,7 +703,7 @@ def merge_file(dump_path, rank_dir, file_dict):
 
 
 def process_statistics_step(dump_path, step, step_list):
-    if step not in step_list:
+    if step_list and step not in step_list:
         return
 
     if not os.path.exists(dump_path):
