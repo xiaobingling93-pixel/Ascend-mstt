@@ -154,7 +154,7 @@ void DBProcessManager::ExecuteTask()
 bool DBProcessManager::CheckAndInitDB()
 {
     std::lock_guard<std::mutex> lock(dbMutex_);
-    if(msMonitorDB_.database == nullptr || msMonitorDB_.dbRunner == nullptr) {
+    if (msMonitorDB_.database == nullptr || msMonitorDB_.dbRunner == nullptr) {
         std::shared_ptr<MsMonitorDB> msMonitorDB{nullptr};
         MakeSharedPtr(msMonitorDB);
         msMonitorDB_.database = msMonitorDB;
@@ -167,7 +167,7 @@ bool DBProcessManager::CheckAndInitDB()
 
 bool DBProcessManager::SaveData()
 {
-    if(!CheckAndInitDB()) {
+    if (!CheckAndInitDB()) {
         LOG(ERROR) << "DBProcessManager init msmonitor db failed";
         return false;
     }

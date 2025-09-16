@@ -186,7 +186,7 @@ bool Connection::ExecuteQuery(const std::string &sql, std::vector<std::tuple<Arg
     if (!QueryCmd(sql)) {
         return false;
     }
-    while(true) {
+    while (true) {
         auto rc = sqlite3_step(stmt_);
         if (rc != SQLITE_ROW) {
             if (rc != SQLITE_DONE) {

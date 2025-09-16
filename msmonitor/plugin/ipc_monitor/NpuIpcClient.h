@@ -143,7 +143,7 @@ public:
     IpcClient() = default;
     bool Init();
     bool RegisterInstance(int32_t npu);
-    bool SendNpuStatus(int32_t npuTraceStatus, const std::string& msgType);
+    bool SendNpuStatus(int32_t status, const std::string& msgType);
     std::string IpcClientNpuConfig();
     bool SyncSendMessage(const Message &message, const std::string &destName, int numRetry = 10,
         int seepTimeUs = 10000);

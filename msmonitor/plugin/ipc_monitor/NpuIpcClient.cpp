@@ -81,10 +81,9 @@ std::string IpcClient::IpcClientNpuConfig()
         req->pids[i] = pids_[i];
     }
     std::unique_ptr<Message> message;
-    try{
+    try {
         message = Message::ConstructMessage<NpuRequest, int32_t>(*req, MSG_TYPE_REQUEST, size);
-    }
-    catch (const std::exception &e) {
+    } catch (const std::exception &e) {
         LOG(ERROR) << "ConstructMessage failed: " << e.what();
         free(req);
         req = nullptr;
