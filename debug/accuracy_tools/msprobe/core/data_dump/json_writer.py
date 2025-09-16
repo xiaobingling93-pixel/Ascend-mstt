@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concurrent
+import copy
 import csv
 import os
-import copy
 import threading
 import traceback
 from datetime import datetime, timezone, timedelta
 
-import concurrent
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, load_json, check_path_before_create
-from msprobe.core.common.log import logger
 from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, check_path_before_create
+from msprobe.core.common.log import logger
 
 lock = threading.Lock()
 
@@ -49,6 +49,7 @@ class DataWriter:
         self._error_log_initialized = False
         self._cache_logged_error_types = set()
         self.crc32_stack_list = []
+        self.data_updated = False
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
@@ -60,7 +61,7 @@ class DataWriter:
             spawn_writer = csv.writer(csv_file)
             if not is_exists:
                 spawn_writer.writerow(result_header)
-            spawn_writer.writerows([result,])
+            spawn_writer.writerows([result, ])
         is_new_file = not is_exists
         if is_new_file:
             change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -238,6 +239,7 @@ class DataWriter:
                 logger.warning(f"The dump data({dump_data}) should be a dict.")
                 return
 
+            self.data_updated = True
             key = next(iter(new_data.keys()))
             if key in dump_data:
                 dump_data.get(key).update(new_data.get(key))
@@ -246,6 +248,7 @@ class DataWriter:
 
     def update_stack(self, name, stack_data):
         with lock:
+            self.data_updated = True
             api_list = self.cache_stack.get(stack_data)
             if api_list is None:
                 self.cache_stack.update({stack_data: [name]})
@@ -254,10 +257,12 @@ class DataWriter:
 
     def update_construct(self, new_data):
         with lock:
+            self.data_updated = True
             self.cache_construct.update(new_data)
 
     def update_debug(self, new_data):
         with lock:
+            self.data_updated = True
             self.cache_debug['data'].update(new_data)
 
     def write_data_json(self, file_path):
@@ -324,16 +329,20 @@ class DataWriter:
             stat_result = self.flush_stat_stack()
             # 遍历 cache_data，将占位符替换为最终统计值
             if stat_result:
+                self.data_updated = True
                 self._replace_stat_placeholders(self.cache_data, stat_result)
                 if self.cache_debug:
                     self._replace_stat_placeholders(self.cache_debug, stat_result)
 
-            # 2) 再 flush CRC32
             crc32_result = self.flush_crc32_stack()
             if crc32_result:
+                self.data_updated = True
                 self._replace_crc32_placeholders(self.cache_data, crc32_result)
                 if self.cache_debug:
                     self._replace_crc32_placeholders(self.cache_debug, crc32_result)
+
+            if not self.data_updated:
+                return
 
             if self.cache_data:
                 self.write_data_json(self.dump_file_path)
@@ -343,4 +352,4 @@ class DataWriter:
                 self.write_construct_info_json(self.construct_file_path)
             if self.cache_debug:
                 self.write_debug_info_json(self.debug_file_path)
-
+            self.data_updated = False
