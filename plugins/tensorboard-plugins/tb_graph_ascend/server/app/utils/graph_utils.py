@@ -24,12 +24,18 @@ from functools import cmp_to_key
 from pathlib import Path
 from tensorboard.util import tb_logging
 from .global_state import GraphState, FILE_NAME_REGEX, MAX_FILE_SIZE, PERM_GROUP_WRITE, PERM_OTHER_WRITE
+from .i18n import language, ZH_CN
 
 logger = tb_logging.get_logger()
 FILE_PATH_MAX_LENGTH = 4096
 
 
 class GraphUtils:
+
+    @staticmethod
+    def t(key):
+        lang = GraphState.get_global_value('lang', ZH_CN)
+        return language.get(lang).get(key, '')
 
     @staticmethod
     def get_graph_data(meta_data):
@@ -188,7 +194,7 @@ class GraphUtils:
                 return default_value
                 
             # 验证必要字段是否存在
-            required_fields = ["tag", "microStep", "run", "type"]
+            required_fields = ["tag", "microStep", "run", "type", 'lang']
             for field in required_fields:
                 if field not in meta_data:
                     logger.error(f"Field {field} is missing in metadata.")

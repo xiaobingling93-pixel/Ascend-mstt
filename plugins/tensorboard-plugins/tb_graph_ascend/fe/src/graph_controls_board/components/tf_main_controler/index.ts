@@ -147,12 +147,13 @@ class MainController extends PolymerElement {
     }
     const { type, tags } = this.metaDir[this.selectedRun];
     this.set('tags', tags);
-    const selection = {
+    const selection: SelectionType = {
       ...this.selection,
       run: this.selectedRun,
       tag: tags[0],
       microStep: -1,
-      type
+      type,
+      lang: 'zh-CN'
     };
     const isDBType = type == DB_TYPE;
     this.set('selection', selection);

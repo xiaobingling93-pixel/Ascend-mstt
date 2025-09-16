@@ -23,6 +23,7 @@ from ..service import ServiceFactory, GraphServiceStrategy
 from ..utils.file_check_wrapper import check_file_type
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import DataType
+from ..utils.global_state import GraphState
 
 
 class GraphView:
@@ -68,6 +69,8 @@ class GraphView:
             'tag': request.args.get('tag'),
             'type': request.args.get('type'),
         }
+        lang = request.args.get('lang')
+        GraphState.set_global_value('lang', lang)
         strategy = GraphView._get_strategy(meta_data)
         if meta_data.get('type') == DataType.DB.value:
             result = strategy.load_graph_data()
@@ -83,7 +86,8 @@ class GraphView:
                 }
             )
         else: 
-            return http_util.Respond(request, {'success': False, 'message': 'type error'}, "application/json")
+            result = {'success': False, 'error': GraphState.t('typeError')}
+            return http_util.Respond(request, result, "application/json")
 
     # 获取当前图数据配置信息
     @staticmethod
@@ -113,6 +117,7 @@ class GraphView:
     # 根据精度误差搜索节点
     @staticmethod
     @wrappers.Request.application
+    @check_file_type
     def search_node(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
         meta_data = data.get("metaData")
@@ -126,7 +131,7 @@ class GraphView:
         else:
             result = {
                 'success': False,
-                'message': "type error"
+                'error': GraphState.t('searchTypeError')
             }
         return http_util.Respond(request, result, "application/json") 
     
@@ -150,10 +155,10 @@ class GraphView:
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = GraphUtils.safe_get_node_info(data)
         result = {'success': False, 'error': ''}
-        if node_info is None or not isinstance(node_info, dict):
-            result['error'] = 'The query parameter nodeInfo and its sub-items must exist and must be a dictionary.'
-            return http_util.Respond(request, result, "application/json")
         meta_data = data.get('metaData')
+        if node_info is None or not isinstance(node_info, dict):
+            result['error'] = GraphState.t('nodeInfoError') 
+   
         strategy = GraphView._get_strategy(meta_data)
         hierarchy = strategy.change_node_expand_state(node_info, meta_data)
         return http_util.Respond(request, json.dumps(hierarchy), "application/json")
@@ -178,10 +183,11 @@ class GraphView:
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = GraphUtils.safe_get_node_info(data)
         result = {'success': False, 'error': ''}
-        if node_info is None or not isinstance(node_info, dict):
-            result['error'] = 'The query parameter nodeInfo and its sub-items must exist and must be a dictionary.'
-            return http_util.Respond(request, result, "application/json")
         meta_data = data.get('metaData')
+        if node_info is None or not isinstance(node_info, dict):
+            result['error'] = GraphState.t('nodeInfoError') 
+            return http_util.Respond(request, result, "application/json")
+        
         strategy = GraphView._get_strategy(meta_data)
         node_detail = strategy.get_node_info(node_info, meta_data)
         return http_util.Respond(request, json.dumps(node_detail), "application/json")

@@ -30,6 +30,7 @@ export interface SelectionType {
     run: string;
     tag: string;
     type: 'json' | 'db';
+    lang: 'zh-CN' | 'en';
     microStep?: number;
     step?: number;
     rank?: number;
