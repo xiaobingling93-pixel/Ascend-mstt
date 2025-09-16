@@ -63,7 +63,7 @@
 
 ### 3. 解析数据说明
 
-将通过[msprobe](https://gitcode.com/Ascend/mstt/blob/master/debug/accuracy_tools/msprobe/README.md#3-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件置于某个文件夹中，路径名称下文称之为 `output_path`
+将通过[msprobe](https://gitcode.com/Ascend/mstt/blob/master/debug/accuracy_tools/msprobe/README.md#3-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件放置于某个文件夹中，路径名称下文称之为 `output_path`
 
 图构建：
 
