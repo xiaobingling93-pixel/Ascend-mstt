@@ -54,8 +54,8 @@ class TestWrapSetupBackwardHook(unittest.TestCase):
         result = self.decorated_func(mock_self, test_data)
 
         self.assertIsInstance(result, dict)
-        self.assertFalse(torch.equal(result["tensors"][0], self.tensor))
-        self.assertTrue(torch.equal(result["tensors"][1], test_tensor2))
+        self.assertTrue(torch.equal(result["tensors"][0], self.tensor))
+        self.assertFalse(torch.equal(result["tensors"][1], test_tensor2))
         self.assertIsInstance(result["nested"]["tuple"][0], torch.Tensor)
         self.assertTrue(torch.equal(result["nested"]["tuple"][1], test_tensor))
 
@@ -76,6 +76,6 @@ class TestWrapSetupBackwardHook(unittest.TestCase):
         result = self.decorated_func(mock_self, test_case)
 
         self.assertIsInstance(result, list)
-        self.assertTrue(torch.equal(result[1]["dict"], test_tensor1))
-        self.assertTrue(torch.equal(result[2][0], test_tensor2))
-        self.assertTrue(torch.equal(result[3][0], test_tensor3))
+        self.assertFalse(torch.equal(result[1]["dict"], test_tensor1))
+        self.assertFalse(torch.equal(result[2][0], test_tensor2))
+        self.assertFalse(torch.equal(result[3][0], test_tensor3))

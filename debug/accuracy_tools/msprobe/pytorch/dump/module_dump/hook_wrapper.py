@@ -24,8 +24,11 @@ from msprobe.pytorch.common.log import logger
 
 
 def wrap_setup_backward_hook(func):
-    def requires_clone(tensor):
-        return isinstance(tensor, torch.Tensor) and tensor.requires_grad and torch.is_grad_enabled()
+    def requires_clone(tensor, need_check_leaf=False):
+        need_clone = isinstance(tensor, torch.Tensor) and tensor.requires_grad and torch.is_grad_enabled()
+        if need_check_leaf:
+            need_clone &= tensor.grad_fn is not None
+        return need_clone
 
     @recursion_depth_decorator("Dump: wrap_setup_backward_hook.parse_tensor", max_depth=Const.DUMP_MAX_DEPTH)
     def parse_tensor(item, tensor_list):
@@ -39,20 +42,20 @@ def wrap_setup_backward_hook(func):
                 parse_tensor(value, tensor_list)
 
     @recursion_depth_decorator("Dump: wrap_setup_backward_hook.rebuild_args", max_depth=Const.DUMP_MAX_DEPTH)
-    def rebuild_args(item, tensor_iter):
-        if requires_clone(item):
+    def rebuild_args(item, tensor_iter, need_check_leaf=False):
+        if requires_clone(item, need_check_leaf):
             result = next(tensor_iter)
             if hasattr(result, "_base") and result._base is not None:
                 if torch._C._autograd._get_creation_meta(result) != torch._C._autograd.CreationMeta(0):
                     torch._C._autograd._set_creation_meta(result, torch._C._autograd.CreationMeta(0))
-            return result    
+            return result
         if isinstance(item, list):
             for index, value in enumerate(item):
-                item[index] = rebuild_args(value, tensor_iter)
+                item[index] = rebuild_args(value, tensor_iter, need_check_leaf=True)
             return item
         if isinstance(item, dict):
             for key, value in item.items():
-                item[key] = rebuild_args(value, tensor_iter)
+                item[key] = rebuild_args(value, tensor_iter, need_check_leaf=True)
             return item
         if isinstance(item, tuple):
             if hasattr(item, '_fields'):
