@@ -35,7 +35,7 @@ notes: the request should contain:
         .. <add other args>
     }
 */
-nlohmann::json toJson(const std::string& message)
+inline nlohmann::json toJson(const std::string& message)
 {
     using json = nlohmann::json;
     json result;
@@ -65,7 +65,7 @@ nlohmann::json toJson(const std::string& message)
     return result;
 }
 
-std::string GetCommandStatus(const std::string& configStr)
+inline std::string GetCommandStatus(const std::string& configStr)
 {
     auto npuTraceStatus = LibkinetoConfigManager::getInstance()->getNpuTraceStatus();
     auto npuMonitorStatus = LibkinetoConfigManager::getInstance()->getNpuMonitorStatus();

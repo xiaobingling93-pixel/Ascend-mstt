@@ -108,14 +108,8 @@ void SimpleJsonServerBase::initSocket()
 
     /* Get port if assigned 0 */
     if (port_ == 0) {
-        socklen_t len_out = sizeof(server_addr);
-        ret = ::getsockname(sock_fd_, (struct sockaddr*)&server_addr, &len_out);
-        if (ret < 0 || len_out != sizeof(server_addr)) {
-            std::perror("getsockname()");
-        } else {
-        port_ = ntohs(server_addr.sin6_port);
-        LOG(INFO) << "System assigned port = " << ntohs(server_addr.sin6_port);
-        }
+        LOG(ERROR) << "RPC listening port is set to 0.";
+        throw std::runtime_error("RPC listening port is set to 0. Please specify a valid port number!");
     }
 
     LOG(INFO) << "Listening to connections on port " << port_;
