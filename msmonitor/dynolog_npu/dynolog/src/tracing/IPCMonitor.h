@@ -25,6 +25,8 @@ public:
     void loop();
     void dataLoop();
 
+    void release();
+
 public:
     virtual void processMsg(std::unique_ptr<ipcfabric::Message> msg);
     virtual void processDataMsg(std::unique_ptr<ipcfabric::Message> msg);

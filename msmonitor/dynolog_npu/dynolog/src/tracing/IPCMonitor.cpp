@@ -35,6 +35,22 @@ IPCMonitor::IPCMonitor(const std::string& ipc_fabric_name)
         << LibkinetoConfigManager::getInstance()->processCount("0");
 }
 
+void IPCMonitor::release()
+{
+    LOG(INFO) << "Start to release IPCMonitor!";
+    if (ipc_manager_) {
+        ipc_manager_.reset();
+    }
+
+    if (data_ipc_manager_) {
+        data_ipc_manager_.reset();
+    }
+
+    if (logger_) {
+        logger_.reset();
+    }
+}
+
 void IPCMonitor::loop()
 {
     while (ipc_manager_) {
