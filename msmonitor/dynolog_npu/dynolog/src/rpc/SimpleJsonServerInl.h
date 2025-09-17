@@ -107,11 +107,15 @@ nlohmann::json SimpleJsonServer<TServiceHandler>::handleSetKinetOnDemandRequest(
         auto commandStatus = GetCommandStatus(config);
         if (commandStatus == "effective") {
             auto result = handler_->setKinetOnDemandRequest(job_id, pids_set, config, process_limit);
-            response["processesMatched"] = result.processesMatched;
-            response["eventProfilersTriggered"] = result.eventProfilersTriggered;
-            response["activityProfilersTriggered"] = result.activityProfilersTriggered;
-            response["eventProfilersBusy"] = result.eventProfilersBusy;
-            response["activityProfilersBusy"] = result.activityProfilersBusy;
+            if (result.processesMatched.empty()) {
+                commandStatus = "ineffective";
+            } else {
+                response["processesMatched"] = result.processesMatched;
+                response["eventProfilersTriggered"] = result.eventProfilersTriggered;
+                response["activityProfilersTriggered"] = result.activityProfilersTriggered;
+                response["eventProfilersBusy"] = result.eventProfilersBusy;
+                response["activityProfilersBusy"] = result.activityProfilersBusy;
+            }
         }
         response["commandStatus"] = commandStatus;
     }

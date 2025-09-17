@@ -23,6 +23,11 @@
 namespace dynolog_npu {
 namespace ipc_monitor {
 
+enum RunningState: int32_t {
+    INIT = 0,
+    FINALIZE = 1
+};
+
 class PyDynamicMonitorProxy : public Singleton<PyDynamicMonitorProxy> {
     friend class Singleton<PyDynamicMonitorProxy>;
 
@@ -34,6 +39,10 @@ public:
             monitor_ = DynoLogNpuMonitor::GetInstance();
             monitor_->SetNpuId(npuId);
             bool res = monitor_->Init();
+            if (res) {
+                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::INIT, MSG_TYPE_TRACE_STATUS);
+                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::INIT, MSG_TYPE_MONITOR_STATUS);
+            }
             return res;
         } catch (const std::exception &e) {
             LOG(ERROR) << "Error when init dyno " << e.what();
@@ -54,6 +63,8 @@ public:
     void FinalizeDyno()
     {
         DynoLogNpuMonitor::GetInstance()->Finalize();
+        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_TRACE_STATUS);
+        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_MONITOR_STATUS);
     }
 
     void UpdateProfilerStatus(std::unordered_map<std::string, std::string>& status)
