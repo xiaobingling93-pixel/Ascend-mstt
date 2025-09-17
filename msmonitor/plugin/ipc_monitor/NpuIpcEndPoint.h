@@ -183,7 +183,7 @@ public:
     }
 
 protected:
-    fileDesT socketFd;
+    fileDesT socketFd = -1;
     size_t SetSocketAdress(const std::string &srcSocket, struct sockaddr_un &destSocket)
     {
         if (srcSocket.size() > addressMaxLen) {

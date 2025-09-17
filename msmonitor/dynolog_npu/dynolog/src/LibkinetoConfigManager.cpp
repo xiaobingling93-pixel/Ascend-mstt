@@ -110,8 +110,7 @@ static std::string readConfigFromConfigFile(const char* filename)
     try {
         conf.assign(
             std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
-    }
-    catch (std::exception& e) {
+    } catch (std::exception& e) {
         LOG(ERROR) << "Error in reading libkineto config from config file: "
             << e.what();
     }
@@ -142,8 +141,7 @@ void LibkinetoConfigManager::runGc()
                     job_it->first);
                 onProcessCleanup(proc_it->first);
                 proc_it = procs.erase(proc_it);
-            }
-            else {
+            } else {
                 proc_it++;
             }
         }
@@ -151,8 +149,7 @@ void LibkinetoConfigManager::runGc()
             LOG(INFO) << "Stopped tracking job " << job_it->first;
             jobInstancesPerGpu_.erase(job_it->first);
             job_it = jobs_.erase(job_it);
-        }
-        else {
+        } else {
             job_it++;
         }
     }
@@ -229,7 +226,7 @@ void LibkinetoConfigManager::setOnDemandConfigForProcess(
     LibkinetoProcess& process,
     const std::string& config,
     int32_t configType /* LibkinetoConfigType */,
-    int32_t limit) 
+    int32_t limit)
 {
     res.processesMatched.push_back(process.pid);
 
@@ -238,8 +235,7 @@ void LibkinetoConfigManager::setOnDemandConfigForProcess(
         if (process.eventProfilerConfig.empty()) {
             process.eventProfilerConfig = config;
             res.eventProfilersTriggered.push_back(process.pid);
-        }
-        else {
+        } else {
             res.eventProfilersBusy++;
         }
     }
@@ -256,8 +252,7 @@ void LibkinetoConfigManager::setOnDemandConfigForProcess(
             res.traceIds.push_back(trace_id);
 
             LOG(INFO) << " PID: " << process.pid << ", Trace Id: " << trace_id;
-        }
-        else {
+        } else {
             res.activityProfilersBusy++;
         }
     }
@@ -276,7 +271,7 @@ GpuProfilerResult LibkinetoConfigManager::setOnDemandConfig(
     const std::set<int32_t>& pids,
     const std::string& config,
     int32_t configType /* LibkinetoConfigType */,
-    int32_t limit) 
+    int32_t limit)
 {
     LOG(INFO) << fmt::format(
 
@@ -335,7 +330,7 @@ GpuProfilerResult LibkinetoConfigManager::setOnDemandConfig(
     return res;
 }
 
-int LibkinetoConfigManager::processCount(const std::string& jobId) const 
+int LibkinetoConfigManager::processCount(const std::string& jobId) const
 {
     int count = 0;
     std::lock_guard<std::mutex> guard(mutex_);
@@ -351,14 +346,13 @@ void LibkinetoConfigManager::updateNpuStatus(
     const std::string& jobId,
     int32_t pid,
     int32_t status,
-    const std::string& msgType) 
+    const std::string& msgType)
 {
     // jobId, pid为预留参数，目前无用
     std::lock_guard<std::mutex> guard(mutex_);
     if (msgType == kLibkinetoTraceStatus) {
         npuTraceStatus_ = status;
-    }
-    else if (msgType == kLibkinetoMonitorStatus) {
+    } else if (msgType == kLibkinetoMonitorStatus) {
         npuMonitorStatus_ = status;
     }
 }

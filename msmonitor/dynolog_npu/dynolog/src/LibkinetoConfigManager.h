@@ -32,7 +32,7 @@ public:
         registerLibkinetoContext(const std::string& jobId, int32_t pid, int32_t gpu);
     static std::shared_ptr<LibkinetoConfigManager> getInstance();
 
-    std::string getBaseConfig() 
+    std::string getBaseConfig()
     {
         std::lock_guard<std::mutex> guard(mutex_);
         return baseConfig_;
