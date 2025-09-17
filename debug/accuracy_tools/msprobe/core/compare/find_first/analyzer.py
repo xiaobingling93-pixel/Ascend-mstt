@@ -98,6 +98,8 @@ class DiffAnalyzer:
                 logger.warning(f'Rank {path.rank} has no dump data!')
                 continue
             for op_name, op_data in dump_data.items():
+                if is_ignore_op(op_name):
+                    continue
                 if is_communication_op(op_name):
                     self._first_comm_nodes[path.rank] = op_name
                     break
@@ -124,10 +126,16 @@ class DiffAnalyzer:
         for rank, nodes in list(self._rank_comm_nodes_dict.items())[:-1]:
             searched_ranks.add(rank)
             seen_nodes = set()
+            last_node = None
             for cur_node in nodes.values():
+                is_overflow = last_node and hasattr(last_node, 'layer') and hasattr(cur_node, 'layer') and \
+                last_node.layer >= cur_node.layer
+                if is_overflow:
+                    cur_node.layer = last_node.layer + 1
                 conn_info = cur_node.find_connected_nodes()
                 if not conn_info.get('ranks'):
                     conn_info['ranks'] = self._rank_comm_nodes_dict.keys()
+                last_node = cur_node
                 if not self._find_connection(conn_info, cur_node, searched_ranks, seen_nodes):
                     logger.debug(f'Cannot find connected communication node for "{cur_node.node_id}".')
 

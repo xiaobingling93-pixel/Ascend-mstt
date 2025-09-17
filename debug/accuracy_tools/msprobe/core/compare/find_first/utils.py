@@ -120,7 +120,8 @@ def is_communication_op(op_name):
 def is_ignore_op(op_name):
     ignore_keywords = [
         'Torch.empty',
-        'Torch.fill'
+        'Torch.fill',
+        'Tensor.__setitem__'
     ]
     return any(keyword in op_name for keyword in ignore_keywords)
 
