@@ -300,7 +300,11 @@ static DebuggerErrno InitAcl()
     constexpr const char* aclErrMsgOn = "1";
     aclInitJson["err_msg_mode"] = aclErrMsgOn;
     LOG_DEBUG("InitAcl dump json to " + aclInitJsonPath);
-    FileOperation::DumpJson(aclInitJsonPath, aclInitJson);
+    DebuggerErrno result = FileOperation::DumpJson(aclInitJsonPath, aclInitJson);
+    if (result != DebuggerErrno::OK) {
+        LOG_ERROR(result, "Failed to dump data to " + aclInitJsonPath + ".");
+        return result;
+    }
     aclError ret;
     try {
         ret = CALL_ACL_API(AclInit, aclInitJsonPath.c_str());

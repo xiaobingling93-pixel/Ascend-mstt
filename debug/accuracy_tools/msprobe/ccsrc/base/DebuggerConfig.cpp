@@ -219,6 +219,10 @@ void KernelListMatcher::Parse(const std::vector<std::string>& expressions)
 {
     for (auto& expression : expressions) {
         size_t len = expression.size();
+        if (len < REGEX_SUFFIX_LEN) {
+            LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, "Invalid expression when kernal match, too short: " + expression);
+            continue;
+        }
         if (strncmp(expression.c_str(), REGEX_PREFIX, REGEX_PREFIX_LEN) == 0 &&
             strncmp(expression.c_str() + (len - REGEX_SUFFIX_LEN), REGEX_SUFFIX, REGEX_SUFFIX_LEN) == 0) {
             /* name-regex(xxx)表示正则表达式 */
