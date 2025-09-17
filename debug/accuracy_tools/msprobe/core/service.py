@@ -26,6 +26,7 @@ from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggr
 from msprobe.core.data_dump.api_registry import ApiRegistry
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.kernel_dump.kernel_config import create_kernel_config_json
+from msprobe.core.common.megatron_utils import MegatronStepInfo
 
 
 class BaseService(ABC):
@@ -170,6 +171,7 @@ class BaseService(ABC):
         self.currrent_step_first_debug_save = True
         self.loop += 1
         self._reset_status()
+        MegatronStepInfo.reset()
 
     def save(self, variable, name, save_backward):
         '''

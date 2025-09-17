@@ -33,7 +33,7 @@ import pandas as pd
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.const import FileCheckConst, CompareConst
+from msprobe.core.common.const import FileCheckConst, CompareConst, Const
 from msprobe.core.common.global_lock import global_lock, is_main_process
 
 proc_lock = multiprocessing.Lock()
@@ -172,7 +172,7 @@ def check_path_exists(path):
     if not os.path.exists(path):
         logger.error('The file path %s does not exist.' % path)
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
-    
+
 
 def check_path_not_exists(path):
     if os.path.exists(path):
@@ -259,8 +259,8 @@ def check_path_type(file_path, file_type):
 def check_others_writable(directory):
     dir_stat = os.stat(directory)
     is_writable = (
-        bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
-        bool(dir_stat.st_mode & stat.S_IWOTH)     # 其他用户可写
+            bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
+            bool(dir_stat.st_mode & stat.S_IWOTH)  # 其他用户可写
     )
     return is_writable
 
@@ -319,7 +319,7 @@ def check_dirpath_before_read(path):
             check_path_owner_consistent(dirpath)
         except FileCheckException:
             logger.warning(f"The directory {dirpath} is not yours.")
-    
+
 
 def check_file_or_directory_path(path, isdir=False):
     """
@@ -420,6 +420,26 @@ def load_json(json_path):
         logger.error(f'load json file "{os.path.basename(json_path)}" failed.')
         raise RuntimeError(f"Load json file {json_path} failed.") from e
     return data
+
+
+def load_construct_json(json_path):
+    construct_dict_o = load_json(json_path)
+    if Const.MEGATRON_MICRO_STEP_NUMBER in construct_dict_o:
+        construct_dict = {}
+        micro_step_dict = {Const.MEGATRON_MICRO_STEP_NUMBER: construct_dict_o.get(Const.MEGATRON_MICRO_STEP_NUMBER)}
+        del construct_dict_o[Const.MEGATRON_MICRO_STEP_NUMBER]
+        for key, value in construct_dict_o.items():
+            if isinstance(value, list):
+                if len(value) != 2:
+                    logger.error(f'Parse construct json file "{os.path.basename(json_path)}" failed.')
+                    raise RuntimeError()
+                construct_dict[key] = value[0]
+                micro_step_dict[key] = value[1]
+            else:
+                construct_dict[key] = value
+                micro_step_dict[key] = 0
+        return construct_dict, micro_step_dict
+    return construct_dict_o, {}
 
 
 def save_json(json_path, data, indent=None, mode="w"):

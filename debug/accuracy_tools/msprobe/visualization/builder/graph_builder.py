@@ -17,11 +17,10 @@ import re
 from dataclasses import dataclass
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import load_json, save_json
+from msprobe.core.common.file_utils import load_json, load_construct_json
 from msprobe.core.common.utils import load_stack_json
 from msprobe.core.common.log import logger
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
-from msprobe.visualization.builder.msprobe_adapter import op_patterns
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
@@ -33,6 +32,7 @@ class GraphBuilder:
     forward_pattern = re.compile(r"(\.forward\.)(\d+)$")
     # 匹配以大写字母开头，后接任意字母，并以Template(结尾，或包含api_template(的字符串
     template_pattern = re.compile(r'\b([A-Z][a-zA-Z]*Template|api_template|api_instance)\(')
+    micro_step_dict = {}
 
     @staticmethod
     def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
@@ -45,16 +45,18 @@ class GraphBuilder:
             model_name: 模型名字，依赖外部输入
         Returns: Graph，代表图的数据结构
         """
-        construct_dict = load_json(construct_path)
+        construct_dict, micro_step_dict = load_construct_json(construct_path)
         if not construct_dict:
             logger.error("The content of 'construct.json' is empty, failed to build graph. "
                          "When dumping data, it is necessary to select level L0 or mix in order to "
                          "collect model structure data, that is, the content of 'construct.json' is not empty.")
             raise RuntimeError
+        GraphBuilder.micro_step_dict = micro_step_dict
         dump_dict = load_json(data_path)
         stack_dict = load_stack_json(stack_path)
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
-        graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict)
+        graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict,
+                      micro_step_num=micro_step_dict.get(Const.MEGATRON_MICRO_STEP_NUMBER))
         GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         GraphBuilder._add_parameters_grad(graph, data_dict)
@@ -170,6 +172,8 @@ class GraphBuilder:
                 node_stack_info = forward_node.stack_info if forward_node \
                     else ['This backward node cannot find the forward node and cannot retrieve stack information.']
             node.stack_info = node_stack_info
+            if GraphBuilder.micro_step_dict:
+                node.micro_step_id = GraphBuilder.micro_step_dict.get(node.id, 0)
         # 添加节点
         node.add_upnode(upnode)
         return node
@@ -229,6 +233,8 @@ class GraphBuilder:
                         node.upnode = api_collection_node
                     api_collection_node.upnode = graph.root
                     output.append(api_collection_node)
+                    if temp_nodes[0].micro_step_id is not None:
+                        api_collection_node.micro_step_id = temp_nodes[0].micro_step_id
                 else:
                     # 如果连续的api节点不足2个，将它们原样添加到输出列表
                     output.extend(temp_nodes)

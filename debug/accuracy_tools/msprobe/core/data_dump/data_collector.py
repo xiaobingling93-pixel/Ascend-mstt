@@ -23,6 +23,7 @@ from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
+from msprobe.core.common.megatron_utils import MegatronStepInfo, get_micro_step, is_megatron
 
 
 def build_data_collector(config):
@@ -270,15 +271,20 @@ class DataCollector:
         if self.config.level not in DataCollector.level_without_construct:
             if self.optimizer_status in [Const.OPTIMIZER, Const.CLIP_GRAD]:
                 if self.optimizer_status_first_start[self.optimizer_status]:
-                    self.data_writer.update_construct({self.optimizer_status: None})
+                    self.data_writer.update_construct(
+                        {self.optimizer_status: None if not is_megatron() else [None, get_micro_step()]})
                     self.optimizer_status_first_start[self.optimizer_status] = False
-                self.data_writer.update_construct({name: self.optimizer_status})
+                self.data_writer.update_construct(
+                    {name: self.optimizer_status if not is_megatron() else [self.optimizer_status, get_micro_step()]})
             else:
                 if self.config.level == Const.LEVEL_MIX and \
                   not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
                     self.data_writer.update_construct(
                         {name: self.module_processor.api_parent_node.get(threading.get_ident())}
                     )
+            if MegatronStepInfo.is_megatron:
+                micro_step_number = max(MegatronStepInfo.forward_micro_step, MegatronStepInfo.backward_micro_step)
+                self.data_writer.update_construct({Const.MEGATRON_MICRO_STEP_NUMBER: micro_step_number})
 
             self.data_writer.update_construct(self.module_processor.module_node)
 

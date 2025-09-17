@@ -25,6 +25,7 @@ from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import ModuleQueue, ThreadSafe
 from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope, BaseScope
+from msprobe.core.common.megatron_utils import wrap_megatron_step, get_micro_step, is_megatron
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (
@@ -45,6 +46,28 @@ def get_cell_construct(construct):
         return construct(self, *args, **kwargs)
 
     return _construct
+
+
+def patch_schedules_step():
+    try:
+        from mindspeed.mindspore.core.pipeline_parallel import schedules
+        schedules.forward_step = wrap_megatron_step(schedules.forward_step)
+        schedules.backward_step = wrap_megatron_step(schedules.backward_step, is_forward=False)
+        logger.info_on_rank_0("Patch mindspeed.mindspore method success.")
+    except ImportError:
+        logger.info_on_rank_0("No mindspeed.mindspore find.")
+    except Exception as e:
+        logger.info_on_rank_0(f"Patch mindspeed.mindspore method failed, detail:{str(e)}")
+
+    try:
+        from megatron.core.pipeline_parallel import schedules
+        schedules.forward_step = wrap_megatron_step(schedules.forward_step)
+        schedules.backward_step = wrap_megatron_step(schedules.backward_step, is_forward=False)
+        logger.info_on_rank_0("Patch megatron method success.")
+    except ImportError:
+        logger.info_on_rank_0("No megatron find.")
+    except Exception as e:
+        logger.info_on_rank_0(f"Patch megatron method failed, detail:{str(e)}")
 
 
 class CellProcessor:
@@ -83,6 +106,8 @@ class CellProcessor:
         if not models:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    'The model cannot be None, when level is "L0" or "mix"')
+
+        patch_schedules_step()
 
         is_registered = False
         model_type = Const.MODULE if is_mindtorch() else Const.CELL
@@ -126,6 +151,7 @@ class CellProcessor:
             if cells_and_names_in_graph_mode:
                 Runtime.run_mode = MsConst.PYNATIVE_GRAPH_MODE
                 GraphModeCellDump(config, cells_and_names_in_graph_mode, strict=False).handle()
+
 
     def build_cell_hook(self, cell_name, build_data_hook):
         @ThreadSafe.synchronized
@@ -259,24 +285,26 @@ class CellProcessor:
             CellProcessor.cell_stack[tid] = []
 
         if self.cell_stack[tid]:
-            CellProcessor.module_node[full_name] = self.cell_stack[tid][-1]
+            CellProcessor.module_node[full_name] = self.cell_stack[tid][-1] if not is_megatron() \
+                else [self.cell_stack[tid][-1], get_micro_step()]
         else:
             parent_name = CellProcessor.cell_queue.find_last(full_name)
-            CellProcessor.module_node[full_name] = parent_name
+            CellProcessor.module_node[full_name] = parent_name if not is_megatron() else [parent_name, get_micro_step()]
 
         CellProcessor.cell_queue.add_name(full_name)
         CellProcessor.cell_stack[tid].append(full_name)
-        CellProcessor.api_parent_node[tid] = full_name
+        CellProcessor.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]
         if self.scope:
             self.scope.begin_module(full_name)
 
     def set_construct_info_in_hook(self, full_name):
         tid = threading.get_ident()
         CellProcessor.cell_queue.remove_name(full_name)
-        CellProcessor.api_parent_node[tid] = None
+        CellProcessor.api_parent_node[tid] = None if not is_megatron() else [None, get_micro_step()]
         if self.cell_stack.get(tid):
             CellProcessor.cell_stack[tid].pop()
         if self.cell_stack.get(tid):
-            CellProcessor.api_parent_node[tid] = CellProcessor.cell_stack[tid][-1]
+            CellProcessor.api_parent_node[tid] = CellProcessor.cell_stack[tid][-1] if not is_megatron() \
+                else [CellProcessor.cell_stack[tid][-1], get_micro_step()]
         if self.scope:
             self.scope.end_module(full_name)
