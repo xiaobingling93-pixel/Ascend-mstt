@@ -137,9 +137,9 @@ void DynoLogNpuMonitor::UpdateNpuStatus(int32_t status, const std::string& msgTy
 {
     bool res = ipcClient_.SendNpuStatus(status, msgType);
     if (res) {
-        LOG(INFO) << "Send npu status successfully";
+        LOG(INFO) << "Send NPU status successfully";
     } else {
-        LOG(WARNING) << "Send npu status failed";
+        LOG(WARNING) << "Send NPU status failed";
     }
 }
 } // namespace ipc_monitor

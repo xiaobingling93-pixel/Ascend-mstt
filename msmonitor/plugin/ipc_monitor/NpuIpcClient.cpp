@@ -62,7 +62,6 @@ bool IpcClient::SendNpuStatus(int32_t status, const std::string& msgType)
         LOG(WARNING) << "Error when SyncSendMessage: " << e.what();
         return false;
     }
-    LOG(INFO) << "Send msmonitor status for pid " << npuStatus.pid << " for dynolog success!";
     return true;
 }
 
