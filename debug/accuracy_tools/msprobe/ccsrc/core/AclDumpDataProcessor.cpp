@@ -313,7 +313,7 @@ DebuggerErrno AclDumpDataProcessor::PushData(const AclDumpChunk *chunk)
         return DebuggerErrno::ERROR_BUFFER_OVERFLOW;
     }
 
-    std::vector<uint8_t> *p = new std::vector<uint8_t>(len);
+    std::vector<uint8_t> *p = new (std::nothrow) std::vector<uint8_t>(len);
     if (p == nullptr) {
         LOG_ERROR(DebuggerErrno::ERROR_NO_MEMORY, "Acl dump data processor(" +  dumpPath + "): Alloc failed(" +
                   std::to_string(len) + " bytes).");
@@ -365,7 +365,7 @@ DebuggerErrno AclDumpDataProcessor::ConcatenateData()
 
     /* 为了减少数据重复拷贝，此处只整合一次，不再剥数据头，用偏移来取数据段 */
     if (buffer.size() > 1) {
-        std::vector<uint8_t> *p = new std::vector<uint8_t>(totalLen);
+        std::vector<uint8_t> *p = new (std::nothrow) std::vector<uint8_t>(totalLen);
         if (p == nullptr) {
             LOG_ERROR(DebuggerErrno::ERROR_NO_MEMORY, "Alloc failed(" + std::to_string(totalLen) + ").");
             return DebuggerErrno::ERROR_NO_MEMORY;
