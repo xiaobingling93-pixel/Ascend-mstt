@@ -52,19 +52,25 @@ class DataNode:
         metrics = {}
         for cmp_data in self.op_data:
             name = cmp_data.get(CompareConst.NPU_NAME)
+            # 构建度量指标字典
+            metrics = {}
+            
             if CompareConst.NPU_MAX in cmp_data:
                 metrics = {CompareConst.NPU_MAX: cmp_data.get(CompareConst.NPU_MAX),
                         CompareConst.NPU_MIN: cmp_data.get(CompareConst.NPU_MIN),
                         CompareConst.NPU_MEAN: cmp_data.get(CompareConst.NPU_MEAN),
                         CompareConst.NPU_NORM: cmp_data.get(CompareConst.NPU_NORM)}
             elif CompareConst.NPU_MD5 in cmp_data:
-                metrics = {CompareConst.NPU_MD5: cmp_data.get(CompareConst.NPU_MD5)}
+                metrics[CompareConst.NPU_MD5] = cmp_data.get(CompareConst.NPU_MD5)
+                
+            if CompareConst.NPU_P2POP_PEER in cmp_data:
+                metrics[CompareConst.NPU_P2POP_PEER] = cmp_data.get(CompareConst.NPU_P2POP_PEER)
 
             if cmp_data.get(CompareConst.STACK) != CompareConst.N_A and not self.stack:
                 self.stack = cmp_data.get(CompareConst.STACK)
-            if Const.INPUT in name:
+            if cmp_data.get('state') == "input":
                 self.inputs[name] = metrics
-            elif Const.OUTPUT in name:
+            elif cmp_data.get('state') == "output":
                 self.outputs[name] = metrics
 
     def gen_node_info(self, path: RankPath):
@@ -161,6 +167,8 @@ class CommunicationNode:
                 if val and val.startswith('[') and val.endswith(']'):
                     val = [int(part) for part in val.strip('[]').split(',')]
                     ranks.update(val)
+            elif v.get(CompareConst.NPU_P2POP_PEER) != "None":
+                ranks.add(v.get(CompareConst.NPU_P2POP_PEER))
 
         return {'ranks': ranks, 'api': f'Distributed.{tar_api}',
                 'type': DiffAnalyseConst.OPPOSITE_DIR.get(self.type, DiffAnalyseConst.LINK)}

@@ -425,6 +425,8 @@ class CompareConst:
     NPU_MIN = "NPU min"
     NPU_MEAN = "NPU mean"
     NPU_NORM = "NPU l2norm"
+    NPU_P2POP_PEER = "NPU P2POp peer"
+
     BENCH_MAX = "Bench max"
     BENCH_MIN = "Bench min"
     BENCH_MEAN = "Bench mean"

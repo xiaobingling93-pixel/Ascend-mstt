@@ -24,11 +24,13 @@ class TestDataNode(unittest.TestCase):
                     CompareConst.NPU_MIN: 0.0,
                     CompareConst.NPU_MEAN: 0.5,
                     CompareConst.NPU_NORM: 0.7,
+                    Const.STATE: "input",
                     CompareConst.STACK: [["Torch.add.1.forward", {"file": "test.py", "line": 10}]]
                 },
                 {
                     CompareConst.NPU_NAME: "output.0",
                     CompareConst.NPU_MD5: "abc123",
+                    Const.STATE: "output",
                     CompareConst.STACK: CompareConst.N_A
                 }
             ]
