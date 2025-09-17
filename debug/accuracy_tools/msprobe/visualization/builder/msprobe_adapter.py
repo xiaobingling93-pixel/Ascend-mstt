@@ -28,7 +28,7 @@ op_patterns = [
     # NodeOp.module
     r'^(Module.|Cell.|optimizer|clip_grad)',
     # NodeOp.function_api
-    r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.)'
+    r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.|MindSpeed.)'
 ]
 
 

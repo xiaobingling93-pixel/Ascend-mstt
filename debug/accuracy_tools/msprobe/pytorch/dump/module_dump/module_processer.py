@@ -23,6 +23,7 @@ from torch.utils.hooks import BackwardHook, RemovableHandle
 from msprobe.core.common.const import Const
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import ModuleQueue, ThreadSafe
+from msprobe.core.common.megatron_utils import wrap_megatron_step, get_micro_step, is_megatron
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import is_torch_nn_module, register_forward_pre_hook
@@ -82,6 +83,8 @@ class ModuleProcesser:
             from megatron.core.pipeline_parallel import schedules
             origin_func_id = id(schedules.deallocate_output_tensor)
             schedules.deallocate_output_tensor = wrap_megatron_deallocate(schedules.deallocate_output_tensor)
+            schedules.forward_step = wrap_megatron_step(schedules.forward_step)
+            schedules.backward_step = wrap_megatron_step(schedules.backward_step, is_forward=False)
             for module in list(sys.modules.values()):
                 if module.__name__ == 'schedules':
                     continue
@@ -258,14 +261,16 @@ class ModuleProcesser:
             ModuleProcesser.module_stack[tid] = []
 
         if self.module_stack[tid]:
-            ModuleProcesser.module_node[full_name] = self.module_stack[tid][-1]
+            ModuleProcesser.module_node[full_name] = self.module_stack[tid][-1] if not is_megatron() \
+                else [self.module_stack[tid][-1], get_micro_step()]
         else:
             parent_name = ModuleProcesser.module_queue.find_last(full_name)
-            ModuleProcesser.module_node[full_name] = parent_name
+            ModuleProcesser.module_node[full_name] = parent_name if not is_megatron() \
+                else [parent_name, get_micro_step()]
 
         ModuleProcesser.module_queue.add_name(full_name)
         ModuleProcesser.module_stack[tid].append(full_name)
-        ModuleProcesser.api_parent_node[tid] = full_name
+        ModuleProcesser.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]
         if self.scope:
             self.scope.begin_module(full_name)
 
@@ -273,14 +278,15 @@ class ModuleProcesser:
         tid = threading.get_ident()
         if torch_version_above_or_equal_2 or is_forward:
             ModuleProcesser.module_queue.remove_name(full_name)
-            ModuleProcesser.api_parent_node[tid] = None
+            ModuleProcesser.api_parent_node[tid] = None if not is_megatron() else [None, get_micro_step()]
             if self.module_stack.get(tid):
                 ModuleProcesser.module_stack[tid].pop()
             if self.module_stack.get(tid):
-                ModuleProcesser.api_parent_node[tid] = ModuleProcesser.module_stack[tid][-1]
+                ModuleProcesser.api_parent_node[tid] = ModuleProcesser.module_stack[tid][-1] if not is_megatron() \
+                    else [ModuleProcesser.module_stack[tid][-1], get_micro_step()]
             if self.scope:
                 self.scope.end_module(full_name)
         else:
             if self.scope:
                 self.scope.begin_module(full_name)
-            ModuleProcesser.api_parent_node[tid] = full_name
+            ModuleProcesser.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]

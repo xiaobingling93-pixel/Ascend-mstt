@@ -22,7 +22,7 @@ from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class Graph:
-    def __init__(self, model_name, data_path='', dump_data=None):
+    def __init__(self, model_name, data_path='', dump_data=None, micro_step_num=None):
         self.node_map = {}
         self.node_id_map = {}
         self.add_node(NodeOp.module, model_name)
@@ -33,6 +33,7 @@ class Graph:
         self.step = 0
         self.rank = 0
         self.compare_mode = GraphConst.SUMMARY_COMPARE
+        self.micro_step_num = micro_step_num
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -189,6 +190,9 @@ class Graph:
                 node.micro_step_id = node.upnode.micro_step_id
             for sub_node in node.subnodes:
                 propagate_micro_step_id(sub_node)
+
+        if self.micro_step_num is not None:
+            return self.micro_step_num + 1
 
         batches_n = Graph.split_nodes_by_micro_step(self.root.subnodes)
         for batch_number, nodes in batches_n.items():

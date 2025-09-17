@@ -28,7 +28,7 @@ import numpy as np
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json, load_construct_json)
 from msprobe.core.common.log import logger
 
 device = collections.namedtuple('device', ['type', 'index'])
@@ -360,7 +360,7 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     stack = load_json(stack_json)
-    construct = load_json(construct_json)
+    construct, _ = load_construct_json(construct_json)
     return stack, construct
 
 

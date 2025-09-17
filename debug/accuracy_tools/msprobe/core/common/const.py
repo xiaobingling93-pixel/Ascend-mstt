@@ -405,6 +405,8 @@ class Const:
 
     MIX_DUMP_NAMES = {'graph', 'pynative'}
 
+    MEGATRON_MICRO_STEP_NUMBER = 'megatron_micro_step_number'
+
 
 class CompareConst:
     """
