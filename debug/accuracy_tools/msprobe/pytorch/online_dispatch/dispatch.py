@@ -17,7 +17,7 @@ import json
 import os
 import time
 import multiprocessing
-from multiprocessing import Pool
+from multiprocessing import Pool, Lock
 
 import torch
 from torch.utils._python_dispatch import TorchDispatchMode
@@ -39,6 +39,7 @@ from msprobe.pytorch.online_dispatch.utils import get_callstack, data_to_cpu, ge
 from msprobe.pytorch.online_dispatch.compare import Comparator
 from msprobe.core.common.utils import check_str_param, safe_get_value
 
+child_global_lock = None
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
@@ -86,14 +87,14 @@ class PtdbgDispatch(TorchDispatchMode):
         yaml_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "torch_ops_config.yaml")
         self.get_ops(yaml_path)
 
-        self.lock = None
+        self.lock = Lock() if process_num > 0 else None
         max_process_num = max(int((multiprocessing.cpu_count() + 1) // Const.CPU_QUARTER), 1)
         if process_num > max_process_num:
             logger.error(f"process_num should be less than or equal to {max_process_num}, but got {process_num}!")
             raise DispatchException(f'process_num should be less than or equal to {max_process_num}, '
                                     f'but got {process_num}!')
         if process_num > 0:
-            self.pool = Pool(process_num)
+            self.pool = Pool(process_num, initializer=self._init_child_process, initargs=(self.lock,))
         if debug:
             logger.info(f'Main pid:{os.getpid()} device:{self.device_id} dump_list:{self.dump_api_list} '
                         f'dump_mode:{self.dump_mode} cpu_path[{self.root_cpu_path}], npu_path[{self.root_npu_path}], '
@@ -114,18 +115,17 @@ class PtdbgDispatch(TorchDispatchMode):
                 logger.error("Please check train log, An exception may have occurred!")
                 return
             check_file_or_directory_path(summary_path, False)
-            fp_handle = FileOpen(summary_path, "r")
-            while True:
-                json_line_data = fp_handle.readline()
-                if json_line_data == '\n':
-                    continue
-                if len(json_line_data) == 0:
-                    break
-                msg = json.loads(json_line_data)
-                if len(msg) < 2:
-                    raise ValueError("JSON data does not contain enough elements. Expected at least 2 elements.")
-                self.all_summary[msg[0]] = msg[1]
-            fp_handle.close()
+            with FileOpen(summary_path, "r") as fp_handle:
+                while True:
+                    json_line_data = fp_handle.readline()
+                    if json_line_data == '\n':
+                        continue
+                    if len(json_line_data) == 0:
+                        break
+                    msg = json.loads(json_line_data)
+                    if len(msg) < 2:
+                        raise ValueError("JSON data does not contain enough elements. Expected at least 2 elements.")
+                    self.all_summary[msg[0]] = msg[1]
 
         if self.debug_flag:
             input_num = 0
@@ -163,11 +163,16 @@ class PtdbgDispatch(TorchDispatchMode):
 
         call_stack = get_callstack()
         self.call_stack_list.append(call_stack)
-        self.api_index += 1
-        if aten_api not in self.single_api_index_dict:
-            self.single_api_index_dict[aten_api] = 1
-        else:
-            self.single_api_index_dict[aten_api] += 1
+
+        self.lock.acquire() if self.process_num > 0 else None
+        try:
+            self.api_index += 1
+            if aten_api not in self.single_api_index_dict:
+                self.single_api_index_dict[aten_api] = 1
+            else:
+                self.single_api_index_dict[aten_api] += 1
+        finally:
+            self.lock.release() if self.process_num > 0 else None
 
         run_param = self.get_run_param(aten_api, func.__name__, aten_api_overload_name)
 
@@ -180,7 +185,7 @@ class PtdbgDispatch(TorchDispatchMode):
         cpu_kwargs = []
         data_to_cpu(args, 0, cpu_args)
         data_to_cpu(kwargs, 0, cpu_kwargs)
-        
+
         cpu_args = safe_get_value(cpu_args, 0, "cpu_args")
         cpu_kwargs = safe_get_value(cpu_kwargs, 0, "cpu_kwargs")
 
@@ -194,7 +199,12 @@ class PtdbgDispatch(TorchDispatchMode):
             try:
                 cpu_out = func(*cpu_args, **cpu_kwargs)
             except RuntimeError as e:
-                self.api_index -= 1
+                self.lock.acquire() if self.process_num > 0 else None
+                try:
+                    self.api_index -= 1
+                    self.single_api_index_dict[aten_api] -= 1
+                finally:
+                    self.lock.release() if self.process_num > 0 else None
                 logger.warning(f"RuntimeError: {e}")
                 logger.warning(f"This aten_api {aten_api} does not support running on cpu, so skip it.")
                 return npu_out
@@ -215,7 +225,7 @@ class PtdbgDispatch(TorchDispatchMode):
             run_param.process_flag = True
             if self.check_fun(func, run_param):
                 data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, None, npu_out_cpu, cpu_out,
-                                             self.lock)
+                                             child_global_lock)
                 self.pool.apply_async(func=dispatch_multiprocess, args=(run_param, data_info),
                                       error_callback=error_call)
             else:
@@ -233,12 +243,20 @@ class PtdbgDispatch(TorchDispatchMode):
                     return True
         return False
 
+    @staticmethod
+    def _init_child_process(lock):
+        global child_global_lock
+        child_global_lock = lock
+
     def get_dir_name(self, tag):
         # guarantee file uniqueness
         time.sleep(1)
-        time_now = time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
+        # 时间格式：年-月-日-时-分-秒-毫秒（精确到千分之一秒）
+        time_now = time.strftime("%Y%m%d%H%M%S%f", time.localtime(time.time()))[:-3]  # 取前3位毫秒
+
         if tag is None or not isinstance(tag, str):
             logger.warning('There is not tag or the type of tag is not string.')
+            # 目录名格式：msprobe_rank{设备ID}_{毫秒时间戳}
             dir_name = f'msprobe_rank{self.device_id}_{time_now}'
         else:
             dir_name = f'msprobe_{tag}_rank{self.device_id}_{time_now}'
