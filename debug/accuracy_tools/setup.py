@@ -66,6 +66,7 @@ for i, arg in enumerate(sys.argv):
     if arg.startswith("--include-mod"):
         if "--no-check" in sys.argv:
             os.environ["INSTALL_WITHOUT_CHECK"] = "1"
+            sys.argv.remove("--no-check")
         if arg.startswith("--include-mod="):
             mod_list = arg[len("--include-mod="):].split(',')
             sys.argv.remove(arg)
