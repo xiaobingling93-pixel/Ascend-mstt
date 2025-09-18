@@ -166,6 +166,10 @@ public:
         }
 
         ssl_ = SSL_new(ctx);
+        if (ssl_ == nullptr) {
+            LOG(ERROR) << "Create SSL failed.";
+            return false;
+        }
         SSL_set_fd(ssl_, client_sock_fd_);
         if (SSL_accept(ssl_) <= 0) {
             ERR_print_errors_fp(stderr);
