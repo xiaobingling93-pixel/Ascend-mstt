@@ -34,7 +34,7 @@ class Hierarchy:
     def __init__(self, graph_type, repo, micro_step, rank, step):
         # DB：查询根节点信息
         node_info = repo.query_root_nodes(graph_type, rank, step)
-        if(not node_info):
+        if not node_info:
             logger.error("No root node info found in database.")
             return
         root_node_name = node_info.get('node_name')
@@ -313,7 +313,7 @@ class Hierarchy:
                 self.get_connected_graph(child_name, result, new_hierarchy)
 
     def update_hierarchy_data(self):
-        if(self.repo.repo_type == DB_TYPE):
+        if self.repo.repo_type == DB_TYPE:
             return self.current_hierarchy
         # 处理JSON
         for node_name, node_info in self.current_hierarchy.items():

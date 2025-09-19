@@ -61,7 +61,7 @@ class GraphRepoDB(GraphRepo):
             return config_info
         except Exception as e:
             logger.error(f"Failed to query config info: {e}")
-            return []
+            return {}
 
     # DB：查询根节点信息
     def query_root_nodes(self, graph_type, rank, step):
@@ -92,10 +92,10 @@ class GraphRepoDB(GraphRepo):
             if len(rows) > 0:
                 return self._convert_db_to_object(dict(rows[0]))
             else:
-                return []
+                return {}
         except Exception as e:
             logger.error(f"Failed to query root nodes: {e}")
-            return []
+            return {}
     
     # DB：查询当前节点的所有父节点信息
     def query_up_nodes(self, node_name, graph_type, rank, step):

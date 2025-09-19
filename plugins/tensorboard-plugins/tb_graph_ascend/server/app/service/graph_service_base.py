@@ -123,7 +123,7 @@ class GraphServiceStrategy(ABC):
         pass
 
     @abstractmethod
-    def add_match_nodes_by_config(self, config_file, meta_data):
+    def add_match_nodes_by_config(self, config_file_name, meta_data):
         pass
 
     @abstractmethod
@@ -139,6 +139,6 @@ class GraphServiceStrategy(ABC):
         pass
 
     @abstractmethod
-    def save_matched_relations(self):
+    def save_matched_relations(self, meta_data):
         pass
     

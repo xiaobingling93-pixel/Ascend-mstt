@@ -438,7 +438,7 @@ class Hierarchy extends PolymerElement {
                 event.stopPropagation();
             } else {
                 const contextMenuItems: Array<ContextMenuItem> = [];
-                if (this.graphType != 'Single') {
+                if (this.graphType !== 'Single') {
                     contextMenuItems.push({
                         text: '展开对应侧节点',
                         type: EXPAND_MATCHED_NODE,
@@ -724,7 +724,7 @@ class Hierarchy extends PolymerElement {
      * @returns
      */
     async changeNodeExpandState(nodeInfo) {
-        if (this.selection.type === DB_TYPE && (typeof (this.selection.rank) != 'number' || typeof (this.selection.step) != 'number')) {
+        if (this.selection.type === DB_TYPE && (typeof (this.selection.rank) !== 'number' || typeof (this.selection.step) !== 'number')) {
             return {}
         }
         this.set('loading', true);
