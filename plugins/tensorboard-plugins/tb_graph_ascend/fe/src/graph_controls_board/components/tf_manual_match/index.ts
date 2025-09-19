@@ -314,7 +314,7 @@ class Legend extends PolymerElement {
 
   @observe('selection')
   _observeSelection(): void {
-    this.set('isDBType', this.selection?.type == DB_TYPE);
+    this.set('isDBType', this.selection?.type === DB_TYPE);
   }
 
 

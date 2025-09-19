@@ -124,9 +124,9 @@ class GraphView:
         search_type = data.get("type")
         values = data.get("values")
         strategy = GraphView._get_strategy(meta_data)
-        if(search_type == 'precision'):
+        if search_type == 'precision':
             result = strategy.search_node_by_precision(meta_data, values)
-        elif(search_type == 'overflow'):
+        elif search_type == 'overflow':
             result = strategy.search_node_by_overflow(meta_data, values)
         else:
             result = {

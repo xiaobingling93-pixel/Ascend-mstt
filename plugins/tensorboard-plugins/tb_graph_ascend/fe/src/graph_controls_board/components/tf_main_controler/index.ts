@@ -155,7 +155,7 @@ class MainController extends PolymerElement {
       type,
       lang: 'zh-CN'
     };
-    const isDBType = type == DB_TYPE;
+    const isDBType = type === DB_TYPE;
     this.set('selection', selection);
     this.set('isDBType', isDBType);
     this.set('selectedTag', tags[0]);
@@ -223,12 +223,12 @@ class MainController extends PolymerElement {
 
   _getTagChanged(event): void {
     const detail = event.detail;
-    if (detail?.rankId != undefined && this.isDBType) {
+    if (detail?.rankId !== undefined && this.isDBType) {
       setTimeout(() => {
         this.set('selectedRank', detail?.rankId);
       })
     }
-    else if (detail?.rankId != undefined && !this.isDBType && detail?.rankId <= this.tags.length) {
+    else if (detail?.rankId !== undefined && !this.isDBType && detail?.rankId <= this.tags.length) {
       setTimeout(() => {
         this.set('selectedTag', this.tags[detail?.rankId]);
       })

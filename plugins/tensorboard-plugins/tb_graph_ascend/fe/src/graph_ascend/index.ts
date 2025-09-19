@@ -373,7 +373,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     value: rank,
                 }))
                 this.set('ranks', ranksArray);
-                selection['rank'] = ranks[0]
+                selection.rank = ranks[0]
             }
             if (steps.length > 0) {
                 const stepsArray = steps.map((step) => ({
@@ -381,7 +381,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     value: step,
                 }))
                 this.set('steps', stepsArray);
-                selection['step'] = steps[0]
+                selection.step = steps[0]
             }
             this.set('selection', selection);
         } else {
