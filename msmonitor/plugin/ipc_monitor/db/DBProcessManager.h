@@ -30,9 +30,9 @@ using StringIdFormat = std::vector<std::tuple<uint64_t, std::string>>;
 // CANN_API: startNs, endNs, type, globalTid, connectionId, name
 using APIFormat = std::vector<std::tuple<uint64_t, uint64_t, uint16_t, uint64_t, uint64_t, uint64_t>>;
 // COMMUNICATION_OP: opName, startNs, endNs, connectionId, groupName,
-//      opId, relay, retry, dataType, algType, count, opType
+//      opId, relay, retry, dataType, algType, count, opType, deviceId
 using CommunicationOpFormat = std::vector<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,
-        uint32_t, int32_t, int32_t, uint16_t, uint64_t, uint64_t, uint64_t>>;
+        uint32_t, int32_t, int32_t, uint16_t, uint64_t, uint64_t, uint64_t, uint32_t>>;
 // COMPUTE_TASK_INFO: name, globalTaskId, blockDim, mixBlockDim, taskType, opType, inputFormats, inputDataTypes,
 //      inputShapes, outputFormats, outputDataTypes, outputShapes, attrInfo, opState, hf32Eligible
 using ComputeTaskInfoFormat = std::vector<std::tuple<uint64_t, uint64_t, uint32_t, uint32_t, uint64_t, uint64_t,
@@ -83,6 +83,7 @@ private:
     bool SaveConstantData();
     bool SaveParallelGroupData();
     bool SaveRankDeviceData();
+    bool SaveNpuInfoData();
     std::string ConstructCommOpName(const std::string &opName, const std::string &groupName);
     template<typename... Args>
     bool SaveIncDataToDB(const std::vector<std::tuple<Args...>> &data, const std::string &tableName);

@@ -46,6 +46,11 @@ const TableColumns HOST_INFO = {
     {"hostName", SQL_TEXT_TYPE}
 };
 
+const TableColumns NPU_INFO = {
+    {"id", SQL_INT_TYPE},
+    {"name", SQL_TEXT_TYPE}
+};
+
 const TableColumns RANK_DEVICE_MAP = {
     {"rankId", SQL_INT_TYPE},
     {"deviceId", SQL_INT_TYPE}
@@ -104,7 +109,8 @@ const TableColumns COMMUNICATION_OP = {
     {"dataType", SQL_INT_TYPE},
     {"algType", SQL_INT_TYPE},
     {"count", SQL_NUMERIC_TYPE},
-    {"opType", SQL_INT_TYPE}
+    {"opType", SQL_INT_TYPE},
+    {"deviceId", SQL_INT_TYPE}
 };
 
 const TableColumns MSTX = {
@@ -147,6 +153,7 @@ MsMonitorDB::MsMonitorDB()
         {TABLE_COMPUTE_TASK_INFO, COMPUTE_TASK_INFO},
         {TABLE_META_DATA, META_DATA},
         {TABLE_HOST_INFO, HOST_INFO},
+        {TABLE_NPU_INFO, NPU_INFO},
         {TABLE_RANK_DEVICE_MAP, RANK_DEVICE_MAP}
     };
 }
