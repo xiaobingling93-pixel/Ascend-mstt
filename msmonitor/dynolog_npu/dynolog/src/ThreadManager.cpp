@@ -240,7 +240,6 @@ void ThreadManager::stop()
         gpumon_thread_->join();
     }
 
-
     if (ipcmon_thread_ && ipcmon_thread_->joinable()) {
         ipcmon_thread_->join();
     }
@@ -253,7 +252,5 @@ void ThreadManager::stop()
         server_->stop();
     }
 }
-
-
 
 }

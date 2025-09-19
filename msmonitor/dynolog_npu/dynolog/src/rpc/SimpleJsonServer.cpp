@@ -21,15 +21,15 @@
 #include <termios.h>
 #include <algorithm>
 
-DEFINE_string(certs_dir, "", "TLS crets dir");
-
 constexpr int CLIENT_QUEUE_LEN = 50;
+
+namespace dynolog {
+
+DEFINE_string(certs_dir, "", "TLS crets dir");
 const std::string NO_CERTS_MODE = "NO_CERTS";
 const size_t MIN_RSA_KEY_LENGTH = 3072;
 constexpr char BACKSPACE_ASCII = 8;
 constexpr char DEL_ASCII = 127;
-
-namespace dynolog {
 
 SimpleJsonServerBase::SimpleJsonServerBase(int port) : port_(port)
 {
