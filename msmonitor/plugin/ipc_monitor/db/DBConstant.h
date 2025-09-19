@@ -38,6 +38,7 @@ const std::string TABLE_MSTX_EVENT_TYPE = "ENUM_MSTX_EVENT_TYPE";
 const std::string TABLE_HCCL_DATA_TYPE = "ENUM_HCCL_DATA_TYPE";
 const std::string TABLE_API_TYPE = "ENUM_API_TYPE";
 const std::string TABLE_HOST_INFO = "HOST_INFO";
+const std::string TABLE_NPU_INFO = "NPU_INFO";
 const std::string TABLE_RANK_DEVICE_MAP = "RANK_DEVICE_MAP";
 const std::string TABLE_META_DATA = "META_DATA";
 

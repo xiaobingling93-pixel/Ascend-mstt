@@ -25,6 +25,7 @@ namespace {
 constexpr uint64_t MSTX_CONNECTION_ID_OFFSET = 4000000000ULL;
 const std::string MSTX_TASK_TYPE = "MsTx";
 const std::string NA = "N/A";
+const std::string UNKNOWN = "UNKNOWN";
 const std::vector<std::tuple<uint16_t, std::string>> HCCL_DATA_TYPE = {
     {msptiCommunicationDataType::MSPTI_ACTIVITY_COMMUNICATION_INT8, "INT8"},
     {msptiCommunicationDataType::MSPTI_ACTIVITY_COMMUNICATION_INT16, "INT16"},
@@ -53,9 +54,9 @@ const std::vector<std::tuple<uint16_t, std::string>> MSTX_EVENT_TYPE = {
 
 const std::vector<std::tuple<std::string, std::string>> META_DATA = {
     {"SCHEMA_VERSION_MICRO", "1"},
-    {"SCHEMA_VERSION_MINOR", "1"},
-    {"SCHEMA_VERSION_MAJOR", "1"},
-    {"SCHEMA_VERSION", "1.1.1"}
+    {"SCHEMA_VERSION_MINOR", "2"},
+    {"SCHEMA_VERSION_MAJOR", "0"},
+    {"SCHEMA_VERSION", "1.2.0"}
 };
 
 constexpr uint16_t API_NODE_TYPE = 10000;
@@ -253,6 +254,26 @@ bool DBProcessManager::SaveRankDeviceData()
     return true;
 }
 
+bool DBProcessManager::SaveNpuInfoData()
+{
+    if (msMonitorDB_.dbRunner->CheckTableExists(TABLE_NPU_INFO)) {
+        return true;
+    }
+    if (deviceSet_.empty()) {
+        return false;
+    }
+    std::vector<std::tuple<uint32_t, std::string>> npuInfoData;
+    npuInfoData.reserve(deviceSet_.size());
+    for (auto deviceId : deviceSet_) {
+        npuInfoData.emplace_back(deviceId, UNKNOWN);
+    }
+    if (!InsertDataToDB(npuInfoData, TABLE_NPU_INFO, msMonitorDB_)) {
+        LOG(ERROR) << "DBProcessManager insert npu info data failed";
+        return false;
+    }
+    return true;
+}
+
 void DBProcessManager::RunPostTask()
 {
     SaveData();
@@ -263,6 +284,7 @@ void DBProcessManager::RunPostTask()
             SaveConstantData();
             SaveParallelGroupData();
             SaveRankDeviceData();
+            SaveNpuInfoData();
         } else {
             LOG(ERROR) << "DBProcessManager init msmonitor db failed";
         }
@@ -330,10 +352,11 @@ void DBProcessManager::ProcessCommunicationData(msptiActivityCommunication *reco
     uint64_t algType = IdPool::GetInstance()->GetUint64Id(record->algType);
     uint64_t opType = IdPool::GetInstance()->GetUint64Id(record->name);
     uint64_t connectionId = record->correlationId;
+    uint32_t deviceId = record->ds.deviceId;
     communicationOpData_.emplace_back(opName, static_cast<uint64_t>(record->start), endTime,
         connectionId, groupName, opId, 0, 0, static_cast<uint16_t>(record->dataType),
-        algType, static_cast<uint64_t>(record->count), opType);
-    deviceSet_.insert(static_cast<uint32_t>(record->ds.deviceId));
+        algType, static_cast<uint64_t>(record->count), opType, deviceId);
+    deviceSet_.insert(deviceId);
 }
 
 void DBProcessManager::ProcessKernelData(msptiActivityKernel *record)
