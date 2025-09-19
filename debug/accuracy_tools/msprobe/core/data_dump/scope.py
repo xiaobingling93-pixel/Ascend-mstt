@@ -69,8 +69,7 @@ class BaseScope(ABC):
         self.scope = scope
         self.api_list = api_list
 
-    @staticmethod
-    def rectify_args(scope, api_list):
+    def rectify_args(self, scope, api_list):
         if not isinstance(api_list, list):
             raise ScopeException(ScopeException.InvalidApiStr,
                                  f"api_list参数须配置为列表，实际类型为{type(api_list)}.")
@@ -104,12 +103,11 @@ class BaseScope(ABC):
 
 
 class ListScope(BaseScope):
-    @staticmethod
-    def rectify_args(scope, api_list):
+    def rectify_args(self, scope, api_list):
         if scope and api_list:
             raise ScopeException(ScopeException.ArgConflict,
                                  f"scope和api_list不可以同时配置，实际配置为scope={scope}, api_list={api_list}.")
-        return super(ListScope, ListScope).rectify_args(scope, api_list)
+        return super().rectify_args(scope, api_list)
 
     def check(self, name):
         if not self.scope or name in self.scope:
@@ -147,7 +145,7 @@ class RangeScope(BaseScope, ABC):
                                      f"scope参数格式错误，要求格式为api或模块完整命名，实际为{name}.")
 
     def rectify_args(self, scope, api_list):
-        scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
+        scope, api_list = super().rectify_args(scope, api_list)
         if scope and len(scope) != 2:
             raise ScopeException(ScopeException.InvalidScope,
                                  f"scope参数指定区间断点，须传入长度为2的列表，实际长度为{len(scope)}.")
