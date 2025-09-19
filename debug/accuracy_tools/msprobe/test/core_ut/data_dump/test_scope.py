@@ -43,12 +43,12 @@ class TestBaseScope(unittest.TestCase):
         scope = []
         api_list = "invalid_api_list"
         with self.assertRaises(ScopeException) as context:
-            BaseScope.rectify_args(scope, api_list)
+            self.base_scope.rectify_args(scope, api_list)
         self.assertEqual(context.exception.code, ScopeException.InvalidApiStr)
 
         api_list = [1, 2, 3]
         with self.assertRaises(ScopeException) as context:
-            BaseScope.rectify_args(scope, api_list)
+            self.base_scope.rectify_args(scope, api_list)
         self.assertEqual(context.exception.code, ScopeException.InvalidApiStr)
 
         scope = "module1"
@@ -56,20 +56,20 @@ class TestBaseScope(unittest.TestCase):
 
         expected_scope = ["module1"]
         expected_api_list = []
-        result_scope, result_api_list = BaseScope.rectify_args(scope, api_list)
+        result_scope, result_api_list = self.base_scope.rectify_args(scope, api_list)
         self.assertEqual(result_scope, expected_scope)
         self.assertEqual(result_api_list, expected_api_list)
 
         scope = 123
         api_list = []
         with self.assertRaises(ScopeException) as context:
-            BaseScope.rectify_args(scope, api_list)
+            self.base_scope.rectify_args(scope, api_list)
         self.assertEqual(context.exception.code, ScopeException.InvalidScope)
 
         scope = ["module1", 2, "module3"]
         api_list = []
         with self.assertRaises(ScopeException) as context:
-            BaseScope.rectify_args(scope, api_list)
+            self.base_scope.rectify_args(scope, api_list)
         self.assertEqual(context.exception.code, ScopeException.InvalidScope)
 
     def test_check_api_list_empty(self):
@@ -91,7 +91,8 @@ class TestListScope(unittest.TestCase):
         scope = ["module1"]
         api_list = ["api1"]
         with self.assertRaises(ScopeException) as context:
-            ListScope.rectify_args(scope, api_list)
+            list_scope = ListScope(scope, api_list)
+            list_scope.rectify_args(scope, api_list)
         self.assertEqual(context.exception.code, ScopeException.ArgConflict)
 
     def test_check(self):
