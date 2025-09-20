@@ -35,7 +35,8 @@ bool DBRunner::CheckTableExists(const std::string &tableName) const
 {
     std::shared_ptr<Connection> conn{nullptr};
     MakeSharedPtr(conn, path_);
-    if (conn == nullptr) {
+    if (conn == nullptr || !conn->IsDBOpened()) {
+        LOG(ERROR) << "Create connection failed: " << path_;
         return false;
     }
     return conn->CheckTableExists(tableName);
