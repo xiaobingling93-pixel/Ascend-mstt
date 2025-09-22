@@ -308,25 +308,16 @@ class DataCollector:
         self.data_processor.update_iter(current_iter)
 
     def params_data_collect(self, name, param_name, pid, data):
-        try:
-            grad_name = name + Const.SEP + Const.PARAMS_GRAD
-            self.update_api_or_module_name(grad_name)
-            if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
-                if self.data_writer.cache_data.get("data"):
-                    self.data_writer.cache_data.get("data").pop(grad_name, None)
-                    self.params_grad_record[grad_name] = False
-                return
-            data_info = self.data_processor.analyze_params(grad_name, param_name, data)
-            self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
-            self.params_grad_record[grad_name] = False
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] params_data_collect failed: "
-                f"name={name}, param_name={param_name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
+        grad_name = name + Const.SEP + Const.PARAMS_GRAD
+        self.update_api_or_module_name(grad_name)
+        if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
+            if self.data_writer.cache_data.get("data"):
+                self.data_writer.cache_data.get("data").pop(grad_name, None)
+                self.params_grad_record[grad_name] = False
+            return
+        data_info = self.data_processor.analyze_params(grad_name, param_name, data)
+        self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
+        self.params_grad_record[grad_name] = False
 
     def params_data_collect_in_bw_hook(self, params_dict, name):
         try:
