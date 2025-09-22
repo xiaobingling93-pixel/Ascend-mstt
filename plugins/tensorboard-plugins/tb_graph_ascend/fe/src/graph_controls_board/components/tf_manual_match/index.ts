@@ -486,7 +486,7 @@ class Legend extends PolymerElement {
         theme: 'success',
       });
     } else {
-      Notification.show(`取消匹配失败`, {
+      Notification.show(`取消匹配失败: ${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',

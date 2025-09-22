@@ -17,12 +17,10 @@ import request from '../utils/request';
 import { LoadGraphFileInfoListType, SelectionType } from './type';
 const useGraphAscend = () => {
 
-    const loadGraphFileInfoList = async (isSafeCheck: boolean): Promise<LoadGraphFileInfoListType> => {
+    const loadGraphFileInfoList = async (): Promise<LoadGraphFileInfoListType> => {
         try {
-            const params = {
-                isSafeCheck
-            };
-            const result = await request({ url: 'load_meta_dir', method: 'GET', params: params });
+
+            const result = await request({ url: 'load_meta_dir', method: 'GET' });
             return result as unknown as LoadGraphFileInfoListType;
         } catch (err) {
             return {

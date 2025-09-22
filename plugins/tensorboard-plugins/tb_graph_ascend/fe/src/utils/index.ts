@@ -40,6 +40,19 @@ const removePrototypePollution = (obj: any): void => {
   }
 };
 
+
+export const escapeHTML = (input: string): string => {
+  const htmlEscapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    '\'': '&#39;',
+    '/': '&#x2F;',
+  };
+  return input.replace(/[&<>"'/]/g, match => htmlEscapeMap[match as keyof typeof htmlEscapeMap]);
+};
+
 export const safeJSONParse = (str: string, defaultValue: any = null): any => {
   // 只接受 string 类型
   if (typeof str !== 'string') {

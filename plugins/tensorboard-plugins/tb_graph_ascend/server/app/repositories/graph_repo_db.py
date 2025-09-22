@@ -21,7 +21,8 @@ from tensorboard.util import tb_logging
 
 from .graph_repo_base import GraphRepo
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import GraphState, SINGLE, NPU, BENCH, DataType
+from ..utils.global_state import GraphState
+from ..utils.constant import SINGLE, NPU, BENCH, DataType
 
 logger = tb_logging.get_logger()
 DB_TYPE = DataType.DB.value

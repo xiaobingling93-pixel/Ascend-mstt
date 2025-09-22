@@ -14,7 +14,8 @@
 # limitations under the License.
 # ==============================================================================
 from .hierarchy import Hierarchy
-from ..utils.global_state import GraphState, NPU, BENCH, SINGLE
+from ..utils.global_state import GraphState
+from ..utils.constant import NPU, BENCH, SINGLE
 
 
 class LayoutHierarchyModel:

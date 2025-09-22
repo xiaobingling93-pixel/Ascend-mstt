@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-from ..utils.global_state import SINGLE, DataType
+from ..utils.constant import SINGLE, DataType
 from .graph_repo_base import GraphRepo
 
 JSON_TYPE = DataType.JSON.value

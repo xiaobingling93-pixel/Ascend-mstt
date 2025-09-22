@@ -19,6 +19,7 @@ import { customElement, property, query } from '@polymer/decorators';
 import '@vaadin/grid'; // 引入新的 Vaadin Grid 组件
 import '@vaadin/tooltip';
 import type { GridEventContext } from '@vaadin/grid';
+import { escapeHTML } from '../../../utils';
 @customElement('tf-vaadin-table')
 class TfVaadinTable extends PolymerElement {
   static readonly template = html`
@@ -173,7 +174,7 @@ class TfVaadinTable extends PolymerElement {
     }
     if (column.path === 'name' && !this.isSingleGraphNode) {
       const className = rowData.item[isMatched] ? 'avater-matched' : 'avater-unmatched';
-      root.innerHTML = `<span class='${className}'>${rowData.item[column.path]}</span>`;
+      root.innerHTML = `<span class='${className}'>${escapeHTML(rowData.item[column.path])}</span>`;
       return;
     }
     let tooltip = rowData.item[column.path] ?? '-';

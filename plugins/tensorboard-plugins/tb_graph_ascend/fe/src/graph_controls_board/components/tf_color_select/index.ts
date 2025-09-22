@@ -434,6 +434,13 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @observe('t')
   _observeT(): void {
     if (this.t) {
+      const newSelectColor = this.colorSetChanged?.map((item) => {
+        if (item[1].value === this.unMatchedNodeName) {
+          return [item[0], { value: this.t('no_matching_nodes'), description: item[1].description }];
+        }
+        return item;
+      });
+      this.set('colorSetChanged', newSelectColor);
       this.set('unMatchedNodeName', this.t('no_matching_nodes'));
       this.set('precisionDesc', this.t(`precision_desc.${this.task}`));
     }
@@ -593,7 +600,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       value: this.unMatchedNodeName,
       description: '对比过程中节点未匹配上',
     };
-
     const params = {
       colors: JSON.stringify(newColorsList),
       metaData: this.selection,
@@ -601,6 +607,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const { success, data, error } = await request({ url: 'updateColors', method: "POST", data: params });
     if (success) {
       // 更新颜色列表
+
       this.set('colors', newColorsList);
       let newColorSetChanged: any[] = [];
       this.toggleVisibility();
@@ -847,10 +854,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.set('selectedPrecisionNode', '');
         return;
       }
+      const values = this.selectColor.map((item) => item === this.unMatchedNodeName ? -1 : item);
       const params = {
         metaData: this.selection,
         type: 'precision',
-        values: this.selectColor,
+        values
       };
       const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
 

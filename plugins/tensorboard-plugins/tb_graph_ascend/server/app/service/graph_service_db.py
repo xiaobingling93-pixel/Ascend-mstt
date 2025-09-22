@@ -20,10 +20,11 @@ from .graph_service_base import GraphServiceStrategy
 from ..repositories.graph_repo_db import GraphRepoDB
 from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import NPU, BENCH, SINGLE
+
 from ..model.layout_hierarchy_model import LayoutHierarchyModel
 from ..model.match_nodes_model import MatchNodesController
-from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
+from ..utils.constant import NPU, BENCH, SINGLE, UN_MATCHED_VALUE
+from ..utils.constant import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 
 logger = tb_logging.get_logger()
 
@@ -49,6 +50,8 @@ class DbGraphService(GraphServiceStrategy):
     def load_graph_config_info(self):
         try:
             self.config_info = self.repo.query_config_info()
+            GraphState.set_global_value("config_info", self.config_info)
+            
             # 读取目录下配置文件列表
             modify_matched_files = GraphUtils.find_config_files(self.run)
             self.config_info['matchedConfigFiles'] = modify_matched_files or []
@@ -137,9 +140,9 @@ class DbGraphService(GraphServiceStrategy):
             micro_step = meta_data.get('microStep')
             if rank is None or step is None or micro_step is None:
                 return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
-            is_filter_unmatch_nodes = True if '无匹配节点' in values else False
+            is_filter_unmatch_nodes = True if UN_MATCHED_VALUE in values else False
             if is_filter_unmatch_nodes:
-                values.remove('无匹配节点')
+                values.remove(UN_MATCHED_VALUE)
           
             update_precision_cache = GraphState.get_global_value("update_precision_cache", {})
             node_name_list = []

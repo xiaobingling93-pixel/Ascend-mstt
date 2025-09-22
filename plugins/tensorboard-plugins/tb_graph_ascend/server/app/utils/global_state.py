@@ -15,45 +15,8 @@
 # ==============================================================================
 
 # 全局常量
-from enum import Enum
+
 from .i18n import ZH_CN
-
-ADD_MATCH_KEYS = [
-    'MaxAbsErr',
-    'MinAbsErr',
-    'MeanAbsErr',
-    'NormAbsErr',
-    'MaxRelativeErr',
-    'MinRelativeErr',
-    'MeanRelativeErr',
-    'NormRelativeErr',
-]
-MAX_FILE_SIZE = 15 * 1024 * 1024 * 1024  # 最大文件大小限制
-NPU_PREFIX = 'N___'
-BENCH_PREFIX = 'B___'
-FILE_NAME_REGEX = r'^[a-zA-Z0-9_\-\.]+$'  # 文件名正则表达式
-# 图类型
-NPU = 'NPU'
-BENCH = 'Bench'
-SINGLE = 'Single'
-# 前端节点类型
-EXPAND_MODULE = 0
-UNEXPAND_NODE = 1
-# 权限码
-PERM_GROUP_WRITE = 0o020
-PERM_OTHER_WRITE = 0o002
-
-# 后端节点类型
-MODULE = 0
-API = 1
-MULTI_COLLECTION = 8
-API_LIST = 9
-
-# 计算指标
-MAX_RELATIVE_ERR = "0"
-MIN_RELATIVE_ERR = "1"
-MEAN_RELATIVE_ERR = "2"
-NORM_RELATIVE_ERR = "3"
 
 
 class GraphState:
@@ -73,6 +36,7 @@ class GraphState:
             "manualMatchNodes": {},
             
         },
+        'config_info': {},  # 全局的配置信息
         'first_run_tags': {},
         'runs': {},
         'update_precision_cache': {},  # {node_name{precision，...}}，方便查询精度，提高性能
@@ -85,7 +49,6 @@ class GraphState:
         """
         初始化全局变量的默认值
         """
-        global _state
         GraphState._state = {
             'logdir': '',
             'current_tag': '',
@@ -101,11 +64,12 @@ class GraphState:
                 "manualMatchNodes": {},
                 
             },
+            'config_info': {},  # 全局的配置信息
             'first_run_tags': {},
             'runs': {},
             'update_precision_cache': {},
             'all_node_info_cache': {},
-            'lang': ZH_CN
+            'lang': ZH_CN,
         }
 
     @staticmethod
@@ -129,12 +93,3 @@ class GraphState:
         """
         GraphState.init_defaults()
 
-
-class Extension(Enum):
-    DB = '.vis.db'
-    JSON = '.vis'
-
-
-class DataType(Enum):
-    DB = 'db'
-    JSON = 'json'
