@@ -15,7 +15,8 @@
 # ==============================================================================
 from .graph_service_db import DbGraphService
 from .graph_service_vis import JsonGraphService
-from ..utils.global_state import GraphState, DataType
+from ..utils.global_state import GraphState
+from ..utils.constant import DataType
 
 
 class ServiceFactory:

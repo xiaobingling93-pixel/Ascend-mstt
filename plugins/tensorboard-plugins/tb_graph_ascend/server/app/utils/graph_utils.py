@@ -23,7 +23,8 @@ import sys
 from functools import cmp_to_key
 from pathlib import Path
 from tensorboard.util import tb_logging
-from .global_state import GraphState, FILE_NAME_REGEX, MAX_FILE_SIZE, PERM_GROUP_WRITE, PERM_OTHER_WRITE
+from .global_state import GraphState
+from .constant import DataType, FILE_NAME_REGEX, MAX_FILE_SIZE, PERM_GROUP_WRITE, PERM_OTHER_WRITE, COLOR_PATTERN
 from .i18n import language, ZH_CN
 
 logger = tb_logging.get_logger()
@@ -139,7 +140,6 @@ class GraphUtils:
         # 类型检查
         if not isinstance(json_str, str):
             return default_value
-
         # 长度限制
         if len(json_str) > MAX_FILE_SIZE:
             return default_value
@@ -155,25 +155,20 @@ class GraphUtils:
 
     @staticmethod
     def safe_get_node_info(data, default_value=None):
-   
         node_info = data.get('nodeInfo')
-        
         try:
             # 长度限制 - 检查字典转为字符串后的长度
             node_info_str = str(node_info)
             if len(node_info_str) > MAX_FILE_SIZE:
                 logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
                 return default_value
-
             # 验证必要字段是否存在
             required_fields = ["nodeName", "nodeType"]
             for field in required_fields:
                 if field not in node_info:
                     logger.error(f"Field {field} is missing in metadata.")
                     return default_value
-                
             return node_info
-            
         except json.JSONDecodeError:
             logger.error("NodeInfo parameter is not in valid JSON format.")
             return default_value
@@ -183,23 +178,37 @@ class GraphUtils:
 
     @staticmethod
     def safe_get_meta_data(data, default_value=None):
-   
         meta_data = data.get('metaData')
-        
         try:
             # 长度限制
             meta_data_str = str(meta_data)
             if len(meta_data_str) > MAX_FILE_SIZE:
                 logger.error(f"Input length exceeds {MAX_FILE_SIZE} characters.")
                 return default_value
-                
             # 验证必要字段是否存在
             required_fields = ["tag", "microStep", "run", "type", 'lang']
             for field in required_fields:
                 if field not in meta_data:
                     logger.error(f"Field {field} is missing in metadata.")
                     return default_value
-                
+            config_info = GraphState.get_global_value('config_info', {})
+            micro_step = meta_data.get('microStep')
+            # 验证非必要字段如果存在,进行范围限制
+            if config_info.get('microSteps'):
+                if int(micro_step) != -1 and int(micro_step) not in list(range(config_info.get('microSteps'))):
+                    logger.error(f"Field microStep {micro_step} is not in config_info.")
+                    return default_value
+            if meta_data.get('type') == DataType.DB.value and config_info:
+                rank = meta_data.get('rank')
+                step = meta_data.get('step')
+                if config_info.get('ranks') and rank:
+                    if rank not in config_info.get('ranks'):
+                        logger.error(f"Field rank {rank} is not in config_info.")
+                        return default_value
+                if config_info.get('steps') and step:
+                    if step not in config_info.get('steps'):
+                        logger.error(f"Field step {step} is not in config_info.")
+                        return default_value
             return meta_data
             
         except json.JSONDecodeError:
@@ -272,7 +281,7 @@ class GraphUtils:
     def safe_save_data(data, run_name, tag):
         runs = GraphState.get_global_value('runs', {})
         run = runs.get(run_name) or run_name
-        if run is None or tag is None:
+        if not run or not tag:
             error_message = 'The query parameters "run" and "tag" are required'
             return None, error_message
         try:
@@ -311,12 +320,16 @@ class GraphUtils:
     def safe_load_data(run_name, tag, only_check=False):
         runs = GraphState.get_global_value('runs', {})
         run_dir = runs.get(str(run_name)) or run_name
+        safe_base_dir = GraphState.get_global_value('logdir')
         """Load a single .vis file from a given directory based on the tag."""
         if run_dir is None or tag is None:
             error_message = 'The query parameters "run" and "tag" are required'
             return None, error_message
         try:
             file_path = os.path.join(run_dir, tag)
+            # 安全验证：基础路径校验
+            if not GraphUtils.is_relative_to(file_path, safe_base_dir):
+                raise ValueError(f"Path out of bounds: {file_path}")
             # 目录安全校验
             success, error = GraphUtils.safe_check_load_file_path(run_dir, True)
             if not success:
@@ -347,9 +360,6 @@ class GraphUtils:
             # 安全验证：路径长度检查
             if len(file_path) > FILE_PATH_MAX_LENGTH:
                 raise PermissionError(f"Path length exceeds limit")
-            # 安全验证：基础路径校验
-            if not GraphUtils.is_relative_to(file_path, safe_base_dir):
-                raise ValueError(f"Path out of bounds: {file_path}")
             if not is_dir and not os.path.exists(file_path):
                 return True, None
             st = os.stat(file_path)
@@ -386,38 +396,46 @@ class GraphUtils:
         # 权限常量定义
         file_path = os.path.normpath(file_path)  # 标准化路径
         real_path = os.path.realpath(file_path)
-        safe_base_dir = GraphState.get_global_value('logdir')
         st = os.stat(real_path)
         try:
             # 安全验证：路径长度检查
             if len(real_path) > FILE_PATH_MAX_LENGTH:
-                raise PermissionError(f"Path length exceeds limit")
-            # 安全验证：路径归属检查（防止越界访问）
-            if not GraphUtils.is_relative_to(file_path, safe_base_dir):
-                raise PermissionError(f"Path out of bounds")
+                raise PermissionError(
+                    f"Path is too long (max {FILE_PATH_MAX_LENGTH} characters). Please use a shorter path."
+                )
             # 安全检查：文件存在性验证
             if not os.path.exists(real_path):
-                raise FileNotFoundError(f"File does not exist")
+                raise FileNotFoundError(f"File or directory does not exist,please check the path and ensure it exists.")
             # 安全验证：禁止符号链接文件
             if os.path.islink(file_path):
-                raise PermissionError(f"Detected symbolic link file")
+                raise PermissionError(f"Symbolic links are not allowed,Use a real file path instead.")
             # 安全验证：文件类型检查（防御TOCTOU攻击）
             # 文件类型
             if not is_dir and not os.path.isfile(real_path):
-                raise PermissionError(f"Path is not a regular file")
+                raise PermissionError(
+                    f"Path is not a regular file."
+                     "make sure the path points to a valid file (not a directory or device)."
+                )
             # 目录类型
             if is_dir and not Path(real_path).is_dir():
-                raise PermissionError(f"Directory does not exist")
+                raise PermissionError(
+                    f"Expected a directory, but it does not exist or is not a directory."
+                     "Please check the path and ensure it is a valid directory."
+                )
             # 可读性检查
             if not st.st_mode & stat.S_IRUSR:
                 raise PermissionError(
-                    f"Directory lacks read permission for others, there may be a risk of data tampering.")
+                    f"Current user lacks read permission on file or directory"
+                     "Run 'chmod u+r \"<path>\"' to grant read access"
+                )
             # 文件大小校验
             if not is_dir and os.path.getsize(file_path) > MAX_FILE_SIZE:
                 file_size = GraphUtils.bytes_to_human_readable(os.path.getsize(file_path))
                 max_size = GraphUtils.bytes_to_human_readable(MAX_FILE_SIZE)
                 raise PermissionError(
-                    f"File size exceeds limit ({file_size} > {max_size})")
+                    f"File size exceeds limit ({file_size} > {max_size})."
+                     "reduce file size or adjust MAX_FILE_SIZE if needed"
+                )
             # 非windows系统下，属主检查
             if os.name != 'nt':
                 current_uid = os.getuid() 
@@ -426,10 +444,16 @@ class GraphUtils:
                     return True, None
                 # 属主检查
                 if st.st_uid != current_uid:
-                    raise PermissionError(f"Directory is not owned by the current user")
+                    raise PermissionError(
+                        f"File or directory is not owned by current user,"
+                         "Run 'chown <user> \"<path>\"' to fix ownership."
+                    )
                 # group和其他用户不可写检查
                 if st.st_mode & PERM_GROUP_WRITE or st.st_mode & PERM_OTHER_WRITE:
-                    raise PermissionError(f"Directory has group or other write permission")
+                    raise PermissionError(
+                        f"File has insecure permissions: group or others have write access. "
+                         "Run 'chmod go-w \"<path>\"' to remove write permissions for group and others."
+                    )
             return True, None
         except Exception as e:
             logger.error(e)
@@ -523,3 +547,80 @@ class GraphUtils:
             sorted_data[k] = {'type': data.get(k, {}).get('type'), 'tags': sorted_values}
 
         return sorted_data
+            
+    @staticmethod
+    def is_safe_string(s: str) -> bool:
+        """
+        安全检查字符串是否包含恶意内容（XSS 防护）
+        """
+        if not isinstance(s, str):
+            return False
+
+        # 1. 长度限制（字符数，非字节）
+        if len(s) > FILE_PATH_MAX_LENGTH:
+            return False
+
+        # 2. 转换为小写用于检测
+        s_lower = s.lower().strip()
+
+        # 3. 黑名单关键词（常见 XSS 向量）
+        dangerous_patterns = [
+            '<script', '<img', '<svg', '<iframe', '<video', '<audio',
+            'javascript:', 'vbscript:', 'data:text/html',
+            'onload=', 'onerror=', 'onmouseover=', 'onclick=',
+            'eval(', 'alert(', 'document.cookie', 'document.location',
+            'window.location', 'innerHTML', 'outerHTML', 'document.write'
+        ]
+
+        if any(pattern in s_lower for pattern in dangerous_patterns):
+            return False
+
+        return True
+
+    @staticmethod
+    def validate_colors_param(colors_json: str):
+        # 合法颜色正则：#FFFFFF 格式，不区分大小写
+    
+        """
+        校验 colors 参数
+        返回: (是否合法, 错误信息, 解析后的数据)
+        """
+
+        if not isinstance(colors_json, dict):
+            return False, "colors 必须是一个对象", {}
+
+        if len(colors_json) == 0:
+            return False, "colors 不能为空", {}
+
+        for key, value in colors_json.items():
+            # 2. 校验颜色键
+            if not re.match(COLOR_PATTERN, key):
+                return False, f"非法颜色键: {key}", {}
+
+            if not isinstance(value, dict):
+                return False, f"颜色值必须是对象: {key}", {}
+
+            if 'value' not in value:
+                return False, f"缺少 value 字段: {key}", {}
+
+            # 3. 校验 value 字段
+            val = value['value']
+            if isinstance(val, list):
+                if len(val) != 2:
+                    return False, f"value 必须是长度为2的数组: {key}", {}
+                if not all(isinstance(x, (int, float)) for x in val):
+                    return False, f"value 数组必须是数字: {key}", {}
+                if val[0] >= val[1]:
+                    return False, f"value 区间无效（左 >= 右）: {key}", {}
+            elif isinstance(val, str):
+                if val not in ["无匹配节点", "N/A", "No matching nodes"]:
+                    return False, f"不支持的 value 字符串值: {val}", {}
+            else:
+                return False, f"value 必须是数字数组或字符串: {key}", {}
+
+            # 4. 校验 description
+            desc = value.get('description', '')
+            if not GraphUtils.is_safe_string(desc):
+                return False, f"description 包含恶意内容或格式错误: {key}", {}
+
+        return True, None, colors_json

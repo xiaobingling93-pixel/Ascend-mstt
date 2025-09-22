@@ -121,7 +121,7 @@ class MainController extends PolymerElement {
     }
     const runs = Object.keys(this.metaDir);
     this.set('runs', runs);
-    this.set('selectedRun', runs[0]);
+    this.set('selectedRun', runs?.[0]);
   }
 
   @observe('ranks')
@@ -129,7 +129,7 @@ class MainController extends PolymerElement {
     if (isEmpty(this.ranks)) {
       return;
     }
-    this.set('selectedRank', this.ranks[0]?.value);
+    this.set('selectedRank', this.ranks?.[0]?.value);
   }
 
   @observe('steps')
@@ -137,7 +137,7 @@ class MainController extends PolymerElement {
     if (isEmpty(this.steps)) {
       return;
     }
-    this.set('selectedStep', this.steps[0]?.value);
+    this.set('selectedStep', this.steps?.[0]?.value);
   }
 
   @observe('selectedRun')
@@ -150,7 +150,7 @@ class MainController extends PolymerElement {
     const selection: SelectionType = {
       ...this.selection,
       run: this.selectedRun,
-      tag: tags[0],
+      tag: tags?.[0],
       microStep: -1,
       type,
       lang: 'zh-CN'
@@ -158,7 +158,7 @@ class MainController extends PolymerElement {
     const isDBType = type === DB_TYPE;
     this.set('selection', selection);
     this.set('isDBType', isDBType);
-    this.set('selectedTag', tags[0]);
+    this.set('selectedTag', tags?.[0]);
     this.set('selectedMicroStep', -1);
   }
 

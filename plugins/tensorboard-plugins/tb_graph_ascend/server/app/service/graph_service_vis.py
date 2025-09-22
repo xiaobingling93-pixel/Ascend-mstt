@@ -24,8 +24,8 @@ from ..utils.global_state import GraphState
 from ..utils.graph_utils import GraphUtils
 from ..model.layout_hierarchy_model import LayoutHierarchyModel
 from ..model.match_nodes_model import MatchNodesController
-from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE
-from ..utils.global_state import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
+from ..utils.constant import NPU_PREFIX, BENCH_PREFIX, NPU, BENCH, SINGLE, UN_MATCHED_VALUE
+from ..utils.constant import MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR
 
 logger = tb_logging.get_logger()
 
@@ -43,9 +43,12 @@ class JsonGraphService(GraphServiceStrategy):
         read_bytes = 0
         chunk_size = 1024 * 1024 * 60  # 缓冲区
         json_data = None  # 最终存储的变量
+        _, error = GraphUtils.safe_load_data(run_path, f"{self.tag}.vis", True)
+        if error:
+            return {'success': False, 'error': '文件存在安全问题，读取文件失败'}
         file_path = os.path.join(run_path, f"{self.tag}.vis")
         file_path = os.path.normpath(file_path)  # 标准化路径
-        file_size = os.path.getsize(file_path)
+        file_size = os.path.getsize(file_path)            
         with open(file_path, 'r', encoding='utf-8') as f:
             while True:
                 chunk = f.read(chunk_size)
@@ -115,6 +118,7 @@ class JsonGraphService(GraphServiceStrategy):
             config_files = GraphUtils.find_config_files(run_name)
             config['matchedConfigFiles'] = config_files or []
             config['task'] = graph_data.get('task')
+            GraphState.set_global_value("config_info", config)
             return {'success': True, 'data': config}
         except Exception as e:
             return {'success': False, 'error': '获取配置信息失败,请检查目录中第一个文件'}
@@ -210,10 +214,10 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': False, 'error': str(error_message)}
      
         precision = []
-        is_filter_unmatch_nodes = True if '无匹配节点' in values else False
+        is_filter_unmatch_nodes = True if UN_MATCHED_VALUE in values else False
         try:
             if is_filter_unmatch_nodes:
-                values.remove('无匹配节点')
+                values.remove(UN_MATCHED_VALUE)
             # 单图
             if not graph_data.get(NPU):
                 node_list = GraphUtils.split_graph_data_by_microstep(graph_data.get('node', {}),

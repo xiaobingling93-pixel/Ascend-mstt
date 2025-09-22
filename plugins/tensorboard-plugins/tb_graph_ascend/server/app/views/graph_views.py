@@ -22,7 +22,7 @@ from tensorboard.backend import http_util
 from ..service import ServiceFactory, GraphServiceStrategy
 from ..utils.file_check_wrapper import check_file_type
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import DataType
+from ..utils.constant import DataType
 from ..utils.global_state import GraphState
 
 
@@ -36,27 +36,41 @@ class GraphView:
         filename = os.path.basename(request.path)
         extension = os.path.splitext(filename)[1]
         if extension == '.html':
-            mimetype = 'text/html'
+            content_type = 'text/html'
         elif extension == '.js':
-            mimetype = 'application/javascript'
+            content_type = 'application/javascript'
         else:
-            mimetype = 'application/octet-stream'
-        current_dir = Path(__file__).resolve().parent
-        server_dir = current_dir.parent.parent
-        filepath = server_dir / "static" / filename
+            content_type = 'application/octet-stream'
+
         try:
+            current_dir = Path(__file__).resolve().parent
+            server_dir = current_dir.parent.parent
+            dir_path = (server_dir / "static").resolve()
+            filepath = (server_dir / "static" / filename).resolve()  # resolve() 规范化路径
+            if not GraphUtils.is_relative_to(filepath, dir_path):
+                raise exceptions.NotFound('404 Not Found')
+            # 检查文件是否存在且是文件（不是目录）
+            if not filepath.is_file():
+                raise exceptions.NotFound('404 Not Found')
+            # 目录安全校验
+            success, error = GraphUtils.safe_check_load_file_path(dir_path, True)
+            if not success:
+                raise PermissionError(error)
+            # 文件安全校验
+            success, error = GraphUtils.safe_check_load_file_path(filepath)
+            if not success:
+                raise PermissionError(error)
             with open(filepath, 'rb') as infile:
                 contents = infile.read()
         except IOError as e:
             raise exceptions.NotFound('404 Not Found') from e
-        return Response(contents, content_type=mimetype, headers={"X-Content-Type-Options": "nosniff"})
+        return Response(contents, content_type=content_type, headers={"X-Content-Type-Options": "nosniff"})
 
     @staticmethod
     @wrappers.Request.application
     def load_meta_dir(request):
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
-        is_safe_check = GraphUtils.safe_json_loads(request.args.get('isSafeCheck'))
-        result = GraphServiceStrategy.load_meta_dir(is_safe_check)
+        result = GraphServiceStrategy.load_meta_dir()
         response = http_util.Respond(request, result, "application/json")
         return response
 
@@ -70,6 +84,7 @@ class GraphView:
             'type': request.args.get('type'),
         }
         lang = request.args.get('lang')
+        
         GraphState.set_global_value('lang', lang)
         strategy = GraphView._get_strategy(meta_data)
         if meta_data.get('type') == DataType.DB.value:
@@ -86,7 +101,7 @@ class GraphView:
                 }
             )
         else: 
-            result = {'success': False, 'error': GraphState.t('typeError')}
+            result = {'success': False, 'error': GraphUtils.t('typeError')}
             return http_util.Respond(request, result, "application/json")
 
     # 获取当前图数据配置信息
@@ -131,7 +146,7 @@ class GraphView:
         else:
             result = {
                 'success': False,
-                'error': GraphState.t('searchTypeError')
+                'error': GraphUtils.t('searchTypeError')
             }
         return http_util.Respond(request, result, "application/json") 
     
@@ -157,8 +172,7 @@ class GraphView:
         result = {'success': False, 'error': ''}
         meta_data = data.get('metaData')
         if node_info is None or not isinstance(node_info, dict):
-            result['error'] = GraphState.t('nodeInfoError') 
-   
+            result['error'] = GraphUtils.t('nodeInfoError') 
         strategy = GraphView._get_strategy(meta_data)
         hierarchy = strategy.change_node_expand_state(node_info, meta_data)
         return http_util.Respond(request, json.dumps(hierarchy), "application/json")
@@ -185,7 +199,7 @@ class GraphView:
         result = {'success': False, 'error': ''}
         meta_data = data.get('metaData')
         if node_info is None or not isinstance(node_info, dict):
-            result['error'] = GraphState.t('nodeInfoError') 
+            result['error'] = GraphUtils.t('nodeInfoError') 
             return http_util.Respond(request, result, "application/json")
         
         strategy = GraphView._get_strategy(meta_data)
@@ -251,6 +265,13 @@ class GraphView:
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
         colors = GraphUtils.safe_json_loads(data.get('colors'))
+        success, error_msg, colors = GraphUtils.validate_colors_param(colors)
+        if not success:
+            result = {
+                'success': False,
+                'error': error_msg
+            }
+            return http_util.Respond(request, json.dumps(result), "application/json")
         strategy = GraphView._get_strategy(meta_data, no_tag=True)
         update_result = strategy.update_colors(colors)
         return http_util.Respond(request, json.dumps(update_result), "application/json")

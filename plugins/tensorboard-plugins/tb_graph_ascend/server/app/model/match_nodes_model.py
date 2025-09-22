@@ -15,7 +15,7 @@
 # ==============================================================================
 
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import ADD_MATCH_KEYS, MODULE, NPU, BENCH
+from ..utils.constant import ADD_MATCH_KEYS, MODULE, NPU, BENCH
 from ..utils.global_state import GraphState
 
 
@@ -31,6 +31,8 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_add(graph_data, npu_node_name, bench_node_name, task): 
+        if not all([graph_data, npu_node_name, bench_node_name, task]):
+            return {'success': False, 'error': '参数错误'}
         if not MatchNodesController.is_same_node_type(graph_data, npu_node_name, bench_node_name):
             return [{
                 'success': False,
@@ -53,6 +55,7 @@ class MatchNodesController:
 
     @staticmethod
     def process_task_delete(graph_data, npu_node_name, bench_node_name, task):
+
         opposite_npu_node_name = GraphUtils.get_opposite_node_name(npu_node_name)
         opposite_bench_node_name = GraphUtils.get_opposite_node_name(bench_node_name)
         if task == 'md5':
@@ -142,19 +145,26 @@ class MatchNodesController:
                             process_child_layer(npu_subnodes, bench_subnodes)
 
         def extract_module_name(subnode_name):
-            splited_subnode_name = subnode_name.split('.')
-            if len(splited_subnode_name) < 4:
+            split_subnode_name = subnode_name.split('.')
+            if len(split_subnode_name) < 4:
                 return ""
-            module_name = splited_subnode_name[-4] if not splited_subnode_name[-4].isdigit() else splited_subnode_name[
-                -5]
-            return module_name
+            elif not split_subnode_name[-4].isdigit():
+                return split_subnode_name[-4]
+            elif len(split_subnode_name) > 5:
+                return split_subnode_name[-5]
+            else:
+                return ""
 
         def extract_api_name(subnode_name):
-            splited_subnode_name = subnode_name.split('.')
-            if len(splited_subnode_name) < 2:
+            split_subnode_name = subnode_name.split('.')
+            if len(split_subnode_name) < 2:
                 return ""
-            api_name = splited_subnode_name[-2] if not splited_subnode_name[-2].isdigit() else splited_subnode_name[-3]
-            return api_name
+            elif not split_subnode_name[-2].isdigit():
+                return split_subnode_name[-2]
+            elif len(split_subnode_name) > 2:
+                return split_subnode_name[-3]
+            else:
+                return ""
 
         npu_subnodes = npu_nodes.get(npu_node_name, {}).get('subnodes', [])
         bench_subnodes = bench_nodes.get(bench_node_name, {}).get('subnodes', [])
@@ -469,21 +479,22 @@ class MatchNodesController:
             mean_diff_rel = abs(mean_diff_abs / (bench_mean if bench_mean != 0 else 1))
 
             # 将结果记录到字典中
-            result[npu_node_name + '.' + npu_data_keys[len(result)]] = dict(
-                zip(
-                    ADD_MATCH_KEYS,
-                    [
-                        max_diff_abs,
-                        min_diff_abs,
-                        mean_diff_abs,
-                        norm_diff_abs,
-                        max_diff_rel,
-                        min_diff_rel,
-                        mean_diff_rel,
-                        norm_diff_rel,
-                    ],
+            if len(npu_data_keys) > len(result):
+                result[npu_node_name + '.' + npu_data_keys[len(result)]] = dict(
+                    zip(
+                        ADD_MATCH_KEYS,
+                        [
+                            max_diff_abs,
+                            min_diff_abs,
+                            mean_diff_abs,
+                            norm_diff_abs,
+                            max_diff_rel,
+                            min_diff_rel,
+                            mean_diff_rel,
+                            norm_diff_rel,
+                        ],
+                    )
                 )
-            )
 
         return result
 

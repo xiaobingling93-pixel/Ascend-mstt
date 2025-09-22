@@ -16,7 +16,7 @@
 # ==============================================================================
 from tensorboard.util import tb_logging
 from ..utils.global_state import GraphState
-from ..utils.global_state import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE, DataType
+from ..utils.constant import NPU_PREFIX, BENCH_PREFIX, NPU, SINGLE, UNEXPAND_NODE, MODULE, DataType
 
 logger = tb_logging.get_logger()
 
@@ -71,16 +71,24 @@ class Hierarchy:
         if int(node_type) == MODULE:
             if len(splited_subnode_name) < 4:
                 return node_name
-            splited_label = splited_subnode_name[-4:] if not splited_subnode_name[
-                -4].isdigit() else splited_subnode_name[-5:]
+            elif not splited_subnode_name[-4].isdigit():
+                splited_label = splited_subnode_name[-4:]
+            elif len(splited_subnode_name) > 4:
+                splited_label = splited_subnode_name[-5:]
+            else:
+                return node_name
         # 在展开层级时，将父级层级名称相关去除，仅保留API子节点本身名称信息，
         # 如 Module.layer1.1.ApiList.1 中的父级名称Module.layer1.1去除，仅保留子级的ApiList.1
         # 如 Module.layer1.1.ApiList.0.1 中的父级名称Module.layer1.1去除，仅保留子级的ApiList.0.1
         else:
             if len(splited_subnode_name) < 2:
                 return node_name
-            splited_label = splited_subnode_name[-2:] if not splited_subnode_name[
-                -2].isdigit() else splited_subnode_name[-3:]
+            elif not splited_subnode_name[-2].isdigit():
+                splited_label = splited_subnode_name[-2:]
+            elif len(splited_subnode_name) > 2:
+                splited_label = splited_subnode_name[-3:]
+            else:
+                return node_name
         return ('.').join(splited_label)
 
     def update_graph_data(self, node_name):

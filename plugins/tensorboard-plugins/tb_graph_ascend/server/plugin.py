@@ -23,7 +23,8 @@ from tensorboard.util import tb_logging
 
 from .app.views.graph_views import GraphView
 from .app.utils.graph_utils import GraphUtils
-from .app.utils.global_state import GraphState, Extension
+from .app.utils.global_state import GraphState
+from .app.utils.constant import Extension
 
 logger = tb_logging.get_logger()
 
@@ -51,7 +52,7 @@ class GraphsPlugin(base_plugin.TBPlugin):
         GraphState.set_global_value('logdir', self.logdir)
 
     def get_plugin_apps(self):
-        return {
+        return {     
             '/index.js': GraphView.static_file_route,
             '/index.html': GraphView.static_file_route,
             "/load_meta_dir": GraphView.load_meta_dir,

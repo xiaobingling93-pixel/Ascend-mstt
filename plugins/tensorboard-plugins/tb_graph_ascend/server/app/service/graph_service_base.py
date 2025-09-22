@@ -18,7 +18,8 @@ from abc import ABC, abstractmethod
 
 from tensorboard.util import tb_logging
 from ..utils.graph_utils import GraphUtils
-from ..utils.global_state import GraphState, NPU, BENCH, Extension, DataType
+from ..utils.global_state import GraphState
+from ..utils.constant import Extension, DataType
 
 logger = tb_logging.get_logger()
 DB_EXT = Extension.DB.value
@@ -36,7 +37,7 @@ class GraphServiceStrategy(ABC):
         self.tag = tag
 
     @staticmethod
-    def load_meta_dir(is_safe_check):
+    def load_meta_dir():
         """
         Scan logdir for directories containing .vis(.db) files. If the directory contains .vis.db files,
         it is considered a db type and the .vis files are ignored. Otherwise, it is considered a json type.
@@ -53,7 +54,7 @@ class GraphServiceStrategy(ABC):
                 if file.endswith(DB_EXT):
                     tag = file[:-len(DB_EXT)]
                     _, error = GraphUtils.safe_load_data(run_abs, file, True)
-                    if error and is_safe_check:
+                    if error:
                         error_list.append({
                             'run': run,
                             'tag': tag,
@@ -68,7 +69,7 @@ class GraphServiceStrategy(ABC):
                 if file.endswith(JSON_EXT):
                     tag = os.path.splitext(file)[0]
                     _, error = GraphUtils.safe_load_data(run_abs, file, True)
-                    if error and is_safe_check:
+                    if error:
                         error_list.append({
                             'run': run,
                             'tag': tag,
@@ -83,7 +84,7 @@ class GraphServiceStrategy(ABC):
                         meta_dir.get(run).get('tags').append(tag)
         meta_dir = GraphUtils.sort_data(meta_dir)
         for run, value in meta_dir.items():
-            first_run_tags[run] = value.get('tags')[0]
+            first_run_tags[run] = value.get('tags')[0] if value.get('tags') else ''
         GraphState.set_global_value('runs', runs)
         GraphState.set_global_value('first_run_tags', first_run_tags)
         result = {

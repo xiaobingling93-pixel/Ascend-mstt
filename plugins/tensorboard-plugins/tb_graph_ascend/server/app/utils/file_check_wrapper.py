@@ -31,12 +31,12 @@ def check_file_type(func):
                 raise RuntimeError('The request "parameter" is not in a format supported by werkzeug')
             data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
             meta_data = GraphUtils.safe_get_meta_data(data)
-            # s设置语言
-            GraphState.set_global_value('lang', meta_data.get('lang', 'zh-CN'))
             result = {'success': False, 'error': ''}
             if meta_data is None or not isinstance(meta_data, dict):
-                result['error'] = GraphState.t('metaDataError')
+                result['error'] = GraphUtils.t('metaDataError')
                 return http_util.Respond(request, result, "application/json")
+            # 设置语言
+            GraphState.set_global_value('lang', meta_data.get('lang', 'zh-CN'))
         except Exception as e:
             result = {'success': False, 'error': str(e)}
             return http_util.Respond(request, result, "application/json")

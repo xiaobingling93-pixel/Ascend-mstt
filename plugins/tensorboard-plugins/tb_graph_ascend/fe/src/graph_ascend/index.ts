@@ -94,15 +94,11 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         </graph-board-layout>
         <vaadin-confirm-dialog
           id="safe-dialog"
-          header="您尝试访问的文件或路径未通过系统的安全校验，是否关闭默认安全模式继续?"
-          cancel-button-visible
-          cancel-text="继续"
-          confirm-text="取消"
+          header="您尝试访问的文件或路径未通过系统的安全校验"
           opened="[[safeDialogOpened]]"
-          cancel="[[onSafeDialogCancel]]"
         >
         <div class='file-list-error'>
-            <p> <vaadin-icon id="safe-warning" icon="vaadin:warning"></vaadin-icon>如果您仍坚持继续，请知悉以下风险：</p>
+            <p> <vaadin-icon id="safe-warning" icon="vaadin:warning"></vaadin-icon>请知悉以下风险：</p>
             <div>非授权路径访问可能存在信息泄露和文件内容篡改。 文件过大或格式异常，可能导致性能问题或服务中断。路径中存在软链接或权限不当，可能存在越权访问和数据篡改风险。</div>
             <P>继续操作将由您自行承担相关后果。如非明确知晓风险，请取消操作并联系管理员处理。</p>
             <div class="error-info">
@@ -266,9 +262,8 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     override async ready(): Promise<void> {
         super.ready();
-        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(true);
+        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList();
         const safeDialog = this.shadowRoot?.querySelector('#safe-dialog') as HTMLElement;
-        safeDialog.addEventListener('cancel', this.onSafeDialogCancel as any);
         if (!isEmpty(error)) {
             this.set('safeDialogOpened', true);
             this.set('fileListError', error);
@@ -280,19 +275,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             { passive: true },
         );
     }
-    // 关闭默认安全模式继续
-    onSafeDialogCancel = async () => {
-        const { data, error } = await this.useGraphAscend.loadGraphFileInfoList(false);
-        if (!isEmpty(error)) {
-            Notification.show('文件列表加载失败', {
-                position: 'middle',
-                duration: 2000,
-                theme: 'error',
-            });
-            return;
-        }
-        this.set('metaDir', data);
-    }
+
     loadDBGraphData = async (metaData: SelectionType, isInitDB: boolean = false) => {
         if (isInitDB) {
             this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
@@ -311,7 +294,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.eventSource = null;
         }
 
-        this.eventSource = new EventSource(`loadGraphData?run=${metaData.run}&tag=${metaData.tag}&type=${metaData.type}`);
+        this.eventSource = new EventSource(`loadGraphData?run=${metaData.run}&tag=${metaData.tag}&type=${metaData.type}&lang=${metaData.lang}`);
         this.eventSource.onmessage = async (e) => {
             const data = safeJSONParse(e.data);
             if (data?.error) {
