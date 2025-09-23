@@ -40,9 +40,12 @@ class GraphRepoDB(GraphRepo):
 
     # DB: 查询配置表信息
     def query_config_info(self):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         query = f"SELECT * FROM tb_config"
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query)
                 rows = cursor.fetchall()
                 
@@ -66,7 +69,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB：查询根节点信息
     def query_root_nodes(self, graph_type, rank, step):
-      
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         graph_type = graph_type if graph_type != SINGLE else NPU
         query = """
         SELECT 
@@ -87,7 +92,7 @@ class GraphRepoDB(GraphRepo):
             AND up_node = '' 
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, graph_type))
                 rows = cursor.fetchall()
             if len(rows) > 0:
@@ -100,6 +105,9 @@ class GraphRepoDB(GraphRepo):
     
     # DB：查询当前节点的所有父节点信息
     def query_up_nodes(self, node_name, graph_type, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         graph_type = graph_type if graph_type != SINGLE else NPU
         # 现根据节点名称查询节点信息，根据up_node字段得到父节点名称
         # 再根据父节点名称查询父节点信息
@@ -161,7 +169,7 @@ class GraphRepoDB(GraphRepo):
                 ASC
         """ 
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, graph_type, node_name))
                 rows = cursor.fetchall()
             up_nodes = {}
@@ -175,6 +183,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB: 查询待匹配节点的信息，构造graph data
     def query_matched_nodes_info(self, npu_node_name, bench_node_name, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         query = """
             SELECT 
                 id,
@@ -203,7 +214,7 @@ class GraphRepoDB(GraphRepo):
         # 存储结果的字典
         nodes_dict = {}
         try:
-            with self.conn as c:
+            with conn as c:
                 for graph_type, node_name, key in queries:
                     if not node_name:  # 可选：跳过空 node_name
                         continue
@@ -225,6 +236,9 @@ class GraphRepoDB(GraphRepo):
             
     # DB: 查询待匹配节点及其子节点的信息，递归查询当前节点信息和其所有的子节点信息，一直叶子节点
     def query_node_and_sub_nodes(self, npu_node_name, bench_node_name, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         query = """
             WITH RECURSIVE descendants AS (
             -- 初始节点选择
@@ -289,7 +303,7 @@ class GraphRepoDB(GraphRepo):
         # 存储结果的字典
         nodes_dict = {}
         try:
-            with self.conn as c:
+            with conn as c:
                 for graph_type, node_name, key in queries:
                     if not node_name:  # 可选：跳过空 node_name
                         continue
@@ -305,6 +319,9 @@ class GraphRepoDB(GraphRepo):
     
     # DB：查询配置文件中的待匹配节点信息
     def query_matched_nodes_info_by_config(self, match_node_links, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         query = """
             SELECT 
                 id,
@@ -325,7 +342,7 @@ class GraphRepoDB(GraphRepo):
                 AND node_name IN ({}) 
             """.format(','.join(['?'] * len(match_node_links)))
         try:
-            with self.conn as c:
+            with conn as c:
                 npu_node_names = list(match_node_links.keys())
                 bench_node_names = list(match_node_links.values())
                 npu_cursor = c.execute(query, (step, rank, NPU, *npu_node_names))
@@ -340,6 +357,9 @@ class GraphRepoDB(GraphRepo):
     
     # DB: 查询所有以当前为父节点的子节点
     def query_sub_nodes(self, node_name, graph_type, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         graph_type = graph_type if graph_type != SINGLE else NPU
         query = """
             SELECT 
@@ -363,7 +383,7 @@ class GraphRepoDB(GraphRepo):
                 node_order ASC
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, graph_type, node_name))
                 rows = cursor.fetchall()
             sub_nodes = {}
@@ -377,6 +397,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB: 查询当前节点信息
     def query_node_info(self, node_name, graph_type, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         graph_type = graph_type if graph_type != SINGLE else NPU
         query = """
             SELECT 
@@ -392,7 +415,7 @@ class GraphRepoDB(GraphRepo):
                 AND n.node_name = ?
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, graph_type, node_name))
                 rows = cursor.fetchall()
             if len(rows) > 0:
@@ -405,6 +428,9 @@ class GraphRepoDB(GraphRepo):
     
     # DB: 查询单图节点名称列表
     def query_node_name_list(self, rank, step, micro_step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return []
         query = """
             SELECT 
                 node_name
@@ -419,7 +445,7 @@ class GraphRepoDB(GraphRepo):
                 node_order ASC
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step))
                 rows = cursor.fetchall()
             return [row['node_name'] for row in rows]
@@ -429,6 +455,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB: 查询已匹配节点列表，未匹配节点列表，所有的节点列表
     def query_all_node_info_in_one(self, rank, step, micro_step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         try:
             # 查找缓存
             all_node_info_cache = GraphState.get_global_value('all_node_info_cache', {})
@@ -452,7 +481,7 @@ class GraphRepoDB(GraphRepo):
                     node_order ASC
             """
             
-            with self.conn as conn:
+            with conn as conn:
                 cursor = conn.execute(query, (step, rank, micro_step, micro_step))
                 rows = cursor.fetchall()
             # 初始化结果
@@ -512,6 +541,9 @@ class GraphRepoDB(GraphRepo):
 
     # # DB：根据step rank modify match_node_link查询已经修改的匹配成功的节点关系
     def query_modify_matched_nodes_list(self, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         query = """
             SELECT 
                 node_name,
@@ -527,7 +559,7 @@ class GraphRepoDB(GraphRepo):
                 AND matched_node_link != ''
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank))
                 rows = cursor.fetchall()
             result = {}
@@ -543,6 +575,9 @@ class GraphRepoDB(GraphRepo):
             
     # DB: 根据精度误差查询节点信息
     def query_node_list_by_precision(self, step, rank, micro_step, values, is_filter_unmatch_nodes):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return []
         # 准备占位符
         conditions = []
         placeholders = []
@@ -573,7 +608,7 @@ class GraphRepoDB(GraphRepo):
                 node_order ASC
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *params))
                 rows = cursor.fetchall()
             node_list = [row['node_name'] for row in rows]
@@ -584,6 +619,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB: 根据溢出查询节点信息
     def query_node_list_by_overflow(self, step, rank, micro_step, values):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return []
         # 准备占位符
         conditions = []
         conditions.append("step = ?")
@@ -607,7 +645,7 @@ class GraphRepoDB(GraphRepo):
                 node_order ASC
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, micro_step, micro_step, *values))
                 rows = cursor.fetchall()
             node_list = [row['node_name'] for row in rows]
@@ -618,6 +656,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB：查询节点信息
     def query_node_info_by_data_source(self, step, rank, data_source):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return {}
         query = """
             SELECT 
                 node_name, 
@@ -633,7 +674,7 @@ class GraphRepoDB(GraphRepo):
                 AND data_source = ?
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 cursor = c.execute(query, (step, rank, data_source))
                 nodes = self._fetch_and_convert_rows(cursor)
             return nodes
@@ -643,6 +684,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB：更新config的colors
     def update_config_colors(self, colors):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return False
         query = """
             UPDATE 
                 tb_config 
@@ -652,7 +696,7 @@ class GraphRepoDB(GraphRepo):
                 id=1
         """
         try:
-            with self.conn as c:
+            with conn as c:
                 c.execute(query, (json.dumps(colors),))
             return True
         except Exception as e:
@@ -661,6 +705,9 @@ class GraphRepoDB(GraphRepo):
 
     # DB：批量更新节点信息
     def update_nodes_info(self, nodes_info, rank, step):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return False
         # 取消匹配和匹配都要走这个逻辑        
         try:
             data = [
@@ -690,7 +737,7 @@ class GraphRepoDB(GraphRepo):
                     AND data_source = ? 
                     AND node_name = ?
             """
-            with self.conn as c:
+            with conn as c:
                 c.executemany(query, data)
             return True
         except Exception as e:
@@ -698,6 +745,9 @@ class GraphRepoDB(GraphRepo):
             return False
     
     def update_nodes_precision_error(self, update_data):
+        conn = self._initialize_db_connection()
+        if not conn:
+            return False
         query = """
             UPDATE 
                 tb_nodes
@@ -710,8 +760,8 @@ class GraphRepoDB(GraphRepo):
                 AND node_name = ?
         """
         try:
-            self.conn.executemany(query, update_data)
-            self.conn.commit()
+            conn.executemany(query, update_data)
+            conn.commit()
             return True
         except Exception as e:
             logger.error(f"Failed to update precision error: {e}")
@@ -728,17 +778,21 @@ class GraphRepoDB(GraphRepo):
             success, error = GraphUtils.safe_check_load_file_path(self.db_path)
             if not success:
                 raise PermissionError(error)
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            self.conn.row_factory = sqlite3.Row
-            self.is_db_connected = self.conn is not None
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
             # 提升性能的 PRAGMA 设置
-            self.conn.execute("PRAGMA journal_mode = WAL;")
-            self.conn.execute("PRAGMA synchronous = NORMAL;")  # 或 OFF（不安全）
-            self.conn.execute("PRAGMA cache_size = 40000;")
-            self.conn.execute("PRAGMA wal_autocheckpoint = 0;")
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA synchronous = NORMAL;")  # 或 OFF（不安全）
+            conn.execute("PRAGMA cache_size = 40000;")
+            conn.execute("PRAGMA wal_autocheckpoint = 0;")
+            self.is_db_connected = conn is not None
+            self.conn = conn
+            return conn
+        
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
             self.conn = None
+            return None
     
     def _fetch_and_convert_rows(self, cursor):
         """

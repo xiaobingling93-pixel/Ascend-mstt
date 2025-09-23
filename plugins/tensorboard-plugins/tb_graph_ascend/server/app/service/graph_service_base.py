@@ -47,6 +47,18 @@ class GraphServiceStrategy(ABC):
         first_run_tags = GraphState.get_global_value('first_run_tags', {})
         meta_dir = {}
         error_list = []
+        success, error = GraphUtils.safe_check_load_file_path(logdir, True)
+        if not success:
+            error_list.append({
+                'run': logdir,
+                'tag': '',
+                'info': f'Error logdir:  {str(error)}'
+            })
+            result = {
+                'data': meta_dir,
+                'error': error_list
+            }
+            return {'success': False, 'error': error_list}
         for root, _, files in GraphUtils.walk_with_max_depth(logdir, 2):
             run_abs = os.path.abspath(root)
             run = os.path.basename(run_abs)  # 不允许同名目录，否则有问题
@@ -58,7 +70,7 @@ class GraphServiceStrategy(ABC):
                         error_list.append({
                             'run': run,
                             'tag': tag,
-                            'info': f'Error: {error}'
+                            'info': f'Error: {str(error)}'
                         })
                         logger.error(f'Error: File run:"{run_abs},tag:{tag}" is not accessible. Error: {error}')
                         continue
