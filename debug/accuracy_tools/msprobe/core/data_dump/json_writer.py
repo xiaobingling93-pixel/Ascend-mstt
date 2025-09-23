@@ -40,6 +40,7 @@ class DataWriter:
         self.debug_file_path = None
         self.dump_error_info_path = None
         self.flush_size = 1000
+        self.md5_flush_size = 5000
         self.larger_flush_size = 20000
         self.cache_data = {}
         self.cache_stack = {}
@@ -191,7 +192,7 @@ class DataWriter:
         summary_mode = getattr(cfg, "summary_mode", None)
 
         if summary_mode == Const.MD5:
-            threshold = self.flush_size
+            threshold = self.md5_flush_size
         else:
             threshold = self.flush_size if length < self.larger_flush_size else self.larger_flush_size
 
