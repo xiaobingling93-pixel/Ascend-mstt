@@ -19,14 +19,15 @@ import os
 import json
 import re
 import stat
-import sys
+import threading
 from functools import cmp_to_key
 from pathlib import Path
 from tensorboard.util import tb_logging
 from .global_state import GraphState
 from .constant import DataType, FILE_NAME_REGEX, MAX_FILE_SIZE, PERM_GROUP_WRITE, PERM_OTHER_WRITE, COLOR_PATTERN
 from .i18n import language, ZH_CN
-
+# 创建一个全局锁
+_thread_local_lock = threading.Lock()
 logger = tb_logging.get_logger()
 FILE_PATH_MAX_LENGTH = 4096
 
@@ -299,9 +300,12 @@ class GraphUtils:
             if not success:
                 raise PermissionError(error)
             # 尝试写入文件
-            with open(file_path, "w", encoding="utf-8") as file:
-                json.dump(data, file, ensure_ascii=False, indent=4)
-            os.chmod(file_path, 0o640)
+            with _thread_local_lock:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+                    f.flush()  # 强制将缓冲区内容写入操作系统
+                    os.fsync(f.fileno())  # 强制将缓冲区内容写入磁盘
+                os.chmod(file_path, 0o640)
             # 最终校验（防御TOCTOU攻击）
             if os.path.islink(file_path):
                 raise RuntimeError("The file has been replaced with a symbolic link")
@@ -329,7 +333,7 @@ class GraphUtils:
             file_path = os.path.join(run_dir, tag)
             # 安全验证：基础路径校验
             if not GraphUtils.is_relative_to(file_path, safe_base_dir):
-                raise ValueError(f"Path out of bounds: {file_path}")
+                raise ValueError(f"The path may not be within a secure directory")
             # 目录安全校验
             success, error = GraphUtils.safe_check_load_file_path(run_dir, True)
             if not success:
@@ -342,8 +346,9 @@ class GraphUtils:
             if only_check:
                 return True, None
             # 尝试解析 JSON 文件,校验文件内容是否合理
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return json.load(f), None
+            with _thread_local_lock:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f), None
         except json.JSONDecodeError:
             logger.error(f'Error: File "{file_path}" is not a valid JSON file!')
             return None, "File is not a valid JSON file!"
