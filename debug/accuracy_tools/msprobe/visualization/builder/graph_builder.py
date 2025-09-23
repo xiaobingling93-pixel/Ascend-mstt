@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+import copy
 from dataclasses import dataclass
 
 from msprobe.core.common.const import Const
@@ -58,6 +59,7 @@ class GraphBuilder:
         graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict,
                       micro_step_num=micro_step_dict.get(Const.MEGATRON_MICRO_STEP_NUMBER))
         GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
+        GraphBuilder._handle_recompute(graph)
         GraphBuilder._collect_apis_between_modules(graph)
         GraphBuilder._add_parameters_grad(graph, data_dict)
         return graph
@@ -280,6 +282,124 @@ class GraphBuilder:
                 input_data, output_data = get_input_output(node_data, parameters_grad_node_id)
                 # 更新数据
                 graph.get_node(parameters_grad_node_id).set_input_output(input_data, output_data)
+
+    @staticmethod
+    def _handle_recompute(graph):
+        """
+        1. 通过_get_recompute_map获得重计算节点映射recompute_map: dict(node_id: node_id_prefix)
+        2. 通过_get_no_recompute_map获得非重计算节点映射no_recompute_map: dict(node_id_prefix: list(node_id))
+        3. 遍历recompute_map，通过node_id_prefix与no_recompute_map建立连接，通过非重计算节点找到自身的父节点
+        """
+        recompute_map, recompute_id_map = GraphBuilder._get_recompute_map(graph.root.subnodes)
+        if not recompute_map:
+            return
+        id_prefixes = set(recompute_map.values())
+        no_recompute_map = GraphBuilder._get_no_recompute_map(graph, id_prefixes)
+        if not no_recompute_map:
+            return
+        # 深拷贝非重计算节点字典用于反向模式
+        no_recompute_ids_b = copy.deepcopy(no_recompute_map)
+
+        del_indexes = []
+        for node_id, id_prefix in recompute_map.items():
+            if id_prefix not in no_recompute_map:
+                continue
+            node_list = no_recompute_map.get(id_prefix) if GraphBuilder.forward_pattern.search(node_id) else \
+                no_recompute_ids_b.get(id_prefix)
+            if not node_list:
+                continue
+            no_recompute_node = node_list.pop()
+            recompute_node = graph.node_map.get(node_id)
+            if not recompute_node:
+                continue
+            # 通过非重计算forward节点的父节点，找到对应的backward父节点
+            new_up_node = graph.node_map.get(
+                GraphBuilder.forward_pattern.sub(r".backward.\2", no_recompute_node.upnode.id))
+            if not new_up_node:
+                continue
+
+            # 更新节点连接关系
+            recompute_node.upnode = new_up_node
+            new_up_node.subnodes.append(recompute_node)
+
+            del_indexes.append(recompute_id_map.get(node_id))
+
+        # 从后往前删除graph首层中已更新父节点的重计算节点
+        del_indexes.sort(reverse=True)
+        for index in del_indexes:
+            if 0 <= index <= len(graph.root.subnodes):
+                del graph.root.subnodes[index]
+
+    @staticmethod
+    def _get_recompute_map(node_list: list):
+        """
+        找到graph首层的重计算层
+
+        return: dict(node_id: node_id_prefix), dict(node_id: index)
+
+        example:
+        {Module.0.module.decoder.layers.0.TransformerLayer.forward.4: Module.0.module.decoder.layers.0.TransformerLayer}
+        """
+        recompute_map = {}
+        recompute_id_map = {}
+        node_id_set = set([node.id for node in node_list])
+        node_id_cache = set()
+        for i, node in enumerate(node_list):
+            if NodeOp.get_node_op(node.id) != NodeOp.module:
+                continue
+            id_segments = node.id.split(Const.SEP)
+            prefix = Const.SEP.join(id_segments[:-2])
+            if node.id in node_id_cache:
+                recompute_map[node.id] = prefix
+                recompute_id_map[node.id] = i
+                continue
+            is_recompute = GraphBuilder._is_recompute_node_id(id_segments)
+            if not is_recompute:
+                continue
+            # 重计算层必然是一组对应的前反向节点
+            id_segments[-2] = Const.BACKWARD if id_segments[-2] == Const.FORWARD else Const.FORWARD
+            relative_node_id = Const.SEP.join(id_segments)
+            if relative_node_id in node_id_set:
+                recompute_map[node.id] = prefix
+                recompute_id_map[node.id] = i
+                # 对应节点id放入缓存避免后续重复判断
+                node_id_cache.add(relative_node_id)
+        return recompute_map, recompute_id_map
+
+    @staticmethod
+    def _is_recompute_node_id(id_segments):
+        """
+        非重计算首层节点命名必然是：Module/Cell.{number(可选)}.module_name.{number(可选)}.class_name.forward/backward.number
+        如果不符合，则判断为重计算节点
+        """
+        if len(id_segments) > 7:
+            return True
+        if len(id_segments) == 7 and not (id_segments[1].isdigit() and id_segments[3].isdigit()):
+            return True
+        if len(id_segments) == 6 and not id_segments[1].isdigit():
+            return True
+        return False
+
+    @staticmethod
+    def _get_no_recompute_map(graph, recompute_id_prefixes):
+        """
+        寻找与重计算层id前缀相同的非重计算forward层，按顺序排列，重计算层按照顺序使用非重计算forward层的父节点对应的backward节点
+
+        return: dict(node_id_prefix: list(node_id))
+        """
+        no_recompute_map = {}
+        for node_id, node in graph.node_map.items():
+            if NodeOp.get_node_op(node_id) == NodeOp.module and GraphBuilder.forward_pattern.search(node_id):
+                if not node.upnode or node.upnode.id == graph.root.id:
+                    continue
+                id_prefix = GraphBuilder.forward_pattern.sub('', node_id)
+                if id_prefix not in recompute_id_prefixes:
+                    continue
+                no_recompute_map.setdefault(id_prefix, []).append(node)
+        for node_list in no_recompute_map.values():
+            # 方便按顺序pop弹出
+            node_list.reverse()
+        return no_recompute_map
 
 
 class GraphExportConfig:
