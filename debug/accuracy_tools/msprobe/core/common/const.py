@@ -274,6 +274,7 @@ class Const:
     TENSOR_TYPE = "torch.Tensor"
     DTENSOR_TYPE = "torch.distributed.tensor.DTensor"
     FAKE_TENSOR_TYPE = "torch._subclasses.fake_tensor.FakeTensor"
+    AC_TENSOR_TYPE = "torch.distributed._functional_collectives.AsyncCollectiveTensor"
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
 

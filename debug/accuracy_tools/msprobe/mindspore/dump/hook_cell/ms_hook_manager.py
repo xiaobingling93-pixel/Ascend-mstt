@@ -203,10 +203,12 @@ class MindsporeHookManager(BaseHookManager):
                 return
 
             with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
                 BaseHookManager.inner_switch[tid] = True
                 module_input = ModuleBackwardInputs(grad_input=grad_input)
                 self.data_collector.update_api_or_module_name(full_name)
                 self.data_collector.backward_input_data_collect(full_name, module, self._pid, module_input)
                 BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
 
         return backward_pre_hook

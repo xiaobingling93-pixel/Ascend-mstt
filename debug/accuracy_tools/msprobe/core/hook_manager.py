@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 import os
 import threading
 from abc import ABC, abstractmethod
@@ -64,6 +65,18 @@ class BaseHookManager(ABC):
         BaseHookManager.inner_api_count = defaultdict(int)
         BaseHookManager.hook_handle_dict.clear()
         BaseHookManager.params_grad_info.clear()
+
+    @staticmethod
+    def ensure_gc_enabled():
+        is_gc_disabled = not gc.isenabled()
+        if is_gc_disabled:
+            gc.enable()
+        return is_gc_disabled
+
+    @staticmethod
+    def restore_gc_state(original_state):
+        if original_state:
+            gc.disable()
 
     @staticmethod
     def _clear_input_kwargs(module, tid):
@@ -168,9 +181,11 @@ class BaseHookManager(ABC):
             if not self._should_execute_hook(Const.MODULE, tid):
                 return
             with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
                 BaseHookManager.inner_switch[tid] = True
                 self.data_collector.params_data_collect(ori_name, param_name, self._pid, grad)
                 BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
             return
 
         return hook_fn
@@ -185,6 +200,7 @@ class BaseHookManager(ABC):
                 return None
 
             with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
                 self._register_forward_hook(module, api_name)
                 BaseHookManager.inner_api_count[tid] += 1
                 if BaseHookManager.inner_api_count[tid] != 1:
@@ -209,6 +225,7 @@ class BaseHookManager(ABC):
                         self._is_recompute
                     )
                 BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
                 return args
 
         return forward_pre_hook
@@ -221,6 +238,7 @@ class BaseHookManager(ABC):
                 return None
 
             with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
                 if hook_type == Const.API:
                     if BaseHookManager.inner_api_count[tid] != 1:
                         if BaseHookManager.inner_api_count[tid] > 1:
@@ -276,6 +294,7 @@ class BaseHookManager(ABC):
                         return forward_new_output
 
                 BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
                 return output
 
         return forward_hook
@@ -287,6 +306,7 @@ class BaseHookManager(ABC):
                 return
 
             with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
                 BaseHookManager.inner_switch[tid] = True
                 self.data_collector.update_api_or_module_name(full_name)
 
@@ -306,5 +326,6 @@ class BaseHookManager(ABC):
                     params_dict = self._get_params_dict(module)
                     self.data_collector.params_data_collect_in_bw_hook(params_dict, full_name)
                 BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
 
         return backward_hook
