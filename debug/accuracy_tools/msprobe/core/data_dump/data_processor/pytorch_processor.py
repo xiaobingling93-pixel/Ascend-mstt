@@ -47,15 +47,28 @@ class TensorHandler:
     def __init__(self):
         self.has_dtensor = hasattr(dist, "tensor") and hasattr(dist.tensor, "DTensor")
         self.has_fake_tensor = hasattr(torch, "_subclasses") and hasattr(torch._subclasses, "fake_tensor")
+        self.has_async_collective_tensor = hasattr(dist, "_functional_collectives") and \
+                                           hasattr(dist._functional_collectives, "AsyncCollectiveTensor")
+
+    @staticmethod
+    def free_tensor(tensor, tensor_name):
+        try:
+            tensor.untyped_storage().resize_(0)
+        except Exception as e:
+            logger.warning(f"Failed to free tensor: {tensor_name}, the detail info: {e}.")
 
     def is_dtensor(self, tensor):
-        return self.has_dtensor and isinstance(tensor, torch.distributed.tensor.DTensor)
+        return self.has_dtensor and isinstance(tensor, dist.tensor.DTensor)
 
     def is_fake_tensor(self, tensor):
         return self.has_fake_tensor and isinstance(tensor, torch._subclasses.fake_tensor.FakeTensor)
 
+    def is_async_collective_tensor(self, tensor):
+        return self.has_async_collective_tensor and \
+            isinstance(tensor, dist._functional_collectives.AsyncCollectiveTensor)
+
     def is_empty_data(self, tensor):
-        return tensor.is_meta or self.is_fake_tensor(tensor)
+        return tensor.is_meta or self.is_fake_tensor(tensor) or self.is_async_collective_tensor(tensor)
 
     def convert_common_tensor(self, tensor):
         if self.is_dtensor(tensor):
@@ -70,6 +83,8 @@ class TensorHandler:
             return Const.DTENSOR_TYPE
         if self.is_fake_tensor(tensor):
             return Const.FAKE_TENSOR_TYPE
+        if self.is_async_collective_tensor(tensor):
+            return Const.AC_TENSOR_TYPE
         return Const.TENSOR_TYPE
 
     def get_dtensor_info(self, tensor):
@@ -103,6 +118,7 @@ class TensorHandler:
             return
         saved_tensor = common_tensor.clone().contiguous().detach()
         save_pt(saved_tensor, file_path)
+        self.free_tensor(saved_tensor, file_path)
 
 
 class PytorchDataProcessor(BaseDataProcessor):
