@@ -21,6 +21,7 @@
 #include <mutex>
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 
 #include "utils/FileUtils.h"
 #include "ErrorInfosManager.h"
@@ -77,6 +78,36 @@ static std::map<DebuggerErrno, const char*> ErrnoString = {
     {DebuggerErrno::ERROR_EXTERNAL_API_ERROR, "EXTERNAL_API_ERROR"},
 };
 
+
+const std::unordered_map<std::string, std::string>& GetInvalidChar(void)
+{
+    static const std::unordered_map<std::string, std::string> INVALID_CHAR = {
+        {"\n", "\\n"}, {"\f", "\\f"}, {"\r", "\\r"}, {"\b", "\\b"},
+        {"\t", "\\t"}, {"\v", "\\v"}, {"\u007F", "\\u007F"}
+    };
+    return INVALID_CHAR;
+}
+
+// convert unsafe string to safe string
+std::string ToSafeString(const std::string &str)
+{
+    std::string safeStr(str);
+    const std::unordered_map<std::string, std::string> invalidChar = GetInvalidChar();
+    size_t i = 0;
+    while (i < safeStr.length()) {
+        std::string chr(1, safeStr[i]);
+        if (invalidChar.find(chr) != invalidChar.end()) {
+            const std::string &validStr = invalidChar.at(chr);
+            safeStr.replace(i, 1, validStr);
+            i += validStr.length();
+            continue;
+        }
+        i++;
+    }
+    return safeStr;
+}
+
+
 void ErrorInfosManager::LogErrorInfo(DebuggerErrLevel level, DebuggerErrno errId, const std::string& info)
 {
     if (level < threshold) {
@@ -89,7 +120,7 @@ void ErrorInfosManager::LogErrorInfo(DebuggerErrLevel level, DebuggerErrno errId
     if (errId != DebuggerErrno::NONE) {
         output << "[" << ErrnoString[errId] << "]";
     }
-    output << info << std::endl;
+    output << ToSafeString(info) << std::endl;
 
     if (level > topLevel) {
         topLevel = level;
