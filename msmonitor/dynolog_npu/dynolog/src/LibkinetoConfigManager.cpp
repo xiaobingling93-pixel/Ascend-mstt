@@ -63,16 +63,16 @@ static std::string generateTraceId(int32_t pid)
 
 LibkinetoConfigManager::LibkinetoConfigManager()
 {
-    managerThread_ = new std::thread(&LibkinetoConfigManager::start, this);
+    managerThread_ = std::thread(&LibkinetoConfigManager::start, this);
 }
 
 LibkinetoConfigManager::~LibkinetoConfigManager()
 {
     stopFlag_ = true;
     managerCondVar_.notify_one();
-    managerThread_->join();
-    delete managerThread_;
-    managerThread_ = nullptr;
+    if (managerThread_.joinable()) {
+        managerThread_.join();
+    }
 }
 
 std::shared_ptr<LibkinetoConfigManager> LibkinetoConfigManager::getInstance()
