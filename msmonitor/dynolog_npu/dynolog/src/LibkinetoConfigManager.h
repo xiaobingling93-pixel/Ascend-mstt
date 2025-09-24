@@ -100,7 +100,7 @@ private:
     void refreshBaseConfig();
 
     std::string baseConfig_;
-    std::thread* managerThread_{ nullptr };
+    std::thread managerThread_;
     std::atomic_bool stopFlag_{ false };
     std::condition_variable managerCondVar_;
     int32_t npuTraceStatus_ = 0;
