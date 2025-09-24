@@ -63,8 +63,6 @@ public:
     void FinalizeDyno()
     {
         DynoLogNpuMonitor::GetInstance()->Finalize();
-        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_TRACE_STATUS);
-        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_MONITOR_STATUS);
     }
 
     void UpdateProfilerStatus(std::unordered_map<std::string, std::string>& status)
@@ -77,7 +75,12 @@ public:
             LOG(ERROR) << "Missing key 'profiler_status'.";
             return;
         }
-        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuTraceStatus, MSG_TYPE_TRACE_STATUS);
+        if (npuTraceStatus == -1) {
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_TRACE_STATUS);
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_MONITOR_STATUS);
+        } else {
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuTraceStatus, MSG_TYPE_TRACE_STATUS);
+        }
     }
 private:
     MonitorBase *monitor_ = nullptr;
