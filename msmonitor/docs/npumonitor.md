@@ -24,7 +24,7 @@ npu-monitor的SUBCOMMANDS（子命令）选项如下：
 | --npu-monitor-stop    | action | 停止性能监控，设置参数后生效，默认不生效                                                                                                                                | Y | Y | N |
 | --report-interval-s   | int | 性能监控数据上报周期，单位s，需要在启动时设置。默认值60                                                                                                                       | Y | Y | N |
 | --mspti-activity-kind | String | 性能监控数据上报数据类型，可以设置单个或多个，多个类型以逗号分隔，每次设置时刷新全局上报类型。可选值范围[`Marker`, `Kernel`, `API`, `Hccl`, `Memory`, `MemSet`, `MemCpy`, `Communication`] , 默认值`Marker` | Y | Y | N |
-| --log-file            | String | 性能数据采集落盘的路径，当前仅支持`mspti-activity-kind`设置为`Marker`、`Kernel`、`API`、`Communication`，4种类型数据的导出，落盘数据格式为db，落盘文件名为`msmonitor_{process_id}_{timestamp}_{rank_id}.db`，db内容说明请参考[msprof导出db格式数据说明](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/devaids/Profiling/atlasprofiling_16_1144.html)，db数据可以使用[MindStudio Insight](https://www.hiascend.com/document/detail/zh/mindstudio/81RC1/GUI_baseddevelopmenttool/msascendinsightug/Insight_userguide_0002.html)工具进行可视化呈现，默认值为空，表示不落盘 | Y | Y | N |
+| --log-file            | String | 性能数据采集落盘的路径，当前仅支持`mspti-activity-kind`设置为`Marker`、`Kernel`、`API`、`Communication`，4种类型数据的导出，落盘数据格式为db，落盘文件名为`msmonitor_{process_id}_{timestamp}_{rank_id}.db`，db内容说明请参考[msprof导出db格式数据说明](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/devaids/Profiling/atlasprofiling_16_1144.html)，db数据可以使用[MindStudio Insight](https://www.hiascend.com/document/detail/zh/mindstudio/81RC1/GUI_baseddevelopmenttool/msascendinsightug/Insight_userguide_0002.html)工具进行可视化呈现（MindStudio Insight暂不支持呈现单进程多卡场景采集的`msmonitor.db`数据），默认值为空，表示不落盘 | Y | Y | N |
 
 ## npu-monitor使用方法
 
