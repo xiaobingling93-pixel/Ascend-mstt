@@ -88,6 +88,6 @@ nputrace特性为用户提供动态触发AI框架（[Ascend PyTorch Profiler](ht
 ![MindStudio Insight TimeLine可视化效果图](./docs/resources/mindstudio_insight.png)
 
 ## 🔒 安全声明
-[msMonitor安全声明](./docs/security_statement.md)
+[mstt安全声明](../security_statement/mstt安全声明.md)
 ## ❓ FAQ
 [msMonitor FAQ](./docs/faq.md)
