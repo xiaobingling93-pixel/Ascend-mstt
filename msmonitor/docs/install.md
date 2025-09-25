@@ -75,7 +75,7 @@ sudo apt-get install -y openssl
 sudo yum install -y openssl
 ```
 dyno CLI与dynolog daemon之间的RPC通信使用TLS证书密钥加密，在启动dyno和dynolog二进制时可以指定证书密钥存放的路径，路径下需要满足如下结构和名称。
-**用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。**
+**用户应使用与自己需求相符的密钥生成和存储机制，并保证密钥安全性与机密性。当前仅支持RSA-SHA256和RSA-SHA512两种证书签名算法。**
 
 服务端证书目录结构： 
 ```bash

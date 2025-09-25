@@ -480,11 +480,10 @@ void SimpleJsonServerBase::verify_certificate_version_and_algorithm(X509* cert)
         throw std::runtime_error("Failed to get signature algorithm");
     }
 
+    // 3. 检查安全证书签名算法 当前仅允许 RSA_SHA_256和RSA_SHA_512
     int sig_nid = OBJ_obj2nid(sig_alg->algorithm);
-    // 检查是否使用不安全的算法
-    if (sig_nid == NID_md2WithRSAEncryption ||
-        sig_nid == NID_md5WithRSAEncryption ||
-        sig_nid == NID_sha1WithRSAEncryption) {
+    if (sig_nid != NID_sha256WithRSAEncryption &&
+        sig_nid != NID_sha512WithRSAEncryption) {
         throw std::runtime_error("Certificate uses insecure signature algorithm: " + std::to_string(sig_nid));
     }
 }
