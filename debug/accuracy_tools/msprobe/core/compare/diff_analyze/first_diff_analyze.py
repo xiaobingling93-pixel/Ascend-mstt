@@ -26,6 +26,8 @@ from msprobe.core.compare.utils import gen_api_batches
 
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 diff_threshold_yaml_path = os.path.join(cur_dir, 'diff_analyze_threshold.yaml')
+ignore_op_list_yaml_path = os.path.join(cur_dir, 'ignore_op_list.yaml')
+ignore_list = load_yaml(ignore_op_list_yaml_path)
 thresholds = load_yaml(diff_threshold_yaml_path)
 cmp_metrics = thresholds.get('compare_metrics')
 
@@ -51,7 +53,7 @@ class FirstDiffAnalyze:
                 return True
         return False
 
-    def single_api_check(self, result_slice, header):
+    def single_api_check(self, result_slice, header, api_name=None):
         """
         单个api差异检查
 
@@ -65,14 +67,18 @@ class FirstDiffAnalyze:
         }
 
         column_indices = {name: idx for idx, name in enumerate(header)}
-
+        output_idx = -1
         for line in result_slice:
             op_item = {
                 column_name: line[column_indices[column_name]]
                 for column_name in header
             }
             single_check_result['op_items'].append(op_item)
-
+            if op_item['state'] != 'output':
+                continue
+            output_idx += 1
+            if output_idx in ignore_list.get(api_name, []):
+                continue
             # set is_same
             if self.mode_config.dump_mode == Const.MD5:
                 if line[column_indices[CompareConst.RESULT]] == CompareConst.DIFF:
@@ -117,7 +123,13 @@ class FirstDiffAnalyze:
         with tqdm(total=len(api_batches), desc=bar_desc_add_rank, unit="api/module", ncols=100) as progress_bar:
             for api_batch in api_batches:
                 result_slice = result[api_batch.start: api_batch.params_grad_end_index]
-                check_result[api_batch.api_name] = self.single_api_check(result_slice, header)
+                api_compo = api_batch.api_name.split('.')
+                # suppose name is Tensor.MatMul.0.forward
+                if len(api_compo) < 4:
+                    continue
+                # get MatMul as api_name
+                api_name = api_compo[-3]
+                check_result[api_batch.api_name] = self.single_api_check(result_slice, header, api_name)
                 progress_bar.update(1)
 
         return check_result

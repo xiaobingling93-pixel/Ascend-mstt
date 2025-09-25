@@ -182,7 +182,7 @@ def analyze_diff_in_group(nodes_group):
     input_diff_nodes = list(filter(lambda node: node.is_diff, src_list))
     # 如果有异常回溯计算节点找到异常来源
     # 使用cpu模拟节点进行计算，查看结果是否有问题。需要对所有计算节点录入/映射，暂不实现。
-    get_compute_ops_from_comm_nodes(input_diff_nodes)
+    get_compute_ops_from_comm_nodes(nodes_group)
     # 筛选入参没问题但出参有问题的通信节点
     output_diff_nodes = list(filter(lambda node: node.data.is_diff, nodes_group))
     get_comm_ops(output_diff_nodes)

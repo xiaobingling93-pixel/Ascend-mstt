@@ -16,7 +16,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
                        'state', 'api_origin_name']
         self.data = [
             ['Functional.conv2d.0.forward.input.0', 1, '0.0%', '0.0%', '0.0%', '0.0%', 'input', 'Functional.conv2d.0.forward'],
-            ['Functional.conv2d.0.forward.input.1', 1, '99.0%', '99.0%', '99.0%', '99.0%', 'input', 'Functional.conv2d.0.forward']
+            ['Functional.conv2d.0.forward.output.0', 1, '99.0%', '99.0%', '99.0%', '99.0%', 'output', 'Functional.conv2d.0.forward']
         ]
         self.result_df = pd.DataFrame(self.data, columns=self.header)
 
@@ -57,7 +57,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
     def test_single_api_check_within_threshold(self):
         result_slice = [
             ['Functional.conv2d.0.forward.input.0', 1, '0.0%', '0.0%', '0.0%', '0.0%', 'input', 'Functional.conv2d.0.forward'],
-            ['Functional.conv2d.0.forward.input.1', 1, '0.1%', '0.1%', '0.1%', '0.1%', 'input', 'Functional.conv2d.0.forward']
+            ['Functional.conv2d.0.forward.output.0', 1, '0.1%', '0.1%', '0.1%', '0.1%', 'output', 'Functional.conv2d.0.forward']
         ]
         expected_result = {
             'is_same': True,
@@ -66,10 +66,10 @@ class TestFirstDiffAnalyze(unittest.TestCase):
                  'MaxRelativeErr': '0.0%', 'MinRelativeErr': '0.0%',
                  'MeanRelativeErr': '0.0%', 'NormRelativeErr': '0.0%',
                  'state': 'input', 'api_origin_name': 'Functional.conv2d.0.forward'},
-                {'NPU name': 'Functional.conv2d.0.forward.input.1', 'L2norm diff': 1,
+                {'NPU name': 'Functional.conv2d.0.forward.output.0', 'L2norm diff': 1,
                  'MaxRelativeErr': '0.1%', 'MinRelativeErr': '0.1%',
                  'MeanRelativeErr': '0.1%', 'NormRelativeErr': '0.1%',
-                 'state': 'input', 'api_origin_name': 'Functional.conv2d.0.forward'}
+                 'state': 'output', 'api_origin_name': 'Functional.conv2d.0.forward'}
             ]
         }
         mode_config = ModeConfig(first_diff_analyze=True)
@@ -80,7 +80,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
     def test_single_api_check_exceed_threshold(self):
         result_slice = [
             ['Functional.conv2d.0.forward.input.0', 1, '88.0%', '88.0%', '88.0%', '88.0%', 'input', 'Functional.conv2d.0.forward'],
-            ['Functional.conv2d.0.forward.input.1', 1, '99.0%', '99.0%', '99.0%', '99.0%', 'input', 'Functional.conv2d.0.forward']
+            ['Functional.conv2d.0.forward.output.0', 1, '99.0%', '99.0%', '99.0%', '99.0%', 'output', 'Functional.conv2d.0.forward']
         ]
         expected_result = {
             'is_same': False,
@@ -89,10 +89,10 @@ class TestFirstDiffAnalyze(unittest.TestCase):
                  'MaxRelativeErr': '88.0%', 'MinRelativeErr': '88.0%',
                  'MeanRelativeErr': '88.0%', 'NormRelativeErr': '88.0%',
                  'state': 'input', 'api_origin_name': 'Functional.conv2d.0.forward'},
-                {'NPU name': 'Functional.conv2d.0.forward.input.1', 'L2norm diff': 1,
+                {'NPU name': 'Functional.conv2d.0.forward.output.0', 'L2norm diff': 1,
                  'MaxRelativeErr': '99.0%', 'MinRelativeErr': '99.0%',
                  'MeanRelativeErr': '99.0%', 'NormRelativeErr': '99.0%',
-                 'state': 'input', 'api_origin_name': 'Functional.conv2d.0.forward'},
+                 'state': 'output', 'api_origin_name': 'Functional.conv2d.0.forward'},
             ]
         }
         mode_config = ModeConfig(first_diff_analyze=True)
@@ -130,22 +130,22 @@ class TestFirstDiffAnalyze(unittest.TestCase):
     def test_single_api_check_md5_same_false(self):
         md5_header = CompareConst.MD5_COMPARE_RESULT_HEADER + [CompareConst.STACK, Const.STATE, Const.API_ORIGIN_NAME]
         result_slice = [
-            ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.0', 'torch.int32', 'torch.int32',
+            ['Functional.conv2d.0.forward.output.0', 'Functional.conv2d.0.forward.output.0', 'torch.int32', 'torch.int32',
              '[]', '[]', 'True', 'True', '2144df1c', '2100df1c', True, 'Different',
-             '', 'input', 'Functional.conv2d.0.forward']
+             '', 'output', 'Functional.conv2d.0.forward']
         ]
         expected_result = {
             'is_same': False,
             'op_items': [
-                {CompareConst.NPU_NAME: 'Functional.conv2d.0.forward.input.0',
-                 CompareConst.BENCH_NAME: 'Functional.conv2d.0.forward.input.0',
+                {CompareConst.NPU_NAME: 'Functional.conv2d.0.forward.output.0',
+                 CompareConst.BENCH_NAME: 'Functional.conv2d.0.forward.output.0',
                  CompareConst.NPU_DTYPE: 'torch.int32', CompareConst.BENCH_DTYPE: 'torch.int32',
                  CompareConst.NPU_SHAPE: '[]', CompareConst.BENCH_SHAPE: '[]',
                  CompareConst.NPU_REQ_GRAD: 'True', CompareConst.BENCH_REQ_GRAD: 'True',
                  CompareConst.NPU_MD5: '2144df1c', CompareConst.BENCH_MD5: '2100df1c',
                  CompareConst.REQ_GRAD_CONSIST: True,
                  CompareConst.RESULT: 'Different', CompareConst.STACK: '',
-                 Const.STATE: 'input', Const.API_ORIGIN_NAME: 'Functional.conv2d.0.forward'
+                 Const.STATE: 'output', Const.API_ORIGIN_NAME: 'Functional.conv2d.0.forward'
                  }
             ]
         }
@@ -163,10 +163,10 @@ class TestFirstDiffAnalyze(unittest.TestCase):
                      'MaxRelativeErr': '0.0%', 'MinRelativeErr': '0.0%',
                      'MeanRelativeErr': '0.0%', 'NormRelativeErr': '0.0%',
                      'state': 'input', 'api_origin_name': 'Functional.conv2d.0.forward'},
-                    {'NPU name': 'Functional.conv2d.0.forward.input.1', 'L2norm diff': 1,
+                    {'NPU name': 'Functional.conv2d.0.forward.output.0', 'L2norm diff': 1,
                      'MaxRelativeErr': '99.0%', 'MinRelativeErr': '99.0%',
                      'MeanRelativeErr': '99.0%', 'NormRelativeErr': '99.0%',
-                     'state': 'input', 'api_origin_name': 'Functional.conv2d.0.forward'},
+                     'state': 'output', 'api_origin_name': 'Functional.conv2d.0.forward'},
                 ]
             }
         }
