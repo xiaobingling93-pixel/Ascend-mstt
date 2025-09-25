@@ -92,6 +92,7 @@ public:
     uint64_t GetUint64Id(const std::string &key);
     StringIdFormat GetStringIdData();
     void Clear();
+    bool IsEmpty();
 
 private:
     std::mutex uint64IdMapMutex_;
@@ -128,6 +129,12 @@ void IdPool::Clear()
     uint64Index_ = 0;
 }
 
+bool IdPool::IsEmpty()
+{
+    std::lock_guard<std::mutex> lock(uint64IdMapMutex_);
+    return uint64IdMap_.empty();
+}
+
 void DBProcessManager::SetReportInterval(uint32_t interval)
 {
     if (reportInterval_.load() != interval) {
@@ -155,11 +162,18 @@ void DBProcessManager::ExecuteTask()
 bool DBProcessManager::CheckAndInitDB()
 {
     std::lock_guard<std::mutex> lock(dbMutex_);
+    if (IdPool::GetInstance()->IsEmpty()) {
+        return true;
+    }
     if (msMonitorDB_.database == nullptr || msMonitorDB_.dbRunner == nullptr) {
+        auto dbPath = GetMsmonitorDbPath(savePath_);
+        if (!PathUtils::IsFileExist(dbPath) && !PathUtils::CreateFile(dbPath)) {
+            LOG(ERROR) << "DBProcessManager create db failed";
+            return false;
+        }
         std::shared_ptr<MsMonitorDB> msMonitorDB{nullptr};
         MakeSharedPtr(msMonitorDB);
         msMonitorDB_.database = msMonitorDB;
-        auto dbPath = GetMsmonitorDbPath(savePath_);
         LOG(INFO) << "msMonitor db will be save to " << dbPath;
         return msMonitorDB_.database != nullptr && msMonitorDB_.ConstructDBRunner(dbPath);
     }
