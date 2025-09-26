@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 import sqlite3
 from typing import List, Tuple, Dict, Any
 from functools import wraps
@@ -19,6 +20,14 @@ from functools import wraps
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import check_path_before_create, change_mode
 from msprobe.core.common.const import FileCheckConst
+
+SAFE_SQL_PATTERN = re.compile(r'^[a-zA-Z0-9_]+$')
+
+
+def check_identifier_safety(name):
+    """验证标识符是否安全（防止SQL注入）"""
+    if not isinstance(name, str) or SAFE_SQL_PATTERN.match(name) is None:
+        raise ValueError(f"Invalid SQL identifier: {name}, potential SQL injection risk!")
 
 
 def _db_operation(func):
@@ -68,6 +77,7 @@ class DBManager:
         where_values = []
         if where_list:
             for col, val in where_list.items():
+                check_identifier_safety(col)
                 where_clauses.append(f"{col} = ?")
                 where_values.append(val)
             if where_clauses:
@@ -84,13 +94,22 @@ class DBManager:
         :param batch_size: 每批插入的大小
         :return: 插入的行数
         """
+        check_identifier_safety(table_name)
+
         if not data:
             return 0
         columns = len(data[0])
-        if key_list and columns != len(key_list):
-            raise ValueError(
-                f"When inserting into table {table_name}, the length of key list ({key_list})"
-                f"does not match the data({columns}).")
+        if key_list:
+            if not isinstance(key_list, list):
+                raise TypeError(
+                    f"key_list must be a list, got {type(key_list)}"
+                )
+            if columns != len(key_list):
+                raise ValueError(
+                    f"When inserting into table {table_name}, the length of key list ({key_list})"
+                    f"does not match the data({columns}).")
+            for key in key_list:
+                check_identifier_safety(key)
 
         batch_size = self.DEFAULT_INSERT_SIZE
         placeholders = ", ".join(["?"] * columns)
@@ -121,11 +140,15 @@ class DBManager:
         :param where: WHERE条件
         :return: 查询结果列表(字典形式)
         """
+        check_identifier_safety(table_name)
 
         if not columns:
             raise ValueError("columns parameter cannot be empty, specify columns to select (e.g. ['id', 'name'])")
         if not isinstance(columns, list) or not all(isinstance(col, str) for col in columns):
             raise TypeError("columns must be a list of strings (e.g. ['id', 'name'])")
+        
+        for col in columns:
+            check_identifier_safety(col)
         
         cols = ", ".join(columns)
         sql = f"SELECT {cols} FROM {table_name}"
@@ -147,6 +170,14 @@ class DBManager:
         :param where_params: WHERE条件参数
         :return: 影响的行数
         """
+        check_identifier_safety(table_name)
+        if not updates:
+            raise ValueError("columns parameter cannot be empty, specify it to update (e.g. {'name': 'xxx'}")
+        if not isinstance(updates, dict):
+            raise TypeError(f"updates must be a dictionary, got: {type(updates)}")
+        for key in updates.keys():
+            check_identifier_safety(key)
+
         set_clause = ", ".join([f"{k} = ?" for k in updates.keys()])
         sql = f"UPDATE {table_name} SET {set_clause}"
 
