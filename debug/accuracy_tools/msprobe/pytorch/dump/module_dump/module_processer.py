@@ -30,7 +30,8 @@ from msprobe.pytorch.common.utils import is_torch_nn_module, register_forward_pr
 from msprobe.pytorch.dump.module_dump.hook_wrapper import wrap_setup_input_output_hook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
-if torch_version_above_or_equal_2:
+torch_version_above_or_equal_21 = torch.__version__.split('+')[0] >= '2.1'
+if torch_version_above_or_equal_21:
     from torch.utils.checkpoint import _StopRecomputationError
 
 
@@ -62,7 +63,7 @@ def wrap_forward_with_hook_safety(module):
                 hook_fn = list(module._forward_hooks.values())[0]
                 hook_fn(module, args, kwargs, exception_output)
             raise e
-    if torch_version_above_or_equal_2:
+    if torch_version_above_or_equal_21:
         module.forward = wrapped_forward
 
 
