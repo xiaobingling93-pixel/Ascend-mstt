@@ -212,7 +212,6 @@ class BaseGraphMerger:
                     if compare_data and not self.compare_param_same(main_param, other_param, has_uncertainty=True):
                         same_flag = False
                 if not same_flag:
-                    # {input.0: [{"Max": 0, "Min": 0, ...}, {"Max": 0.1, "Min": 0, ...}, ...]}
                     data_dict[key.replace(main_node.id + Const.SEP, '')] = tp_need_merge_params
         return data_types.get('input_data'), data_types.get('output_data')
 
