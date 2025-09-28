@@ -23,6 +23,7 @@ namespace ipc_monitor {
 namespace db {
 namespace {
 constexpr uint64_t MSTX_CONNECTION_ID_OFFSET = 4000000000ULL;
+constexpr int32_t INVALID_DEVICE_ID = -1;
 const std::string MSTX_TASK_TYPE = "MsTx";
 const std::string NA = "N/A";
 const std::string UNKNOWN = "UNKNOWN";
@@ -252,14 +253,15 @@ bool DBProcessManager::SaveRankDeviceData()
     if (msMonitorDB_.dbRunner->CheckTableExists(TABLE_RANK_DEVICE_MAP)) {
         return true;
     }
-    if (deviceSet_.empty()) {
-        return false;
-    }
     auto rankId = GetRankId();
-    std::vector<std::tuple<int32_t, uint32_t>> rankDeviceData;
-    rankDeviceData.reserve(deviceSet_.size());
-    for (auto deviceId : deviceSet_) {
-        rankDeviceData.emplace_back(rankId, deviceId);
+    std::vector<std::tuple<int32_t, int32_t>> rankDeviceData;
+    if (deviceSet_.empty()) {
+        rankDeviceData.emplace_back(rankId, INVALID_DEVICE_ID);
+    } else {
+        rankDeviceData.reserve(deviceSet_.size());
+        for (auto deviceId : deviceSet_) {
+            rankDeviceData.emplace_back(rankId, static_cast<int32_t>(deviceId));
+        }
     }
     if (!InsertDataToDB(rankDeviceData, TABLE_RANK_DEVICE_MAP, msMonitorDB_)) {
         LOG(ERROR) << "DBProcessManager insert rank device map data failed";
@@ -273,13 +275,14 @@ bool DBProcessManager::SaveNpuInfoData()
     if (msMonitorDB_.dbRunner->CheckTableExists(TABLE_NPU_INFO)) {
         return true;
     }
+    std::vector<std::tuple<int32_t, std::string>> npuInfoData;
     if (deviceSet_.empty()) {
-        return false;
-    }
-    std::vector<std::tuple<uint32_t, std::string>> npuInfoData;
-    npuInfoData.reserve(deviceSet_.size());
-    for (auto deviceId : deviceSet_) {
-        npuInfoData.emplace_back(deviceId, UNKNOWN);
+        npuInfoData.emplace_back(INVALID_DEVICE_ID, UNKNOWN);
+    } else {
+        npuInfoData.reserve(deviceSet_.size());
+        for (auto deviceId : deviceSet_) {
+            npuInfoData.emplace_back(static_cast<int32_t>(deviceId), UNKNOWN);
+        }
     }
     if (!InsertDataToDB(npuInfoData, TABLE_NPU_INFO, msMonitorDB_)) {
         LOG(ERROR) << "DBProcessManager insert npu info data failed";
