@@ -5,7 +5,7 @@ export BUILD_TENSORBOARD=1
 export USE_TENSORBOARD="OFF"
 
 # 设置 CARGO_HOME
-export CARGO_HOME="/root/.cargo"
+export CARGO_HOME="$HOME/.cargo"
 
 # 创建 Cargo 配置目录
 mkdir -p ${CARGO_HOME}
