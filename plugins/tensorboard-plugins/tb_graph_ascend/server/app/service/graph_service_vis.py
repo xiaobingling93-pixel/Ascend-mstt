@@ -48,7 +48,9 @@ class JsonGraphService(GraphServiceStrategy):
             return {'success': False, 'error': '文件存在安全问题，读取文件失败'}
         file_path = os.path.join(run_path, f"{self.tag}.vis")
         file_path = os.path.normpath(file_path)  # 标准化路径
-        file_size = os.path.getsize(file_path)            
+        file_size = os.path.getsize(file_path)  
+        if file_size == 0:
+            return {'success': False, 'error': '文件为空'}
         with open(file_path, 'r', encoding='utf-8') as f:
             while True:
                 chunk = f.read(chunk_size)
@@ -56,7 +58,7 @@ class JsonGraphService(GraphServiceStrategy):
                     break
                 read_bytes += len(chunk)
                 buffer += chunk
-                current_progress = min(95, int((read_bytes / file_size) * 100))
+                current_progress = min(95, int((read_bytes / file_size) * 100)) 
                 reading_info = {
                     'progress': current_progress,
                     'status': 'reading',
@@ -364,6 +366,8 @@ class JsonGraphService(GraphServiceStrategy):
         match_node_links, error = GraphUtils.safe_load_data(meta_data.get('run'), config_file_name)
         if error:
             return {'success': False, 'error': '读取配置文件失败'}
+        if not match_node_links:
+            return {'success': False, 'error': GraphUtils.t('matchNodeLinksNullError')}
         task = graph_data.get('task')
         try:
             # 根据任务类型计算误差

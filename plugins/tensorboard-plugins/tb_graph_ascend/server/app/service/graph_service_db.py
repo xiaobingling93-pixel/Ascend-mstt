@@ -257,6 +257,8 @@ class DbGraphService(GraphServiceStrategy):
             graph_data = self.repo.query_matched_nodes_info_by_config(match_node_links, rank, step)
             if error:
                 return {'success': False, 'error': GraphUtils.t('loadConfigFileError')}
+            if not match_node_links:
+                return {'success': False, 'error': GraphUtils.t('matchNodeLinksNullError')}
             # 根据任务类型计算误差
             if task == 'md5' or task == 'summary':
                 match_result = MatchNodesController.process_task_add_child_layer_by_config(graph_data,

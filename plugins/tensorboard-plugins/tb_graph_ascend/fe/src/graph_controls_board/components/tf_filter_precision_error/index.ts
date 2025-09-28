@@ -85,9 +85,11 @@ class TfFilterPrecisionError extends PolymerElement {
                 duration: 1800,
                 theme: 'error',
             });
+            this.set('filterValue', this.lastFilterValue);
             setTimeout(() => {
                 this.set('filterDialogOpened', true);
-            }, 1800)
+            }, 1000)
+
             return;
         }
         const data = {
@@ -112,9 +114,10 @@ class TfFilterPrecisionError extends PolymerElement {
                 duration: 1800,
                 theme: 'error',
             });
+            this.set('filterValue', this.lastFilterValue);
             setTimeout(() => {
                 this.set('filterDialogOpened', true);
-            }, 1800)
+            }, 1000)
         }
     }
 

@@ -18,130 +18,131 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-    mode: 'development', // 明确指定开发模式
-    devtool: 'eval-cheap-source-map', // 开发环境推荐使用的 source map 类型
+  mode: 'development',
+  devtool: 'eval-cheap-source-map',
 
-    entry: {
-        app: './src/index', // 保持与生产环境一致的入口
+  entry: {
+    app: './src/index',
+  },
+
+  output: {
+    filename: '[name].bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: '/',
+  },
+
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'dist'),
     },
-
-    output: {
-        filename: '[name].bundle.js', // 使用带 hash 的文件名
-        path: path.resolve(__dirname, 'dist'),
-        publicPath: '/', // 确保 dev server 的静态资源路径正确
-    },
-
-    devServer: {
-        static: {
-            directory: path.join(__dirname, 'dist'), // 服务资源目录
+    compress: false,
+    proxy: [
+      {
+        context: (pathname) => {
+          return !pathname.match(/(\.js|\.css|\.html|\.ico|\.svg)$/);
         },
-        compress: false,
-        proxy: [
-            {
-                context: (pathname) => {
-                    return !pathname.match(/(\.js|\.css|\.html|\.ico|\.svg)$/);
-                },
-                target: 'http://127.0.0.1:6006',
-                changeOrigin: true,
-                secure: false,
-                pathRewrite: {
-                    '^/(.*)': '/data/plugin/graph_ascend/$1', // 路径转换核心逻辑
-                },
-                on: {
-                    error: (err, req, res) => {
-                        // 安全处理响应对象
-                        if (res && !res.headersSent) {
-                            res.writeHead(500, { 'Content-Type': 'text/plain' });
-                            res.end('Proxy Error');
-                        }
-                    },
-                    proxyReqWs: (proxyReq, req, socket) => {
-                        // WebSocket 错误专属处理
-                        socket.on('error', (error) => {
-
-                        });
-                    },
-                },
-            },
-        ],
-        webSocketServer: {
-            type: 'ws',
-            options: {
-                path: '/ws',
-                noInfo: true,
-            },
+        target: 'http://127.0.0.1:6006',
+        changeOrigin: true,
+        secure: false,
+        pathRewrite: {
+          '^/(.*)': '/data/plugin/graph_ascend/$1',
         },
-        http2: false, // 推荐启用HTTP/2
-        https: false, // 根据实际需要配置
-        hot: true, // 启用热模块替换
-        liveReload: true, // 启用实时重新加载
-        port: 8080, // 自定义端口号
-        open: true, // 自动打开浏览器
-        client: {
-            overlay: {
-                errors: true,
-                warnings: false,
-            }, // 在浏览器中显示编译错误
+        on: {
+          error: (err, req, res) => {
+            if (res && !res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'text/plain' });
+              res.end('Proxy Error');
+            }
+          },
+          proxyReqWs: (proxyReq, req, socket) => {
+            socket.on('error', (error) => {
+              console.error('WebSocket proxy error:', error);
+            });
+          },
         },
-        headers: {
-            'X-Proxy-Source': 'webpack-dev-server',
-        },
-    },
-
-    module: {
-        rules: [
-            {
-                test: /\.html$/,
-                use: [
-                    {
-                        loader: 'html-loader',
-                        options: {
-                            sources: false, // 开发环境不需要优化资源路径
-                        },
-                    },
-                ],
-            },
-            {
-                test: /\.ts?$/,
-                use: {
-                    loader: 'ts-loader',
-                    options: {
-                        transpileOnly: true, // 保持快速编译
-                        experimentalWatchApi: true, // 启用 TypeScript 的监听 API
-                    },
-                },
-                exclude: /node_modules/,
-            },
-            {
-                test: /\.css$/i,
-                use: [
-                    'style-loader',
-                    {
-                        loader: 'css-loader',
-                        options: {
-                            sourceMap: true, // 启用 CSS source maps
-                        },
-                    },
-                ],
-            },
-        ],
-    },
-
-    resolve: {
-        extensions: ['.ts', '.js', '.json'], // 添加 .json 扩展名解析
-    },
-
-    plugins: [
-        new HtmlWebpackPlugin({
-            inject: 'body',
-            template: './index.html',
-            minify: false, // 开发环境不压缩 HTML
-        }),
+      },
     ],
-
-    optimization: {
-        removeAvailableModules: false,
-        removeEmptyChunks: false,
-        splitChunks: false, // 禁用代码拆分加速编译
+    webSocketServer: {
+      type: 'ws',
+      options: {
+        path: '/ws',
+        noInfo: true,
+      },
     },
+
+    server: {
+      type: 'http', // 可选: 'http' | 'https' | 'http2'
+    },
+
+    hot: true,
+    liveReload: true,
+    port: 8080,
+    open: true,
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
+    },
+    headers: {
+      'X-Proxy-Source': 'webpack-dev-server',
+    },
+  },
+
+  module: {
+    rules: [
+      {
+        test: /\.html$/,
+        use: [
+          {
+            loader: 'html-loader',
+            options: {
+              sources: false,
+            },
+          },
+        ],
+      },
+      {
+        test: /\.ts?$/,
+        use: {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+            experimentalWatchApi: true,
+          },
+        },
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.css$/i,
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              sourceMap: true,
+            },
+          },
+        ],
+      },
+    ],
+  },
+
+  resolve: {
+    extensions: ['.ts', '.js', '.json'],
+  },
+
+  plugins: [
+    new HtmlWebpackPlugin({
+      inject: 'body',
+      template: './index.html',
+      minify: false,
+    }),
+  ],
+
+  optimization: {
+    removeAvailableModules: false,
+    removeEmptyChunks: false,
+    splitChunks: false,
+  },
 };
