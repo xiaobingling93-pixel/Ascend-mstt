@@ -514,10 +514,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       return;
     }
     try {
+      const values = this.selectColor.map((item) => item === this.unMatchedNodeName ? -1 : item);
       const params = {
         metaData: this.selection,
         type: 'precision',
-        values: this.selectColor,
+        values,
       };
       const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params })
 

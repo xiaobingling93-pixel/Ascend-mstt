@@ -404,11 +404,6 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
     };
 
     initGraphBoard = () => {
-        const isFileChange = this.currentSelection?.run !== this.selection?.run || this.currentSelection?.tag !== this.selection?.tag;
-        const isDBChange = this.currentSelection?.rank !== this.selection?.rank || this.currentSelection?.step !== this.selection?.step;
-        if (!isFileChange && !isDBChange && this.currentSelection?.microStep === this.selection?.microStep) {
-            return;
-        }
         (this.shadowRoot?.querySelector('#graph-board') as any)?.initGraphHierarchy(this.jumpToNode);
         if (this.jumpToNode) {
             this.set('selectedNode', this.jumpToNode);

@@ -34,6 +34,7 @@ class GraphView:
     @wrappers.Request.application
     def static_file_route(request):
         filename = os.path.basename(request.path)
+
         extension = os.path.splitext(filename)[1]
         if extension == '.html':
             content_type = 'text/html'
@@ -43,23 +44,16 @@ class GraphView:
             content_type = 'application/octet-stream'
 
         try:
+            # 添加白名单校验
+            if filename != 'index.html' and filename != 'index.js':
+                raise exceptions.NotFound('404 Not Found') from e
             current_dir = Path(__file__).resolve().parent
             server_dir = current_dir.parent.parent
             dir_path = (server_dir / "static").resolve()
             filepath = (server_dir / "static" / filename).resolve()  # resolve() 规范化路径
             if not GraphUtils.is_relative_to(filepath, dir_path):
                 raise exceptions.NotFound('404 Not Found')
-            # 检查文件是否存在且是文件（不是目录）
-            if not filepath.is_file():
-                raise exceptions.NotFound('404 Not Found')
-            # 目录安全校验
-            success, error = GraphUtils.safe_check_load_file_path(dir_path, True)
-            if not success:
-                raise PermissionError(error)
-            # 文件安全校验
-            success, error = GraphUtils.safe_check_load_file_path(filepath)
-            if not success:
-                raise PermissionError(error)
+            # 前端打包后产生的内部输入文件，不需要要安全校验
             with open(filepath, 'rb') as infile:
                 contents = infile.read()
         except IOError as e:

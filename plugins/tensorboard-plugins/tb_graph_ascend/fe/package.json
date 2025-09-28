@@ -25,7 +25,7 @@
     "typescript": "^5.4.5",
     "webpack": "^5.96.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "4.15.1"
+    "webpack-dev-server": "^5.2.1"
   },
   "dependencies": {
     "@jridgewell/gen-mapping": "^0.3.12",
@@ -54,7 +54,7 @@
     "@vaadin/tabsheet": "24.6.5",
     "@vaadin/text-field": "24.6.5",
     "@vaadin/tooltip": "24.6.5",
-    "axios": "^1.8.4",
+    "axios": "^1.12.0",
     "brace-expansion": "^1.1.12",
     "clean-webpack-plugin": "^4.0.0",
     "cross-env": "^7.0.3",

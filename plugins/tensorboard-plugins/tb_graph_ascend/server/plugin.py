@@ -77,12 +77,18 @@ class GraphsPlugin(base_plugin.TBPlugin):
 
         def _is_vis(path, file_name):
             return os.path.isfile(path) and (file_name.endswith(DB_EXT) or file_name.endswith(JSON_EXT))
-
+        
+        _, error = GraphUtils.safe_check_load_file_path(self.logdir, True)
+        if error:
+            return False
         for content in os.listdir(self.logdir):
             content_path = os.path.join(self.logdir, content)
             if _is_vis(content_path, content):
                 return True
             if os.path.isdir(content_path):
+                _, error = GraphUtils.safe_check_load_file_path(content_path, True)
+                if error:
+                    continue
                 for file in os.listdir(content_path):
                     if _is_vis(os.path.join(content_path, file), file):
                         return True

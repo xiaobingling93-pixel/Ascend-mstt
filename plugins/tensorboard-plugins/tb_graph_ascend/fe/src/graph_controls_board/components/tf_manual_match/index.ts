@@ -180,6 +180,7 @@ class Legend extends PolymerElement {
           items="[[npuMatchedNodes]]"
           selected-value="{{selectedNpuMatchedNode}}"
           on-select-change="[[_changeNpuMatchedNode]]"
+          is-compare-graph="[[isCompareGraph]]"
         ></tf-search-combox>
         <tf-search-combox
           class="matched-node"
@@ -187,6 +188,7 @@ class Legend extends PolymerElement {
           items="[[benchMatchedNodes]]"
           selected-value="{{selectedBenchMatchedNode}}"
           on-select-change="[[_changeBenchMatchedNode]]"
+          is-compare-graph="[[isCompareGraph]]"
         ></tf-search-combox>
         <template is="dom-if" if="[[unmatchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>

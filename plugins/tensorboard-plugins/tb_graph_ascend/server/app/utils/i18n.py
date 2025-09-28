@@ -33,7 +33,9 @@ language = {
         'getNodeInfoError': '获取节点信息失败',
         'taskTypeError': '任务类型不支持',
         'matchNodeError': '匹配节点失败',
-        'loadConfigFileError': '读取配置文件失败'
+        'loadConfigFileError': '读取配置文件失败',
+        'matchNodeLinksNullError': '匹配配置文件为空'   
+       
     },
     EN: {
         'typeError': 'File type error',
@@ -50,6 +52,7 @@ language = {
         'getNodeInfoError': 'get node info failed',
         'taskTypeError': 'task type not support',
         'matchNodeError': 'match node failed',
-        'loadConfigFileError': 'load config file failed'
+        'loadConfigFileError': 'load config file failed',
+        'matchNodeLinksNullError': 'match node links is null'
     }
 }
