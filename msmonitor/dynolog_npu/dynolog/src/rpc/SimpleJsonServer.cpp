@@ -20,6 +20,7 @@
 #include <iostream>
 #include <termios.h>
 #include <algorithm>
+#include "dynolog/src/utils.h"
 
 constexpr int CLIENT_QUEUE_LEN = 50;
 
@@ -33,6 +34,9 @@ constexpr char DEL_ASCII = 127;
 
 SimpleJsonServerBase::SimpleJsonServerBase(int port) : port_(port)
 {
+    if (FLAGS_certs_dir != NO_CERTS_MODE && !PathUtils::DirPathCheck(FLAGS_certs_dir)) {
+        throw std::runtime_error("--certs-dir must be a valid directory!");
+    }
     try {
         initSocket();
         if (FLAGS_certs_dir != NO_CERTS_MODE) {

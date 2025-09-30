@@ -16,4 +16,5 @@ pub mod gputrace;
 pub mod nputrace;
 pub mod npumonitor;
 pub mod utils;
+pub mod path;
 // ... add new command modules here
