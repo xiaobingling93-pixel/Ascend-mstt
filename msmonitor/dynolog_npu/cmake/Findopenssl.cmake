@@ -21,8 +21,8 @@ function(download_opensource_pkg pkg_name)
 
     execute_process(
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cmake
-        COMMAND bash download_opensource.sh ${pkg_name} ${PKG_DOWNLOAD_PATH} ${PKG_SHA256} ${PKG_GIT_TAG}
-        RESULT_VARIABLE RESULT
+        COMMAND bash download_opensource.sh ${pkg_name} ${PKG_DOWNLOAD_PATH} ${PKG_GIT_TAG} ${PKG_SHA256}
+            RESULT_VARIABLE RESULT
     )
     if (NOT RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to download ${pkg_name}(${RESULT}).")
