@@ -63,7 +63,7 @@ const std::vector<std::tuple<std::string, std::string>> META_DATA = {
 constexpr uint16_t API_NODE_TYPE = 10000;
 const std::vector<std::tuple<uint16_t, std::string>> API_TYPE = {
     {5000, "runtime"},
-    {5500, "hccl"},
+    {5500, "communication"},
     {10000, "node"},
     {15000, "model"},
     {20000, "acl"},

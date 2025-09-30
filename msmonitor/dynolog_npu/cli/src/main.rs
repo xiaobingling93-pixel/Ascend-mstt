@@ -13,6 +13,7 @@ use std::io;
 use rpassword::prompt_password;
 
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::Parser;
 use std::collections::HashSet;
 
@@ -33,6 +34,7 @@ use commands::nputrace::NpuTraceConfig;
 use commands::nputrace::NpuTraceOptions;
 use commands::nputrace::NpuTraceTriggerConfig;
 use commands::npumonitor::NpuMonitorConfig;
+use commands::path::PathUtils;
 use commands::*;
 
 /// Instructions on adding a new Dyno CLI command:
@@ -52,6 +54,8 @@ use commands::*;
 
 const DYNO_PORT: u16 = 1778;
 const MIN_RSA_KEY_LENGTH: u64 = 3072; // 最小 RSA 密钥长度（位）
+const MAX_SIZE: usize = 1024;
+const NO_CERTS_MODE: &str = "NO_CERTS";
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -66,9 +70,17 @@ struct Opts {
     cmd: Command,
 }
 
+fn validate_string_max_len(s: &str) -> Result<String, String> {
+    if s.len() > MAX_SIZE {
+        return Err(format!("The input string is too long, max allowed: {}", MAX_SIZE));
+    }
+    Ok(s.to_string())
+}
+
 const ALLOWED_VALUES: &[&str] = &["Marker", "Kernel", "API", "Hccl", "Memory", "MemSet", "MemCpy", "Communication"];
 
 fn parse_mspti_activity_kinds(src: &str)  -> Result<String, String>{
+    validate_string_max_len(src)?;
     let allowed_values: HashSet<&str> = ALLOWED_VALUES.iter().cloned().collect();
 
     let kinds: Vec<&str> = src.split(',').map(|s| s.trim()).collect();
@@ -88,7 +100,7 @@ fn parse_host_sys(src: &str) -> Result<String, String>{
     if src == "None" {
         return Ok(src.to_string());
     }
-
+    validate_string_max_len(src)?;
     let allowed_host_sys_values: HashSet<&str> = ALLOWED_HOST_SYSTEM_VALUES.iter().cloned().collect();
 
     let host_systems: Vec<&str> = src.split(',').map(|s| s.trim()).collect();
@@ -176,7 +188,7 @@ enum Command {
         #[clap(long, default_value_t = 0)]
         job_id: u64,
         /// List of pids to capture trace for (comma separated).
-        #[clap(long, default_value = "0")]
+        #[clap(long, value_parser = validate_string_max_len, default_value = "0")]
         pids: String,
         /// Duration of trace to collect in ms.
         #[clap(long, default_value_t = 500)]
@@ -511,7 +523,7 @@ fn create_dyno_client(
     port: u16,
     certs_dir: &str,
 ) -> Result<DynoClient> {
-    if certs_dir == "NO_CERTS" {
+    if certs_dir == NO_CERTS_MODE {
         println!("Running in no-certificate mode");
         create_dyno_client_with_no_certs(host, port)
     } else {
@@ -684,6 +696,9 @@ fn main() -> Result<()> {
         cmd,
     } = Opts::parse();
 
+    if certs_dir != NO_CERTS_MODE && !PathUtils::check_dir(&certs_dir, true) {
+        return Err(anyhow!("--certs_dir must be a valid directory!"));
+    }
     let client = create_dyno_client(&hostname, port, &certs_dir)
         .expect("Couldn't connect to the server...");
 
@@ -760,6 +775,19 @@ fn main() -> Result<()> {
             mstx_domain_include,
             mstx_domain_exclude,
         } => {
+            if let Some(value) = &mstx_domain_include {
+                if let Err(err_msg) = validate_string_max_len(value) {
+                    return Err(anyhow!("--mstx_domain_include error: {}", err_msg));
+                }
+            }
+            if let Some(value) = &mstx_domain_exclude {
+                if let Err(err_msg) = validate_string_max_len(value) {
+                    return Err(anyhow!("--mstx_domain_exclude error: {}", err_msg));
+                }
+            }
+            if !PathUtils::check_dir(&log_file, true) {
+                return Err(anyhow!("--log-file must be a valid directory!"));
+            }
             let trigger_config = if iterations > 0 {
                 NpuTraceTriggerConfig::IterationBased {
                     start_step,
@@ -808,6 +836,10 @@ fn main() -> Result<()> {
             mspti_activity_kind,
             log_file,
         } => {
+            
+            if !log_file.is_empty() && !PathUtils::check_dir(&log_file, false) {
+                return Err(anyhow!("--log-file must be a valid directory!"));
+            }
             let npu_mon_config = NpuMonitorConfig {
                 npu_monitor_start,
                 npu_monitor_stop,
