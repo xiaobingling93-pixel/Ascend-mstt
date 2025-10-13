@@ -785,7 +785,7 @@ fn main() -> Result<()> {
                     return Err(anyhow!("--mstx_domain_exclude error: {}", err_msg));
                 }
             }
-            if !PathUtils::check_dir(&log_file, true) {
+            if !PathUtils::check_dir(&log_file, false) {
                 return Err(anyhow!("--log-file must be a valid directory!"));
             }
             let trigger_config = if iterations > 0 {
@@ -836,7 +836,7 @@ fn main() -> Result<()> {
             mspti_activity_kind,
             log_file,
         } => {
-            
+
             if !log_file.is_empty() && !PathUtils::check_dir(&log_file, false) {
                 return Err(anyhow!("--log-file must be a valid directory!"));
             }
