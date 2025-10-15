@@ -383,6 +383,10 @@ static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
     auto wDim = tensor.hostShape[AXIS_W];
     auto groups = tensor.subFormat;
     auto cinOri = cDim;
+    if (groups == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, "groups must not equal to 0.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
     auto coutOri = nDim / groups;
 
     if (cinOri == 0 || coutOri == 0) {
