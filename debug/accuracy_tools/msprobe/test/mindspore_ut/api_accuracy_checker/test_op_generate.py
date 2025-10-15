@@ -42,7 +42,7 @@ class TestCommonConfigCheckConfig(unittest.TestCase):
         return CommonConfig(cfg_dict)
 
     def test_invalid_api_name_too_long(self):
-        long_name = "A" * 31
+        long_name = "A" * 301
         with self.assertRaises(ValueError) as cm:
             self.make_cfg({"api_name": long_name})
         self.assertIn("too long", str(cm.exception))
