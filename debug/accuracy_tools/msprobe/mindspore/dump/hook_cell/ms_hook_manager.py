@@ -116,7 +116,7 @@ class MindsporeHookManager(BaseHookManager):
             args = bw_hook(args) if is_backward_hook_output_a_view() else bw_hook(*args)
         return args
 
-    def _register_backward_pre_hook(self, module, full_backward_name, output):
+    def _register_backward_pre_hook(self, module, full_backward_name, args, kwargs, output):
         if not _pynative_executor.requires_grad():
             return output
 

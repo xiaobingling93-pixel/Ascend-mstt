@@ -20,11 +20,17 @@ from contextlib import nullcontext
 import torch
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import replace_last_occurrence, ThreadSafe
 from msprobe.core.data_dump.data_processor.base import (ModuleForwardInputsOutputs)
 from msprobe.core.hook_manager import BaseHookManager, HookSet
-from msprobe.pytorch.common.utils import is_recomputation, torch_version_above_or_equal_2, register_forward_hook
+from msprobe.pytorch.common.utils import (
+    is_recomputation,
+    torch_version_above_or_equal_2,
+    register_forward_hook,
+    Const as PtConst
+)
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
 
@@ -77,7 +83,15 @@ class PytorchHookManager(BaseHookManager):
     def _register_backward_hook(self, module, full_backward_name, args):
         pass
 
-    def _register_backward_pre_hook(self, module, full_backward_name, output):
+    def _register_backward_pre_hook(self, module, full_backward_name, args, kwargs, output):
+        if module.prefix_api_name in PtConst.DROPOUT_API_LIST:
+            p = kwargs.get('p', 0.5)
+            if len(args) >= 2:
+                p = args[1]
+            if p == 0:
+                logger.debug(f"The parameter 'p' is set to 0, so the {full_backward_name} data will not be collected.")
+                return output
+
         var = output
         while not isinstance(var, torch.Tensor):
             if isinstance(var, dict):
