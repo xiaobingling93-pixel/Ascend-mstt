@@ -81,6 +81,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
         self.fuzz_level = json_config.get("fuzz_level", PytorchFreeBenchmarkConst.DEFAULT_FUZZ_LEVEL)
         self.fuzz_stage = json_config.get("fuzz_stage", PytorchFreeBenchmarkConst.DEFAULT_FUZZ_STAGE)
         self.if_preheat = json_config.get("if_preheat", False)
+        self.list = json_config.get("list")
         self.preheat_step = json_config.get("preheat_step", PytorchFreeBenchmarkConst.DEFAULT_PREHEAT_STEP)
         self.max_sample = json_config.get("max_sample", PytorchFreeBenchmarkConst.DEFAULT_PREHEAT_STEP)
         self.check_freebenchmark_config()
@@ -145,6 +146,11 @@ class FreeBenchmarkCheckConfig(BaseConfig):
             )
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
+            )
+        if self.fuzz_stage == Const.BACKWARD and not self.list:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR,
+                f"When fuzz_stage is set to {Const.BACKWARD}, the parameters list must not be empty."
             )
 
     def _check_fuzz_level(self):
