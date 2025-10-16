@@ -277,6 +277,24 @@ class Const:
         "int32_to_int64": ["cross_entropy"]
     }
 
+    DROPOUT_API_LIST = [
+        "Functional.dropout.",
+        "Functional.dropout1d.",
+        "Functional.dropout2d.",
+        "Functional.dropout3d.",
+        "Functional.alpha_dropout.",
+        "Functional.feature_alpha_dropout.",
+        "Torch.dropout.",
+        "Torch.dropout_.",
+        "Torch.alpha_dropout.",
+        "Torch.alpha_dropout_.",
+        "Torch.feature_alpha_dropout.",
+        "Torch.feature_alpha_dropout_.",
+        "Torch.feature_dropout.",
+        "Torch.feature_dropout_.",
+        "NPU._npu_dropout."
+    ]
+
 
 def get_tensor_rank(in_feat, out_feat):
     if dist.is_initialized():

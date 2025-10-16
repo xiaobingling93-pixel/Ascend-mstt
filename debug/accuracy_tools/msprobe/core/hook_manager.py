@@ -116,7 +116,7 @@ class BaseHookManager(ABC):
         pass
 
     @abstractmethod
-    def _register_backward_pre_hook(self, module, full_backward_name, output):
+    def _register_backward_pre_hook(self, module, full_backward_name, args, kwargs, output):
         pass
 
     @abstractmethod
@@ -258,7 +258,7 @@ class BaseHookManager(ABC):
                 if hook_type == Const.API:
                     full_forward_name = api_name + str(self._get_count(api_name)) + Const.SEP + Const.FORWARD
                     full_backward_name = api_name + str(self._get_count(api_name)) + Const.SEP + Const.BACKWARD
-                    output = self._register_backward_pre_hook(module, full_backward_name, output)
+                    output = self._register_backward_pre_hook(module, full_backward_name, args, kwargs, output)
 
                 with self._no_grad_context():
                     if hook_type == Const.MODULE:

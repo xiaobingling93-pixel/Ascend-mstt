@@ -54,7 +54,7 @@ class TestBaseHookManager(unittest.TestCase):
         def _register_backward_hook(self, module, full_backward_name, args):
             pass
 
-        def _register_backward_pre_hook(self, module, full_backward_name, output):
+        def _register_backward_pre_hook(self, module, full_backward_name, args, kwargs, output):
             pass
 
         def _get_params_dict(self, module):
