@@ -37,8 +37,6 @@ class TestMindsporeHookManager(unittest.TestCase):
         BaseHookManager.inner_switch[threading.get_ident()] = False
 
     def test_properties(self):
-        self.assertIsNone(self.manager._is_recompute)
-
         with patch('msprobe.mindspore.dump.hook_cell.ms_hook_manager._no_grad') as mock_no_grad:
             ctx = self.manager._no_grad_context()
             mock_no_grad.assert_called_once()

@@ -83,6 +83,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
         return f"{group_ranks_hash:08x}"
 
     @staticmethod
+    def is_recompute(call_stack):
+        return None
+
+    @staticmethod
     def _analyze_process_group(arg):
         group_info = {"type": "mindspore.ProcessGroup"}
         try:

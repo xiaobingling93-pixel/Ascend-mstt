@@ -54,11 +54,6 @@ class BaseHookManager(ABC):
     def _pid(self):
         return os.getpid()
 
-    @property
-    @abstractmethod
-    def _is_recompute(self):
-        pass
-
     @staticmethod
     def reset_status():
         BaseHookManager.inner_switch = defaultdict(bool)
@@ -221,8 +216,7 @@ class BaseHookManager(ABC):
                         full_forward_name,
                         module,
                         self._pid,
-                        module_input_output,
-                        self._is_recompute
+                        module_input_output
                     )
                 BaseHookManager.inner_switch[tid] = False
                 self.restore_gc_state(original_state)
@@ -271,8 +265,7 @@ class BaseHookManager(ABC):
                             api_name,
                             module,
                             self._pid,
-                            module_input_output,
-                            self._is_recompute
+                            module_input_output
                         )
                         self._init_params_grad_info(module, params_dict)
                     else:
@@ -281,8 +274,7 @@ class BaseHookManager(ABC):
                             full_forward_name,
                             module,
                             self._pid,
-                            module_input_output,
-                            self._is_recompute
+                            module_input_output
                         )
                         self._add_count(api_name)
                         BaseHookManager.inner_api_count[tid] -= 1
@@ -319,8 +311,7 @@ class BaseHookManager(ABC):
                     full_name,
                     module,
                     self._pid,
-                    module_input_output,
-                    self._is_recompute
+                    module_input_output
                 )
                 if hook_type == Const.MODULE:
                     params_dict = self._get_params_dict(module)

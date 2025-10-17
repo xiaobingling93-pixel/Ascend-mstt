@@ -42,10 +42,6 @@ class MindsporeHookManager(BaseHookManager):
     cell_backward_pre_hook = []
     cell_backward_hook = []
 
-    @property
-    def _is_recompute(self):
-        return None
-
     @staticmethod
     def reset_status():
         BaseHookManager.reset_status()

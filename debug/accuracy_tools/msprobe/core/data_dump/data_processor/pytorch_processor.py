@@ -33,7 +33,7 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, is_int
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from msprobe.pytorch.common.utils import save_pt
+from msprobe.pytorch.common.utils import save_pt, is_recomputation
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 is_gpu = False
@@ -245,6 +245,10 @@ class PytorchDataProcessor(BaseDataProcessor):
     def is_hookable_element(element):
         return (hasattr(element, "register_hook") and callable(element.register_hook)) and \
             (hasattr(element, "requires_grad") and element.requires_grad)
+
+    @staticmethod
+    def is_recompute(call_stack):
+        return is_recomputation(call_stack)
 
     @staticmethod
     def _analyze_torch_size(arg):

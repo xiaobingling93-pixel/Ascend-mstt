@@ -199,11 +199,12 @@ class TestDataCollector(unittest.TestCase):
 
         test_name = "test_api"
         mock_stack = ["func1", "func2", "func3"]
+        data_info = {}
         self.data_collector.data_processor.analyze_api_call_stack.return_value = mock_stack
 
-        self.data_collector.call_stack_collect(test_name)
+        self.data_collector.call_stack_collect(data_info, test_name)
 
-        self.data_collector.data_processor.analyze_api_call_stack.assert_called_once_with(test_name)
+        self.data_collector.data_processor.analyze_api_call_stack.assert_called_once()
         self.data_collector.data_writer.update_stack.assert_called_once_with(test_name, mock_stack)
 
     def test_update_construct_without_construct(self):
@@ -336,7 +337,7 @@ class TestForwardDataCollect(unittest.TestCase):
         )
 
         self.data_collector.data_processor.analyze_forward_input.assert_not_called()
-        self.data_collector.set_is_recomputable.assert_called_once_with({}, None)
+        self.data_collector.call_stack_collect.assert_called_once_with({}, "test")
 
     def test_forward_input_with_level_l2(self):
         self.data_collector.config.task = self.Const.TENSOR
@@ -355,12 +356,12 @@ class TestForwardDataCollect(unittest.TestCase):
         self.data_collector.check_scope_and_pid.return_value = True
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_forward_input.return_value = mock_data
-
+        self.data_collector.data_processor.is_recompute.return_value = True
         self.data_collector.forward_input_data_collect(
-            "test", "module1", 123, "input_output", is_recompute=True
+            "test", "module1", 123, "input_output"
         )
 
-        self.data_collector.set_is_recomputable.assert_called_once_with(mock_data, True)
+        self.data_collector.call_stack_collect.assert_called_once_with(mock_data, "test")
         self.data_collector.handle_data.assert_called_once_with(
             "test", mock_data, flush=self.data_collector.data_processor.is_terminated
         )
@@ -383,7 +384,7 @@ class TestForwardDataCollect(unittest.TestCase):
     def test_forward_output_normal(self):
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_forward_output.return_value = mock_data
-        self.data_collector.forward_output_data_collect("test", "module", 123, "data", True)
+        self.data_collector.forward_output_data_collect("test", "module", 123, "data")
         self.data_collector.handle_data.assert_called_once_with(
             "test",
             mock_data,
@@ -403,8 +404,8 @@ class TestForwardDataCollect(unittest.TestCase):
     def test_forward_normal(self):
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_forward.return_value = mock_data
-        self.data_collector.forward_data_collect("test", "module", 123, "data", False)
-        self.data_collector.call_stack_collect.assert_called_once_with("test")
+        self.data_collector.forward_data_collect("test", "module", 123, "data")
+        self.data_collector.call_stack_collect.assert_called_once_with(mock_data, "test")
         self.data_collector.handle_data.assert_called_once_with(
             "test",
             mock_data,
@@ -467,8 +468,7 @@ class TestBackwardDataCollector(unittest.TestCase):
     def test_backward_input_with_normal(self):
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_backward_input.return_value = mock_data
-        self.data_collector.backward_input_data_collect("test", "module", 123, "data", True)
-        self.data_collector.set_is_recomputable.assert_called_once_with(mock_data, True)
+        self.data_collector.backward_input_data_collect("test", "module", 123, "data")
 
     def test_backward_output_with_scope_check_fail(self):
         self.data_collector.check_scope_and_pid.return_value = False
@@ -478,5 +478,4 @@ class TestBackwardDataCollector(unittest.TestCase):
     def test_backward_output_with_recompute(self):
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_backward_output.return_value = mock_data
-        self.data_collector.backward_output_data_collect("test", "module", 123, "data", False)
-        self.data_collector.set_is_recomputable.assert_called_once_with(mock_data, False)
+        self.data_collector.backward_output_data_collect("test", "module", 123, "data")

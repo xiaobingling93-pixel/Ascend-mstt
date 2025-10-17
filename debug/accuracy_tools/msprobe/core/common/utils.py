@@ -708,3 +708,12 @@ def check_process_num(process_num):
         raise ValueError(f"process_num({process_num}) is not a positive integer")
     if process_num > Const.MAX_PROCESS_NUM:
         raise ValueError(f"The maximum supported process_num is {Const.MAX_PROCESS_NUM}, current value: {process_num}.")
+
+
+def get_call_stack(api_name):
+    try:
+        call_stack = inspect.stack()
+    except Exception as e:
+        logger.warning(f"The call stack of <{api_name}> failed to retrieve, {e}.")
+        call_stack = None
+    return call_stack

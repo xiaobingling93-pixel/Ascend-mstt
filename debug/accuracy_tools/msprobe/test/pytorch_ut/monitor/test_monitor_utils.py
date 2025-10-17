@@ -178,7 +178,7 @@ class TestIsRecomputation(unittest.TestCase):
         # 模拟megatron框架下的调用栈
         frame1 = MagicMock()
         frame1.function = 'backward'
-        frame1.filename = 'torch/_tensor.py'
+        frame1.filename = 'megatron/torch/_tensor.py'
 
         frame2 = MagicMock()
         frame2.function = 'some_function'
@@ -193,7 +193,7 @@ class TestIsRecomputation(unittest.TestCase):
         # 模拟mindspeed L0&L1场景下的调用栈
         frame1 = MagicMock()
         frame1.function = 'checkpoint_function_backward'
-        frame1.filename = 'some_module.py'
+        frame1.filename = 'megatron/some_module.py'
 
         frame2 = MagicMock()
         frame2.function = 'some_other_function'
@@ -208,7 +208,7 @@ class TestIsRecomputation(unittest.TestCase):
         # 模拟mindspeed L2场景下的调用栈
         frame1 = MagicMock()
         frame1.function = 'checkpoint_function_backward'
-        frame1.filename = 'another_module.py'
+        frame1.filename = 'megatron/another_module.py'
 
         frame2 = MagicMock()
         frame2.function = 'yet_another_function'
