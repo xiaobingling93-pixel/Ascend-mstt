@@ -116,15 +116,14 @@ class BaseDataProcessor:
         return False
 
     @staticmethod
-    def analyze_api_call_stack(name):
-        try:
-            if name.startswith("Primitive"):
-                api_stack = inspect.stack()[4:]
-            else:
-                api_stack = inspect.stack()[5:]
-        except Exception as e:
-            logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
+    def analyze_api_call_stack(call_stack, name):
+        if not call_stack:
             api_stack = None
+        elif name.startswith("Primitive"):
+            api_stack = call_stack[4:]
+        else:
+            api_stack = call_stack[5:]
+
         stack_str = []
         if api_stack:
             for (_, path, line, func, code, _) in api_stack:

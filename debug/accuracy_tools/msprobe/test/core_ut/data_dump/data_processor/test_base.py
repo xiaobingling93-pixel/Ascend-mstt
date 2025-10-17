@@ -67,9 +67,8 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.processor.current_api_or_module_name = "test_api"
         self.processor.api_data_category = "input"
 
-    @patch('inspect.stack')
-    def test_analyze_api_call_stack(self, mock_stack):
-        mock_stack.return_value = [
+    def test_analyze_api_call_stack(self):
+        call_stack = [
             (None, 'file3.py', 30, 'function3', ['code line 3'], None),
             (None, 'file1.py', 40, 'function1', ['code line 1'], None),
             (None, 'file2.py', 50, 'function2', ['code line 2'], None),
@@ -79,7 +78,7 @@ class TestBaseDataProcessor(unittest.TestCase):
             (None, 'file2.py', 90, 'function2', ['code line 2'], None),
             (None, 'file3.py', 100, 'function3', ['code line 3'], None)
         ]
-        result = BaseDataProcessor.analyze_api_call_stack('test_stack')
+        result = BaseDataProcessor.analyze_api_call_stack(call_stack, 'test_stack')
         expected_output = (
             'File file1.py, line 80, in function1, \n code line 1',
             'File file2.py, line 90, in function2, \n code line 2',

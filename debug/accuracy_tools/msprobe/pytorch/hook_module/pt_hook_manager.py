@@ -35,10 +35,6 @@ from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
 
 class PytorchHookManager(BaseHookManager):
-    @property
-    def _is_recompute(self):
-        return is_recomputation()
-
     @staticmethod
     def _no_grad_context():
         return nullcontext()
@@ -143,8 +139,7 @@ class PytorchHookManager(BaseHookManager):
                         full_name,
                         module,
                         self._pid,
-                        module_input_output,
-                        self._is_recompute
+                        module_input_output
                     )
                 BaseHookManager.inner_switch[tid] = False
 

@@ -35,13 +35,6 @@ class TestPytorchHookManager(unittest.TestCase):
         )
         BaseHookManager.inner_switch[threading.get_ident()] = False
 
-    def test_properties(self):
-        with patch('msprobe.pytorch.hook_module.pt_hook_manager.is_recomputation', return_value=True):
-            self.assertTrue(self.manager._is_recompute)
-
-        with patch('msprobe.pytorch.hook_module.pt_hook_manager.is_recomputation', return_value=False):
-            self.assertFalse(self.manager._is_recompute)
-
     def test_no_grad_context(self):
         self.assertIsInstance(self.manager._no_grad_context(), nullcontext)
 

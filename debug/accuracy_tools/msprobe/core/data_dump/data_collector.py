@@ -22,6 +22,7 @@ from msprobe.core.data_dump.scope import ScopeFactory
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import get_call_stack
 from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
 from msprobe.core.common.megatron_utils import MegatronStepInfo, get_micro_step, is_megatron
 
@@ -98,13 +99,15 @@ class DataCollector:
         logger.debug(msg)
         self.data_writer.update_data(data_info)
 
-    def call_stack_collect(self, name):
-        stack_info = self.data_processor.analyze_api_call_stack(name)
+    def call_stack_collect(self, data_info, name):
+        call_stack = get_call_stack(name)
+        stack_info = self.data_processor.analyze_api_call_stack(call_stack, name)
         self.data_writer.update_stack(name, stack_info)
+        is_recompute = self.data_processor.is_recompute(call_stack)
+        self.set_is_recomputable(data_info, is_recompute)
 
-    def forward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def forward_input_data_collect(self, name, module, pid, module_input_output):
         try:
-
             if self.config.task == Const.FREE_BENCHMARK:
                 backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
                 if self.check_scope_and_pid(self.scope, backward_name, pid):
@@ -117,10 +120,9 @@ class DataCollector:
             data_info = {}
             if self.config.task != Const.STRUCTURE:
                 data_info = self.data_processor.analyze_forward_input(name, module, module_input_output)
-            self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
-            self.call_stack_collect(name)
+            self.call_stack_collect(data_info, name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
         except Exception as e:
@@ -132,9 +134,8 @@ class DataCollector:
                 error_type=error_type
             )
 
-    def forward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def forward_output_data_collect(self, name, module, pid, module_input_output):
         try:
-
             self.update_construct(name)
             if not self.check_scope_and_pid(self.scope, name, pid):
                 return
@@ -142,7 +143,6 @@ class DataCollector:
             data_info = {}
             if self.config.task != Const.STRUCTURE:
                 data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
-            self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
@@ -171,7 +171,7 @@ class DataCollector:
                 error_type=error_type
             )
 
-    def forward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def forward_data_collect(self, name, module, pid, module_input_output):
         try:
 
             self.update_construct(name)
@@ -180,8 +180,7 @@ class DataCollector:
             data_info = {}
             if self.config.task != Const.STRUCTURE:
                 data_info = self.data_processor.analyze_forward(name, module, module_input_output)
-            self.set_is_recomputable(data_info, is_recompute)
-            self.call_stack_collect(name)
+            self.call_stack_collect(data_info, name)
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
         except Exception as e:
@@ -192,7 +191,7 @@ class DataCollector:
                 error_type=error_type
             )
 
-    def backward_data_collect_only_tensor(self, name, module, pid, module_input_output, is_recompute=None):
+    def backward_data_collect_only_tensor(self, name, module, pid, module_input_output):
         try:
             if not self.check_scope_and_pid(self.scope, name, pid):
                 return
@@ -206,7 +205,7 @@ class DataCollector:
                 error_type=error_type
             )
 
-    def backward_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def backward_data_collect(self, name, module, pid, module_input_output):
         try:
             self.update_construct(name)
             if not self.check_scope_and_pid(self.scope, name, pid):
@@ -229,7 +228,7 @@ class DataCollector:
                 error_type=error_type
             )
 
-    def backward_input_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def backward_input_data_collect(self, name, module, pid, module_input_output):
         try:
             self.update_construct(name)
             if not self.check_scope_and_pid(self.scope, name, pid):
@@ -237,7 +236,6 @@ class DataCollector:
             data_info = {}
             if self.config.task != Const.STRUCTURE:
                 data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
-            self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
 
         except Exception as e:
@@ -248,7 +246,7 @@ class DataCollector:
                 error_type=error_type
             )
 
-    def backward_output_data_collect(self, name, module, pid, module_input_output, is_recompute=None):
+    def backward_output_data_collect(self, name, module, pid, module_input_output):
         try:
             self.update_construct(name)
             if not self.check_scope_and_pid(self.scope, name, pid):
@@ -256,7 +254,6 @@ class DataCollector:
             data_info = {}
             if self.config.task != Const.STRUCTURE:
                 data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
-            self.set_is_recomputable(data_info, is_recompute)
             self.handle_data(name, data_info)
 
         except Exception as e:

@@ -39,7 +39,6 @@ except ImportError:
 else:
     is_gpu = False
 
-
 torch_without_guard_version = torch.__version__ >= '2.1'
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
@@ -406,7 +405,7 @@ def load_pkl(pt_path):
     return pt
 
 
-def is_recomputation():
+def is_recomputation(call_stack=None):
     """Check if the current operation is in the re-computation phase.
 
     This function inspects the current call stack to indicate whether the current operation is in the
@@ -419,12 +418,14 @@ def is_recomputation():
     Returns:
         bool: True if in the re-computation phase, False otherwise.
     """
+    if not call_stack:
+        try:
+            call_stack = inspect.stack()
+        except Exception as e:
+            logger.warning(
+                f"Failed to capture stack trace, recomputation validation may be incorrect, error info: {e}.")
+            return False
     backward_function_indices = []
-    try:
-        call_stack = inspect.stack()
-    except Exception as e:
-        logger.warning(f"Failed to capture stack trace, recomputation validation may be incorrect, error info: {e}.")
-        return False
 
     # Identify the function 'backward' is being executed within the 'torch/_tensor.py' file.
     for frame_info in call_stack:
@@ -434,7 +435,8 @@ def is_recomputation():
 
     # Identify indices in the call stack where the specific function is being executed
     for idx, frame_info in enumerate(call_stack):
-        if frame_info.function == Const.BACKWARD or frame_info.function == 'checkpoint_function_backward':
+        if (frame_info.function == Const.BACKWARD or frame_info.function == 'checkpoint_function_backward' and
+                "megatron" in frame_info.filename):
             backward_function_indices.append(idx)
 
     # Check if the execution is within 'torch/autograd/function.py' file
