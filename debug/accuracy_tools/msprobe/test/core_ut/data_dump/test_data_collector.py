@@ -198,14 +198,14 @@ class TestDataCollector(unittest.TestCase):
         self.data_collector.data_writer = MagicMock()
 
         test_name = "test_api"
-        mock_stack = ["func1", "func2", "func3"]
+        mock_stack = "stack_info", False
         data_info = {}
         self.data_collector.data_processor.analyze_api_call_stack.return_value = mock_stack
 
         self.data_collector.call_stack_collect(data_info, test_name)
 
         self.data_collector.data_processor.analyze_api_call_stack.assert_called_once()
-        self.data_collector.data_writer.update_stack.assert_called_once_with(test_name, mock_stack)
+        self.data_collector.data_writer.update_stack.assert_called_once_with(test_name, "stack_info")
 
     def test_update_construct_without_construct(self):
         self.data_collector.data_writer = MagicMock()
