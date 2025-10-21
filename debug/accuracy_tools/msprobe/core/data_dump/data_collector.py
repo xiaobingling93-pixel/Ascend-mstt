@@ -22,7 +22,6 @@ from msprobe.core.data_dump.scope import ScopeFactory
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import get_call_stack
 from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
 from msprobe.core.common.megatron_utils import MegatronStepInfo, get_micro_step, is_megatron
 
@@ -100,10 +99,8 @@ class DataCollector:
         self.data_writer.update_data(data_info)
 
     def call_stack_collect(self, data_info, name):
-        call_stack = get_call_stack(name)
-        stack_info = self.data_processor.analyze_api_call_stack(call_stack, name)
+        stack_info, is_recompute = self.data_processor.analyze_api_call_stack(name)
         self.data_writer.update_stack(name, stack_info)
-        is_recompute = self.data_processor.is_recompute(call_stack)
         self.set_is_recomputable(data_info, is_recompute)
 
     def forward_input_data_collect(self, name, module, pid, module_input_output):
@@ -143,6 +140,8 @@ class DataCollector:
             data_info = {}
             if self.config.task != Const.STRUCTURE:
                 data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
+            is_recompute = self.data_processor.is_recompute()
+            self.set_is_recomputable(data_info, is_recompute)
             if self.config.level == Const.LEVEL_L2:
                 return
             self.handle_data(name, data_info, flush=self.data_processor.is_terminated)

@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import List
+import inspect
 
 import numpy as np
 import torch
@@ -247,8 +248,37 @@ class PytorchDataProcessor(BaseDataProcessor):
             (hasattr(element, "requires_grad") and element.requires_grad)
 
     @staticmethod
-    def is_recompute(call_stack):
+    def is_recompute(call_stack=None):
         return is_recomputation(call_stack)
+
+    @staticmethod
+    def analyze_api_call_stack(name):
+        try:
+            call_stack = inspect.stack()
+            if name.startswith("Primitive"):
+                api_stack = call_stack[4:]
+            else:
+                api_stack = call_stack[5:]
+        except Exception as e:
+            logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
+            api_stack = None
+            call_stack = None
+
+        stack_str = []
+        if api_stack:
+            for (_, path, line, func, code, _) in api_stack:
+                if not code:
+                    continue
+                if any(filter_path in path for filter_path in Const.STACK_FILTER_KEYWORDS) and \
+                        Const.CALL_STACK_FLAG not in path:
+                    continue
+                stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
+                stack_str.append(stack_line)
+        else:
+            stack_str.append(Const.WITHOUT_CALL_STACK)
+        is_recompute = PytorchDataProcessor.is_recompute(call_stack)
+        del call_stack
+        return tuple(stack_str), is_recompute
 
     @staticmethod
     def _analyze_torch_size(arg):

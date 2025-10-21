@@ -116,29 +116,6 @@ class BaseDataProcessor:
         return False
 
     @staticmethod
-    def analyze_api_call_stack(call_stack, name):
-        if not call_stack:
-            api_stack = None
-        elif name.startswith("Primitive"):
-            api_stack = call_stack[4:]
-        else:
-            api_stack = call_stack[5:]
-
-        stack_str = []
-        if api_stack:
-            for (_, path, line, func, code, _) in api_stack:
-                if not code:
-                    continue
-                if any(filter_path in path for filter_path in Const.STACK_FILTER_KEYWORDS) and \
-                        Const.CALL_STACK_FLAG not in path:
-                    continue
-                stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
-                stack_str.append(stack_line)
-        else:
-            stack_str.append(Const.WITHOUT_CALL_STACK)
-        return tuple(stack_str)
-
-    @staticmethod
     def transfer_type(data):
         dtype = str(type(data))
         if 'int' in dtype:
