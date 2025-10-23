@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "include/ErrorCode.h"
-#include "proto/AclDumpMsg.pb.h"
+#include "third_party/proto/AclDumpMsg.pb.h"
 #include "utils/DataUtils.h"
 
 namespace MindStudioDebugger {

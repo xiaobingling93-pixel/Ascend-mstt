@@ -32,7 +32,7 @@
 #include "utils/MathUtils.h"
 #include "core/AclTensor.h"
 #include "base/ErrorInfosManager.h"
-#include "proto/AclDumpMsg.pb.h"
+#include "third_party/proto/AclDumpMsg.pb.h"
 #include "AclDumpDataProcessor.h"
 
 namespace MindStudioDebugger {
