@@ -65,7 +65,7 @@ export MSMONITOR_USE_DAEMON=1
 
 Step 3：拉起训练/推理任务
 ```bash
-# 训练任务中需要使用pytorch的优化器/继承原生优化器
+# 训练任务中需要使用PyTorch的优化器/继承原生优化器
 bash train.sh
 ```
 
