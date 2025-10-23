@@ -20,7 +20,7 @@ if (DEFINED CANN_PATH AND NOT "${CANN_PATH}" STREQUAL "")
     endif()
 endif()
 
-set(PROTO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/proto)
+set(PROTO_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party/proto)
 file(GLOB_RECURSE PROTO_SRC "*.proto")
 compile_protobuf_file(
     ${PROTO_PATH}
