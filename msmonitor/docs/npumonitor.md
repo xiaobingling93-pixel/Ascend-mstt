@@ -45,7 +45,7 @@ Step 2：在训练/推理任务拉起窗口使能dynolog环境变量
 export MSMONITOR_USE_DAEMON=1
 ```
 
-Step 3：配置Msmonitor日志路径(可选，默认路径为当前目录下的msmonitor_log)
+Step 3：配置Msmonitor日志路径（可选，默认路径为当前目录下的msmonitor_log）
 ```bash
 export MSMONITOR_LOG_PATH=<LOG PATH>
 # 示例：
