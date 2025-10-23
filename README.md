@@ -1,16 +1,7 @@
-# 🚨 重要通知
-
-**1. Ascend Training Tools 更名为 MindStudio Training Tools (mstt)。**
-
-**2. 本代码仓 URL 变更为 [https://gitee.com/ascend/mstt](https://gitee.com/ascend/mstt)，原 URL 仍然可用（2024.07.04 ）。**
 
 ---
 
 # 🧰 MindStudio Training Tools
-
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Commit Activity](https://img.shields.io/badge/commit%20activity-high-red)
-![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
 
 ## [模型训练开发全流程](https://www.hiascend.com/software/mindstudio/training)
 
