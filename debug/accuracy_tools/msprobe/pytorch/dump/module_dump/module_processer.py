@@ -13,21 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
 import sys
+import threading
 from collections import OrderedDict
 
 import torch
 from torch.utils.hooks import BackwardHook, RemovableHandle
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.megatron_utils import wrap_megatron_step, get_micro_step, is_megatron
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import ModuleQueue, ThreadSafe
-from msprobe.core.common.megatron_utils import wrap_megatron_step, get_micro_step, is_megatron
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import is_torch_nn_module, register_forward_pre_hook
-from msprobe.pytorch.dump.module_dump.hook_wrapper import wrap_setup_input_output_hook
+from msprobe.pytorch.dump.module_dump.hook_wrapper import (
+    wrap_setup_input_output_hook,
+    wrap_backward_hook_function_apply
+)
+
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 torch_version_above_or_equal_21 = torch.__version__.split('+')[0] >= '2.1'
@@ -63,6 +67,7 @@ def wrap_forward_with_hook_safety(module):
                 hook_fn = list(module._forward_hooks.values())[0]
                 hook_fn(module, args, kwargs, exception_output)
             raise e
+
     if torch_version_above_or_equal_21:
         module.forward = wrapped_forward
 
@@ -80,6 +85,7 @@ class ModuleProcesser:
     def __init__(self, scope):
         self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
         wrap_setup_input_output_hook()
+        wrap_backward_hook_function_apply()
         try:
             from megatron.core.pipeline_parallel import schedules
             origin_func_id = id(schedules.deallocate_output_tensor)
