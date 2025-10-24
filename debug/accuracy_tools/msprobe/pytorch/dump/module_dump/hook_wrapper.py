@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from functools import wraps
+from typing import Any, Callable
 
 import torch
 from torch.utils.hooks import BackwardHook
@@ -21,6 +22,9 @@ from torch.utils.hooks import BackwardHook
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.hook_module.api_register import get_api_register
+
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
 def wrap_setup_backward_hook(func):
@@ -92,3 +96,23 @@ def wrap_setup_backward_hook(func):
 def wrap_setup_input_output_hook():
     BackwardHook.setup_input_hook = wrap_setup_backward_hook(BackwardHook.setup_input_hook)
     BackwardHook.setup_output_hook = wrap_setup_backward_hook(BackwardHook.setup_output_hook)
+
+
+def get_apply_func_wrapper(original_func: Callable) -> Callable:
+    @wraps(original_func)
+    def wrapped_apply(*args, **kwargs) -> Any:
+        api_register = get_api_register()
+        if api_register:
+            api_register.restore_inner_used_api()
+        result = original_func(*args, **kwargs)
+        if api_register:
+            api_register.register_inner_used_api()
+        return result
+
+    return wrapped_apply
+
+
+def wrap_backward_hook_function_apply():
+    if torch_version_above_or_equal_2:
+        original_apply = torch.nn.modules._functions.BackwardHookFunction.apply
+        torch.nn.modules._functions.BackwardHookFunction.apply = get_apply_func_wrapper(original_apply)

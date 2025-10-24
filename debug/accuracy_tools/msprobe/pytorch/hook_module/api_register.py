@@ -43,7 +43,6 @@ else:
 
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 
-_inner_used_api = {}
 _supported_api_list_path = (os.path.join(os.path.dirname(os.path.realpath(__file__)), Const.SUPPORT_API_FILE_NAME),)
 _cuda_func_mapping = {"npu_fusion_attention": "gpu_fusion_attention"}
 dist_data_collect_func = {}
@@ -84,6 +83,12 @@ if not is_gpu:
         mindspeed_op_list = load_yaml(_supported_api_list_path[0]).get(Const.PT_API_TYPE_MINDSPEED)
         mindspeed_op_file_list = [op.split(Const.SEP)[0] + Const.PY_SUFFIX for op in mindspeed_op_list]
         dynamic_import_op(mindspeed.ops, mindspeed_op_file_list)
+
+_inner_used_api = {
+    Const.PT_FRAMEWORK + Const.SEP + Const.PT_API_TYPE_TENSOR: (
+        torch.Tensor, "view_as"
+    )
+}
 
 
 @parameter_adapter
