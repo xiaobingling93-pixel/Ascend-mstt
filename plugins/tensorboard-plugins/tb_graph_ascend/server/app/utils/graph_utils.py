@@ -92,7 +92,10 @@ class GraphUtils:
 
             # 检测循环引用（防止死循环）
             if current_node in node_list:
-                raise ValueError(f"检测到循环引用：节点 {current_node} 已存在于路径中")
+                raise ValueError(
+                    f"{GraphUtils.t('circularReferenceError1')}"
+                    f"{current_node}{GraphUtils.t('circularReferenceError2')}"
+                )
 
         return list(reversed(node_list))  # 返回结果列表
 
@@ -111,7 +114,10 @@ class GraphUtils:
                 if str(micro_step_id) == str(micro_step) or micro_step_id is None:
                     splited_graph_data[node_name] = (node_data)
                     if node_name in node_list:
-                        raise ValueError(f"检测到循环引用：节点 {node_name} 已存在于路径中")
+                        raise ValueError(
+                            f"{GraphUtils.t('circularReferenceError1')}"
+                            f"{node_name}{GraphUtils.t('circularReferenceError2')}"
+                        )
                     node_list.append(node_name)
                     traverse_npu(graph_nodes, node_data.get('subnodes', []))
 
@@ -288,7 +294,7 @@ class GraphUtils:
         try:
             # 检查 tag 是否为合法文件名
             if not re.match(FILE_NAME_REGEX, tag):
-                raise ValueError(f"Invalid tag: {tag}.")
+                raise ValueError(f"{GraphUtils.t('invalidTag')}{tag}.")
             # 构建文件路径并标准化
             file_path = os.path.join(run, tag)
             # 目录安全校验
@@ -333,7 +339,7 @@ class GraphUtils:
             file_path = os.path.join(run_dir, tag)
             # 安全验证：基础路径校验
             if not GraphUtils.is_relative_to(file_path, safe_base_dir):
-                raise ValueError(f"The path may not be within a secure directory")
+                raise ValueError(GraphUtils.t('pathMayNotInSecureDirectory'))
             # 目录安全校验
             success, error = GraphUtils.safe_check_load_file_path(run_dir, True)
             if not success:
@@ -592,40 +598,40 @@ class GraphUtils:
         """
 
         if not isinstance(colors_json, dict):
-            return False, "colors 必须是一个对象", {}
+            return False, GraphUtils.t('colorsNotObject'), {}
 
         if len(colors_json) == 0:
-            return False, "colors 不能为空", {}
+            return False, GraphUtils.t('colotsEmpty'), {}
 
         for key, value in colors_json.items():
             # 2. 校验颜色键
             if not re.match(COLOR_PATTERN, key):
-                return False, f"非法颜色键: {key}", {}
+                return False, f"{GraphUtils.t('illegalColorKey')}{key}", {}
 
             if not isinstance(value, dict):
-                return False, f"颜色值必须是对象: {key}", {}
+                return False, f"{GraphUtils.t('colorValuesNotObject')}{key}", {}
 
             if 'value' not in value:
-                return False, f"缺少 value 字段: {key}", {}
+                return False, f"{GraphUtils.t('missingValueField')}{key}", {}
 
             # 3. 校验 value 字段
             val = value['value']
             if isinstance(val, list):
                 if len(val) != 2:
-                    return False, f"value 必须是长度为2的数组: {key}", {}
+                    return False, f"{GraphUtils.t('notArrayOfLength2')}{key}", {}
                 if not all(isinstance(x, (int, float)) for x in val):
-                    return False, f"value 数组必须是数字: {key}", {}
+                    return False, f"{GraphUtils.t('notArrayConsistNumbers')}{key}", {}
                 if val[0] >= val[1]:
-                    return False, f"value 区间无效（左 >= 右）: {key}", {}
+                    return False, f"{GraphUtils.t('invalidValueRange')}{key}", {}
             elif isinstance(val, str):
                 if val not in ["无匹配节点", "N/A", "No matching nodes"]:
-                    return False, f"不支持的 value 字符串值: {val}", {}
+                    return False, f"{GraphUtils.t('unsupportedValue')}{val}", {}
             else:
-                return False, f"value 必须是数字数组或字符串: {key}", {}
+                return False, f"{GraphUtils.t('valueTypeError')}{key}", {}
 
             # 4. 校验 description
             desc = value.get('description', '')
             if not GraphUtils.is_safe_string(desc):
-                return False, f"description 包含恶意内容或格式错误: {key}", {}
+                return False, f"{GraphUtils.t('descriptionError')}{key}", {}
 
         return True, None, colors_json
