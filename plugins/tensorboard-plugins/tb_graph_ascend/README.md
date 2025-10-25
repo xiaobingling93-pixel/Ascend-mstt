@@ -52,9 +52,9 @@
    python setup.py develop
    ```
 
-- 或： 构建 whl 包安装
+- 或： 构建 whl 包安装 用户应确保在安全的环境下进行whl包的构建
   ```
-  python setup.py bdist_wheel
+  python secure_build.py
   ```
   在 `plugins/tensorboard-plugins/tb_graph_ascend/dist` 目录下取出 whl 包，使用以下指令安装（此处{version}为 whl 包实际版本）
   ```
