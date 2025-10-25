@@ -109,7 +109,7 @@ class DbGraphService(GraphServiceStrategy):
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
             if rank is None or step is None or micro_step is None:
-                return {'success': False, 'error': 'rank or step or micro_step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             # 单图
             rank_step = {
                 'rank': rank,
@@ -175,7 +175,7 @@ class DbGraphService(GraphServiceStrategy):
             step = meta_data.get('step')
             micro_step = meta_data.get('microStep')
             if rank is None or step is None or micro_step is None:
-                return {'success': False, 'error': 'rank or step or micro_step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             node_name_list = self.repo.query_node_list_by_overflow(step, rank, micro_step, values)
             return {'success': True, 'data': node_name_list}
         except Exception as e:
@@ -295,20 +295,20 @@ class DbGraphService(GraphServiceStrategy):
                                                                             bench_node_name, task)
                 return self._generate_matched_result(match_result, rank, step)
             else:
-                return {'success': False, 'error': '任务类型不支持(Task type not supported) '}
+                return {'success': False, 'error': GraphUtils.t('taskTypeError')}
         except Exception as e:
             logger.error('delete_match_nodes error: {}'.format(e))
-            return {'success': False, 'error': '删除匹配节点失败', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('deleteMatchNodeFailed'), 'data': None}
     
     def update_precision_error(self, meta_data, filter_value):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbConncetionNotInit')}
 
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             if rank is None or step is None:
-                return {'success': False, 'error': 'rank or step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             npu_node_list = self.repo.query_node_info_by_data_source(step, rank, NPU)
             update_data_hierarchy = {}
             update_data_db = []
@@ -366,33 +366,33 @@ class DbGraphService(GraphServiceStrategy):
                 GraphState.set_global_value("update_precision_cache", update_data_hierarchy)
                 return {'success': True, 'data': {}}
             else:
-                return {'success': False, 'error': '未找到可更新的节点(Matched node not found) '}
+                return {'success': False, 'error': GraphUtils.t('noUpdateNodesFound')}
         except Exception as e:
             logger.error('update_precision_error error: {}'.format(e))
-            return {'success': False, 'error': '更新节点精度失败(Update node precision failed)', 'data': None}   
+            return {'success': False, 'error': GraphUtils.t('updateNodeAccuracyFailed'), 'data': None}   
 
     def update_colors(self, colors):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbConncetionNotInit')}
             # DB：更新颜色
             update_db_res = self.repo.update_config_colors(colors)
             if not update_db_res:
-                return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+                return {'success': False, 'error': GraphUtils.t('updateDatabaseFailed')}
             return {'success': True}
         except Exception as e:
-            return {'success': False, 'error': '更新颜色失败(Update color failed)', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('updateColorFailed'), 'data': None}
 
     def save_matched_relations(self, meta_data):
         try:
             if not self.conn:
-                return {'success': False, 'error': 'database connection not init'}
+                return {'success': False, 'error': GraphUtils.t('dbConncetionNotInit')}
             run = meta_data.get('run')
             tag = meta_data.get('tag')
             rank = meta_data.get('rank')
             step = meta_data.get('step')
             if rank is None or step is None:
-                return {'success': False, 'error': 'rank or step is null'}
+                return {'success': False, 'error': GraphUtils.t('rankStepNullError')}
             # DB：根据step rank modify match_node_link查询已经修改的匹配成功的节点关系
             modify_matched_nodes_list = self.repo.query_modify_matched_nodes_list(rank, step)
             confilg_file_name = f"{tag}_{step}_{rank}.vis.config"
@@ -404,7 +404,7 @@ class DbGraphService(GraphServiceStrategy):
        
         except Exception as e:
             logger.error('save_matched_relations error: {}'.format(e))
-            return {'success': False, 'error': '保存匹配关系失败(Save matched relations failed)', 'data': None}
+            return {'success': False, 'error': GraphUtils.t('saveMatchRelationshipFailed'), 'data': None}
 
     def _generate_matched_result(self, match_result, rank, step):
         update_data = []
@@ -417,7 +417,7 @@ class DbGraphService(GraphServiceStrategy):
             # DB：更新数据库节点信息
             update_db_res = self.repo.update_nodes_info(update_data, rank, step)
             if not update_db_res:
-                return {'success': False, 'error': '更新数据库失败(Update database failed) '}
+                return {'success': False, 'error': GraphUtils.t('updateDatabaseFailed')}
             # 视图：调用更新update_hirarchy方法，同步更新图
             LayoutHierarchyModel.update_current_hierarchy_data(update_data)
             # 返回：返回更新后的节点信息
@@ -432,6 +432,6 @@ class DbGraphService(GraphServiceStrategy):
                 }
             }
         else:
-            result = {'success': False, 'error': '选择的节点不可匹配(Selected nodes do not match) '}
+            result = {'success': False, 'error': GraphUtils.t('selectedNodeCantMatched')}
         return result
                      
