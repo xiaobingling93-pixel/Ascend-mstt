@@ -66,6 +66,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query config info: {e}")
             return {}
+        finally:
+            conn.close()
 
     # DB：查询根节点信息
     def query_root_nodes(self, graph_type, rank, step):
@@ -102,6 +104,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query root nodes: {e}")
             return {}
+        finally:
+            conn.close()
     
     # DB：查询当前节点的所有父节点信息
     def query_up_nodes(self, node_name, graph_type, rank, step):
@@ -180,6 +184,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query up nodes: {e}")
             return {}
+        finally:
+            conn.close()
 
     # DB: 查询待匹配节点的信息，构造graph data
     def query_matched_nodes_info(self, npu_node_name, bench_node_name, rank, step):
@@ -233,6 +239,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query matched nodes info: {e}")
             return self._convert_to_graph_json({}, {})
+        finally:
+            conn.close()
             
     # DB: 查询待匹配节点及其子节点的信息，递归查询当前节点信息和其所有的子节点信息，一直叶子节点
     def query_node_and_sub_nodes(self, npu_node_name, bench_node_name, rank, step):
@@ -316,6 +324,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query node and sub nodes: {e}")
             return {'NPU': {}, 'Bench': {}}
+        finally:
+            conn.close()
     
     # DB：查询配置文件中的待匹配节点信息
     def query_matched_nodes_info_by_config(self, match_node_links, rank, step):
@@ -354,6 +364,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query nodes info: {e}")
             return {}
+        finally:
+            conn.close()
     
     # DB: 查询所有以当前为父节点的子节点
     def query_sub_nodes(self, node_name, graph_type, rank, step):
@@ -394,6 +406,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query sub nodes: {e}")
             return {}
+        finally:
+            conn.close()
 
     # DB: 查询当前节点信息
     def query_node_info(self, node_name, graph_type, rank, step):
@@ -425,6 +439,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query node info: {e}")
             return {}
+        finally:
+            conn.close()
     
     # DB: 查询单图节点名称列表
     def query_node_name_list(self, rank, step, micro_step):
@@ -452,6 +468,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query node name list: {e}")
             return []
+        finally:
+            conn.close()
 
     # DB: 查询已匹配节点列表，未匹配节点列表，所有的节点列表
     def query_all_node_info_in_one(self, rank, step, micro_step):
@@ -538,6 +556,8 @@ class GraphRepoDB(GraphRepo):
                 'npu_unmatch_node': [],
                 'bench_unmatch_node': []
             }
+        finally:
+            conn.close()
 
     # # DB：根据step rank modify match_node_link查询已经修改的匹配成功的节点关系
     def query_modify_matched_nodes_list(self, rank, step):
@@ -572,6 +592,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query modify matched nodes list: {e}")
             return {}
+        finally:
+            conn.close()
             
     # DB: 根据精度误差查询节点信息
     def query_node_list_by_precision(self, step, rank, micro_step, values, is_filter_unmatch_nodes):
@@ -616,6 +638,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query node list by precision: {e}")
             return []
+        finally:
+            conn.close()
 
     # DB: 根据溢出查询节点信息
     def query_node_list_by_overflow(self, step, rank, micro_step, values):
@@ -653,6 +677,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query node list by overflow: {e}")
             return []
+        finally:
+            conn.close()
 
     # DB：查询节点信息
     def query_node_info_by_data_source(self, step, rank, data_source):
@@ -681,6 +707,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to query node info: {e}")
             return {}
+        finally:
+            conn.close()
 
     # DB：更新config的colors
     def update_config_colors(self, colors):
@@ -702,6 +730,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to update config colors: {e}")
             return False
+        finally:
+            conn.close()
 
     # DB：批量更新节点信息
     def update_nodes_info(self, nodes_info, rank, step):
@@ -766,6 +796,8 @@ class GraphRepoDB(GraphRepo):
         except Exception as e:
             logger.error(f"Failed to update precision error: {e}")
             return False
+        finally:
+            conn.close()
 
     def _initialize_db_connection(self):
         try:
@@ -791,6 +823,11 @@ class GraphRepoDB(GraphRepo):
         
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
+            if 'conn' in locals() and conn:
+                try:
+                    conn.close()
+                except Exception as close_error:
+                    logger.error(f"Failed to close database connection: {close_error}")
             self.conn = None
             return None
     
