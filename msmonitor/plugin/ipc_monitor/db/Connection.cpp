@@ -44,9 +44,7 @@ Connection::Connection(const std::string &path)
 
 Connection::~Connection()
 {
-    if (stmt_) {
-        sqlite3_finalize(stmt_);
-    }
+    FinalizeStmt();  // 先释放sqlite3_stmt，再释放sqlite3
     if (db_) {
         auto rc = sqlite3_close(db_);
         if (rc != SQLITE_OK) {
@@ -63,11 +61,7 @@ bool Connection::ExecuteSql(const std::string &sql, const std::string &sqlType)
     sqlite3_busy_timeout(db_, TIMEOUT);
     auto rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
-        if (sqlType == CHECK) {
-            LOG(WARNING) << "Execute sql failed: " << rc << ", type: " << sqlType << ", msg: " << errMsg;
-        } else {
-            LOG(ERROR) << "Execute sql failed: " << rc << ", type: " << sqlType << ", msg: " << errMsg;
-        }
+        LOG(ERROR) << "Execute sql failed: " << rc << ", type: " << sqlType << ", msg: " << errMsg;
         sqlite3_free(errMsg);
         return false;
     }
@@ -114,6 +108,7 @@ std::vector<TableColumn> Connection::ExecuteGetTableColumns(const std::string &t
     std::vector<TableColumn> columns;
     std::string sql = "PRAGMA table_info(" + tableName + ")";
     sqlite3_busy_timeout(db_, TIMEOUT);
+    FinalizeStmt();  // prepare前需要保证stmt是nullptr
     auto rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt_, nullptr);
     if (rc != SQLITE_OK) {
         LOG(ERROR) << "Execute sql failed: " << rc << ", msg: " << sqlite3_errmsg(db_);
@@ -141,6 +136,7 @@ bool Connection::InsertCmd(const std::string &tableName, uint32_t colNum)
     }
     sql += ")";
     sqlite3_busy_timeout(db_, TIMEOUT);
+    FinalizeStmt();  // prepare前需要保证stmt是nullptr
     auto rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt_, nullptr);
     if (rc != SQLITE_OK) {
         LOG(ERROR) << "Execute sql failed: " << rc << ", msg: " << sqlite3_errmsg(db_);
@@ -151,12 +147,21 @@ bool Connection::InsertCmd(const std::string &tableName, uint32_t colNum)
 
 bool Connection::QueryCmd(const std::string &sql)
 {
+    FinalizeStmt();  // prepare前需要保证stmt是nullptr
     auto rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt_, nullptr);
     if (rc != SQLITE_OK) {
         LOG(ERROR) << "Execute sql failed: " << rc << ", msg: " << sqlite3_errmsg(db_);
         return false;
     }
     return true;
+}
+
+void Connection::FinalizeStmt()
+{
+    if (stmt_) {
+        sqlite3_finalize(stmt_);
+        stmt_ = nullptr;
+    }
 }
 
 bool Connection::BindParameters(int32_t value)
