@@ -25,6 +25,7 @@ import './components/tf_resize_height/index';
 import type { UseNodeInfoType } from './useNodeInfo';
 import type { NodeInfoType } from './type';
 import { BENCH_PREFIX, NPU_PREFIX } from '../common/constant';
+import i18next from '../common/i18n';
 
 @customElement('graph-info-board')
 class TfGraphNodeInfo extends PolymerElement {
@@ -117,10 +118,10 @@ class TfGraphNodeInfo extends PolymerElement {
     <vaadin-tabsheet>
       <vaadin-tabs slot="tabs" class="vaadin-tabs">
         <vaadin-tab id="io-tab" class="vaadin-tab">
-          <template is="dom-if" if="[[!isSingleGraph]]"> 比对详情 </template>
-          <template is="dom-if" if="[[isSingleGraph]]"> 节点详情 </template>
+          <template is="dom-if" if="[[!isSingleGraph]]"> [[t('comparison_details')]] </template>
+          <template is="dom-if" if="[[isSingleGraph]]"> [[t('node_details')]] </template>
         </vaadin-tab>
-        <vaadin-tab id="stack-info-tab" class="vaadin-tab">节点信息</vaadin-tab>
+        <vaadin-tab id="stack-info-tab" class="vaadin-tab">[[t('node_information')]]</vaadin-tab>
       </vaadin-tabs>
 
       <div tab="io-tab" class="vaadin-tab-content">
@@ -131,13 +132,13 @@ class TfGraphNodeInfo extends PolymerElement {
                 <template is="dom-if" if="[[npuNodeName]]">
                   <p class="node-info-item selected-node">
                     <span class="legend-selected"></span>
-                    目标节点：[[npuNodeName]]
+                    [[t('debug_node')]]：[[npuNodeName]]
                   </p>
                 </template>
                 <template is="dom-if" if="[[benchNodeName]]">
                   <p class="node-info-item match-node">
                     <span class="legend-matched"></span>
-                    标杆节点：[[benchNodeName]]
+                    [[t('bench_node')]]：[[benchNodeName]]
                   </p>
                 </template>
               </div>
@@ -145,11 +146,11 @@ class TfGraphNodeInfo extends PolymerElement {
                 <div class="node-info">
                   <p class="node-info-item ">
                     <span class="matched-yes"></span>
-                    已匹配
+                    [[t('matched')]]
                   </p>
                   <p class="node-info-item match-node">
                     <span class="matched-no"></span>
-                    未匹配
+                    [[t('unMatched')]]
                   </p>
                 </div>
               </template>
@@ -182,6 +183,10 @@ class TfGraphNodeInfo extends PolymerElement {
       </div>
     </vaadin-tabsheet>
   `;
+  @property({ type: Object })
+  get t() {
+    return (key: string) => i18next.t(key);
+  }
 
   @property({ type: String, notify: true })
   selectedNode: string = '';
@@ -205,6 +210,20 @@ class TfGraphNodeInfo extends PolymerElement {
   isSingleGraph = false;
 
   useNodeInfo: UseNodeInfoType = useNodeInfo();
+
+  constructor() {
+    super();
+    this.setupLanguageListener();
+  }
+
+  setupLanguageListener() {
+    i18next.on('languageChanged', () => {
+      //更新语言后重新渲染
+      const t = this.t;
+      this.set('t', null);
+      this.set('t', t);
+    });
+  }
 
   @observe('selectedNode')
   observeToUpdateTableData() {
@@ -253,7 +272,7 @@ class TfGraphNodeInfo extends PolymerElement {
     if (success) {
       return { npuNode: data?.npu, benchNode: data?.bench };
     } else {
-      Notification.show(`获取节点信息失败：${error}`, {
+      Notification.show(`${this.t('retrieve_node_information_fail')}：${error}`, {
         position: 'middle',
         duration: 2000,
         theme: 'error',

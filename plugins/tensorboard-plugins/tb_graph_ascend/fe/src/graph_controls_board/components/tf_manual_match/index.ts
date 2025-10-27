@@ -149,7 +149,7 @@ class Legend extends PolymerElement {
         <vaadin-progress-bar indeterminate></vaadin-progress-bar>
       </template>
       <div class="unmatched-node">
-        <p class="vaadin-details-title">未匹配节点</p>
+        <p class="vaadin-details-title">[[t('unmatched_node')]]</p>
         <tf-search-combox
           label="[[t('debug')]]([[npuUnMatchedNodes.length]])"
           items="[[npuUnMatchedNodes]]"
@@ -167,16 +167,16 @@ class Legend extends PolymerElement {
         <template is="dom-if" if="[[matchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
-        <vaadin-checkbox class="match-checkbox" label="操作选中节点及其子节点" checked={{isMatchChildren}}></vaadin-checkbox>
+        <vaadin-checkbox class="match-checkbox" label="[[t('manage_nodes_and_subs')]]" checked={{isMatchChildren}}></vaadin-checkbox>
         <div class="match-button">
-          <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">点击匹配</vaadin-button>
+          <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">[[t('click_to_match')]]</vaadin-button>
         </div>
       </div>
       <div class="matched-node">
-        <p class="vaadin-details-title">已匹配节点</p>
+        <p class="vaadin-details-title">[[t('matched_nodes')]]</p>
         <tf-search-combox
           class="matched-node"
-          label="调试侧([[npuMatchedNodes.length]])"
+          label="[[t('debug')]]([[npuMatchedNodes.length]])"
           items="[[npuMatchedNodes]]"
           selected-value="{{selectedNpuMatchedNode}}"
           on-select-change="[[_changeNpuMatchedNode]]"
@@ -184,7 +184,7 @@ class Legend extends PolymerElement {
         ></tf-search-combox>
         <tf-search-combox
           class="matched-node"
-          label="标杆侧([[benchMatchedNodes.length]])"
+          label="[[t('bench')]]([[benchMatchedNodes.length]])"
           items="[[benchMatchedNodes]]"
           selected-value="{{selectedBenchMatchedNode}}"
           on-select-change="[[_changeBenchMatchedNode]]"
@@ -193,9 +193,9 @@ class Legend extends PolymerElement {
         <template is="dom-if" if="[[unmatchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
-        <vaadin-checkbox class="match-checkbox" label="操作选中节点及其子节点" checked={{isUnMatchChildren}}></vaadin-checkbox>
+        <vaadin-checkbox class="match-checkbox" label="[[t('manage_nodes_and_subs')]]" checked={{isUnMatchChildren}}></vaadin-checkbox>
         <div class="match-button">
-          <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink">取消匹配</vaadin-button>
+          <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink">[[t('cancel_matching')]]</vaadin-button>
         </div>
       </div>
 
@@ -205,12 +205,12 @@ class Legend extends PolymerElement {
           theme="primary small"
           on-click="_saveMatchedRelations"
           disabled="[[saveLoading]]"
-          >生成匹配配置文件</vaadin-button
+          >[[t('generate_matching_configuration_file')]]</vaadin-button
         >
         <vaadin-icon id="match-config" icon="vaadin:question-circle"></vaadin-icon>
         <vaadin-tooltip
           for="match-config"
-          text="手动匹配结束后，点击保存匹配节点信息，会将已匹配的节点对应关系保存到配置文件中，不会持久原始文件，如果是初次保存，会新建一个文件，文件名称为：[当前文件名].vis.config。"
+          text="[[t('generate_matching_configuration_file_tooltip')]]"
           position="end"
         ></vaadin-tooltip>
         <template is="dom-if" if="[[!isDBType]]">
@@ -219,12 +219,12 @@ class Legend extends PolymerElement {
             theme="primary contrast small"
             on-click="_saveMatchedNodesLink"
             disabled="[[saveLoading]]"
-            >保存</vaadin-button
+            >[[t('save')]]</vaadin-button
           >
           <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
           <vaadin-tooltip
             for="match-save"
-            text="注意：匹配结束后需要点击保存按钮，将操作后数据更新到文件中，否则操作无效"
+            text="[[t('save_tooltip')]]"
             position="end"
           ></vaadin-tooltip>
           <template is="dom-if" if="[[saveLoading]]">
@@ -236,7 +236,7 @@ class Legend extends PolymerElement {
   `;
 
   @property({ type: Object })
-  t: Function = () => '';
+  t: Function = (key) => i18next.t(key);
 
   @property({ type: Object })
   unmatched: any = [];
@@ -319,8 +319,6 @@ class Legend extends PolymerElement {
     this.set('isDBType', this.selection?.type === DB_TYPE);
   }
 
-
-
   @observe('t')
   _observeT(): void {
     if (this.t) {
@@ -381,7 +379,7 @@ class Legend extends PolymerElement {
       const node = NPU_PREFIX + this.selectedNpuUnMatchedNode;
       this.set('selectedNode', node);
     } else {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -394,7 +392,7 @@ class Legend extends PolymerElement {
       const node = BENCH_PREFIX + this.selectedBenchUnMatchedNode;
       this.set('selectedNode', node);
     } else {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -409,7 +407,7 @@ class Legend extends PolymerElement {
       this.set('selectedNode', node);
       this.set('selectedNode', BENCH_PREFIX + this.selectedBenchMatchedNode); // 展开对应侧节点
     } else {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -424,7 +422,7 @@ class Legend extends PolymerElement {
       this.set('selectedNode', node);
       this.set('selectedNode', NPU_PREFIX + this.selectedNpuMatchedNode); // 展开对应侧节点
     } else {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -435,7 +433,7 @@ class Legend extends PolymerElement {
   // 取消匹配
   async _deletelMatchedNodesLink(): Promise<void> {
     if (!this.isCompareGraph) {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -443,7 +441,7 @@ class Legend extends PolymerElement {
       return;
     }
     if (!this.selectedNpuMatchedNode || !this.selectedBenchMatchedNode) {
-      Notification.show('提示：请先选择要取消匹配的节点', {
+      Notification.show(this.t('unmatch_first'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -482,13 +480,13 @@ class Legend extends PolymerElement {
       // 已匹配列表清空选中的节点
       this.set('selectedNpuMatchedNode', '');
       this.set('selectedBenchMatchedNode', '');
-      Notification.show(`取消成功：取消节点数 ${processedNodeNum} 个,对应节点状态已更新`, {
+      Notification.show(`${this.t('cancel_match_success_part1')}${processedNodeNum}${this.t('cancel_match_success_part2')}`, {
         position: 'middle',
         duration: 4000,
         theme: 'success',
       });
     } else {
-      Notification.show(`取消匹配失败: ${error}`, {
+      Notification.show(`${this.t('cancel_match_fail')}${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',
@@ -498,7 +496,7 @@ class Legend extends PolymerElement {
 
   _addMatchedNodesLinkByConfigFile = async (): Promise<void> => {
     if (!this.isCompareGraph) {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -536,7 +534,9 @@ class Legend extends PolymerElement {
       this.set('npuUnMatchedNodes', npuUnMatchNodes);
       this.set('benchUnMatchedNodes', benchUnMatchNodes);
       Notification.show(
-        `匹配成功：匹配节点数 ${processedNodeNum} 个，其中成功 ${matchSuccessNum} 个，失败 ${matchFailedNum} 个`,
+        this.t('match_success_part1') + processedNodeNum + 
+        this.t('match_success_part2') + matchSuccessNum + 
+        this.t('match_success_part3') + matchFailedNum,
         {
           position: 'middle',
           duration: 4000,
@@ -544,7 +544,7 @@ class Legend extends PolymerElement {
         },
       );
     } else {
-      Notification.show(`匹配失败:${error}`, {
+      Notification.show(`${this.t('match_fail')}:${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',
@@ -555,7 +555,7 @@ class Legend extends PolymerElement {
   // 匹配节点
   async _addMatchedNodesLink(): Promise<void> {
     if (!this.isCompareGraph) {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -563,7 +563,7 @@ class Legend extends PolymerElement {
       return;
     }
     if (!this.selectedNpuUnMatchedNode || !this.selectedBenchUnMatchedNode) {
-      Notification.show('提示：请选择需要匹配的节点', {
+      Notification.show(this.t('select_match_node'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -603,13 +603,13 @@ class Legend extends PolymerElement {
       // 未匹配列表清空选中的节点
       this.set('selectedNpuUnMatchedNode', '');
       this.set('selectedBenchUnMatchedNode', '');
-      Notification.show(`匹配成功：匹配节点数 ${processedNodeNum} 个,对应节点状态已更新`, {
+      Notification.show(`${this.t('match_success_part1')}${processedNodeNum}${this.t('match_success_part4')}`, {
         position: 'middle',
         duration: 4000,
         theme: 'success',
       });
     } else {
-      Notification.show(`操作失败:${error}`, {
+      Notification.show(`${this.t('operation_fail')}:${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',
@@ -623,13 +623,13 @@ class Legend extends PolymerElement {
     const result = await this.useMatched.saveMatchedNodesLink(this.selection);
     this.set('saveLoading', false);
     if (result.success) {
-      Notification.show('保存成功：文件已变更', {
+      Notification.show(this.t('save_success'), {
         position: 'middle',
         duration: 3000,
         theme: 'success',
       });
     } else {
-      Notification.show(`操作失败${result.error}`, {
+      Notification.show(`${this.t('operation_fail')}${result.error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',
@@ -638,7 +638,7 @@ class Legend extends PolymerElement {
   }
   async _saveMatchedRelations(): Promise<void> {
     if (!this.isCompareGraph) {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -652,13 +652,13 @@ class Legend extends PolymerElement {
       const configFile = data;
       const matchedConfigFiles = [...new Set(['未选择', configFile, ...this.matchedConfigFiles])];
       this.set('matchedConfigFiles', matchedConfigFiles);
-      Notification.show(`操作成功:文件已生成到当前目录下，文件名称为${configFile}`, {
+      Notification.show(`${this.t('file_generate_success')}${configFile}`, {
         position: 'middle',
         duration: 3000,
         theme: 'success',
       });
     } else {
-      Notification.show(`操作失败:${error}`, {
+      Notification.show(`${this.t('operation_fail')}:${error}`, {
         position: 'middle',
         duration: 3000,
         theme: 'error',

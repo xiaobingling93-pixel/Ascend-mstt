@@ -15,11 +15,11 @@
  */
 
 import { PolymerElement, html } from '@polymer/polymer';
-import { customElement } from '@polymer/decorators';
+import { customElement, property } from '@polymer/decorators';
+import i18next from '../../../common/i18n';
 @customElement('scene-legend')
 class Legend extends PolymerElement {
-  static get template(): HTMLTemplateElement {
-    return html`
+  static readonly template = html`
       <style>
         :host {
           --legend-border-color:rgb(99, 99, 99);
@@ -104,16 +104,15 @@ class Legend extends PolymerElement {
       <div class="legend">
         <div class="legend-item">
           <svg  class='module-rect'></svg>
-          <span class="legend-item-value">Module or Operators</span>
+          <span class="legend-item-value">[[t('module_or_operators')]]</span>
         </div>
         <div class="legend-item">
           <svg  class='unexpand-nodes'></svg>
-          <span class="legend-item-value">Unexpanded Nodes</span>
+          <span class="legend-item-value">[[t('unexpanded_nodes')]]</span>
           <div class="legend-item-value legend-clarifier">
             <paper-tooltip fit-to-visible-bounds animation-delay="0" position="right" offset="0">
               <div class="custom-tooltip">
-                Unexpandable Node: It can be an Api, operator or module. It cannot be expanded because it has no
-                subnodes
+                [[t('unexpanded_nodes_tooltip')]]
               </div>
             </paper-tooltip>
           </div>
@@ -122,10 +121,10 @@ class Legend extends PolymerElement {
           <svg class='api-list'>
               <rect width="46" height="18" rx='5' ry='5' x='2' y='4' />
           </svg>
-          <span class="legend-item-value">Api List</span>
+          <span class="legend-item-value">[[t('api_list')]]</span>
           <div class="legend-item-value legend-clarifier">
             <paper-tooltip animation-delay="0" position="right" offset="0">
-               <div class="custom-tooltip">Apis between modules</div>
+               <div class="custom-tooltip">[[t('api_list_tooltip')]]</div>
             </paper-tooltip>
           </div>
         </div>
@@ -133,14 +132,30 @@ class Legend extends PolymerElement {
           <svg class='fusion-node'>
                <rect width="46" height="18" rx='5' ry='5' x='2' y='4' />
           </svg>
-          <span class="legend-item-value">Multi Collection</span>
+          <span class="legend-item-value">[[t('multi_collection')]]</span>
           <div class="legend-item-value legend-clarifier">
             <paper-tooltip animation-delay="0" position="right" offset="0">
-                <div class="custom-tooltip">Fusion node Collection</div>
+                <div class="custom-tooltip">[[t('multi_collection_tooltip')]]</div>
             </paper-tooltip>
           </div>
         </div>
       </div>
     `;
-  }
+    @property({ type: Object })
+    t: Function = (key) => i18next.t(key);
+
+    constructor() {
+      super();
+      this.setupLanguageListener();
+    }
+
+    setupLanguageListener() {
+      i18next.on('languageChanged', () => {
+        //更新语言后重新渲染
+        const t = this.t;
+        this.set('t', null);
+        this.set('t', t);
+      });
+    }
 }
+

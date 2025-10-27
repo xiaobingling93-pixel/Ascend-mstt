@@ -20,6 +20,7 @@ import '@vaadin/grid'; // 引入新的 Vaadin Grid 组件
 import '@vaadin/tooltip';
 import type { GridEventContext } from '@vaadin/grid';
 import { escapeHTML } from '../../../utils';
+import i18next from 'i18next';
 @customElement('tf-vaadin-table')
 class TfVaadinTable extends PolymerElement {
   static readonly template = html`
@@ -95,7 +96,7 @@ class TfVaadinTable extends PolymerElement {
       </vaadin-grid>
     </template>
     <template is="dom-if" if="[[isEmptyGrid]]">
-      <p class="no-data">当前节点暂无IO数据</p>
+      <p class="no-data">[[t('no_iodata')]]</p>
     </template>
   `;
 
@@ -123,7 +124,24 @@ class TfVaadinTable extends PolymerElement {
   })
   isEmptyGrid!: false;
 
+  @property({ type: Object })
+  t: Function = (key) => i18next.t(key);
+
   renderDefaultValue!: (root: HTMLElement, column: any, rowData: any) => void;
+
+  constructor() {
+    super();
+    this.setupLanguageListener();
+  }
+
+  setupLanguageListener() {
+    i18next.on('languageChanged', () => {
+      //更新语言后重新渲染
+      const t = this.t;
+      this.set('t', null);
+      this.set('t', t);
+    });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();

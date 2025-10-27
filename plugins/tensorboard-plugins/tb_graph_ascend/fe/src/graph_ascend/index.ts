@@ -29,6 +29,7 @@ import '@vaadin/confirm-dialog'
 import { Notification } from '@vaadin/notification';
 import request from '../utils/request';
 import type { SelectedItemType, SelectionType, ProgressType, GraphConfigType, GraphAllNodeType, NodeListType, UnmatchedNodeType } from './type';
+import i18next from '../common/i18n';
 
 @customElement('graph-ascend')
 class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
@@ -71,6 +72,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             <div class="center" slot="center">
                 <div class="graph-board-wrapper">
                     <graph-board
+                        t="[[t]]"
                         id="graph-board"
                         colors="{{colors}}"
                         selection="[[selection]]"
@@ -151,6 +153,8 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             }
         </style>
     `;
+    @property({ type: Object })
+    t: Function = (key) => i18next.t(key);
 
     @property({ type: Object })
     metaDir: Record<string, string> = {};
@@ -278,13 +282,13 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
 
     loadDBGraphData = async (metaData: SelectionType, isInitDB: boolean = false) => {
         if (isInitDB) {
-            this.progreesLoading('正在初始化数据库', '请稍后', { progress: 10, progressValue: 10, done: false });
+            this.progreesLoading(this.t('initializing_database'), this.t('please_wait'), { progress: 10, progressValue: 10, done: false });
             await request({ url: 'loadGraphData', method: 'GET', params: metaData });
             await this.loadGraphConfig(metaData)
         }
-        this.progreesLoading('正在初始化图', '请稍后', { progress: 90, progressValue: 90, done: false });
+        this.progreesLoading(this.t('initializing_graph'), this.t('please_wait'), { progress: 90, progressValue: 90, done: false });
         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
-        this.progreesLoading('初始化完成', '请稍后', { progress: 100, progressValue: 100, done: true });
+        this.progreesLoading(this.t('initialization_complete'), this.t('please_wait'), { progress: 100, progressValue: 100, done: true });
     }
 
 
@@ -298,10 +302,10 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
         this.eventSource.onmessage = async (e) => {
             const data = safeJSONParse(e.data);
             if (data?.error) {
-                this.progreesError('初始化图失败', data.error);
+                this.progreesError(this.t('graph_initialization_fail'), data.error);
             }
             if (data?.status === 'reading') {
-                this.progressReading('正在读取文件', data);
+                this.progressReading(this.t('reading_file'), data);
             }
             if (data?.status === 'loading') {
                 if (data.done) {
@@ -310,19 +314,19 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                     try {
                         await this.loadGraphConfig(metaData)
                         this.initGraphBoard(); // 先读取配置，再加载图,顺序很重要
-                        this.progreesLoading('初始化完成', '请稍后', data);
+                        this.progreesLoading(this.t('initialization_complete'), this.t('please_wait'), data);
                     } catch (error) {
-                        this.progreesError('初始化图失败', error);
+                        this.progreesError(this.t('graph_initialization_fail'), error);
                     }
                 } else {
-                    this.progreesLoading('正在解析文件', '正在初始化模型，请稍后.', data);
+                    this.progreesLoading(this.t('parsing_file'), this.t('initializing_model'), data);
                 }
             }
         };
 
         this.eventSource.onerror = (e) => {
             if (!this.progressData || !this.progressData.done) {
-                this.progreesError('加载失败', '请检查文件格式是否正确');
+                this.progreesError(this.t('loadig_fail'), this.t('file_format_wrong'));
             }
             this.eventSource?.close();
         };
@@ -368,7 +372,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             }
             this.set('selection', selection);
         } else {
-            Notification.show(`图配置加载失败:${error}`, {
+            Notification.show(`${this.t('load_image_config_fail')}:${error}`, {
                 position: 'middle',
                 duration: 2000,
                 theme: 'error',
@@ -395,7 +399,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
             this.set('nodelist', nodelist);
             this.set('unmatched', unmatched);
         } else {
-            Notification.show(`图节点列表加载失败:${error}`, {
+            Notification.show(`${this.t('load_graph_node_list_fail')}:${error}`, {
                 position: 'middle',
                 duration: 2000,
                 theme: 'error',

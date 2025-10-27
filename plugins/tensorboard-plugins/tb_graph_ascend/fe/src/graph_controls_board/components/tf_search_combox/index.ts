@@ -23,6 +23,7 @@ import { Notification } from '@vaadin/notification';
 import { PolymerElement, html } from '@polymer/polymer';
 import { customElement, property } from '@polymer/decorators';
 import '@vaadin/progress-bar';
+import i18next from 'i18next';
 @customElement('tf-search-combox')
 class Legend extends PolymerElement {
   // 定义模板
@@ -74,19 +75,21 @@ class Legend extends PolymerElement {
         on-change="_onChange"
       ></vaadin-combo-box>
       <vaadin-icon
-        title="搜索上一项"
+        title="[[t('search_previous')]]"
         icon="vaadin:arrow-up"
         class="search-arrow"
         on-click="_selectPrevious"
       ></vaadin-icon>
       <vaadin-icon
-        title="搜索下一项"
+        title="[[t('search_next')]]"
         icon="vaadin:arrow-down"
         class="search-arrow"
         on-click="_selectNext"
       ></vaadin-icon>
     </div>
   `;
+  @property({ type: Object })
+  t: Function = (key) => i18next.t(key);
 
   @property({ type: Object })
   onSelectChange!: () => void;
@@ -104,10 +107,24 @@ class Legend extends PolymerElement {
     this.onSelectChange();
   }
 
+    constructor() {
+    super();
+    this.setupLanguageListener();
+  }
+
+  setupLanguageListener() {
+    i18next.on('languageChanged', () => {
+      //更新语言后重新渲染
+      const t = this.t;
+      this.set('t', null);
+      this.set('t', t);
+    });
+  }
+
   // 选择列表中的下一个节点
   _selectNext(): void {
     if (!this.isCompareGraph) {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -116,7 +133,7 @@ class Legend extends PolymerElement {
     }
 
     if (isEmpty(this.items)) {
-      Notification.show('提示：列表为空', {
+      Notification.show(this.t('list_empty'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -130,7 +147,7 @@ class Legend extends PolymerElement {
     }
     const index = this.items.indexOf(this.selectedValue);
     if (index + 1 >= this.items.length) {
-      Notification.show('提示：已到达列表底部', {
+      Notification.show(this.t('bottom_of_list'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -145,7 +162,7 @@ class Legend extends PolymerElement {
   // 选择列表中的上一个节点
   _selectPrevious(): void {
     if (!this.isCompareGraph) {
-      Notification.show('提示：单图节点不支持匹配', {
+      Notification.show(this.t('build_not_support_match'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -154,7 +171,7 @@ class Legend extends PolymerElement {
     }
 
     if (isEmpty(this.items)) {
-      Notification.show('提示：列表为空', {
+      Notification.show(this.t('list_empty'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',
@@ -168,7 +185,7 @@ class Legend extends PolymerElement {
     }
     const index = this.items.indexOf(this.selectedValue);
     if (index - 1 < 0) {
-      Notification.show('提示：已到达列表顶部', {
+      Notification.show(this.t('top_of_list'), {
         position: 'middle',
         duration: 2000,
         theme: 'contrast',

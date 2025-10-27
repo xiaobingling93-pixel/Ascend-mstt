@@ -149,8 +149,8 @@ const useNodeInfo = (): UseNodeInfoType => {
     if (isEmpty(npuNode) && isEmpty(benchNode)) {
       return [];
     }
-    const nodeName = `NPU节点：${npuNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')}`;
-    const benchNodeName = `标杆节点：${benchNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')}`;
+    const nodeName = `NPU：${npuNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')}`;
+    const benchNodeName = `Debug：${benchNode?.name?.replace(new RegExp(`^(${NPU_PREFIX}|${BENCH_PREFIX})`), '')}`;
     const detailData: Array<Record<string, unknown>> = [];
     // 获取stackInfo
     const stackInfo: Record<string, unknown> = {};
@@ -182,12 +182,6 @@ const useNodeInfo = (): UseNodeInfoType => {
       detailData.push(parallelMergeInfo);
     }
     return detailData;
-  };
-
-  const converObjectToString = (obj: any): string => {
-    return Object.entries(obj)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n');
   };
 
   return {

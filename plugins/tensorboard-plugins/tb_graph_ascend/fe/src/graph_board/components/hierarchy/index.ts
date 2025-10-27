@@ -40,6 +40,7 @@ import type { UseGraphType } from '../../type';
 import type { HierarchyNodeType, ContextMenuItem, PreProcessDataConfigType, GraphType } from '../../type';
 import type { ContextMenuItemSelectedEvent } from '@vaadin/context-menu';
 import type { SelectionType } from '../../../graph_ascend/type';
+import i18next from 'i18next';
 
 const EXPAND_MATCHED_NODE = 1;
 const DATA_COMMUNICATION = 2;
@@ -119,6 +120,8 @@ class Hierarchy extends PolymerElement {
         <template>
     </div>
   `;
+    @property({ type: Object })
+    t: Function = (key) => i18next.t(key);
 
     @property({ type: String })
     graphType: GraphType = 'NPU';
@@ -371,7 +374,7 @@ class Hierarchy extends PolymerElement {
                 this.set('selectedNode', '');
                 this.set('selectedNode', tempSelectedNode);
             } else {
-                Notification.show(`更新图数据失败：${error}`, {
+                Notification.show(`${this.t('upadte_map_data_fail')}：${error}`, {
                     position: 'middle',
                     duration: 3000,
                     theme: 'error',
@@ -736,7 +739,7 @@ class Hierarchy extends PolymerElement {
             this.set('hierarchyData', hierarchyData);
             this.set('hierarchyObject', hierarchyObject);
         } else {
-            Notification.show(`展开失败：${error}`, {
+            Notification.show(`${this.t('expand_fail')}：${error}`, {
                 position: 'middle',
                 duration: 3000,
                 theme: 'error',
@@ -767,7 +770,7 @@ class Hierarchy extends PolymerElement {
                 : matchedPrefix + matchedNodeName; // 加上前缀
             return { matchedNodeName, selectedNode };
         } else {
-            Notification.show(`展开失败：当前节点及其父节点无匹配节点`, {
+            Notification.show(this.t('expand_fail_no_match_nodes'), {
                 position: 'middle',
                 duration: 3000,
                 theme: 'error',
