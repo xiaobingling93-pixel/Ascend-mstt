@@ -7,16 +7,17 @@ import { customElement, property, observe } from '@polymer/decorators';
 import { html, PolymerElement } from '@polymer/polymer';
 import request from '../../../utils/request';
 import { isEmpty } from 'lodash';
+import i18next from '../../../common/i18n'
 
 @customElement('tf-filter-precision-error')
 class TfFilterPrecisionError extends PolymerElement {
     static readonly template = html`
         <vaadin-confirm-dialog
           id="filter-dialog"
-          header="筛选精度误差计算指标"
+          header="[[t('screening_accuracy_error_metric')]]"
           cancel-button-visible
-          cancel-text="取消"
-          confirm-text="确认"
+          cancel-text="[[t('cancel')]]"
+          confirm-text="[[t('confirm')]]"
           confirm-theme=" primary"
           opened="{{filterDialogOpened}}"
         >
@@ -32,6 +33,8 @@ class TfFilterPrecisionError extends PolymerElement {
             </vaadin-checkbox-group>
         </vaadin-confirm-dialog>
     `
+    @property({ type: Object })
+    t: Function = (key) => i18next.t(key);
 
     @property({ type: Boolean, notify: true })
     filterDialogOpened: boolean = false;
@@ -80,7 +83,7 @@ class TfFilterPrecisionError extends PolymerElement {
 
     onFlterDialogConfirm = async (e: any) => {
         if (isEmpty(this.filterValue)) {
-            Notification.show(`错误: 精度误差计算指标为空，请选择指标`, {
+            Notification.show(this.t('precision_error'), {
                 position: 'middle',
                 duration: 1800,
                 theme: 'error',
@@ -102,14 +105,14 @@ class TfFilterPrecisionError extends PolymerElement {
             this.dispatchEvent(updateHierarchyData);
             this.set('filterDialogOpened', false);
             this.updateFilterData();
-            Notification.show(`操作成功：精度误差值已更新`, {
+            Notification.show(this.t('percision_update_success'), {
                 position: 'middle',
                 duration: 2000,
                 theme: 'success',
             });
         }
         else {
-            Notification.show(`精度误差计算错误${error}`, {
+            Notification.show(`${this.t('caluculate_precision_error')}${error}`, {
                 position: 'middle',
                 duration: 1800,
                 theme: 'error',

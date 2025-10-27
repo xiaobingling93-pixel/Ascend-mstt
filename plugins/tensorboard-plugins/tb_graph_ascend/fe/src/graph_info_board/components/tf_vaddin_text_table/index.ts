@@ -20,6 +20,7 @@ import '@vaadin/grid'; // 引入新的 Vaadin Grid 组件
 import '@vaadin/tooltip';
 import type { GridEventContext } from '@vaadin/grid';
 import { Notification } from '@vaadin/notification';
+import i18next from 'i18next';
 @customElement('tf-vaadin-text-table')
 class TfVaadinTable extends PolymerElement {
   static readonly template = html`
@@ -88,7 +89,7 @@ class TfVaadinTable extends PolymerElement {
       </vaadin-grid>
     </template>
     <template is="dom-if" if="[[isEmptyGrid]]">
-      <p class="no-data">当前节点暂无数据</p>
+      <p class="no-data">[[t('no_data')]]</p>
     </template>
   `;
 
@@ -110,8 +111,31 @@ class TfVaadinTable extends PolymerElement {
   })
   isEmptyGrid: boolean = false;
 
+  @property({ type: Object })
+  t: Function = (key) => i18next.t(key);
+
   renderDefaultValue!: (root: HTMLElement, column: any, rowData: any) => void;
   tooltipGenerator!: (context: GridEventContext<Record<string, string>>) => string;
+
+  private copyButtonElements: Set<HTMLButtonElement> = new Set();
+
+  constructor() {
+    super();
+    this.setupLanguageListener();
+  }
+
+  setupLanguageListener() {
+    i18next.on('languageChanged', () => {
+      // 更新语言后重新渲染
+      const t = this.t;
+      this.set('t', null);
+      this.set('t', t);
+      // 更新copy按钮文本
+      this.copyButtonElements.forEach(button => {
+          button.textContent = this.t('copy');
+      });
+    });
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -201,7 +225,7 @@ class TfVaadinTable extends PolymerElement {
 
     const button = document.createElement('button');
     button.className = 'copy-button';
-    button.textContent = '复制';
+    button.textContent = 'copy';
     button.style.display = 'none';
     button.onmousemove = () => {
       button.style.display = 'unset';
@@ -210,14 +234,14 @@ class TfVaadinTable extends PolymerElement {
       navigator.clipboard
         .writeText(textarea.value)
         .then(() => {
-          Notification.show('复制成功', {
+          Notification.show(this.t('copy_success'), {
             position: 'middle',
             duration: 1000,
             theme: 'success',
           });
         })
         .catch((err) => {
-          Notification.show('复制失败，请重试', {
+          Notification.show(this.t('copy_fail'), {
             position: 'middle',
             duration: 1000,
             theme: 'error',
@@ -225,6 +249,7 @@ class TfVaadinTable extends PolymerElement {
         });
     };
     container.appendChild(button);
+    this.copyButtonElements.add(button);
     root.appendChild(container);
   }
 

@@ -230,7 +230,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           <paper-checkbox  checked on-click="_toggleBenchMinimap">[[t('show_bench_minimap')]]</paper-checkbox>
         </template>
       </div>
-      <vaadin-checkbox class="sync-expand-checkbox" label="是否同步展开对应侧节点" checked={{isSyncExpand}}></vaadin-checkbox>
+      <vaadin-checkbox class="sync-expand-checkbox" label="[[t('shouldExpandNodesSync')]]" checked={{isSyncExpand}}></vaadin-checkbox>
       <div class="container-wrapper">
         <tf-main-controler
           t="[[t]]"

@@ -19,6 +19,7 @@ import { customElement, property, observe } from '@polymer/decorators';
 import './components/legend/index';
 import './components/hierarchy/index';
 import { MIN_GRAPG_WIDTH } from '../common/constant';
+import i18next from '../common/i18n';
 @customElement('graph-board')
 class MainGraph extends PolymerElement {
     static readonly template = html`
@@ -42,7 +43,9 @@ class MainGraph extends PolymerElement {
                 min-width: 320px;
             }
         </style>
-        <scene-legend></scene-legend>
+        <scene-legend
+            t="[[t]]"
+        ></scene-legend>
         <div id="container">
             <graph-hierarchy
                 id="NPU"
@@ -73,6 +76,8 @@ class MainGraph extends PolymerElement {
             </template>
         </div>
     `;
+    @property({ type: Object })
+    t: Function = (key) => i18next.t(key);
 
     @property({ type: Boolean })
     isSingleGraph = false;

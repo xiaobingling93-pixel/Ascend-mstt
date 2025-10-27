@@ -25,6 +25,9 @@ import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
 import '../tf_filter_precision_error/index'
+import i18next from '../../../common/i18n';
+import { t } from 'i18next';
+import { PaperButtonElement } from '@polymer/paper-button';
 @customElement('tf-color-select')
 class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   // 定义模板
@@ -174,6 +177,21 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           height: 30px;
           border-radius: 0;
         }
+
+        #left {
+          position: relative;
+          left: var(--color-config-left);
+        }
+
+        #right {
+          position: relative;
+          left: var(--color-config-right);
+        }
+
+        #addButton {
+          position: relative;
+          left: var(--color-config-add);
+        }
       </style>
       <template is="dom-if" if="[[enableConfig]]">
         <div class='container-wrapper'>
@@ -260,7 +278,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           <template is="dom-if" if="[[!_colorSetting]]">
             <div class="toolbar" id="colorSetting-toolbar" style="width: auto; cursor: default;">
               <span class="toggle-legend-text">
-                颜色设置
+                [[t('color_setting')]]
                 <div class="legend-clarifier">
                   <paper-tooltip animation-delay="0" position="right" offset="0">
                     <div class="custom-tooltip">
@@ -274,22 +292,22 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               </span>
               <div style="display: flex; margin-left: auto;">
               <button on-click="_defaultSetting" style="margin-right: 7px;">
-                  <span>预设配置</span>
+                  <span>[[t('preset_configuration')]]</span>
                 </button>
                 <button on-click="_confirmAction" style="margin-right: 7px;">
-                  <span>确认</span>
+                  <span>[[t('confirm')]]</span>
                 </button>
                 <button on-click="_cancelAction">
-                  <span>取消</span>
+                  <span>[[t('cancel')]]</span>
                 </button>
               </div>
             </div>
             <iron-collapse opened="[[_colors]]" class="legend-content" id="colorSetting-content" style="height: 150px; padding-top: 10px;">
               <div style="display: flex; align-items: center">
-                <div>颜色选择</div>
-                <div style="margin-left: 17px">左区间</div>
-                <div style="margin-left: 42px">右区间</div>
-                <button style="margin-left: 40px" on-click="_addOption">添加区间</button>
+                <div>[[t('color_selection')]]</div>
+                <div id="left">[[t('left_interval')]]</div>
+                <div id="right">[[t('right_interval')]]</div>
+                <button id="addButton" on-click="_addOption">[[t('add_range')]]</button>
               </div>
               <!-- 动态生成的隐藏选项 -->
               <template is="dom-repeat" items="[[colorSelects]]" as="item">
@@ -335,11 +353,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           </template>
         </div>
       </template>
-      <tf-filter-precision-error filter-dialog-opened="{{filterDialogOpened}}" update-filter-data="{{updateFilterData}}" selection="[[selection]]"/>
+      <tf-filter-precision-error t="[[t]]" filter-dialog-opened="{{filterDialogOpened}}" update-filter-data="{{updateFilterData}}" selection="[[selection]]"/>
     `;
 
   @property({ type: Object })
-  t: Function = () => '';
+  t: Function = (key) => i18next.t(key);
 
   @property({ type: Boolean })
   _colorSetting: boolean = true; // 颜色设置按钮
@@ -428,8 +446,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   precisionDesc: string = '';
 
   @property({ type: String })
-  unMatchedNodeName = this.t('no_matching_nodes')
+  unMatchedNodeName = t('no_matching_nodes')
 
+  private closeButtonElements: Set<PaperButtonElement> = new Set();
+  private titleElements: Set<HTMLHeadingElement> = new Set(); // 专门管理标题元素
 
   @observe('t')
   _observeT(): void {
@@ -443,6 +463,17 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       this.set('colorSetChanged', newSelectColor);
       this.set('unMatchedNodeName', this.t('no_matching_nodes'));
       this.set('precisionDesc', this.t(`precision_desc.${this.task}`));
+      this.updateStyles({
+        '--color-config-left': i18next.language === 'zh-CN' ? '16px' : '36px',
+        '--color-config-right': i18next.language === 'zh-CN' ? '56px' : '93px',
+        '--color-config-add': i18next.language === 'zh-CN' ? '100px' : '143px',
+      });
+      this.closeButtonElements.forEach(button => {
+          button.textContent = this.t('close');
+      });
+      this.titleElements.forEach(title => {
+          title.textContent = this.t('info');
+      });
     }
   }
 
@@ -536,7 +567,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
     }
     catch (error) {
-      Notification.show(`获取精度菜单失败，请检查 toggleCheckbox 和 vis 文件中的数据。`, {
+      Notification.show(this.t('retrieve_precision_menu_fail'), {
         position: 'middle',
         duration: 4000,
         theme: 'error',
@@ -575,7 +606,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const newColorsList = {};
     const len = this.colorSelects.length;
     if (len === 0) {
-      this.showDynamicDialog('配置失败，请添加配置项。');
+      this.showDynamicDialog(this.t('configuration_items_missing'));
       return;
     }
 
@@ -586,7 +617,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       const rightValue = this.colorSelects[i].values[1];
       // 检查每个组中的所有输入框是否都有值
       if (isNaN(leftValue) || isNaN(rightValue) || color === 'NaN') {
-        this.showDynamicDialog('配置失败，存在未配置项。');
+        this.showDynamicDialog(this.t('unconfigured_items_exist'));
         return;
       }
       // 将每个 color 和其对应的 leftValue 和 rightValue 作为 value 数组，设置到 colors 对象中
@@ -809,7 +840,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     dialog.id = 'dynamicDialog';
     // 添加标题
     const title = document.createElement('h2');
-    title.textContent = '提示';
+    title.textContent = 'Info';
+    this.titleElements.add(title);
     dialog.appendChild(title);
     // 添加提示内容
     const content = document.createElement('div');
@@ -820,7 +852,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     buttonContainer.classList.add('buttons');
     const closeButton = document.createElement('paper-button');
     closeButton.setAttribute('dialog-dismiss', '');
-    closeButton.textContent = '关闭';
+    closeButton.textContent = 'close';
+    this.closeButtonElements.add(closeButton);
     buttonContainer.appendChild(closeButton);
     dialog.appendChild(buttonContainer);
     // 添加到 shadow DOM
