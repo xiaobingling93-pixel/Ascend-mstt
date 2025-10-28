@@ -48,11 +48,9 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 
-
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
     raise ValueError("monitor require torch>=2.0")
-
 
 FORMAT_MAPPING = {
     MonitorConst.TENSORBOARD: SummaryWriterWithAD,
@@ -732,9 +730,9 @@ class TrainerMon:
             # 静态在第0步就可以保存, 动态在第0步不可以, 因为动态设计的就是重置后下一步开启, 第0步的self.monitoring还是False
             if self.monitoring:
                 module_rank_valid = not self.module_rank_list or (
-                            dist.is_initialized() and dist.get_rank() in self.module_rank_list)
+                        dist.is_initialized() and dist.get_rank() in self.module_rank_list)
                 step_condition = (context.step >= self.start_step and (
-                            context.step - self.start_step) % self.step_interval == 0)
+                        context.step - self.start_step) % self.step_interval == 0)
                 if module_rank_valid and step_condition:
                     self.has_collect_times += 1
 
@@ -791,6 +789,7 @@ class TrainerMon:
                     hook(optimizer, args, kwargs)
                 step_final_hook(optimizer, args, kwargs)
                 return out
+
             return wrapper
 
         optimizer.__class__.step = patch_step(optimizer.__class__.step, optimizer)
@@ -1013,11 +1012,11 @@ class TrainerMon:
                 vpp_stage + module_name,
             ]:
                 if pattern in l2_targets:
-                    return pattern 
+                    return pattern
         elif hook_name in ["linear_hook"]:
             return vpp_stage + squash_param_name(module_name, self.squash_name)
         return ""
-    
+
     def _hook_module(self, target_names, l2_target_names, module: torch.nn.Module, vpp_stage=''):
         if '_modules' not in module.__dict__:
             # nothing to hook
@@ -1151,7 +1150,7 @@ class TrainerMon:
                 context.micro_step = 0
                 context.step += 1
             return
-        
+
         def stack_hook(module, args, kwargs, module_output, name):
             if module not in self.module_fwd_hook_context_by_module:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
@@ -1221,7 +1220,7 @@ class TrainerMon:
         if self.monitor_mbs_grad:
             self._hook_weights()
             return
-        
+
         self.optimizer_mon.patch_grad_sync(self)
 
         if self.enable_megatron or self.enable_deepspeed:
@@ -1281,6 +1280,7 @@ class TrainerMon:
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = foreach_reduce(fsdp_params, unsharded_grads, *unused)
                 return out
+
             return wrapper
 
         logger.info("Patch fsdp2 foreach_reduce, collect pre_grad metrics.")

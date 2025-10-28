@@ -13,7 +13,6 @@ from msprobe.pytorch.monitor.utils import get_param_struct
 from msprobe.pytorch.common.utils import is_recomputation
 
 
-
 class TestValidationFunctions(unittest.TestCase):
 
     def test_get_output_base_dir(self):
@@ -112,7 +111,7 @@ class TestValidationFunctions(unittest.TestCase):
         self.assertEqual(config["targets"], {"": {}})
         self.assertEqual(config["all_xy"], True)
 
-     # ===== validate_l2_targets 测试 =====
+    # ===== validate_l2_targets 测试 =====
     def test_validate_l2_targets_valid_input(self):
         """测试合法输入"""
         valid_targets = {
@@ -125,43 +124,43 @@ class TestValidationFunctions(unittest.TestCase):
         """测试非 dict 输入"""
         with self.assertRaises(TypeError) as cm:
             validate_l2_targets("not_a_dict")
-        self.assertEqual(str(cm.exception), 
-                        'l2_targets in config.json should be a dict')
+        self.assertEqual(str(cm.exception),
+                         'l2_targets in config.json should be a dict')
 
     def test_validate_l2_targets_invalid_hook_name(self):
         """测试非法 hook_name"""
         with self.assertRaises(TypeError) as cm:
             validate_l2_targets({"invalid_hook": ["module1"]})
-        self.assertIn(f'key of l2_targtes must be in {MonitorConst.L2_HOOKS}', 
-                     str(cm.exception))
+        self.assertIn(f'key of l2_targtes must be in {MonitorConst.L2_HOOKS}',
+                      str(cm.exception))
 
     def test_validate_l2_targets_invalid_value_type(self):
         """测试非法 value 类型"""
         with self.assertRaises(TypeError) as cm:
             validate_l2_targets({"linear_hook": "not_a_list"})
-        self.assertEqual(str(cm.exception), 
-                        'values of l2_targets should be a list in config.json')
+        self.assertEqual(str(cm.exception),
+                         'values of l2_targets should be a list in config.json')
 
     def test_validate_l2_targets_invalid_item_type(self):
         """测试非法 list item 类型"""
         with self.assertRaises(TypeError) as cm:
             validate_l2_targets({"linear_hook": [123]})
-        self.assertEqual(str(cm.exception), 
-                        'item of "linear_hook" in l2_targets should be module_name[str] in config.json')
+        self.assertEqual(str(cm.exception),
+                         'item of "linear_hook" in l2_targets should be module_name[str] in config.json')
 
     # ===== validate_recording_l2_features 测试 =====
     def test_validate_recording_l2_features_valid(self):
         """测试合法布尔值输入"""
-        validate_recording_l2_features(True)  
-        validate_recording_l2_features(False)  
+        validate_recording_l2_features(True)
+        validate_recording_l2_features(False)
 
     def test_validate_recording_l2_features_invalid_type(self):
         """测试非法类型输入"""
         with self.assertRaises(TypeError) as cm:
             validate_recording_l2_features("xx")
-            self.assertEqual(str(cm.exception), 
-                            "recording_l2_features should be a bool")
-            
+            self.assertEqual(str(cm.exception),
+                             "recording_l2_features should be a bool")
+
     def test_valid_orders(self):
         validate_sa_order("b,s,h,d")
         validate_sa_order("s, b,h,  d")
@@ -169,8 +168,9 @@ class TestValidationFunctions(unittest.TestCase):
     def test_invalid_orders(self):
         with self.assertRaises(TypeError) as cm:
             validate_recording_l2_features("xx")
-            self.assertEqual(str(cm.exception), 
-                            f'sa_order must be in {MonitorConst.SA_ORDERS}, got xx')
+            self.assertEqual(str(cm.exception),
+                             f'sa_order must be in {MonitorConst.SA_ORDERS}, got xx')
+
 
 class TestIsRecomputation(unittest.TestCase):
     @patch('inspect.stack')

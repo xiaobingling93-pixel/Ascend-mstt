@@ -312,7 +312,6 @@ class TrainerMon:
         self.recording_l2_features = self.config.get('recording_l2_features', False)
         self.sa_order = self.config.get('sa_order', "s,b,h,d")
 
-
         if not self.cc_distribution.get('enable', False):
             self.cc_log_only = False
         else:
@@ -403,7 +402,7 @@ class TrainerMon:
             if self.monitoring:
                 module_rank_valid = self.is_target_rank()
                 step_condition = (context.step >= self.start_step and (
-                            context.step - self.start_step) % self.step_interval == 0)
+                        context.step - self.start_step) % self.step_interval == 0)
                 if module_rank_valid and step_condition:
                     self.has_collect_times += 1
 
@@ -447,6 +446,7 @@ class TrainerMon:
                     hook(optimizer, args, kwargs)
                 step_final_hook(optimizer, args, kwargs)
                 return out
+
             return wrapper
 
         if self.is_mindtorch:
@@ -541,7 +541,7 @@ class TrainerMon:
             if self.mv_distribution or self.ur_distribution or self.mg_direction:
                 if self.is_mindtorch:
                     context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, \
-                    context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
+                        context.param_adam_ratio = self.optimizer_mon.fetch_mv(self, self.param2name)
                 else:
                     context.param_exp_avg, context.param_exp_avg_sq = self.get_mv_for_ms(optimizer)
 
@@ -563,7 +563,6 @@ class TrainerMon:
         def optimizer_post_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
             self.generate_param_metrics(context, MonitorConst.POST_PARAM)
-
 
         if self.optimizer_hooked or not self.is_target_rank():
             return
@@ -810,7 +809,7 @@ class TrainerMon:
                     f'{context.module_name}.{Const.INPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
                     MonitorConst.ACTV, module_input))
             module_output = [tensor for tensor in module_output if isinstance(tensor, Tensor)] \
-                            if isinstance(module_output, tuple) else module_output
+                if isinstance(module_output, tuple) else module_output
             tbtag_tensor_map.update(
                 self.build_tbtag_tensor_map(
                     f'{context.module_name}.{Const.OUTPUT}', f'{MonitorConst.NAME_SEP}{context.micro_step}',
@@ -868,11 +867,13 @@ class TrainerMon:
             if version.parse(mindspore.__version__) >= version.parse('2.6.0'):
                 def wrapper(module, args, kwargs, module_output):
                     return fwd_hook_fun(module, args, kwargs, module_output, name)
+
                 return module.register_forward_hook(wrapper, with_kwargs=True)
 
             else:
                 def wrapper(module, args, module_output):
                     return fwd_hook_fun(module, args, None, module_output, name)
+
                 return module.register_forward_hook(wrapper)
 
         def extract_attention_feature_hook(module, args, kwargs, module_output, name):
@@ -880,7 +881,7 @@ class TrainerMon:
             if kwargs:
                 kwargs_tensors = [tensor for tensor in kwargs.values() if isinstance(tensor, Tensor)]
                 module_input.extend(kwargs_tensors)
-            
+
             if module not in self.feature_hook_context_by_module:
                 self.feature_hook_context_by_module[module] = FeatureHookContext(name)
             context: FeatureHookContext = self.feature_hook_context_by_module[module]
@@ -890,7 +891,7 @@ class TrainerMon:
                 logger.warning(
                     "Calculate attention feature failed, the length of module_input in attention hook's module should "
                     "be greater than or equal to 2.")
-            
+
             q_h = module_input[0]
             k_h = module_input[1]
             qkt = cal_qkt(q_h, k_h, order=self.sa_order)
