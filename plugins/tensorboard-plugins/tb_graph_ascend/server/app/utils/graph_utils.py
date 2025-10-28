@@ -389,6 +389,9 @@ class GraphUtils:
                 current_uid = os.getuid() 
                 # 如果是root用户，跳过后续权限检查
                 if current_uid == 0:
+                    logger.warning("""Security Warning: Do not run this tool as root. 
+                                   Running with elevated privileges may compromise system security. 
+                                   Use a regular user account.""")
                     return True, None
                 # 属主检查
                 if st.st_uid != current_uid:
@@ -452,7 +455,10 @@ class GraphUtils:
                 current_uid = os.getuid() 
                 # 如果是root用户，跳过后续权限检查
                 if current_uid == 0:
-                    return True, None
+                    logger.warning("""Security Warning: Do not run this tool as root. 
+                                   Running with elevated privileges may compromise system security. 
+                                   Use a regular user account.""")
+                    return True, None 
                 # 属主检查
                 if st.st_uid != current_uid:
                     raise PermissionError(
@@ -587,6 +593,23 @@ class GraphUtils:
             return False
 
         return True
+    
+    @staticmethod
+    def escape_html(input_str):
+        """
+        将字符串中的特殊 HTML 字符转义为 HTML 实体。
+        """
+        html_escape_map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '/': '&#x2F;',
+        }
+        # 使用 str.translate 配合 str.maketrans 提高性能
+        translate_table = str.maketrans(html_escape_map)
+        return input_str.translate(translate_table)
 
     @staticmethod
     def validate_colors_param(colors_json: str):
@@ -633,5 +656,6 @@ class GraphUtils:
             desc = value.get('description', '')
             if not GraphUtils.is_safe_string(desc):
                 return False, f"{GraphUtils.t('descriptionError')}{key}", {}
+            value['description'] = GraphUtils.escape_html(desc)
 
         return True, None, colors_json
