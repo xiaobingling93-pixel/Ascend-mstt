@@ -24,8 +24,8 @@ def setup_param_groups(num_groups=2, params_per_group=5):
         offset = 0
         for i in range(params_per_group):
             name = f'param{group_idx}_{i}'
-            p = torch.nn.Parameter(torch.randn(2,3, dtype=torch.bfloat16))
-            p.ds_tensor = torch.nn.Parameter(torch.randn(1,3, dtype=torch.bfloat16))
+            p = torch.nn.Parameter(torch.randn(2, 3, dtype=torch.bfloat16))
+            p.ds_tensor = torch.nn.Parameter(torch.randn(1, 3, dtype=torch.bfloat16))
             p.ds_id = count
             param_slice_mapping[name] = MagicMock(start=offset, numel=p.numel())
             group.append(p)
@@ -35,8 +35,9 @@ def setup_param_groups(num_groups=2, params_per_group=5):
             count += 1
         bit16_groups.append(group)
         param_slice_mappings.append(param_slice_mapping)
-    
-    return  bit16_groups, param_names, param_slice_mappings, grad_position
+
+    return bit16_groups, param_names, param_slice_mappings, grad_position
+
 
 def setup_mock_monitor():
     mock_monitor = MagicMock()
@@ -45,6 +46,7 @@ def setup_mock_monitor():
     mock_monitor.ur_distribution = False
 
     return mock_monitor
+
 
 class TestOptimizerMon(unittest.TestCase):
     def setUp(self) -> None:
@@ -202,8 +204,8 @@ class TestDeepSpeedZeroOptimizer(unittest.TestCase):
 
     def test_param_not_in_partition(self):
         param_in_partition = list(self.torch_opt.param_names.keys())[0]
-        param_not_in_partition = torch.randn(2,3)
-        
+        param_not_in_partition = torch.randn(2, 3)
+
         self.assertFalse(
             self.optimizer_mon.param_not_in_partition(param_in_partition, 0)
         )
@@ -221,6 +223,7 @@ class TestDeepSpeedZeroOptimizer(unittest.TestCase):
         param = list(self.torch_opt.param_names.keys())[6]
         self.assertEqual(self.optimizer_mon.param2group[param], 1)
 
+
 class TestDeepSpeedZeroOptimizerStage0Mon(unittest.TestCase):
     def setUp(self):
         bit16_groups, param_names, param_slice_mappings, _ = setup_param_groups()
@@ -231,14 +234,14 @@ class TestDeepSpeedZeroOptimizerStage0Mon(unittest.TestCase):
         }
         mock_opt.param_names = param_names
         mock_opt.bf16_groups = bit16_groups
-        mock_opt.fp32_groups_flat_partition = [torch.stack(group,dim=0).flatten().float() \
-                                               for group in bit16_groups]# mock name 2 index in subgroup
+        mock_opt.fp32_groups_flat_partition = [torch.stack(group, dim=0).flatten().float() \
+                                               for group in bit16_groups]  # mock name 2 index in subgroup
         mock_opt.state = {
             flat_group: {
                 'exp_avg': torch.ones_like(flat_group),
                 'exp_avg_sq': torch.ones_like(flat_group)
             } for flat_group in mock_opt.fp32_groups_flat_partition
-        } 
+        }
         mock_opt.cpu_offload = False
 
         self.torch_opt = mock_opt
@@ -246,7 +249,7 @@ class TestDeepSpeedZeroOptimizerStage0Mon(unittest.TestCase):
         self.optimizer_mon = DeepSpeedZeroOptimizerStage0Mon(mock_opt)
 
     def test_get_grad_for_param(self):
-        param = list(self.torch_opt.param_names.keys())[0] 
+        param = list(self.torch_opt.param_names.keys())[0]
         group_idx = 0
         param_id = 2
         grad_expected = torch.randn_like(param)
@@ -256,18 +259,20 @@ class TestDeepSpeedZeroOptimizerStage0Mon(unittest.TestCase):
         self.assertTrue(torch.equal(grad_expected, grad))
 
     def test_fetch_grad(self):
-        self.torch_opt.fp32_groups_gradient_dict = [[torch.randn_like(param) for param in group] for group in self.optimizer_mon.bit16_groups]
-        self.mock_monitor.name2tag = {name:{MonitorConst.POST_GRAD: name} for name in self.torch_opt.param_names.values()}
+        self.torch_opt.fp32_groups_gradient_dict = [[torch.randn_like(param) for param in group] for group in
+                                                    self.optimizer_mon.bit16_groups]
+        self.mock_monitor.name2tag = {name: {MonitorConst.POST_GRAD: name} for name in
+                                      self.torch_opt.param_names.values()}
         result = self.optimizer_mon.fetch_grad(self.mock_monitor, self.torch_opt.param_names)
         for _, name in self.torch_opt.param_names.items():
-            group_index, param_id = [int(i) for i in name.replace('param','').split('_')]
+            group_index, param_id = [int(i) for i in name.replace('param', '').split('_')]
             self.assertTrue(torch.equal(result[name], self.torch_opt.fp32_groups_gradient_dict[group_index][param_id]))
 
     def test_fetch_mv(self):
         del self.torch_opt.chained_optimizers
         del self.torch_opt.param_to_cpu_states_map
         result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt.param_names)
-        for param, name in self.torch_opt.param_names.items():  
+        for param, name in self.torch_opt.param_names.items():
             self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
             self.assertTrue(torch.equal(result.exp_avg_sq[name], torch.ones_like(param).flatten()))
 
@@ -282,15 +287,16 @@ class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
         }
         mock_opt.param_names = param_names
         mock_opt.bit16_groups = bit16_groups
-        mock_opt.single_partition_of_fp32_groups = [torch.stack(group,dim=0).flatten().float() \
-                                               for group in bit16_groups]
-        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group] for group_idx, group in enumerate(bit16_groups)}# mock name 2 index in subgroup
+        mock_opt.single_partition_of_fp32_groups = [torch.stack(group, dim=0).flatten().float() \
+                                                    for group in bit16_groups]
+        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group] for group_idx, group in
+                                       enumerate(bit16_groups)}  # mock name 2 index in subgroup
         mock_opt.state = {
             flat_group: {
                 'exp_avg': torch.ones_like(flat_group),
                 'exp_avg_sq': torch.ones_like(flat_group)
             } for flat_group in mock_opt.single_partition_of_fp32_groups
-        } 
+        }
         mock_opt.cpu_offload = False
 
         self.torch_opt = mock_opt
@@ -298,7 +304,7 @@ class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
         self.optimizer_mon = DeepSpeedZeroOptimizerStage1or2Mon(mock_opt)
 
     def test_get_grad_for_param(self):
-        param = list(self.torch_opt.param_names.keys())[0] 
+        param = list(self.torch_opt.param_names.keys())[0]
         group_idx = 0
         param_id = 2
         grad_expected = torch.randn_like(param)
@@ -308,17 +314,18 @@ class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
         self.assertTrue(torch.equal(grad_expected, grad))
 
     def test_fetch_grad(self):
-        self.mock_monitor.name2tag = {name:{MonitorConst.POST_GRAD: name} for name in self.torch_opt.param_names.values()}
+        self.mock_monitor.name2tag = {name: {MonitorConst.POST_GRAD: name} for name in
+                                      self.torch_opt.param_names.values()}
         result = self.optimizer_mon.fetch_grad(self.mock_monitor, self.torch_opt.param_names)
         for param, name in self.torch_opt.param_names.items():
-            group_index, param_id = [int(i) for i in name.replace('param','').split('_')]
+            group_index, param_id = [int(i) for i in name.replace('param', '').split('_')]
             self.assertTrue(torch.equal(result[name], self.torch_opt.averaged_gradients[group_index][param_id]))
 
     def test_fetch_mv(self):
         del self.torch_opt.chained_optimizers
         del self.torch_opt.param_to_cpu_states_map
         result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt.param_names)
-        for param, name in self.torch_opt.param_names.items():  
+        for param, name in self.torch_opt.param_names.items():
             self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
             self.assertTrue(torch.equal(result.exp_avg_sq[name], torch.ones_like(param).flatten()))
 
@@ -330,9 +337,9 @@ class TestDeepSpeedZeroOptimizerStage3Mon(unittest.TestCase):
         mock_opt = MagicMock()
         mock_opt.param_names = param_names
         mock_opt.fp16_groups = bit16_groups
-        mock_opt.fp32_partitioned_groups_flat = [torch.stack(group,dim=0).flatten().float()
+        mock_opt.fp32_partitioned_groups_flat = [torch.stack(group, dim=0).flatten().float()
                                                  for group in bit16_groups]
-        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group] 
+        mock_opt.averaged_gradients = {group_idx: [torch.randn_like(param) for param in group]
                                        for group_idx, group in enumerate(bit16_groups)}
         mock_opt.grad_position = grad_position
         mock_opt.get_param_id = lambda x: int(param_names[x].split('_')[1])
@@ -341,24 +348,25 @@ class TestDeepSpeedZeroOptimizerStage3Mon(unittest.TestCase):
                 'exp_avg': torch.ones_like(flat_group),
                 'exp_avg_sq': torch.ones_like(flat_group)
             } for flat_group in mock_opt.fp32_partitioned_groups_flat
-        } 
+        }
 
         self.torch_opt = mock_opt
         self.optimizer_mon = DeepSpeedZeroOptimizerStage3Mon(mock_opt)
         self.mock_monitor = setup_mock_monitor()
 
     def test_fetch_grad(self):
-        self.mock_monitor.name2tag = {name:{MonitorConst.POST_GRAD: name} for name in self.torch_opt.param_names.values()}
+        self.mock_monitor.name2tag = {name: {MonitorConst.POST_GRAD: name} for name in
+                                      self.torch_opt.param_names.values()}
         result = self.optimizer_mon.fetch_grad(self.mock_monitor, self.torch_opt.param_names)
         for param, name in self.torch_opt.param_names.items():
-            group_index, param_id = [int(i) for i in name.replace('param','').split('_')]
+            group_index, param_id = [int(i) for i in name.replace('param', '').split('_')]
             self.assertTrue(torch.equal(result[name], self.torch_opt.averaged_gradients[group_index][param_id]))
 
     def test_fetch_mv(self):
         del self.torch_opt.chained_optimizers
         del self.torch_opt.param_to_cpu_states_map
         result = self.optimizer_mon.fetch_mv(self.mock_monitor, self.torch_opt.param_names)
-        for param, name in self.torch_opt.param_names.items():  
+        for param, name in self.torch_opt.param_names.items():
             self.assertTrue(torch.equal(result.exp_avg[name], torch.ones_like(param).flatten()))
             self.assertTrue(torch.equal(result.exp_avg_sq[name], torch.ones_like(param).flatten()))
 

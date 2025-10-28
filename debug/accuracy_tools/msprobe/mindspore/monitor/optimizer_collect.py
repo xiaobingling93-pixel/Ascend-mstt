@@ -28,7 +28,7 @@ class OptimizerMon(object):
 
     def narrow_from_flatten(self, param, flatten_state):
         return flatten_state
-    
+
     def get_state(self, optim):
         if hasattr(optim, 'chained_optimizers'):
             for opt in optim.chained_optimizers:
@@ -52,7 +52,7 @@ class OptimizerMon(object):
             if param.numel() != element_in_cur_partition:
                 if first_param:
                     grad = grad.flatten()[-element_in_cur_partition:]
-                else: # supposed to be the last one
+                else:  # supposed to be the last one
                     grad = grad.flatten()[:element_in_cur_partition]
             first_param = False
             if grad is None:
@@ -61,7 +61,7 @@ class OptimizerMon(object):
             monitor.register_param_call_id("hook_optimizer", tag)
             grad_dict[tag] = grad
         return grad_dict
-    
+
     def map_fp16_to_fp32_param(self, optim):
         pass
 
@@ -115,7 +115,7 @@ class OptimizerMon(object):
                     monitor.update_heatmap_visualizer[name].pre_cal(update_dict[name])
                     monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
         return exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict
-    
+
     def _get_single_state(self, optim):
         state = {}
         if hasattr(optim, 'param_to_cpu_states_map'):
@@ -132,6 +132,7 @@ class MixPrecisionOptimizerMon(OptimizerMon):
     混合精度优化器监控类。在混合精度训练中监控和管理优化器。
     混合精度训练通过适当降低某些计算的精度来加速训练过程并减少内存消耗。
     """
+
     def map_fp16_to_fp32_param(self, optim):
         for fp16_group, fp32_group in zip(optim.float16_groups, optim.fp32_from_float16_groups):
             for fp16_param, fp32_param in zip(fp16_group, fp32_group):
@@ -175,6 +176,7 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
     - Handling gradient collection for different ZeRO stages
     - Managing optimizer state access for monitoring
     """
+
     def __init__(self, optim):
         super().__init__(optim)
         self.stage = ''
@@ -187,12 +189,12 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
     @abstractmethod
     def get_grad_for_param(self, lp_param, group_idx, param_id):
         raise NotImplementedError
-    
+
     def param_not_in_partition(self, lp_param, group_idx):
         param_slice_mapping = self.optim.state_dict()['param_slice_mappings'][group_idx]
         hp_address = param_slice_mapping.get(self.optim.param_names.get(lp_param))
         return hp_address is None
-    
+
     def get_position(self, lp_param, group_idx):
         param_slice_mapping = self.optim.state_dict()['param_slice_mappings'][group_idx]
         hp_address = param_slice_mapping.get(self.optim.param_names.get(lp_param))
@@ -204,7 +206,7 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
             for param in bit16_group:
                 param2group[param] = group_idx
         return param2group
-    
+
     def get_param_index(self, lp_param, group_idx):
         if not self.param2index:
             for group in self.bit16_groups:
@@ -212,9 +214,9 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
                 for index, param in enumerate(group):
                     param2index[param] = index
                 self.param2index.append(param2index)
-                
+
         return self.param2index[group_idx][lp_param]
-    
+
     def narrow_from_flatten(self, param, flatten_state):
         if flatten_state is None:
             return flatten_state
@@ -223,7 +225,7 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
             return None
         start, numel = self.get_position(param, group_idx)
         return flatten_state.narrow(0, start, numel)
-        
+
     def map_fp16_to_fp32_param(self, optim):
         for group_idx, group in enumerate(self.bit16_groups):
             for param in group:
@@ -253,7 +255,7 @@ class DeepSpeedZeroOptimizerStage0Mon(DeepSpeedZeroOptimizerMon):
         self.bit16_groups = optim.bf16_groups
         self.fp32_flat_groups = optim.fp32_groups_flat_partition
         self.param2group = self.get_group_index()
-            
+
     def get_grad_for_param(self, lp_param, group_idx, param_id):
         return self.optim.fp32_groups_gradient_dict[group_idx][param_id]
 
@@ -298,11 +300,11 @@ class DeepSpeedZeroOptimizerStage3Mon(DeepSpeedZeroOptimizerMon):
     def param_not_in_partition(self, lp_param, group_idx):
         """Each param partioned across all zero ranks"""
         return False
-    
+
     def get_position(self, lp_param, group_idx):
         param_id = self.optim.get_param_id(lp_param)
         return self.optim.grad_position[param_id][1:]
-    
+
     def get_grad_for_param(self, lp_param, group_idx, param_id):
         return self.optim.averaged_gradients[group_idx][param_id]
 
