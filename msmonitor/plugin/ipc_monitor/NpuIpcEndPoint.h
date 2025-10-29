@@ -178,6 +178,9 @@ public:
     std::vector<fileDesT> GetFileDes(const Ctxt &ctxt) const
     {
         struct cmsghdr *cmg = CMSG_FIRSTHDR(&ctxt.msghdl);
+        if (!cmg) {
+            throw std::runtime_error("CMSG_FIRSTHDR returned nullptr.");
+        }
         unsigned numFileDes = (cmg->cmsg_len - sizeof(struct cmsghdr)) / sizeof(fileDesT);
         return { ctxt.fileDesPtr, ctxt.fileDesPtr + numFileDes };
     }
@@ -221,6 +224,9 @@ protected:
         ctxt->msghdr.msg_controllen = CMSG_SPACE(fileDesSize);
 
         struct cmsghdr *cmsg = CMSG_FIRSTHDR(&ctxt->msghdr);
+        if (!cmsg) {
+            throw std::runtime_error("CMSG_FIRSTHDR returned nullptr.");
+        }
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_RIGHTS;
         cmsg->cmsg_len = CMSG_LEN(fileDesSize);
