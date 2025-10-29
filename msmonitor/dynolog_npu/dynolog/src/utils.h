@@ -28,5 +28,6 @@ struct PathUtils {
     static bool IsSoftLink(const std::string &path);
     static bool IsFile(const std::string &path);
 };
+bool IsRoot();
 }
 #endif

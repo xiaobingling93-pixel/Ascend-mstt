@@ -120,4 +120,9 @@ bool PathUtils::DirPathCheck(const std::string &path)
     }
     return true;
 }
+
+bool IsRoot()
+{
+    return getuid() == 0;
+}
 }

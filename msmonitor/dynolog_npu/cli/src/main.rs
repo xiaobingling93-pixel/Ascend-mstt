@@ -35,6 +35,7 @@ use commands::nputrace::NpuTraceOptions;
 use commands::nputrace::NpuTraceTriggerConfig;
 use commands::npumonitor::NpuMonitorConfig;
 use commands::path::PathUtils;
+use commands::utils;
 use commands::*;
 
 /// Instructions on adding a new Dyno CLI command:
@@ -689,6 +690,13 @@ fn create_dyno_client_with_certs(
 
 
 fn main() -> Result<()> {
+    if utils::is_root() {
+        println!(
+            "Security Warning: Do not run this tool as root. \
+            Running with elevated privileges may compromise system security. \
+            Use a regular user account."
+        );
+    }
     let Opts {
         hostname,
         port,
