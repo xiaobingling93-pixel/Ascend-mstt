@@ -152,7 +152,13 @@ class ModuleProcesser:
         modules_and_names_with_index = self.get_modules_and_names(models, recursive, module_names)
         for index, modules_and_names in modules_and_names_with_index.items():
             model = models if index == "-1" else models[int(index)]
+            
+            model_list = []
             for name, module in modules_and_names:
+                model_list.append((name, module))
+            
+            is_verl = "verl" in sys.modules
+            for idx, (name, module) in enumerate(model_list):
                 if recursive and module == model:
                     continue
                 if not is_torch_nn_module(module):
@@ -163,6 +169,13 @@ class ModuleProcesser:
                     continue
                 if module.__class__.__name__ == "FullyShardedDataParallel":
                     continue
+                
+                # verl 场景下跳过第一层和最后一层
+                if is_verl and (idx == 1 or idx == len(model_list) - 1):
+                    logger.warning(f"The module {name} is the first or last layer in verl scenario, "
+                                   f"the data dump for this module will be skipped.")
+                    continue
+                
                 setattr(module, 'msprobe_hook', True)
                 module_index = (index + Const.SEP) if index != "-1" else ""
                 prefix_name = f'{BaseScope.Module_Type_Module}{Const.SEP}{module_index}{name}{Const.SEP}' + \
