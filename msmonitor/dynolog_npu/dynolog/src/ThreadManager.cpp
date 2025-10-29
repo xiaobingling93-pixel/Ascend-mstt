@@ -20,6 +20,7 @@
 #include <gflags/gflags.h>
 #include <chrono>
 #include <cstdlib>
+#include "dynolog/src/utils.h"
 #include "dynolog/src/Logger.h"
 
 #include "dynolog/src/PerfMonitor.h"
@@ -208,6 +209,11 @@ void ThreadManager::run(int argc, char** argv)
     FLAGS_logtostderr = 1;
     google::InitGoogleLogging(argv[0]);
 
+    if (dynolog::IsRoot()) {
+        LOG(WARNING) << "Security Warning: Do not run this tool as root. "
+                     << "Running with elevated privileges may compromise system security. "
+                     << "Use a regular user account.";
+    }
     LOG(INFO) << "Starting Ascend Extension for dynolog, version = " DYNOLOG_VERSION
         << ", build git-hash = " DYNOLOG_GIT_REV;
 

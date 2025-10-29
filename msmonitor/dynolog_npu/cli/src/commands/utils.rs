@@ -9,6 +9,8 @@ use anyhow::Result;
 
 use crate::DynoClient;
 
+use nix::unistd::Uid;
+
 pub fn send_msg(client: &mut DynoClient, msg: &str) -> Result<()> {
     match client {
         DynoClient::Secure(secure_client) => {
@@ -47,4 +49,8 @@ pub fn get_resp(client: &mut DynoClient) -> Result<String> {
     }
     
     Ok(String::from_utf8(resp_buf)?)
+}
+
+pub fn is_root() -> bool {
+    Uid::current().is_root()
 }
