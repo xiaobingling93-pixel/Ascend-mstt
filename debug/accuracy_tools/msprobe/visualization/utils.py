@@ -152,7 +152,8 @@ def load_parallel_param(input_param):
 
 
 def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
-    params = [parallel_param.tp, parallel_param.pp, parallel_param.rank_size]
+    pattern = re.compile(r'^[a-z\-]+$')
+    params = [parallel_param.tp, parallel_param.pp, parallel_param.rank_size, parallel_param.vpp]
     ranks = check_and_return_dir_contents(dump_path, Const.RANK)
     if len(ranks) != parallel_param.rank_size:
         logger.error(f'{log_prefix} The parallel param "rank_size" error, '
@@ -160,6 +161,12 @@ def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if any(x is None for x in params):
         logger.error(f'{log_prefix} The parallel params "tp/pp/rank_size" must not be null!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if any(isinstance(x, bool) for x in params):
+        logger.error(f'{log_prefix} The parallel params "tp/pp/vpp/rank_size" must not be bool!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if any(not isinstance(x, int) for x in params):
+        logger.error(f'{log_prefix} The parallel params "tp/pp/vpp/rank_size" must be int!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if any(x <= 0 for x in params):
         logger.error(f'{log_prefix} The parallel params "tp/pp/vpp/rank_size" must be greater than 0!')
@@ -184,6 +191,9 @@ def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if not isinstance(parallel_param.order, str):
         logger.error(f'{log_prefix} The parallel params "order" must be of string type!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if not pattern.match(parallel_param.order):
+        logger.error(f'{log_prefix} The parallel params "order" must consist only of lowercase letters and "-"!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
 
