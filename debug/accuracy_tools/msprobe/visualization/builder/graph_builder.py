@@ -74,6 +74,7 @@ class GraphBuilder:
             config.graph_b.data_source = GraphConst.JSON_BENCH_KEY
             config.graph_b.step = config.step
             config.graph_b.rank = config.rank
+            config.graph_b.compare_mode = config.compare_mode
             node_to_db(config.graph_b, filename)
         config_to_db(config, filename)
 
