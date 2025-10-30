@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -13,13 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-from .compare.distributed_compare import compare_distributed
-from .compare.pt_compare import compare
-from .common.utils import seed_all
-from .debugger.precision_debugger import PrecisionDebugger, module_dump, module_dump_end
 from .torchair_dump import set_fx_dump_config, set_ge_dump_config
-
-torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
-if torch_version_above_or_equal_2:
-    from msprobe.pytorch.monitor.module_hook import TrainerMon
