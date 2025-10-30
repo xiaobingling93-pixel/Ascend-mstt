@@ -14,16 +14,16 @@
 # limitations under the License.
 
 import argparse
-import sys
 import importlib.util
+import sys
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import root_privilege_warning
 from msprobe.core.common.log import logger
-from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
-from msprobe.core.config_check.config_check_cli import _config_checking_parser, \
-            _run_config_checking_command
+from msprobe.core.compare.utils import _compare_parser
+from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
 
 
 def is_module_available(module_name):
@@ -64,6 +64,8 @@ def main():
     if len(sys.argv) < 4:
         parser.print_help()
         sys.exit(0)
+
+    root_privilege_warning()
     framework_args = parser.parse_args(sys.argv[1:3])
     if framework_args.framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command

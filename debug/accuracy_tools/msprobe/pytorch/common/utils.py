@@ -355,56 +355,6 @@ def save_pt(tensor, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-class TypeCheckingUnpickler(pickle.Unpickler):
-    """
-    This class is a subclass of pickle.Unpickler, which is used to unpickle pickled objects.
-    It overrides the find_class method to add type checking functionality.
-    """
-    allowed_types = [
-        "str",
-        "ApiData",
-        "OrderedDict",
-        "_rebuild_tensor_v2",  # from torch.utils
-        "_load_from_bytes"  # from torch.storage
-    ]
-
-    def find_class(self, module, name):
-        """
-        Method to find the class of the object to be unpickled.
-        Throws pickle.UnpicklingError If the object type is not in the allowed types list.
-        """
-        if name in self.allowed_types:
-            return super().find_class(module, name)
-        raise pickle.UnpicklingError("Unsupported object type: {}.{}".format(module, name))
-
-
-def save_pkl(tensor, filepath):
-    """Save ApiData or str objection by pickle"""
-    check_path_before_create(filepath)
-    filepath = os.path.realpath(filepath)
-    try:
-        with FileOpen(filepath, 'wb') as f:
-            pickle.dump(tensor, f)
-    except Exception as e:
-        logger.error("Save pt file failed, please check according possible error causes: "
-                     "1. out of disk space or disk error, "
-                     "2. no permission to write files, etc.")
-        raise RuntimeError(f"save pt file {filepath} failed") from e
-    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-
-
-def load_pkl(pt_path):
-    """Load ApiData or str objection by pickle for accuracy_checker_online"""
-    check_file_or_directory_path(pt_path)
-    pt_path = os.path.realpath(pt_path)
-    try:
-        with FileOpen(pt_path, 'rb') as f:
-            pt = TypeCheckingUnpickler(f).load()
-    except Exception as e:
-        raise RuntimeError(f"load pt file {pt_path} failed: {e}") from e
-    return pt
-
-
 def is_recomputation(call_stack=None):
     """Check if the current operation is in the re-computation phase.
 

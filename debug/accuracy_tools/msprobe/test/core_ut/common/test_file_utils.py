@@ -1,10 +1,24 @@
+# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import tempfile
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
 from zipfile import ZipFile, ZipInfo
-import tempfile
 
 import pytest
-
 from msprobe.core.common.file_utils import *
 
 
@@ -371,11 +385,6 @@ class TestPathOperations:
     def test_check_others_writable(self):
         mock_stat = MagicMock()
 
-        # Test group writable
-        mock_stat.st_mode = stat.S_IWGRP
-        with patch('os.stat', return_value=mock_stat):
-            assert check_others_writable(self.test_path) is True
-
         # Test others writable
         mock_stat.st_mode = stat.S_IWOTH
         with patch('os.stat', return_value=mock_stat):
@@ -512,12 +521,12 @@ class TestDirectoryChecks:
         self.test_dir = tmp_path / "test_dir"
         self.test_file = tmp_path / "test_file"
 
-    def test_check_dirpath_before_read(self):
+    def test_check_dirpath_permission(self):
         with patch('msprobe.core.common.file_utils.check_others_writable', return_value=True), \
                 patch('msprobe.core.common.file_utils.check_path_owner_consistent',
                       side_effect=FileCheckException(0)), \
                 patch('msprobe.core.common.file_utils.logger') as mock_logger:
-            check_dirpath_before_read(self.test_dir)
+            check_dirpath_permission(self.test_dir)
             assert mock_logger.warning.call_count == 2
 
     def test_check_file_or_directory_path(self):

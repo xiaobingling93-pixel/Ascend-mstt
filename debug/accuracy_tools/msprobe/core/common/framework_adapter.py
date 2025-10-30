@@ -12,10 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.import functools
+
 import functools
+
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import check_file_or_directory_path
-from msprobe.core.common.file_utils import save_npy
+from msprobe.core.common.file_utils import check_file_or_directory_path, save_npy
 
 
 class FrameworkDescriptor:
@@ -103,7 +104,7 @@ class FmkAdp:
     @classmethod
     def tensor_norm(cls, tensor):
         return cls.process_tensor(tensor, lambda x: x.norm())
-    
+
     @classmethod
     def save_tensor(cls, tensor, filepath):
         if cls.fmk == Const.PT_FRAMEWORK:
@@ -151,7 +152,7 @@ class FmkAdp:
 
     @classmethod
     def load_checkpoint(cls, path, to_cpu=True, weights_only=True):
-        check_file_or_directory_path(path)
+        check_file_or_directory_path(path, is_strict=not weights_only)
         if cls.fmk == Const.PT_FRAMEWORK:
             try:
                 if to_cpu:
@@ -161,7 +162,7 @@ class FmkAdp:
             except Exception as e:
                 raise RuntimeError(f"load pt file {path} failed: {e}") from e
         return mindspore.load_checkpoint(path)
-    
+
     @classmethod
     def asnumpy(cls, tensor):
         if cls.fmk == Const.PT_FRAMEWORK:

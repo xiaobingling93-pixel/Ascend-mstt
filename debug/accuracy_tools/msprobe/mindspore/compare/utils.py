@@ -26,8 +26,7 @@ def read_npy_data(dir_path, file_name):
         return None
 
     data_path = os.path.join(dir_path, file_name)
-    path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                               FileCheckConst.NUMPY_SUFFIX, False)
+    path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.NUMPY_SUFFIX)
     data_path = path_checker.common_check()
     data_value = load_npy(data_path)
     return data_value
