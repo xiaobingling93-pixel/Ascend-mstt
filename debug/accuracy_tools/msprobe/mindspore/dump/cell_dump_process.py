@@ -520,7 +520,7 @@ def generate_dump_info(path):
         return
 
     if dump_task == CoreConst.TENSOR:
-        dump_data = {"task": "tensor", "level": "L0", "dump_data_dir": path, "data": {}}
+        dump_data = {"task": "tensor", "level": "L0", "framework": "mindspore", "dump_data_dir": path, "data": {}}
         with Pool(processes=10) as pool:
             file_paths = []
             for file in os.listdir(path):
