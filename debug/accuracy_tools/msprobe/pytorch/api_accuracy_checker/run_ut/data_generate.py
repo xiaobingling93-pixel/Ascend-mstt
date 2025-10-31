@@ -20,9 +20,17 @@ import math
 import torch
 import numpy
 
+try:
+    import torch_npu
+except ImportError:
+    IS_GPU = True
+else:
+    IS_GPU = False
+
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type, get_full_data_path, \
-    CompareException, get_module_and_atttribute_name, get_attribute
+    CompareException, get_module_and_atttribute_name, get_attribute, is_dtype_fp8, is_dtype_hif8, is_hifloat8_tensor, \
+    is_dtype_fp8_or_hif8
 from msprobe.core.common.file_utils import FileChecker, load_npy
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
@@ -38,7 +46,10 @@ FLOAT_TYPE = [
             'torch.double', 
             'torch.float16',
             'torch.half', 
-            'torch.bfloat16'
+            'torch.bfloat16',
+            'torch.float8_e4m3fn',
+            'torch.float8_e5m2',
+            'torch_npu.HiFloat8Tensor'
             ]
 NUMPY_TYPE = [
             "numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.uint8", "numpy.uint16", "numpy.uint32",
@@ -61,6 +72,9 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
     data_type = info.get('type')
     data_path = info.get('datapath', info.get('data_name'))
     data_path = get_full_data_path(data_path, real_data_path)
+    dtype = info.get('dtype')
+    if is_dtype_fp8_or_hif8(dtype) and IS_GPU:
+        raise CompareException("GPU does not need to support float8 data type")
     if data_type in TENSOR_DATA_LIST:
         if data_path:
             data = gen_real_tensor(data_path, convert_type)
@@ -69,10 +83,20 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
         if api_name in hf_32_standard_api and data.dtype == torch.float32:
             data = fp32_to_hf32_to_fp32(data)
         if info.get('requires_grad') and need_grad:
+            if is_hifloat8_tensor(data):
+                origin_dtype = info.get('dtype')
+            else:
+                origin_dtype = data.dtype
+            if is_dtype_fp8(origin_dtype):
+                data = data.to(torch.float32)
             data.requires_grad_(True)
             temp_data = data * 1
             data = temp_data.type_as(data)
             data.retain_grad()
+            if is_dtype_fp8(origin_dtype):
+                data = data.to(origin_dtype)
+            if is_dtype_hif8(origin_dtype):
+                data = torch_npu.HiFloat8Tensor.to_hifloat8(data)
     elif data_type.startswith("numpy"):
         if data_type not in NUMPY_TYPE:
             raise Exception("{} is not supported now".format(data_type))
@@ -196,8 +220,13 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             tensor = torch.full(shape, high, dtype=dtype)
             tensor[-1] = low
             return tensor
+        
         low_scale, high_scale = low, high
-        dtype_finfo = torch.finfo(dtype)
+        if is_dtype_hif8(dtype):
+            finfo_dtype = torch.float32
+        else:
+            finfo_dtype = dtype
+        dtype_finfo = torch.finfo(finfo_dtype)
         #适配老版json high和low为inf或-inf的情况，取dtype的最大值或最小值进行放缩
         if high == float(CompareConst.INF):
             high_scale = dtype_finfo.max
@@ -209,7 +238,11 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             low_scale = dtype_finfo.min
 
         scale = high_scale - low_scale
-        rand01 = torch.rand(shape, dtype=dtype)
+        if is_dtype_fp8(dtype) or is_dtype_hif8(dtype):
+            generate_dtype = torch.float32
+        else:
+            generate_dtype = dtype
+        rand01 = torch.rand(shape, dtype=generate_dtype)
         tensor = rand01 * scale + low_scale
     elif 'int' in data_dtype or 'long' in data_dtype:
         low, high = int(low), int(high)
@@ -236,6 +269,12 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
         if low_origin in [float(CompareConst.INF), float(CompareConst.NEG_INF)]:
             tmp_tensor[0] = low_origin
     data = tmp_tensor.reshape(shape)
+    if is_dtype_fp8(dtype):
+        data = data.to(dtype)
+    if is_dtype_hif8(dtype):
+        if IS_GPU:
+            raise CompareException("GPU does not support torch_npu.HiFloat8Tensor")
+        data = torch_npu.HiFloat8Tensor.to_hifloat8(data)
     return data
 
 

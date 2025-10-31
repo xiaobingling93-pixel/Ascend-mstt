@@ -22,6 +22,7 @@ import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
+from msprobe.pytorch.api_accuracy_checker.common.utils import is_dtype_fp8
 from msprobe.core.common.const import CompareConst
 
 
@@ -212,6 +213,8 @@ def check_norm_value(normal_value_mask, rel_err, rtol):
 
 
 def get_ulp_err(bench_output, device_output, dtype):
+    if is_dtype_fp8(dtype):
+        return calc_ulp_err_fp8(bench_output, device_output)
     parameters = ULP_PARAMETERS.get(dtype)
     min_eb = parameters.get('min_eb')[0]
     exponent_num = parameters.get('exponent_num')[0]
@@ -224,6 +227,32 @@ def get_ulp_err(bench_output, device_output, dtype):
     else:
         ulp_err = calc_ulp_err(bench_output, device_output, eb, exponent_num, np.float32)
     ulp_err = np.abs(ulp_err)
+    return ulp_err
+
+
+def calc_ulp_err_fp8(bench_output, device_output):
+    # compute ulp error of FP8
+    x = np.float64(bench_output)
+    hi_fp8 = np.float64(device_output)
+
+    ex = np.log2(abs(x) + 2**(-1000))
+    ex[ex < -22] = -22
+    exponent = np.floor(ex)  # Exponent
+
+    eabs = np.abs(exponent)
+    wm = np.zeros_like(x)                       # Mantissa width Init
+    wm[eabs <= 15] = 1
+    wm[eabs <= 7] = 2
+    wm[eabs <= 3] = 3
+    ulp_err = (hi_fp8 - x) * 2 ** (-exponent + wm)         # for wm = 1~3
+
+    s_ex = ex * np.where(x >= 0, 1, -1)         
+    eh = np.log2(abs(hi_fp8) + 2**(-1000))
+    
+    s_eh = eh * np.where(hi_fp8 >= 0, 1, -1)
+    ulp_err1 = s_eh - s_ex                      # for wm = 0
+
+    ulp_err[wm == 0] = ulp_err1[wm == 0]        # Merge 2 cases
     return ulp_err
 
 

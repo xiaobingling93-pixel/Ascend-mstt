@@ -16,6 +16,7 @@
 # limitations under the License.
 
 from typing import Callable
+from msprobe.pytorch.api_accuracy_checker.common.utils import is_dtype_fp8_or_hif8
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import absolute_standard_api, binary_standard_api, \
     ulp_standard_api, thousandth_standard_api, accumulative_error_standard_api, BINARY_COMPARE_UNSUPPORT_LIST
 from msprobe.core.common.const import CompareConst
@@ -70,11 +71,11 @@ class StandardRegistry:
             raise ValueError("The function to be registered must be callable.")
         self.comparison_functions[standard] = func
 
-    def get_comparison_function(self, api_name, dtype=None):
-        standard = self._get_standard_category(api_name, dtype)
+    def get_comparison_function(self, api_name, dtype, in_dtype):
+        standard = self._get_standard_category(api_name, dtype, in_dtype)
         return self.comparison_functions.get(standard)
 
-    def _get_standard_category(self, api_name, dtype=None):
+    def _get_standard_category(self, api_name, out_dtype, in_dtype):
         """
         Determines the standard category for a given API name and data type.
 
@@ -84,7 +85,8 @@ class StandardRegistry:
 
         Args:
             api_name (str): The name of the API for which to determine the standard category.
-            dtype (type, optional): The data type to check against the BINARY_COMPARE_UNSUPPORT_LIST. Defaults to None.
+            out_dtype (type): The data type of the output tensor.
+            in_dtype (type): The data type of the input tensor.
 
         Returns:
             str: The name of the standard category that matches the API name and data type, or 'benchmark' if no match 
@@ -96,7 +98,11 @@ class StandardRegistry:
         The BINARY_COMPARE_UNSUPPORT_LIST should be defined and contain all data types that are not supported for 
         binary comparison.
         """
-        if dtype and dtype not in BINARY_COMPARE_UNSUPPORT_LIST:
+        if is_dtype_fp8_or_hif8(out_dtype):
+            return CompareConst.ULP_COMPARE
+        if is_dtype_fp8_or_hif8(in_dtype):
+            return CompareConst.ABSOLUTE_THRESHOLD
+        if str(out_dtype) not in BINARY_COMPARE_UNSUPPORT_LIST:
             return CompareConst.BINARY_CONSISTENCY
         for name, category in self.api_standard_function_map.items():
             if api_name in category:

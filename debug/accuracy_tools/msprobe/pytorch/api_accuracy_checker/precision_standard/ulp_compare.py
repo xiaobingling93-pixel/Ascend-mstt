@@ -25,6 +25,7 @@ from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import calc_ratio, get_ulp_err
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ApiPrecisionCompareColumn, check_inf_or_nan, \
     is_inf_or_nan
+from msprobe.pytorch.api_accuracy_checker.common.utils import is_dtype_fp8_or_hif8
 
 
 UlpInfNanConsistency = namedtuple('UlpInfNanConsistency', ['mean_ulp_err_inf_nan_consistency', 
@@ -144,7 +145,10 @@ class UlpPrecisionCompare(BasePrecisionCompare):
         mean_ulp_err = metrics.get(CompareConst.MEAN_ULP_ERR)
         ulp_err_proportion = metrics.get(CompareConst.ULP_ERR_PROPORTION)
         ulp_err_proportion_ratio = metrics.get(CompareConst.ULP_ERR_PROPORTION_RATIO)
-        if dtype == Const.TORCH_FLOAT32:
+        if is_dtype_fp8_or_hif8(dtype):
+            status, final_message = \
+                self._get_fp8_ulp_err_status(ulp_err_proportion)
+        elif dtype == Const.TORCH_FLOAT32:
             status, final_message = \
                 self._get_fp32_ulp_err_status(mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio)
         else:
@@ -182,14 +186,30 @@ class UlpPrecisionCompare(BasePrecisionCompare):
         compare_message = "ERROR: ULP误差不满足标准\n"
         return CompareConst.ERROR, compare_message
 
+    def _get_fp8_ulp_err_status(self, ulp_err_proportion):
+        _, ulp_err_proportion_threshold, _ = StandardConfig.get_ulp_threshold(torch.float16)
+        if ulp_err_proportion < ulp_err_proportion_threshold:
+            return CompareConst.PASS, ""
+        compare_message = "ERROR: ULP误差不满足标准\n"
+        return CompareConst.ERROR, compare_message
+    
     def _compute_ratio(self):
         compare_message = ""
-        mean_ulp_err, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._compute_mean_ulp_err()
-        compare_message += mean_ulp_err_message
-        npu_ulp_err_proportion, gpu_ulp_err_proportion = self._compute_ulp_err_proportion()
-        ulp_err_proportion_ratio, ulp_err_proportion_ratio_inf_nan_consistency, ulp_err_proportion_ratio_message = \
-            self._compute_ulp_err_proportion_ratio(npu_ulp_err_proportion, gpu_ulp_err_proportion, str(self.dtype))
-        compare_message += ulp_err_proportion_ratio_message
+        dtype = self.row_npu.get(ApiPrecisionCompareColumn.DEVICE_DTYPE)
+        if is_dtype_fp8_or_hif8(dtype):
+            mean_ulp_err = CompareConst.SPACE
+            ulp_err_proportion_ratio = CompareConst.SPACE
+            npu_ulp_err_proportion = self._get_and_convert_value(self.row_npu, 
+                                                                 ApiPrecisionCompareColumn.ULP_ERR_PROPORTION, "NPU")
+            mean_ulp_err_inf_nan_consistency = True
+            ulp_err_proportion_ratio_inf_nan_consistency = True
+        else:
+            mean_ulp_err, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._compute_mean_ulp_err()
+            compare_message += mean_ulp_err_message
+            npu_ulp_err_proportion, gpu_ulp_err_proportion = self._compute_ulp_err_proportion()
+            ulp_err_proportion_ratio, ulp_err_proportion_ratio_inf_nan_consistency, ulp_err_proportion_ratio_message = \
+                self._compute_ulp_err_proportion_ratio(npu_ulp_err_proportion, gpu_ulp_err_proportion, str(self.dtype))
+            compare_message += ulp_err_proportion_ratio_message
         metrics = {
             CompareConst.MEAN_ULP_ERR: mean_ulp_err,
             CompareConst.ULP_ERR_PROPORTION: npu_ulp_err_proportion,

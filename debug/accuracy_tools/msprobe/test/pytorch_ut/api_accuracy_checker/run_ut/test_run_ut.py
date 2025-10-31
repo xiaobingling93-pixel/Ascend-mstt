@@ -170,7 +170,7 @@ class TestRunUtMethods(unittest.TestCase):
             mocks['retain_grad'].return_value = None
             mocks['to'].return_value = mock_tensor
 
-            device_args, device_kwargs = generate_device_params([mock_tensor], {'inplace': False}, True, '')
+            device_args, device_kwargs, _ = generate_device_params([mock_tensor], {'inplace': False}, True, '')
             self.assertEqual(len(device_args), 1)
             self.assertEqual(device_args[0].dtype, torch.float32)
             self.assertTrue(device_args[0].requires_grad)

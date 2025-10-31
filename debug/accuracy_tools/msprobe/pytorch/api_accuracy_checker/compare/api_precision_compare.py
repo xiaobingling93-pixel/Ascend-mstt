@@ -225,9 +225,17 @@ def get_api_status(row_npu, row_gpu, api_name, compare_column, registry):
         compare_column.api_name = full_api_name_with_direction_status
         dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         input_data = PrecisionCompareInput(row_npu, row_gpu, dtype, compare_column)
-        comparison_func = registry.get_comparison_function(api_name, dtype)
+        in_dtype = get_in_dtype(row_npu)
+        comparison_func = registry.get_comparison_function(api_name, dtype, in_dtype)
         new_status = comparison_func(input_data)
     return new_status
+
+
+def get_in_dtype(row_npu):
+    if row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO].isspace():
+        return "torch.float32"
+    else:
+        return "torch.float8_e4m3fn"
 
 
 def print_test_success(api_full_name, forward_result, backward_result):

@@ -119,6 +119,13 @@ class BasePrecisionCompare:
         self.compare_column = input_data.compare_column
         self.compare_algorithm = None
     
+    @staticmethod
+    def _get_and_convert_value(row_data, column_name, device_type):
+        value = row_data.get(column_name)
+        if value is None:
+            raise ValueError(f"{device_type} value for column '{column_name}' is None.")
+        return convert_str_to_float(value)
+
     @abstractmethod
     def _get_status(self, metrics, inf_nan_consistency):
         pass
@@ -133,14 +140,8 @@ class BasePrecisionCompare:
         return compare_result
     
     def _get_and_convert_values(self, column_name):
-        npu_value = self.row_npu.get(column_name)
-        gpu_value = self.row_gpu.get(column_name)
-        if npu_value is None:
-            raise ValueError(f"NPU value for column '{column_name}' is None.")
-        if gpu_value is None:
-            raise ValueError(f"GPU value for column '{column_name}' is None.")
-        npu_value = convert_str_to_float(npu_value)
-        gpu_value = convert_str_to_float(gpu_value)
+        npu_value = self._get_and_convert_value(self.row_npu, column_name, "NPU")
+        gpu_value = self._get_and_convert_value(self.row_gpu, column_name, "GPU")
         return npu_value, gpu_value
 
     def _post_compare(self, metrics, inf_nan_consistency):
