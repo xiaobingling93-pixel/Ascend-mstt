@@ -259,3 +259,61 @@ def get_attribute(module_name, attribute_name):
         logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
         raise CompareException(CompareException.INVALID_ATTRIBUTE_ERROR) from e
     return attribute
+
+
+def is_dtype_fp8(dtype):
+    """
+    Function Description:
+        Check if the data type is float8.
+    Parameter:
+        dtype: Data type (torch.dtype or string).
+    Return:
+        True or False.
+    """
+    # 处理字符串类型的 dtype
+    if isinstance(dtype, str):
+        return dtype in ["torch.float8_e4m3fn", "torch.float8_e5m2"]
+
+    # 处理 torch.dtype 类型
+    return dtype in [torch.float8_e4m3fn, torch.float8_e5m2]
+
+
+def is_dtype_hif8(dtype):
+    """
+    Function Description:
+        Check if the data type is HiFloat8Tensor.
+    Parameter:
+        dtype: Data type (string).
+    Return:
+        True or False.
+    """
+    # 处理字符串类型的 dtype
+    if isinstance(dtype, str):
+        dtype_str = dtype
+    # 处理类对象或 dtype 对象
+    else:
+        dtype_str = str(dtype)
+
+    # 检查是否匹配 HiFloat8Tensor 的字符串表示
+    return (
+            dtype_str == "<class 'torch_npu.utils.hif8_tensor.HiFloat8Tensor'>" or
+            dtype_str == "torch_npu.HiFloat8Tensor"
+    )
+
+
+def is_dtype_fp8_or_hif8(dtype):
+    """
+    Function Description:
+        Check if the data type is FP8 (native or HiFloat8 variant).
+    Parameters:
+        dtype: Data type (torch.dtype, class, or string).
+    Returns:
+        True if dtype is FP8 or HiFloat8, False otherwise.
+    """
+    return is_dtype_fp8(dtype) or is_dtype_hif8(dtype)
+
+
+def is_hifloat8_tensor(tensor):
+    if not IS_GPU and hasattr(torch_npu, "HiFloat8Tensor") and isinstance(tensor, torch_npu.HiFloat8Tensor):
+        return True
+    return False

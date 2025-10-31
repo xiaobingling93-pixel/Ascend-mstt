@@ -125,7 +125,7 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     device_info_kwargs = kwargs.get(Const.DEVICE)
     if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
         kwargs[Const.DEVICE] = current_device
-    npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
+    npu_args, npu_kwargs, _ = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
     cpu_exec_params = ExecParams(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs, False, None)

@@ -66,6 +66,13 @@ class Comparator:
         self.save_path_list = [result_csv_path]
         self.detail_save_path_list = [details_csv_path]
 
+        if config and config.online_config.is_online:
+            self.save_path_str = result_csv_path.replace(".csv", "_rank{}.csv")
+            self.detail_save_path_str = details_csv_path.replace(".csv", "_rank{}.csv")
+            self.save_path_list = [self.save_path_str.format(rank) for rank in config.online_config.rank_list]
+            self.detail_save_path_list = \
+                [self.detail_save_path_str.format(rank) for rank in config.online_config.rank_list]
+
         self.registry = self._register_compare_func()
 
         if not is_continue_run_ut:
@@ -173,7 +180,7 @@ class Comparator:
                 write_csv(DETAIL_TEST_ROWS, detail_save_path)
 
     @recursion_depth_decorator("compare_core")
-    def _compare_core(self, api_name, bench_output, device_output):
+    def _compare_core(self, api_name, bench_output, device_output, is_fp8):
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
             status = CompareConst.ERROR
@@ -185,7 +192,7 @@ class Comparator:
                 message = "bench and npu output dict keys are different."
             else:
                 status, compare_column, message = self._compare_core(api_name, list(bench_output.values()),
-                                                                     list(device_output.values()))
+                                                                     list(device_output.values()), is_fp8)
         elif isinstance(bench_output, torch.Tensor):
             copy_bench_out = bench_output.detach().clone()
             copy_device_output = device_output.detach().clone()
@@ -193,7 +200,7 @@ class Comparator:
             compare_column.npu_type = str(copy_device_output.dtype)
             compare_column.shape = tuple(device_output.shape)
             status, compare_column, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
-                                                                         compare_column)
+                                                                         compare_column, is_fp8)
         elif isinstance(bench_output, (bool, int, float, str)):
             compare_column.bench_type = str(type(bench_output))
             compare_column.npu_type = str(type(device_output))
@@ -247,11 +254,12 @@ class Comparator:
         bench_output, device_output = data_info.bench_output, data_info.device_output
         bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
         backward_message = data_info.backward_message
+        is_fp8 = data_info.is_fp8
         if "dropout" in full_api_name:
             fwd_success_status, fwd_compare_alg_results = self._compare_dropout(bench_output, device_output)
         else:
             fwd_success_status, fwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_output,
-                                                                                     device_output)
+                                                                                     device_output, is_fp8)
         if not (bench_grad and device_grad):
             bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
         else:
@@ -259,7 +267,7 @@ class Comparator:
                 bwd_success_status, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], device_grad[0])
             else:
                 bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_grad,
-                                                                                         device_grad)
+                                                                                         device_grad, is_fp8)
         if backward_message:
             backward_column = CompareColumn()
             bwd_compare_alg_results = [backward_column.to_column_value(CompareConst.SKIP, backward_message)]
@@ -272,7 +280,6 @@ class Comparator:
                                  fwd_compare_alg_results,
                                  bwd_compare_alg_results,
                                  data_info.rank)
-
         self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE
@@ -287,7 +294,7 @@ class Comparator:
         registry.register(CompareConst.ACCUMULATIVE_ERROR_COMPARE, self._accumulative_error_compare)
         return registry
 
-    def _compare_core_wrapper(self, api_name, bench_output, device_output):
+    def _compare_core_wrapper(self, api_name, bench_output, device_output, is_fp8):
         detailed_result_total = []
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
@@ -298,12 +305,12 @@ class Comparator:
             else:
                 device_output = device_output[:len(bench_output)]
                 for b_out_i, n_out_i in zip(bench_output, device_output):
-                    status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
+                    status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i, is_fp8)
                     status.append(status_i)
                     compare_result.append(compare_result_i)
                     message.append(message_i)
         else:
-            status, compare_result, message = self._compare_core(api_name, bench_output, device_output)
+            status, compare_result, message = self._compare_core(api_name, bench_output, device_output, is_fp8)
         if not isinstance(status, list):
             detailed_result_total.append(compare_result.to_column_value(status, message))
             if status == CompareConst.ERROR:
@@ -319,10 +326,15 @@ class Comparator:
                     test_final_success = CompareConst.WARNING
         return test_final_success, detailed_result_total
 
-    def _compare_torch_tensor(self, api_name, bench_output, device_output, compare_column):
+    def _compare_torch_tensor(self, api_name, bench_output, device_output, compare_column, is_fp8):
         cpu_shape = bench_output.shape
         npu_shape = device_output.shape
+        
         npu_dtype = device_output.dtype
+        if is_fp8:
+            in_dtype = torch.float8_e4m3fn
+        else:
+            in_dtype = torch.float32
         if npu_dtype == torch.bfloat16:
             bench_output = bench_output.to(torch.float32)
             device_output = device_output.to(torch.float32)
@@ -346,22 +358,28 @@ class Comparator:
             compare_column.error_rate = err_rate
             return status, compare_column, message
         else:
+            in_and_out_dtype = {
+                'dtype': npu_dtype,
+                'in_dtype': in_dtype
+            }
             status, compare_column, message = self._compare_float_tensor(api_name, bench_output, device_output,
-                                                                         compare_column, npu_dtype)
+                                                                         compare_column, in_and_out_dtype)
             return status, compare_column, message
 
-    def _perform_comparison(self, api_name, input_data):
-        comparison_func = self.registry.get_comparison_function(api_name, None)
+    def _perform_comparison(self, api_name, input_data, dtype, in_dtype):
+        comparison_func = self.registry.get_comparison_function(api_name, dtype, in_dtype)
         comparison_func(input_data)
             
-    def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, dtype):
+    def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, in_and_out_dtype):
+        dtype = in_and_out_dtype.get('dtype')
+        in_dtype = in_and_out_dtype.get('in_dtype')
         message = ""
         _, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         input_data = CompareInput(bench_output, device_output, compare_column, dtype, rel_err_orign)
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
-            self._perform_comparison(api_name, input_data)
+            self._perform_comparison(api_name, input_data, dtype, in_dtype)
         else:
             message += f"The data type {dtype} is not supported for new precision standard."
 

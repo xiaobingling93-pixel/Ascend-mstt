@@ -208,7 +208,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     device_info_kwargs = kwargs.get(Const.DEVICE)
     if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
         kwargs[Const.DEVICE] = current_device
-    device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
+    device_args, device_kwargs, is_fp8 = generate_device_params(args, kwargs, need_backward, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
     cpu_params = generate_cpu_params(args, kwargs, need_backward, api_name)
@@ -222,7 +222,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     out = exec_api(cpu_exec_params)
     device_exec_params = ExecParams(api_type, api_name, current_device, device_args, device_kwargs, is_autocast,
                                      autocast_dtype)
-    device_out = exec_api(device_exec_params)
+    if is_fp8 and isinstance(device_out, torch.Tensor) and device_out.dtype == torch.float32:
+        device_out = device_out.to(torch.float16)
     current_path = os.path.dirname(os.path.realpath(__file__))
     ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
     api_setting_dict = get_json_contents(ut_setting_path)
@@ -251,7 +252,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         out = safe_get_value(out, 0, "out")
         device_out = safe_get_value(device_out, 0, "device_out")
 
-    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
+    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message,
+                      rank=0, is_fp8=is_fp8)
 
 
 def check_need_grad(api_info_dict):

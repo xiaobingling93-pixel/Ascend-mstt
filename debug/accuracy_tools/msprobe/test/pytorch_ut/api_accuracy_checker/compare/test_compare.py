@@ -72,7 +72,7 @@ class TestCompare(unittest.TestCase):
     def test_compare_core_wrapper(self):
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
-        test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
+        test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out, False)
         actual_cosine_similarity = detailed_result_total[0][3]
         # 设置一个小的公差值
         tolerance = 1e-4
@@ -86,7 +86,7 @@ class TestCompare(unittest.TestCase):
         self.assertTrue(test_final_success)
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
-        test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
+        test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out, False)
         actual_cosine_similarity = detailed_result_total[0][3]
         self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
         actual_cosine_similarity = detailed_result_total[1][3]
@@ -102,7 +102,7 @@ class TestCompare(unittest.TestCase):
                                                 '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
 
     def test_compare_core_different(self):
-        res = self.compare._compare_core('api', 1, 'str')
+        res = self.compare._compare_core('api', 1, 'str', False)
 
         self.assertEqual(res[0], 'error')
         self.assertEqual(res[2], 'bench and npu output type is different.')
@@ -112,7 +112,7 @@ class TestCompare(unittest.TestCase):
             'key1': 1,
             'key2': 2
         }
-        res = self.compare._compare_core('api', output_dict, output_dict)
+        res = self.compare._compare_core('api', output_dict, output_dict, False)
         
         self.assertEqual(res[0], 'error')
         self.assertEqual(res[2], "Unexpected output type in compare_core: <class 'list'>")
@@ -126,27 +126,27 @@ class TestCompare(unittest.TestCase):
             'key3': 3,
             'key4': 4
         }
-        res = self.compare._compare_core('api', bench_dict, device_dict)
+        res = self.compare._compare_core('api', bench_dict, device_dict, False)
 
         self.assertEqual(res[0], 'error')
         self.assertEqual(res[2], 'bench and npu output dict keys are different.')
 
     def test_compare_core_with_tensor(self):
         tensor = torch.tensor([1, 2, 3])
-        res = self.compare._compare_core('api', tensor, tensor)
+        res = self.compare._compare_core('api', tensor, tensor, False)
 
         self.assertEqual(res[0], 'pass')
         self.assertEqual(res[2], 'Compare algorithm is not supported for int64 data. Only judged by Error Rate.\n')
 
     def test_compare_core_with_buildin(self):
         interger = 1
-        res = self.compare._compare_core('api', interger, interger)
+        res = self.compare._compare_core('api', interger, interger, False)
 
         self.assertEqual(res[0], 'pass')
         self.assertEqual(res[2], '')
 
     def test_compare_core_with_none(self):
-        res = self.compare._compare_core('api', None, None)
+        res = self.compare._compare_core('api', None, None, False)
 
         self.assertEqual(res[0], 'SKIP')
         self.assertEqual(res[2], 'Bench output is None, skip this test.')
@@ -155,7 +155,7 @@ class TestCompare(unittest.TestCase):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
         bench_grad, npu_grad = [torch.randn(100, 100)], [torch.randn(100, 100)]
         api_name = 'Functional.conv2d.0'
-        data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None)
+        data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None, False)
         is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info)
         self.assertFalse(is_fwd_success)
         # is_bwd_success should be checked
@@ -210,7 +210,7 @@ class TestCompare(unittest.TestCase):
         npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
         status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output,
-                                                                             compare_column)
+                                                                             compare_column, False)
         self.assertEqual(status, "pass")
 
     def test_compare_torch_tensor_bf16(self):
@@ -218,7 +218,7 @@ class TestCompare(unittest.TestCase):
         npu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.bfloat16)
         compare_column = CompareColumn()
         status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output,
-                                                                             compare_column)
+                                                                             compare_column, False)
         self.assertEqual(status, "pass")
 
     def test_compare_torch_tensor_different_shape(self):
@@ -226,7 +226,7 @@ class TestCompare(unittest.TestCase):
         npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
         status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output,
-                                                                             compare_column)
+                                                                             compare_column, False)
         self.assertEqual(status, "error")
 
     def test_compare_torch_tensor_different_dtype(self):
@@ -234,7 +234,7 @@ class TestCompare(unittest.TestCase):
         npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
         status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output,
-                                                                             compare_column)
+                                                                             compare_column, False)
         self.assertEqual(status, "error")
 
     def test_compare_torch_tensor_special_dtype(self):
@@ -242,7 +242,7 @@ class TestCompare(unittest.TestCase):
         npu_output = torch.Tensor([True, True, False])
         compare_column = CompareColumn()
         status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output,
-                                                                             compare_column)
+                                                                             compare_column, False)
         self.assertEqual(status, "pass")
 
     def test_compare_builtin_type_pass_with_special_types(self):
@@ -270,27 +270,39 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.Tensor([1.0, 2.0, 3.0])
         npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("conv2d", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
         self.assertEqual(status, "pass")
 
     def test_compare_float_tensor_binary(self):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float16)
         npu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("abs", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
         self.assertEqual(status, "pass")
 
     def test_compare_float_tensor_absolute(self):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         npu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("mul", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "pass")
 
@@ -298,9 +310,13 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         npu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("__matmul__", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "pass")
 
@@ -308,9 +324,13 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float16)
         npu_output = torch.tensor([1.1, 2.1, 3.1], dtype=torch.float16)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("__matmul__", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "error")
 
@@ -318,9 +338,13 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float16)
         npu_output = torch.tensor([1.0001, 2.0001, 3.0001], dtype=torch.float16)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("__matmul__", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "pass")
 
@@ -328,9 +352,13 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float16)
         npu_output = torch.tensor([1.01, 2.01, 3.01], dtype=torch.float16)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("__matmul__", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "Warning")
 
@@ -338,9 +366,13 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         npu_output = torch.tensor([1.01, 2.01, 3.01], dtype=torch.float32)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("__matmul__", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "error")
 
@@ -348,9 +380,13 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         npu_output = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)
         compare_column = CompareColumn()
+        in_and_out_dtype ={
+            'dtype': npu_output.dtype,
+            'in_dtype': torch.float32
+        }
         status, compare_column, message = self.compare._compare_float_tensor("__matmul__", cpu_output.numpy(),
                                                                              npu_output.numpy(),
-                                                                             compare_column, npu_output.dtype)
+                                                                             compare_column, in_and_out_dtype)
 
         self.assertEqual(status, "pass")
 
