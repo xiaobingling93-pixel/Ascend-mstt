@@ -1,18 +1,9 @@
-/*
- * Copyright (C) 2025-2025. Huawei Technologies Co., Ltd. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (c) Meta Platforms, Inc. and affiliates.
+//
+// This source code is licensed under the MIT license found in the
+// LICENSE file in the root directory of this source tree.
+
+// Dynolog : A portable telemetry monitoring daemon.
 
 #include "dynolog/src/ThreadManager.h"
 
@@ -20,6 +11,7 @@
 #include <gflags/gflags.h>
 #include <chrono>
 #include <cstdlib>
+#include <csignal>
 #include "dynolog/src/utils.h"
 #include "dynolog/src/Logger.h"
 
@@ -199,6 +191,7 @@ void ThreadManager::start_threads()
     // use simple json RPC server for now
     server_ = std::make_unique<SimpleJsonServer<ServiceHandler>>(handler, FLAGS_port);
     if (server_) {
+        std::signal(SIGPIPE, SIG_IGN);
         server_->run();
     }
 }
