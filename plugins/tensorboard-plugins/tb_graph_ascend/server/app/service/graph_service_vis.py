@@ -74,7 +74,10 @@ class JsonGraphService(GraphServiceStrategy):
                 json_data = GraphUtils.safe_json_loads(buffer)
                 yield f"data: {json.dumps({'progress': 99, 'status': 'loading'})}\n\n"
             except json.JSONDecodeError as e:
-                yield f"data: {json.dumps({'progress': current_progress, 'error': GraphUtils.t('parseJsonFailed')})}\n\n"
+                yield f"data: {json.dumps({
+                    'progress': current_progress,
+                    'error': GraphUtils.t('parseJsonFailed')
+                })}\n\n"
 
         if json_data is not None:  # 验证存储
             GraphState.set_global_value('current_file_data', json_data)
@@ -207,7 +210,7 @@ class JsonGraphService(GraphServiceStrategy):
             node_type_name = ""
             if graph_data.get(NPU):
                 node_type_name = GraphUtils.t('debug') if graph_type == NPU else GraphUtils.t('bench')
-        return {'success': False, 'error': f'{node_type_name}{GraphUtils.t('expandNodeError')}', 'data': None}
+        return {'success': False, 'error': f"{node_type_name}{GraphUtils.t('expandNodeError')}", 'data': None}
 
     def search_node_by_precision(self, meta_data, values):
         # 遍历所有的NPU节点，如果节点的精度值在values中，则返回该节点
