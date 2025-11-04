@@ -184,11 +184,7 @@ public:
     DebuggerDataInOut inout{DebuggerDataInOut::INOUT_BOTH};
     DebuggerDumpFileFormat fileFormat{DebuggerDumpFileFormat::FILE_FORMAT_NPY};
     std::vector<std::string> backwardInput;
-    bool onlineRunUt{false};
-    std::string nfsPath;
-    std::string tlsPath;
-    std::string host;
-    int32_t port{-1};
+
 private:
     void Parse(const nlohmann::json &content);
 };
