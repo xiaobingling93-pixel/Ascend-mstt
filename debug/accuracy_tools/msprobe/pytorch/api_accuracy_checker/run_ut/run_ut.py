@@ -222,6 +222,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     out = exec_api(cpu_exec_params)
     device_exec_params = ExecParams(api_type, api_name, current_device, device_args, device_kwargs, is_autocast,
                                      autocast_dtype)
+    device_out = exec_api(device_exec_params)
     if is_fp8 and isinstance(device_out, torch.Tensor) and device_out.dtype == torch.float32:
         device_out = device_out.to(torch.float16)
     current_path = os.path.dirname(os.path.realpath(__file__))
