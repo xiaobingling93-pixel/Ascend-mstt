@@ -66,13 +66,6 @@ class Comparator:
         self.save_path_list = [result_csv_path]
         self.detail_save_path_list = [details_csv_path]
 
-        if config and config.online_config.is_online:
-            self.save_path_str = result_csv_path.replace(".csv", "_rank{}.csv")
-            self.detail_save_path_str = details_csv_path.replace(".csv", "_rank{}.csv")
-            self.save_path_list = [self.save_path_str.format(rank) for rank in config.online_config.rank_list]
-            self.detail_save_path_list = \
-                [self.detail_save_path_str.format(rank) for rank in config.online_config.rank_list]
-
         self.registry = self._register_compare_func()
 
         if not is_continue_run_ut:
