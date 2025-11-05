@@ -392,7 +392,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         merge_result(input_dir, output_dir, config_path)
 
-        mock_file_checker.assert_called_once_with(input_dir, "dir", "read")
+        mock_file_checker.assert_called_once_with(input_dir, "dir", "r")
         mock_create_directory.assert_called_once_with(output_dir)
         mock_get_result_path.assert_called_once_with(input_dir)
         mock_load_yaml.assert_called_once_with(config_path)

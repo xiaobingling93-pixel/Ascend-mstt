@@ -694,9 +694,23 @@ class FileCheckConst:
     """
     Class for file check const
     """
-    READ_ABLE = "read"
-    WRITE_ABLE = "write"
-    READ_WRITE_ABLE = "read and write"
+    READ_ABLE = "r"
+    WRITE_ABLE = "w"
+    EXECUTE_ABLE = "x"
+    READ_WRITE_ABLE = "rw"
+    READ_EXECUTE_ABLE = "rx"
+    WRITE_EXECUTE_ABLE = "wx"
+    READ_WRITE_EXECUTE_ABLE = "rwx"
+    PERM_OPTIONS = [
+        READ_ABLE,
+        WRITE_ABLE,
+        EXECUTE_ABLE,
+        READ_WRITE_ABLE,
+        READ_EXECUTE_ABLE,
+        WRITE_EXECUTE_ABLE,
+        READ_WRITE_EXECUTE_ABLE
+    ]
+
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"

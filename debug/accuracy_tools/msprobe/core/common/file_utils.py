@@ -46,13 +46,19 @@ class FileChecker:
     The class for check file.
 
     Attributes:
-        file_path: The file or dictionary path to be verified.
-        path_type: file or dictionary
-        ability(str): one of [FileCheckConst.READ_ABLE, FileCheckConst.WRITE_ABLE, FileCheckConst.READ_WRITE_ABLE]
+        file_path: The file or dictionary path to be verified
+        path_type: file or dictionary type
+        ability(str): one of ["r", "w", "x", "rw", "rx", "wx", "rwx"], r: read, w: write, x: execute
         file_type(str): The correct file type for file
     """
 
-    def __init__(self, file_path, path_type, ability=None, file_type=None):
+    def __init__(
+        self,
+        file_path,
+        path_type,
+        ability=None,
+        file_type=None
+    ):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
         self.ability = self._check_ability_type(ability)
@@ -67,15 +73,14 @@ class FileChecker:
 
     @staticmethod
     def _check_ability_type(ability):
-        ability_list = [FileCheckConst.READ_ABLE, FileCheckConst.WRITE_ABLE, FileCheckConst.READ_WRITE_ABLE]
-        if ability and ability not in ability_list:
-            logger.error(f'The ability must be one of {ability_list}.')
+        if ability and ability not in FileCheckConst.PERM_OPTIONS:
+            logger.error(f'The ability must be one of {FileCheckConst.PERM_OPTIONS}.')
             raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         return ability
 
     def common_check(self):
         """
-        功能：基本文件权限校验，包括文件存在性、软连接、文件长度、文件类型、文件读写权限、文件属组、文件路径特殊字符、文件后缀等
+        功能：基本文件权限校验，包括文件存在性、软连接、文件长度、文件类型、文件读写权限、文件属组、文件路径特殊字符、文件后缀名等
         注意：文件后缀的合法性，非通用操作，可使用其他独立接口实现
         """
         check_path_exists(self.file_path)
@@ -94,13 +99,15 @@ class FileChecker:
         return self.file_path
 
     def check_path_ability(self):
-        if self.ability == FileCheckConst.WRITE_ABLE:
-            check_path_writability(self.file_path)
-        if self.ability == FileCheckConst.READ_ABLE:
+        if not self.ability:
+            return
+
+        if FileCheckConst.READ_ABLE in self.ability:
             check_path_readability(self.file_path)
-        if self.ability == FileCheckConst.READ_WRITE_ABLE:
-            check_path_readability(self.file_path)
+        if FileCheckConst.WRITE_ABLE in self.ability:
             check_path_writability(self.file_path)
+        if FileCheckConst.EXECUTE_ABLE in self.ability:
+            check_path_executable(self.file_path)
 
 
 class FileOpen:
