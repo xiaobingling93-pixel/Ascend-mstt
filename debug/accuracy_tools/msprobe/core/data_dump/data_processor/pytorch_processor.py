@@ -32,9 +32,19 @@ from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, is_int
-from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
-    ModuleForwardInputsOutputs, TensorStatInfo
-from msprobe.pytorch.common.utils import save_pt, is_recomputation
+from msprobe.core.data_dump.data_processor.base import (
+    BaseDataProcessor,
+    ModuleBackwardInputsOutputs,
+    ModuleForwardInputsOutputs,
+    TensorStatInfo
+)
+from msprobe.pytorch.common.utils import (
+    Const as PtConst,
+    save_pt,
+    is_recomputation,
+    is_hifloat8_tensor,
+    is_float8_tensor
+)
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 is_gpu = False
@@ -58,6 +68,12 @@ class TensorHandler:
         except Exception as e:
             logger.warning(f"Failed to free tensor: {tensor_name}, the detail info: {e}.")
 
+    @staticmethod
+    def get_tensor_dtype(tensor):
+        if is_hifloat8_tensor(tensor):
+            return PtConst.HIFLOAT8_TYPE
+        return str(tensor.dtype)
+
     def is_dtensor(self, tensor):
         return self.has_dtensor and isinstance(tensor, dist.tensor.DTensor)
 
@@ -77,6 +93,12 @@ class TensorHandler:
         if self.is_fake_tensor(tensor):
             logger.debug("FakeTensor cannot be converted to torch.Tensor type.")
             return tensor
+        if is_float8_tensor(tensor):
+            logger.debug(
+                f"The fp8/hifp8 tensor analyzing/saving is unsupported in dump function."
+                f"Casting to float for processing."
+            )
+            tensor = tensor.float()
         return tensor
 
     def get_tensor_type(self, tensor):
@@ -392,7 +414,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_stat = self.get_stat_info(common_tensor, self.config.async_dump, self.config.precision)
         tensor_json = {}
         tensor_json.update({'type': self.tensor_handler.get_tensor_type(tensor)})
-        tensor_json.update({'dtype': str(common_tensor.dtype)})
+        tensor_json.update({'dtype': self.tensor_handler.get_tensor_dtype(tensor)})
         tensor_json.update({"shape": common_tensor.shape})
 
         stat_values = [
@@ -741,6 +763,11 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
     )
     def clone_and_detach_tensor(self, input_params):
         if isinstance(input_params, torch.Tensor):
+            if is_float8_tensor(input_params):
+                raise MsprobeException(
+                    MsprobeException.UNSUPPORTED_TYPE_ERROR,
+                    f"L2 backward dump does not support float8 type."
+                )
             if input_params.requires_grad:
                 return input_params.clone().detach().requires_grad_()
             return input_params.clone()
@@ -754,6 +781,8 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
             return input_params
 
     def analyze_single_element(self, element, suffix_stack):
+        if is_float8_tensor(element):
+            return {}
         if isinstance(element, torch.Tensor):
             if not self.is_found_output_tensor:
                 if element.requires_grad:
