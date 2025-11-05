@@ -23,9 +23,11 @@
 namespace dynolog_npu {
 namespace ipc_monitor {
 
-enum RunningState: int32_t {
-    INIT = 0,
-    FINALIZE = 1
+enum PROFILER_STATUS: int32_t {
+    UNINITIALIZED = -1,
+    IDLE = 0,
+    RUNNING = 1,
+    READY = 2,
 };
 
 class PyDynamicMonitorProxy : public Singleton<PyDynamicMonitorProxy> {
@@ -40,8 +42,8 @@ public:
             monitor_->SetNpuId(npuId);
             bool res = monitor_->Init();
             if (res) {
-                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::INIT, MSG_TYPE_TRACE_STATUS);
-                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::INIT, MSG_TYPE_MONITOR_STATUS);
+                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::IDLE, MSG_TYPE_TRACE_STATUS);
+                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::IDLE, MSG_TYPE_MONITOR_STATUS);
             }
             return res;
         } catch (const std::exception &e) {
@@ -76,8 +78,8 @@ public:
             return;
         }
         if (npuTraceStatus == -1) {
-            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_TRACE_STATUS);
-            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(RunningState::FINALIZE, MSG_TYPE_MONITOR_STATUS);
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::UNINITIALIZED, MSG_TYPE_TRACE_STATUS);
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::UNINITIALIZED, MSG_TYPE_MONITOR_STATUS);
         } else {
             DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuTraceStatus, MSG_TYPE_TRACE_STATUS);
         }

@@ -103,8 +103,8 @@ private:
     std::thread managerThread_;
     std::atomic_bool stopFlag_{ false };
     std::condition_variable managerCondVar_;
-    int32_t npuTraceStatus_ = 0;
-    int32_t npuMonitorStatus_ = 0;
+    int32_t npuTraceStatus_ = -1;
+    int32_t npuMonitorStatus_ = -1;
 };
 
 } // namespace dynolog

@@ -8,9 +8,24 @@
 #include <fmt/format.h>
 #include <glog/logging.h>
 #include <nlohmann/json.hpp>
+#include <unordered_map>
 #include "dynolog/src/rpc/SimpleJsonServer.h"
 
 namespace dynolog {
+
+const std::unordered_map<int32_t, std::string> PROFILER_STATUS_MAP = {
+    {-1, "Uninitialized"},
+    {0, "Idle"},
+    {1, "Running"},
+    {2, "Ready"},
+};
+
+enum PROFILER_STATUS: int32_t {
+    UNINITIALIZED = -1,
+    IDLE = 0,
+    RUNNING = 1,
+    READY = 2,
+};
 
 template <class TServiceHandler = ServiceHandler>
 class SimpleJsonServer : public SimpleJsonServerBase {
@@ -71,22 +86,41 @@ inline std::string GetCommandStatus(const std::string& configStr)
     auto npuMonitorStatus = LibkinetoConfigManager::getInstance()->getNpuMonitorStatus();
     std::string prefix = "NPU_MONITOR_START";
     if (configStr.compare(0, prefix.size(), prefix) == 0) {
-        if (npuTraceStatus == 1) {
+        if (npuTraceStatus == PROFILER_STATUS::RUNNING || npuMonitorStatus == PROFILER_STATUS::UNINITIALIZED) {
             return "ineffective";
-        } else if (npuTraceStatus == 0) {
+        } else if (npuTraceStatus == PROFILER_STATUS::IDLE || npuTraceStatus == PROFILER_STATUS::READY) {
             return "effective";
         } else {
             return "unknown";
         }
     } else {
-        if (npuMonitorStatus == 1) {
+        if (npuMonitorStatus == PROFILER_STATUS::RUNNING || npuTraceStatus == PROFILER_STATUS::UNINITIALIZED) {
             return "ineffective";
-        } else if (npuMonitorStatus == 0) {
+        } else if (npuMonitorStatus == PROFILER_STATUS::IDLE) {
             return "effective";
         } else {
             return "unknown";
         }
     }
+}
+
+inline nlohmann::json GetStatus()
+{
+    using json = nlohmann::json;
+    json response;
+    response["nputrace"] = "unknown";
+    response["npumonitor"] = "unknown";
+    auto npuTraceStatus = LibkinetoConfigManager::getInstance()->getNpuTraceStatus();
+    auto npuMonitorStatus = LibkinetoConfigManager::getInstance()->getNpuMonitorStatus();
+    auto it = PROFILER_STATUS_MAP.find(npuTraceStatus);
+    if (it != PROFILER_STATUS_MAP.end()) {
+        response["nputrace"] = it->second;
+    }
+    it = PROFILER_STATUS_MAP.find(npuMonitorStatus);
+    if (it != PROFILER_STATUS_MAP.end()) {
+        response["npumonitor"] = it->second;
+    }
+    return response;
 }
 
 template <class TServiceHandler>
@@ -140,7 +174,7 @@ std::string SimpleJsonServer<TServiceHandler>::processOneImpl(const std::string&
     }
 
     if (request["fn"] == "getStatus") {
-        response["status"] = handler_->getStatus();
+        response = GetStatus();
     } else if (request["fn"] == "getVersion") {
         response["version"] = handler_->getVersion();
     } else if (request["fn"] == "setKinetOnDemandRequest") {
