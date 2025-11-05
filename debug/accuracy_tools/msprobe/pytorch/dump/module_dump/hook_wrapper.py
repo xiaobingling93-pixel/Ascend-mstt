@@ -22,6 +22,7 @@ from torch.utils.hooks import BackwardHook
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import is_float8_tensor
 from msprobe.pytorch.hook_module.api_register import get_api_register
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -30,6 +31,8 @@ torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 def wrap_setup_backward_hook(func):
     def requires_clone(tensor, need_check_leaf=False):
         need_clone = isinstance(tensor, torch.Tensor) and tensor.requires_grad and torch.is_grad_enabled()
+        if need_clone:
+            need_clone &= not is_float8_tensor(tensor)
         if need_check_leaf:
             need_clone &= tensor.grad_fn is not None
         return need_clone
