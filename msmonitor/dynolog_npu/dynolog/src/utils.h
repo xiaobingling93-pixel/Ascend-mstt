@@ -27,6 +27,8 @@ struct PathUtils {
     static bool Exist(const std::string &path);
     static bool IsSoftLink(const std::string &path);
     static bool IsFile(const std::string &path);
+    static bool IsWritableByOthers(const std::string &path);
+    static bool IsOwner(const std::string &path);
 };
 bool IsRoot();
 }
