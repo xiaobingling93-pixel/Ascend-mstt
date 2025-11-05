@@ -19,7 +19,7 @@
 
 namespace dynolog {
 namespace tracing {
-
+constexpr int kMaxPidNum = 10;
 constexpr int kSleepUs = 10000;
 constexpr int kDataMsgSleepUs = 1000;
 const std::string kLibkinetoRequest = "req";
@@ -147,14 +147,18 @@ void IPCMonitor::processDataMsg(std::unique_ptr<ipcfabric::Message> msg)
         msg->metadata.type,
         kLibkinetoData.data(),
         kLibkinetoData.size()) == 0) {
+        if (msg->metadata.size == 0) {
+            LOG(WARNING) << "Received empty data message";
+            return;
+        }
         std::string message = std::string((char*)msg->buf.get(), msg->metadata.size);
         try {
             nlohmann::json result = nlohmann::json::parse(message);
             LOG(INFO) << "Received data message : " << result;
             LogData(result);
-        } catch (nlohmann::json::parse_error&) {
-        LOG(ERROR) << "Error parsing message = " << message;
-        return;
+        } catch (const std::exception& e) {
+            LOG(ERROR) << "Error parsing message = " << message << ", exception: " << e.what();
+            return;
         }
     } else {
         LOG(ERROR) << "TYPE UNKOWN: " << msg->metadata.type;
@@ -168,14 +172,26 @@ void IPCMonitor::getLibkinetoOnDemandRequest(
         LOG(ERROR) << "Fabric Manager not initialized";
         return;
     }
-    std::string ret_config = "";
+    if (msg->metadata.size < sizeof(ipcfabric::LibkinetoRequest)) {
+        LOG(ERROR) << "req receive message size is invalid: " << msg->metadata.size;
+        return;
+    }
     ipcfabric::LibkinetoRequest* req =
         (ipcfabric::LibkinetoRequest*)msg->buf.get();
-    if (req->n == 0) {
+    auto pid_num = req->n;
+    if (pid_num <= 0) {
         LOG(ERROR) << "Missing pids parameter for type " << req->type;
         return;
     }
-    std::vector<int32_t> pids(req->pids, req->pids + req->n);
+    if (pid_num > kMaxPidNum) {
+        pid_num = kMaxPidNum;
+    }
+    if (msg->metadata.size < sizeof(ipcfabric::LibkinetoRequest) + pid_num * sizeof(int32_t)) {
+        LOG(ERROR) << "req receive message size is invalid: " << msg->metadata.size;
+        return;
+    }
+    std::vector<int32_t> pids(req->pids, req->pids + pid_num);
+    std::string ret_config = "";
     try {
         ret_config = LibkinetoConfigManager::getInstance()->obtainOnDemandConfig(
             std::to_string(req->jobid), pids, req->type);
@@ -185,6 +201,10 @@ void IPCMonitor::getLibkinetoOnDemandRequest(
     std::unique_ptr<ipcfabric::Message> ret =
         ipcfabric::Message::constructMessage<decltype(ret_config)>(
             ret_config, kLibkinetoRequest);
+    if (!ret) {
+        LOG(ERROR) << "Failed to construct message for config: IPC sync_send fail";
+        return;
+    }
     if (!ipc_manager_->sync_send(*ret, msg->src)) {
         LOG(ERROR) << "Failed to return config to libkineto: IPC sync_send fail";
     }
@@ -196,6 +216,10 @@ void IPCMonitor::registerLibkinetoContext(
 {
     if (!ipc_manager_) {
         LOG(ERROR) << "Fabric Manager not initialized";
+        return;
+    }
+    if (msg->metadata.size < sizeof(ipcfabric::LibkinetoContext)) {
+        LOG(ERROR) << "ctxt receive message size is invalid: " << msg->metadata.size;
         return;
     }
     ipcfabric::LibkinetoContext* ctxt =
@@ -210,6 +234,10 @@ void IPCMonitor::registerLibkinetoContext(
     std::unique_ptr<ipcfabric::Message> ret =
         ipcfabric::Message::constructMessage<decltype(size)>(
             size, kLibkinetoContext);
+    if (!ret) {
+        LOG(ERROR) << "Failed to construct message for ctxt: IPC sync_send fail";
+        return;
+    }
     if (!ipc_manager_->sync_send(*ret, msg->src)) {
         LOG(ERROR) << "Failed to send ctxt from dyno: IPC sync_send fail";
     }
@@ -224,6 +252,10 @@ void IPCMonitor::updateLibkinetoStatus(
         pid_t pid;
         int64_t jobId;
     };
+    if (msg->metadata.size < sizeof(NpuStatus)) {
+        LOG(ERROR) << msgType << " receive message size is invalid: " << msg->metadata.size;
+        return;
+    }
     NpuStatus* status = (NpuStatus*)msg->buf.get();
     try {
         LibkinetoConfigManager::getInstance()->updateNpuStatus(
@@ -232,6 +264,5 @@ void IPCMonitor::updateLibkinetoStatus(
     LOG(ERROR) << "Kineto config manager exception when updateNpuStatus: " << ex.what();
     }
 }
-
 } // namespace tracing
 } // namespace dynolog
