@@ -704,7 +704,7 @@ fn main() -> Result<()> {
         cmd,
     } = Opts::parse();
 
-    if certs_dir != NO_CERTS_MODE && !PathUtils::check_dir(&certs_dir, true) {
+    if certs_dir != NO_CERTS_MODE && !PathUtils::check_dir(&certs_dir, true, true) {
         return Err(anyhow!("--certs_dir must be a valid directory!"));
     }
     let client = create_dyno_client(&hostname, port, &certs_dir)
@@ -793,7 +793,7 @@ fn main() -> Result<()> {
                     return Err(anyhow!("--mstx_domain_exclude error: {}", err_msg));
                 }
             }
-            if !PathUtils::check_dir(&log_file, false) {
+            if !PathUtils::check_dir(&log_file, false, false) {
                 return Err(anyhow!("--log-file must be a valid directory!"));
             }
             let trigger_config = if iterations > 0 {
@@ -845,7 +845,7 @@ fn main() -> Result<()> {
             log_file,
         } => {
 
-            if !log_file.is_empty() && !PathUtils::check_dir(&log_file, false) {
+            if !log_file.is_empty() && !PathUtils::check_dir(&log_file, false, false) {
                 return Err(anyhow!("--log-file must be a valid directory!"));
             }
             let npu_mon_config = NpuMonitorConfig {

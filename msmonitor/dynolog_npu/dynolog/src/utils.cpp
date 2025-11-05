@@ -28,7 +28,8 @@ namespace dynolog {
 
 namespace {
 const uint16_t MAX_PATH_SIZE = 1024;
-constexpr int DIR_CHECK_MODE = R_OK | X_OK;
+constexpr int INPUT_DIR_CHECK_MODE = R_OK | X_OK;
+constexpr mode_t OTHERS_WRITE_MASK = S_IWGRP | S_IWOTH;
 const std::unordered_map<std::string, std::string> INVALID_CHAR = {
     {"\n", "\\n"}, {"\f", "\\f"}, {"\r", "\\r"}, {"\b", "\\b"}, {"\t", "\\t"},
     {"\v", "\\v"}, {"\u007F", "\\u007F"}, {"\"", "\\\""}, {"'", "\'"},
@@ -49,7 +50,7 @@ bool PathUtils::Access(const std::string &path, const int &mode)
         LOG(ERROR) << "The file path is empty.";
         return false;
     }
-  return access(path.c_str(), mode) == 0;
+    return access(path.c_str(), mode) == 0;
 }
 
 bool PathUtils::Exist(const std::string &path)
@@ -86,6 +87,31 @@ bool PathUtils::IsFile(const std::string &path)
     return fileStat.st_mode & S_IFREG;
 }
 
+bool PathUtils::IsWritableByOthers(const std::string &path)
+{
+    struct stat fileStat;
+    if (stat(path.c_str(), &fileStat) != 0) {
+        LOG(ERROR) << "The file stat failed, path: " << path;
+        return true;
+    }
+    return (fileStat.st_mode & OTHERS_WRITE_MASK) != 0;
+}
+
+bool PathUtils::IsOwner(const std::string &path)
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        LOG(ERROR) << "The file stat failed, path: " << path;
+        return false;
+    }
+    uid_t current_uid = getuid();
+    if (info.st_uid != current_uid) {
+        return false;
+    }
+    return true;
+}
+
+
 bool PathUtils::DirPathCheck(const std::string &path)
 {
     if (path.empty()) {
@@ -114,8 +140,19 @@ bool PathUtils::DirPathCheck(const std::string &path)
         LOG(ERROR) << "The path is a soft link: " << path;
         return false;
     }
-    if (!Access(path, DIR_CHECK_MODE)) {
-        LOG(ERROR) << "The path has no r-x access: " << path;
+    if (IsRoot()) {
+        return true;
+    }
+    if (!IsOwner(path)) {
+        LOG(ERROR) << "The path is not owned by current user: " << path;
+        return false;
+    }
+    if (!Access(path, INPUT_DIR_CHECK_MODE)) {
+        LOG(ERROR) << "The path is not readable: " << path;
+        return false;
+    }
+    if (IsWritableByOthers(path)) {
+        LOG(ERROR) << "The path is writable by others: " << path;
         return false;
     }
     return true;
