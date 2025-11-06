@@ -7,9 +7,11 @@
     "dev": "webpack serve --config webpack.dev.js",
     "buildLinux": "cross-env NODE_ENV=production webpack && cp dist/index.html ../server/static/",
     "buildWin": "cross-env NODE_ENV=production webpack && copy dist\\index.html ..\\server\\static\\",
-    "prettier": "prettier --config ./.prettierrc --write ./src/**/*.ts"
+    "prettier": "prettier --config ./.prettierrc --write ./src/**/*.ts",
+    "test": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/d3": "^7.4.3",
     "@types/lodash": "^4.17.20",
     "@types/node": "^16.4.13",
