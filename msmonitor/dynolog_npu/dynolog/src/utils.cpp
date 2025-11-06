@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <unordered_map>
 #include <glog/logging.h>
+#include <nlohmann/json.hpp>
 
 namespace dynolog {
 
@@ -162,4 +163,63 @@ bool IsRoot()
 {
     return getuid() == 0;
 }
+
+class JsonDepthCheckSAX : public nlohmann::json::json_sax_t {
+public:
+    bool null() override { return true; }
+    bool boolean(bool) override { return true; }
+    bool number_integer(nlohmann::json::number_integer_t) override { return true; }
+    bool number_unsigned(nlohmann::json::number_unsigned_t) override { return true; }
+    bool number_float(nlohmann::json::number_float_t, const std::string &) override { return true; }
+    bool string(nlohmann::json::string_t &) override { return true; }
+    bool binary(nlohmann::json::binary_t &) override { return true; }
+    bool key(nlohmann::json::string_t &) override { return true; }
+    bool parse_error(std::size_t, const std::string &, const nlohmann::json::exception &) override { return false; }
+
+    bool start_object(std::size_t) override
+    {
+        depth_++;
+        if (depth_ > MAX_DEPTH) {
+            throw std::runtime_error("JSON depth exceeds maximum allowed depth");
+        }
+        return true;
+    }
+
+    bool end_object() override
+    {
+        depth_--;
+        return true;
+    }
+
+    bool start_array(std::size_t) override
+    {
+        depth_++;
+        if (depth_ > MAX_DEPTH) {
+            throw std::runtime_error("JSON depth exceeds maximum allowed depth");
+        }
+        return true;
+    }
+
+    bool end_array() override
+    {
+        depth_--;
+        return true;
+    }
+
+private:
+    int depth_ = 0;
+    const int MAX_DEPTH = 10;
+};
+
+bool CheckJsonDepth(const std::string &json_str)
+{
+    JsonDepthCheckSAX sax;
+    try {
+        nlohmann::json::sax_parse(json_str, &sax);
+    } catch (const std::exception &e) {
+        LOG(ERROR) << "JSON depth check failed: " << e.what();
+        return false;
+    }
+    return true;
 }
+} // namespace dynolog
