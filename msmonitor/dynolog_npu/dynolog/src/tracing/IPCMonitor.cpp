@@ -16,6 +16,7 @@
 #include <vector>
 #include "dynolog/src/LibkinetoConfigManager.h"
 #include "dynolog/src/ipcfabric/Utils.h"
+#include "dynolog/src/utils.h"
 
 namespace dynolog {
 namespace tracing {
@@ -153,6 +154,10 @@ void IPCMonitor::processDataMsg(std::unique_ptr<ipcfabric::Message> msg)
         }
         std::string message = std::string((char*)msg->buf.get(), msg->metadata.size);
         try {
+            if (!(nlohmann::json::accept(message) && CheckJsonDepth(message))) {
+                LOG(ERROR) << "Error parsing message = " << message;
+                return;
+            }
             nlohmann::json result = nlohmann::json::parse(message);
             LOG(INFO) << "Received data message : " << result;
             LogData(result);

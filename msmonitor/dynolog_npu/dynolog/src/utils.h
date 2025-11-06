@@ -31,5 +31,6 @@ struct PathUtils {
     static bool IsOwner(const std::string &path);
 };
 bool IsRoot();
+bool CheckJsonDepth(const std::string &json_str);
 }
 #endif
