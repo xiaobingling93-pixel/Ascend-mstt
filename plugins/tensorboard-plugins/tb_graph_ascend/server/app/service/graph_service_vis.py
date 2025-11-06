@@ -74,10 +74,8 @@ class JsonGraphService(GraphServiceStrategy):
                 json_data = GraphUtils.safe_json_loads(buffer)
                 yield f"data: {json.dumps({'progress': 99, 'status': 'loading'})}\n\n"
             except json.JSONDecodeError as e:
-                yield f"data: {json.dumps({
-                    'progress': current_progress,
-                    'error': GraphUtils.t('parseJsonFailed')
-                })}\n\n"
+                err_str = json.dumps({'progress': current_progress, 'error': GraphUtils.t('parseJsonFailed')})
+                yield f"data: {err_str}\n\n"
 
         if json_data is not None:  # 验证存储
             GraphState.set_global_value('current_file_data', json_data)

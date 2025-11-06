@@ -77,7 +77,7 @@ module.exports = {
     hot: true,
     liveReload: true,
     port: 8080,
-    open: true,
+    open: false,
     client: {
       overlay: {
         errors: true,
