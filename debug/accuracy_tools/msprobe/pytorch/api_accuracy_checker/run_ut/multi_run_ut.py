@@ -39,7 +39,12 @@ from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 
 
-def split_json_file(input_file, num_splits, filter_api):
+def split_json_file(input_file, num_splits, filter_api, device_id):
+    max_processes = len(device_id) * 8
+    if num_splits > max_processes:
+        logger.warning(f"A device supports a maximum of 8 processes. "
+                       f"The total number of processes exceeds the limit, and it is set to {max_processes}.")
+        num_splits = max_processes
     forward_data, backward_data, real_data_path = parse_json_info_forward_backward(input_file)
     input_dir = os.path.dirname(os.path.abspath(input_file))
     if filter_api:
@@ -79,7 +84,7 @@ def split_json_file(input_file, num_splits, filter_api):
         save_json(split_filename, temp_data)
         split_files.append(split_filename)
 
-    return split_files, total_items
+    return split_files, total_items, num_splits
 
 
 def signal_handler(signum, frame):
@@ -194,7 +199,9 @@ def prepare_config(args):
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
-    split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
+    split_files, total_items, modified_num_splits = split_json_file(api_info, args.num_splits,
+                                                                    args.filter_api, args.device_id)
+    args.num_splits = modified_num_splits
     config_path = args.config_path if args.config_path else None
     if config_path:
         config_path_checker = FileChecker(config_path, FileCheckConst.FILE,

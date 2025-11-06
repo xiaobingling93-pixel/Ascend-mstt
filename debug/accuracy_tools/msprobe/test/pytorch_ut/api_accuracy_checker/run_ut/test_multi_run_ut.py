@@ -147,7 +147,7 @@ class TestMultiRunUT(unittest.TestCase):
     def test_split_json_file(self, mock_FileOpen):
         mock_FileOpen.return_value.__enter__.return_value = mock_open(read_data=self.test_json_content).return_value
         num_splits = 2
-        split_files, total_items = split_json_file(self.test_json_file, num_splits, False)
+        split_files, total_items, modified_num_splits = split_json_file(self.test_json_file, num_splits, False, [2])
         self.assertEqual(len(split_files), num_splits)
         self.assertEqual(total_items, len(self.test_data.get('data')))
 
@@ -190,7 +190,7 @@ class TestMultiRunUT(unittest.TestCase):
     @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.check_file_suffix')
     @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.FileChecker')
     @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.split_json_file',
-           return_value=(['forward_split1.json', 'forward_split2.json'], 2))
+           return_value=(['forward_split1.json', 'forward_split2.json'], 2, 2))
     def test_prepare_config(self, mock_split_json_file, mock_FileChecker, mock_check_file_suffix, mock_check_link,
                             mock_realpath, mock_remove):
         mock_FileChecker_instance = MagicMock()
