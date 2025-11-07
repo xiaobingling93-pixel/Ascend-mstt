@@ -44,12 +44,17 @@
 
 ## 算子调试 msdebug
 若使用msdebug进行上板调试，还需要额外调整，具体如下：
-1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
-    + 调试信息增强，并扩大栈空间：
+1. 编译阶段：在```sample/normal_sample/vec_only```相对路径下的```Makefile```文件中修改如下内容：
+    + 调试信息增强，`-O2`修改为`-O0 -g`：
     ```
     COMPILER_FLAG		:= -xcce -O2 -std=c++17
     修改为：
-    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g --cce-ignore-always-inline=true
+    COMPILER_FLAG		:= -xcce -O0 -g -std=c++17
+    ```
+    + 编译：
+    ```
+    cd ./sample/normal_sample/vec_only
+    make
     ```
 
 2. 运行阶段：
@@ -58,8 +63,9 @@ msdebug ./*.fatbin
 ```
 
 ## 内存检测 sanitizer
-1. 编译阶段：在编译过程中添加```--cce-enable-sanitizer -g```参数, 在链接过程中添加```--cce-enable-sanitizer```参数。（现样例中已在Makefile中添加），执行如下命令：
+1. 编译阶段：在编译过程中添加```--cce-enable-sanitizer -g```参数, 在链接过程中添加```--cce-enable-sanitizer```参数。（现样例中已在Makefile中添加），以内存越界读写检测为例，执行如下命令完成用例编译：
 ```
+cd ./sample/sanitizer_sample/memcheck/illegal_read_and_write
 make
 ```
 
