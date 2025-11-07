@@ -27,9 +27,6 @@ use openssl::pkey::PKey;
 
 // Make all the command modules accessible to this file.
 mod commands;
-use commands::gputrace::GpuTraceConfig;
-use commands::gputrace::GpuTraceOptions;
-use commands::gputrace::GpuTraceTriggerConfig;
 use commands::nputrace::NpuTraceConfig;
 use commands::nputrace::NpuTraceOptions;
 use commands::nputrace::NpuTraceTriggerConfig;
@@ -140,49 +137,6 @@ enum Command {
     Status,
     /// Check the version of a dynolog process
     Version,
-    /// Capture gputrace
-    Gputrace {
-        /// Job id of the application to trace.
-        #[arg(long, default_value_t = 0)]
-        job_id: u64,
-        /// List of pids to capture trace for (comma separated).
-        #[arg(long, default_value = "0")]
-        pids: String,
-        /// Duration of trace to collect in ms.
-        #[arg(long, default_value_t = 500)]
-        duration_ms: u64,
-        /// Training iterations to collect, this takes precedence over duration.
-        #[arg(long, default_value_t = -1)]
-        iterations: i64,
-        /// Log file for trace.
-        #[arg(long)]
-        log_file: String,
-        /// Unix timestamp used for synchronized collection (milliseconds since epoch).
-        #[arg(long, default_value_t = 0)]
-        profile_start_time: u64,
-        /// Start iteration roundup, starts an iteration based trace at a multiple
-        /// of this value.
-        #[arg(long, default_value_t = 1)]
-        profile_start_iteration_roundup: u64,
-        /// Max number of processes to profile.
-        #[arg(long, default_value_t = 3)]
-        process_limit: u32,
-        /// Record PyTorch operator input shapes and types.
-        #[arg(long)]
-        record_shapes: bool,
-        /// Profile PyTorch memory.
-        #[arg(long)]
-        profile_memory: bool,
-        /// Capture Python stacks in traces.
-        #[arg(long)]
-        with_stacks: bool,
-        /// Annotate operators with analytical flops.
-        #[arg(long)]
-        with_flops: bool,
-        /// Capture PyTorch operator modules in traces.
-        #[arg(long)]
-        with_modules: bool,
-    },
     /// Capture nputrace. Subcommand functions aligned with Ascend Torch Profiler.
     Nputrace {
         /// Job id of the application to trace.
@@ -287,15 +241,7 @@ enum Command {
         /// Log file for NPU monitor.
         #[clap(long, default_value = "")]
         log_file: String,
-    },
-    /// Pause dcgm profiling. This enables running tools like Nsight compute and avoids conflicts.
-    DcgmPause {
-        /// Duration to pause dcgm profiling in seconds
-        #[clap(long, default_value_t = 300)]
-        duration_s: i32,
-    },
-    /// Resume dcgm profiling
-    DcgmResume,
+    }
 }
 
 struct ClientConfigPath {
@@ -713,46 +659,6 @@ fn main() -> Result<()> {
     match cmd {
         Command::Status => status::run_status(client),
         Command::Version => version::run_version(client),
-        Command::Gputrace {
-            job_id,
-            pids,
-            log_file,
-            duration_ms,
-            iterations,
-            profile_start_time,
-            profile_start_iteration_roundup,
-            process_limit,
-            record_shapes,
-            profile_memory,
-            with_stacks,
-            with_flops,
-            with_modules,
-        } => {
-            let trigger_config = if iterations > 0 {
-                GpuTraceTriggerConfig::IterationBased {
-                    profile_start_iteration_roundup,
-                    iterations,
-                }
-            } else {
-                GpuTraceTriggerConfig::DurationBased {
-                    profile_start_time,
-                    duration_ms,
-                }
-            };
-            let trace_options = GpuTraceOptions {
-                record_shapes,
-                profile_memory,
-                with_stacks,
-                with_flops,
-                with_modules,
-            };
-            let trace_config = GpuTraceConfig {
-                log_file,
-                trigger_config,
-                trace_options,
-            };
-            gputrace::run_gputrace(client, job_id, &pids, process_limit, trace_config)
-        }
         Command::Nputrace {
             job_id,
             pids,
@@ -857,8 +763,6 @@ fn main() -> Result<()> {
             };
             npumonitor::run_npumonitor(client, npu_mon_config)
         }
-        Command::DcgmPause { duration_s } => dcgm::run_dcgm_pause(client, duration_s),
-        Command::DcgmResume => dcgm::run_dcgm_resume(client),
         // ... add new commands here
     }
 }
