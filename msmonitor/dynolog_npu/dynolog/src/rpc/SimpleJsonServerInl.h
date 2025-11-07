@@ -184,17 +184,6 @@ std::string SimpleJsonServer<TServiceHandler>::processOneImpl(const std::string&
         response["version"] = handler_->getVersion();
     } else if (request["fn"] == "setKinetOnDemandRequest") {
         response = handleSetKinetOnDemandRequest(request);
-    } else if (request["fn"] == "dcgmProfPause") {
-        if (!request.contains("duration_s")) {
-            response["status"] = "failed";
-        } else {
-            int duration_s = request.value("duration_s", 300);
-            bool result = handler_->dcgmProfPause(duration_s);
-            response["status"] = result;
-        }
-    } else if (request["fn"] == "dcgmProfResume") {
-        bool result = handler_->dcgmProfResume();
-        response["status"] = result;
     } else {
         LOG(ERROR) << "Unknown RPC call = " << request["fn"];
         return "";
@@ -202,5 +191,4 @@ std::string SimpleJsonServer<TServiceHandler>::processOneImpl(const std::string&
 
     return response.dump();
 }
-
 } // namespace dynolog
