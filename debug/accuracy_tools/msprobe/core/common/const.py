@@ -238,6 +238,8 @@ class Const:
     TYPE = 'type'
     DTYPE = 'dtype'
     SHAPE = 'shape'
+    LAYOUT = 'layout'
+    SHARD_SIZE = 'hsdp_shard_size'
     STACK_INFO = 'stack_info'
     MAX = 'Max'
     MIN = 'Min'

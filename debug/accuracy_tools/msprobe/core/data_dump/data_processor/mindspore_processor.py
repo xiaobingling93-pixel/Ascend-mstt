@@ -214,6 +214,23 @@ class MindsporeDataProcessor(BaseDataProcessor):
             'dtype': str(tensor.dtype),
             'shape': tensor.shape
         }
+        if hasattr(tensor, "layout") and tensor.layout is not None:
+            layout_dic = {}
+            if hasattr(tensor.layout, "device_matrix") and tensor.layout.device_matrix is not None:
+                layout_dic['Device Matrix'] = tensor.layout.device_matrix
+            if hasattr(tensor.layout, "alias_name") and tensor.layout.alias_name is not None: 
+                layout_dic['Alias Name'] = tensor.layout.alias_name
+                interleaved = "Yes" if ("interleaved_parallel" in tensor.layout.alias_name) else "No"
+                layout_dic['Interleaved'] = interleaved
+            if hasattr(tensor.layout, "partial") and tensor.layout.partial is not None: 
+                layout_dic['Partial'] = tensor.layout.partial
+            if hasattr(tensor.layout, "tensor_map") and tensor.layout.tensor_map is not None: 
+                layout_dic['Tensor Map'] = tensor.layout.tensor_map
+            if hasattr(tensor.layout, "rank_list") and tensor.layout.rank_list is not None: 
+                layout_dic['Rank List'] = tensor.layout.rank_list
+            tensor_json['layout'] = layout_dic
+        if hasattr(tensor, "hsdp_effective_shard_size") and tensor.hsdp_effective_shard_size is not None:
+            tensor_json['hsdp_shard_size'] = tensor.hsdp_effective_shard_size
 
         # 将统计值存入全局 buffer，并返回占位索引
         stat_values = [

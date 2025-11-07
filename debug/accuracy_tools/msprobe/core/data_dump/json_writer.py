@@ -109,6 +109,13 @@ class DataWriter:
                         Const.MEAN: stat_values[2],
                         Const.NORM: stat_values[3],
                     }
+                    if Const.MS_FRAMEWORK in data["type"]:
+                        layout = data.get("layout", None)
+                        if layout:
+                            new_entries[Const.LAYOUT] = layout
+                        shard_size = data.get("hsdp_shard_size", None)
+                        if shard_size:
+                            new_entries[Const.SHARD_SIZE] = shard_size
                     del data[key]
 
                     # 重构字典顺序
