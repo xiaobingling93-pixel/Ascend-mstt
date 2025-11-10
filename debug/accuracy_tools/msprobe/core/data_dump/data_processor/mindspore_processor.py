@@ -31,7 +31,8 @@ from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
-from msprobe.mindspore.common.utils import is_mindtorch
+from msprobe.mindspore.common.utils import is_mindtorch, cast_to_float_if_fp8
+from msprobe.mindspore.common.const import Const as MsConst
 
 has_adump = True
 try:
@@ -208,10 +209,12 @@ class MindsporeDataProcessor(BaseDataProcessor):
         return p2pop_info
 
     def _analyze_tensor(self, tensor, suffix):
+        dtype = str(tensor.dtype)
+        tensor = cast_to_float_if_fp8(tensor)
         tensor_stat = self.get_stat_info(tensor)
         tensor_json = {
             'type': 'mindspore.Tensor',
-            'dtype': str(tensor.dtype),
+            'dtype': dtype,
             'shape': tensor.shape
         }
         if hasattr(tensor, "layout") and tensor.layout is not None:
@@ -263,6 +266,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = MindsporeDataProcessor._analyze_tensor(self, tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
+        tensor = cast_to_float_if_fp8(tensor)
         if self.config.async_dump:
             self._async_dump_cache[file_path] = tensor.copy()
         else:
@@ -346,6 +350,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def maybe_save_overflow_data(self):
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
+                tensor = cast_to_float_if_fp8(tensor)
                 save_tensor_as_npy(tensor, file_path)
             self.real_overflow_nums += 1
             if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:

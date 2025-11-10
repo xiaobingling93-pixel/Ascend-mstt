@@ -84,6 +84,8 @@ class Const:
         mstype.int64, mstype.intp, mstype.uint64, mstype.uintp
     )
 
+    FP8_TYPE_LIST = ["Float8E5M2", "Float8E4M3FN", "HiFloat8"]
+
 
 class MsCompareConst:
     # api_info field

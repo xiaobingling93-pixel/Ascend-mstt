@@ -373,3 +373,14 @@ def wrap_backward_hook_call_func(call_func):
     new_call.__name__ = '__call__'
 
     return new_call
+
+
+def cast_to_float_if_fp8(tensor):
+    dtype = str(tensor.dtype)
+    if dtype in MsConst.FP8_TYPE_LIST:
+        logger.debug(
+            f"The {dtype} tensor analyzing/saving is unsupported in dump function."
+            f"Casting to a float for processing"
+        )
+        tensor = tensor.to(ms.float32)
+    return tensor

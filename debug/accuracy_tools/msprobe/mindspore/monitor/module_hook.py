@@ -32,7 +32,7 @@ from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.file_utils import load_json, save_json, make_dir
 from msprobe.core.monitor.utils import validate_config, get_output_base_dir, get_target_output_dir
 from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
-from msprobe.mindspore.common.utils import is_mindtorch
+from msprobe.mindspore.common.utils import is_mindtorch, cast_to_float_if_fp8
 from msprobe.mindspore.monitor.common_func import is_valid_instance, get_parameters, get_submodules, get_rank, \
     comm_is_initialized
 from msprobe.mindspore.monitor.utils import get_summary_writer_tag_name, step_accumulates_one, is_skip_step, \
@@ -710,15 +710,16 @@ class TrainerMon:
         if isinstance(tensor, Tensor):
             tensor = [tensor]
         if isinstance(tensor, tuple) or isinstance(tensor, list):
-            if len(tensor) == 1:
+            if len(tensor) == 1 and isinstance(tensor[0], Tensor):
                 key = get_summary_writer_tag_name(module_name + suffix, tag, self.rank)
                 self.register_param_call_id("_hook_module", key)
                 tensor_map[key] = tensor[0]
             else:
                 for i, tensor_i in enumerate(tensor):
-                    key = get_summary_writer_tag_name(module_name + f"_{i}" + suffix, tag, self.rank)
-                    self.register_param_call_id("_hook_module", key)
-                    tensor_map[key] = tensor_i
+                    if isinstance(tensor_i, Tensor):
+                        key = get_summary_writer_tag_name(module_name + f"_{i}" + suffix, tag, self.rank)
+                        self.register_param_call_id("_hook_module", key)
+                        tensor_map[key] = tensor_i
         return tensor_map
 
     def register_param_call_id(self, hook_name: str, key: str):
@@ -998,7 +999,7 @@ class TrainerMon:
             param.micro_step += 1
 
             if self.monitor_mbs_grad or (param.micro_step == self.micro_batch_number):
-                context_dict[key] = grad
+                context_dict[key] = cast_to_float_if_fp8(grad)
             if param.micro_step == self.micro_batch_number:
                 param.micro_step = 0
 
