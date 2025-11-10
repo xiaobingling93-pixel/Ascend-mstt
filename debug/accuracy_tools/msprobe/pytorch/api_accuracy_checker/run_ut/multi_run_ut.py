@@ -123,7 +123,8 @@ def run_parallel_ut(config):
     def read_process_output(process):
         try:
             while True:
-                if process.poll() is not None:
+                # 子进程标准输出流与进程本身状态是分开的，因此增加判断。子进程返回值非None表示子进程结束，标准输出为None表示结束。
+                if process.poll() is not None or process.stdout is None:
                     break
                 output = process.stdout.readline()
                 if output == '':
@@ -171,7 +172,7 @@ def run_parallel_ut(config):
 
     try:
         for process in processes:
-            process.communicate(timeout=None)
+            process.wait()  # wait仅阻塞，不捕获标准输出和标准错误，原communicate不仅阻塞，而且捕获标准输出和标准错误
     except KeyboardInterrupt:
         logger.warning("Interrupted by user, terminating processes and cleaning up...")
     except Exception as e:
