@@ -15,6 +15,7 @@
 from mindspore import dtype as mstype, Tensor
 
 from msprobe.mindspore.monitor.features import FUNC_MAP, cal_entropy, cal_stable_rank
+from msprobe.mindspore.common.utils import cast_to_float_if_fp8
 
 
 def get_single_metrics(op_list, tag, tensor, eps=1e-8, output=None):
@@ -22,7 +23,11 @@ def get_single_metrics(op_list, tag, tensor, eps=1e-8, output=None):
         output = {}
     if tag not in output:
         output[tag] = {}
+    dtype = tensor.dtype
     for op in op_list:
+        if op == "dtype":
+            output[tag][op] = dtype
+            continue
         func = FUNC_MAP.get(op)
         if op == "zeros":
             statistic = func(tensor, eps)
