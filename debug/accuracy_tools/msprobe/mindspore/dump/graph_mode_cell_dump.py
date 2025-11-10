@@ -87,6 +87,7 @@ class GraphModeCellDump:
                     "Importing _dump_step failed, "
                     "please use the latest version package of MindSpore."
                 )
+            ms.runtime.synchronize()
             _dump_step(1)
             cellDumperWithDumpGradient.process_statistics_step(dump_path, Runtime.step_count, step_list)
 

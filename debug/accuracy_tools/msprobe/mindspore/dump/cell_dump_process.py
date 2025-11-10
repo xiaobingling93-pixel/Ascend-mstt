@@ -600,7 +600,7 @@ def is_download_finished(directory, save_flag):
 
 
 def process_step(dump_path, flag_path, step, step_list):
-    if step not in step_list:
+    if step_list and step not in step_list:
         return
 
     if not os.path.exists(dump_path):
@@ -716,7 +716,11 @@ def process_statistics_step(dump_path, step, step_list):
     if rank_id is not None:
         rank_dir_kbk = CoreConst.RANK + CoreConst.REPLACEMENT_CHARACTER + str(rank_id)
     rank_path_kbk = os.path.join(dump_path, rank_dir_kbk)
-
+    
+    data_dir = os.path.join(rank_path_kbk, "Net")
+    if not os.path.isdir(data_dir):
+        logger.warning('No grap cell data is dumped.')
+        return
     # 按相同step数将csv文件名分组存入file_dict
     file_dict = {}
     depth_limit = 4
@@ -733,6 +737,10 @@ def process_statistics_step(dump_path, step, step_list):
                     file_dict[step_dir].append(file_path)
                 else:
                     file_dict[step_dir] = [file_path]
+
+    if not file_dict:
+        logger.warning('Net exist but no grap cell data is dumped.')
+        return
 
     # 将相同step的csv文件合并，并加工后存入相应step目录下
     merge_file(dump_path, rank_dir_kbk, file_dict)
