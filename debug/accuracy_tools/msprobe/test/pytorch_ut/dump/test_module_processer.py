@@ -46,7 +46,7 @@ class TestModule(torch.nn.Module):
         return x * 2
 
 
-def forward_hook_fn(module, args, kwargs_or_output, output_or_kwargs=None):
+def ModuleProcesser_forward_hook_fn(module, args, kwargs_or_output, output_or_kwargs=None):
     print(f"The forward_hook executed normally.")
 
 
@@ -89,7 +89,7 @@ class TestWrapper(unittest.TestCase):
         """测试正常执行forward时的情况"""
         # 准备测试模块和hook
         module = TestModule(raise_exception=False)
-        module.register_forward_hook(forward_hook_fn)
+        module.register_forward_hook(ModuleProcesser_forward_hook_fn)
 
         # 应用包装函数
         wrap_forward_with_hook_safety(module)
@@ -106,7 +106,7 @@ class TestWrapper(unittest.TestCase):
         """测试抛出_StopRecomputationError时hook被调用"""
         # 准备测试模块和hook
         module = TestModule(raise_exception=True)
-        module.register_forward_hook(forward_hook_fn)
+        module.register_forward_hook(ModuleProcesser_forward_hook_fn)
 
         # 应用包装函数
         wrap_forward_with_hook_safety(module)
