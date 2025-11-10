@@ -63,9 +63,11 @@ def wrap_forward_with_hook_safety(module):
         except _StopRecomputationError as e:
             exception_output = None
             if len(module._forward_hooks.values()) > 0:
-                # msprobe的forward_hook会出现在第一个，仅执行msprobe的forward_hook
-                hook_fn = list(module._forward_hooks.values())[0]
-                hook_fn(module, args, kwargs, exception_output)
+                # 仅执行msprobe的forward_hook, hook名称必然包含'ModuleProcesser.'
+                for hook_fn in module._forward_hooks.values():
+                    if 'ModuleProcesser' in str(hook_fn):
+                        hook_fn(module, args, kwargs, exception_output)
+                        break
             raise e
 
     if torch_version_above_or_equal_21:
