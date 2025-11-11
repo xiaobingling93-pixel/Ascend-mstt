@@ -30,6 +30,7 @@
 #include <libgen.h>
 #include <climits>
 #include <unistd.h>
+#include <pwd.h>
 #include <sys/stat.h>
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -568,6 +569,19 @@ bool CreateMsmonitorLogPath(std::string &path)
         fprintf(stderr, "[ERROR] LOG_PATH: %s of Msmonitor is invalid.\n", absPath.c_str());
     }
     return false;
+}
+
+std::string GetCurrentUserHomePath()
+{
+    static std::string homePath = []() -> std::string {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw == nullptr || pw->pw_dir == nullptr) {
+            LOG(ERROR) << "Failed to get current user info";
+            return "";
+        }
+        return std::string(pw->pw_dir);
+    }();
+    return homePath;
 }
 } // namespace ipc_monitor
 } // namespace dynolog_npu

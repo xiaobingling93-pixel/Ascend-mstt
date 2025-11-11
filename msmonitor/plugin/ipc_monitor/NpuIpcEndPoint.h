@@ -31,7 +31,7 @@ namespace ipc_monitor {
 
 using fileDesT = int;
 constexpr const char STR_END_CHAR = '\0';
-constexpr int SOCKET_FD_CHMOD = 0640;
+constexpr int SOCK_PATH_PERMISSION = 0600;
 
 struct NpuPayLoad {
     size_t size;
@@ -62,7 +62,7 @@ public:
         }
         int ret = 0;
         struct sockaddr_un address;
-        size_t addressLen = SetSocketAdress(addressName, address);
+        size_t addressLen = SetSocketAdress(addressName, address, true);
         if (address.sun_path[0] != STR_END_CHAR) {
             ret = unlink(address.sun_path);
         }
@@ -76,7 +76,7 @@ public:
         }
 
         if (address.sun_path[0] != STR_END_CHAR) {
-            ret = chmod(address.sun_path, SOCKET_FD_CHMOD);
+            ret = chmod(address.sun_path, SOCK_PATH_PERMISSION);
         }
         if (ret == -1) {
             throw std::runtime_error("Chmod failed, error is " + std::string(strerror(errno)) + IPC_ERROR(ErrCode::PARAM));
@@ -99,7 +99,7 @@ public:
                 IPC_ERROR(ErrCode::PARAM));
         }
         auto ctxt = BuildNpuCtxt_(npuPayLoad, fileDes.size());
-        ctxt->msghdr.msg_namelen = SetSocketAdress(desAddrName, ctxt->messageName);
+        ctxt->msghdr.msg_namelen = SetSocketAdress(desAddrName, ctxt->messageName, false);
         if (!fileDes.empty()) {
             if (fileDes.size() * sizeof(fileDesT) > sizeof(ctxt->fileDesPtr)) {
                 throw std::runtime_error("Memcpy failed when fileDes size large than ctxt fileDesPtr " +
@@ -166,13 +166,27 @@ public:
         throw std::runtime_error("TryPeekMessage occur " + std::string(std::strerror(errno)));
     }
 
-    const char *GetName(Ctxt const & ctxt) const
+    const char *GetName(Ctxt const & ctxt, bool isAbstract) const
     {
-        if (ctxt.messageName.sun_path[0] != STR_END_CHAR) {
-            throw std::runtime_error("GetName() want to got abstract socket, but got " +
-                std::string(ctxt.messageName.sun_path));
+        if (isAbstract) {
+            if (ctxt.messageName.sun_path[0] != STR_END_CHAR) {
+                throw std::runtime_error("GetName() want to got abstract socket, but got " +
+                    std::string(ctxt.messageName.sun_path));
+            }
+            return ctxt.messageName.sun_path + 1;
+        } else {
+            auto socketDir = GetCurrentUserHomePath();
+            if (!socketDir.empty()) {
+                if (strncmp(socketDir.c_str(), ctxt.messageName.sun_path, socketDir.size()) != 0 ||
+                    ctxt.messageName.sun_path[socketDir.size()] != '/') {
+                    throw std::runtime_error(
+                        "Unexpected socket name: " + std::string(ctxt.messageName.sun_path) +
+                        ". Expected to start with " + std::string(socketDir));
+                }
+                return ctxt.messageName.sun_path + socketDir.size() + 1;
+            }
         }
-        return ctxt.messageName.sun_path + 1;
+        return nullptr;
     }
 
     std::vector<fileDesT> GetFileDes(const Ctxt &ctxt) const
@@ -187,19 +201,37 @@ public:
 
 protected:
     fileDesT socketFd = -1;
-    size_t SetSocketAdress(const std::string &srcSocket, struct sockaddr_un &destSocket)
+    size_t SetSocketAdress(const std::string &srcSocket, struct sockaddr_un &destSocket, bool isAbstract)
     {
-        if (srcSocket.size() > addressMaxLen) {
-            throw std::runtime_error("Abstract UNIX Socket path cannot be larger than addressMaxLen");
-        }
         destSocket.sun_family = AF_UNIX;
-        destSocket.sun_path[0] = STR_END_CHAR;
-        if (srcSocket.empty()) {
-            return sizeof(sa_family_t);
+        if (isAbstract) {
+            destSocket.sun_path[0] = STR_END_CHAR;
+            if (srcSocket.empty()) {
+                return sizeof(sa_family_t);
+            }
+            if (srcSocket.size() > addressMaxLen) {
+                throw std::runtime_error("Abstract UNIX Socket path cannot be larger than addressMaxLen");
+            }
+            srcSocket.copy(destSocket.sun_path + 1, srcSocket.size());
+            destSocket.sun_path[srcSocket.size() + 1] = STR_END_CHAR;
+            return sizeof(sa_family_t) + srcSocket.size() + 2;  // 2 for sun_path[0] and sun_path[srcSocket.size() + 1]
+        } else {
+            auto homePath = GetCurrentUserHomePath();
+            if (!homePath.empty()) {
+                std::string sockPath = homePath + "/" + srcSocket + ".sock";
+                if (sockPath.size() > addressMaxLen) {
+                    throw std::runtime_error("UNIX Socket path cannot be larger than addressMaxLen");
+                }
+                if (!(PathUtils::IsFileExist(sockPath) && PathUtils::IsFileWritable(sockPath))) {
+                    throw std::runtime_error("UNIX Socket path is not exist or not writable: " + sockPath);
+                }
+                sockPath.copy(destSocket.sun_path, sockPath.size());
+                destSocket.sun_path[sockPath.size()] = '\0';
+                return sizeof(sa_family_t) + sockPath.size() + 1;
+            }
+            throw std::runtime_error("GetHomePath failed when build socket path " + IPC_ERROR(ErrCode::PARAM));
         }
-        srcSocket.copy(destSocket.sun_path + 1, srcSocket.size());
-        destSocket.sun_path[srcSocket.size() + 1] = STR_END_CHAR;
-        return sizeof(sa_family_t) + srcSocket.size() + 2;  // 2
+        return sizeof(sa_family_t);
     }
 
     auto BuildNpuCtxt_(const std::vector<NpuPayLoad> &npuPayLoad, unsigned numFileDes)

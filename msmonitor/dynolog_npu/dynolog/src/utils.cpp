@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <sys/stat.h>
+#include <pwd.h>
 #include <unordered_map>
 #include <glog/logging.h>
 #include <nlohmann/json.hpp>
@@ -111,7 +112,6 @@ bool PathUtils::IsOwner(const std::string &path)
     }
     return true;
 }
-
 
 bool PathUtils::DirPathCheck(const std::string &path)
 {
@@ -221,5 +221,18 @@ bool CheckJsonDepth(const std::string &json_str)
         return false;
     }
     return true;
+}
+
+std::string GetCurrentUserHomePath()
+{
+    static std::string home_path = []() -> std::string {
+        struct passwd *pw = getpwuid(getuid());
+        if (pw == nullptr || pw->pw_dir == nullptr) {
+            LOG(ERROR) << "Failed to get current user info";
+            return "";
+        }
+        return std::string(pw->pw_dir);
+    }();
+    return home_path;
 }
 } // namespace dynolog

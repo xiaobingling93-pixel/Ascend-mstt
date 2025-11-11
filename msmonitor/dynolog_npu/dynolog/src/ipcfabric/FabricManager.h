@@ -85,7 +85,7 @@ struct Message {
 
 class FabricManager {
 public:
-    explicit FabricManager(std::string endpoint_name = "") : ep_{endpoint_name} {}
+    explicit FabricManager(std::string endpoint_name = "") : ep_{std::move(endpoint_name)} {}
     FabricManager(const FabricManager &) = delete;
     FabricManager &operator=(const FabricManager &) = delete;
 
@@ -117,7 +117,7 @@ public:
             Payload(msg.metadata.size, msg.buf.get())};
         int i = 0;
         try {
-            auto ctxt = ep_.buildSendCtxt(dest_name, payload, std::vector<int>());
+            auto ctxt = ep_.buildSendCtxt(dest_name, payload);
             while (!ep_.trySendMsg(*ctxt) && i < num_retries)
             {
                 i++;
@@ -153,18 +153,19 @@ public:
                 return false;
             }
             if (success) {
-                if (receive_metadata.size > MAX_MSG_SIZE) {
-                    receive_metadata.size = MAX_MSG_SIZE;
-                }
+                receive_metadata.size = std::min(receive_metadata.size, MAX_MSG_SIZE);
                 std::unique_ptr<Message> msg = std::make_unique<Message>(Message());
                 msg->metadata = receive_metadata;
                 msg->buf = std::make_unique<unsigned char[]>(receive_metadata.size);
-                msg->src = std::string(ep_.getName(*peek_ctxt));
-                std::vector<Payload> payload{
-                    Payload(sizeof(struct Metadata), (void *)&msg->metadata),
+                auto src = ep_.getName(*peek_ctxt, true);
+                if (src == nullptr) {
+                    LOG(ERROR) << "Failed to get source name from peek context";
+                    return false;
+                }
+                msg->src = std::string(src);
+                std::vector<Payload> payload{Payload(sizeof(struct Metadata), (void *)&msg->metadata),
                     Payload(receive_metadata.size, msg->buf.get())};
                 auto recv_ctxt = ep_.buildRcvCtxt(payload);
-
                 try {
                     success = ep_.tryRcvMsg(*recv_ctxt);
                 } catch (std::exception &e) {
@@ -182,13 +183,12 @@ public:
                 }
                 if (success) {
                     std::lock_guard<std::mutex> wguard(dequeLock_);
-                    message_deque_.push_back(std::move(msg));
+                    message_deque_.emplace_back(std::move(msg));
                     return true;
                 }
             }
         } catch (std::exception &e) {
             LOG(ERROR) << "Error in recv(): " << e.what();
-            return false;
         }
         return false;
     }
@@ -219,7 +219,7 @@ public:
 private:
     // message LIFO deque with oldest message at front
     std::deque<std::unique_ptr<Message>> message_deque_;
-    EndPoint<0> ep_;
+    EndPoint ep_;
     std::mutex dequeLock_;
 };
 } // namespace dynolog::ipcfabric

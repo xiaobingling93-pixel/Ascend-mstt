@@ -109,6 +109,7 @@ uint64_t CalcHashId(const std::string &data);
 std::string GetHostName();
 std::string GetHostUid();
 bool CreateMsmonitorLogPath(std::string& path);
+std::string GetCurrentUserHomePath();
 
 struct PathUtils {
     static bool IsFileExist(const std::string &path);
