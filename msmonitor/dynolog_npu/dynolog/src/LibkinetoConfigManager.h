@@ -105,6 +105,7 @@ private:
     std::condition_variable managerCondVar_;
     int32_t npuTraceStatus_ = -1;
     int32_t npuMonitorStatus_ = -1;
+    int32_t registerCount_ = 0;
 };
 
 } // namespace dynolog

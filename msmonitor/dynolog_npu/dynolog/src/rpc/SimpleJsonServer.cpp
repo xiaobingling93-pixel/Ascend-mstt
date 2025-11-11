@@ -21,10 +21,12 @@
 #include <termios.h>
 #include <algorithm>
 #include <chrono>
+#include <sys/time.h>
 #include "dynolog/src/utils.h"
 
 constexpr int CLIENT_QUEUE_LEN = 50;
 constexpr int MAX_MESSAGE_LEN = 2 * 4096;   // twice the maximum linux path length
+constexpr int SOCKET_TIMEOUT_SEC = 3;
 
 namespace dynolog {
 
@@ -42,9 +44,9 @@ SimpleJsonServerBase::SimpleJsonServerBase(int port) : port_(port)
     try {
         initSocket();
         if (FLAGS_certs_dir != NO_CERTS_MODE) {
-        init_openssl();
-        ctx_ = create_context();
-        configure_context(ctx_);
+            init_openssl();
+            ctx_ = create_context();
+            configure_context(ctx_);
         }
     } catch (const std::exception& e) {
         LOG(ERROR) << "Failed to initialize server: " << e.what();
@@ -134,12 +136,12 @@ public:
     ~ClientSocketWrapper()
     {
         if (FLAGS_certs_dir != NO_CERTS_MODE && ssl_) {
-        int shutdown_ret = SSL_shutdown(ssl_);
-        if (shutdown_ret <= 0) {
-            LOG(ERROR) << "SSL_shutdown failed, error code: " << shutdown_ret;
-            shutdown_ret = SSL_shutdown(ssl_);
-        }
-        SSL_free(ssl_);
+            int shutdown_ret = SSL_shutdown(ssl_);
+            if (shutdown_ret < 0) {
+                LOG(ERROR) << "SSL_shutdown failed, error code: " << shutdown_ret;
+                shutdown_ret = SSL_shutdown(ssl_);
+            }
+            SSL_free(ssl_);
         }
         if (client_sock_fd_ != -1) {
             ::close(client_sock_fd_);
@@ -165,6 +167,15 @@ public:
             client_addr_str.data(),
             client_addr_str.size());
         LOG(INFO) << "Received connection from " << client_addr_str.data();
+
+        // set timeout 3s
+        struct timeval tv;
+        tv.tv_sec = SOCKET_TIMEOUT_SEC;
+        tv.tv_usec = 0;
+        if (::setsockopt(client_sock_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+            LOG(ERROR) << "Set client socket timeout failed.";
+            return false;
+        }
 
         if (FLAGS_certs_dir == NO_CERTS_MODE) {
             LOG(INFO) << "No certs mode";
@@ -199,7 +210,7 @@ public:
         int recv = 0;
         int ret = 1;
         // set timeout 3s
-        const auto timeout = std::chrono::seconds(3);
+        const auto timeout = std::chrono::seconds(SOCKET_TIMEOUT_SEC);
         auto start = std::chrono::steady_clock::now();
         while (recv < msg_size && ret > 0) {
             ret = read_helper((uint8_t*)&message[recv], msg_size - recv);
@@ -270,7 +281,7 @@ private:
     int read_helper(uint8_t* buf, int size)
     {
         if (FLAGS_certs_dir == NO_CERTS_MODE) {
-            int ret = ::read(client_sock_fd_, (void*)buf, size);
+            int ret = ::recv(client_sock_fd_, buf, size, 0);
             if (ret == -1) {
                 std::perror("read()");
             }
@@ -282,8 +293,9 @@ private:
         }
         return ret;
     }
-        int client_sock_fd_ = -1;
-        SSL* ssl_ = nullptr;
+
+    int client_sock_fd_ = -1;
+    SSL* ssl_ = nullptr;
 };
 
 /* Accepts socket connections and processes the payloads.
@@ -519,13 +531,13 @@ void SimpleJsonServerBase::verify_rsa_key_length(EVP_PKEY* pkey)
         if (!rsa) {
             throw std::runtime_error("Failed to get RSA key");
         }
-        
+
         const BIGNUM* n = nullptr;
         RSA_get0_key(rsa, &n, nullptr, nullptr);
         if (!n) {
             throw std::runtime_error("Failed to get RSA modulus");
         }
-        
+
         key_length = BN_num_bits(n);
 #endif
         if (key_length < MIN_RSA_KEY_LENGTH) {
@@ -550,10 +562,10 @@ void SimpleJsonServerBase::verify_certificate_validity(X509* cert)
         !ASN1_TIME_to_tm(not_after, &tm_after)) {
         throw std::runtime_error("Failed to convert certificate dates");
     }
-    
+
     time_t not_before_time = mktime(&tm_before);
     time_t not_after_time = mktime(&tm_after);
-    
+
     // 检查证书是否已生效
     if (current_time < not_before_time) {
         BIO* bio = BIO_new(BIO_s_mem());
@@ -602,7 +614,7 @@ void SimpleJsonServerBase::verify_certificate_extensions(X509* cert)
         for (int i = 0; i < sk_X509_EXTENSION_num(exts); i++) {
             X509_EXTENSION* ext = sk_X509_EXTENSION_value(exts, i);
             ASN1_OBJECT* obj = X509_EXTENSION_get_object(ext);
-            
+
             if (OBJ_obj2nid(obj) == NID_basic_constraints) {
                 BASIC_CONSTRAINTS* constraints = (BASIC_CONSTRAINTS*)X509V3_EXT_d2i(ext);
                 if (constraints) {
@@ -654,26 +666,26 @@ void SimpleJsonServerBase::load_private_key(SSL_CTX* ctx, const std::string& ser
     rewind(key_file);
 
     if (is_encrypted) {
-        char password[256] = {0};
+        char user_input[256] = {0};
         std::cout << "Please enter the certificate password: ";
-        get_password_with_stars(password, sizeof(password));
+        get_password_with_stars(user_input, sizeof(user_input));
         std::cout << std::endl;
 
         EVP_PKEY* pkey = PEM_read_PrivateKey(
             key_file,
             nullptr,
             [](char* buf, int size, int rwflag, void* userdata) -> int {
-                const char* password = static_cast<const char*>(userdata);
-                int pwlen = strlen(password);
+                const char* pw = static_cast<const char*>(userdata);
+                int pwlen = strlen(pw);
                 if (pwlen > size) return 0;
-                std::copy(password, password + pwlen, buf);
+                std::copy(pw, pw + pwlen, buf);
                 return pwlen;
             },
-            password);
+            user_input);
 
         fclose(key_file);
         // 直接清空 char[] 密码
-        std::fill(std::begin(password), std::end(password), 0);
+        std::fill(std::begin(user_input), std::end(user_input), 0);
 
         if (!pkey) {
             ERR_print_errors_fp(stderr);

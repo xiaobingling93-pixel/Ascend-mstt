@@ -23,6 +23,7 @@ namespace dynolog {
 namespace {
 
 const int VerboseLevel = 2;
+constexpr int kMaxRegisterCount = 50;
 constexpr std::chrono::seconds kKeepAliveTimeSecs(60);
 constexpr char kConfigFile[] = "/etc/libkineto.conf";
 
@@ -141,6 +142,7 @@ void LibkinetoConfigManager::runGc()
                     job_it->first);
                 onProcessCleanup(proc_it->first);
                 proc_it = procs.erase(proc_it);
+                registerCount_--;
             } else {
                 proc_it++;
             }
@@ -161,9 +163,14 @@ void LibkinetoConfigManager::runGc()
 int32_t LibkinetoConfigManager::registerLibkinetoContext(const std::string& jobId, int32_t pid, int32_t gpu)
 {
     std::lock_guard<std::mutex> guard(mutex_);
+    if (registerCount_ >= kMaxRegisterCount) {
+        LOG(ERROR) << "Max register count reached, can not register more libkineto contexts.";
+        return -1;
+    }
     auto& instances = jobInstancesPerGpu_[jobId][gpu];
     instances.insert(pid);
     LOG(INFO) << fmt::format("Registered process ({}) for job {}.", pid, jobId);
+    registerCount_++;
     return instances.size();
 }
 

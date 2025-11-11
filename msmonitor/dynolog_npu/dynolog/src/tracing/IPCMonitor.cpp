@@ -234,7 +234,12 @@ void IPCMonitor::registerLibkinetoContext(
         size = LibkinetoConfigManager::getInstance()->registerLibkinetoContext(
             std::to_string(ctxt->jobid), ctxt->pid, ctxt->gpu);
     } catch (const std::runtime_error& ex) {
-    LOG(ERROR) << "Kineto config manager exception : " << ex.what();
+        LOG(ERROR) << "Kineto config manager exception : " << ex.what();
+    }
+    if (size < 0) {
+        LOG(ERROR) << "Failed to register libkineto context for job "
+                   << ctxt->jobid << ", pid " << ctxt->pid << ", gpu " << ctxt->gpu;
+        return;
     }
     std::unique_ptr<ipcfabric::Message> ret =
         ipcfabric::Message::constructMessage<decltype(size)>(
