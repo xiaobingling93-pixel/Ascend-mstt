@@ -148,15 +148,11 @@ class GradContext:
     def __init__(self) -> None:
         self.pre = {}
         self.post = {}
-        self.acc_metric = {}
-        self.acc = {}
         self.actv = {}
 
     def reset(self):
         self.pre.clear()
         self.post.clear()
-        self.acc_metric.clear()
-        self.acc.clear()
         self.actv.clear()
 
 
@@ -508,18 +504,8 @@ class TrainerMon:
         if not self.wg_distribution:
             return {}, {}
 
-        if self.weight_hooked:
-            get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
-
         get_metrics(self.ops, post_grad_dict, self.eps, self.grad_context.post)
-        reduced_grad = self.grad_context.post
-
-        if self.weight_hooked:
-            unreduced_grad = self.grad_context.acc_metric
-        else:
-            unreduced_grad = self.grad_context.pre
-
-        return reduced_grad, unreduced_grad
+        return self.grad_context.post, self.grad_context.pre
 
     def generate_xy_metrics(self):
         actv = {}
@@ -527,7 +513,6 @@ class TrainerMon:
             actv.update(fwd_context.actv)
 
         actv_grad = self.grad_context.actv
-
         return actv, actv_grad
 
     def reload_xy(self, xy_distribution=False):
@@ -605,11 +590,8 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.weight_hooked:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced',
+        self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced',
                                               use_micro_step=self.monitor_mbs_grad)
-        else:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
     def hook_optimizer(self, optimizer):
@@ -1294,10 +1276,9 @@ class TrainerMon:
         """
         遍历参数的梯度生成函数（grad_acc），并挂载hook，以便在该参数所有梯度计算后，采集通信聚合前梯度数据。
         """
-        context = self.grad_context
 
         @torch.no_grad
-        def param_hook(*args, context_dict, param, name):
+        def param_hook(*args, param, name):
             key = name
             if self.monitor_mbs_grad:
                 key += f'{MonitorConst.NAME_SEP}{param.micro_step}'
@@ -1305,7 +1286,7 @@ class TrainerMon:
             key = get_summary_writer_tag_name(key, 'acc_grad', self.rank)
             self.register_param_call_id("param_hook", key)
             param.micro_step += 1
-
+            grad_dict = {}
             if self.monitor_mbs_grad or (param.micro_step == self.micro_batch_number):
                 if self.params_have_main_grad:
                     grad = param.main_grad
@@ -1313,8 +1294,9 @@ class TrainerMon:
                     grad = param.grad
                 if is_float8_tensor(grad):
                     grad = grad.float()
-                context_dict[key] = grad.clone()
+                grad_dict[key] = grad.clone()
 
+            get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
             if param.micro_step == self.micro_batch_number:
                 param.micro_step = 0
 
@@ -1324,7 +1306,7 @@ class TrainerMon:
             param_tmp = param.expand_as(param)
             grad_acc = param_tmp.grad_fn.next_functions[0][0]
             handle = grad_acc.register_hook(
-                partial(param_hook, context_dict=context.acc, param=param, name=name))
+                partial(param_hook, param=param, name=name))
             self.grad_accs.append(grad_acc)
             self.handles['wgrads'].append(handle)
 
