@@ -156,7 +156,12 @@ bool IpcClient::Recv()
             std::unique_ptr<Message> npuMessage = std::make_unique<Message>(Message());
             npuMessage->metadata = recvMetadata;
             npuMessage->buf = std::make_unique<unsigned char[]>(recvMetadata.size);
-            npuMessage->src = std::string(ep_.GetName(*peekCtxt));
+            auto srcName = ep_.GetName(*peekCtxt, false);
+            if (srcName == nullptr) {
+                LOG(ERROR) << "Failed to get source name from peek context";
+                return false;
+            }
+            npuMessage->src = std::string(srcName);
             std::vector<NpuPayLoad> npuPayLoad{ NpuPayLoad(sizeof(struct Metadata), (void *)&npuMessage->metadata),
                 NpuPayLoad(recvMetadata.size, npuMessage->buf.get()) };
             auto recvCtxt = ep_.BuildNpuRcvCtxt(npuPayLoad);
