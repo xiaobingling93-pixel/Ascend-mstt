@@ -70,7 +70,7 @@ class TestTrainerMon(unittest.TestCase):
         self.trainer.summary_writer.write_metrics.assert_called()
 
     def test_write_grad_tb_given_grad_data_when_called_then_writes_metrics(self):
-        self.trainer.grad_context.acc_metric = {"grad1": ms.Tensor(0.5)}
+        self.trainer.grad_context.pre = {"grad1": ms.Tensor(0.5)}
         self.trainer.grad_context.post = {"grad2": ms.Tensor(0.8)}
         self.trainer.summary_writer.write_metrics = MagicMock()
         self.trainer.write_grad_tb(1)
