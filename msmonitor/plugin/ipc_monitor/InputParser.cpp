@@ -138,7 +138,7 @@ MsptiMonitorCfg InputParser::DynoLogGetOpts(std::unordered_map<std::string, std:
     auto activityKinds = str2Kinds(cmd[MSPTI_ACTIVITY_KIND_KEY]);
     uint32_t reportTimes = 0;
     Str2Uint32(reportTimes, cmd[REPORT_INTERVAL_S_KEY]);
-    bool startSwitch = false;
+    bool startSwitch = false; 
     Str2Bool(startSwitch, cmd[NPU_MONITOR_START_KEY]);
     bool endSwitch = false;
     Str2Bool(endSwitch, cmd[NPU_MONITOR_STOP_KEY]);

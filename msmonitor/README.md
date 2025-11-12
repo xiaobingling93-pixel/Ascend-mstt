@@ -82,13 +82,20 @@ dyno --certs-dir /home/client_certs nputrace --start-step 10 --iterations 2 --ac
 ```
 dyno --certs-dir /home/client_certs nputrace status
 ```
-输入以上命令后，会回显一个json字符串，例如：{"npumonitor":"Uninitialized","nputrace":"Uninitialized"}，nputrace有Uninitialized、Idle、Running、Ready四种状态，npumonitor有Uninitialized、Idle、Running三种状态。
+输入以上命令后，会回显一个json字符串，例如：{"current_step":1,"npumonitor":"Idle","nputrace":"Ready","start_step":5,"stop_step":10}。
 
 **状态说明：**
-- Uninitialized：程序未启动或者dynolog init之前；
-- Idle：没有下发命令；
-- Ready：命令已下发，暂未到达指定step；
+- Uninitialized：程序未启动或者dynolog init之前。
+- Idle：没有下发命令。
+- Ready：命令已下发，暂未到达指定step。
 - Running：正在采集数据。
+
+**其他说明：**
+- nputrace有Uninitialized、Idle、Running、Ready四种状态，npumonitor有Uninitialized、Idle、Running三种状态。
+- start_step、stop_step表示采集step的范围。PyTorch框架下有效采集范围为[start_step, stop_step)，即包含start_step，但不包含stop_step。MindSpore框架下有效采集范围为[start_step, stop_step]，包含stop_step。
+- nputrace为Running或者Ready状态时，才会显示start_step和stop_step。
+- current_step默认值为-1。
+- MindSpore框架下nputrace没有Ready状态。
 
 ### 📈 npumonitor特性
 npumonitor特性为用户提供轻量化监控关键指标的能力，npumonitor基于[MSPTI](https://www.hiascend.com/document/detail/zh/mindstudio/81RC1/T&ITools/Profiling/atlasprofiling_16_0021.html)开发，用户可以通过npumonitor查看模型运行时的计算、通信算子执行耗时。

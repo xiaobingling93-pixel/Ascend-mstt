@@ -30,6 +30,22 @@ enum PROFILER_STATUS: int32_t {
     READY = 2,
 };
 
+int32_t GetInt32FromMap(
+    const std::unordered_map<std::string, std::string>& map,
+    const std::string& key,
+    int32_t default_val = -1
+) {
+    auto it = map.find(key);
+    if (it != map.end()) {
+        int32_t val;
+        if (!Str2Int32(val, it->second)) {
+            return default_val;
+        }
+        return val;
+    }
+    return default_val;
+}
+
 class PyDynamicMonitorProxy : public Singleton<PyDynamicMonitorProxy> {
     friend class Singleton<PyDynamicMonitorProxy>;
 
@@ -42,8 +58,10 @@ public:
             monitor_->SetNpuId(npuId);
             bool res = monitor_->Init();
             if (res) {
-                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::IDLE, MSG_TYPE_TRACE_STATUS);
-                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::IDLE, MSG_TYPE_MONITOR_STATUS);
+                NpuStatus npuStatus;
+                npuStatus.status = PROFILER_STATUS::IDLE;
+                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_TRACE_STATUS);
+                DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_MONITOR_STATUS);
             }
             return res;
         } catch (const std::exception &e) {
@@ -65,23 +83,23 @@ public:
     void FinalizeDyno()
     {
         DynoLogNpuMonitor::GetInstance()->Finalize();
+        NpuStatus npuStatus;
+        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_TRACE_STATUS);
+        DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_MONITOR_STATUS);
     }
 
     void UpdateProfilerStatus(std::unordered_map<std::string, std::string>& status)
     {
-        int32_t npuTraceStatus = 0;
-        auto it = status.find("profiler_status");
-        if (it != status.end() && !it->second.empty()) {
-            Str2Int32(npuTraceStatus, it->second);
+        NpuStatus npuStatus;
+        npuStatus.status = GetInt32FromMap(status, PROFILER_STATUS);
+        npuStatus.currentStep = GetInt32FromMap(status, CURRENT_STEP);
+        npuStatus.startStep = GetInt32FromMap(status, START_STEP);
+        npuStatus.stopStep = GetInt32FromMap(status, STOP_STEP);
+        if (npuStatus.status == PROFILER_STATUS::UNINITIALIZED) {
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_TRACE_STATUS);
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_MONITOR_STATUS);
         } else {
-            LOG(ERROR) << "Missing key 'profiler_status'.";
-            return;
-        }
-        if (npuTraceStatus == -1) {
-            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::UNINITIALIZED, MSG_TYPE_TRACE_STATUS);
-            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(PROFILER_STATUS::UNINITIALIZED, MSG_TYPE_MONITOR_STATUS);
-        } else {
-            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuTraceStatus, MSG_TYPE_TRACE_STATUS);
+            DynoLogNpuMonitor::GetInstance()->UpdateNpuStatus(npuStatus, MSG_TYPE_TRACE_STATUS);
         }
     }
 private:

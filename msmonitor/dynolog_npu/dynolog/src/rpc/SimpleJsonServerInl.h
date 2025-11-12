@@ -14,6 +14,10 @@
 
 namespace dynolog {
 
+const std::string CURRENT_STEP = "current_step";
+const std::string START_STEP = "start_step";
+const std::string STOP_STEP = "stop_step";
+
 const std::unordered_map<int32_t, std::string> PROFILER_STATUS_MAP = {
     {-1, "Uninitialized"},
     {0, "Idle"},
@@ -91,17 +95,17 @@ inline std::string GetCommandStatus(const std::string& configStr)
     auto npuMonitorStatus = LibkinetoConfigManager::getInstance()->getNpuMonitorStatus();
     std::string prefix = "NPU_MONITOR_START";
     if (configStr.compare(0, prefix.size(), prefix) == 0) {
-        if (npuTraceStatus == PROFILER_STATUS::RUNNING || npuMonitorStatus == PROFILER_STATUS::UNINITIALIZED) {
+        if (npuTraceStatus.status == PROFILER_STATUS::RUNNING || npuMonitorStatus.status == PROFILER_STATUS::UNINITIALIZED) {
             return "ineffective";
-        } else if (npuTraceStatus == PROFILER_STATUS::IDLE || npuTraceStatus == PROFILER_STATUS::READY) {
+        } else if (npuTraceStatus.status == PROFILER_STATUS::IDLE || npuTraceStatus.status == PROFILER_STATUS::READY) {
             return "effective";
         } else {
             return "unknown";
         }
     } else {
-        if (npuMonitorStatus == PROFILER_STATUS::RUNNING || npuTraceStatus == PROFILER_STATUS::UNINITIALIZED) {
+        if (npuMonitorStatus.status == PROFILER_STATUS::RUNNING || npuTraceStatus.status == PROFILER_STATUS::UNINITIALIZED) {
             return "ineffective";
-        } else if (npuMonitorStatus == PROFILER_STATUS::IDLE) {
+        } else if (npuMonitorStatus.status == PROFILER_STATUS::IDLE) {
             return "effective";
         } else {
             return "unknown";
@@ -117,13 +121,18 @@ inline nlohmann::json GetStatus()
     response["npumonitor"] = "unknown";
     auto npuTraceStatus = LibkinetoConfigManager::getInstance()->getNpuTraceStatus();
     auto npuMonitorStatus = LibkinetoConfigManager::getInstance()->getNpuMonitorStatus();
-    auto it = PROFILER_STATUS_MAP.find(npuTraceStatus);
+    auto it = PROFILER_STATUS_MAP.find(npuTraceStatus.status);
     if (it != PROFILER_STATUS_MAP.end()) {
         response["nputrace"] = it->second;
     }
-    it = PROFILER_STATUS_MAP.find(npuMonitorStatus);
+    it = PROFILER_STATUS_MAP.find(npuMonitorStatus.status);
     if (it != PROFILER_STATUS_MAP.end()) {
         response["npumonitor"] = it->second;
+    }
+    response[CURRENT_STEP] = npuTraceStatus.currentStep;
+    if (npuTraceStatus.status == PROFILER_STATUS::RUNNING || npuTraceStatus.status == PROFILER_STATUS::READY) {
+        response[START_STEP] = npuTraceStatus.startStep;
+        response[STOP_STEP] = npuTraceStatus.stopStep;
     }
     return response;
 }

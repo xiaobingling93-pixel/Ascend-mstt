@@ -23,6 +23,15 @@ namespace dynolog {
 const std::string kLibkinetoTraceStatus = "npuTraceStatus";
 const std::string kLibkinetoMonitorStatus = "npuMonitorStatus";
 
+struct NpuStatus {
+    int32_t status = -1;
+    int32_t currentStep = -1;
+    int32_t startStep = -1;
+    int32_t stopStep = -1;
+    pid_t pid;
+    int64_t jobId;
+};
+
 class LibkinetoConfigManager {
 public:
     LibkinetoConfigManager();
@@ -50,9 +59,9 @@ public:
         int32_t configType,
         int32_t limit);
 
-    void updateNpuStatus(const std::string& jobId, int32_t pid, int32_t status, const std::string& msgType);
-    int32_t getNpuTraceStatus();
-    int32_t getNpuMonitorStatus();
+    void updateNpuStatus(const NpuStatus& status, const std::string& msgType);
+    NpuStatus getNpuTraceStatus() const;
+    NpuStatus getNpuMonitorStatus() const;
 
     // Return the number of active libkineto processes
     // with the given Chronos / Tangram Job Id
@@ -103,8 +112,8 @@ private:
     std::thread managerThread_;
     std::atomic_bool stopFlag_{ false };
     std::condition_variable managerCondVar_;
-    int32_t npuTraceStatus_ = -1;
-    int32_t npuMonitorStatus_ = -1;
+    NpuStatus npuTraceStatus_;
+    NpuStatus npuMonitorStatus_;
     int32_t registerCount_ = 0;
 };
 
