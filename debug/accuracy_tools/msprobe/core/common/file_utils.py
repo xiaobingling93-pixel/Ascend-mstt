@@ -1047,4 +1047,48 @@ class SafeUnpickler(pickle.Unpickler):
         raise pickle.PicklingError(f'Unpickling {module}.{name} is illegal!')
 
 
+class DeserializationScanner:
+    """反序列化风险扫描器"""
+
+    DANGEROUS_METHODS = {
+        '__reduce__', '__reduce_ex__', '__setstate__', '__getstate__',
+        '__new__', '__init__', '__del__',
+        '__call__', '__enter__', '__exit__',
+        'eval', 'exec', 'compile', '__import__', 'open'
+        'os.system', 'os.popen', 'subprocess.call', 'subprocess.Popen',
+    }
+
+    DANGEROUS_MODULES = {
+        'os', 'sys', 'subprocess', 'shutil', 'socket',
+        'requests', 'urllib', 'ftplib', 'smtplib',
+    }
+
+    @classmethod
+    def scan_pickle_content(cls, filepath: str) -> bool:
+        with FileOpen(filepath, 'rb') as f:
+            content = f.read()
+
+        try:
+            text_content = content.decode('latin-1')
+        except Exception as e:
+            text_content = str(content)
+
+        for method in cls.DANGEROUS_METHODS:
+            if re.fullmatch(method, text_content):
+                logger.warning(f"Insecure method found: {method}")
+                return False
+
+        for module in cls.DANGEROUS_MODULES:
+            patterns = [
+                f"import {module}",
+                f"from {module} import",
+                f"{module}.",
+            ]
+            for pattern in patterns:
+                if pattern in text_content:
+                    logger.warning(f"Insecure module found: {module}")
+                    return False
+        return True
+
+
 atexit.register(SharedDict.destroy_shared_memory)

@@ -16,7 +16,9 @@
 import functools
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import check_file_or_directory_path, save_npy
+from msprobe.core.common.file_utils import check_file_or_directory_path, save_npy, DeserializationScanner
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import confirm
 
 
 class FrameworkDescriptor:
@@ -155,6 +157,13 @@ class FmkAdp:
         check_file_or_directory_path(path, is_strict=not weights_only)
         if cls.fmk == Const.PT_FRAMEWORK:
             try:
+                if not weights_only:
+                    if not DeserializationScanner.scan_pickle_content(path):
+                        if not confirm(
+                                f"Some insecure methods or modules are detected in {path}, "
+                                f"input yes to ignore and continue, otherwise exit", False):
+                            logger.error("Insecure risks found and exit!")
+                            raise Exception("Insecure risks found and exit!")
                 if to_cpu:
                     return cls.framework.load(path, map_location=cls.framework.device("cpu"), weights_only=weights_only)
                 else:
