@@ -257,19 +257,15 @@ void IPCMonitor::registerLibkinetoContext(
 void IPCMonitor::updateLibkinetoStatus(
     std::unique_ptr<ipcfabric::Message> msg, const std::string& msgType)
 {
-    struct NpuStatus {
-        int32_t status;
-        pid_t pid;
-        int64_t jobId;
-    };
     if (msg->metadata.size < sizeof(NpuStatus)) {
         LOG(ERROR) << msgType << " receive message size is invalid: " << msg->metadata.size;
         return;
     }
     NpuStatus* status = (NpuStatus*)msg->buf.get();
     try {
-        LibkinetoConfigManager::getInstance()->updateNpuStatus(
-            std::to_string(status->jobId), status->pid, status->status, msgType);
+        if (status != nullptr) {
+            LibkinetoConfigManager::getInstance()->updateNpuStatus(*status, msgType);
+        }
     } catch (const std::runtime_error& ex) {
     LOG(ERROR) << "Kineto config manager exception when updateNpuStatus: " << ex.what();
     }

@@ -19,6 +19,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 #include "NpuIpcEndPoint.h"
 #include "utils.h"
 #include "securec.h"
@@ -38,6 +39,12 @@ const std::string MSG_TYPE_TRACE_STATUS = "npuTraceStatus";
 const std::string MSG_TYPE_MONITOR_STATUS = "npuMonitorStatus";
 const std::string MSG_TYPE_DATA = "data";
 
+// 状态上报信息
+const std::string PROFILER_STATUS = "profiler_status";
+const std::string CURRENT_STEP = "current_step";
+const std::string START_STEP = "start_step";
+const std::string STOP_STEP = "stop_step";
+
 struct NpuRequest {
     int type;
     int pidSize;
@@ -52,9 +59,12 @@ struct NpuContext {
 };
 
 struct NpuStatus {
-    int32_t status;
-    pid_t pid;
-    int64_t jobId;
+    int32_t status = -1;
+    int32_t currentStep = -1;
+    int32_t startStep = -1;
+    int32_t stopStep = -1;
+    pid_t pid = GetProcessId();
+    int64_t jobId = JOB_ID;
 };
 
 struct Metadata {
@@ -143,7 +153,7 @@ public:
     IpcClient() = default;
     bool Init();
     bool RegisterInstance(int32_t npu);
-    bool SendNpuStatus(int32_t status, const std::string& msgType);
+    bool SendNpuStatus(const NpuStatus& status, const std::string& msgType);
     std::string IpcClientNpuConfig();
     bool SyncSendMessage(const Message &message, const std::string &destName, int numRetry = 10,
         int seepTimeUs = 10000);

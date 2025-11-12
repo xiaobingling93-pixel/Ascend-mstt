@@ -34,7 +34,7 @@ public:
     std::string Poll() override;
     void EnableMsptiMonitor(std::unordered_map<std::string, std::string>& cfg_map);
     void Finalize();
-    void UpdateNpuStatus(int32_t status, const std::string& msgType);
+    void UpdateNpuStatus(const NpuStatus& status, const std::string& msgType);
     void SetNpuId(int id) override
     {
         npuId_ = id;

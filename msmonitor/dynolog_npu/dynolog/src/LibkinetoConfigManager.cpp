@@ -349,11 +349,7 @@ int LibkinetoConfigManager::processCount(const std::string& jobId) const
     return count;
 }
 
-void LibkinetoConfigManager::updateNpuStatus(
-    const std::string& jobId,
-    int32_t pid,
-    int32_t status,
-    const std::string& msgType)
+void LibkinetoConfigManager::updateNpuStatus(const NpuStatus& status,const std::string& msgType)
 {
     // jobId, pid为预留参数，目前无用
     std::lock_guard<std::mutex> guard(mutex_);
@@ -364,13 +360,13 @@ void LibkinetoConfigManager::updateNpuStatus(
     }
 }
 
-int32_t LibkinetoConfigManager::getNpuTraceStatus()
+NpuStatus LibkinetoConfigManager::getNpuTraceStatus() const
 {
     std::lock_guard<std::mutex> guard(mutex_);
     return npuTraceStatus_;
 }
 
-int32_t LibkinetoConfigManager::getNpuMonitorStatus()
+NpuStatus LibkinetoConfigManager::getNpuMonitorStatus() const
 {
     std::lock_guard<std::mutex> guard(mutex_);
     return npuMonitorStatus_;
