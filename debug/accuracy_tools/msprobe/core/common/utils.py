@@ -708,3 +708,20 @@ def check_process_num(process_num):
         raise ValueError(f"process_num({process_num}) is not a positive integer")
     if process_num > Const.MAX_PROCESS_NUM:
         raise ValueError(f"The maximum supported process_num is {Const.MAX_PROCESS_NUM}, current value: {process_num}.")
+
+
+def confirm(prompt, default=False):
+    if default is True:
+        prompt_suffix = " [Y/n] "
+    elif default is False:
+        prompt_suffix = " [y/N] "
+    else:
+        prompt_suffix = " [y/n] "
+
+    full_prompt = prompt + prompt_suffix
+
+    user_input = input(full_prompt).strip().lower()
+    if user_input in ['y', 'yes']:
+        return True
+    else:
+        return default

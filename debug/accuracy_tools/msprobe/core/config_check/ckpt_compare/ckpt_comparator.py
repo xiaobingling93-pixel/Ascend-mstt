@@ -19,9 +19,9 @@ from tqdm import tqdm
 from msprobe.core.common.file_utils import save_json, check_path_before_create, check_path_not_exists, \
     check_file_or_directory_path
 from msprobe.core.common.log import logger
+from msprobe.core.common.utils import confirm
 from msprobe.core.config_check.ckpt_compare.megatron_loader import load_megatron_weights
 from msprobe.core.config_check.ckpt_compare.metrics import METRIC_FUNC
-
 
 
 def compare_checkpoints(ckpt_path1, ckpt_path2, output_path) -> Dict:
@@ -45,6 +45,11 @@ def compare_checkpoints(ckpt_path1, ckpt_path2, output_path) -> Dict:
     """
 
     # Load both checkpoints
+    if not confirm("You are using torch.load with weights_only is False, it may cause arbitrary code "
+                   "execution. Do it only if you get the file from a trusted source. Input yes to continue, "
+                   "otherwise exit", False):
+        logger.error("Insecure risks found and exit!")
+        raise Exception("Insecure risks found and exit!")
     check_file_or_directory_path(ckpt_path1, isdir=True)
     check_file_or_directory_path(ckpt_path2, isdir=True)
     check_path_before_create(output_path)
