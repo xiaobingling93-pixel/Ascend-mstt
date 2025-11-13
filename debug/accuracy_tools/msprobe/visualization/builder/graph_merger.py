@@ -146,6 +146,7 @@ class BaseGraphMerger:
                                                                           GraphConst.APIS_BETWEEN_MODULES_ALL_RANKS,
                                                                           id_accumulation=True)
                 all_collection_node = main_graph_result.graph.get_node(all_collection_node_id)
+                all_collection_node.upnode = main_graph_result.graph.root
                 new_main_root_sub_nodes.append(all_collection_node)
                 # Apis_Between_Modules.0 --> Apis_Between_Modules_Rank0.0
                 origin_main_node_id = main_node.id
