@@ -11,7 +11,7 @@ git clone https://gitcode.com/Ascend/mstt.git
 ```
 
 ### 2. 安装依赖
-dynolog的编译依赖，确保安装了以下依赖：
+dynolog的编译依赖，确保安装了以下依赖，用户手动安装的三方依赖由用户自行确保安全性，避免安装存在安全漏洞的版本：
 <table>
   <tr>
    <td>Language
