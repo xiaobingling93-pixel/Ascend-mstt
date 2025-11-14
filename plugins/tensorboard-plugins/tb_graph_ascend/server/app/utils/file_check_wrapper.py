@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from tensorboard.backend import http_util
+import json
+from werkzeug import Response
 from werkzeug.wrappers.request import Request
-
+from ..utils.constant import security_headers
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState
 
 
 def check_file_type(func):
-
     def wrapper(*args, **kwargs):
         try:
             if len(args) <= 0:
@@ -34,13 +34,12 @@ def check_file_type(func):
             result = {'success': False, 'error': ''}
             if meta_data is None or not isinstance(meta_data, dict):
                 result['error'] = GraphUtils.t('metaDataError')
-                return http_util.Respond(request, result, "application/json")
+                return Response(json.dumps(result), content_type="application/json", headers=security_headers)
             # 设置语言
             GraphState.set_global_value('lang', meta_data.get('lang', 'zh-CN'))
         except Exception as e:
             result = {'success': False, 'error': str(e)}
-            return http_util.Respond(request, result, "application/json")
-
+            return Response(json.dumps(result), content_type="application/json", headers=security_headers)
         return func(*args, **kwargs)
 
     return wrapper
