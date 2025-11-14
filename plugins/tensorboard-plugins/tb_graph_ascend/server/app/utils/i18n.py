@@ -82,7 +82,7 @@ language = {
         'circularReferenceError2': ' 已存在于路径中',
         'invalidTag': '无效标签: ',
         'pathMayNotInSecureDirectory': '该路径可能不在安全目录内',
-
+        'serverError': '服务异常，请稍后重试'
     },
     EN: {
         'typeError': 'File type error',
@@ -148,5 +148,6 @@ language = {
         'circularReferenceError2': ' already exists in the path',
         'invalidTag': 'Invalid tag: ',
         'pathMayNotInSecureDirectory': 'The path may not be within a secure directory',
+        'serverError': 'server error, please try again later'
     }
 }

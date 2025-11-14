@@ -18,12 +18,13 @@ import os
 import json
 from pathlib import Path
 from werkzeug import wrappers, Response, exceptions
-from tensorboard.backend import http_util
+from ..utils.request_method import request_method
 from ..service import ServiceFactory, GraphServiceStrategy
 from ..utils.file_check_wrapper import check_file_type
 from ..utils.graph_utils import GraphUtils
 from ..utils.constant import DataType
 from ..utils.global_state import GraphState
+from ..utils.constant import security_headers
 
 
 class GraphView:
@@ -58,19 +59,20 @@ class GraphView:
                 contents = infile.read()
         except IOError as e:
             raise exceptions.NotFound('404 Not Found') from e
-        return Response(contents, content_type=content_type, headers={"X-Content-Type-Options": "nosniff"})
+        return Response(contents, content_type=content_type, headers=security_headers)
 
     @staticmethod
     @wrappers.Request.application
+    @request_method('GET')
     def load_meta_dir(request):
         """Scan logdir for directories containing .vis files, modified to return a tuple of (run, tag)."""
         result = GraphServiceStrategy.load_meta_dir()
-        response = http_util.Respond(request, result, "application/json")
-        return response
+        return Response(json.dumps(result), content_type="application/json", headers=security_headers)
 
     # 读取当前图数据
     @staticmethod
     @wrappers.Request.application
+    @request_method('GET')
     def load_graph_data(request):
         meta_data = {
             'run': request.args.get('run'),
@@ -78,12 +80,11 @@ class GraphView:
             'type': request.args.get('type'),
         }
         lang = request.args.get('lang')
-        
         GraphState.set_global_value('lang', lang)
         strategy = GraphView._get_strategy(meta_data)
         if meta_data.get('type') == DataType.DB.value:
             result = strategy.load_graph_data()
-            return http_util.Respond(request, result, "application/json")
+            return Response(result, content_type="application/json", headers=security_headers)
         elif meta_data.get('type') == DataType.JSON.value:
             return Response(
                 strategy.load_graph_data(),
@@ -91,42 +92,44 @@ class GraphView:
                 headers={
                     'Cache-Control': 'no-cache',
                     'Connection': 'close',  # TCP链接不复用，请求结束释放资源
-                    "X-Content-Type-Options": "nosniff",
-                }
+                } | security_headers
             )
         else: 
             result = {'success': False, 'error': GraphUtils.t('typeError')}
-            return http_util.Respond(request, result, "application/json")
+            return Response(json.dumps(result), content_type="application/json", headers=security_headers)
 
     # 获取当前图数据配置信息
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def load_graph_config_info(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.load_graph_config_info()
         # 创建响应对象
-        response = http_util.Respond(request, result, "application/json")
+        response = Response(json.dumps(result), content_type="application/json", headers=security_headers)
         return response
 
     # 获取当前图所有节点列表
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def load_graph_all_node_list(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.load_graph_all_node_list(meta_data)
-        response = http_util.Respond(request, result, "application/json")
-        return response
-    
+        response = Response(json.dumps(result), content_type="application/json", headers=security_headers)
+        return response          
+
     # 根据精度误差搜索节点
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def search_node(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
         meta_data = data.get("metaData")
@@ -142,24 +145,26 @@ class GraphView:
                 'success': False,
                 'error': GraphUtils.t('searchTypeError')
             }
-        return http_util.Respond(request, result, "application/json") 
-    
+        return Response(json.dumps(result), content_type="application/json", headers=security_headers) 
+
     # 更新误差节点
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def update_precision_error(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'))
         meta_data = data.get('metaData')
         filter_value = data.get("filterValue")
         strategy = GraphView._get_strategy(meta_data)
         result = strategy.update_precision_error(meta_data, filter_value)
-        return http_util.Respond(request, result, "application/json")
+        return Response(json.dumps(result), content_type="application/json", headers=security_headers)
 
     # 展开关闭节点
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def change_node_expand_state(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = GraphUtils.safe_get_node_info(data)
@@ -169,24 +174,26 @@ class GraphView:
             result['error'] = GraphUtils.t('nodeInfoError') 
         strategy = GraphView._get_strategy(meta_data)
         hierarchy = strategy.change_node_expand_state(node_info, meta_data)
-        return http_util.Respond(request, json.dumps(hierarchy), "application/json")
+        return Response(json.dumps(hierarchy), content_type="application/json", headers=security_headers)
 
     # 更新当前图节点信息
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def update_hierarchy_data(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         graph_type = data.get("graphType")
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         hierarchy = strategy.update_hierarchy_data(graph_type)
-        return http_util.Respond(request, json.dumps(hierarchy), "application/json")
+        return Response(json.dumps(hierarchy), content_type="application/json", headers=security_headers)
 
     # 获取当前节点对应节点的信息看板数据
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def get_node_info(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         node_info = GraphUtils.safe_get_node_info(data)
@@ -194,28 +201,29 @@ class GraphView:
         meta_data = data.get('metaData')
         if node_info is None or not isinstance(node_info, dict):
             result['error'] = GraphUtils.t('nodeInfoError') 
-            return http_util.Respond(request, result, "application/json")
-        
+            return Response(result, content_type="application/json", headers=security_headers)
         strategy = GraphView._get_strategy(meta_data)
         node_detail = strategy.get_node_info(node_info, meta_data)
-        return http_util.Respond(request, json.dumps(node_detail), "application/json")
+        return Response(json.dumps(node_detail), content_type="application/json", headers=security_headers)
 
     # 根据配置文件添加匹配节点
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def add_match_nodes_by_config(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         config_file = data.get('configFile')
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         match_result = strategy.add_match_nodes_by_config(config_file, meta_data)
-        return http_util.Respond(request, json.dumps(match_result), "application/json")
+        return Response(json.dumps(match_result), content_type="application/json", headers=security_headers)
 
     # 添加匹配节点
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def add_match_nodes(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         npu_node_name = data.get("npuNodeName")
@@ -224,12 +232,13 @@ class GraphView:
         is_match_children = data.get("isMatchChildren")
         strategy = GraphView._get_strategy(meta_data)
         match_result = strategy.add_match_nodes(npu_node_name, bench_node_name, meta_data, is_match_children)
-        return http_util.Respond(request, json.dumps(match_result), "application/json")
+        return Response(json.dumps(match_result), content_type="application/json", headers=security_headers)
 
     # 取消节点匹配
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def delete_match_nodes(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         npu_node_name = data.get("npuNodeName")
@@ -238,23 +247,25 @@ class GraphView:
         is_unmatch_children = data.get("isUnMatchChildren")
         strategy = GraphView._get_strategy(meta_data)
         match_result = strategy.delete_match_nodes(npu_node_name, bench_node_name, meta_data, is_unmatch_children)
-        return http_util.Respond(request, json.dumps(match_result), "application/json")
+        return Response(json.dumps(match_result), content_type="application/json", headers=security_headers)
 
     # 保存匹配节点列表
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def save_data(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         save_result = strategy.save_data(meta_data)
-        return http_util.Respond(request, json.dumps(save_result), "application/json")
+        return Response(json.dumps(save_result), content_type="application/json", headers=security_headers)
 
     # 更新颜色信息
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def update_colors(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
@@ -265,21 +276,22 @@ class GraphView:
                 'success': False,
                 'error': error_msg
             }
-            return http_util.Respond(request, json.dumps(result), "application/json")
+            return Response(json.dumps(result), content_type="application/json", headers=security_headers)
         strategy = GraphView._get_strategy(meta_data, no_tag=True)
         update_result = strategy.update_colors(colors)
-        return http_util.Respond(request, json.dumps(update_result), "application/json")
+        return Response(json.dumps(update_result), content_type="application/json", headers=security_headers)
 
     # 保存匹配关系
     @staticmethod
     @wrappers.Request.application
     @check_file_type
+    @request_method('POST')
     def save_matched_relations(request):
         data = GraphUtils.safe_json_loads(request.get_data().decode('utf-8'), {})
         meta_data = data.get('metaData')
         strategy = GraphView._get_strategy(meta_data)
         save_result = strategy.save_matched_relations(meta_data)
-        return http_util.Respond(request, json.dumps(save_result), "application/json")
+        return Response(json.dumps(save_result), content_type="application/json", headers=security_headers)
 
     @staticmethod
     def _get_strategy(meta_data, no_tag=False):
