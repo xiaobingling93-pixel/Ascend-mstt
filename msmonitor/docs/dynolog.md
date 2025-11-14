@@ -1,6 +1,6 @@
 # dynolog介绍
 
-dynolog负责接收dyno CLI的RPC请求，触发nputrace和npumonitor功能。
+dynolog负责接收dyno CLI的RPC请求，触发nputrace和npu-monitor功能。
 
 - dynolog daemon可以通过systemd或者命令行任意一种方法开启
 

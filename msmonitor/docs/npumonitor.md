@@ -1,6 +1,6 @@
-# npumonitor特性
+# npu-monitor特性
 
-npumonitor通过dyno CLI中的npumonitor子命令开启：
+npu-monitor通过dyno CLI中的npu-monitor子命令开启：
 
 ```bash
 dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
@@ -10,7 +10,7 @@ dyno --certs-dir <CERT_DIR> npu-monitor [SUBCOMMANDS]
 - 2. <CERT_DIR>可传入证书路径，如果不使用TLS证书密钥，设置为NO_CERTS。
 
 
-查看npumonitor支持的命令和帮助
+查看npu-monitor支持的命令和帮助
 
 ```bash
 dyno npu-monitor --help

@@ -1,5 +1,5 @@
 # FAQ
 
-- **Q：dyno CLI发送npumonitor命令后没有数据上报？**
-- A：npumonitor功能基于MSPTI接口开发，如果没有数据上报，请先检查LD_PRELOAD是否正常设置libmspti.so的路径，然后检查dynolog日志中有无正常接收到dyno CLI的RPC请求。
+- **Q：dyno CLI发送npu-monitor命令后没有数据上报？**
+- A：npu-monitor功能基于MSPTI接口开发，如果没有数据上报，请先检查LD_PRELOAD是否正常设置libmspti.so的路径，然后检查dynolog日志中有无正常接收到dyno CLI的RPC请求。
 ----------------------------------------------------------------------------------------------------------------------------------------------------
