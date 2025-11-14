@@ -8,7 +8,7 @@ Step 2：使能dynolog环境变量
 
 Step 3：配置msMonitor日志路径
 
-- 前3步以及第5步操作可以参考[npumonitor](./npumonitor.md)或[nputrace](./nputrace.md)
+- 前3步以及第5步操作可以参考[npu-monitor](./npumonitor.md)或[nputrace](./nputrace.md)
 
 Step 4: 拉起训练任务
 在训练任务中实例化DynamicProfilerMonitor对象，且在每一次训练后，调用step()方法。

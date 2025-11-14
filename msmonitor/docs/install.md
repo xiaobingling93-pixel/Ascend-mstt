@@ -113,4 +113,4 @@ bash scripts/build.sh -t rpm
 
 - msmonitor-plugin wheel包编译
 
-msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npumonitor功能前必须安装该wheel包，具体编译安装指导可参考[msmonitor-plugin编包指导](../plugin/README.md)。
+msmonitor-plugin wheel包提供IPCMonitor，MsptiMonitor等公共能力，使用nputrace和npu-monitor功能前必须安装该wheel包，具体编译安装指导可参考[msmonitor-plugin编包指导](../plugin/README.md)。
