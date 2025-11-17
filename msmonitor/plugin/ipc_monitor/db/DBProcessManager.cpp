@@ -17,6 +17,7 @@
 #include "db/DBProcessManager.h"
 #include "db/DBConstant.h"
 #include "singleton.h"
+#include "MsptiMonitor.h"
 
 namespace dynolog_npu {
 namespace ipc_monitor {
@@ -235,6 +236,7 @@ bool DBProcessManager::SaveConstantData()
 bool DBProcessManager::SaveParallelGroupData()
 {
     const std::string parallel_group_info_key = "parallel_group_info";
+    auto clusterConfigData = MsptiMonitor::GetInstance()->GetClusterConfigData();
     auto iter = clusterConfigData.find(parallel_group_info_key);
     if (iter == clusterConfigData.end()) {
         LOG(WARNING) << "DBProcessManager SaveParallelGroupData parallel_group_info is not found";

@@ -32,6 +32,7 @@ const std::string REPORT_INTERVAL_S_KEY = "REPORT_INTERVAL_S";
 const std::string NPU_MONITOR_START_KEY = "NPU_MONITOR_START";
 const std::string NPU_MONITOR_STOP_KEY = "NPU_MONITOR_STOP";
 const std::string NPU_MONITOR_SAVE_PATH = "NPU_MONITOR_LOG_FILE";
+const std::string NPU_MONITOR_EXPORT_TYPE = "NPU_MONITOR_EXPORT_TYPE";
 
 const std::unordered_map<std::string, msptiActivityKind> kindStrMap = {
     {"Marker", MSPTI_ACTIVITY_KIND_MARKER},
@@ -50,6 +51,13 @@ bool isValidKind(const std::string& kindStrs)
     return std::all_of(kindStrList.begin(), kindStrList.end(), [&kindStrMap](const std::string& kindStr) {
         return kindStrMap.find(kindStr) != kindStrMap.end();
     });
+}
+
+bool isValidExportType(const std::string& s)
+{
+    std::string lowerS = s;
+    std::transform(lowerS.begin(), lowerS.end(), lowerS.begin(), ::tolower);
+    return lowerS == "db" || lowerS == "jsonl";
 }
 
 bool isUint32(const std::string& s)
@@ -89,7 +97,8 @@ std::unordered_map<std::string, Rule> rules = {
     {REPORT_INTERVAL_S_KEY, {true, isUint32, "valid values: uint32"}},
     {NPU_MONITOR_START_KEY, {true, isBool, "valid values: true/True, false/False"}},
     {NPU_MONITOR_STOP_KEY, {true, isBool, "valid values: true/True, false/False"}},
-    {NPU_MONITOR_SAVE_PATH, {true, isValidPath, "valid path (max length 4096 characters)"}}
+    {NPU_MONITOR_SAVE_PATH, {true, isValidPath, "valid path (max length 4096 characters)"}},
+    {NPU_MONITOR_EXPORT_TYPE, {true, isValidExportType, "valid values: DB/Jsonl"}},
 };
 
 bool validateArgs(const std::unordered_map<std::string, std::string>& args,
@@ -133,7 +142,7 @@ std::set<msptiActivityKind> str2Kinds(const std::string& kindStrs)
 MsptiMonitorCfg InputParser::DynoLogGetOpts(std::unordered_map<std::string, std::string>& cmd)
 {
     if (!validateArgs(cmd, rules)) {
-        return {{MSPTI_ACTIVITY_KIND_INVALID}, 0, false, false, false, ""};
+        return {{MSPTI_ACTIVITY_KIND_INVALID}, 0, false, false, false, "", ""};
     }
     auto activityKinds = str2Kinds(cmd[MSPTI_ACTIVITY_KIND_KEY]);
     uint32_t reportTimes = 0;
@@ -142,7 +151,7 @@ MsptiMonitorCfg InputParser::DynoLogGetOpts(std::unordered_map<std::string, std:
     Str2Bool(startSwitch, cmd[NPU_MONITOR_START_KEY]);
     bool endSwitch = false;
     Str2Bool(endSwitch, cmd[NPU_MONITOR_STOP_KEY]);
-    return {activityKinds, reportTimes, startSwitch, endSwitch, true, cmd[NPU_MONITOR_SAVE_PATH]};
+    return {activityKinds, reportTimes, startSwitch, endSwitch, true, cmd[NPU_MONITOR_SAVE_PATH], cmd[NPU_MONITOR_EXPORT_TYPE]};
 }
 } // namespace ipc_monitor
 } // namespace dynolog_npu

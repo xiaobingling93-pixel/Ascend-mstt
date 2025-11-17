@@ -30,13 +30,6 @@ public:
     virtual void EnableKindSwitch(msptiActivityKind kind, bool flag) {}
     virtual ErrCode ConsumeMsptiData(msptiActivity *record) { return ErrCode::SUC; }
     virtual void SetReportInterval(uint32_t interval) {}
-    void SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData)
-    {
-        clusterConfigData = configData;
-    }
-
-protected:
-    std::unordered_map<std::string, std::string> clusterConfigData;
 };
 } // namespace ipc_monitor
 } // namespace dynolog_npu
