@@ -23,6 +23,7 @@
 #include <chrono>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <iomanip>
 #include <random>
 #include <unordered_map>
@@ -417,9 +418,11 @@ std::string PathUtils::DirName(const std::string &path)
     if (path.empty()) {
         return "";
     }
-    std::string tempPath = std::string(path.begin(), path.end());
-    char* cPath = dirname(const_cast<char *>(tempPath.data()));
-    return cPath ? std::string(cPath) : "";
+    std::filesystem::path fsPath(path);
+    if (fsPath.empty()) {
+        return "";
+    }
+    return fsPath.parent_path().filename().string();
 }
 
 bool PathUtils::CreateFile(const std::string &path)
@@ -462,6 +465,19 @@ bool PathUtils::DirPathCheck(const std::string& path)
         return false;
     }
     return true;
+}
+
+bool PathUtils::IsOwner(const std::string &path)
+{
+    if (path.empty() || path.size() > PATH_MAX) {
+        return false;
+    }
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        LOG(ERROR) << "Get file stat failed, path: " << path;
+        return false;
+    }
+    return info.st_uid == getuid();
 }
 
 int GetRankId()
