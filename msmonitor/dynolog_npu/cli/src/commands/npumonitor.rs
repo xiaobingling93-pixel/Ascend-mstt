@@ -8,7 +8,8 @@ pub struct NpuMonitorConfig {
     pub npu_monitor_stop: bool,
     pub report_interval_s: u32,
     pub mspti_activity_kind: String,
-    pub log_file: String
+    pub log_file: String,
+    pub export_type: String
 }
 
 impl NpuMonitorConfig {
@@ -18,12 +19,14 @@ impl NpuMonitorConfig {
 NPU_MONITOR_STOP={}
 REPORT_INTERVAL_S={}
 MSPTI_ACTIVITY_KIND={}
-NPU_MONITOR_LOG_FILE={}"#,
+NPU_MONITOR_LOG_FILE={}
+NPU_MONITOR_EXPORT_TYPE={}"#,
             self.npu_monitor_start,
             self.npu_monitor_stop,
             self.report_interval_s,
             self.mspti_activity_kind,
-            self.log_file
+            self.log_file,
+            self.export_type,
         )
     }
 }

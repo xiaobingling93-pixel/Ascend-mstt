@@ -23,6 +23,7 @@
 #include "DynoLogNpuMonitor.h"
 #include "MetricManager.h"
 #include "db/DBProcessManager.h"
+#include "jsonl/JsonlProcessManager.h"
 #include "utils.h"
 
 namespace {
@@ -48,9 +49,15 @@ void MsptiMonitor::Start()
         MakeSharedPtr(metricManager);
         dataProcessor_ = metricManager;
     } else {
-        std::shared_ptr<db::DBProcessManager> dbProcessManager{nullptr};
-        MakeSharedPtr(dbProcessManager, savePath_);
-        dataProcessor_ = dbProcessManager;
+        if (export_type_ == MSPTI_EXPORT_TYPE_DB) {
+            std::shared_ptr<db::DBProcessManager> dbProcessManager{nullptr};
+            MakeSharedPtr(dbProcessManager, savePath_);
+            dataProcessor_ = dbProcessManager;
+        } else if (export_type_ == MSPTI_EXPORT_TYPE_JSONL) {
+            std::shared_ptr<jsonl::JsonlProcessManager> jsonlProcessManager{nullptr};
+            MakeSharedPtr(jsonlProcessManager, savePath_);
+            dataProcessor_ = jsonlProcessManager;
+        }
     }
     if (dataProcessor_ == nullptr) {
         LOG(ERROR) << "MsptiMonitor Start failed, dataProcessor init failed";
@@ -275,13 +282,6 @@ void MsptiMonitor::BufferConsume(msptiActivity *record)
 std::shared_ptr<MsptiDataProcessBase> MsptiMonitor::GetDataProcessor()
 {
     return GetInstance()->dataProcessor_;
-}
-
-void MsptiMonitor::SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData)
-{
-    if (dataProcessor_ != nullptr) {
-        dataProcessor_->SetClusterConfigData(configData);
-    }
 }
 } // namespace ipc_monitor
 } // namespace dynolog_npu

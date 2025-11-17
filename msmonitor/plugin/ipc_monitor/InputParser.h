@@ -32,6 +32,7 @@ struct MsptiMonitorCfg {
     bool monitorStop;
     bool isMonitor;
     std::string savePath;
+    std::string export_type;
 };
 
 

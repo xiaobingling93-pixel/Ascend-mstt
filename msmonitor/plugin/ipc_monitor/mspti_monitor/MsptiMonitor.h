@@ -28,6 +28,9 @@
 
 namespace dynolog_npu {
 namespace ipc_monitor {
+const std::string MSPTI_EXPORT_TYPE_DB = "DB";
+const std::string MSPTI_EXPORT_TYPE_JSONL = "Jsonl";
+
 class MsptiMonitor : public Singleton<MsptiMonitor>, public Thread {
 public:
     virtual ~MsptiMonitor();
@@ -40,7 +43,13 @@ public:
     std::set<msptiActivityKind> GetEnabledActivities();
     void Uninit();
     bool CheckAndSetSavePath(const std::string& path);
-    void SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData);
+    bool IsMetricMode() const { return savePath_.empty(); }
+    void SetExportType(const std::string& type) { export_type_ = type; }
+    void SetClusterConfigData(const std::unordered_map<std::string, std::string>& configData)
+    {
+        clusterConfigData_ = configData;
+    }
+    const std::unordered_map<std::string, std::string>& GetClusterConfigData() const { return clusterConfigData_; }
 
 private:
     static void BufferRequest(uint8_t **buffer, size_t *size, size_t *maxNumRecords);
@@ -62,7 +71,9 @@ private:
     std::atomic<bool> checkFlush_{false};
     std::atomic<uint32_t> flushInterval_{0};
     std::string savePath_;
+    std::string export_type_;
     std::shared_ptr<MsptiDataProcessBase> dataProcessor_{nullptr};
+    std::unordered_map<std::string, std::string> clusterConfigData_;
 };
 } // namespace ipc_monitor
 } // namespace dynolog_npu

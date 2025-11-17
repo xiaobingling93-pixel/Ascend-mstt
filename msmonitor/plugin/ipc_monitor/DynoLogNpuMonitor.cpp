@@ -80,6 +80,10 @@ ErrCode DynoLogNpuMonitor::DealMonitorReq(MsptiMonitorCfg& cmd)
             return ErrCode::PERMISSION;
         }
 
+        if (!msptiMonitor->IsMetricMode()) {
+            msptiMonitor->SetExportType(cmd.export_type);
+        }
+
         LOG(INFO) << "Start mspti monitor thread successfully";
         msptiMonitor->Start();
     }
