@@ -71,7 +71,10 @@ enum class ErrCode {
 
 std::string formatErrorCode(SubModule submodule, ErrCode errorCode);
 
-#define IPC_ERROR(error) formatErrorCode(SubModule::IPC, error)
+inline std::string IPC_ERROR(ErrCode error)
+{
+    return formatErrorCode(SubModule::IPC, error);
+}
 
 template<typename T, typename V>
 inline T ReinterpretConvert(V ptr)
@@ -122,6 +125,7 @@ struct PathUtils {
     static bool CreateFile(const std::string &path);
     static bool IsSoftLink(const std::string &path);
     static bool DirPathCheck(const std::string &path);
+    static bool IsOwner(const std::string &path);
 };
 } // namespace ipc_monitor
 } // namespace dynolog_npu

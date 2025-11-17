@@ -3,7 +3,7 @@ project(IPCMonitor)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -19,6 +19,7 @@ find_package(sqlite3 MODULE REQUIRED)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor
+    ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/metric
     ${CMAKE_CURRENT_SOURCE_DIR}/ipc_monitor/mspti_monitor
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/securec/include
