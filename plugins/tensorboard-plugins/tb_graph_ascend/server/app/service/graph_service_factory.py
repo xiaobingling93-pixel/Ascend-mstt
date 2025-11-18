@@ -29,22 +29,25 @@ class ServiceFactory:
 
     def create_strategy(self, data_type, run, tag):
         if not (data_type == self.data_type and run == self.run and tag == self.tag):
-            self.data_type = data_type
-            self.run = run
-            self.tag = tag
             if data_type == DataType.DB.value:
                 self.strategy = DbGraphService(run, tag)
             else:
                 self.strategy = JsonGraphService(run, tag)
+            # 创建成功后，更新全局变量
+            self.data_type = data_type
+            self.run = run
+            self.tag = tag
         return self.strategy
     
     def create_strategy_without_tag(self, data_type, run):
         if not (data_type == self.data_type and run == self.run):
-            self.data_type = data_type
-            self.run = run
+   
             self.tag = GraphState.get_global_value('first_run_tags', {}).get(self.run)
             if data_type == DataType.DB.value:
                 self.strategy = DbGraphService(run, self.tag)
             else:
                 self.strategy = JsonGraphService(run, self.tag)
+            # 创建成功后，更新全局变量
+            self.data_type = data_type
+            self.run = run
         return self.strategy
