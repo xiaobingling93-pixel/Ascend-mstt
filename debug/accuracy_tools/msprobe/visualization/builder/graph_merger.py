@@ -378,6 +378,12 @@ class PPMerger(BaseGraphMerger):
             logger.info('Unable to get pp groups based on Distributed Api (batch_isend_irecv, send, or isend), '
                         'generate pp groups using parallel param "rank_size", "tp" and "pp".')
             _, pp_groups = self.get_default_groups()
+        elif len(pp_groups[0]) != self.parallel_param.pp:
+            logger.warning(f'Based on Distributed Api (atch_isend_irecv, send, or isend), '
+                           f'the resulting pp groups={pp_groups}, '
+                           f'its length is not equal to the parallel param "pp"({self.parallel_param.pp}) you defined, '
+                           f'generate pp groups using parallel param "rank_size", "tp" and "pp".')
+            _, pp_groups = self.get_default_groups()
         logger.info(f'{self.log_prefix} All pp groups is {pp_groups}.')
         return pp_groups
 
@@ -657,6 +663,12 @@ class TPMerger(BaseGraphMerger):
         if not tp_groups:
             logger.info('Unable to get tp groups based on Distributed Api (reduce_scatter or all_reduce), '
                         'generate tp groups using parallel param "rank_size", "tp" and "pp".')
+            tp_groups, _ = self.get_default_groups()
+        elif len(tp_groups[0]) != self.parallel_param.tp:
+            logger.warning(f'Based on Distributed Api (reduce_scatter or all_reduce), '
+                           f'the resulting tp groups={tp_groups}, '
+                           f'its length is not equal to the parallel param "tp"({self.parallel_param.tp}) you defined, '
+                           f'generate tp groups using parallel param "rank_size", "tp" and "pp".')
             tp_groups, _ = self.get_default_groups()
         logger.info(f'{self.log_prefix} All tp groups is {tp_groups}.')
         return tp_groups
