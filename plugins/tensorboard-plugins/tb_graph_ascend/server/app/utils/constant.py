@@ -17,7 +17,10 @@
 from enum import Enum
 
 security_headers = {
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' ; style-src 'self'; img-src 'self' data:;",
+    "Content-Security-Policy": (
+        "default-src 'self'; connect-src 'self'; script-src 'unsafe-inline'; "
+        "style-src 'unsafe-inline'; img-src 'self' data:; font-src data:;"
+    ),
     "X-Frame-Options": "SAMEORIGIN",
     "X-XSS-Protection": "1; mode=block",
     "X-Content-Type-Options": "nosniff",
