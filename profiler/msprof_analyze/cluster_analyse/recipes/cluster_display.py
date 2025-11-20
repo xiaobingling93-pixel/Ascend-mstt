@@ -261,3 +261,106 @@ def display_stats_optional_combobox(options, display_func, args, description="Op
         dropdown.value = options[0]
     elif len(options) == 1:
         display_func(options[0], args)
+
+
+COLOR_PALETTE = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+    '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+    '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
+    '#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'
+]
+
+
+def create_legend_color_map(legends, color_palette=None):
+    """创建 Rank 到颜色的映射"""
+    if not color_palette:
+        color_palette = COLOR_PALETTE
+    unique_legends = sorted(legends.unique()) if legends is not None else []
+    legend_color_map = {}
+    if len(unique_legends) > len(color_palette):
+        logger.warning(f"Number of unique legends exceeds the number of colors. Colors will be repeated.")
+    for i, rank in enumerate(unique_legends):
+        legend_color_map[rank] = color_palette[i % len(color_palette)]
+
+    return legend_color_map
+
+
+def display_duration_boxplots_with_legend(figs, stats_df: pd.DataFrame, legend_col_name=None,
+                                          orientation="v", title=None, x_title="Names", y_title="Time",
+                                          color_palette=None):
+    # 提取统计数据
+    x_axis = stats_df.index
+    mean_ds = stats_df.get("Mean(Us)", None)
+    min_ds = stats_df.get("Min(Us)", None)
+    max_ds = stats_df.get("Max(Us)", None)
+    q1_ds = stats_df.get("Q1(Us)", None)
+    median_ds = stats_df.get('Median(Us)', None)
+    q3_ds = stats_df.get('Q3(Us)', None)
+
+    # 验证必要的统计列存在
+    required_columns = [mean_ds, min_ds, max_ds, q1_ds, median_ds, q3_ds]
+    if any(col is None for col in required_columns):
+        logger.error(f"Missing required columns. Please ensure the input DataFrame contains the following columns: "
+                     f"Mean(Us), Min(Us), Max(Us), Q1(Us), Median(Us), Q3(Us)")
+        return
+
+    # 创建颜色映射
+    legend_ds = None
+    legend_color_map = {}
+    if legend_col_name is not None and legend_col_name in stats_df.columns:
+        legend_ds = stats_df[legend_col_name]
+        legend_color_map = create_legend_color_map(legend_ds, color_palette=color_palette)
+
+    fig = go.Figure()
+    added_legend = set()
+
+    # 按原始顺序添加 traces
+    for i, name in enumerate(x_axis):
+        legend_value = legend_ds.iloc[i] if legend_ds is not None else "N/A"
+        color = legend_color_map.get(legend_value, 'gray')
+
+        # 只在第一次遇到该 legend 时显示图例
+        show_legend = legend_value not in added_legend
+        if show_legend:
+            added_legend.add(legend_value)
+
+        # 创建并添加 trace
+        fig.add_trace(
+            go.Box(
+                x=[name] if orientation == "v" else None,
+                y=[name] if orientation == "h" else None,
+                lowerfence=[min_ds.iloc[i]],
+                q1=[q1_ds.iloc[i]],
+                median=[median_ds.iloc[i]],
+                q3=[q3_ds.iloc[i]],
+                upperfence=[max_ds.iloc[i]],
+                mean=[mean_ds.iloc[i]],
+                boxpoints=False,
+                name=f"{legend_col_name} {legend_value}",
+                showlegend=show_legend,
+                marker_color=color,
+                line_color=color,
+                legendgroup=str(legend_value)
+            )
+        )
+
+    # 更新图表布局
+    axis_config = {
+        'categoryorder': 'array',
+        'categoryarray': list(x_axis)
+    }
+
+    fig.update_traces(orientation=orientation)
+    fig.update_layout(
+        xaxis_title=x_title,
+        yaxis_title=y_title,
+        title=title,
+        height=1024,
+        xaxis=axis_config if orientation == "v" else {},
+        yaxis=axis_config if orientation == "h" else {}
+    )
+
+    fig.show()
+
+    if isinstance(figs, list):
+        figs.append(fig)
