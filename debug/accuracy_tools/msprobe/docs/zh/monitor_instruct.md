@@ -9,7 +9,7 @@
 
 要求：
 
-- PyTorch场景：torch不低于**2.0**
+- PyTorch场景：torch不低于**2.1**
 - MindSpore场景：mindspore不低于**2.4.10**，仅支持**MindSpore动态图**，已支持**msadapter**套件
 
 ## 功能介绍
