@@ -285,8 +285,8 @@ class CellProcessor:
             CellProcessor.cell_stack[tid] = []
 
         if self.cell_stack[tid]:
-            CellProcessor.module_node[full_name] = self.cell_stack[tid][-1] if not is_megatron() \
-                else [self.cell_stack[tid][-1], get_micro_step()]
+            CellProcessor.module_node[full_name] = self.cell_stack.get(tid)[-1] if not is_megatron() \
+                else [self.cell_stack.get(tid)[-1], get_micro_step()]
         else:
             parent_name = CellProcessor.cell_queue.find_last(full_name)
             CellProcessor.module_node[full_name] = parent_name if not is_megatron() else [parent_name, get_micro_step()]
@@ -304,7 +304,7 @@ class CellProcessor:
         if self.cell_stack.get(tid):
             CellProcessor.cell_stack[tid].pop()
         if self.cell_stack.get(tid):
-            CellProcessor.api_parent_node[tid] = CellProcessor.cell_stack[tid][-1] if not is_megatron() \
-                else [CellProcessor.cell_stack[tid][-1], get_micro_step()]
+            CellProcessor.api_parent_node[tid] = CellProcessor.cell_stack.get(tid)[-1] if not is_megatron() \
+                else [CellProcessor.cell_stack.get(tid)[-1], get_micro_step()]
         if self.scope:
             self.scope.end_module(full_name)

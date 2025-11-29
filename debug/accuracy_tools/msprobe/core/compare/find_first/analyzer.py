@@ -155,7 +155,7 @@ class DiffAnalyzer:
             if connected_rank in searched_ranks:
                 continue
             tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
-            for search_id, search_node in self._rank_comm_nodes_dict[connected_rank].items():
+            for search_id, search_node in self._rank_comm_nodes_dict.get(connected_rank).items():
                 if search_id in seen_nodes:
                     continue
                 if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
@@ -169,7 +169,7 @@ class DiffAnalyzer:
         return found
 
     def _analyze_comm_nodes(self, rank):
-        path = self._paths[rank]
+        path = self._paths.get(rank)
         data = self._cache.load_json(path.dump_path)
         communication_nodes = {}
         if rank not in self._first_comm_nodes:  # 此rank没有通信节点
@@ -177,7 +177,7 @@ class DiffAnalyzer:
         last_node_id = None  # 记录上一个通信节点的node_id
         compute_ops = []  # 记录两个通信节点之间的计算节点
         sub_layer = 0  # 记录两个通信算子之间异常计算节点的调用序数
-        for op_name in dropwhile(lambda k: k != self._first_comm_nodes[rank], data):
+        for op_name in dropwhile(lambda k: k != self._first_comm_nodes.get(rank), data):
             node_id = f'{rank}.{op_name}'
             op_data = data[op_name]
             if is_communication_op(op_name):
@@ -277,6 +277,6 @@ class DiffAnalyzer:
         result_file = os.path.join(self._output_path, file_name)
         result_content = defaultdict(list)
         for node in self._diff_nodes:
-            result_content[f'rank_{node.rank}'].append(node.gen_node_info(self._paths[node.rank]))
+            result_content[f'rank_{node.rank}'].append(node.gen_node_info(self._paths.get(node.rank)))
         save_json(result_file, result_content, 2)
         logger.info(f"The analyze result is saved in: {result_file}")

@@ -300,7 +300,7 @@ class DeepSpeedZeroOptimizerMon(OptimizerMon):
             if self.param_not_in_partition(lp_param, group_idx):
                 continue
             if self.stage == '1or2':
-                param_id = param_id - self.group_offset[group_idx] - 1
+                param_id = param_id - self.group_offset.get(group_idx) - 1
             grad = self.get_grad_for_param(lp_param, group_idx, param_id)
             tag = monitor.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
             monitor.register_param_call_id("hook_optimizer", tag)

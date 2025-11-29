@@ -266,7 +266,7 @@ class DataCollector:
     def update_construct(self, name):
         if self.config.level not in DataCollector.level_without_construct:
             if self.optimizer_status in [Const.OPTIMIZER, Const.CLIP_GRAD]:
-                if self.optimizer_status_first_start[self.optimizer_status]:
+                if self.optimizer_status_first_start.get(self.optimizer_status):
                     self.data_writer.update_construct(
                         {self.optimizer_status: None if not is_megatron() else [None, get_micro_step()]})
                     self.optimizer_status_first_start[self.optimizer_status] = False
@@ -349,4 +349,4 @@ class DataCollector:
 
         # register tensor backward hook
         self.data_processor.analyze_debug_backward(variable, grad_name_with_count_category,
-                                                   self.data_writer.cache_debug['data'])
+                                                   self.data_writer.cache_debug.get('data'))

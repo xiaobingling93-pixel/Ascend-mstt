@@ -85,6 +85,10 @@ class SingleBenchmarkAccuracyResult:
         self.max_rel_idx = max_rel_idx
 
     def get_result(self, eb_thd, error_thd):
+        # 修复：检查阈值是否为 None，避免类型错误
+        if eb_thd is None or error_thd is None:
+            self.result = False
+            return
         if (
             self.error_balance > eb_thd
             or self.max_abs_diff > error_thd

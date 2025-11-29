@@ -283,8 +283,8 @@ class ModuleProcesser:
             ModuleProcesser.module_stack[tid] = []
 
         if self.module_stack[tid]:
-            ModuleProcesser.module_node[full_name] = self.module_stack[tid][-1] if not is_megatron() \
-                else [self.module_stack[tid][-1], get_micro_step()]
+            ModuleProcesser.module_node[full_name] = self.module_stack.get(tid)[-1] if not is_megatron() \
+                else [self.module_stack.get(tid)[-1], get_micro_step()]
         else:
             parent_name = ModuleProcesser.module_queue.find_last(full_name)
             ModuleProcesser.module_node[full_name] = parent_name if not is_megatron() \

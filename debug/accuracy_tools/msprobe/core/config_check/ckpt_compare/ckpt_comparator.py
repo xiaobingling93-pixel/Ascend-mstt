@@ -65,8 +65,8 @@ def compare_checkpoints(ckpt_path1, ckpt_path2, output_path) -> Dict:
     logger.warning(f'Parameters not in ckpt2: {set(weights1) - set(weights2)}')
     logger.warning(f'Parameters not in ckpt1: {set(weights2) - set(weights1)}')
     for key in tqdm(common):
-        tensor1 = weights1[key]
-        tensor2 = weights2[key]
+        tensor1 = weights1.get(key)
+        tensor2 = weights2.get(key)
         
         results[key] = {}
         for metric, func in METRIC_FUNC.items():

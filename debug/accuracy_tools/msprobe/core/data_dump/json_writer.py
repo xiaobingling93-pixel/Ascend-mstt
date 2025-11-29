@@ -160,7 +160,7 @@ class DataWriter:
         return results
 
     def initialize_json_file(self, **kwargs):
-        if kwargs["level"] == Const.LEVEL_DEBUG and not self.cache_debug:
+        if kwargs.get("level") == Const.LEVEL_DEBUG and not self.cache_debug:
             # debug level case only create debug.json
             debug_dict = copy.deepcopy(kwargs)
             debug_dict.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
@@ -271,7 +271,7 @@ class DataWriter:
     def update_debug(self, new_data):
         with lock:
             self.data_updated = True
-            self.cache_debug['data'].update(new_data)
+            self.cache_debug.get('data').update(new_data)
 
     def write_data_json(self, file_path):
         logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
