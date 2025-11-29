@@ -99,11 +99,11 @@ class FileCache:
 
     def _cleanup(self):
         while self._calc_cache_size() > self._max_memory_usage and self._cache:
-            least_frequent_key = min(self._access_cnt.keys(), key=lambda k: self._access_cnt[k])
-            least_recent_key = min(self._access_time.keys(), key=lambda k: self._access_time[k])
-            largest_key = max(self._cache.keys(), key=lambda k: self._size[k])
+            least_frequent_key = min(self._access_cnt.keys(), key=lambda k: self._access_cnt.get(k))
+            least_recent_key = min(self._access_time.keys(), key=lambda k: self._access_time.get(k))
+            largest_key = max(self._cache.keys(), key=lambda k: self._size.get(k))
             key_to_rm = min([least_frequent_key, least_recent_key, largest_key],
-                            key=lambda k: (self._access_cnt[k], self._access_time[k], -self._size[k]))
+                            key=lambda k: (self._access_cnt.get(k), self._access_time.get(k), -self._size.get(k)))
             del self._cache[key_to_rm]
             del self._access_cnt[key_to_rm]
             del self._access_time[key_to_rm]

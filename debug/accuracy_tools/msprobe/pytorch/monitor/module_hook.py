@@ -1254,7 +1254,7 @@ class TrainerMon:
             def wrapper(fsdp_params, unsharded_grads, *unused):
                 grad_dict = {}
                 for param, grad in zip(fsdp_params, unsharded_grads):
-                    tag = self.name2tag.get(self.origin2squash[param._param_fqn], {}).get(MonitorConst.PRE_GRAD)
+                    tag = self.name2tag.get(self.origin2squash.get(param._param_fqn)).get(MonitorConst.PRE_GRAD)
                     if tag is None:
                         continue
                     grad_dict[tag] = grad

@@ -19,6 +19,8 @@ import os
 import sys
 from collections import namedtuple
 
+import torch
+
 from msprobe.core.common.const import CompareConst, FileCheckConst
 from msprobe.core.common.file_utils import read_csv, get_json_contents, write_csv
 from msprobe.core.common.utils import check_op_str_pattern_valid
@@ -103,10 +105,13 @@ class Saver:
         for _, row in data.iterrows():
             if len(row) < 3:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-            if not all(row[i] and row[i].upper() in checklist for i in (1, 2)):
-                raise ValueError(
-                    "The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE, SKIP or N/A"
-                    % result_csv_name)
+            for i in (1, 2):
+                if not row[i] or row[i].strip() == "":
+                    raise ValueError(f"Empty value in column {i + 1} of {result_csv_name}")
+                if row[i].upper() not in checklist:
+                    raise ValueError(
+                        "The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE, SKIP or N/A"
+                        % result_csv_name)
             column1 = row[1].upper()
             column2 = row[2].upper()
             if column1 == CompareConst.SKIP:
@@ -194,6 +199,9 @@ class Comparator:
 
     @staticmethod
     def _compare_dropout(bench_out, npu_out):
+        # 检查输入是否为张量
+        if not (isinstance(bench_out, torch.Tensor) and isinstance(npu_out, torch.Tensor)):
+            return False, "Non-tensor input for dropout comparison"
         tensor_num = bench_out.numel()
         if tensor_num >= ELEMENT_NUM_THRESHOLD:
             if abs((bench_out == 0).sum() - (npu_out == 0).cpu().sum()) / tensor_num < ZERO_NUM_THRESHOLD:
@@ -204,12 +212,12 @@ class Comparator:
             return True, 1
 
     def compare_output(self, api_name, bench_out, npu_out, bench_grad=None, npu_grad=None):
-        if "dropout" in api_name:
+        if "dropout" in api_name.lower():
             is_fwd_success, fwd_compare_alg_results = self._compare_dropout(bench_out, npu_out)
         else:
             is_fwd_success, fwd_compare_alg_results = self._compare_core_wrapper(bench_out, npu_out)
         if bench_grad and npu_grad:
-            if "dropout" in api_name:
+            if "dropout" in api_name.lower():
                 is_bwd_success, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], npu_grad[0])
             else:
                 is_bwd_success, bwd_compare_alg_results = self._compare_core_wrapper(bench_grad, npu_grad)

@@ -69,8 +69,8 @@ class RankGroupGenerator(object):
             elif item == 'ep':
                 self.size_list_with_ep.append(self.expert_parallel)
             else:
-                self.size_list_with_ep.append(self.parallel_sizes[item])
-                self.size_list_without_ep.append(self.parallel_sizes[item])
+                self.size_list_with_ep.append(self.parallel_sizes.get(item))
+                self.size_list_without_ep.append(self.parallel_sizes.get(item))
 
     @staticmethod
     def create_mask(order_str: str, target_tokens: str) -> List[bool]:
@@ -153,7 +153,7 @@ class RankGroupGenerator(object):
         result = {}
         for token in ["dp", "pp", "tp"]:
             result[token] = self.generate_ranks(token)
-            result[f"{token}_size"] = self.parallel_sizes[token]
+            result[f"{token}_size"] = self.parallel_sizes.get(token)
         return result
 
 

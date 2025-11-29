@@ -99,12 +99,12 @@ class NanAnalyzer:
         result_file = os.path.join(self._output_path, file_name)
         result_content = defaultdict(list)
         for node in self._anomaly_nodes:
-            result_content[f'rank_{node.rank}'].append(node.gen_node_info(self._paths[node.rank]))
+            result_content[f'rank_{node.rank}'].append(node.gen_node_info(self._paths.get(node.rank)))
         save_json(result_file, result_content, 2)
         logger.info(f"The analyze result is saved in: {result_file}")
 
     def _analyze_comm_nodes(self, rank):
-        path = self._paths[rank]
+        path = self._paths.get(rank)
         data = self._cache.load_json(path.dump_path).get('data')
         communication_nodes = {}
         if rank not in self._first_comm_nodes:  # 此rank没有通信节点
@@ -157,11 +157,11 @@ class NanAnalyzer:
                 cur_node.add_link(search_node)
 
         found = cur_node.connected
-        for connected_rank in conn_info['ranks']:
+        for connected_rank in conn_info.get('ranks'):
             if connected_rank in searched_ranks:
                 continue
-            tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
-            for search_id, search_node in self._rank_comm_nodes_dict[connected_rank].items():
+            tar_id_prefix = f'{connected_rank}.{conn_info.get("api")}'
+            for search_id, search_node in self._rank_comm_nodes_dict.get(connected_rank).items():
                 if search_id in seen_nodes:
                     continue
                 if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
