@@ -125,10 +125,16 @@ class SlowRankAnalysis(BaseRecipeAnalysis):
             logger.error("SlowRank analysis is not supported for notebook export type.")
 
     def save_db(self, ):
+        if self.perpector_df is not None or self.perpector_df.empty:
+            logger.info(f"No slow rank found, skip data dump.")
+            return
         self.dump_data(self.perpector_df, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, "SlowRank")
         self.dump_data(self.stat_df, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER, "SlowOpStats", index=False)
 
     def save_notebook(self):
+        if self.perpector_df is not None or self.perpector_df.empty:
+            logger.info(f"No slow rank found, skip data dump.")
+            return
         self.dump_data(self.perpector_df, "rank_stats.csv")
         self.dump_data(self.stat_df, "slow_op_stats.csv", index=False)
         self.create_notebook("stats.ipynb")
