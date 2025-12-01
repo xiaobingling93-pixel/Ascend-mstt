@@ -189,21 +189,23 @@ def display_graph(figs, x_axis, y_axes, title=None,
         figs.append(fig)
 
 
-def display_bar(x_axis, y_axes, title=None, y_index=None):
-    if isinstance(y_axes, pd.DataFrame):
-        data = y_axes.set_index(x_axis)
-    elif isinstance(y_axes, dict):
-        data = pd.DataFrame(y_axes, index=x_axis)
-    elif isinstance(y_axes, pd.Series):
-        data = pd.DataFrame({"": y_axes}, index=x_axis)
-    elif isinstance(y_axes, np.ndarray):
-        data = pd.DataFrame({"": pd.Series(y_axes)}, index=x_axis)
+def display_bar(x_axis, y_axis, title=None, y_index=None, x_label=None, y_label=None):
+    if isinstance(y_axis, pd.DataFrame):
+        data = y_axis.set_index(x_axis)
+    elif isinstance(y_axis, dict):
+        data = pd.DataFrame(y_axis, index=x_axis)
+    elif isinstance(y_axis, pd.Series):
+        data = pd.DataFrame({"": y_axis}, index=x_axis)
+    elif isinstance(y_axis, np.ndarray):
+        data = pd.DataFrame({"": pd.Series(y_axis)}, index=x_axis)
     else:
         return
 
     fig = data.plot.bar(title=title)
+    fig.set_xlabel(x_label)
+    fig.set_ylabel(y_label)
     fig.bar_label(fig.containers[0])
-    if y_index is not None and y_index in y_axes:
+    if y_index is not None and y_index in y_axis:
         # get index of the top1
         top1_indices = data[y_index].nlargest(1).index
         # change the color for the top1
