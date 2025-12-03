@@ -27,7 +27,7 @@
 
 **请安装tb_graph_ascend，否则无法解析构图结果。**
 
-[tb_graph_ascend安装](../plugins/tb_graph_ascend_instruct.md#2-安装方式)。
+[tb_graph_ascend安装](../../../../../../plugins/tensorboard-plugins/tb_graph_ascend/README.md#2-安装方式)。
 
 ### 1.3 版本配套关系
 
