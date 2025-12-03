@@ -11,6 +11,7 @@ msProbe详细版本配套关系及对应软件包下载链接如下：
 
 |  版本   |    发布日期    |支持 PyTorch 版本|支持 MindSpore 版本|                                                                下载链接                                                                |校验码|
 |:-----:|:----------:|:--:|:--:|:----------------------------------------------------------------------------------------------------------------------------------:|:--:|
+| 8.3.1 | 2025.12.03 |1.11/2.1/2.2/2.5/2.6/2.7|2.4.0/2.5.0/2.6.0/2.7.1| [mindstudio_probe-8.3.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/8.3/mindstudio_probe-8.3.1-py3-none-any.whl) |65edba129d1dcd40a053c555617d9a6a949c601becbeaefe847791e5cb4d3d0e|
 | 8.3.0 | 2025.10.30 |1.11/2.1/2.2/2.5/2.6/2.7|2.4.0/2.5.0/2.6.0/2.7.1| [mindstudio_probe-8.3.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/8.3/mindstudio_probe-8.3.0-py3-none-any.whl) |e933657b8ceb20774f924865d1f47978bd49cd1d9cec5fb60dec4f18802afbcc|
 | 8.2.1 | 2025.9.29  |1.11/2.1/2.2|2.4.0/2.5.0/2.6.0| [mindstudio_probe-8.2.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/8.2/mindstudio_probe-8.2.1-py3-none-any.whl) |2152fadefec3d70148a910a54f2cfb6fccfa60b5ccd59f835f20289a7a5f4764|
 | 8.2.0 | 2025.9.03  |1.11/2.1/2.2|2.4.0/2.5.0/2.6.0| [mindstudio_probe-8.2.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/8.2/mindstudio_probe-8.2.0-py3-none-any.whl) |bbc1577d76754adf987069308177d3e0a04e36de9c7f22e75c34cf4ad0ce1af2|
