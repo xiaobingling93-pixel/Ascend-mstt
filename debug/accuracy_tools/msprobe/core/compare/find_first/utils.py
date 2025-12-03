@@ -121,7 +121,9 @@ def is_ignore_op(op_name):
     ignore_keywords = [
         'Torch.empty',
         'Torch.fill',
-        'Tensor.__setitem__'
+        'Tensor.__setitem__',
+        'parameters_grad',
+        'Tensor.to'
     ]
     return any(keyword in op_name for keyword in ignore_keywords)
 
