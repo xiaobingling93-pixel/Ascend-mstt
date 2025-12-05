@@ -18,7 +18,12 @@ from msprobe.core.service import BaseService
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
-from msprobe.pytorch.hook_module.api_register import get_api_register, ApiTemplate, redirect_wait
+from msprobe.pytorch.hook_module.api_register import (
+    get_api_register,
+    ApiTemplate,
+    redirect_wait,
+    reset_dist_collect_func
+)
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.hook_module.pt_hook_manager import PytorchHookManager
 from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
@@ -33,7 +38,7 @@ class PytorchService(BaseService):
     @staticmethod
     def _get_current_rank():
         return get_rank_if_initialized()
-    
+
     def reset_status(self):
         self._reset_status()
 
@@ -59,8 +64,8 @@ class PytorchService(BaseService):
         self.module_processor.register_module_hook(self.model, self.build_hook)
         self.logger.info(f"The module {self.config.task} hook function is successfully mounted to the model.")
 
-
     def _reset_status(self):
         super()._reset_status()
         ModuleProcesser.reset_module_stats()
         HOOKModule.reset_module_stats()
+        reset_dist_collect_func()
