@@ -36,7 +36,7 @@ msprobe -f pytorch run_ut -api_info ./dump_path/step{step_number}/rank{rank_numb
 
 | 参数名称                          | 解释                                                                                                                                                                            | 是否必选                           |
 |-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------------------- |
-| -f 或 --framework              | 指定训练框架。pytorch。                                                                                                                                                     | 是                                 |
+| -f 或 --framework              | 指定训练框架，当前场景配置为pytorch。                                                                                                                                         | 是                                 |
 | -api_info 或 --api_info_file   | 指定 API 信息文件 dump.json。                                                                                                                                                        | 是                                 |
 | -save_error_data              | 保存精度未达标的 API 输入输出数据。                                                                                                                                                          | 否                                 |
 | -o 或 --out_path               | 指定 run_ut 执行结果存盘路径，默认“./”。                                                                                                                                                    | 否                                 |
@@ -104,7 +104,7 @@ msprobe -f pytorch multi_run_ut -api_info ./dump_path/step{step_number}/rank{ran
 
 | 参数名称                     | 解释                                                         | 是否必选                           |
 | ---------------------------- | ------------------------------------------------------------ | ---------------------------------- |
-| -f 或 --framework              | 指定训练框架。pytorch。                                | 是                                 |
+| -f 或 --framework              | 指定训练框架，当前场景配置为pytorch。                        | 是                                 |
 | -api_info 或 --api_info_file   | 指定 API 信息文件 dump.json。                                   | 是                                 |
 | -save_error_data             | 保存精度未达标的 API 输入输出数据。                            | 否                                 |
 | -o 或 --out_path               | 指定 run_ut 执行结果存盘路径，默认“./”。 | 否                                 |
@@ -216,7 +216,7 @@ msprobe -f pytorch api_precision_compare -npu /home/xxx/npu/accuracy_checking_de
 
 | 参数名称                  | 说明               | 是否必选 |
 |-----------------------| ------------- | -------- |
-| -f 或 --framework      | 指定训练框架。pytorch。  | 是                                 |
+| -f 或 --framework      | 指定训练框架，当前场景配置为pytorch。 | 是                                 |
 | -npu 或 --npu_csv_path | NPU 预检结果 `accuracy_checking_details_{timestamp}.csv` 文件路径。默认从当前目录下识别该文件。 | 是       |
 | -gpu 或 --gpu_csv_path | GPU 预检结果 `accuracy_checking_details_{timestamp}.csv` 文件路径。默认从当前目录下识别该文件。 | 是       |
 | -o 或 --out_path       | 指定 api_precision_compare.py 执行结果存盘路径，默认为当前目录。 | 否       |

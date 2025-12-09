@@ -445,7 +445,7 @@ seed_all()
 debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path")
 # 模型定义及初始化等操作
 prompts = ["Hello, my name is"]
-sampling_params = SamplingParams(temprature=0.8, top_p=0.95)
+sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
 llm = LLM(model='...')
 model = llm.llm_engine.model_executor.driver_worker.worker.model_runner.get_model()
 # 开启数据dump, 指定采集推理模型逐字符循环推理中的第1~3次
