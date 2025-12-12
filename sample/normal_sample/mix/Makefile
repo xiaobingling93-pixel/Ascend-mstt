@@ -1,7 +1,7 @@
 # Location of the CANN, 主要基于${ASCEND_HOME_PATH}/compiler/tikcpp/ascendc_kernel_cmake中内容简化
 ASCEND_HOME_PATH			?= /usr/local/Ascend/ascend-toolkit/latest
 
-COMPILER					:= $(ASCEND_HOME_PATH)/compiler/ccec_compiler/bin/ccec # 参考device_config.cmake中CMAKE_C_COMPILER配置
+COMPILER					:= bisheng # 参考device_config.cmake中CMAKE_C_COMPILER配置
 COMPILER_FLAG				:= -xcce -O2 -std=c++17
 LINK_FLAG					:= --cce-fatobj-link
 DAV_FLAG                    := --cce-aicore-arch=dav-c220
