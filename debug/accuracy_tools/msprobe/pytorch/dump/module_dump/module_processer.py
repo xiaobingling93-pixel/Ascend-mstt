@@ -83,6 +83,7 @@ class ModuleProcesser:
     module_bw_hook_kernels = {}
     module_with_backward_hook = {}
     enable_module_dump = False
+    is_megatron_module = False
 
     def __init__(self, scope):
         self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
@@ -136,6 +137,15 @@ class ModuleProcesser:
             modules_and_names_with_index["-1"] = models.named_modules() if recursive else \
                 [(module_names[0], models)]
         return modules_and_names_with_index
+    
+    @staticmethod
+    def check_is_megatron_module(models):
+        if isinstance(models, (list, tuple)):
+            for model in models:
+                if "megatron" in type(model).__module__:
+                    return True
+        else:
+            return "megatron" in type(models).__module__
 
     @classmethod
     def reset_module_stats(cls):
@@ -150,7 +160,7 @@ class ModuleProcesser:
     def register_module_hook(self, models, build_hook, recursive=True, module_names=None):
         if module_names is None:
             module_names = []
-
+        ModuleProcesser.is_megatron_module = self.check_is_megatron_module(models)
         modules_and_names_with_index = self.get_modules_and_names(models, recursive, module_names)
         for index, modules_and_names in modules_and_names_with_index.items():
             model = models if index == "-1" else models[int(index)]
