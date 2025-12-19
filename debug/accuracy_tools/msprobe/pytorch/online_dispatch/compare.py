@@ -192,7 +192,7 @@ class Comparator:
             test_final_success = status
         else:
             for item, item_status in enumerate(status):
-                detailed_result_total.append(details.get(item, 'key does not exist'))
+                detailed_result_total.append(details[item])
                 if not item_status:
                     test_final_success = False
         return test_final_success, detailed_result_total
