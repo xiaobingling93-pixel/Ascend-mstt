@@ -17,6 +17,7 @@ import os
 import sqlite3
 import json
 import re
+import time
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import change_mode, check_path_before_create, FileChecker
 from msprobe.core.common.const import FileCheckConst
@@ -133,33 +134,56 @@ def create_insert_sql_from_dict(table_name, columns_dict, ignore_insert=False):
 
 
 def to_db(db_path, create_table_sql, insert_sql, data, db_insert_size=1000):
+    max_retries = 10
+    initial_delay = 0.1
     if not os.path.exists(db_path):
         check_path_before_create(db_path)
     else:
         FileChecker(db_path, FileCheckConst.FILE, FileCheckConst.READ_WRITE_ABLE,
                     FileCheckConst.DB_SUFFIX).common_check()
-    try:
-        conn = sqlite3.connect(db_path)
-    except sqlite3.Error as e:
-        logger.error(f"Unable to create database connection: {e}")
-        raise RuntimeError("Unable to create database connection") from e
 
-    try:
-        cursor = conn.cursor()
-        cursor.execute(create_table_sql)
-        if len(data) == 1:
-            cursor.execute(insert_sql, data[0])
-            conn.commit()
-        else:
+    retry_count = 0
+    current_delay = initial_delay
+
+    while retry_count <= max_retries:
+        conn = None
+        try:
+            conn = sqlite3.connect(db_path, timeout=30)
+            cursor = conn.cursor()
+            # 启用WAL模式提升多进程读写并发能力
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute(create_table_sql)
             for i in range(0, len(data), db_insert_size):
                 batch = data[i:i + db_insert_size]
                 cursor.executemany(insert_sql, batch)
-                conn.commit()
-    except sqlite3.Error as e:
-        logger.error(f"An sqlite3 error occurred: {e}")
-        raise RuntimeError("An sqlite3 error occurred") from e
-    finally:
-        conn.close()
+            conn.commit()
+            return
+        except sqlite3.OperationalError as e:
+            if "database is locked" in str(e).lower():
+                retry_count += 1
+                if retry_count > max_retries:
+                    logger.error(f"Database lock conflict retry attempts exhausted ({max_retries}): {e}")
+                    raise RuntimeError(f"DB lock retry exhausted: {e}") from e
+
+                logger.warning(
+                    f"DB lock conflict (retry {retry_count}/{max_retries}), wait {current_delay:.2f}s : {e}"
+                )
+                time.sleep(current_delay)
+                current_delay *= 2
+                continue
+
+            logger.error(f"An sqlite3 error occurred: {e}")
+            raise e
+        except sqlite3.Error as e:
+            logger.error(f"An sqlite3 error occurred: {e}")
+            raise e
+        except Exception as e:
+            logger.error(f"An unknown error occurred: {e}")
+            raise e
+        finally:
+            if conn:
+                conn.close()
 
 
 def add_table_index(db_path):
