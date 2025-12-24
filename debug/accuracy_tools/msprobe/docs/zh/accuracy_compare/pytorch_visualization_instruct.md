@@ -27,14 +27,15 @@
 
 **请安装tb_graph_ascend，否则无法解析构图结果。**
 
+[tb_graph_ascend安装](../../../../../../plugins/tensorboard-plugins/tb_graph_ascend/README.md#2-安装方式)。
+
+
 ### 1.3 版本配套关系
 
 | msprobe版本 | tb_graph_ascend版本 | 说明       | 
 |-----------|-------------------|----------| 
 | 大于等于8.2.1     | 大于等于8.2.0             | msprobe工具的分级可视化构图比对功能自8.2.1版本起，输出件切换为db格式，需要对应版本的tb_graph_ascend进行解析 | 
 | 小于8.2.1     | 小于8.2.0            |    无      | 
-
-[tb_graph_ascend安装](../../../../../../plugins/tensorboard-plugins/tb_graph_ascend/README.md#2-安装方式)。
 
 ## 2.模型结构数据采集
 [PyTorch场景的精度数据采集](../dump/pytorch_data_dump_instruct.md)。
