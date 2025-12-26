@@ -1,0 +1,24 @@
+date, name, issue/requirement/DTS, reason
+2021-07-01 11:51:59, lilinchen, issue #11, add arg modify rule for torch.load
+2021-07-01 20:35:45, zhouyanming, issue #15, 不修改torch.nn.DataParallel接口
+2021-07-28 11:22:51, wangshiling, AR20210721035669, 支持语义等价
+2021-08-03 19:56:28, chenzeren, AR20210628319374, 支持API等价替换
+2021-08-13 15:56:56, chenzeren, AR20210628319374, 支持API等价替换, MaxUnPool2d -> MaxUnpool2d
+2021-08-16 20:51:43, chenzeren, AR20210628319374, 等价替换需求用例补充
+2021-08-17 21:21:47, chenzeren, AR20210723197103, 支持单卡转多卡用例补充
+2021-09-02 17:02:58, zhouyanming, issue #4, data_loader参数pin_memory默认置为True
+2021-09-02 17:02:58, zhouyanming, issue #5, torch.version.npu不支持
+2021-09-27 11:18:28, chenzeren, issue #10\11\12, 单卡转多卡问题修复
+2021-11-15 22:49:56, chenzeren, issue #18, 门禁精简
+2021-12-09 17:15:40, wangshiling, issue #24, 更新相似API替换列表
+2021-12-10 12:21:54, zhouyanming, DTS DTS2021121006730, 优化DDP插入规则 & 修改MASTER_ADDR默认为127.0.0.1
+2021-12-14 20:01:57, zhouyanming, issue #26, 单卡转多卡时不切分batch_size
+2021-12-15 18:16:24, zhouyanming, issue #27, 单转多场景删除过多的set_device
+2021-12-30 15:32:32, zhouyanming, issue #32, 新增每日冒烟用例混合精度一张
+2022-01-04 15:32:32, zhouyanming, issue #33, 修复门禁用例报错
+2022-01-05 14:36:34, chenzeren, issue #34, 门禁精简
+2022-02-09 12:38:23, zhouyanming, AR20220110001811, 多卡易用性提升
+2022-03-30 17:39:23, zhouyanming, DTS2022033004656, 新增1.8测试用例&测试用例优化
+2022-04-21 20:37:14, zhouyanming, AR20220331745615, 适配ModelArts中的环境变量
+2022-05-28 14:20:14, zhouyanming, DTS2022052707376, 修复空指针异常
+2022-06-23 15:38:35, zhouyanming, DTS2022062215197, 框架解耦需求适配,需要在import torch.npu之前import torch_npu
