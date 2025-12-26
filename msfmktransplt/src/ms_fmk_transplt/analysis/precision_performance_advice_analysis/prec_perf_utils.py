@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -------------------------------------------------------------------------
+#  This file is part of the MindStudio project.
+# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+#
+# MindStudio is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
+#
+#          http://license.coscl.org.cn/MulanPSL2
+#
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PSL v2 for more details.
+# -------------------------------------------------------------------------
+
+from collections import namedtuple, defaultdict
+from typing import Optional, Dict
+
+from utils import transplant_logger as translog
+
+
+# precision & performance advice dict union
+AdviceInfo = namedtuple(
+    "AdviceInfo",
+    [
+        "api_prec_dict",
+        "api_perf_dict",
+        "api_params_perf_dict",
+        "perf_api_suggest"
+    ]
+)
+
+
+class PerfApiSuggest:
+    """
+    Process the information of suggested api. If the suggested
+    api is not used, related suggestions will be proposed.
+
+    Args:
+        perf_suggest (Dict): The dict parsed from 'precision_performance_advice' json file.
+    """
+
+    def __init__(self, perf_suggest: Optional[Dict[str, Dict[str, str]]]):
+        self.dependency: Dict[str, bool] = {}
+        self.suggest_apis: Dict[str, bool] = {}
+        self.suggest_apis_info: Dict[str, Dict[str, str]] = perf_suggest
+        self.__set_dependency()
+
+    def __set_dependency(self):
+        if not self.suggest_apis_info or not isinstance(self.suggest_apis_info, dict):
+            return
+
+        for api_name, val in self.suggest_apis_info.items():
+            if not isinstance(val, dict):
+                warn_msg = "The data format in inner json file is not correct!"
+                translog.warning(warn_msg)
+                continue
+            dep_api = val.get("dependency", [])
+            if not isinstance(dep_api, list):
+                translog.warning("The data format in inner json file is not correct!")
+                continue
+            for api in dep_api:
+                self.dependency[api] = False
+            self.suggest_apis[api_name] = False
