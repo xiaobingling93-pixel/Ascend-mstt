@@ -136,6 +136,3 @@ class Interface:
 
         return result if not output_dict else dict(result.data)
 
-
-if __name__ == "__main__":
-    Interface()
