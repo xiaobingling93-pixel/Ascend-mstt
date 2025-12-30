@@ -99,7 +99,7 @@ start(model=None, token_range=None)
 **参数说明**:
 
 1. model：指定需要采集数据的实例化模型，支持传入mindspore.nn.Cell、List[mindspore.nn.Cell]或Tuple[mindspore.nn.Cell] 类型，默认未配置。Cell级别（"L0" level）dump 与 "mix" level dump 时，必须传入 model 才可以采集 model 内的所有 Cell 对象数据，且若存在会进行图编译的 Cell 对象（例如被 `mindspore.jit` 装饰的 Cell），则必须在第一个 step 训练开始前调用 `start` 接口。API级别（"L1" level）dump 时，传入 model 可以采集 model 内包含 primitive op 对象在内的所有 API 数据，若不传入 model 参数，则只采集非 primitive op 的 API 数据。token_range不为None时，必须传入model参数。
-<br>对于复杂模型，如果仅需要监控一部分(如model.A，model.A extends mindspore.nn.Cell)，传入需要监控的部分(如model.A)即可。  
+<br>对于复杂模型，如果仅需要监测一部分(如model.A，model.A extends mindspore.nn.Cell)，传入需要监测的部分(如model.A)即可。  
 注意：传入的当前层不会被dump，工具只会dump传入层的子层级。如传入了model.A，A本身不会被dump，而是会dump A.x, A.x.xx等。
 2. token_range：指定推理模型采集时的token循环始末范围，支持传入[int, int]类型，代表[start, end]，范围包含边界，默认未配置。
 

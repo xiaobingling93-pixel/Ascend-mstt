@@ -97,7 +97,7 @@ debugger.start(model=None, token_range=None)
 1. model：指定需要采集 Module 级数据的模型，支持传入 torch.nn.Module、list[torch.nn.Module]或Tuple[torch.nn.Module] 类型，默认未配置。
 level 配置为"L0"|"mix"或token_range不为None时，必须在该接口或 **PrecisionDebugger** 接口中配置该参数。
 本接口中的 model 比 PrecisionDebugger 中 model 参数优先级更高，会覆盖 PrecisionDebugger 中的 model 参数。
-<br>对于复杂模型，如果仅需要监控一部分(如model.A，model.A extends torch.nn.Module)，传入需要监控的部分(如model.A)即可。  
+<br>对于复杂模型，如果仅需要监测一部分(如model.A，model.A extends torch.nn.Module)，传入需要监测的部分(如model.A)即可。  
 注意：传入的当前层不会被dump，工具只会dump传入层的子层级。如传入了model.A，A本身不会被dump，而是会dump A.x, A.x.xx等。
 2. token_range：指定推理模型采集时的token循环始末范围，支持传入[int, int]类型，代表[start, end]，范围包含边界，默认未配置。
 
