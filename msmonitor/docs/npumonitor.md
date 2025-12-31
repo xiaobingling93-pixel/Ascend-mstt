@@ -57,7 +57,7 @@ export MSMONITOR_LOG_PATH=/tmp/msmonitor_log
 Step 4：设置LD_PRELOAD使能MSPTI
 ```bash
 # 示例：export LD_PRELOAD=/usr/local/Ascend/ascend-toolkit/latest/lib64/libmspti.so
-export LD_PRELOAD=<CANN toolkit安装路径>/ascend-toolkit/latest/lib64/libmspti.so
+export LD_PRELOAD=<CANN toolkit安装路径>/cann/lib64/libmspti.so
  ```
 
 Step 5：拉起训练/推理任务
