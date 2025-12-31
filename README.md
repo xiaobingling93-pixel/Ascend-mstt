@@ -2,6 +2,28 @@
 ---
 
 # MindStudio Training Tools
+最新消息
+[2025.12.31]：MindStudio昇腾平台训练工具链全面开源
+涉及代码仓：
+
+[MindStudio-Profiler](https://gitcode.com/Ascend/msprof)
+构建昇腾全场景性能调优基础能力，支持采集CANN和NPU性能数据，提升昇腾设备性能调优效率
+
+[MindStudio-Profiler-Analyze](https://gitcode.com/Ascend/msprof-analyze)
+昇腾性能分析工具，基于采集的性能数据进行分析，提供昇腾设备性能瓶颈快速识别能力
+
+[MindStudio-MemScope](https://gitcode.com/Ascend/msmemscope)
+针对昇腾显存调试调优场景的专用工具，提供整网级多维度显存数据采集、自动诊断、优化分析能力。
+
+[MindStudio-Probe](https://gitcode.com/Ascend/msprobe)
+模型开发精度调试环节使用的工具包，是针对昇腾提供的全场景精度工具链，帮助用户提高模型精度定位效率。
+
+[MindStudio-Monitor](https://gitcode.com/Ascend/msmonitor)
+一站式在线监控工具，支持落盘和在线性能数据采集，提供集群场景性能监测及定位能力。
+
+[MindStudio-Insight](https://gitcode.com/Ascend/msinsight)
+MindStudio Insight可视化工具，支持系统级、算子级、服务化等多场景多维度性能分析，深度剖析性能数据，帮助开发者完成性能诊断。
+
 
 ## 简介
 
