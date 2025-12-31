@@ -52,7 +52,7 @@ export MSMONITOR_USE_DAEMON=1
 3. 设置LD_PRELOAD使能MSPTI（使能npu-monitor功能设置）
 ```bash
 # 默认路径示例：export LD_PRELOAD=/usr/local/Ascend/ascend-toolkit/latest/lib64/libmspti.so
-export LD_PRELOAD=<CANN toolkit安装路径>/ascend-toolkit/latest/lib64/libmspti.so
+export LD_PRELOAD=<CANN toolkit安装路径>/cann/lib64/libmspti.so
 ```
 4. 拉起训练/推理任务
 ```bash
