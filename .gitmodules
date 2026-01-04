@@ -7,3 +7,6 @@
 [submodule "msinsight"]
 	path = msinsight
 	url = https://gitcode.com/Ascend/msinsight
+[submodule "msmemscope"]
+	path = msmemscope
+	url = https://gitcode.com/Ascend/msmemscope
