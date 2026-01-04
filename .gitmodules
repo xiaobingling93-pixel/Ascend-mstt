@@ -1,3 +1,6 @@
 [submodule "msmonitor/third_party/dynolog"]
 	path = msmonitor/third_party/dynolog
 	url = https://github.com/facebookincubator/dynolog.git
+[submodule "msprobe"]
+	path = msprobe
+	url = https://gitcode.com/Ascend/msprobe
