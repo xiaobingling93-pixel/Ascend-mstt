@@ -4,3 +4,6 @@
 [submodule "msprobe"]
 	path = msprobe
 	url = https://gitcode.com/Ascend/msprobe
+[submodule "msinsight"]
+	path = msinsight
+	url = https://gitcode.com/Ascend/msinsight
