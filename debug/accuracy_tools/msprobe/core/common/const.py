@@ -290,6 +290,7 @@ class Const:
     PT_API_TYPE_NPU = "torch_npu"
     PT_API_TYPE_ATEN = "aten"
     PT_API_TYPE_DIST = "distributed"
+    PT_API_TYPE_DIST_C10D = "distributed_c10d"
     PT_API_TYPE_NPU_DIST = "npu_distributed"
     PT_API_TYPE_MINDSPEED = "mindspeed"
 
@@ -324,6 +325,7 @@ class Const:
             PT_API_TYPE_NPU: PT_API_TYPE_NPU,
             PT_API_TYPE_ATEN: PT_API_TYPE_ATEN,
             PT_API_TYPE_DIST: PT_API_TYPE_DIST,
+            PT_API_TYPE_DIST_C10D: PT_API_TYPE_DIST,
             PT_API_TYPE_NPU_DIST: PT_API_TYPE_NPU_DIST,
             PT_API_TYPE_MINDSPEED: PT_API_TYPE_MINDSPEED
         },
@@ -354,6 +356,7 @@ class Const:
             PT_API_TYPE_NPU: NPU_API_TYPE_PREFIX,
             PT_API_TYPE_ATEN: ATEN_API_TYPE_PREFIX,
             PT_API_TYPE_DIST: DIST_API_TYPE_PREFIX,
+            PT_API_TYPE_DIST_C10D: DIST_API_TYPE_PREFIX,
             PT_API_TYPE_NPU_DIST: DIST_API_TYPE_PREFIX,
             PT_API_TYPE_MINDSPEED: MINDSPEED_API_TYPE_PREFIX
         },
