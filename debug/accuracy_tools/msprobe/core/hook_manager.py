@@ -50,6 +50,7 @@ class BaseHookManager(ABC):
     def __init__(self, data_collector, config):
         self.data_collector = data_collector
         self.config = config
+        self.current_pid = os.getpid()
 
     @property
     def _pid(self):
@@ -77,7 +78,7 @@ class BaseHookManager(ABC):
     def _clear_input_kwargs(module, tid):
         if hasattr(module, 'msprobe_input_kwargs') and tid in module.msprobe_input_kwargs:
             del module.msprobe_input_kwargs[tid]
-    
+
     @staticmethod
     def _get_grad_hook_call_index(ori_name, param_name):
         if ori_name not in BaseHookManager.grad_hook_call:
@@ -130,13 +131,18 @@ class BaseHookManager(ABC):
     @abstractmethod
     def _need_exchange(self, module):
         pass
-    
+
     @abstractmethod
     def _register_param_hook(self, name, module, params_dict):
         pass
 
+    def is_child_process(self):
+        return self.current_pid != self._pid
+
     def _should_execute_hook(self, hook_type, tid, is_forward=True):
         is_api_hook = hook_type == Const.API
+        if self.is_child_process():
+            return False
         if BaseHookManager.inner_switch[tid]:
             return False
         if not is_api_hook and not Runtime.is_running:
