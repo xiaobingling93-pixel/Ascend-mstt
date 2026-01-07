@@ -3,6 +3,8 @@
 USERNAME=$(id -un)
 USERGROUP=$(id -gn)
 
+COMMON_SHELL_PATH="common.sh"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -135,7 +137,7 @@ main() {
     exit 0
 }
 
-
+source ${COMMON_SHELL_PATH}
 #参数初始化
 install_file=""
 input_install_path=""
@@ -149,8 +151,23 @@ check_flag=n
 pylocal=y
 force_flag=n
 
-#解析参数
+# get run package path
+run_path=`echo "$2" | cut -d"-" -f3-`
+if [ -z "${run_path}" ]; then
+    run_path=`pwd`
+else
+    # delete last "/" "/."
+    run_path=`echo "${run_path}" | sed "s/((\/)|(\/\.))*$//g"`
+    [ -z "${run_path}" ] && run_path="/"
+    if [ ! -d "${run_path}" ]; then
+        log_and_print $LEVEL_ERROR "Run package path is invalid: $run_path"
+        exit 1
+    fi
+fi
+
 shift 2
+
+start_log
 
 for arg in "$@"; do
     case "$arg" in
