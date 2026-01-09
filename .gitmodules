@@ -1,6 +1,3 @@
-[submodule "msmonitor/third_party/dynolog"]
-	path = msmonitor/third_party/dynolog
-	url = https://github.com/facebookincubator/dynolog.git
 [submodule "msprobe"]
 	path = msprobe
 	url = https://gitcode.com/Ascend/msprobe
@@ -10,3 +7,12 @@
 [submodule "msmemscope"]
 	path = msmemscope
 	url = https://gitcode.com/Ascend/msmemscope
+[submodule "msprof"]
+	path = msprof
+	url = https://gitcode.com/Ascend/msprof.git
+[submodule "mspti"]
+	path = mspti
+	url = https://gitcode.com/Ascend/mspti.git
+[submodule "msprof-analyze"]
+	path = msprof-analyze
+	url = https://gitcode.com/Ascend/msprof-analyze.git
