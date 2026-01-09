@@ -16,3 +16,6 @@
 [submodule "msprof-analyze"]
 	path = msprof-analyze
 	url = https://gitcode.com/Ascend/msprof-analyze.git
+[submodule "msmonitor"]
+	path = msmonitor
+	url = https://gitcode.com/Ascend/msmonitor.git
