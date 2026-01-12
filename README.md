@@ -4,6 +4,8 @@
 # MindStudio Training Tools
 ## 最新消息
 
+[2026.1.12]：[mstt 仓库License变更通知](https://gitcode.com/Ascend/mstt/discussions/1)
+
 [2025.12.31]：MindStudio昇腾平台训练工具链全面开源，涉及如下代码仓。
 
 - [MindStudio-Profiler](https://gitcode.com/Ascend/msprof)
