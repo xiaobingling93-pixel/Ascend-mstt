@@ -26,35 +26,24 @@ error() {
 
 # 检查是否已安装
 check_installation() {
-    if [[ -d "$INSTALL_DIR" ]]; then
+    local _mstt_path=$INSTALL_DIR/mstt
+    if [[ -d "${_mstt_path}" ]]; then
         if [[ "$SILENT_MODE" != "true" ]]; then
-            echo -n "目录 $INSTALL_DIR 已存在，是否覆盖？ (y/N): "
+            echo -n "目录 ${_mstt_path} 已存在，是否覆盖？ (y/N): "
             read -r response
             if [[ ! "$response" =~ ^[Yy]$ ]]; then
                 info "安装已取消"
                 exit 0
             fi
         fi
-        warn "将覆盖现有安装: $INSTALL_DIR"
+        warn "将覆盖现有安装: ${_mstt_path}"
     fi
 }
 
 # 创建安装目录
 create_install_dir() {
-    info "创建安装目录: $INSTALL_DIR"
-
-    # 尝试创建目录
-    if ! mkdir -p "$INSTALL_DIR"; then
-        # 如果创建失败，可能需要 sudo
-        warn "需要权限创建目录 $INSTALL_DIR"
-        if command -v sudo >/dev/null 2>&1; then
-            sudo mkdir -p "$INSTALL_DIR"
-            SUDO_USED=true
-        else
-            error "无法创建目录，请检查权限"
-            exit 1
-        fi
-    fi
+    install_path=$(convert_install_path "${INSTALL_DIR}/mstt")
+    create_folder $install_path "${USERNAME}:${USERGROUP}" 750
 }
 
 function convert_install_path() {
@@ -79,6 +68,24 @@ function convert_install_path() {
     echo "${_install_path}"
 }
 
+copy_file() {
+    local source="$1"
+    local target="$2"
+
+
+    if [ ! -e "${source}" ]; then
+        error "${source} does not exist!"
+        exit 1
+    fi
+
+    cp -rf "${source}" "${target}"
+    if [ $? -ne 0 ]; then
+        error "copy ${source} failed!"
+        exit 1
+    fi
+
+}
+
 # 主安装函数
 main_install() {
     # 设置安装目录
@@ -100,12 +107,7 @@ main_install() {
 
     info "正在安装文件..."
 
-    # 复制文件到安装目录
-    if [[ "$SUDO_USED" == "true" ]]; then
-        sudo cp -r "$PWD"/* "$INSTALL_DIR"/
-    else
-        cp -r "$PWD"/* "$INSTALL_DIR"/
-    fi
+    copy_file "$PWD/ms_fmk_transplt" "$INSTALL_DIR/mstt"/
 
     info "安装完成！"
     info "安装目录: $INSTALL_DIR"
@@ -121,11 +123,7 @@ function get_install_path() {
     else
         _install_path="${input_install_path}"
     fi
-
-    install_path=$(convert_install_path "${_install_path}")
-    create_folder $install_path "${USERNAME}:${USERGROUP}" 750
-
-    echo "${install_path}"
+    echo "${_install_path}"
 }
 
 # 主函数
