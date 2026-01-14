@@ -78,7 +78,7 @@ SingleComparator.compare(
 ```
 SingleComparator.compare：将两次采集的数据进行比对，参数如下：
 - dir1：需要比对的其中一个dump_path，对应SingleSave的dump_path。
-- dir2：需要比对的令一个dump_path，对应SingleSave的dump_path。
+- dir2：需要比对的另一个dump_path，对应SingleSave的dump_path。
 - output_path：比对结果输出路径，默认为"./msprobe_compare_output"。
 - num_processes：比对的时候起多少个进程，默认为8。
 会在output_path下对每种关键数据都生成excel结果表格，比如response.xlsx，形式为关键数据的名字加上.xlsx后缀。
