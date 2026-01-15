@@ -636,6 +636,7 @@
     "torch.nn.functional.adaptive_avg_pool3d": "",
     "torch.nn.functional.fractional_max_pool2d": "",
     "torch.nn.functional.fractional_max_pool3d": "",
+    "torch.nn.functional.scaled_dot_product_attention": "",
     "torch.nn.functional.threshold": "",
     "torch.nn.functional.threshold_": "",
     "torch.nn.functional.relu": "",
