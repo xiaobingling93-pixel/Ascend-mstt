@@ -1,17 +1,18 @@
-/* Copyright (c) 2025, Huawei Technologies.
- * All rights reserved.
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
  *
- * Licensed under the Apache License, Version 2.0  (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *          http://license.coscl.org.cn/MulanPSL2
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
  */
 
 import '@vaadin/combo-box';
@@ -24,7 +25,7 @@ import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects }
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
-import '../tf_filter_precision_error/index'
+import '../tf_filter_precision_error/index';
 import i18next from '../../../common/i18n';
 import { t } from 'i18next';
 import { PaperButtonElement } from '@polymer/paper-button';
@@ -446,7 +447,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   precisionDesc: string = '';
 
   @property({ type: String })
-  unMatchedNodeName = t('no_matching_nodes')
+  unMatchedNodeName = t('no_matching_nodes');
 
   private closeButtonElements: Set<PaperButtonElement> = new Set();
   private titleElements: Set<HTMLHeadingElement> = new Set(); // 专门管理标题元素
@@ -468,11 +469,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         '--color-config-right': i18next.language === 'zh-CN' ? '56px' : '93px',
         '--color-config-add': i18next.language === 'zh-CN' ? '100px' : '143px',
       });
-      this.closeButtonElements.forEach(button => {
-          button.textContent = this.t('close');
+      this.closeButtonElements.forEach((button) => {
+        button.textContent = this.t('close');
       });
-      this.titleElements.forEach(title => {
-          title.textContent = this.t('info');
+      this.titleElements.forEach((title) => {
+        title.textContent = this.t('info');
       });
     }
   }
@@ -545,35 +546,32 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       return;
     }
     try {
-      const values = this.selectColor.map((item) => item === this.unMatchedNodeName ? -1 : item);
+      const values = this.selectColor.map((item) => (item === this.unMatchedNodeName ? -1 : item));
       const params = {
         metaData: this.selection,
         type: 'precision',
         values,
       };
-      const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params })
+      const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
 
       if (success) {
         this.set('precisionmenu', data);
         this.set('selectedPrecisionNode', data?.[0] || '');
-      }
-      else {
+      } else {
         Notification.show(`Error:${error}`, {
           position: 'middle',
           duration: 4000,
           theme: 'error',
         });
       }
-
-    }
-    catch (error) {
+    } catch (error) {
       Notification.show(this.t('retrieve_precision_menu_fail'), {
         position: 'middle',
         duration: 4000,
         theme: 'error',
       });
     }
-  }
+  };
 
   toggleVisibility(): void {
     this.set('_colorSetting', !this._colorSetting);
@@ -636,7 +634,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
       colors: JSON.stringify(newColorsList),
       metaData: this.selection,
     };
-    const { success, data, error } = await request({ url: 'updateColors', method: "POST", data: params });
+    const { success, data, error } = await request({ url: 'updateColors', method: 'POST', data: params });
     if (success) {
       // 更新颜色列表
 
@@ -888,11 +886,11 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         this.set('selectedPrecisionNode', '');
         return;
       }
-      const values = this.selectColor.map((item) => item === this.unMatchedNodeName ? -1 : item);
+      const values = this.selectColor.map((item) => (item === this.unMatchedNodeName ? -1 : item));
       const params = {
         metaData: this.selection,
         type: 'precision',
-        values
+        values,
       };
       const { success, data, error } = await request({ url: 'screen', method: 'POST', data: params });
 
@@ -905,9 +903,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         // 选中第一个选项
         setTimeout(() => {
           this._observePrecsionNode();
-        }, 200)
-      }
-      else {
+        }, 200);
+      } else {
         Notification.show(`Error:${error}`, {
           position: 'middle',
           duration: 4000,
@@ -943,9 +940,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         // 选中第一个选项
         setTimeout(() => {
           this._observeOverFlowNode();
-        }, 200)
-      }
-      else {
+        }, 200);
+      } else {
         Notification.show(`Error:${error}`, {
           position: 'middle',
           duration: 4000,
