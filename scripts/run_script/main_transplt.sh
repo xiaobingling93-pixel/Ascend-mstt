@@ -124,9 +124,9 @@ main_install() {
 function get_install_path() {
     if [ -z "${input_install_path}" ]; then
         local _install_path
-        _install_path="/usr/local/Ascend/ascend-toolkit/latest/tools"
+        _install_path="/usr/local/Ascend"
     else
-        _install_path="${input_install_path}/ascend-toolkit/latest/tools"
+        _install_path="${input_install_path}"
     fi
     echo $_install_path
     install_path=$(convert_install_path "${_install_path}")
