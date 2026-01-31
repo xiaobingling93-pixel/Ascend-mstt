@@ -1,26 +1,23 @@
-/* Copyright 2020 The TensorFlow Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-Copyright (c) 2025, Huawei Technologies.
-Adapt to the model hierarchical visualization data collected by the msprobe tool
-==============================================================================*/
-
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
+ *
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *          http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
+ */
 import '@vaadin/icon';
 import '@vaadin/icons';
 import '@vaadin/select';
 import '@vaadin/button';
-
 
 import * as _ from 'lodash';
 import { customElement, property } from '@polymer/decorators';
@@ -30,7 +27,7 @@ import { LegacyElementMixin } from '../polymer/legacy_element_mixin';
 import { PaperCheckboxElement } from '../polymer/irons_and_papers';
 import '../polymer/irons_and_papers';
 
-import i18next from '../common/i18n'
+import i18next from '../common/i18n';
 import './components/tf_main_controler';
 import './components/tf_manual_match/index';
 import './components/tf_color_select/index';
@@ -159,7 +156,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         justify-content: space-between;
         align-items: center;
       }
-      .language-button{
+      .language-button {
         font-size: var(--tb-graph-controls-title-font-size);
         font-weight: 400;
         cursor: pointer;
@@ -179,7 +176,7 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         display: flex;
         padding-top: 0;
       }
-      
+
       .vaadin-details-title {
         font-size: 14px;
         color: #333333;
@@ -193,18 +190,18 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         font-weight: 600;
       }
 
-      .loading-wrapper{
-          position: absolute;
-          width: 90%;
-          height: 90%;
-          z-index: 999;
-          color: rgba(37, 37, 37, 0.8);
-          background-color: rgba(255, 255, 255, 0.76);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-size: 20px;
-          font-weight: 600;
+      .loading-wrapper {
+        position: absolute;
+        width: 90%;
+        height: 90%;
+        z-index: 999;
+        color: rgba(37, 37, 37, 0.8);
+        background-color: rgba(255, 255, 255, 0.76);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 20px;
+        font-weight: 600;
       }
       paper-checkbox {
         --paper-checkbox-unchecked-color: gray; /* 选中时的颜色 */
@@ -217,20 +214,26 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       <button class="tab-button" on-tap="_showMatch">[[t('function')]]</button>
     </div>
     <div id="nodes-content" class="tab-content">
-      <div class='setting-title'>
+      <div class="setting-title">
         <div class="fit-screen">
           <vaadin-icon icon="vaadin:viewport" on-click="_clickSetting"></vaadin-icon>
           <vaadin-button theme="tertiary contrast" on-click="_fit">[[t('fit')]]</vaadin-button>
         </div>
-        <vaadin-button class='language-button' theme="tertiary-inline" on-click="changeLanguage">中|en</vaadin-button>
+        <vaadin-button class="language-button" theme="tertiary-inline" on-click="changeLanguage">中|en</vaadin-button>
       </div>
       <div class="minimap-control">
-        <paper-checkbox class="left-checkbox" checked on-change="_toggleNpuMinimap">[[t('show_debug_minimap')]]</paper-checkbox>
+        <paper-checkbox class="left-checkbox" checked on-change="_toggleNpuMinimap"
+          >[[t('show_debug_minimap')]]</paper-checkbox
+        >
         <template is="dom-if" if="[[!isSingleGraph]]">
-          <paper-checkbox  checked on-click="_toggleBenchMinimap">[[t('show_bench_minimap')]]</paper-checkbox>
+          <paper-checkbox checked on-click="_toggleBenchMinimap">[[t('show_bench_minimap')]]</paper-checkbox>
         </template>
       </div>
-      <vaadin-checkbox class="sync-expand-checkbox" label="[[t('shouldExpandNodesSync')]]" checked={{isSyncExpand}}></vaadin-checkbox>
+      <vaadin-checkbox
+        class="sync-expand-checkbox"
+        label="[[t('shouldExpandNodesSync')]]"
+        checked="{{isSyncExpand}}"
+      ></vaadin-checkbox>
       <div class="container-wrapper">
         <tf-main-controler
           t="[[t]]"
@@ -241,11 +244,11 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
           steps="[[steps]]"
         ></tf-main-controler>
       </div>
-   
+
       <tf-color-select
         t="[[t]]"
         colors="{{colors}}"
-        task=[[task]]
+        task="[[task]]"
         is-overflow-filter="{{isOverflowFilter}}"
         overflowcheck="[[overflowcheck]]"
         selected-node="{{selectedNode}}"
@@ -256,15 +259,13 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
     </div>
     <div id="directory-content" class="tab-content hidden"></div>
     <div id="match-content" class="tab-content hidden">
-        <template is='dom-if' if='[[loading]]'>
-          <div class='loading-wrapper'>
-              Loading......
-          </div>
+      <template is="dom-if" if="[[loading]]">
+        <div class="loading-wrapper">Loading......</div>
       </template>
       <vaadin-details class="vaadin-details" summary="[[t('node_search')]]" opened>
         <tf-linkage-search-combox
           t="[[t]]"
-          nodelist="[[nodelist]]"           
+          nodelist="[[nodelist]]"
           selected-node="{{selectedNode}}"
           is-compare-graph="[[!isSingleGraph]]"
         >
@@ -280,7 +281,6 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         bench-match-nodes="[[benchMatchNodes]]"
         matched-config-files="[[matchedConfigFiles]]"
       ></tf-manual-match>
-
     </div>
   `;
 
@@ -332,12 +332,10 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   colors: any;
 
   @property({ type: Object, notify: true })
-  loadAllNodeList: Function = () => { };
+  loadAllNodeList: Function = () => {};
 
   @property({ type: Object, notify: true })
   needLoadAllNodeList: boolean = true;
-
-
 
   override ready(): void {
     super.ready();
@@ -351,9 +349,8 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
       const t = this.t;
       this.set('t', null);
       this.set('t', t);
-      const selection = { ...this.selection, lang: currentLang }
+      const selection = { ...this.selection, lang: currentLang };
       this.set('selection', selection);
-
     });
   }
 
@@ -391,10 +388,10 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
   async _showMatch(): Promise<void> {
     this._showTabContent(this.t('function'), 'match-content');
     if (this.loadAllNodeList && this.needLoadAllNodeList) {
-      this.set('loading', true)
+      this.set('loading', true);
       await this.loadAllNodeList(this.selection);
-      this.set('needLoadAllNodeList', false) //已经加载过一次,不需要再加载
-      this.set('loading', false)
+      this.set('needLoadAllNodeList', false); //已经加载过一次,不需要再加载
+      this.set('loading', false);
     }
   }
 

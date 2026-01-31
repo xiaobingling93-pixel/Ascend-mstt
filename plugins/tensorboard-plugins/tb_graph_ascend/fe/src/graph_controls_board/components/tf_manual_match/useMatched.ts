@@ -1,40 +1,51 @@
-/* Copyright (c) 2025, Huawei Technologies.
- * All rights reserved.
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
  *
- * Licensed under the Apache License, Version 2.0  (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *          http://license.coscl.org.cn/MulanPSL2
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
  */
 
 import { isEmpty } from 'lodash';
 import request from '../../../utils/request';
 import { UseMatchedType, MatchResultType } from '../../type';
 const useMatched = (): UseMatchedType => {
-  const requestAddMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any, isMatchChildren: boolean): Promise<any> => {
+  const requestAddMatchNodes = async (
+    npuNodeName: string,
+    benchNodeName: string,
+    metaData: any,
+    isMatchChildren: boolean,
+  ): Promise<any> => {
     const params = {
       npuNodeName: npuNodeName,
       benchNodeName: benchNodeName,
       metaData,
-      isMatchChildren
+      isMatchChildren,
     };
     const mactchResult = await request({ url: 'addMatchNodes', method: 'POST', data: params });
     return mactchResult;
   };
 
-  const requestDeleteMatchNodes = async (npuNodeName: string, benchNodeName: string, metaData: any, isUnMatchChildren: boolean): Promise<any> => {
+  const requestDeleteMatchNodes = async (
+    npuNodeName: string,
+    benchNodeName: string,
+    metaData: any,
+    isUnMatchChildren: boolean,
+  ): Promise<any> => {
     const params = {
       npuNodeName: npuNodeName,
       benchNodeName: benchNodeName,
       metaData,
-      isUnMatchChildren
+      isUnMatchChildren,
     };
     const mactchResult = await request({ url: 'deleteMatchNodes', method: 'POST', data: params });
     return mactchResult;
@@ -69,7 +80,7 @@ const useMatched = (): UseMatchedType => {
     npuNodeName: string,
     benchNodeName: string,
     selection: any,
-    isMatchChildren: boolean
+    isMatchChildren: boolean,
   ): Promise<MatchResultType> => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
@@ -77,18 +88,33 @@ const useMatched = (): UseMatchedType => {
         error: '调试侧节点或标杆节点为空',
       };
     }
-    const matchResult: MatchResultType = await requestAddMatchNodes(npuNodeName, benchNodeName, selection, isMatchChildren);
+    const matchResult: MatchResultType = await requestAddMatchNodes(
+      npuNodeName,
+      benchNodeName,
+      selection,
+      isMatchChildren,
+    );
     return matchResult;
   };
 
-  const deleteMatchedNodesLink = async (npuNodeName: string, benchNodeName: string, selection: any, isUnMatchChildren: boolean): Promise<any> => {
+  const deleteMatchedNodesLink = async (
+    npuNodeName: string,
+    benchNodeName: string,
+    selection: any,
+    isUnMatchChildren: boolean,
+  ): Promise<any> => {
     if (isEmpty(npuNodeName) || isEmpty(benchNodeName)) {
       return {
         success: false,
         error: '调试侧节点或标杆节点为空',
       };
     }
-    const matchResult: MatchResultType = await requestDeleteMatchNodes(npuNodeName, benchNodeName, selection, isUnMatchChildren);
+    const matchResult: MatchResultType = await requestDeleteMatchNodes(
+      npuNodeName,
+      benchNodeName,
+      selection,
+      isUnMatchChildren,
+    );
     return matchResult;
   };
 

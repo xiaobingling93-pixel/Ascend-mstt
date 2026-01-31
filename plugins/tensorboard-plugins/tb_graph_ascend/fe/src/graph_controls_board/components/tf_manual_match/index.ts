@@ -1,17 +1,18 @@
-/* Copyright (c) 2025, Huawei Technologies.
- * All rights reserved.
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
  *
- * Licensed under the Apache License, Version 2.0  (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *          http://license.coscl.org.cn/MulanPSL2
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
  */
 
 import '@vaadin/button';
@@ -27,10 +28,9 @@ import { customElement, property, observe } from '@polymer/decorators';
 import { NPU_PREFIX, BENCH_PREFIX, DB_TYPE } from '../../../common/constant';
 import useMatched from './useMatched';
 import '../tf_search_combox/index';
-import i18next from '../../../common/i18n'
+import i18next from '../../../common/i18n';
 import type { UseMatchedType } from '../../type';
 import type { SelectionType } from '../../../graph_ascend/type';
-
 
 @customElement('tf-manual-match')
 class Legend extends PolymerElement {
@@ -139,11 +139,7 @@ class Legend extends PolymerElement {
           on-change="_addMatchedNodesLinkByConfigFile"
         ></vaadin-combo-box>
         <vaadin-icon id="question" icon="vaadin:question-circle"></vaadin-icon>
-        <vaadin-tooltip
-          for="question"
-          text="[[t('select_match_config_file_desc')]]"
-          position="end"
-        ></vaadin-tooltip>
+        <vaadin-tooltip for="question" text="[[t('select_match_config_file_desc')]]" position="end"></vaadin-tooltip>
       </div>
       <template is="dom-if" if="[[matchConfigLoading]]">
         <vaadin-progress-bar indeterminate></vaadin-progress-bar>
@@ -167,7 +163,11 @@ class Legend extends PolymerElement {
         <template is="dom-if" if="[[matchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
-        <vaadin-checkbox class="match-checkbox" label="[[t('manage_nodes_and_subs')]]" checked={{isMatchChildren}}></vaadin-checkbox>
+        <vaadin-checkbox
+          class="match-checkbox"
+          label="[[t('manage_nodes_and_subs')]]"
+          checked="{{isMatchChildren}}"
+        ></vaadin-checkbox>
         <div class="match-button">
           <vaadin-button theme="secondary small" on-click="_addMatchedNodesLink">[[t('click_to_match')]]</vaadin-button>
         </div>
@@ -193,9 +193,15 @@ class Legend extends PolymerElement {
         <template is="dom-if" if="[[unmatchLoading]]">
           <vaadin-progress-bar indeterminate></vaadin-progress-bar>
         </template>
-        <vaadin-checkbox class="match-checkbox" label="[[t('manage_nodes_and_subs')]]" checked={{isUnMatchChildren}}></vaadin-checkbox>
+        <vaadin-checkbox
+          class="match-checkbox"
+          label="[[t('manage_nodes_and_subs')]]"
+          checked="{{isUnMatchChildren}}"
+        ></vaadin-checkbox>
         <div class="match-button">
-          <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink">[[t('cancel_matching')]]</vaadin-button>
+          <vaadin-button theme="secondary small" on-click="_deletelMatchedNodesLink"
+            >[[t('cancel_matching')]]</vaadin-button
+          >
         </div>
       </div>
 
@@ -222,11 +228,7 @@ class Legend extends PolymerElement {
             >[[t('save')]]</vaadin-button
           >
           <vaadin-icon id="match-save" icon="vaadin:question-circle"></vaadin-icon>
-          <vaadin-tooltip
-            for="match-save"
-            text="[[t('save_tooltip')]]"
-            position="end"
-          ></vaadin-tooltip>
+          <vaadin-tooltip for="match-save" text="[[t('save_tooltip')]]" position="end"></vaadin-tooltip>
           <template is="dom-if" if="[[saveLoading]]">
             <vaadin-progress-bar indeterminate></vaadin-progress-bar>
           </template>
@@ -453,7 +455,7 @@ class Legend extends PolymerElement {
       this.selectedNpuMatchedNode,
       this.selectedBenchMatchedNode,
       this.selection,
-      this.isUnMatchChildren
+      this.isUnMatchChildren,
     );
     this.set('unmatchLoading', false);
     if (success) {
@@ -480,11 +482,14 @@ class Legend extends PolymerElement {
       // 已匹配列表清空选中的节点
       this.set('selectedNpuMatchedNode', '');
       this.set('selectedBenchMatchedNode', '');
-      Notification.show(`${this.t('cancel_match_success_part1')}${processedNodeNum}${this.t('cancel_match_success_part2')}`, {
-        position: 'middle',
-        duration: 4000,
-        theme: 'success',
-      });
+      Notification.show(
+        `${this.t('cancel_match_success_part1')}${processedNodeNum}${this.t('cancel_match_success_part2')}`,
+        {
+          position: 'middle',
+          duration: 4000,
+          theme: 'success',
+        },
+      );
     } else {
       Notification.show(`${this.t('cancel_match_fail')}${error}`, {
         position: 'middle',
@@ -534,9 +539,12 @@ class Legend extends PolymerElement {
       this.set('npuUnMatchedNodes', npuUnMatchNodes);
       this.set('benchUnMatchedNodes', benchUnMatchNodes);
       Notification.show(
-        this.t('match_success_part1') + processedNodeNum + 
-        this.t('match_success_part2') + matchSuccessNum + 
-        this.t('match_success_part3') + matchFailedNum,
+        this.t('match_success_part1') +
+          processedNodeNum +
+          this.t('match_success_part2') +
+          matchSuccessNum +
+          this.t('match_success_part3') +
+          matchFailedNum,
         {
           position: 'middle',
           duration: 4000,
