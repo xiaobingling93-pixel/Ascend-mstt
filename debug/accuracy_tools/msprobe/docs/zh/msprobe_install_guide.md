@@ -61,7 +61,7 @@ Summary: Pytorch Ascend Probe Utils
 Home-page: https://gitcode.com/Ascend/mstt/tree/master/debug/accuracy_tools/msprobe
 Author: Ascend Team
 Author-email: xx@xx.com
-License: Apache License 2.0
+License: Mulan PSL v2
 Location: /home/xxx/miniconda3/envs/xxx/lib/python3.x/site-packages/mindstudio_probe-1.0.x-py3.x.egg
 Requires: einops, matplotlib, numpy, openpyxl, pandas, pyOpenSSL, pyyaml, rich, tqdm, twisted, wheel
 Required-by: 
