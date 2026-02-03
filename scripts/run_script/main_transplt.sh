@@ -2,7 +2,7 @@
 # install.sh - 安装脚本
 USERNAME=$(id -un)
 USERGROUP=$(id -gn)
-MODULE_NAME="Ascend-mindstudio-transplt"
+MODULE_NAME="mindstudio-transplt"
 
 # 颜色定义
 RED='\033[0;31m'

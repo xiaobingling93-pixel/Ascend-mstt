@@ -106,12 +106,14 @@ function copy_script() {
 }
 
 function get_package_name() {
-
-      CONFIG_FILE="${CUR_DIR}/conf/version_transplt.info"
+    CONFIG_FILE="${CUR_DIR}/conf/version_transplt.info"
     NAME=$(grep -E '^Name=' "$CONFIG_FILE" | cut -d'=' -f2)
-    VERSION=$(grep -E '^Version=' "$CONFIG_FILE" | cut -d'=' -f2)
+    # 如果VERSION未通过外部传参设置，则从配置文件读取
+    if [ -z "${VERSION}" ]; then
+        VERSION=$(grep -E '^Version=' "$CONFIG_FILE" | cut -d'=' -f2)
+    fi
     local os_arch=$(arch)
-    echo "${NAME}_${VERSION}_linux-${os_arch}.run"
+    echo "${NAME}_${VERSION}_linux_${os_arch}.run"
 }
 
 function create_run_package() {
@@ -168,10 +170,12 @@ function check_package() {
 }
 
 function main() {
+	# 解析命令行参数，支持通过外部传参设置VERSION
+	parse_script_args "$@"
 	create_temp_dir ${TRANSPLT_TEMP_DIR}
 	check_file_exist ${TRANSPLT_TEMP_DIR}
 	create_run_package ${TRANSPLT_RUN_NAME} ${TRANSPLT_TEMP_DIR} ${main_script}
 	check_package ${OUTPUT_DIR}/$(get_package_name) ${PKG_LIMIT_SIZE}
 }
 
-main
+main "$@"
