@@ -102,8 +102,6 @@ main_install() {
         echo ""
     fi
 
-    # 检查是否已安装
-    check_installation
     # 创建安装目录
     create_install_dir
 
@@ -142,7 +140,6 @@ main() {
     exit 0
 }
 
-source ${COMMON_SHELL_PATH}
 #参数初始化
 install_file=""
 input_install_path=""
