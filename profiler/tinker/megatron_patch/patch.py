@@ -45,8 +45,12 @@ _patch_func_model_config = [
     (IS_WRAPPER, ["megatron.core.distributed.grad_buffer",
                   "megatron.core.distributed.param_and_grad_buffer"],
      "Bucket.register_grad_ready", register_grad_ready_wrapper),
+    (IS_WRAPPER, ["megatron.core.distributed.param_and_grad_buffer"],
+     "_ParamAndGradBucketGroup.register_grad_ready", register_grad_ready_wrapper),
     (IS_WRAPPER, ["megatron.core.distributed.grad_buffer", "megatron.core.distributed.param_and_grad_buffer"],
      "Bucket.start_grad_sync", start_grad_sync_wrapper),
+    (IS_WRAPPER, ["megatron.core.distributed.param_and_grad_buffer"],
+     "_ParamAndGradBucketGroup.start_grad_sync", start_grad_sync_wrapper),
 
     # patch micro_batch function for megatron and modellink
     (NOT_WRAPPER, ["megatron.global_vars", "megatron.training.global_vars"], "_build_num_microbatches_calculator",

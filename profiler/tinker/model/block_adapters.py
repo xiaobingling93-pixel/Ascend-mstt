@@ -137,7 +137,8 @@ mcore_block_adapters = [
     BlockAdapter(
         block_name='embedding',
         method_location=MethodLocation(
-            source_method_path=['modellink.core.models.gpt.gpt_model.gpt_model_forward'],
+            source_method_path=['modellink.core.models.gpt.gpt_model.gpt_model_forward',
+                                'modellink.core.models.gpt.gpt_model.GPTModel'],
             start_key_word=None,
             end_key_word='rotary_pos_emb ='
         ),
@@ -179,9 +180,11 @@ mcore_block_adapters = [
     BlockAdapter(
         block_name='post_process',
         method_location=MethodLocation(
-            source_method_path=['modellink.core.models.gpt.gpt_model.gpt_model_forward'],
+            source_method_path=['modellink.core.models.gpt.gpt_model.gpt_model_forward',
+                               'modellink.core.models.gpt.gpt_model.GPTModel'],
+            # cut 掉 decoder 部分，end 用 output_weight 前一行 "# logits and loss"，新旧版本结构一致
             start_key_word='decoder_input is not None',
-            end_key_word='return hidden_states',
+            end_key_word='# logits and loss',
             cut_mode=True
         ),
         return_values=["loss"],
