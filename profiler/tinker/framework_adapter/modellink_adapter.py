@@ -190,7 +190,7 @@ class ModelLinkAdapter10(ModelLinkAdapter11):
 
 class ModelLinkAdapter12(ModelLinkAdapter11):
     """
-    1.2相关接口相较1.1无变更， 此处新建子类， 用于明确五变更情况
+    1.2相关接口相较1.1无变更， 此处新建子类， 用于明确无变更情况
     """
     pass
 
@@ -207,9 +207,36 @@ class ModelLinkAdapter100(ModelLinkAdapter11):
 
 class ModelLinkAdapter200(ModelLinkAdapter100):
     """
-    2.0.0相关接口相较1.0.0无变更， 此处新建子类， 用于明确五变更情况
+    2.0.0相关接口相较1.0.0无变更， 此处新建子类， 用于明确无变更情况
     """
     pass
+
+
+class ModelLinkAdapter230(ModelLinkAdapter100):
+    """
+    2.3.0相关接口相较2.0.0, initilize, wrap_block接口变更
+    """
+    def initialize(self):
+        from megatron.training.initialize import initialize_megatron
+        initialize_megatron()
+
+    def wrap_block(self, block):
+        """
+        为裸block增加fp16和ddp外壳
+        """
+        from megatron.core.tensor_parallel import set_defaults_if_not_set_tensor_model_parallel_attributes
+        from megatron.core.transformer.module import Float16Module
+
+        args = self.get_args()
+
+        for param in block.parameters():
+            set_defaults_if_not_set_tensor_model_parallel_attributes(param)
+
+        block.cuda(torch.cuda.current_device())
+        if args.fp16 or args.bf16:
+            block = Float16Module(args, block)  # Float16Module导入路径，参数顺序变化
+
+        return block
 
 
 class ModelLinkAdapterTune200(ModelLinkAdapter100):
@@ -225,17 +252,45 @@ class ModelLinkAdapterTune200(ModelLinkAdapter100):
         data_iterator, _, _ = build_train_valid_test_data_iterators(train_valid_test_datasets_provider)
         return SFTTrainer.get_batch(data_iterator)
 
+class ModelLinkAdapterTune230(ModelLinkAdapterTune200):
+    """
+    2.3.0 tune相关接口相较2.0.0 tune, initilize, wrap_block接口变更
+    """
+    def initialize(self):
+        from megatron.training.initialize import initialize_megatron
+        initialize_megatron()
+
+    def wrap_block(self, block):
+        """
+        为裸block增加fp16和ddp外壳
+        """
+        from megatron.core.tensor_parallel import set_defaults_if_not_set_tensor_model_parallel_attributes
+        from megatron.core.transformer.module import Float16Module
+
+        args = self.get_args()
+
+        for param in block.parameters():
+            set_defaults_if_not_set_tensor_model_parallel_attributes(param)
+
+        block.cuda(torch.cuda.current_device())
+        if args.fp16 or args.bf16:
+            block = Float16Module(args, block)
+
+        return block
+
 
 version_map: Dict[str, Type[ModelLinkAdapter]] = {
     '1.0': ModelLinkAdapter10,
     '1.1': ModelLinkAdapter11,
     '1.2': ModelLinkAdapter12,
     '1.0.0': ModelLinkAdapter100,
-    '2.0.0': ModelLinkAdapter200
+    '2.0.0': ModelLinkAdapter200,
+    '2.3.0': ModelLinkAdapter230
 }
 
 tune_version_map: Dict[str, Type[ModelLinkAdapter]] = {
-    '2.0.0': ModelLinkAdapterTune200
+    '2.0.0': ModelLinkAdapterTune200,
+    '2.3.0': ModelLinkAdapterTune230
 }
 
 

@@ -401,7 +401,7 @@ def get_effective_part(block_adapter: BlockAdapter, source_code: str):
     else:
         end_line_idx = len(source_code.splitlines()) - 1
     if block_adapter.method_location.cut_mode:
-        target_code = cut_lines(source_code, start_line_idx, end_line_idx + 1)
+        target_code = cut_lines(source_code, start_line_idx, end_line_idx)  # cut_lines函数把[start_line_idx,end_line_idx]之间的代码扣掉
     else:
         target_code = get_lines(source_code, start_line_idx, end_line_idx + 1)
     return target_code

@@ -14,22 +14,44 @@
 # limitations under the License.
 
 import os
+import importlib
 
 from typing import Optional
 
 from megatron.training import get_args
 
-try:
-    from megatron.training.microbatches import build_num_microbatches_calculator, NumMicroBatchesCalculator
-except ImportError:
-    try:
-        from megatron.microbatches import build_num_microbatches_calculator, NumMicroBatchesCalculator
-    except ImportError:
-        from megatron.core.num_microbatches_calculator import build_num_microbatches_calculator, \
-                  NumMicroBatchesCalculator
 
-_GLOBAL_NUM_MICROBATCHES_CALCULATOR = None  # type: Optional[NumMicroBatchesCalculator]
+def get_megatron_microbatch_modules():
+    # (build_func_path, calculator_path)
+    attempts = [
+        ("megatron.training.microbatches.build_num_microbatches_calculator",
+         "megatron.training.microbatches.NumMicroBatchesCalculator"),
+        ("megatron.microbatches.build_num_microbatches_calculator",
+         "megatron.microbatches.NumMicroBatchesCalculator"),
+        ("megatron.core.num_microbatches_calculator._build_num_microbatches_calculator",
+         "megatron.core.num_microbatches_calculator.NumMicroBatchesCalculator"),
+    ]
 
+    # 尝试导入
+    for build_path, calc_path in attempts:
+        try:
+            build_module, build_name = build_path.rsplit('.', 1)
+            build_module_obj = importlib.import_module(build_module)
+            build_func = getattr(build_module_obj, build_name)
+
+            calc_module, calc_name = calc_path.rsplit('.', 1)
+            calc_module_obj = importlib.import_module(calc_module)
+            calc_class = getattr(calc_module_obj, calc_name)
+
+            # 返回结果
+            return build_func, calc_class
+
+        except (ImportError, AttributeError):
+            continue
+
+    raise ImportError("Fail to import megatron microbatch modules.")
+
+build_num_microbatches_calculator, NumMicroBatchesCalculator = get_megatron_microbatch_modules()
 
 def get_num_microbatches():
     return _GLOBAL_NUM_MICROBATCHES_CALCULATOR.get()
@@ -52,6 +74,13 @@ def _build_num_microbatches_calculator(args):
                                          args.global_batch_size,  
                                          args.micro_batch_size,  
                                          args.data_parallel_size))
+    elif modellink_version == "2.3.0":
+        _GLOBAL_NUM_MICROBATCHES_CALCULATOR = (
+            build_num_microbatches_calculator(args.rank, args.rampup_batch_size,
+                                              args.global_batch_size,
+                                              args.micro_batch_size,
+                                              args.data_parallel_size,
+                                              args.decrease_batch_size_if_needed))
     else:
         _GLOBAL_NUM_MICROBATCHES_CALCULATOR = build_num_microbatches_calculator(args)
 
