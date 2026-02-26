@@ -4,7 +4,7 @@
 CUR_DIR=$(dirname $(readlink -f $0))
 TOP_DIR=${CUR_DIR}/..
 
-
+UNINSTALL_SCRIPT=uninstall.sh
 OPENSOURCE_DIR=${TOP_DIR}/opensource
 
 THIRDPARTY_LIST="${OPENSOURCE_DIR}/makeself"
@@ -89,7 +89,7 @@ function create_temp_dir() {
     # run install scripts
     copy_script ${MAIN_SCRIPT} ${temp_dir}
     copy_script ${COMMON_SCRIPT} ${temp_dir}
-#    copy_script ${UTILS_SCRIPT} ${temp_dir}
+    copy_script ${UNINSTALL_SCRIPT} ${temp_dir}
 }
 
 # copy script
@@ -145,7 +145,7 @@ function check_file_exist() {
 
     check_package ${temp_dir}/${MAIN_SCRIPT} ${PKG_LIMIT_SIZE}
     check_package ${temp_dir}/${COMMON_SCRIPT} ${PKG_LIMIT_SIZE}
-#    check_package ${temp_dir}/${UTILS_SCRIPT} ${PKG_LIMIT_SIZE}
+    check_package ${temp_dir}/${UNINSTALL_SCRIPT} ${PKG_LIMIT_SIZE}}
 }
 
 function check_package() {
