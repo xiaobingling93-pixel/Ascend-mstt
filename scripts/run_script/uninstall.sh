@@ -98,7 +98,10 @@ main() {
         error "Error occurred during uninstall"
         exit 1
     fi
-    sed -i "/uninstall_package "share/info/ms_fmk_transplt"/d" "${_cann_uninstall}"
+    rm -rf "${_install_dir}/share/info/ms_fmk_transplt"
+    if [ -f "${_cann_uninstall}" ]; then
+        sed -i "/uninstall_package \"share\/info\/ms_fmk_transplt\"/d" "${_cann_uninstall}"
+    fi
 }
 
 # 执行主函数
