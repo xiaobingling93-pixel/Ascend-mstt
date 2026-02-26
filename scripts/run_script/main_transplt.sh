@@ -23,29 +23,14 @@ error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查是否已安装
-check_installation() {
-    if [[ -d "$INSTALL_DIR" ]]; then
-        if [[ "$SILENT_MODE" != "true" ]]; then
-            echo -n "目录 $INSTALL_DIR 已存在，是否覆盖？ (y/N): "
-            read -r response
-            if [[ ! "$response" =~ ^[Yy]$ ]]; then
-                info "安装已取消"
-                exit 0
-            fi
-        fi
-        warn "将覆盖现有安装: $INSTALL_DIR"
-    fi
-}
-
 # 创建安装目录
 create_install_dir() {
-    info "创建安装目录: $INSTALL_DIR"
+    info "Creating installation directory: $INSTALL_DIR"
 
     # 尝试创建目录
     if ! mkdir -p "$INSTALL_DIR"; then
-        error "目录创建失败: $INSTALL_DIR"
-        error "请检查是否有足够的权限，或手动创建该目录"
+        error "Failed to create directory: $INSTALL_DIR"
+        error "Please check if you have sufficient permissions, or create the directory manually"
         exit 1
     fi
 }
@@ -96,16 +81,16 @@ main_install() {
 
     if [[ "$SILENT_MODE" != "true" ]]; then
         echo "========================================="
-        echo "  Ascend-mindstudio-transplt 安装程序"
+        echo "  mindstudio-transplt Installer"
         echo "========================================="
-        echo "安装目录: $INSTALL_DIR"
+        echo "Installation directory: $INSTALL_DIR"
         echo ""
     fi
 
     # 创建安装目录
     create_install_dir
 
-    info "正在安装文件..."
+    info "Installing files..."
 
     # 复制文件到安装目录
     if [[ "$SUDO_USED" == "true" ]]; then
@@ -114,29 +99,168 @@ main_install() {
         cp -r "$PWD"/ms_fmk_transplt "$INSTALL_DIR"/
     fi
 
-    info "安装完成！"
-    info "安装目录: $INSTALL_DIR"
+    info "Installation completed!"
+    info "Installation directory: $INSTALL_DIR"
+    register_uninstall_transplt
 }
 
 
 function get_install_path() {
     if [ -z "${input_install_path}" ]; then
         local _install_path
-        _install_path="/usr/local/Ascend"
+        _install_path="/usr/local/Ascend/tools"
     else
-        _install_path="${input_install_path}"
+        _install_path="${input_install_path}/tools"
     fi
     echo $_install_path
     install_path=$(convert_install_path "${_install_path}")
 }
 
+register_uninstall_transplt() {
+    info "Registering uninstall script..."
+    local _install_path="$INSTALL_DIR"
+    local _info_dir="${_install_path}/../share/info/ms_fmk_transplt"
+    # Get the directory where this script is located
+    # When run from makeself, the script is in the extracted directory
+    # Try BASH_SOURCE first (more reliable), then $0, then run_path
+    local _script_dir=""
+    if [ -n "${BASH_SOURCE[0]}" ]; then
+        _script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)
+    fi
+    if [ -z "${_script_dir}" ] || [ ! -d "${_script_dir}" ]; then
+        _script_dir=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
+    fi
+    if [ -z "${_script_dir}" ] || [ ! -d "${_script_dir}" ]; then
+        _script_dir="${run_path}"
+    fi
+    local _uninstall_source="${_script_dir}/uninstall.sh"
+    local _cann_uninstall="${_install_path}/../cann_uninstall.sh"
+ 
+    # 如果存在cann_uninstall.sh，则执行sed命令
+    if [ -f "${_cann_uninstall}" ]; then
+        sed -i "/^exit /i uninstall_package \"share/info/ms_fmk_transplt\"" "${_cann_uninstall}"
+    fi
+    
+    # 检查父目录是否存在和权限
+    local _parent_dir=$(dirname "${_info_dir}")
+    info "Checking parent directory: ${_parent_dir}"
+    if [ ! -d "${_parent_dir}" ]; then
+        error "Parent directory does not exist: ${_parent_dir}"
+        error "Please ensure the installation directory structure is correct"
+        return 1
+    fi
+    
+    if [ ! -w "${_parent_dir}" ]; then
+        error "No write permission to parent directory: ${_parent_dir}"
+        error "Current user: $(whoami)"
+        error "Please run with appropriate permissions"
+        return 1
+    fi
+    
+    # 创建目录
+    info "Creating directory: ${_info_dir}"
+    mkdir -p "${_info_dir}" 2>&1
+    local _mkdir_result=$?
+    if [ ${_mkdir_result} -ne 0 ]; then
+        error "Failed to create directory: ${_info_dir}"
+        error "Parent directory: ${_parent_dir}"
+        error "Parent directory writable: $([ -w "${_parent_dir}" ] && echo "yes" || echo "no")"
+        error "mkdir exit code: ${_mkdir_result}"
+        return 1
+    fi
+    
+    # 验证目录是否创建成功
+    if [ ! -d "${_info_dir}" ]; then
+        error "Directory was not created: ${_info_dir}"
+        return 1
+    fi
+    
+    if [ ! -w "${_info_dir}" ]; then
+        error "Directory exists but is not writable: ${_info_dir}"
+        return 1
+    fi
+    
+    # 拷贝uninstall.sh
+    if [ -f "${_uninstall_source}" ]; then
+        info "Copying uninstall script from ${_uninstall_source} to ${_info_dir}/uninstall.sh"
+        cp "${_uninstall_source}" "${_info_dir}/uninstall.sh" 2>&1
+        local _cp_result=$?
+        if [ ${_cp_result} -ne 0 ]; then
+            error "Failed to copy uninstall script"
+            error "Source: ${_uninstall_source}"
+            error "Destination: ${_info_dir}/uninstall.sh"
+            error "Destination directory writable: $([ -w "${_info_dir}" ] && echo "yes" || echo "no")"
+            error "cp exit code: ${_cp_result}"
+            return 1
+        fi
+        chmod +x "${_info_dir}/uninstall.sh" 2>/dev/null || true
+        info "Uninstall script registered successfully"
+    else
+        warn "Uninstall script not found: ${_uninstall_source}"
+        warn "Script directory: ${_script_dir}"
+        warn "Current working directory: $(pwd)"
+        warn "Script path (\$0): $0"
+        return 1
+    fi
+    
+    return 0
+}
+
+# 主卸载函数
+main_uninstall() {
+    TRANSPLT_DIR=$(get_install_path)
+    local _install_path="$INSTALL_DIR"
+    local _cann_uninstall="${_install_path}/../cann_uninstall.sh"
+    
+    
+    if [[ "$SILENT_MODE" != "true" ]]; then
+        echo "========================================="
+        echo "  mindstudio-transplt Uninstaller"
+        echo "========================================="
+        echo "Target directory: $TRANSPLT_DIR"
+        echo ""
+    fi
+    
+    # 检查目录是否存在
+    if [[ ! -d "$TRANSPLT_DIR" ]]; then
+        warn "Directory does not exist: $TRANSPLT_DIR"
+        warn "Nothing to uninstall"
+        return 0
+    fi
+    
+    # 检查写权限
+    if [[ ! -w "$(dirname "$TRANSPLT_DIR")" ]]; then
+        error "No permission to delete $TRANSPLT_DIR"
+        error "Current user: $(whoami)"
+        error "Please run uninstall with a user that has permissions"
+        error "or manually delete: rm -rf $TRANSPLT_DIR"
+        exit 1
+    fi
+    
+    info "Uninstalling mindstudio-transplt..."
+    info "Removing directory: $TRANSPLT_DIR"
+    
+    if rm -rf "$TRANSPLT_DIR"; then
+        info "mindstudio-transplt has been successfully removed"
+        return 0
+    else
+        error "Deletion failed, please check permissions"
+        exit 1
+    fi
+
+    sed -i "/uninstall_package "share/info/ms_fmk_transplt"/d" "${_cann_uninstall}"
+}
+
+
 # 主函数
 main() {
-    # 执行安装
-    main_install
-    cur_date=`date +"%Y-%m-%d %H:%M:%S"`
-    echo "[${MODULE_NAME}] [${cur_date}] [INFO]: End Time: $cur_date"
-    # 清理（makeself 会自动清理临时目录）
+    if [[ "$uninstall_flag" == "y" ]]; then
+        main_uninstall
+    else
+        main_install
+        cur_date=`date +"%Y-%m-%d %H:%M:%S"`
+        echo "[${MODULE_NAME}] [${cur_date}] [INFO]: Installation completed!"
+    fi
     exit 0
 }
 
