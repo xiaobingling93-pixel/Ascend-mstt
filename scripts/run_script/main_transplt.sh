@@ -248,7 +248,7 @@ main_uninstall() {
         exit 1
     fi
 
-    sed -i "/uninstall_package "share/info/ms_fmk_transplt"/d" "${_cann_uninstall}"
+    sed -i "/uninstall_package \"share\/info\/ms_fmk_transplt\"/d" "${_cann_uninstall}"
 }
 
 
