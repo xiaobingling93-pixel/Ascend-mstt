@@ -32,7 +32,11 @@ validate_install_dir() {
     
     # 构建完整的模块目录路径
     INSTALL_MODULE_DIR="$base_dir/tools/ms_fmk_transplt"
-    
+    if [[ ! -w $(dirname $INSTALL_MODULE_DIR) ]]; then
+        chmod +w $(dirname $INSTALL_MODULE_DIR)
+        change_flag='y'
+    fi
+
     # 检查模块目录是否存在
     if [[ ! -d "$INSTALL_MODULE_DIR" ]]; then
         error "ms_fmk_transplt not found in $base_dir"
@@ -61,6 +65,9 @@ perform_uninstall() {
     # 删除目录
     if rm -rf "$INSTALL_MODULE_DIR"; then
         info "mindstudio-transplt has been successfully removed"
+        if [ $change_flag = "y" ]; then
+            chmod -w $(dirname $INSTALL_MODULE_DIR)
+        fi
         return 0
     else
         error "Deletion failed, please check permissions"
