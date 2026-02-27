@@ -61,6 +61,7 @@ MAIN_SCRIPT=main_transplt.sh
 COMMON_SCRIPT=common.sh
 INSTALL_SCRIPT=install.sh
 UTILS_SCRIPT=utils.sh
+VERSION_SCRIPT=version.info
 
 TRANSPLT_RUN_NAME="Ascend-mindstudio-transplt"
 
@@ -90,6 +91,7 @@ function create_temp_dir() {
     copy_script ${MAIN_SCRIPT} ${temp_dir}
     copy_script ${COMMON_SCRIPT} ${temp_dir}
     copy_script ${UNINSTALL_SCRIPT} ${temp_dir}
+    copy_script ${VERSION_SCRIPT} ${temp_dir}
 }
 
 # copy script
@@ -106,7 +108,7 @@ function copy_script() {
 }
 
 function get_package_name() {
-    CONFIG_FILE="${CUR_DIR}/conf/version_transplt.info"
+    CONFIG_FILE="${CUR_DIR}/run_script/version.info"
     NAME=$(grep -E '^Name=' "$CONFIG_FILE" | cut -d'=' -f2)
     # 如果VERSION未通过外部传参设置，则从配置文件读取
     if [ -z "${VERSION}" ]; then
@@ -146,6 +148,7 @@ function check_file_exist() {
     check_package ${temp_dir}/${MAIN_SCRIPT} ${PKG_LIMIT_SIZE}
     check_package ${temp_dir}/${COMMON_SCRIPT} ${PKG_LIMIT_SIZE}
     check_package ${temp_dir}/${UNINSTALL_SCRIPT} ${PKG_LIMIT_SIZE}}
+    check_package ${temp_dir}/${VERSION_SCRIPT} ${PKG_LIMIT_SIZE}
 }
 
 function check_package() {
