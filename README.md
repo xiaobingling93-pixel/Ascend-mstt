@@ -151,6 +151,23 @@ msTT工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过
 
 欢迎大家为社区做贡献。如果有任何疑问或建议，请提交[Issues](https://gitcode.com/Ascend/mstt/issues)，我们会尽快回复。感谢您的支持。
 
+- 联系我们
+
+<div style="display: flex; align-items: center; gap: 10px;">
+    <span>MindStuido公众号：</span>
+    <img width="100" src="./docs/zh/figures/readme/officialAccount.jpg" />
+    <span style="margin-left: 20px;">昇腾小助手：</span>
+    <a href="https://gitcode.com/Ascend/mstt/blob/master/docs/zh/figures/readme/xiaozhushou.png">
+        <img src="https://camo.githubusercontent.com/22bbaa8aaa1bd0d664b5374d133c565213636ae50831af284ef901724e420f8f/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f5765436861742d3037433136303f7374796c653d666f722d7468652d6261646765266c6f676f3d776563686174266c6f676f436f6c6f723d7768697465" data-canonical-src="./docs/zh/figures/readme/xiaozhushou.png" style="max-width: 100%;">
+    </a>
+    <span style="margin-left: 20px;">昇腾论坛：</span>
+    <a href="https://www.hiascend.com/forum/" rel="nofollow">
+        <img src="https://camo.githubusercontent.com/dd0b7ef70793ab93ce46688c049386e0755a18faab780e519df5d7f61153655e/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f576562736974652d2532333165333766663f7374796c653d666f722d7468652d6261646765266c6f676f3d6279746564616e6365266c6f676f436f6c6f723d7768697465" data-canonical-src="https://img.shields.io/badge/Website-%231e37ff?style=for-the-badge&amp;logo=bytedance&amp;logoColor=white" style="max-width: 100%;">
+    </a>
+</div>
+
+在公众号中私信【交流群】，可以获取技术交流群二维码。
+
 ## 🙏 致谢
 
 msTT由华为公司的下列部门联合贡献：
