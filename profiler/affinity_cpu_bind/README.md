@@ -19,23 +19,27 @@
     NPU7    HCCS   HCCS    HCCS    HCCS    HCCS    HCCS    HCCS    X       ...    xx-xx
     NPUx    ...    ...     ...     ...     ...     ...     ...     ...     ...    ...
 
-##  使用方式
+## 使用方式
 
 1.执行以下命令实施绑核：
 
  - 直接执行绑核命令
+
 ```bash
 python3 bind_core.py -app="inference/train cmd"
 ```
+
 -app或--application：配置训练或推理程序的执行命令，执行命令前后加引号。
 -t或--time：设置绑核之前的等待时间，单位为秒。
 
 该方式会自动拉起训练或推理任务，检测任务进程，并实施绑核。
 
  - 手动拉起训练或推理任务后再执行绑核
+
 ```bash
 python3 bind_core.py
 ```
+
 该方式会循环查找（循环5次，每次10s，若找不到进程，则直接退出）使用到NPU的任务进程，并实施绑核。
 
 2.绑核运行过程的日志会保存到当前路径的bind_core_时间戳.log。

@@ -465,7 +465,6 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
 
 - 以MindSpore框架内，不同版本下的cell模块比对场景为例，参见[精度数据采集](#精度数据采集)，完成不同框架版本的cell模块dump，其中不同框架版本以MindSpore 2.7.2和MindSpore 2.8.0为例。
 
-
 **执行比对**
 
 1. 数据准备。
@@ -498,7 +497,7 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
    TensorBoard 2.19.0 at http://ubuntu:6008/ (Press CTRL+C to quit)
    ```
 
-   需要在Windows环境下打开浏览器，访问地址<http://ubuntu:6008/，其中ubuntu修改为服务器的IP地址，例如http://192.168.1.10:6008/。>
+   需要在Windows环境下打开浏览器，访问地址`http://ubuntu:6008/`，其中ubuntu修改为服务器的IP地址，例如`http://192.168.1.10:6008/`。
 
    访问地址成功后页面显示TensorBoard界面，如下所示。
 
