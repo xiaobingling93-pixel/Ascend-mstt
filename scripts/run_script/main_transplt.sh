@@ -138,7 +138,7 @@ register_uninstall_transplt() {
     local _cann_uninstall="${_install_path}/../cann_uninstall.sh"
  
     # 如果存在cann_uninstall.sh，则执行sed命令
-    if [ -f "${_cann_uninstall}" ]; then
+    if [ -f "${_cann_uninstall}" ] && ! grep -q "uninstall_package \"share/info/ms_fmk_transplt\"" "${_cann_uninstall}"; then
         sed -i "/^exit /i uninstall_package \"share/info/ms_fmk_transplt\"" "${_cann_uninstall}"
     fi
     
