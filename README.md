@@ -10,6 +10,8 @@
 
 ## ✨ 最新消息
 
+[2026.3.28]：[mstt 仓库精度调试模块（debug 目录）日落下线通知](https://gitcode.com/Ascend/mstt/discussions/2)
+
 [2026.2.25]：Tinker并行策略自动寻优系统正式开源，具体请参见[Tinker](https://gitcode.com/Ascend/mstt/tree/master/profiler/tinker)。
 
 [2026.1.12]：[mstt 仓库License变更通知](https://gitcode.com/Ascend/mstt/discussions/1)
