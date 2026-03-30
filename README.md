@@ -10,174 +10,81 @@
 
 ## ✨ 最新消息
 
-[2026.3.28]：[mstt 仓库精度调试模块（debug 目录）日落下线通知](https://gitcode.com/Ascend/mstt/discussions/2)
+<span style="font-size:14px;">
 
-[2026.2.25]：Tinker并行策略自动寻优系统正式开源，具体请参见[Tinker](https://gitcode.com/Ascend/mstt/tree/master/profiler/tinker)。
+🔹 **[2026.03.28]**：精度调试模块（debug 目录）正式日落下线，详情请参见 [公告](https://gitcode.com/Ascend/mstt/discussions/2)               
+🔹 **[2026.02.25]**：Tinker 并行策略自动寻优系统正式开源，详情请参见 [Tinker 项目](https://gitcode.com/Ascend/tinker)      
+🔹 **[2026.01.12]**：本仓库许可证（License）变更，详情请参见 [公告](https://gitcode.com/Ascend/mstt/discussions/1)     
+🔹 **[2025.12.31]**：MindStudio 训练开发工具链全面开源    
 
-[2026.1.12]：[mstt 仓库License变更通知](https://gitcode.com/Ascend/mstt/discussions/1)
-
-[2025.12.31]：MindStudio昇腾平台训练工具链全面开源，涉及如下代码仓。
-
-- [MindStudio-Profiler](https://gitcode.com/Ascend/msprof)
-
-  构建昇腾全场景性能调优基础能力，支持采集CANN和NPU性能数据，提升昇腾设备性能调优效率。
-
-- [MindStudio-Profiler-Analyze](https://gitcode.com/Ascend/msprof-analyze)
-
-  昇腾性能分析工具，基于采集的性能数据进行分析，提供昇腾设备性能瓶颈快速识别能力。
-
-- [MindStudio-MemScope](https://gitcode.com/Ascend/msmemscope)
-
-  针对昇腾显存调试调优场景的专用工具，提供整网级多维度显存数据采集、自动诊断、优化分析能力。
-
-- [MindStudio-Probe](https://gitcode.com/Ascend/msprobe)
-
-  模型开发精度调试环节使用的工具包，是针对昇腾提供的全场景精度工具链，帮助用户提高模型精度定位效率。
-
-  如果安装的是8.x版本及之前的MindStudio-Probe，请参考[MindStudio-Probe-8.x](debug/accuracy_tools/msprobe/README.md)
-
-- [MindStudio-Monitor](https://gitcode.com/Ascend/msmonitor)
-
-  一站式在线监控工具，支持落盘和在线性能数据采集，提供集群场景性能监测及定位能力。
-
-- [MindStudio-Profilier-Tools-Interface](https://gitcode.com/Ascend/mspti)
-
-  MindStudio针对Ascend设备提出的一套Profiling API，用户可以通过msPTI构建针对NPU应用程序的工具，用于分析应用程序的性能。
-  
-- [MindStudio-Insight](https://gitcode.com/Ascend/msinsight)
-
-  MindStudio Insight可视化工具，支持系统级、算子级、服务化等多场景多维度性能分析，深度剖析性能数据，帮助开发者完成性能诊断。
+</span>
 
 ## ℹ️ 简介
 
-MindStudio Training Tools（MindStudio训练工具链，msTT）聚焦您在模型迁移、模型开发中遇到的痛点问题，提供全流程的工具链，通过提供分析迁移工具、精度调试工具、性能调优工具三大主力工具包，帮助您解决开发过程中迁移困难、Loss跑飞、性能不达标或劣化等问题，让您轻松解决精度和性能问题，开启乐趣十足的极简开发之旅。
+MindStudio Training Tools（msTT）训练开发工具链，聚焦训练开发中的关键挑战。通过提供分析迁移、精度调试与性能调优三大核心工具，高效应对迁移受阻、Loss 异常、性能不达标等问题，助力实现精度与性能双优的极简开发体验。
 
-**模型训练开发全流程**
-
-![training_process](docs/zh/figures/training_process.png)
-
-## 🔍 目录结构
-
-关键目录如下。
-
-```txt
-├── docs              // 文档目录
-├── msfmktransplt     // MindStudio分析迁移工具源码目录
-├── scripts           // 存放安装卸载升级脚本
-├── msinsight         // MindStudio可视化调优工具源码目录
-├── msmemscope        // MindStudio内存检测工具源码目录
-├── msmoniter         // MindStudio一站式在线监控工具源码目录
-├── msprobe           // MindStudio精度调试工具源码目录
-├── msprof            // MindStudio模型调优工具源码目录
-├── msprof-analyze    // MindStudio性能分析工具源码目录
-├── mspti             // MindStudio Profiling Tools Interface工具源码目录
-└── README.md         // 整体仓代码说明
-```
+<img src="./docs/zh/figures/readme/fullview.svg?v=2026032908" width="1200"/>
 
 ## ⚙️ 功能介绍
 
-### 分析迁移工具
+训练开发工具链提供以下系列化工具：
 
-[MindStudio Analysis and Migration Tool（MindStudio分析迁移工具，msfmktransplt）](./msfmktransplt/docs/zh/msfmktransplt_instruct.md)
-
-PyTorch训练脚本一键式迁移至昇腾NPU的功能，开发者可做到少量代码修改或零代码完成迁移。
-
-### 精度调试工具
-
-- [MindStudio Probe（MindStudio精度调试工具，msProbe）](https://gitcode.com/Ascend/msprobe)
-
-  模型开发精度调试环节使用的工具包，是针对昇腾提供的全场景精度工具链，帮助用户提高模型精度定位效率。
-
-  如果安装的是8.x版本及之前的MindStudio-Probe，请参考[MindStudio-Probe-8.x](debug/accuracy_tools/msprobe/README.md)
-
-- [Tensorboard](https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend)
-
-  Tensorboard支持模型结构进行分级可视化展示的插件tb-graph-ascend
-
-  可将模型的层级关系、精度数据进行可视化，并支持将调试模型和标杆模型进行分视图展示和关联比对，方便用户快速定位精度问题。
-
-  **注：MindStudio昇腾平台训练工具链现已全面开源，模型分级可视化插件已经并入MindStudio Probe仓库，此仓库相关内容后续不再维护演进，建议使用最新版本，请参考**[tb_graph_ascend](https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/accuracy_compare/pytorch_visualization_instruct.md)；如果安装的是8.x版本及之前的MindStudio-Probe，请参考[tb_graph_ascend-8.x](plugins/tensorboard-plugins/tb_graph_ascend)。
-
-### 性能调优工具
-
-- [MindStudio Profiler（MindStudio模型调优工具，msProf）](https://gitcode.com/Ascend/msprof)
-
-  构建昇腾全场景性能调优基础能力，支持采集CANN和NPU性能数据，提升昇腾设备性能调优效率。
-
-- [MindStudio Profiler Analyze（MindStudio性能分析工具，msprof-analyze）](https://gitcode.com/Ascend/msprof-analyze)
-
-  昇腾性能分析工具，基于采集的性能数据进行分析，提供昇腾设备性能瓶颈快速识别能力。
-
-- [msMemScope（MindStudio内存检测工具）](https://gitcode.com/Ascend/msmemscope)
-
-  针对昇腾显存调试调优场景的专用工具，提供整网级多维度显存数据采集、自动诊断、优化分析能力。
-
-- [MindStudio Monitor（MindStudio一站式在线监控工具，msMonitor）](https://gitcode.com/Ascend/msmonitor)
-
-  一站式在线监控工具，支持落盘和在线性能数据采集，提供集群场景性能监测及定位能力。
-  
-- [MindStudio Profiling Tools Interface（msPTI）](https://gitcode.com/Ascend/mspti)
-
-  MindStudio针对Ascend设备提出的一套Profiling API，用户可以通过msPTI构建针对NPU应用程序的工具，用于分析应用程序的性能。
-  
-- [MindStudio Insight（MindStudio可视化调优工具，msInsight）](https://gitcode.com/Ascend/msinsight)
-
-  MindStudio Insight可视化工具，支持系统级、算子级、服务化等多场景多维度性能分析，深度剖析性能数据，帮助开发者完成性能诊断。
-  
-- [bind_core](https://gitcode.com/Ascend/mstt/tree/master/profiler/affinity_cpu_bind)
-
-  绑核脚本，支持非侵入修改工程代码，实现一键式绑核功能。
-- [Tinker](https://gitcode.com/Ascend/mstt/tree/master/profiler/tinker)
-
-  Tinker大模型并行策略自动寻优系统，根据提供的训练脚本，进行单节点NPU性能测量，推荐高性能并行策略训练脚本。
+| 类别 | 工具名称                                                                                      | 功能简介                                               |
+|:--:|:------------------------------------------------------------------------------------------|:---------------------------------------------------|
+| 迁移 | [**msTransplant**](./msfmktransplt)                                                       | **【分析迁移】** PyTorch 训练脚本一键迁移至昇腾 NPU，支持少量改码或零改码完成迁移。 |
+| 精度 | [**msProbe**](https://gitcode.com/Ascend/msprobe)                                         | **【精度调试】** 昇腾全场景精度工具，用于训练精度调试与问题定位。                |
+| 精度 | [**TensorBoard**](https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend) | **【分级可视】** 分级展示模型结构与精度，支持调试与标杆模型对比以定位精度问题。         |
+| 性能 | [**msProf**](https://gitcode.com/Ascend/msprof)                                           | **【模型调优】** 全场景性能调优底座，采集 CANN 与 NPU 数据，提升设备调优效率。    |
+| 性能 | [**msprof-analyze**](https://gitcode.com/Ascend/msprof-analyze)                           | **【性能分析】** 基于采集数据做性能分析，快速识别性能瓶颈。                   |
+| 性能 | [**msMemScope**](https://gitcode.com/Ascend/msmemscope)                                   | **【内存调优】** 内存调优专用工具：整网级多维度内存采集，支持自动诊断与优化分析。        |
+| 性能 | [**msInsight**](https://gitcode.com/Ascend/msinsight)                                     | **【可视调优】** 可视化性能分析，覆盖系统、算子、服务化等场景，辅助完成性能诊断。        |
+| 性能 | [**Tinker**](https://gitcode.com/Ascend/mstt/tree/master/profiler/tinker)                 | **【并行寻优】** 大模型并行策略自动寻优：按训练脚本做单节点 NPU 测评并推荐高性能并行方案。 |
+| 性能 | [**bind_core**](https://gitcode.com/Ascend/mstt/tree/master/profiler/affinity_cpu_bind)   | **【一键绑核】** CPU 绑核工具，无需侵入修改工程即可按 CPU 亲和性策略绑核。       |
+| 性能 | [**msPTI**](https://gitcode.com/Ascend/mspti)                                             | **【性能剖析】** 面向昇腾的 Profiling API，可据此开发 NPU 应用性能分析工具。 |
+| 监控 | [**msMonitor**](https://gitcode.com/Ascend/msmonitor)                                     | **【在线监控】** 一站式监控，支持落盘与在线采集，面向集群的监测与问题定位。           |
 
 ## 🚀 快速入门
 
-msTT工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联使用分析迁移、精度调试和性能调优流程对应的工具，帮助用户快速上手。
+面向 PyTorch 与 MindSpore 场景，通过可执行样例串联迁移分析、精度调试与性能调优，助力用户快速上手端到端训练优化。
 
-具体参见《[PyTorch场景msTT工具快速入门](docs/zh/pytorch_mstt_quick_start.md)》和《[MindSpore场景msTT工具快速入门](docs/zh/mindspore_mstt_quick_start.md)》。
+| 训练框架      | 快速入门指南 |
+|-----------|----------------|
+| PyTorch   | [《PyTorch 场景 msTT 工具快速入门》](docs/zh/quick_start/pytorch_mstt_quick_start.md) |
+| MindSpore | [《MindSpore 场景 msTT 工具快速入门》](docs/zh/quick_start/mindspore_mstt_quick_start.md) |
+
+## 📦 安装指南
+
+介绍 msTT 工具的环境依赖与安装方法，请参见 [《msTT 安装指南》](./docs/zh/install_guide/mstt_install_guide.md)。
 
 ## 📘 使用指南
 
-各工具的详细使用说明请参阅其源码仓库中的 README 文件。
+各工具的详细使用说明请参阅其源码仓库中的 README 文件，也可通过上方功能介绍表格中的链接直接跳转。
+
+## 🛠️ 贡献指南
+
+欢迎参与项目贡献，请参见 [《贡献指南》](./docs/zh/contributing/contributing_guide.md)。
 
 ## ⚖️ 相关说明
 
-* [《版本说明》](./docs/zh/release_notes.md)
-* [《贡献声明》](./docs/zh/contributing/contributing_statement.md)
-* [《License声明》](./docs/zh/legal/license_notice.md) 
-* [《安全声明》](./docs/zh/security_statement.md) 
-* [《免责声明》](./docs/zh/legal/disclaimer.md)
+🔹 [《版本说明》](./docs/zh/release_notes/release_notes.md)    
+🔹 [《许可证声明》](./docs/zh/legal/license_notice.md)     
+🔹 [《安全声明》](./docs/zh/legal/security_statement.md)     
+🔹 [《免责声明》](./docs/zh/legal/disclaimer.md)    
 
 ## 🤝 建议与交流
 
-欢迎大家为社区做贡献。如果有任何疑问或建议，请提交[Issues](https://gitcode.com/Ascend/mstt/issues)，我们会尽快回复。感谢您的支持。
+欢迎大家为社区做贡献。如果有任何疑问或建议，请提交 [Issues](https://gitcode.com/Ascend/mstt/issues)，我们会尽快回复。感谢您的支持。
 
-- 联系我们
-
-<div style="display: flex; align-items: center; gap: 10px;">
-    <span>MindStuido公众号：</span>
-    <img width="100" src="./docs/zh/figures/readme/officialAccount.jpg" />
-    <span style="margin-left: 20px;">昇腾小助手：</span>
-    <a href="https://gitcode.com/Ascend/mstt/blob/master/docs/zh/figures/readme/xiaozhushou.png">
-        <img src="https://camo.githubusercontent.com/22bbaa8aaa1bd0d664b5374d133c565213636ae50831af284ef901724e420f8f/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f5765436861742d3037433136303f7374796c653d666f722d7468652d6261646765266c6f676f3d776563686174266c6f676f436f6c6f723d7768697465" data-canonical-src="./docs/zh/figures/readme/xiaozhushou.png" style="max-width: 100%;">
-    </a>
-    <span style="margin-left: 20px;">昇腾论坛：</span>
-    <a href="https://www.hiascend.com/forum/" rel="nofollow">
-        <img src="https://camo.githubusercontent.com/dd0b7ef70793ab93ce46688c049386e0755a18faab780e519df5d7f61153655e/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f576562736974652d2532333165333766663f7374796c653d666f722d7468652d6261646765266c6f676f3d6279746564616e6365266c6f676f436f6c6f723d7768697465" data-canonical-src="https://img.shields.io/badge/Website-%231e37ff?style=for-the-badge&amp;logo=bytedance&amp;logoColor=white" style="max-width: 100%;">
-    </a>
-</div>
-
-在公众号中私信【交流群】，可以获取技术交流群二维码。
+|                                      📱 关注 MindStudio 公众号                                       | 💬 更多交流与支持                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|:-----------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <img src="./docs/zh/figures/readme/officialAccount.png" width="120"><br><sub>*扫码关注获取最新动态*</sub> | 💡 **加入微信交流群**：<br>关注公众号，回复“交流群”即可获取入群二维码。<br><br>🛠️ **其他渠道**：<br>👉 昇腾助手：[![WeChat](https://img.shields.io/badge/WeChat-07C160?style=flat-square&logo=wechat&logoColor=white)](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/figures/readme/xiaozhushou.png)<br>👉 昇腾论坛：[![Website](https://img.shields.io/badge/Website-%231e37ff?style=flat-square&logo=RSS&logoColor=white)](https://www.hiascend.com/forum/) |
 
 ## 🙏 致谢
 
-msTT由华为公司的下列部门联合贡献：
-
-- 昇腾计算MindStudio开发部
-- 分布式并行计算实验室
-- 华为云昇腾云服务
-- 昇腾计算生态使能部
-- 2012网络实验室
-
-感谢来自社区的每一个PR，欢迎贡献msTT！
+msTT 由华为公司的下列部门联合贡献：    
+🔹 昇腾计算 MindStudio 开发部  
+🔹 昇腾计算生态使能部  
+🔹 华为云昇腾云服务  
+🔹 2012分布式并行计算实验室  
+🔹 2012网络技术实验室  
+感谢来自社区的每一个 PR，欢迎贡献 msTT！

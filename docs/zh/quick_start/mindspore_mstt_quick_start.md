@@ -269,7 +269,7 @@ pip install mindstudio-probe pre
 
    **图1** 结果文件内容
 
-   ![img](figures/5.png)
+   ![img](../figures/5.png)
 
    输出结果详细介绍请参见“[输出结果](https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/monitor_v2_instruct.md#输出结果)”。
 
@@ -389,11 +389,11 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
 
 **图1** accuracy_checking_result
 
-![img](figures/zh-cn_image_0000002446546908.png)
+![img](../figures/zh-cn_image_0000002446546908.png)
 
 **图2** accuracy_checking_details
 
-![img](figures/zh-cn_image_0000002446706776.png)
+![img](../figures/zh-cn_image_0000002446706776.png)
 
 预检结果详细介绍请参见“[预检结果](https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/accuracy_checker/mindspore_accuracy_checker_instruct.md#%E9%A2%84%E6%A3%80%E7%BB%93%E6%9E%9C)”。
 
@@ -445,15 +445,15 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
 
    **图1** compare_result_1
 
-   ![img](figures/6.png)
+   ![img](../figures/6.png)
 
    **图2** compare_result_2
 
-   ![img](figures/7.png)
+   ![img](../figures/7.png)
 
    **图2** compare_result_3
    
-   ![img](figures/8.png)
+   ![img](../figures/8.png)
    
    更多比对结果分析请参见“[输出结果文件说明](https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md#%E8%BE%93%E5%87%BA%E7%BB%93%E6%9E%9C%E6%96%87%E4%BB%B6%E8%AF%B4%E6%98%8E)”。
 
@@ -503,7 +503,7 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
 
    **图1** 分级可视化构图比对
 
-   ![img](figures/zh-cn_image_0000002446706788.png)
+   ![img](../figures/zh-cn_image_0000002446706788.png)
 
    由于本样例在dump数据时"level"配置为"L1"，故采集到模型结构数据为空，分级可视化构图时无数据，如上图为其他数据示例。
 
@@ -676,7 +676,7 @@ msprof-analyze advisor all -d $HOME/profiling_data/
 
 advisor工具的分析结果主要提供可能存在性能问题的专家建议。
 
-详细结果介绍请参见《[advisor](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/advisor_instruct.md)》中的“[输出结果文件说明](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/advisor_instruct.md#%E8%BE%93%E5%87%BA%E7%BB%93%E6%9E%9C%E6%96%87%E4%BB%B6%E8%AF%B4%E6%98%8E)”。
+详细结果介绍请参见《[advisor](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/user_guide/advisor_instruct.md)》中的“[输出结果文件说明](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/user_guide/advisor_instruct.md#%E8%BE%93%E5%87%BA%E7%BB%93%E6%9E%9C%E6%96%87%E4%BB%B6%E8%AF%B4%E6%98%8E)”。
 
 **执行compare_tools性能比对**
 
@@ -690,7 +690,7 @@ msprof-analyze compare -d $HOME/2.8.0/profiling_data/*_ascend_ms -bp $HOME/2.7.2
 
 分析结果输出到执行终端中，并在**--output_path**参数指定路径下生成“performance_comparison_result_{timestamp}.xlsx”文件供用户查看。
 
-性能比对工具将总体性能拆解为训练耗时和内存占用，其中训练耗时可拆分为算子（包括nn.Module）、通信、调度三个维度，并打印输出总体指标，帮助用户定位劣化的方向。与此同时，工具还会在“performance_comparison_result_{timestamp}.xlsx”文件中展示每个算子在执行耗时、通信耗时、内存占用的优劣，可通过DIFF列大于0筛选出劣化算子。此处不提供示例，详细结果介绍请参见《[性能比对工具](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/compare_tool_instruct.md)》中的“[输出结果文件说明](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/compare_tool_instruct.md#%E8%BE%93%E5%87%BA%E7%BB%93%E6%9E%9C%E6%96%87%E4%BB%B6%E8%AF%B4%E6%98%8E)”。
+性能比对工具将总体性能拆解为训练耗时和内存占用，其中训练耗时可拆分为算子（包括nn.Module）、通信、调度三个维度，并打印输出总体指标，帮助用户定位劣化的方向。与此同时，工具还会在“performance_comparison_result_{timestamp}.xlsx”文件中展示每个算子在执行耗时、通信耗时、内存占用的优劣，可通过DIFF列大于0筛选出劣化算子。此处不提供示例，详细结果介绍请参见《[性能比对工具](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/user_guide/compare_tool_instruct.md)》中的“[输出结果文件说明](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/user_guide/compare_tool_instruct.md#%E8%BE%93%E5%87%BA%E7%BB%93%E6%9E%9C%E6%96%87%E4%BB%B6%E8%AF%B4%E6%98%8E)”。
 
 #### 使用MindStudio Insight工具可视化性能数据
 
@@ -719,7 +719,7 @@ msprof-analyze compare -d $HOME/2.8.0/profiling_data/*_ascend_ms -bp $HOME/2.7.2
 
       **图1** 展示性能数据
 
-      ![img](figures/zh-cn_image_0000002446706780.png)
+      ![img](../figures/zh-cn_image_0000002446706780.png)
 
 4. 分析性能数据。
 
