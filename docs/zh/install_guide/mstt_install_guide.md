@@ -12,7 +12,7 @@
 **下载安装包**
 
 1. 访问["OBS 制品仓"](https://www.openlibing.com/apps/obsArtifactRepository)，单击 "ascend-package" > "mstt"。
-![download mstt package on openlibing website](./figures/mstt_download.png)
+![download mstt package on openlibing website](../figures/mstt_download.png)
 2. 单击"下载"，将软件包下载至本地
 
 **安装 CANN（可选）**
