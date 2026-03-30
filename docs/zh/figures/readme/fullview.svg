@@ -101,9 +101,9 @@
   <text x="792" y="288" text-anchor="middle" fill="#64748b" font-size="11">面向集群监测与定位</text>
 
   <rect x="16" y="302" width="928" height="36" rx="10" fill="url(#footerBg)" filter="url(#shadow)" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="360" y="325" text-anchor="end" fill="#1e40af" font-size="14" font-weight="bold">面向昇腾 NPU</text>
-  <circle cx="375" cy="320" r="2.5" fill="#94a3b8"/>
-  <text x="480" y="325" text-anchor="middle" fill="#1e40af" font-size="14" font-weight="bold">聚焦高精度高性能的训练开发</text>
-  <circle cx="584" cy="320" r="2.5" fill="#94a3b8"/>
-  <text x="597" y="325" text-anchor="start" fill="#1e40af" font-size="14" font-weight="bold">工具链覆盖训练开发全生命周期</text>
+  <text x="320" y="325" text-anchor="end" fill="#1e40af" font-size="14" font-weight="bold">面向昇腾 NPU</text>
+  <circle cx="335" cy="320" r="2.5" fill="#94a3b8"/>
+  <text x="440" y="325" text-anchor="middle" fill="#1e40af" font-size="14" font-weight="bold">聚焦高精度高性能的训练开发</text>
+  <circle cx="544" cy="320" r="2.5" fill="#94a3b8"/>
+  <text x="557" y="325" text-anchor="start" fill="#1e40af" font-size="14" font-weight="bold">工具链覆盖训练开发全生命周期</text>
 </svg>

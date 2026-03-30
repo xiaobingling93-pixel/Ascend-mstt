@@ -23,7 +23,7 @@
 
 MindStudio Training Tools（msTT）训练开发工具链，聚焦训练开发中的关键挑战。通过提供分析迁移、精度调试与性能调优三大核心工具，高效应对迁移受阻、Loss 异常、性能不达标等问题，助力实现精度与性能双优的极简开发体验。
 
-<img src="./docs/zh/figures/readme/fullview.svg?v=2026032908" width="1200"/>
+<img src="./docs/zh/figures/readme/fullview.svg?v=2026033001" width="1200"/>
 
 ## ⚙️ 功能介绍
 
@@ -82,7 +82,7 @@ MindStudio Training Tools（msTT）训练开发工具链，聚焦训练开发中
 ## 🙏 致谢
 
 msTT 由华为公司的下列部门联合贡献：    
-🔹 昇腾计算 MindStudio 开发部  
+🔹 昇腾计算MindStudio开发部  
 🔹 昇腾计算生态使能部  
 🔹 华为云昇腾云服务  
 🔹 2012分布式并行计算实验室  
