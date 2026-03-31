@@ -1,5 +1,8 @@
 # msprof-analyze
 
+## 重要通知
+[2026.3.30]：[【变更通知】mstt 仓库性能分析工具（profiler/msprof_analyze目录）日落下线通知](https://gitcode.com/Ascend/mstt/discussions/3)  
+
 ## 📌 简介
 msprof-analyze（MindStudio Profiler Analyze）是MindStudio全流程工具链推出的性能分析工具，基于采集的性能数据进行分析，识别AI作业中的性能瓶颈。
 
