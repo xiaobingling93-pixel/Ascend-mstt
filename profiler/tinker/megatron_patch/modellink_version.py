@@ -28,7 +28,7 @@ def modellink_import():
     try:
         if modellink_version == "1.0":
             from ascendspeed import megatron_adaptor
-        if modellink_version == "1.0.0" or modellink_version == "2.0.0":
+        if modellink_version >= "1.0.0":
             import mindspeed_llm
             sys.modules['modellink'] = sys.modules['mindspeed_llm']
         else:

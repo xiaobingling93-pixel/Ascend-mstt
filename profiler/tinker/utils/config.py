@@ -195,7 +195,7 @@ def check_layers(args):
                     num_layers = data.get("num_layers")
                     parts = args.num_layer_list.split(',')
                     # 把每个部分转成整数
-                    int_list = [int(parts) for part in parts]
+                    int_list = [int(part) for part in parts]
                     if num_layers != sum(int_list):
                         raise ValueError("sum of num_layer_list should be equal to num_layers")
 

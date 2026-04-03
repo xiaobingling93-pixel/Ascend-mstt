@@ -212,6 +212,37 @@ class ModelLinkAdapter200(ModelLinkAdapter100):
     pass
 
 
+class ModelLinkAdapter230(ModelLinkAdapter200):
+    """
+    2.3.0相关接口适配
+    """
+    
+    def initialize(self):
+        # 按照检视意见：直接使用 megatron 中的 initialize_megatron
+        from megatron.training.initialize import initialize_megatron
+        initialize_megatron()
+    
+    def wrap_block(self, block):
+        """
+        为裸block增加fp16和ddp外壳（2.3.0适配版本）
+        """
+        from megatron.core.tensor_parallel import set_defaults_if_not_set_tensor_model_parallel_attributes
+        import torch
+        
+        args = self.get_args()
+        
+        for param in block.parameters():
+            set_defaults_if_not_set_tensor_model_parallel_attributes(param)
+        
+        block.cuda(torch.cuda.current_device())
+        if args.fp16 or args.bf16:
+            from megatron.core.transformer.module import Float16Module
+            from megatron.core.utils import get_model_config
+            config = get_model_config(block)
+            block = Float16Module(config, block)
+        return block
+
+
 class ModelLinkAdapterTune200(ModelLinkAdapter100):
     """
     2.0.0 tune 相关接口相较1.0.0 输入数据处理变更了
@@ -226,16 +257,25 @@ class ModelLinkAdapterTune200(ModelLinkAdapter100):
         return SFTTrainer.get_batch(data_iterator)
 
 
+class ModelLinkAdapterTune230(ModelLinkAdapterTune200):
+    """
+    2.3.0 tune 相关接口相较2.0.0无变更， 此处新建子类， 用于明确五变更情况
+    """
+    pass
+
+
 version_map: Dict[str, Type[ModelLinkAdapter]] = {
     '1.0': ModelLinkAdapter10,
     '1.1': ModelLinkAdapter11,
     '1.2': ModelLinkAdapter12,
     '1.0.0': ModelLinkAdapter100,
-    '2.0.0': ModelLinkAdapter200
+    '2.0.0': ModelLinkAdapter200,
+    '2.3.0': ModelLinkAdapter230
 }
 
 tune_version_map: Dict[str, Type[ModelLinkAdapter]] = {
-    '2.0.0': ModelLinkAdapterTune200
+    '2.0.0': ModelLinkAdapterTune200,
+    '2.3.0': ModelLinkAdapterTune230
 }
 
 

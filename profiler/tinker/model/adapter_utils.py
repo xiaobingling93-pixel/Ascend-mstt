@@ -200,6 +200,9 @@ def get_module_methods(module_obj):
 
 def error_free_import():
     """确保各框架版本，megatron均被patch"""
+    package_path = os.getenv('ML_PATH', None)
+    if package_path:
+        sys.path.append(package_path)
     module_names = ['modellink', 'mindspeed_llm', 'ascendspeed.megatron_adaptor']
     for module_name in module_names:
         try:
@@ -362,6 +365,25 @@ def gen_method_forward(source_code: str, block_adapter: BlockAdapter) -> str:
 
     # 格式化，保证与class的相对缩进
     method_forward = '\n'.join([method_forward_head_body, method_forward_return])
+
+    # 为 post_process 块添加 output_weight 变量的定义
+    if block_adapter.block_name == 'post_process':
+        # 使用 AST 解析来确保正确插入变量定义
+        try:
+            tree = ast.parse(method_forward)
+            function_def = tree.body[0]
+            if isinstance(function_def, ast.FunctionDef):
+                # 创建 output_weight 变量定义的 AST 节点
+                assign_node = ast.Assign(
+                    targets=[ast.Name(id='output_weight', ctx=ast.Store())],
+                    value=ast.Constant(value=None)
+                )
+                # 在函数体的开始处插入变量定义
+                function_def.body.insert(0, assign_node)
+                # 重新生成代码
+                method_forward = astor.to_source(tree).strip()
+        except Exception as e:
+            logger.debug(f'Error adding output_weight definition: {e}')
 
     return method_forward
 

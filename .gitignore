@@ -98,6 +98,9 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 
+# Tinker generated files
+profiler/tinker/model/genned_block_forward.py
+
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
