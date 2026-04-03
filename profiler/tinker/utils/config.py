@@ -236,7 +236,7 @@ def check_args(args: argparse.Namespace) -> argparse.Namespace:
     def check_post_train(args: argparse.Namespace):
         if args.is_full_tune:
             return
-        if "tune" in args.pretrain_script_path and "full" in args.pretrain_script_path and args.version >= "2.0.0":
+        if "tune" in args.pretrain_script_path and "full" in args.pretrain_script_path and args.version == "2.0.0":
             args.is_full_tune = True
 
     check_args_none(args)

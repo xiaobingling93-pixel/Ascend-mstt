@@ -32,7 +32,6 @@ def start_grad_sync_wrapper(fn: Callable):
     def wrapper(self, *args, **kwargs):
         self.communication_handle = None
         self.communication_issued = False
-        self.grad_reduce_handle = None
         res = fn(self, *args, **kwargs)
         return res
 
