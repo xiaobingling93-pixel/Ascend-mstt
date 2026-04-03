@@ -19,14 +19,33 @@ from typing import Optional
 
 from megatron.training import get_args
 
+# 尝试导入不同版本的microbatches模块
 try:
     from megatron.training.microbatches import build_num_microbatches_calculator, NumMicroBatchesCalculator
 except ImportError:
     try:
         from megatron.microbatches import build_num_microbatches_calculator, NumMicroBatchesCalculator
     except ImportError:
-        from megatron.core.num_microbatches_calculator import build_num_microbatches_calculator, \
-                  NumMicroBatchesCalculator
+        try:
+            from megatron.core.num_microbatches_calculator import build_num_microbatches_calculator, \
+                      NumMicroBatchesCalculator
+        except ImportError:
+            # 为MindSpeed 2.3.0添加兼容实现
+            class NumMicroBatchesCalculator:
+                def __init__(self, args):
+                    self.args = args
+                
+                def get(self):
+                    return self.args.micro_batch_size
+                
+                def get_current_global_batch_size(self):
+                    return self.args.global_batch_size
+                
+                def update(self, consumed_samples, consistency_check=True):
+                    pass
+            
+            def build_num_microbatches_calculator(args):
+                return NumMicroBatchesCalculator(args)
 
 _GLOBAL_NUM_MICROBATCHES_CALCULATOR = None  # type: Optional[NumMicroBatchesCalculator]
 

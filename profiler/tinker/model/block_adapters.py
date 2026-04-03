@@ -137,7 +137,7 @@ mcore_block_adapters = [
     BlockAdapter(
         block_name='embedding',
         method_location=MethodLocation(
-            source_method_path=['modellink.core.models.gpt.gpt_model.gpt_model_forward'],
+            source_method_path=['modellink.core.models.gpt.gpt_model.GPTModel', 'mindspeed_llm.core.models.gpt.gpt_model.GPTModel'],
             start_key_word=None,
             end_key_word='rotary_pos_emb ='
         ),
@@ -151,7 +151,7 @@ mcore_block_adapters = [
     BlockAdapter(
         block_name='transformer_block',
         method_location=MethodLocation(
-            source_method_path=['modellink.core.transformer.transformer_block.transformer_block_forward'],
+            source_method_path=['modellink.core.transformer.transformer_block.transformer_block_forward', 'mindspeed_llm.core.transformer.transformer_block.transformer_block_forward'],
             start_key_word=None,
             end_key_word='group_prefetch_offload_commit_async'
         ),
@@ -166,7 +166,7 @@ mcore_block_adapters = [
     BlockAdapter(
         block_name='final_norm',
         method_location=MethodLocation(
-            source_method_path=['modellink.core.transformer.transformer_block.transformer_block_forward'],
+            source_method_path=['modellink.core.transformer.transformer_block.transformer_block_forward', 'mindspeed_llm.core.transformer.transformer_block.transformer_block_forward'],
             start_key_word='final_layernorm',
             end_key_word='final_layernorm'
         ),
@@ -179,7 +179,7 @@ mcore_block_adapters = [
     BlockAdapter(
         block_name='post_process',
         method_location=MethodLocation(
-            source_method_path=['modellink.core.models.gpt.gpt_model.gpt_model_forward'],
+            source_method_path=['modellink.core.models.gpt.gpt_model.GPTModel', 'mindspeed_llm.core.models.gpt.gpt_model.GPTModel'],
             start_key_word='decoder_input is not None',
             end_key_word='return hidden_states',
             cut_mode=True
