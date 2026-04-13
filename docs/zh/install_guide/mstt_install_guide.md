@@ -13,7 +13,7 @@
 
 1. 访问["OBS 制品仓"](https://www.openlibing.com/apps/obsArtifactRepository)，单击 "ascend-package" > "mstt"。
 ![download mstt package on openlibing website](../figures/mstt_download.png)
-2. 单击"下载"，将软件包下载至本地
+2. 单击“下载”，将软件包下载至本地
 
 **安装 CANN（可选）**
 
@@ -33,13 +33,13 @@ pip3 config set global.trusted-host repo.huaweicloud.com
 1. 安装前需给run包添加可执行权限。
 
     ```shell
-    chmod +x ascend-mindstudio-training-tools_linux-*.run
+    chmod +x ascend-mindstudio-training-tools_linux-<version>.run
     ```
 
 2. 执行以下命令安装。
 
     ```shell
-    ./ascend-mindstudio-training-tools_linux-*.run --install
+    ./ascend-mindstudio-training-tools_linux-<version>.run --install
     ```
 
 > [!NOTE] 说明  
@@ -69,7 +69,7 @@ To uninstall the toolkit, please run the following command:
 
 ## 升级
 
-如需使用run包替换运行环境中已安装的msTT包，执行如下安装操作：
+如需使用run包替换运行环境中已安装的msTT包，执行如下升级操作：
 
 ```sh
 ./ascend-mindstudio-training-tools_linux-*.run --upgrade

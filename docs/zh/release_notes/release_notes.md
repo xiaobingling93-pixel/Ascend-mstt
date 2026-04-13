@@ -34,9 +34,9 @@
 
 ##### 性能工具
 
-1. msMonitor NPU Monitor组件新增轻量化数据落盘能力：支持以 Jsonl 格式进行数据持久化，为后续数据分析与系统集成提供更高效、易处理的数据格式支持。
+1. msMonitor NPU Monitor组件新增轻量化数据落盘能力：支持以 jsonl 格式进行数据持久化，为后续数据分析与系统集成提供更高效、易处理的数据格式支持。
 2. msMonitor 命令行交互体验优化：status 子命令支持实时查询当前执行的 step 状态，提升工具的使用便捷性。
-3. msprof-analyze 新增module_statistic分析能力：提供的针对PyTorch模型自动解析模型层级结构的分析能力，帮助精准定位性能瓶颈。
+3. msprof-analyze 新增module_statistic分析能力：提供针对PyTorch模型自动解析模型层级结构的分析能力，帮助精准定位性能瓶颈。
 
 ##### 可视化工具
 
