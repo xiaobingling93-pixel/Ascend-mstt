@@ -114,7 +114,7 @@ train finish
 在昇腾NPU环境下安装msProbe工具，执行如下命令：
 
 ```bash
-pip install mindstudio-probe pre
+pip install mindstudio-probe --pre
 ```
 
 **执行检查**

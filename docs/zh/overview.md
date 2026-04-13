@@ -18,13 +18,13 @@ MindStudio Analysis and Migration Tool（MindStudio分析迁移工具，msfmktra
 
 MindStudio Probe（MindStudio精度调试工具，msProbe）
 
-模型开发精度调试环节使用的工具包，是针对昇腾提供的全场景精度工具链，帮助用户提高模型精度定位效率。详细介绍请参见《[精度调试工具](https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/dump/mindspore_dump_quick_start.md)》。
+模型开发精度调试环节使用的工具包，是针对昇腾提供的全场景精度工具链，帮助用户提高模型精度问题定位效率。详细介绍请参见《[精度调试工具](https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/dump/mindspore_dump_quick_start.md)》。
 
 ## 性能调优工具
 
 - MindStudio Profiler（MindStudio模型调优工具，msProf）
 
-  构建昇腾全场景性能调优基础能力，支持采集CANN和NPU性能数据，提升昇腾设备性能调优效率。详细介绍请参见《[模型调优工具](https://gitcode.com/Ascend/msprof/blob/master/docs/zh/quick_start.md)》。
+  构建昇腾全场景性能调优基础能力，支持采集CANN和NPU性能数据，提升昇腾设备性能调优效率。详细介绍请参见《[模型调优工具](https://gitcode.com/Ascend/msprof/blob/master/docs/zh/getting_started/quick_start.md)》。
 
 - Ascend PyTorch调优工具
 
@@ -32,7 +32,7 @@ MindStudio Probe（MindStudio精度调试工具，msProbe）
 
 - MindStudio Profiler Analyze（MindStudio性能分析工具，msprof-analyze）
 
-  昇腾性能分析工具，基于采集的性能数据进行分析，提供昇腾设备性能瓶颈快速识别能力。详细介绍请参见《[性能分析工具](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/README.md)》。
+  昇腾性能分析工具，基于采集的性能数据进行分析，提供昇腾设备性能瓶颈快速识别能力。详细介绍请参见《[性能分析工具](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/getting_started/quick_start.md)》。
 
 - msMemScope（MindStudio内存分析工具）
 
@@ -40,11 +40,11 @@ MindStudio Probe（MindStudio精度调试工具，msProbe）
 
 - MindStudio Monitor（MindStudio在线监控工具，msMonitor）
 
-  一站式在线监控工具，支持落盘和在线性能数据采集，提供集群场景性能监测及定位能力。详细介绍请参见《[在线监控工具](https://gitcode.com/Ascend/msmonitor/blob/master/docs/zh/quick_start.md)》。
+  一站式在线监控工具，支持落盘和在线性能数据采集，提供集群场景性能监测及定位能力。详细介绍请参见《[在线监控工具](https://gitcode.com/Ascend/msmonitor/blob/master/docs/zh/getting_started/quick_start.md)》。
 
 - MindStudio Profiling Tools Interface（msPTI）
 
-  MindStudio针对Ascend设备提出的一套Profiling API，用户可以通过msPTI构建针对NPU应用程序的工具，用于分析应用程序的性能。详细介绍请参见《[msPTI工具](https://gitcode.com/Ascend/mspti/blob/master/docs/zh/README.md)》。
+  MindStudio针对Ascend设备提出的一套Profiling API，用户可以通过msPTI构建针对NPU应用程序的工具，用于分析应用程序的性能。详细介绍请参见《[msPTI工具](https://gitcode.com/Ascend/mspti/blob/master/docs/zh/getting_started/quick_start.md)》。
 
 - MindStudio Insight（MindStudio可视化调优工具，msInsight）
 

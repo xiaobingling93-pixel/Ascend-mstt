@@ -49,12 +49,12 @@ MindStudio Training Tools（msTT）训练开发工具链，聚焦训练开发中
 
 | 训练框架      | 快速入门指南 |
 |-----------|----------------|
-| PyTorch   | [《PyTorch 场景 msTT 工具快速入门》](docs/zh/quick_start/pytorch_mstt_quick_start.md) |
-| MindSpore | [《MindSpore 场景 msTT 工具快速入门》](docs/zh/quick_start/mindspore_mstt_quick_start.md) |
+| PyTorch   | 《[PyTorch 场景 msTT 工具快速入门](docs/zh/quick_start/pytorch_mstt_quick_start.md)》 |
+| MindSpore | 《[MindSpore 场景 msTT 工具快速入门](docs/zh/quick_start/mindspore_mstt_quick_start.md)》 |
 
 ## 📦 安装指南
 
-介绍 msTT 工具的环境依赖与安装方法，请参见 [《msTT 安装指南》](./docs/zh/install_guide/mstt_install_guide.md)。
+介绍 msTT 工具的环境依赖与安装方法，请参见 《[msTT 安装指南](./docs/zh/install_guide/mstt_install_guide.md)》。
 
 ## 📘 使用指南
 
@@ -62,14 +62,14 @@ MindStudio Training Tools（msTT）训练开发工具链，聚焦训练开发中
 
 ## 🛠️ 贡献指南
 
-欢迎参与项目贡献，请参见 [《贡献指南》](./docs/zh/contributing/contributing_guide.md)。
+欢迎参与项目贡献，请参见 《[贡献指南](./docs/zh/contributing/contributing_guide.md)》。
 
 ## ⚖️ 相关说明
 
-🔹 [《版本说明》](./docs/zh/release_notes/release_notes.md)    
-🔹 [《许可证声明》](./docs/zh/legal/license_notice.md)     
-🔹 [《安全声明》](./docs/zh/legal/security_statement.md)     
-🔹 [《免责声明》](./docs/zh/legal/disclaimer.md)    
+🔹 《[版本说明](./docs/zh/release_notes/release_notes.md)》    
+🔹 《[许可证声明](./docs/zh/legal/license_notice.md)》     
+🔹 《[安全声明](./docs/zh/legal/security_statement.md)》     
+🔹 《[免责声明](./docs/zh/legal/disclaimer.md)》    
 
 ## 🤝 建议与交流
 
