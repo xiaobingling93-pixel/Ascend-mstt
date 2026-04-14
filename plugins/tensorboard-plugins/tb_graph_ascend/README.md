@@ -103,7 +103,7 @@ python >= 3.8 ，tensorboard >= 2.11.2
 |    ├── compare_{timestamp}.vis.db
 ```
 
-## 4.启动 tensorboard
+## 4.启动 TensorBoard
 
 1. 启动 TensorBoard
 
@@ -119,13 +119,13 @@ python >= 3.8 ，tensorboard >= 2.11.2
    tensorboard --logdir output_path --port=6007
    ```
 
-2. 在浏览器上打开 tensorboard
+2. 在浏览器上打开 TensorBoard
 
    在浏览器中打开 URL： `http://localhost:6006`。
 
    注意：如果`--logdir` 指定目录下的文件太大或太多，请等候，刷新浏览器查看加载结果。
 
-3. 建议在本地启动 tensorboard，如果网络浏览器与启动 TensorBoard 的机器不在同一台机器上，需要远程启动，可参照[远程启动方式](#413-远程查看数据)，但需用户自行评估**安全风险**。
+3. 建议在本地启动 TensorBoard，如果网络浏览器与启动 TensorBoard 的机器不在同一台机器上，需要远程启动，可参照[远程启动方式](#413-远程查看数据)，但需用户自行评估**安全风险**。
 
 ## 5.浏览器查看
 
@@ -306,14 +306,14 @@ tensorboard --logdir out_path
 
 | 序号 | 代码仓              | 功能                       | 源设备                          | 源 IP                              | 源端口 | 目的设备                 | 目的 IP                         | 目的端口<br/>（侦听） | 协议 | 端口说明             | 端口配置 | 侦听端口是否可更改 | 所属平面 | 版本     | 特殊场景 | 备注 |
 | :--- | :------------------ | :------------------------- | :------------------------------ | :--------------------------------- | :----- | :----------------------- | :------------------------------ | :-------------------- | :--- | :------------------- | :------- | :----------------- | :------- | :------- | :------- | :--- |
-| 1    | tensorboard-plugins | TensorBoard 底座前后端通信 | 访问 TensorBoard 浏览器所在机器 | 访问 TensorBoard 浏览器所在机器 ip |        | TensorBoard 服务所在机器 | TensorBoard 服务所在服务器的 ip | 6006                  | HTTP | tensorboard 服务通信 | `--port` | 可修改             | 业务面   | 所有版本 | 无       |      |
+| 1    | tensorboard-plugins | TensorBoard 底座前后端通信 | 访问 TensorBoard 浏览器所在机器 | 访问 TensorBoard 浏览器所在机器 ip |        | TensorBoard 服务所在机器 | TensorBoard 服务所在服务器的 ip | 6006                  | HTTP | TensorBoard 服务通信 | `--port` | 可修改             | 业务面   | 所有版本 | 无       |      |
 | 2    | tensorboard-plugins | TensorBoard 底座可能存在向公网地址(如CDN)等请求静态资源文件css、woff2等情况 | 访问TensorBoard浏览器所在设备 | 访问TensorBoard浏览器所在设备IP | 随机端口 | 静态资源文件站点 | 目标静态资源文件站点IP     | 443   | HTTPS | 通过HTTPS协议请求静态资源时默认的443端口 | 不涉及监听 | 业务面 | 所有版本 | 无 |  |
 
-mindstudio仅交付模型分级可视化插件，tensorboard及插件依赖一些三方开源组件(如polymer及其相关间接依赖)，使用时可能存在发起向公网地址如CDN请求样式文件或字体文件的情况，说明如下：
+mindstudio仅交付模型分级可视化插件，TensorBoard及插件依赖一些三方开源组件(如polymer及其相关间接依赖)，使用时可能存在发起向公网地址如CDN请求样式文件或字体文件的情况，说明如下：
 
 1、模型分级可视化插件已通过在CSP响应头中添加策略拦截，但仍然会在浏览器调试窗口中记录对应请求的拦截记录，不影响功能正常使用。
 
-2、tensorboard底座CSP响应头策略由tensorboard底座自身配置，不受插件加固影响，因此仍然可能存在请求公网地址的情况，出于安全考虑，建议不要在跨机或不安全的网络环境中使用
+2、TensorBoard底座CSP响应头策略由TensorBoard底座自身配置，不受插件加固影响，因此仍然可能存在请求公网地址的情况，出于安全考虑，建议不要在跨机或不安全的网络环境中使用
 
 ### 4.3 公网地址说明
 
