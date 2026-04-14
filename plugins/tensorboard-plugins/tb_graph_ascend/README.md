@@ -8,7 +8,7 @@
 
 ### 1. 相关依赖
 
-`python >= 3.8 ，tensorboard >= 2.11.2
+python >= 3.8 ，tensorboard >= 2.11.2
 
 ### 2. 安装方式
 
