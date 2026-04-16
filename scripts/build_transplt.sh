@@ -68,14 +68,69 @@ TRANSPLT_RUN_NAME="Ascend-mindstudio-transplt"
 PKG_LIMIT_SIZE=524288000 # 500M
 
 function parse_script_args() {
-    if [ $# -gt 2 ]; then
-        echo "[ERROR] Too many arguments. Only one or two arguments are allowed."
+    version=""
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --build_version)
+                if [ -n "${version}" ]; then
+                    echo "[ERROR] Duplicate argument: --build_version"
+                    exit 1
+                fi
+                shift
+                if [ -z "$1" ] || [[ "$1" == --* ]]; then
+                    echo "[ERROR] Missing value for --build_version"
+                    exit 1
+                fi
+                version="$1"
+                ;;
+            --build_version=*)
+                if [ -n "${version}" ]; then
+                    echo "[ERROR] Duplicate argument: --build_version"
+                    exit 1
+                fi
+                version="${1#*=}"
+                if [ -z "${version}" ]; then
+                    echo "[ERROR] Missing value for --build_version"
+                    exit 1
+                fi
+                ;;
+            -h|--help)
+                echo "Usage: $0 [--build_version <version>]"
+                exit 0
+                ;;
+            *)
+                echo "[ERROR] Unknown argument: $1"
+                echo "Usage: $0 [--build_version <version>]"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [ -n "${version}" ]; then
+        update_version_info "${version}"
+    fi
+}
+
+function update_version_info() {
+    local version="$1"
+    local config_file="${CUR_DIR}/run_script/version.info"
+
+    if [ -z "${version}" ]; then
+        echo "[ERROR] update_version_info: empty version."
         exit 1
-    elif [ $# -eq 2 ]; then
-        VERSION="$1"
-        BUILD_MODE="$2"
-    elif [ $# -eq 1 ]; then
-        VERSION="$1"
+    fi
+
+    if [ ! -f "${config_file}" ]; then
+        echo "[ERROR] ${config_file} does not exist."
+        exit 1
+    fi
+
+    if grep -qE '^Version=' "${config_file}"; then
+        sed -i "s/^Version=.*/Version=${version}/" "${config_file}"
+    else
+        echo "Version=${version}" >> "${config_file}"
     fi
 }
 
