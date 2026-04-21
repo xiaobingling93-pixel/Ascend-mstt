@@ -4,7 +4,7 @@
 
 昇腾NPU是AI算力的后起之秀，但目前训练和在线推理脚本大多是基于GPU的。由于NPU与GPU的架构差异，基于GPU的训练和在线推理脚本不能直接在NPU上使用。
 
-分析迁移工具（msfmktransplt，MindStudio Analysis and Migration Tool）提供PyTorch训练脚本一键式迁移至昇腾NPU的功能，开发者可做到少量代码修改或零代码完成迁移。该工具提供PyTorch Analyse功能，帮助用户分析PyTorch训练脚本的API、第三方库API、亲和API分析以及动态shape的支持情况。同时提供了自动迁移和PyTorch GPU2Ascend工具两种迁移方式，将基于GPU的脚本迁移为基于NPU的脚本，这种自动化方法节省了人工手动进行脚本迁移的学习成本与工作量，大幅提升了迁移效率。
+分析迁移工具（msTransplant，MindStudio Transplant）提供PyTorch训练脚本一键式迁移至昇腾NPU的功能，开发者可做到少量代码修改或零代码完成迁移。该工具提供PyTorch Analyse功能，帮助用户分析PyTorch训练脚本的API、第三方库API、亲和API分析以及动态shape的支持情况。同时提供了自动迁移和PyTorch GPU2Ascend工具两种迁移方式，将基于GPU的脚本迁移为基于NPU的脚本，这种自动化方法节省了人工手动进行脚本迁移的学习成本与工作量，大幅提升了迁移效率。
 
 - （推荐）自动迁移：修改内容少，只需在训练脚本中导入库代码，迁移后直接在昇腾NPU平台上运行。
 - PyTorch GPU2Ascend工具迁移：迁移过程会生成分析文件，支持用户查看API支持度分析报告和迁移过程中对原训练脚本的修改内容，并支持单卡脚本迁移为多卡脚本。
@@ -243,7 +243,7 @@ bash pytorch_analyse.sh -i <input> -o <output> -v <version> [-m <mode>] [-env <e
     |api_precision_advice.csv|当前训练脚本中可以进行精度调优的专家建议，除此之外，还可以使用[msProbe](https://gitcode.com/Ascend/msprobe)工具进行调优。|
     |api_performance_advice.csv|当前训练脚本中可以进行性能调优的专家建议和指导措施，除此之外，还可以使用[Ascend PyTorch Profiler](https://gitcode.com/Ascend/pytorch/blob/v2.7.1/docs/zh/ascend_pytorch_profiler/ascend_pytorch_profiler_user_guide.md)工具进行调优。分析结果基于原生PyTorch框架的API接口信息，具体请参见[表4 PyTorch API接口信息](#PyTorchAPI接口信息 )。|
 
-    **图1** 不支持的API列表示例![](figures/不支持的API列表示例.png)<a id="不支持的API列表示例"></a>
+    **图1** 不支持的API列表示例![](./docs/zh/figures/不支持的API列表示例.png)<a id="不支持的API列表示例"></a>
 
     **表 4**  PyTorch API接口信息<a id="PyTorchAPI接口信息"></a>
     
@@ -268,7 +268,7 @@ bash pytorch_analyse.sh -i <input> -o <output> -v <version> [-m <mode>] [-env <e
     <p id="p09011133123818"><a name="p09011133123818"></a><a name="p09011133123818"></a>社区版：<a href="https://www.hiascend.com/developer/download/community/result?module=cann&amp;cann=8.3.RC1" target="_blank" rel="noopener noreferrer">8.3.RC1</a></p>
     </td>
     </tr>
-    <tr id="row191956546308"><td class="cellrowborder" valign="top" headers="mcps1.2.5.1.1 "><p id="p16196554163016"><a name="p16196554163016"></a><a name="p16196554163016"></a>2.7.1</p>
+    <tr id="row192006546308"><td class="cellrowborder" valign="top" headers="mcps1.2.5.1.1 "><p id="p16196554163016"><a name="p16196554163016"></a><a name="p16196554163016"></a>2.7.1</p>
     </td>
     <td class="cellrowborder" valign="top" headers="mcps1.2.5.1.2 "><p id="p719616546306"><a name="p719616546306"></a><a name="p719616546306"></a><a href="https://www.hiascend.com/document/detail/zh/Pytorch/720/apiref/PyTorchNativeapi/ptaoplist_000078.html" target="_blank" rel="noopener noreferrer">PyTorch2.7.1</a></p>
     </td>
@@ -303,7 +303,7 @@ bash pytorch_analyse.sh -i <input> -o <output> -v <version> [-m <mode>] [-env <e
     <p id="p1274716292217"><a name="p1274716292217"></a><a name="p1274716292217"></a>社区版：<a href="https://www.hiascend.com/developer/download/community/result?module=cann&amp;cann=8.1.RC1" target="_blank" rel="noopener noreferrer">8.1.RC1</a></p>
     </td>
     </tr>
-    <tr id="row245105019591"><td class="cellrowborder" valign="top" headers="mcps1.2.5.1.1 "><p id="p1850716371927"><a name="p1850716371927"></a><a name="p1850716371927"></a>2.4.0</p>
+    <tr id="row245105020091"><td class="cellrowborder" valign="top" headers="mcps1.2.5.1.1 "><p id="p1850716371927"><a name="p1850716371927"></a><a name="p1850716371927"></a>2.4.0</p>
     </td>
     <td class="cellrowborder" valign="top" headers="mcps1.2.5.1.2 "><p id="p12873421011"><a name="p12873421011"></a><a name="p12873421011"></a><a href="https://www.hiascend.com/document/detail/zh/Pytorch/700/apiref/apilist/ptaoplist_000371.html" target="_blank" rel="noopener noreferrer">PyTorch2.4.0</a></p>
     </td>
@@ -325,7 +325,7 @@ bash pytorch_analyse.sh -i <input> -o <output> -v <version> [-m <mode>] [-env <e
     <td class="cellrowborder" rowspan="3" valign="top" width="25.230000000000004%" headers="mcps1.2.5.1.3 "><p id="p5882131818183"><a name="p5882131818183"></a><a name="p5882131818183"></a><a href="https://www.hiascend.com/developer/download/commercial/result?product=4&amp;model=14&amp;solution=30612d961f7741b1a95f87775a9b2bcb" target="_blank" rel="noopener noreferrer">6.0.0</a></p>
     </td>
     <td class="cellrowborder" rowspan="3" valign="top" width="35.57%" headers="mcps1.2.5.1.4 "><p id="p155231440155011"><a name="p155231440155011"></a><a name="p155231440155011"></a>商用版：<a href="https://www.hiascend.com/developer/download/commercial/result?product=4&amp;model=8&amp;solution=30612d961f7741b1a95f87775a9b2bcb" target="_blank" rel="noopener noreferrer">8.0.0</a></p>
-    <p id="p19523840165011"><a name="p19523840165011"></a><a name="p19523840165011"></a>社区版：<a href="https://www.hiascend.com/developer/download/community/result?module=cann&amp;cann=8.0.0.beta1" target="_blank" rel="noopener noreferrer">8.0.0.beta1</a></p>
+    <p id="p20023840165011"><a name="p20023840165011"></a><a name="p20023840165011"></a>社区版：<a href="https://www.hiascend.com/developer/download/community/result?module=cann&amp;cann=8.0.0.beta1" target="_blank" rel="noopener noreferrer">8.0.0.beta1</a></p>
     </td>
     </tr>
     <tr id="row898493121811"><td class="cellrowborder" valign="top" headers="mcps1.2.5.1.1 "><p id="p688371861817"><a name="p688371861817"></a><a name="p688371861817"></a>2.3.1</p>
@@ -429,7 +429,7 @@ bash pytorch_analyse.sh -i <input> -o <output> -v <version> [-m <mode>] [-env <e
     |unknown_op.csv|支持情况存疑的API列表。如果训练失败，可以到[昇腾开源社区](https://gitcode.com/Ascend/pytorch)求助。|
    
     **图2**  不支持的API列表示例 <a id="不支持的API列表示例2"></a>     
-    ![](figures/框架不支持的API列表示例.png)
+    ![](./docs/zh/figures/框架不支持的API列表示例.png)
 
 - 分析模式为“affinity_apis“时，分析结果如下所示：
 
@@ -442,7 +442,7 @@ bash pytorch_analyse.sh -i <input> -o <output> -v <version> [-m <mode>] [-env <e
     分析报告affinity_api_call.csv包括原生API的调用信息，并将其分为几种类型：class（类）、function（方法）、torch（Pytorch框架API）以及special（特殊表达式）。用户可以根据分析报告，在训练脚本中将原生API手动替换为指定的亲和API，替换后的脚本在昇腾AI处理器上运行时，性能更优。分析报告示例如下。
 
     **图3**  亲和API分析报告示例  
-    ![](figures/亲和API分析报告示例.png "亲和API分析报告示例")
+    ![](./docs/zh/figures/亲和API分析报告示例.png "亲和API分析报告示例")
 
 - 分析模式为“dynamic_shape”时，分析结果如下所示：
 
@@ -831,7 +831,7 @@ for images, labels in train_loader:
 
 **问题现象**
 
-![](figures/FAQ3.png)
+![](./docs/zh/figures/FAQ3.png)
 
 **解决方案**  
 如上图所示，将label_batch.npu()改成label_batch.int().npu()，即把当前报错行的变量类型改成int32，规避此类Muls算子不支持int64的问题。
@@ -845,11 +845,11 @@ for images, labels in train_loader:
 **解决方案**  
 可以通过用std求标准差再平方得到var，均值单独调用mean接口求来规避问题例如：
 
-![](figures/脚本迁移FAQ1.png)
+![](./docs/zh/figures/脚本迁移FAQ1.png)
 
 具体到代码中修改：
 
-![](figures/脚本迁移FAQ2.png)
+![](./docs/zh/figures/脚本迁移FAQ2.png)
 
 ### 常见运行报错
 

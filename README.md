@@ -31,7 +31,7 @@ MindStudio Training Tools（msTT）训练开发工具链，聚焦训练开发中
 
 | 类别 | 工具名称                                                                                      | 功能简介                                               |
 |:--:|:------------------------------------------------------------------------------------------|:---------------------------------------------------|
-| 迁移 | [**msTransplant**](./msfmktransplt/docs/zh/msfmktransplt_instruct.md)                                                      | **【分析迁移】** PyTorch 训练脚本一键迁移至昇腾 NPU，支持少量改码或零改码完成迁移。 |
+| 迁移 | [**msTransplant**](https://gitcode.com/Ascend/mstt/tree/master/msfmktransplt)                                                      | **【分析迁移】** PyTorch 训练脚本一键迁移至昇腾 NPU，支持少量改码或零改码完成迁移。 |
 | 精度 | [**msProbe**](https://gitcode.com/Ascend/msprobe)                                         | **【精度调试】** 昇腾全场景精度工具，用于训练精度调试与问题定位。                |
 | 精度 | [**TensorBoard**](https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend) | **【分级可视】** 分级展示模型结构与精度，支持调试与标杆模型对比以定位精度问题。         |
 | 性能 | [**msProf**](https://gitcode.com/Ascend/msprof)                                           | **【模型调优】** 全场景性能调优底座，采集 CANN 与 NPU 数据，提升设备调优效率。    |
