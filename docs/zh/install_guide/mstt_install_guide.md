@@ -42,7 +42,7 @@ pip3 config set global.trusted-host repo.huaweicloud.com
     ./ascend-mindstudio-training-tools_linux-<version>.run --install
     ```
 
-> [!NOTE] 说明  
+> [!NOTE]  
 > 对于 root 用户，msTT默认安装到 /usr/local/Ascend 目录下；如果使用普通用户进行安装，msTT会默认安装到 ${HOME}/Ascend 下。<br>
 > 如果要指定路径安装，则需添加 `--install-path`，指定的安装路径必须为绝对路径，不支持相对路径，输入相对路径会出现安装报错，例如：`./ascend-mindstudio-training-tools_linux-*.run --install --install-path=/path/to/install`。
 
@@ -75,7 +75,7 @@ To uninstall the toolkit, please run the following command:
 ./ascend-mindstudio-training-tools_linux-*.run --upgrade
 ```
 
-> [!NOTE] 说明  
+> [!NOTE]  
 > 对于 root 用户，msTT默认升级路径为 /usr/local/Ascend 目录；如果使用普通用户进行升级，msTT会默认升级 ${HOME}/Ascend 下的工具包。<br>
 > 如果要指定升级路径，则需添加 `--install-path`，使用方式和安装时一样。
 

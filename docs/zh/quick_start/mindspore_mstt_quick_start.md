@@ -1,5 +1,7 @@
 # MindSpore场景msTT工具快速入门
 
+<br>
+
 ## 概述
 
 本文介绍训练场景开发工具快速入门，主要针对训练开发流程中的模型开发&迁移、模型精度调试和模型性能调优环节分别使用的开发工具进行介绍。
@@ -11,8 +13,6 @@
   基于昇腾开发的大模型或者是从GPU迁移到昇腾NPU环境的大模型，在训练过程中可能出现精度溢出、loss曲线跑飞或不收敛等异常问题。由于训练loss等指标无法精确定位问题模块，本文提供了msProbe（MindStudio Probe，精度调试工具）进行快速定界。精度调试工具在下文均简称为msProbe。
 
   msProbe为msTT工具链的精度工具，通过分别对标杆环境（如已调试好的CPU、GPU或昇腾NPU等环境）和昇腾NPU环境下的训练精度数据进行采集和比对，从而找出差异点。
-
-  msProbe工具包含众多功能，详细介绍请参见《[MindStudio Probe](https://gitcode.com/Ascend/msprobe)》。
 
 - MindSpore Profiler接口工具：MindSpore训练场景下的性能数据采集。
 
@@ -64,7 +64,7 @@
 
 1. 准备一台基于昇腾NPU的训练服务器（如Atlas A2 训练系列产品），并安装NPU驱动和固件。
 
-2. 安装配套版本的CANN Toolkit开发套件包和ops算子包并配置CANN环境变量，具体请参见《[CANN软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=Ubuntu)》。
+2. 安装配套版本的CANN Toolkit开发套件包和ops算子包并配置CANN环境变量，具体请参见[CANN快速安装](https://www.hiascend.com/cann/download)。
 
 3. 安装框架。
 
@@ -100,7 +100,7 @@ train finish
 
 根据本手册的样例，需要将工具接口添加到训练脚本中进行配置检查。
 
-> [!NOTE] 说明
+> [!NOTE]
 >
 > 当前是以MindSpore不同版本在同一环境下进行精度比对的场景为例，因此两个场景检查出的结果只会有版本号的不同，所以可跳过此步骤。
 
@@ -233,7 +233,7 @@ pip install mindstudio-probe --pre
 
 2. 在训练脚本中添加工具，如下所示。
 
-   > [!NOTE] 说明
+   > [!NOTE]
    >
    > 可直接拷贝[MindSpore训练状态监测代码样例](#mindspore训练状态监测代码样例)中的完整代码执行，下列仅为说明脚本中需要添加的工具接口。
 
@@ -304,7 +304,7 @@ pip install mindstudio-probe --pre
 
 2. 分别以MindSpore 2.7.2和MindSpore 2.8.0环境下的训练脚本（mindspore_main.py文件）中添加工具，如下所示。
 
-   > [!NOTE] 说明
+   > [!NOTE]
    >
    > 可直接拷贝[MindSpore精度数据采集代码样例](#mindspore精度数据采集代码样例)中的完整代码执行，下列仅为说明工具接口在脚本中添加的位置。
 
@@ -326,7 +326,7 @@ pip install mindstudio-probe --pre
     57     print("train finish")
    ```
 
-   > [!NOTE] 说明
+   > [!NOTE]
    >
    > 精度数据会占据一定的磁盘空间，可能存在磁盘写满导致服务器不可用的风险。精度数据所需空间跟模型的参数、采集开关配置、采集的迭代数量有较大关系，须用户自行保证落盘目录下的可用磁盘空间。
 
@@ -339,7 +339,7 @@ pip install mindstudio-probe --pre
    日志打印出现如下示例信息表示数据采集成功，完成采集后即可查看数据。
 
    ```ColdFusion
-   The aip tensor hook function is successfully mounted to the model.
+   The api tensor hook function is successfully mounted to the model.
    msprobe: debugger.start() is set successfully
    Dump switch is turned on at step 0.
    Dump data will be saved in /home/user1/dump/dump_data/step0.
@@ -489,7 +489,7 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
    tensorboard --logdir ./output --bind_all
    ```
 
-   --logdir指定的路径即为[2](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0012.html?framework=mindspore#ZH-CN_TOPIC_0000002446706768__li7405184191914)中的./output路径。
+   --logdir指定的路径即为步骤2中的-o参数指定的路径。
 
    执行以上命令后打印如下日志。
 
@@ -526,7 +526,7 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
 
 1. 在昇腾NPU环境下的训练脚本（mindspore_main.py文件）中添加MindSpore Profiler接口工具，如下所示。
 
-   > [!NOTE] 说明
+   > [!NOTE]
    >
    > 可直接拷贝[MindSpore Profiler接口采集性能数据代码样例](#mindspore-profiler接口采集性能数据代码样例)中的完整代码执行，下列仅为说明工具接口在脚本中添加的位置。
 
@@ -565,7 +565,7 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
     74         print("train finish")
    ```
 
-   > [!NOTE] 说明
+   > [!NOTE]
    >
    > - 以上仅提供简单示例，若需要配置更完整的采集参数以及对应接口详细介绍请参见《[mindspore.profiler.profile](https://www.mindspore.cn/docs/zh-CN/r2.8.0/api_python/mindspore/mindspore.profiler.profile.html)》。
    > - 性能数据会占据一定的磁盘空间，可能存在磁盘写满导致服务器不可用的风险。性能数据所需空间跟模型的参数、采集开关配置、采集的迭代数量有较大关系，须用户自行保证落盘目录下的可用磁盘空间。
@@ -634,11 +634,11 @@ accuracy_checking_result\_{timestamp}.csv标明每个API是否通过测试。对
    Successfully installed msprof-analyze-{version}
    ```
 
-   msprof-analyze工具详细介绍请参见《[msprof-analyze](https://gitcode.com/Ascend/mstt/tree/master/profiler/msprof_analyze)》。
+   msprof-analyze工具详细介绍请参见《[msprof-analyze](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/getting_started/quick_start.md)》。
 
 **执行msprof-analyze分析**<a name="执行msprof-analyze分析"></a>
 
-> [!NOTE] 说明
+> [!NOTE]
 >
 > 以下仅提供操作指导，无具体数据分析。
 
@@ -658,7 +658,7 @@ msprof-analyze主要对基于通信域的迭代内耗时分析、通信时间分
 
    分析结果在-d参数指定目录下生成cluster_analysis_output文件夹并输出cluster_step_trace_time.csv、cluster_communication_matrix.json、cluster_communication.json文件。
 
-   更多介绍请参见《[msprof-analyze](https://gitcode.com/Ascend/msprof-analyze)》。
+   更多介绍请参见《[msprof-analyze](https://gitcode.com/Ascend/msprof-analyze/blob/master/docs/zh/getting_started/quick_start.md)》。
 
    集群分析工具的交付件通过MindStudio Insight工具展示，详细操作请参见[使用MindStudio Insight工具可视化性能数据](#使用MindStudio Insight工具可视化性能数据)。
 
